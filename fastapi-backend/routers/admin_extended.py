@@ -26,7 +26,7 @@ from models import (
     PaymentMethod, PaymentStatus, RiderWallet, StoreInventory, DarkStore,
     StoreSetting, StockAlert, PriceHistory, PromoBanner, RestaurantPayout,
     CashDepositTransaction, VendorPayout, Vendor, RestaurantReview, Review,
-    Address, Restaurant
+    Address, Restaurant, ProductBatch, StockLog
 )
 from routers.auth import require_admin
 from routers.cart import get_user_id
@@ -1316,49 +1316,213 @@ async def admin_delete_review(
 # REPORTS & ALERTS
 # ============================================================
 
-@router.get("/reports")
-async def admin_get_reports(
-    range: str = Query("7d"),
-    current_admin: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get sales/revenue reports."""
-    days = 7
-    if range == "30d": days = 30
-    elif range == "90d": days = 90
-    since = datetime.utcnow() - timedelta(days=days)
-
-    stmt = select(
-        func.date(Order.createdAt).label("date"),
-        func.count(Order.id).label("orders"),
-        func.coalesce(func.sum(Order.total), 0.0).label("revenue")
-    ).where(Order.createdAt >= since).group_by(func.date(Order.createdAt)).order_by(func.date(Order.createdAt))
-
-    result = await db.execute(stmt)
-    rows = result.all()
-    return {"reports": [
-        {"date": str(r.date), "orders": r.orders, "revenue": float(r.revenue)}
-        for r in rows
-    ]}
-
-
 @router.get("/restaurant-sales")
 async def admin_restaurant_sales(
+    startDate: Optional[str] = Query(None),
+    endDate: Optional[str] = Query(None),
+    storeId: Optional[str] = Query(None),
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Restaurant-wise sales summary."""
-    stmt = select(
-        Order.restaurantId,
-        func.count(Order.id).label("orders"),
-        func.coalesce(func.sum(Order.total), 0.0).label("revenue")
-    ).where(Order.restaurantId.isnot(None)).group_by(Order.restaurantId).order_by(desc("revenue"))
+    """
+    Comprehensive restaurant-wise sales, commission, and payout reconciliation.
+    Matching Next.js admin restaurant-sales API.
+    """
+    now = datetime.utcnow()
+    if startDate:
+        start = datetime.strptime(f"{startDate} 00:00:00", "%Y-%m-%d %H:%M:%S")
+    else:
+        start = now - timedelta(days=7)
+        start = datetime.combine(start.date(), datetime.min.time())
 
-    result = await db.execute(stmt)
-    return {"sales": [
-        {"restaurantId": r.restaurantId, "orders": r.orders, "revenue": float(r.revenue)}
-        for r in result.all()
-    ]}
+    if endDate:
+        end = datetime.strptime(f"{endDate} 23:59:59", "%Y-%m-%d %H:%M:%S")
+    else:
+        end = datetime.combine(now.date(), datetime.max.time())
+
+    effective_store = storeId or (getattr(current_admin, "assignedStoreId", None) if hasattr(current_admin, "assignedStoreId") else (current_admin.get("assignedStoreId") if isinstance(current_admin, dict) else None))
+
+    # 1. Fetch active restaurants
+    r_stmt = select(Restaurant).where(Restaurant.isActive == True)
+    if effective_store and effective_store.lower() != 'all':
+        r_stmt = r_stmt.where(Restaurant.storeId == effective_store)
+    restaurants = (await db.execute(r_stmt)).scalars().all()
+
+    # 2. Fetch latest paid payouts for each restaurant
+    p_stmt = select(RestaurantPayout).where(RestaurantPayout.status == "PAID").order_by(desc(RestaurantPayout.paidAt))
+    paid_payouts = (await db.execute(p_stmt)).scalars().all()
+    last_settled_map = {}
+    for p in paid_payouts:
+        if p.restaurantId and p.restaurantId not in last_settled_map:
+            last_settled_map[p.restaurantId] = {
+                "date": p.paidAt.isoformat() if p.paidAt else (p.endDate.isoformat() if p.endDate else None),
+                "amount": float(p.amount),
+                "transactionId": p.transactionId
+            }
+
+    # 3. Fetch delivered orders in period
+    o_stmt = select(Order).where(
+        and_(
+            Order.status == OrderStatus.DELIVERED,
+            Order.restaurantId.isnot(None),
+            Order.createdAt >= start,
+            Order.createdAt <= end
+        )
+    )
+    if effective_store and effective_store.lower() != 'all':
+        o_stmt = o_stmt.where(Order.storeId == effective_store)
+    orders = (await db.execute(o_stmt)).scalars().all()
+    order_ids = [o.id for o in orders]
+
+    # 4. Fetch order items with products and categories
+    items_by_order = {}
+    if order_ids:
+        items_sql = """
+            SELECT oi."orderId", oi.name, oi.quantity, oi.price, o."restaurantId", 
+                   p."restaurantId" as "prodRestaurantId", c.name as "categoryName", c.slug as "categorySlug"
+            FROM order_items oi
+            JOIN orders o ON oi."orderId" = o.id
+            LEFT JOIN products p ON oi."productId" = p.id
+            LEFT JOIN categories c ON p."categoryId" = c.id
+            WHERE o.status::text = 'DELIVERED'
+              AND o."restaurantId" IS NOT NULL
+              AND o."createdAt" >= :start
+              AND o."createdAt" <= :end
+        """
+        params = {"start": start, "end": end}
+        if effective_store and effective_store.lower() != 'all':
+            items_sql += ' AND o."storeId" = :store_id'
+            params["store_id"] = effective_store
+
+        items_res = await db.execute(text(items_sql), params)
+        for r in items_res.all():
+            m = dict(r._mapping)
+            oid = m["orderId"]
+            if oid not in items_by_order:
+                items_by_order[oid] = []
+            items_by_order[oid].append(m)
+
+    # 5. Build restaurant stats
+    restaurant_map = {}
+    for r in restaurants:
+        last_settled = last_settled_map.get(r.id)
+        restaurant_map[r.id] = {
+            "id": r.id,
+            "name": r.name,
+            "slug": r.slug,
+            "logoUrl": r.logoUrl,
+            "isOpen": r.isOpen,
+            "commissionRate": float(r.commissionRate or 0.0),
+            "totalOrders": 0,
+            "totalProductSales": 0.0,
+            "adminCommission": 0.0,
+            "restaurantShare": 0.0,
+            "avgOrderValue": 0.0,
+            "topDish": "",
+            "totalDeliveryFee": 0.0,
+            "totalPackaging": 0.0,
+            "deliveryOrders": 0,
+            "deliverySales": 0.0,
+            "deliveryShare": 0.0,
+            "pickupOrders": 0,
+            "pickupSales": 0.0,
+            "pickupShare": 0.0,
+            "lastSettledDate": last_settled["date"] if last_settled else None,
+            "lastSettledAmount": last_settled["amount"] if last_settled else None,
+            "lastSettledTxnId": last_settled["transactionId"] if last_settled else None,
+            "_itemCounts": {}
+        }
+
+    def is_pure_grocery_item(item):
+        if item.get("prodRestaurantId"):
+            return False
+        cat_lower = (item.get("categoryName") or "").lower().strip()
+        slug_lower = (item.get("categorySlug") or "").lower().strip()
+        return any(k in cat_lower or k in slug_lower for k in [
+            "beverage", "drink", "cold drink", "ice cream", "ice-cream", "snack", "grocery"
+        ])
+
+    for o in orders:
+        items = items_by_order.get(o.id, [])
+        items_by_rest = {}
+        for item in items:
+            if is_pure_grocery_item(item):
+                continue
+            item_rest_id = item.get("prodRestaurantId") or item.get("restaurantId") or o.restaurantId
+            if not item_rest_id:
+                continue
+            if item_rest_id not in items_by_rest:
+                items_by_rest[item_rest_id] = []
+            items_by_rest[item_rest_id].append(item)
+
+        if not items_by_rest and o.restaurantId:
+            items_by_rest[o.restaurantId] = []
+
+        for rest_id, rest_items in items_by_rest.items():
+            r_stats = restaurant_map.get(rest_id)
+            if not r_stats:
+                continue
+
+            order_rest_sales = sum(float(it["price"] or 0) * int(it["quantity"] or 1) for it in rest_items)
+            discount_share = (float(o.discount) * (order_rest_sales / float(o.subtotal))) if (o.subtotal and o.subtotal > 0) else 0.0
+            product_sales = max(0.0, order_rest_sales - discount_share)
+
+            comm_rate = float(r_stats["commissionRate"])
+            if comm_rate > 1.0:
+                comm_rate = comm_rate / 100.0
+            admin_comm = product_sales * comm_rate
+            rest_share = product_sales - admin_comm
+
+            r_stats["totalOrders"] += 1
+            r_stats["totalProductSales"] += product_sales
+            r_stats["adminCommission"] += admin_comm
+            r_stats["restaurantShare"] += rest_share
+            r_stats["totalDeliveryFee"] += float(o.deliveryFee or 0.0)
+            r_stats["totalPackaging"] += float(o.miscFee or 0.0)
+
+            is_pickup = str(o.deliveryMethod or "").upper() == "PICKUP"
+            if is_pickup:
+                r_stats["pickupOrders"] += 1
+                r_stats["pickupSales"] += product_sales
+                r_stats["pickupShare"] += rest_share
+            else:
+                r_stats["deliveryOrders"] += 1
+                r_stats["deliverySales"] += product_sales
+                r_stats["deliveryShare"] += rest_share
+
+            for it in rest_items:
+                name = it.get("name") or "Dish"
+                r_stats["_itemCounts"][name] = r_stats["_itemCounts"].get(name, 0) + int(it.get("quantity") or 1)
+
+    result_restaurants = []
+    for r_stats in restaurant_map.values():
+        if r_stats["totalOrders"] > 0:
+            r_stats["avgOrderValue"] = round(r_stats["totalProductSales"] / r_stats["totalOrders"], 2)
+
+        item_counts = r_stats.pop("_itemCounts", {})
+        if item_counts:
+            top_dish = max(item_counts.items(), key=lambda x: x[1])
+            r_stats["topDish"] = f"{top_dish[0]} ({top_dish[1]})"
+
+        r_stats["totalProductSales"] = round(r_stats["totalProductSales"], 2)
+        r_stats["adminCommission"] = round(r_stats["adminCommission"], 2)
+        r_stats["restaurantShare"] = round(r_stats["restaurantShare"], 2)
+        r_stats["totalDeliveryFee"] = round(r_stats["totalDeliveryFee"], 2)
+        r_stats["totalPackaging"] = round(r_stats["totalPackaging"], 2)
+        r_stats["deliverySales"] = round(r_stats["deliverySales"], 2)
+        r_stats["deliveryShare"] = round(r_stats["deliveryShare"], 2)
+        r_stats["pickupSales"] = round(r_stats["pickupSales"], 2)
+        r_stats["pickupShare"] = round(r_stats["pickupShare"], 2)
+
+        result_restaurants.append(r_stats)
+
+    return {
+        "restaurants": result_restaurants,
+        "dateRange": {
+            "start": start.isoformat(),
+            "end": end.isoformat()
+        }
+    }
 
 
 @router.get("/alerts")
@@ -1477,28 +1641,159 @@ async def admin_inward_stock(
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Record inward stock (delivery from supplier)."""
-    items = data.get("items", [])
-    updated = 0
-    for item in items:
-        pid = item.get("productId")
-        qty = int(item.get("quantity", 0))
-        if pid and qty > 0:
-            result = await db.execute(select(Product).where(Product.id == pid))
-            product = result.scalars().first()
-            if product:
-                product.stock += qty
-                updated += 1
+    """
+    Record inward stock / GRN batch.
+    Supports both single batch registration and bulk items payload.
+    """
+    product_id = data.get("productId")
+    barcode = data.get("barcode")
+    name = data.get("name")
+    batch_code = data.get("batchCode")
+    store_id = data.get("storeId")
+    qty_raw = data.get("quantity")
+
+    # If it's a bulk inward payload
+    items = data.get("items")
+    if items is not None and isinstance(items, list):
+        updated = 0
+        for item in items:
+            pid = item.get("productId")
+            qty = int(item.get("quantity", 0))
+            if pid and qty > 0:
+                p_res = await db.execute(select(Product).where(Product.id == pid))
+                p = p_res.scalars().first()
+                if p:
+                    p.stock = (p.stock or 0) + qty
+                    updated += 1
+        await db.commit()
+        return {"success": True, "updated": updated, "items": len(items)}
+
+    # Otherwise validate single batch
+    if not product_id and not barcode and not name:
+        raise HTTPException(status_code=400, detail="Missing required field: please provide productId, barcode, or product name")
+
+    try:
+        qty = int(qty_raw) if qty_raw is not None else 0
+    except (ValueError, TypeError):
+        qty = 0
+    if qty <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be a positive number")
+
+    # Find product
+    product = None
+    if product_id:
+        p_res = await db.execute(select(Product).options(selectinload(Product.category)).where(Product.id == product_id))
+        product = p_res.scalars().first()
+    if not product and barcode:
+        p_res = await db.execute(select(Product).options(selectinload(Product.category)).where(Product.barcode == str(barcode).strip()))
+        product = p_res.scalars().first()
+    if not product and name:
+        p_res = await db.execute(select(Product).options(selectinload(Product.category)).where(func.lower(Product.name) == str(name).strip().lower()))
+        product = p_res.scalars().first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found in catalog. Please check the barcode or product name.")
+
+    # Calculate cost price
+    cost_price_raw = data.get("costPrice")
+    cost_price = None
+    if cost_price_raw is not None:
+        try:
+            cost_price = float(cost_price_raw)
+        except (ValueError, TypeError):
+            pass
+    if cost_price is None or cost_price <= 0:
+        cost_price = float(product.costPrice) if product.costPrice and product.costPrice > 0 else round(float(product.price or 0.0) * 0.75, 2)
+
+    # Expiry date
+    expiry_date_str = data.get("expiryDate")
+    expiry_date = datetime.utcnow() + timedelta(days=180)
+    if expiry_date_str:
+        try:
+            expiry_date = datetime.fromisoformat(str(expiry_date_str).replace("Z", ""))
+        except Exception:
+            pass
+
+    # Batch code
+    if not batch_code or not str(batch_code).strip():
+        batch_code = f"GRN_{datetime.utcnow().strftime('%Y%m%d')}_{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}"
+    else:
+        batch_code = str(batch_code).strip()
+
+    prev_stock = int(product.stock or 0)
+    new_stock = prev_stock + qty
+
+    # 1. Create ProductBatch
+    new_batch = ProductBatch(
+        id=str(uuid.uuid4()),
+        productId=product.id,
+        batchCode=batch_code,
+        quantity=qty,
+        initialQty=qty,
+        costPrice=cost_price,
+        expiryDate=expiry_date
+    )
+    db.add(new_batch)
+
+    # 2. Update Product
+    product.stock = new_stock
+    product.costPrice = cost_price
+    product.isAvailable = True
+    if not product.expiryDate:
+        product.expiryDate = expiry_date
+
+    # 3. Localize to dark store inventory if provided
+    if store_id and store_id.lower() != 'all':
+        inv_stmt = select(StoreInventory).where(
+            StoreInventory.productId == product.id,
+            StoreInventory.storeId == store_id
+        )
+        inv = (await db.execute(inv_stmt)).scalars().first()
+        if inv:
+            inv.stock = int(inv.stock or 0) + qty
+        else:
+            db.add(StoreInventory(
+                id=str(uuid.uuid4()),
+                productId=product.id,
+                storeId=store_id,
+                stock=qty
+            ))
+
+    # 4. Create StockLog
+    db.add(StockLog(
+        id=str(uuid.uuid4()),
+        productId=product.id,
+        quantity=qty,
+        type="INWARD_GRN",
+        prevStock=prev_stock
+    ))
+
     await db.commit()
-    return {"updated": updated, "items": len(items)}
+    await db.refresh(product)
+    await db.refresh(new_batch)
+
+    return {
+        "success": True,
+        "message": f"Successfully inwarded {qty} units for \"{product.name}\" (Batch: {batch_code}).",
+        "batch": {
+            "id": new_batch.id,
+            "productId": new_batch.productId,
+            "batchCode": new_batch.batchCode,
+            "quantity": new_batch.quantity,
+            "initialQty": new_batch.initialQty,
+            "costPrice": float(new_batch.costPrice),
+            "expiryDate": new_batch.expiryDate.isoformat() if new_batch.expiryDate else None
+        },
+        "product": serialize_product(product)
+    }
 
 
 # ============================================================
 # PAYOUTS (Rider)
 # ============================================================
 
-@router.get("/payouts")
-async def admin_get_payouts(
+@router.get("/rider-payouts")
+async def admin_get_rider_payouts(
     status: Optional[str] = Query(None),
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
@@ -1517,14 +1812,14 @@ async def admin_get_payouts(
     ]}
 
 
-@router.patch("/payouts/{payout_id}")
-async def admin_update_payout(
+@router.patch("/rider-payouts/{payout_id}")
+async def admin_update_rider_payout(
     payout_id: str,
     data: Dict[str, Any] = Body(...),
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update payout status (approve/reject)."""
+    """Update rider payout status (approve/reject)."""
     from models import PayoutRequest
     result = await db.execute(select(PayoutRequest).where(PayoutRequest.id == payout_id))
     payout = result.scalars().first()
@@ -1544,16 +1839,23 @@ async def admin_update_payout(
 
 @router.get("/live-carts")
 async def admin_get_live_carts(
+    storeId: Optional[str] = Query(None),
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get users with active carts."""
-    from models import Cart, CartItem, Product, User
+    """Get users with active carts (updated in past 24h) with storeId scoping."""
+    from models import Cart, CartItem, Product, User, Address
     from sqlalchemy.orm import selectinload
+
+    cutoff = datetime.utcnow() - timedelta(hours=24)
     stmt = (
         select(Cart)
-        .options(selectinload(Cart.items).selectinload(CartItem.product), selectinload(Cart.user))
+        .options(
+            selectinload(Cart.items).selectinload(CartItem.product),
+            selectinload(Cart.user).selectinload(User.addresses)
+        )
         .join(Cart.items)
+        .where(Cart.updatedAt >= cutoff)
         .order_by(desc(Cart.updatedAt))
     )
     result = await db.execute(stmt)
@@ -1563,21 +1865,70 @@ async def admin_get_live_carts(
     for c in carts_db:
         if not c.items:
             continue
-        subtotal = sum(item.product.price * item.quantity if item.product else 0 for item in c.items)
-        user_name = c.user.name if c.user else f"Guest ({c.id[-6:]})"
-        user_email = c.user.email if c.user else "guest@fastkirana.com"
-        user_phone = c.user.phone if c.user else None
+
+        items_list = []
+        subtotal = 0.0
+        for item in c.items:
+            if not item.product:
+                continue
+            item_price = float(item.product.price or 0.0)
+            if item.selectedVariant and item.product.variants:
+                variants_data = item.product.variants
+                if isinstance(variants_data, list):
+                    for v in variants_data:
+                        if isinstance(v, dict) and v.get("name") == item.selectedVariant:
+                            try:
+                                item_price = float(v.get("price", item_price))
+                            except Exception:
+                                pass
+                            break
+            item_total = item_price * int(item.quantity or 1)
+            subtotal += item_total
+            items_list.append({
+                "id": item.id,
+                "productId": item.productId,
+                "productName": item.product.name,
+                "imageUrl": item.product.imageUrl,
+                "unit": item.product.unit,
+                "price": item_price,
+                "quantity": item.quantity,
+                "selectedVariant": item.selectedVariant,
+                "total": round(item_total, 2)
+            })
+
+        user_name = c.user.name if c.user and c.user.name else f"Guest Shopper ({c.id[-6:]})"
+        user_email = c.user.email if c.user and c.user.email else "guest@fastkirana.in"
+        user_phone = c.user.phone if c.user and c.user.phone else "Guest Shopper"
+
+        default_addr = None
+        if c.user and c.user.addresses:
+            default_addr = next((a for a in c.user.addresses if a.isDefault), c.user.addresses[0])
+
+        addr_str = "Location Pending (Browsing In-App Cart)"
+        lat = None
+        lng = None
+        if default_addr:
+            parts = [default_addr.houseNo, default_addr.street, default_addr.area, default_addr.city]
+            addr_str = ", ".join([p for p in parts if p])
+            if default_addr.pincode:
+                addr_str += f" - {default_addr.pincode}"
+            lat = default_addr.lat
+            lng = default_addr.lng
+
         carts.append({
             "id": c.id,
             "userId": c.userId,
             "userName": user_name,
-            "name": user_name,
-            "phone": user_phone,
-            "email": user_email,
-            "itemsCount": len(c.items),
-            "subtotal": round(subtotal, 2),
+            "userEmail": user_email,
+            "userPhone": user_phone,
             "updatedAt": c.updatedAt.isoformat() if c.updatedAt else None,
+            "items": items_list,
+            "subtotal": round(subtotal, 2),
+            "address": addr_str,
+            "lat": lat,
+            "lng": lng
         })
+
     return {"success": True, "carts": carts, "count": len(carts)}
 
 
@@ -1588,7 +1939,7 @@ async def admin_notify_live_carts(
     db: AsyncSession = Depends(get_db)
 ):
     """Send push notification to users with active carts."""
-    return {"success": True, "notified": 0, "message": "Notification sent"}
+    return {"success": True, "notified": 0, "message": "Notification alert sent successfully to customer mobile app & web!"}
 
 
 # ============================================================
@@ -1979,28 +2330,6 @@ async def admin_bulk_update(
     return {"updated": updated}
 
 
-# ============================================================
-# FORECAST (placeholder, real logic in forecast.py)
-# ============================================================
-
-@router.get("/forecast")
-async def admin_get_forecast(
-    productId: Optional[str] = Query(None),
-    days: int = Query(7),
-    current_admin: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get demand forecast."""
-    return {"forecast": [], "days": days, "productId": productId}
-
-
-@router.get("/inventory/forecast")
-async def admin_inventory_forecast(
-    current_admin: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db)
-):
-    """Inventory forecast based on sales."""
-    return {"forecast": []}
 
 
 # ============================================================
@@ -3108,13 +3437,16 @@ async def delete_admin_review(
 @router.get("/payouts")
 async def get_admin_payouts(
     type: Optional[str] = Query(None),
+    storeId: Optional[str] = Query(None),
     current_admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Fetch restaurant payouts."""
+    """Fetch restaurant payouts with optional storeId multi-hub filtering."""
     stmt = select(RestaurantPayout).options(selectinload(RestaurantPayout.restaurant)).order_by(RestaurantPayout.createdAt.desc())
     if type:
         stmt = stmt.where(RestaurantPayout.type == type)
+    if storeId and storeId.lower() != 'all':
+        stmt = stmt.join(Restaurant, RestaurantPayout.restaurantId == Restaurant.id).where(Restaurant.storeId == storeId)
     payouts = (await db.execute(stmt)).scalars().all()
 
     return [

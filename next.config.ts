@@ -194,6 +194,71 @@ const nextConfig: NextConfig = {
           source: '/api/admin/rider-cash',
           destination: `${apiDest}/api/admin/rider-cash`,
         },
+        // Admin Analytics & Reports -> 100% FastAPI Backend Cutover
+        {
+          source: '/api/admin/reports/:path*',
+          destination: `${apiDest}/api/admin/reports/:path*`,
+        },
+        {
+          source: '/api/admin/reports',
+          destination: `${apiDest}/api/admin/reports`,
+        },
+        {
+          source: '/api/admin/restaurant-sales/:path*',
+          destination: `${apiDest}/api/admin/restaurant-sales/:path*`,
+        },
+        {
+          source: '/api/admin/restaurant-sales',
+          destination: `${apiDest}/api/admin/restaurant-sales`,
+        },
+        {
+          source: '/api/admin/payouts/:path*',
+          destination: `${apiDest}/api/admin/payouts/:path*`,
+        },
+        {
+          source: '/api/admin/payouts',
+          destination: `${apiDest}/api/admin/payouts`,
+        },
+        {
+          source: '/api/admin/forecast/:path*',
+          destination: `${apiDest}/api/admin/forecast/:path*`,
+        },
+        {
+          source: '/api/admin/forecast',
+          destination: `${apiDest}/api/admin/forecast`,
+        },
+        {
+          source: '/api/admin/inward/:path*',
+          destination: `${apiDest}/api/admin/inward/:path*`,
+        },
+        {
+          source: '/api/admin/inward',
+          destination: `${apiDest}/api/admin/inward`,
+        },
+        {
+          source: '/api/admin/live-carts/:path*',
+          destination: `${apiDest}/api/admin/live-carts/:path*`,
+        },
+        {
+          source: '/api/admin/live-carts',
+          destination: `${apiDest}/api/admin/live-carts`,
+        },
+        {
+          source: '/api/admin/alerts/:path*',
+          destination: `${apiDest}/api/admin/alerts/:path*`,
+        },
+        {
+          source: '/api/admin/alerts',
+          destination: `${apiDest}/api/admin/alerts`,
+        },
+        {
+          source: '/api/admin/reviews/:path*',
+          destination: `${apiDest}/api/admin/reviews/:path*`,
+        },
+        {
+          source: '/api/admin/reviews',
+          destination: `${apiDest}/api/admin/reviews`,
+        },
       ],
       afterFiles: [],
       fallback: [],

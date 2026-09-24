@@ -82,6 +82,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   Future<void> _loadDiskOrders() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final savedStoreId = prefs.getString('assigned_store_id');
+      if (savedStoreId != null && savedStoreId.isNotEmpty) {
+        _assignedStoreId = savedStoreId;
+      }
+
       final todayKey = _getTodayDateKey();
       final savedDate = prefs.getString('admin_stats_saved_date');
 
@@ -259,7 +264,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isDeviceOffline = false;
-  String? _assignedStoreId;
+  String? _assignedStoreId = 'hub-209206';
 
   List<Map<String, String>> _availableRiders = [];
 
@@ -270,6 +275,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       if (res.data != null) {
         final sId = res.data['assignedStoreId']?.toString();
         if (sId != null && sId.isNotEmpty && mounted) {
+          final wasDifferent = _assignedStoreId != sId;
           setState(() {
             _assignedStoreId = sId;
           });
@@ -277,7 +283,9 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           await prefs.setString('assigned_store_id', sId);
           await SecureStorage.write('assigned_store_id', sId);
           _fetchDeliveryRiders();
-          _silentFetchAdminOrders();
+          if (wasDifferent) {
+            _silentFetchAdminOrders();
+          }
         }
       }
     } catch (e) {
@@ -328,14 +336,15 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       }
     });
 
-    _loadDiskOrders();
-    if (_cachedOrders.isNotEmpty) {
-      _allOrders = _cachedOrders;
-      _isLoading = false;
-      _silentFetchAdminOrders();
-    } else {
-      _fetchAdminOrders();
-    }
+    _loadDiskOrders().then((_) {
+      if (mounted) {
+        if (_allOrders.isNotEmpty) {
+          _silentFetchAdminOrders();
+        } else {
+          _fetchAdminOrders();
+        }
+      }
+    });
 
     // 1. Ultra-fast WebSocket Realtime Connection (0ms instant sync)
     _realtimeOrdersChannel = SupabaseService.subscribeToAllOrdersRealtime(

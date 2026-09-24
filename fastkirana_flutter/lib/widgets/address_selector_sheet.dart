@@ -149,37 +149,19 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
             ),
           ),
 
-          // Header Bar with Close Button
+          // Header Bar with Close Button (Swiggy / Zepto Clean Style - Zero Clutter)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
+            padding: const EdgeInsets.fromLTRB(20, 6, 12, 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Select Delivery Location',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 17),
-                          fontWeight: FontWeight.w900,
-                          color: AppDesignSystem.slate900,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Express delivery within ${currentHub.deliveryRadiusKm.toStringAsFixed(0)} km of ${currentHub.name}',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11.5),
-                          fontWeight: FontWeight.w500,
-                          color: AppDesignSystem.slate500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                Text(
+                  'Select Delivery Location',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 18),
+                    fontWeight: FontWeight.w900,
+                    color: AppDesignSystem.slate900,
+                    letterSpacing: -0.4,
                   ),
                 ),
                 IconButton(
@@ -197,48 +179,124 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
             ),
           ),
 
-          const Divider(height: 1, color: AppDesignSystem.slate100),
-
-          // Action Buttons (Swiggy / Zepto Style): Use GPS & Add New Address
+          // Search Address Bar (Swiggy / Zepto Style)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+            child: InkWell(
+              onTap: () async {
+                Navigator.pop(context);
+                final newAddress = await Navigator.push<Address>(
+                  context,
+                  FadeSlideRoute(page: const MapPickerScreen()),
+                );
+                if (newAddress != null && context.mounted) {
+                  final distKm = LocationService.getDistanceKm(
+                    newAddress.latitude ?? AppConfig.darkstoreLat,
+                    newAddress.longitude ?? AppConfig.darkstoreLng,
+                  );
+                  ref.read(selectedAddressProvider.notifier).state = newAddress;
+                  widget.onAddressSelected(newAddress);
+                  if (distKm > LocationService.maxDeliveryRadiusKm) {
+                    UnserviceableLocationBanner.showUnserviceableModal(context, ref, distKm);
+                  }
+                }
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.slate400),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Search for area, street name...',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 13),
+                          fontWeight: FontWeight.w500,
+                          color: AppDesignSystem.slate400,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Quick Action Cards (Swiggy / Zepto Style): Current Location & Add Address
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Row(
               children: [
-                // 1. Use Current Location (GPS)
+                // 1. Current Location (GPS)
                 Expanded(
                   child: Bounceable(
                     onTap: _handleUseCurrentLocation,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF0FDF4),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFBBF7D0), width: 1.2),
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _isLocatingGps
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.green600),
-                                )
-                              : const Icon(Icons.my_location_rounded, size: 16, color: AppDesignSystem.green600),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                _isLocatingGps ? 'Locating...' : 'Current Location',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 12),
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF15803D),
+                          Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFBBF7D0), width: 1),
+                            ),
+                            child: _isLocatingGps
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
+                                  )
+                                : const Icon(Icons.my_location_rounded, size: 16, color: Color(0xFF16A34A)),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _isLocatingGps ? 'Locating...' : 'Current Location',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.slate900,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                maxLines: 1,
-                              ),
+                                Text(
+                                  'Using GPS',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10),
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF16A34A),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -270,30 +328,55 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFFED7AA), width: 1.2),
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.add_location_alt_rounded, size: 16, color: AppDesignSystem.orange600),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Add New Address',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 12),
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFFC2410C),
+                          Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF7ED),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFFED7AA), width: 1),
+                            ),
+                            child: const Icon(Icons.add_location_alt_rounded, size: 16, color: Color(0xFFEA580C)),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Add Address',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.slate900,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                maxLines: 1,
-                              ),
+                                Text(
+                                  'Select on map',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10),
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFEA580C),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

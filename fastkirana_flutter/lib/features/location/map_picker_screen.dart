@@ -267,48 +267,6 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                     );
                   }).toList(),
                 ),
-
-                // Hub Center Markers with Badges
-                MarkerLayer(
-                  markers: (_activeHubs.isNotEmpty ? _activeHubs : StoreHub.defaultHubs).map((hub) {
-                    return Marker(
-                      point: LatLng(hub.latitude, hub.longitude),
-                      width: 110,
-                      height: 52,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-                            decoration: BoxDecoration(
-                              color: AppDesignSystem.slate900,
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('🏪', style: TextStyle(fontSize: 10)),
-                                const SizedBox(width: 3),
-                                Text(
-                                  '${hub.city} Hub',
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white,
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_drop_down, color: AppDesignSystem.slate900, size: 14),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
               ],
             ),
           ),
@@ -320,15 +278,15 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Floating Tooltip Badge
+                  // Floating Tooltip Badge (Swiggy/Zepto Style)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
                     decoration: BoxDecoration(
                       color: _isServiceable ? AppDesignSystem.slate900 : AppDesignSystem.red600,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
+                          color: Colors.black.withValues(alpha: 0.22),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -338,18 +296,18 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _isServiceable ? Icons.bolt_rounded : Icons.warning_rounded,
+                          _isServiceable ? Icons.bolt_rounded : Icons.info_outline_rounded,
                           size: 14,
-                          color: Colors.white,
+                          color: _isServiceable ? const Color(0xFFFBBF24) : Colors.white,
                         ),
                         const SizedBox(width: 5),
                         Text(
                           _isServiceable
-                              ? '⚡ ~${_calculateEtaText(_distanceKm)} • ${_distanceKm.toStringAsFixed(1)} km (${_matchedHub?.name ?? "Hub"})'
-                              : '🟠 ${(_distanceKm - (_matchedHub?.deliveryRadiusKm ?? 5.0)).clamp(0.1, 99.0).toStringAsFixed(1)} km outside zone (${_matchedHub?.city ?? "Hub"})',
+                              ? 'Delivery in ~${_calculateEtaText(_distanceKm)}'
+                              : 'Location outside delivery area',
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
                         ),
@@ -408,174 +366,102 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
             ),
           ),
 
-          // 3. TOP APP BAR & SEARCH BAR + QUICK HUB CHIPS
+          // 3. TOP APP BAR & SEARCH BAR
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      // Back Button
-                      Bounceable(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.12),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                  // Back Button
+                  Bounceable(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
                           ),
-                          child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 20),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-
-                      // Search Pill (Interactive Area Search)
-                      Expanded(
-                        child: Bounceable(
-                          onTap: _openAreaSearchSheet,
-                          child: Container(
-                            height: 46,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.orange600),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    _areaName.isNotEmpty ? _areaName : 'Search area, colony or landmark...',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 13.5),
-                                      fontWeight: FontWeight.w700,
-                                      color: slateDark,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFFFF7ED),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.tune_rounded,
-                                    size: 14,
-                                    color: AppDesignSystem.orange600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 20),
+                    ),
                   ),
+                  const SizedBox(width: 10),
 
-                  // Quick Store Hub Pills
-                  if (_activeHubs.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 32,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _activeHubs.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final hub = _activeHubs[index];
-                          final isSelected = _matchedHub?.id == hub.id;
-                          return Bounceable(
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              _mapController.move(LatLng(hub.latitude, hub.longitude), 15.5);
-                              _updateLocationDetails(hub.latitude, hub.longitude);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: isSelected ? AppDesignSystem.slate900 : Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: isSelected ? AppDesignSystem.slate900 : const Color(0xFFE2E8F0),
+                  // Search Pill (Interactive Area Search)
+                  Expanded(
+                    child: Bounceable(
+                      onTap: _openAreaSearchSheet,
+                      child: Container(
+                        height: 46,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.orange600),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _areaName.isNotEmpty ? _areaName : 'Search area, colony or landmark...',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontWeight: FontWeight.w700,
+                                  color: slateDark,
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    isSelected ? '📍 ' : '🏪 ',
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
-                                  Text(
-                                    '${hub.city} Hub',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: isSelected ? Colors.white : AppDesignSystem.slate800,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '(${hub.deliveryRadiusKm.toInt()}km)',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: isSelected ? Colors.white70 : AppDesignSystem.slate500,
-                                    ),
-                                  ),
-                                ],
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          );
-                        },
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFFF7ED),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.tune_rounded,
+                                size: 14,
+                                color: AppDesignSystem.orange600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
           ),
 
-          // 4. FLOATING "CURRENT LOCATION" BUTTON
+          // 4. FLOATING "CURRENT LOCATION" BUTTON (Sleek circular Swiggy/Zepto style)
           Positioned(
             right: 16,
             bottom: 230,
             child: Bounceable(
               onTap: _fetchCurrentGpsLocation,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.14),
@@ -584,26 +470,14 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _isLocating
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.orange600),
-                          )
-                        : const Icon(Icons.my_location_rounded, size: 18, color: AppDesignSystem.orange600),
-                    const SizedBox(width: 7),
-                    Text(
-                      'Current location',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12.5),
-                        fontWeight: FontWeight.w800,
-                        color: AppDesignSystem.orange600,
-                      ),
-                    ),
-                  ],
+                child: Center(
+                  child: _isLocating
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.2, color: AppDesignSystem.orange600),
+                        )
+                      : const Icon(Icons.my_location_rounded, size: 22, color: AppDesignSystem.orange600),
                 ),
               ),
             ),
@@ -715,8 +589,8 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                           Expanded(
                             child: Text(
                               _isServiceable
-                                  ? '⚡ ~${_calculateEtaText(_distanceKm)} Delivery • ${_distanceKm.toStringAsFixed(1)} km from ${_matchedHub?.name ?? "Hub"}'
-                                  : 'Outside active zone (${_distanceKm.toStringAsFixed(1)} km to nearest hub)',
+                                  ? 'Delivery in ~${_calculateEtaText(_distanceKm)} • Rapid Delivery'
+                                  : 'Location outside active delivery zone',
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11.5),
                                 fontWeight: FontWeight.w700,
@@ -735,9 +609,9 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       onTap: () async {
                         if (!_isServiceable) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
+                            const SnackBar(
                               backgroundColor: AppDesignSystem.red600,
-                              content: Text('Delivery is available within 5.0 km of our active operational hub (${_distanceKm.toStringAsFixed(1)} km away)'),
+                              content: Text('Delivery is currently unavailable at this location'),
                               behavior: SnackBarBehavior.floating,
                             ),
                           );

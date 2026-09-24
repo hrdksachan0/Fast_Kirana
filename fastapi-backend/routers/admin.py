@@ -324,6 +324,7 @@ async def save_admin_settings(
 async def get_sales_reports(
     startDate: Optional[str] = Query(None),
     endDate: Optional[str] = Query(None),
+    storeId: Optional[str] = Query(None),
     current_admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
@@ -343,17 +344,23 @@ async def get_sales_reports(
         else:
             end = datetime.combine(now.date(), time.max)
 
-        # 1. Fetch delivered orders
+        # 1. Fetch delivered orders with storeId filtering
+        effective_store = storeId or current_admin.assignedStoreId
         orders_stmt = select(Order).where(
             Order.status == OrderStatus.DELIVERED,
             Order.createdAt >= start,
             Order.createdAt <= end
-        ).order_by(Order.createdAt.asc())
+        )
+        if effective_store and effective_store.lower() != 'all':
+            orders_stmt = orders_stmt.where(Order.storeId == effective_store)
+
+        orders_stmt = orders_stmt.order_by(Order.createdAt.asc())
         orders_res = await db.execute(orders_stmt)
         orders = orders_res.scalars().all()
 
         # 2. Fetch order items (use raw SQL join for speed and variants hydration)
-        items_sql = """
+        store_clause = 'AND o."storeId" = :store_id' if effective_store and effective_store.lower() != 'all' else ''
+        items_sql = f"""
             SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
                    COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
                    c.name as "categoryName",
@@ -374,8 +381,12 @@ async def get_sales_reports(
             WHERE o.status::text = 'DELIVERED'
               AND o."createdAt" >= :start
               AND o."createdAt" <= :end
+              {store_clause}
         """
-        items_res = await db.execute(text(items_sql), {"start": start, "end": end})
+        params = {"start": start, "end": end}
+        if effective_store and effective_store.lower() != 'all':
+            params["store_id"] = effective_store
+        items_res = await db.execute(text(items_sql), params)
         order_items = [dict(r._mapping) for r in items_res.all()]
 
         items_by_order = {}
@@ -824,20 +835,35 @@ async def get_admin_dashboard(
 
 @router.get("/forecast")
 async def get_admin_inventory_forecast(
+    storeId: Optional[str] = Query(None),
     current_admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Generate inventory reorder suggestions and risk alerts based on 30-day velocity metrics.
+    Generate inventory reorder suggestions and risk alerts based on 30-day velocity metrics with storeId scoping.
     """
     try:
+        from models import StoreInventory
         # Load active products from categories other than cafe
         products_stmt = select(Product).options(selectinload(Product.category)).join(Category).where(
             Product.isAvailable == True,
+            Product.restaurantId.is_(None),
             Category.slug != "cafe"
         )
+        if storeId and storeId.lower() != 'all':
+            products_stmt = products_stmt.where(
+                Product.id.in_(
+                    select(StoreInventory.productId).where(StoreInventory.storeId == storeId)
+                )
+            )
         products_res = await db.execute(products_stmt)
         products = products_res.scalars().all()
+
+        local_stock_map = {}
+        if storeId and storeId.lower() != 'all':
+            inv_res = await db.execute(select(StoreInventory).where(StoreInventory.storeId == storeId))
+            for inv in inv_res.scalars().all():
+                local_stock_map[inv.productId] = int(inv.stock or 0)
 
         # Fetch order items from the last 30 days
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
@@ -845,6 +871,8 @@ async def get_admin_inventory_forecast(
             Order.status.in_([OrderStatus.DELIVERED, OrderStatus.SHIPPED, OrderStatus.PACKED, OrderStatus.CONFIRMED]),
             Order.createdAt >= thirty_days_ago
         )
+        if storeId and storeId.lower() != 'all':
+            items_stmt = items_stmt.where(Order.storeId == storeId)
         items_res = await db.execute(items_stmt)
         order_items = items_res.all()
 
@@ -867,6 +895,7 @@ async def get_admin_inventory_forecast(
 
         forecast_list = []
         for p in products:
+            p_stock = local_stock_map.get(p.id, p.stock) if (storeId and storeId.lower() != 'all') else p.stock
             sales = product_sales_map.get(p.id, {"totalQty": 0, "weekdayQty": 0, "weekendQty": 0})
 
             # Calculate velocities
@@ -900,9 +929,9 @@ async def get_admin_inventory_forecast(
                     weekend_velocity = round(daily_velocity * 1.25, 2)
 
             weekend_boost = round(weekend_velocity / weekday_velocity, 2) if weekday_velocity > 0 else 1.0
-            days_remaining = max(0, int(p.stock / daily_velocity)) if daily_velocity > 0 else 999
+            days_remaining = max(0, int(p_stock / daily_velocity)) if daily_velocity > 0 else 999
             
-            is_at_risk = days_remaining <= 6 or p.stock <= p.minStock
+            is_at_risk = days_remaining <= 6 or p_stock <= p.minStock
             raw_reorder = daily_velocity * 14
             recommended_reorder = max(50, int(math.ceil(raw_reorder / 10.0) * 10)) if is_at_risk else 0
 
@@ -910,7 +939,7 @@ async def get_admin_inventory_forecast(
             suggestion = "Stock levels healthy."
 
             if is_at_risk:
-                if p.stock == 0:
+                if p_stock == 0:
                     reorder_by_day = "TODAY"
                     suggestion = f"🔴 Out of stock! Reorder {recommended_reorder} units immediately."
                 elif days_remaining <= 1:
@@ -932,7 +961,7 @@ async def get_admin_inventory_forecast(
                 "name": p.name,
                 "slug": p.slug,
                 "imageUrl": p.imageUrl,
-                "stock": p.stock,
+                "stock": p_stock,
                 "minStock": p.minStock,
                 "costPrice": p.costPrice or round(p.price * 0.75, 2),
                 "price": float(p.price),

@@ -303,24 +303,30 @@ class Order {
       if (val == null) return DateTime.now();
       String s = val.toString().trim();
       if (s.isEmpty) return DateTime.now();
-      if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
-        s = '${s.replaceAll(' ', 'T')}Z';
+      if (s.endsWith('Z') || s.contains('+') || RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
+        final parsed = DateTime.tryParse(s);
+        if (parsed != null) return parsed.toLocal();
       }
+      final direct = DateTime.tryParse(s);
+      if (direct != null) return direct.toLocal();
+      s = '${s.replaceAll(' ', 'T')}Z';
       final parsed = DateTime.tryParse(s);
-      if (parsed == null) return DateTime.now();
-      return parsed.toLocal();
+      return parsed?.toLocal() ?? DateTime.now();
     }
 
     DateTime? parseNullableDate(dynamic val) {
       if (val == null) return null;
       String s = val.toString().trim();
       if (s.isEmpty) return null;
-      if (!s.endsWith('Z') && !s.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
-        s = '${s.replaceAll(' ', 'T')}Z';
+      if (s.endsWith('Z') || s.contains('+') || RegExp(r'-\d{2}:\d{2}$').hasMatch(s)) {
+        final parsed = DateTime.tryParse(s);
+        if (parsed != null) return parsed.toLocal();
       }
+      final direct = DateTime.tryParse(s);
+      if (direct != null) return direct.toLocal();
+      s = '${s.replaceAll(' ', 'T')}Z';
       final parsed = DateTime.tryParse(s);
-      if (parsed == null) return null;
-      return parsed.toLocal();
+      return parsed?.toLocal();
     }
 
     String? parseShopName() {
@@ -562,7 +568,7 @@ class Order {
     'refundAmount': refundAmount,
     'paymentMethod': paymentMethod.name.toUpperCase(),
     'paymentStatus': paymentStatus,
-    'estimatedDelivery': estimatedDelivery?.toIso8601String(),
+    'estimatedDelivery': estimatedDelivery?.toUtc().toIso8601String(),
     'deliveryPhoto': deliveryPhoto,
     'deliveryMethod': deliveryMethod,
     'shopName': shopName,
@@ -572,11 +578,11 @@ class Order {
     'customerName': customerName,
     'customerPhone': customerPhone,
     'customerAddress': customerAddress,
-    'createdAt': createdAt.toIso8601String(),
-    'confirmedAt': confirmedAt?.toIso8601String(),
-    'packedAt': packedAt?.toIso8601String(),
-    'shippedAt': shippedAt?.toIso8601String(),
-    'deliveredAt': deliveredAt?.toIso8601String(),
+    'createdAt': createdAt.toUtc().toIso8601String(),
+    'confirmedAt': confirmedAt?.toUtc().toIso8601String(),
+    'packedAt': packedAt?.toUtc().toIso8601String(),
+    'shippedAt': shippedAt?.toUtc().toIso8601String(),
+    'deliveredAt': deliveredAt?.toUtc().toIso8601String(),
     'items': items?.map((i) => i.toJson()).toList(),
     'kot_printed': kotPrinted,
   };

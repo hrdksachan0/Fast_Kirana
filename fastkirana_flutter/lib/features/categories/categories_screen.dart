@@ -94,7 +94,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       'webImage': 'https://www.fastkirana.in/packaged-foods.png',
     },
     'personal-care': {
-      'tagline': 'Soaps, Shampoos & Skincare',
+      'tagline': 'Soaps, Shampoos & Care',
       'items': 22,
       'btnColor': AppDesignSystem.teal600,
       'asset': 'assets/categories/personal_care_category.webp',
@@ -660,19 +660,27 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
             ),
             const SizedBox(height: 7),
 
-            // Category Name
-            Text(
-              category.name,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: context.isCompact ? 12 : 13.5,
-                fontWeight: FontWeight.w800,
-                color: category.slug.contains('fruit')
-                    ? AppDesignSystem.emerald600
-                    : AppDesignSystem.slate900,
-                letterSpacing: -0.3,
+            // Category Name (Truncation-Free 2-line box)
+            SizedBox(
+              height: context.isCompact ? 28 : 32,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  category.name,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: context.isCompact ? 11.5 : 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: category.slug.contains('fruit')
+                        ? AppDesignSystem.emerald600
+                        : AppDesignSystem.slate900,
+                    letterSpacing: -0.3,
+                    height: 1.15,
+                  ),
+                  maxLines: 2,
+                  softWrap: true,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
 
@@ -680,11 +688,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
             Text(
               tagline,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: context.isCompact ? 9 : 10,
+                fontSize: context.isCompact ? 8.5 : 9.5,
                 fontWeight: FontWeight.w600,
                 color: AppDesignSystem.slate500,
+                letterSpacing: -0.15,
               ),
               maxLines: 1,
+              softWrap: true,
               overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: context.isCompact ? 6 : 8),

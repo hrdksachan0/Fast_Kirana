@@ -70,6 +70,23 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
     super.dispose();
   }
 
+  String _formatStatusLabel(String status) {
+    if (status == 'ALL') {
+      return widget.selectedTab == 0 ? 'All Live' : 'All History';
+    }
+    if (status == 'PAYMENT_PENDING') {
+      return '⚠️ Payment Pending${widget.displayPendingPaymentCount > 0 ? ' (${widget.displayPendingPaymentCount})' : ''}';
+    }
+    if (status == 'ADMIN_PENDING') return 'Admin Pending';
+    if (status == 'PENDING') return 'Kitchen Pending';
+    if (status == 'CONFIRMED') return 'Confirmed';
+    if (status == 'PACKED') return 'Packed';
+    if (status == 'SHIPPED') return 'Shipped';
+    if (status == 'DELIVERED') return 'Delivered';
+    if (status == 'CANCELLED') return 'Cancelled';
+    return status;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -288,11 +305,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
                       }
                     },
                     label: Text(
-                      status == 'ALL'
-                          ? (widget.selectedTab == 0 ? 'All Live' : 'All History')
-                          : (status == 'PAYMENT_PENDING'
-                              ? '⚠️ Payment Pending${widget.displayPendingPaymentCount > 0 ? ' (${widget.displayPendingPaymentCount})' : ''}'
-                              : status),
+                      _formatStatusLabel(status),
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11.5),
                         fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,

@@ -582,8 +582,9 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF0F172A),
                                 letterSpacing: -0.4,
+                                height: 1.2,
                               ),
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -635,8 +636,9 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
 
                       const SizedBox(height: 6),
 
-                      // Location & Distance Row (Sanitized Address: Zero "20..." Truncation)
+                      // Location & Distance Row (Sanitized Address: Zero Truncation)
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFF94A3B8)),
                           const SizedBox(width: 4),
@@ -647,8 +649,10 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                                 fontSize: Responsive.scaledFontSize(context, 12),
                                 fontWeight: FontWeight.w500,
                                 color: const Color(0xFF64748B),
+                                height: 1.25,
                               ),
-                              maxLines: 1,
+                              maxLines: 2,
+                              softWrap: true,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),

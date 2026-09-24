@@ -563,13 +563,13 @@ class HomeInfiniteFeed {
             ),
           ),
 
-          // 2-Column Luxury Bento Grid of Categories
+          // 2-Column Luxury Bento Grid of Categories (Truncation-Free)
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             sliver: SliverGrid(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
-                childAspectRatio: context.isCompact ? 1.95 : 2.12,
+                childAspectRatio: context.isCompact ? 1.80 : 1.90,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
               ),
@@ -590,7 +590,7 @@ class HomeInfiniteFeed {
                       );
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -607,20 +607,20 @@ class HomeInfiniteFeed {
                         children: [
                           // Luxury Image Container with soft category-calibrated tint
                           Container(
-                            width: 48,
-                            height: 48,
+                            width: 44,
+                            height: 44,
                             decoration: BoxDecoration(
                               color: bgTint,
-                              borderRadius: BorderRadius.circular(13),
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: borderTint, width: 0.9),
                             ),
                             padding: const EdgeInsets.all(2),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(11),
+                              borderRadius: BorderRadius.circular(10),
                               child: CategoryVisualHelper.buildAvatarImage(context, cat),
                             ),
                           ),
-                          const SizedBox(width: 9),
+                          const SizedBox(width: 8),
 
                           // Text Content (Truncation-Free & Clean)
                           Expanded(
@@ -631,16 +631,17 @@ class HomeInfiniteFeed {
                                 Text(
                                   cat.name,
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                                    fontSize: Responsive.scaledFontSize(context, 11),
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF0F172A),
-                                    height: 1.2,
+                                    height: 1.15,
                                     letterSpacing: -0.2,
                                   ),
                                   maxLines: 2,
+                                  softWrap: true,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 3),
+                                const SizedBox(height: 2),
                                 Text(
                                   '$totalCount+ items',
                                   style: GoogleFonts.plusJakartaSans(
@@ -651,13 +652,6 @@ class HomeInfiniteFeed {
                                 ),
                               ],
                             ),
-                          ),
-
-                          // Clean Nav Arrow
-                          const Icon(
-                            Icons.chevron_right_rounded,
-                            size: 17,
-                            color: Color(0xFF94A3B8),
                           ),
                         ],
                       ),
