@@ -43,9 +43,10 @@ async def get_current_user(
         if user and not is_token_expired(user):
             return user
 
-    # 2. Check NextAuth Session Cookie & Headers if request object is present
+    # 2. Check direct FastAPI token cookie or NextAuth Session Cookie
     if request is not None:
         session_cookie = (
+            request.cookies.get("fastapi_token") or
             request.cookies.get("__Secure-authjs.session-token") or
             request.cookies.get("__Secure-next-auth.session-token") or
             request.cookies.get("authjs.session-token") or

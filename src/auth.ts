@@ -7,6 +7,7 @@ import { authConfig } from './auth.config'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 import { isDevBypassActive, getDevBypassPassword } from '@/lib/auth-bypass-config'
 import { findCanonicalUser, getCanonicalEmail, getAssignedRestaurantId, isRootAdminAccount } from '@/lib/superadmin-config'
+import { SignJWT } from 'jose'
 
 const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -63,6 +64,33 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         session.user.assignedStoreId = token.assignedStoreId as string
         if (token.email) {
           session.user.email = token.email as string
+        }
+
+        // Bridge to FastAPI: Generate standard HS256 JWT
+        try {
+          const secretStr = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || ''
+          if (secretStr && token.id) {
+            const secret = new TextEncoder().encode(secretStr)
+            const expSeconds = 30 * 24 * 60 * 60 // 30 days
+            const fastToken = await new SignJWT({
+              id: token.id,
+              sub: token.id,
+              email: (token.email || session.user?.email || null) as string | null,
+              role: session.user.role,
+              phone: (token.phone || (session.user as any)?.phone || null) as string | null,
+              assignedRestaurantId: (token.assignedRestaurantId || null) as string | null,
+              assignedStoreId: (token.assignedStoreId || null) as string | null,
+            })
+              .setProtectedHeader({ alg: 'HS256' })
+              .setIssuedAt()
+              .setExpirationTime('30d')
+              .sign(secret)
+
+            session.fastapiToken = fastToken
+            session.user.fastapiToken = fastToken
+          }
+        } catch (jwtErr) {
+          console.error('Error signing FastAPI token in auth session:', jwtErr)
         }
       }
       return session

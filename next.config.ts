@@ -166,6 +166,34 @@ const nextConfig: NextConfig = {
           source: '/api/delivery/:path*',
           destination: `${apiDest}/api/delivery/:path*`,
         },
+        {
+          source: '/api/addresses/:path*',
+          destination: `${apiDest}/api/addresses/:path*`,
+        },
+        {
+          source: '/api/addresses',
+          destination: `${apiDest}/api/addresses`,
+        },
+        {
+          source: '/api/profile/:path*',
+          destination: `${apiDest}/api/profile/:path*`,
+        },
+        {
+          source: '/api/profile',
+          destination: `${apiDest}/api/profile`,
+        },
+        {
+          source: '/api/fcm/:path*',
+          destination: `${apiDest}/api/fcm/:path*`,
+        },
+        {
+          source: '/api/admin/rider-cash/:path*',
+          destination: `${apiDest}/api/admin/rider-cash/:path*`,
+        },
+        {
+          source: '/api/admin/rider-cash',
+          destination: `${apiDest}/api/admin/rider-cash`,
+        },
       ],
       afterFiles: [],
       fallback: [],

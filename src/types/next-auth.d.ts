@@ -8,9 +8,11 @@ declare module 'next-auth' {
     assignedRestaurantId?: string | null
     assignedStoreId?: string | null
     needsPhoneVerification?: boolean
+    fastapiToken?: string
   }
 
   interface Session {
+    fastapiToken?: string
     user: {
       id?: string
       role?: 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN'
@@ -18,6 +20,7 @@ declare module 'next-auth' {
       assignedRestaurantId?: string | null
       assignedStoreId?: string | null
       needsPhoneVerification?: boolean
+      fastapiToken?: string
     } & DefaultSession['user']
   }
 }
@@ -30,5 +33,6 @@ declare module 'next-auth/jwt' {
     assignedRestaurantId?: string | null
     assignedStoreId?: string | null
     needsPhoneVerification?: boolean
+    fastapiToken?: string
   }
 }
