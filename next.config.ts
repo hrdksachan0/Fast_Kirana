@@ -132,8 +132,36 @@ const nextConfig: NextConfig = {
           source: '/api/coupons',
           destination: `${apiDest}/api/coupons`,
         },
-        // Note: /api/stores and /api/store-status are kept local to Next.js where handlers exist,
-        // preventing 404s until Railway deployment completes.
+        // Store Hubs, Store Status & Location Geofencing -> FastAPI
+        {
+          source: '/api/stores/:path*',
+          destination: `${apiDest}/api/stores/:path*`,
+        },
+        {
+          source: '/api/stores',
+          destination: `${apiDest}/api/stores`,
+        },
+        {
+          source: '/api/store-status',
+          destination: `${apiDest}/api/store-status`,
+        },
+        {
+          source: '/api/delivery-check',
+          destination: `${apiDest}/api/delivery-check`,
+        },
+        {
+          source: '/api/location/:path*',
+          destination: `${apiDest}/api/location/:path*`,
+        },
+        // Core Customer Orders, Status, Tracking & COD -> FastAPI
+        {
+          source: '/api/orders/:path*',
+          destination: `${apiDest}/api/orders/:path*`,
+        },
+        {
+          source: '/api/orders',
+          destination: `${apiDest}/api/orders`,
+        },
         {
           source: '/api/store-settings/:path*',
           destination: `${apiDest}/api/store-settings/:path*`,
