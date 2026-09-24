@@ -1013,5 +1013,7 @@ export function useAdminProducts({
     handleToggleProductAvailability,
     handleCreateProduct,
     handleDeleteProduct,
+    allProducts,
+    setAllProducts,
   }
 }

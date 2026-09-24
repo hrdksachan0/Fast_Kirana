@@ -84,6 +84,28 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
   const [forecast, setForecast] = useState<any[]>([])
   const [loadingForecast, setLoadingForecast] = useState(true)
   const [inwardingId, setInwardingId] = useState<string | null>(null)
+  const [internalProducts, setInternalProducts] = useState<Product[]>(Array.isArray(products) && products.length > 0 ? products : [])
+
+  useEffect(() => {
+    if (Array.isArray(products) && products.length > 0) {
+      setInternalProducts(products)
+    } else {
+      const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
+      fetch(`/api/products?limit=1000${storeParam}&t=${Date.now()}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          const list = Array.isArray(data?.products)
+            ? data.products
+            : Array.isArray(data)
+            ? data
+            : []
+          if (list.length > 0) {
+            setInternalProducts(list)
+          }
+        })
+        .catch((err) => console.error('Failed to auto-fetch analytics products:', err))
+    }
+  }, [products, storeId])
 
   const fetchForecast = async () => {
     try {
@@ -141,6 +163,10 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
     }
   }
 
+  const effectiveProducts = useMemo(() => {
+    return Array.isArray(products) && products.length > 0 ? products : internalProducts
+  }, [products, internalProducts])
+
   const metrics = useMemo(() => {
     let groceryStockValue = 0
     let groceryCostValue = 0
@@ -153,7 +179,7 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
 
     let cafeActiveCount = 0
 
-    for (const p of products || []) {
+    for (const p of effectiveProducts || []) {
       if (!p || !p.isAvailable) continue
       const isCafe = p.category?.slug === 'cafe' || p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
       const isRestaurant = p.category?.slug === 'restaurant' || p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
@@ -201,13 +227,13 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
         totalActiveProducts: cafeActiveCount,
       }
     }
-  }, [products])
+  }, [effectiveProducts])
 
   // 2. Group products by category and calculate stock value (skipping Cafe and Restaurant product valuations)
   const categoryMetrics = useMemo(() => {
     const data: Record<string, { name: string; count: number; value: number; lowStock: number }> = {}
 
-    for (const p of products || []) {
+    for (const p of effectiveProducts || []) {
       if (!p || !p.isAvailable) continue
       const isCafe = p.category?.slug === 'cafe' || p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
       const isRestaurant = p.category?.slug === 'restaurant' || p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
@@ -225,7 +251,7 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
     }
 
     return Object.values(data).sort((a, b) => b.value - a.value)
-  }, [products])
+  }, [effectiveProducts])
 
   return (
     <div className="space-y-6">
