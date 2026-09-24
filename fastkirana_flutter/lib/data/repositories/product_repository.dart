@@ -25,10 +25,10 @@ class ProductRepository {
   static final Map<String, String> _eTags = {};
 
   // ─── Disk cache keys ────────────────────────────────────────
-  static String _diskProductsKey(String hubId) => 'cached_products_${hubId}_v6';
-  static String _diskFetchTimestampKey(String hubId) => 'cached_products_ts_${hubId}_v6';
-  static String _diskCategoriesKey([String? hubId]) => 'cached_categories_${hubId ?? "global"}_v6';
-  static String _diskCategoryTimestampKey([String? hubId]) => 'cached_categories_ts_${hubId ?? "global"}_v6';
+  static String _diskProductsKey(String hubId) => 'cached_products_${hubId}_v7';
+  static String _diskFetchTimestampKey(String hubId) => 'cached_products_ts_${hubId}_v7';
+  static String _diskCategoriesKey([String? hubId]) => 'cached_categories_${hubId ?? "global"}_v7';
+  static String _diskCategoryTimestampKey([String? hubId]) => 'cached_categories_ts_${hubId ?? "global"}_v7';
   static const _cacheTTLMinutes = 2; // 2 minutes TTL for high freshness while retaining instant render
 
   // ─── Preload disk cache into memory ──────────────────────────
@@ -611,20 +611,20 @@ class ProductRepository {
   }
 
   Future<List<Category>> getCategories({String? storeId, bool forceRefresh = false}) async {
-    final effectiveHub = (storeId != null && storeId.isNotEmpty) ? storeId : AppConfig.darkstoreId;
+    const effectiveHub = 'global';
     final cachedForHub = _hubCachedCategories[effectiveHub];
     final lastFetch = _hubCategoryLastFetchTime[effectiveHub];
     final isMemFresh = lastFetch != null && DateTime.now().difference(lastFetch).inMinutes < _cacheTTLMinutes;
 
-    // 1. In-memory cache hit
-    if (!forceRefresh && isMemFresh && cachedForHub != null && cachedForHub.isNotEmpty) {
+    // 1. In-memory cache hit (only if healthy count >= 10)
+    if (!forceRefresh && isMemFresh && cachedForHub != null && cachedForHub.length >= 10) {
       return cachedForHub;
     }
 
-    // 2. Disk cache hit (survives app restarts — 0ms instant render)
+    // 2. Disk cache hit (survives app restarts — 0ms instant render, only if full taxonomy >= 10)
     if (!forceRefresh) {
       final diskCategories = await _loadCategoriesFromDisk(effectiveHub);
-      if (diskCategories != null && diskCategories.isNotEmpty) {
+      if (diskCategories != null && diskCategories.length >= 10) {
         _hubCachedCategories[effectiveHub] = diskCategories;
         _cachedCategories = diskCategories;
         final diskFresh = await _isDiskCategoryCacheFresh(effectiveHub);
@@ -632,13 +632,11 @@ class ProductRepository {
           return diskCategories;
         }
         // Background refresh if stale without blocking the immediate UI return
-        dio.get('/api/categories', queryParameters: {
-          if (effectiveHub.isNotEmpty && effectiveHub != 'all') 'storeId': effectiveHub,
-        }).then((response) {
+        dio.get('/api/categories').then((response) {
           final data = response.data;
           if (data is List) {
             final cats = data.map((json) => Category.fromJson(Map<String, dynamic>.from(json as Map))).toList();
-            if (cats.isNotEmpty) {
+            if (cats.length >= 10) {
               _hubCachedCategories[effectiveHub] = cats;
               _cachedCategories = cats;
               _hubCategoryLastFetchTime[effectiveHub] = DateTime.now();
@@ -650,24 +648,24 @@ class ProductRepository {
       }
     }
 
-    // 3. Network fetch
+    // 3. Network fetch (Global categories taxonomy)
     try {
-      final response = await dio.get('/api/categories', queryParameters: {
-        if (effectiveHub.isNotEmpty && effectiveHub != 'all') 'storeId': effectiveHub,
-      });
+      final response = await dio.get('/api/categories');
       final data = response.data;
       if (data is List) {
         final cats = data.map((json) => Category.fromJson(Map<String, dynamic>.from(json as Map))).toList();
         if (cats.isNotEmpty) {
-          _hubCachedCategories[effectiveHub] = cats;
-          _cachedCategories = cats;
-          _hubCategoryLastFetchTime[effectiveHub] = DateTime.now();
-          _saveCategoriesToDisk(cats, effectiveHub);
+          if (cats.length >= 10) {
+            _hubCachedCategories[effectiveHub] = cats;
+            _cachedCategories = cats;
+            _hubCategoryLastFetchTime[effectiveHub] = DateTime.now();
+            _saveCategoriesToDisk(cats, effectiveHub);
+          }
           return cats;
         }
       }
     } catch (e, st) {
-      LoggerService.error('ProductRepository: getCategories failed for storeId $effectiveHub', e, st);
+      LoggerService.error('ProductRepository: getCategories failed', e, st);
     }
 
     // Disk cache fallback on network failure even if stale

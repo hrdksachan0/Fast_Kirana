@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { RestaurantManager } from '@/components/admin/restaurant-manager'
 
 import { extractCityFromStoreName } from '@/lib/store-resolver'
+import { isRootAdminAccount } from '@/lib/superadmin-config'
 
 export const revalidate = 0
 
@@ -11,8 +12,8 @@ export default async function AdminRestaurantsPage(props: {
   searchParams?: Promise<{ storeId?: string }>
 }) {
   const session = await auth()
-  if (!session || session.user?.role !== 'ADMIN') {
-    redirect('/')
+  if (!session) {
+    redirect('/login?callbackUrl=/admin/restaurants')
   }
 
   const searchParams = props.searchParams ? await props.searchParams : undefined
@@ -22,22 +23,24 @@ export default async function AdminRestaurantsPage(props: {
   }) : null
 
   const userAssignedStoreId = dbUser?.assignedStoreId || (session.user as any)?.assignedStoreId || null
+
+  const isMaster = isRootAdminAccount({
+    email: dbUser?.email || session.user?.email,
+    phone: dbUser?.phone || (session.user as any)?.phone,
+    role: dbUser?.role || session.user?.role,
+    assignedStoreId: userAssignedStoreId,
+  })
+
+  const role = (dbUser?.role || session.user?.role)?.toUpperCase()
+  if (!isMaster && role !== 'ADMIN' && role !== 'SUPER_ADMIN' && role !== 'SUPERADMIN' && role !== 'RESTAURANT_OWNER' && role !== 'CHEF') {
+    redirect('/')
+  }
+
   const initialStoreId = userAssignedStoreId || searchParams?.storeId || null
 
   let restaurantWhere: any = {}
   if (initialStoreId && initialStoreId !== 'all') {
-    const store = await prisma.darkStore.findUnique({
-      where: { id: initialStoreId },
-      select: { name: true }
-    })
-    const storeCity = store ? extractCityFromStoreName(store.name) : ''
-    if (storeCity) {
-      restaurantWhere.city = { contains: storeCity, mode: 'insensitive' }
-    } else if (store) {
-      restaurantWhere.city = { contains: store.name, mode: 'insensitive' }
-    } else {
-      restaurantWhere.city = '__NO_MATCH__'
-    }
+    restaurantWhere.storeId = initialStoreId
   }
 
   const thirtyDaysAgo = new Date()

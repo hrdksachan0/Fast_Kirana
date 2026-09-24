@@ -5,11 +5,28 @@ import { RestaurantForm } from '@/components/admin/restaurant-form'
 import { ChevronLeft, Package } from 'lucide-react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
+import { isRootAdminAccount } from '@/lib/superadmin-config'
 
 export default async function EditRestaurantPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  const role = session?.user?.role
-  if (!session || (role !== 'ADMIN' && role !== 'RESTAURANT_OWNER' && role !== 'CHEF')) {
+  if (!session) {
+    redirect('/login?callbackUrl=/admin/restaurants')
+  }
+
+  const dbUser = session?.user?.id ? await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, role: true, phone: true, email: true, assignedStoreId: true }
+  }) : null
+
+  const isMaster = isRootAdminAccount({
+    email: dbUser?.email || session.user?.email,
+    phone: dbUser?.phone || (session.user as any)?.phone,
+    role: dbUser?.role || session.user?.role,
+    assignedStoreId: dbUser?.assignedStoreId || (session.user as any)?.assignedStoreId,
+  })
+
+  const role = (dbUser?.role || session.user?.role)?.toUpperCase()
+  if (!isMaster && role !== 'ADMIN' && role !== 'SUPER_ADMIN' && role !== 'SUPERADMIN' && role !== 'RESTAURANT_OWNER' && role !== 'CHEF') {
     redirect('/admin')
   }
 

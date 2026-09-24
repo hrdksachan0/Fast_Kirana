@@ -1,12 +1,31 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
+import { prisma } from '@/lib/prisma'
+import { isRootAdminAccount } from '@/lib/superadmin-config'
 import { RestaurantForm } from '@/components/admin/restaurant-form'
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function NewRestaurantPage() {
   const session = await auth()
-  if (!session || session.user?.role !== 'ADMIN') {
+  if (!session) {
+    redirect('/login?callbackUrl=/admin/restaurants/new')
+  }
+
+  const dbUser = session?.user?.id ? await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, role: true, phone: true, email: true, assignedStoreId: true }
+  }) : null
+
+  const isMaster = isRootAdminAccount({
+    email: dbUser?.email || session.user?.email,
+    phone: dbUser?.phone || (session.user as any)?.phone,
+    role: dbUser?.role || session.user?.role,
+    assignedStoreId: dbUser?.assignedStoreId || (session.user as any)?.assignedStoreId,
+  })
+
+  const role = (dbUser?.role || session.user?.role)?.toUpperCase()
+  if (!isMaster && role !== 'ADMIN' && role !== 'SUPER_ADMIN' && role !== 'SUPERADMIN') {
     redirect('/')
   }
 

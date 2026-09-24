@@ -119,16 +119,6 @@ export default async function AdminPage(props: {
       ? Prisma.sql`AND "storeId" = ${initialStoreId}`
       : Prisma.empty
 
-    let initialStoreCity = ''
-    if (initialStoreId && initialStoreId !== 'all') {
-      const storeObj = await prisma.darkStore.findUnique({
-        where: { id: initialStoreId },
-        select: { name: true }
-      })
-      if (storeObj) {
-        initialStoreCity = extractCityFromStoreName(storeObj.name)
-      }
-    }
 
     const [todayStatsRaw, statusStatsRaw, ...results] = await Promise.all([
       prisma.$queryRaw<Array<{
@@ -259,7 +249,7 @@ export default async function AdminPage(props: {
       prisma.restaurant.findMany({
         where: {
           isActive: true,
-          ...(initialStoreCity ? { city: { contains: initialStoreCity, mode: 'insensitive' } } : {})
+          ...(initialStoreId && initialStoreId !== 'all' ? { storeId: initialStoreId } : {})
         },
         orderBy: { sortOrder: 'asc' },
         select: {

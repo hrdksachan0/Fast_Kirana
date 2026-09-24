@@ -15,8 +15,7 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) {
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
-  final hub = ref.watch(currentStoreHubProvider);
-  return repo.getCategories(storeId: hub.id);
+  return repo.getCategories();
 });
 
 final trendingProductsProvider = FutureProvider<List<Product>>((ref) async {
@@ -57,7 +56,7 @@ final homeProductCatalogProvider = FutureProvider<List<Product>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
-  return repo.getProducts(limit: 1000, storeId: hub.id, includeRestaurants: false);
+  return repo.getProducts(limit: 1000, storeId: hub.id, includeRestaurants: false, forceRefresh: true);
 });
 
 final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<String>>((ref, productIds) async {

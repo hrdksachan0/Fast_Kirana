@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { toast } from 'sonner'
+import { useMemo } from 'react'
 import { PlusCircle, X, ImageIcon, Sparkles, Loader2, Trash } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Category } from '@prisma/client'
@@ -72,15 +71,6 @@ export function CategoriesTab({
   allProducts,
 }: CategoriesTabProps) {
   const isStoreScoped = Boolean(selectedHubId && selectedHubId !== 'all')
-  const [viewScope, setViewScope] = useState<'store' | 'all'>('store')
-
-  useEffect(() => {
-    if (isStoreScoped) {
-      setViewScope('store')
-    } else {
-      setViewScope('all')
-    }
-  }, [selectedHubId, isStoreScoped])
 
   const { storeCatIds, storeProductCounts } = useMemo(() => {
     const ids = new Set<string>()
@@ -94,20 +84,17 @@ export function CategoriesTab({
         ids.add(catId)
         counts[catId] = (counts[catId] || 0) + 1
       }
-      if (p.category?.parentId) {
-        ids.add(String(p.category.parentId))
-      }
     }
     return { storeCatIds: ids, storeProductCounts: counts }
   }, [allProducts])
 
-  const activeScope = isStoreScoped ? viewScope : 'all'
   const filteredCategories: CategoryWithCount[] = useMemo(() => {
-    if (activeScope === 'store') {
-      return categories.filter((c) => storeCatIds.has(c.id))
+    const validCats = categories.filter((c) => c.slug !== 'cafe' && c.slug !== 'restaurant')
+    if (isStoreScoped) {
+      return validCats.filter((c) => storeCatIds.has(c.id))
     }
-    return categories
-  }, [categories, activeScope, storeCatIds])
+    return validCats
+  }, [categories, isStoreScoped, storeCatIds])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -116,44 +103,22 @@ export function CategoriesTab({
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h3 className="font-extrabold text-text-primary text-base flex items-center gap-2">
-              <span>📁 Grocery Categories &amp; Subcategories</span>
+              <span>📁 Categories</span>
             </h3>
-            {isStoreScoped && (
-              <div className="inline-flex items-center p-0.5 bg-muted/60 rounded-xl border border-border text-[11px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setViewScope('store')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    viewScope === 'store'
-                      ? 'bg-primary text-primary-foreground shadow-xs font-black'
-                      : 'text-text-secondary hover:text-text-primary cursor-pointer'
-                  }`}
-                >
-                  🏪 Current Store ({storeCategoryCount ?? storeCatIds.size})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewScope('all')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    viewScope === 'all'
-                      ? 'bg-primary text-primary-foreground shadow-xs font-black'
-                      : 'text-text-secondary hover:text-text-primary cursor-pointer'
-                  }`}
-                >
-                  🌐 Master Catalog ({categories.filter((c) => c.slug !== 'cafe' && c.slug !== 'restaurant').length})
-                </button>
-              </div>
-            )}
-            {!isStoreScoped && (
+            {isStoreScoped ? (
               <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
-                {categories.filter((c) => c.slug !== 'cafe' && c.slug !== 'restaurant').length} Total
+                🏪 Store Categories: {filteredCategories.length}
+              </span>
+            ) : (
+              <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
+                {filteredCategories.length} Total
               </span>
             )}
           </div>
           <p className="text-xs text-text-secondary mt-1">
-            {isStoreScoped && viewScope === 'store'
-              ? 'Showing only categories with inventory stocked in this outlet.'
-              : 'Create main categories and nested subcategories, upload category photos or select from photo library.'}
+            {isStoreScoped
+              ? 'Showing only categories active in this store outlet.'
+              : 'Manage product categories and upload category photos.'}
           </p>
         </div>
 
@@ -165,11 +130,11 @@ export function CategoriesTab({
           className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all shadow-xs cursor-pointer active:scale-98"
         >
           <PlusCircle className="h-4 w-4" />
-          <span>{showAddCategory ? 'Close Form' : 'Add Category / Subcategory'}</span>
+          <span>{showAddCategory ? 'Close Form' : 'Add Category'}</span>
         </button>
       </div>
 
-      {/* Add Category / Subcategory Form */}
+      {/* Add Category Form */}
       <AnimatePresence>
         {showAddCategory && (
           <motion.form
@@ -180,39 +145,21 @@ export function CategoriesTab({
             className="bg-card p-6 border border-border rounded-2xl shadow-md space-y-5 max-w-xl animate-slide-up"
           >
             <div className="border-b border-border/60 pb-3 flex justify-between items-center">
-              <h4 className="font-extrabold text-text-primary text-sm">Create Category / Subcategory</h4>
+              <h4 className="font-extrabold text-text-primary text-sm">Create Category</h4>
               <span className="text-[10px] text-text-muted font-mono">POST /api/categories</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="text-[10px] font-bold text-text-secondary block mb-1">Category / Subcategory Name *</label>
+                <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Name *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Fresh Milk or Chocolates & Sweets"
+                  placeholder="e.g. Fresh Milk, Snacks, or Fruits & Vegetables"
                   value={newCategory.name}
                   onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                 />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="text-[10px] font-bold text-text-secondary block mb-1">Parent Category (Select for Subcategory)</label>
-                <select
-                  value={newCategory.parentId}
-                  onChange={(e) => setNewCategory({ ...newCategory, parentId: e.target.value })}
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-bold cursor-pointer"
-                >
-                  <option value="">📁 None (Main Root Category)</option>
-                  {categories
-                    .filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant' && !c.parentId)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        🏷️ Subcategory of: {c.name}
-                      </option>
-                    ))}
-                </select>
               </div>
 
               <div className="sm:col-span-2">
@@ -282,7 +229,7 @@ export function CategoriesTab({
                 </div>
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className="text-[10px] font-bold text-text-secondary block mb-1">Sort Order Weight</label>
                 <input
                   type="number"
@@ -298,7 +245,7 @@ export function CategoriesTab({
               <button
                 type="button"
                 onClick={() => setShowAddCategory(false)}
-                className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all"
+                className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
               >
                 Cancel
               </button>
@@ -313,7 +260,7 @@ export function CategoriesTab({
                     Creating...
                   </>
                 ) : (
-                  'Save Category / Subcategory'
+                  'Save Category'
                 )}
               </button>
             </div>
@@ -330,7 +277,7 @@ export function CategoriesTab({
           >
             <div className="border-b border-border/60 pb-3 flex justify-between items-center">
               <div>
-                <h4 className="font-black text-text-primary text-base">Edit Category / Subcategory</h4>
+                <h4 className="font-black text-text-primary text-base">Edit Category</h4>
                 <p className="text-[10px] text-text-muted">ID: {editingCategory.id}</p>
               </div>
               <button
@@ -352,24 +299,6 @@ export function CategoriesTab({
                   onChange={(e) => setCategoryEditForm({ ...categoryEditForm, name: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                 />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-text-secondary block mb-1">Parent Category (Select for Subcategory)</label>
-                <select
-                  value={categoryEditForm.parentId}
-                  onChange={(e) => setCategoryEditForm({ ...categoryEditForm, parentId: e.target.value })}
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-bold cursor-pointer"
-                >
-                  <option value="">📁 None (Main Root Category)</option>
-                  {categories
-                    .filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant' && !c.parentId && c.id !== editingCategory.id)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        🏷️ Subcategory of: {c.name}
-                      </option>
-                    ))}
-                </select>
               </div>
 
               <div>
@@ -467,203 +396,108 @@ export function CategoriesTab({
         </div>
       )}
 
-      {/* Categories & Subcategories Tree List Table */}
+      {/* Categories Tree List Table */}
       <div className="bg-card border border-border rounded-2xl p-5 shadow-sm overflow-hidden space-y-4">
-        {(() => {
-          const groceryCats = filteredCategories.filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant')
-
-          if (groceryCats.length === 0) {
-            return (
-              <div className="text-center py-12 px-4 bg-muted/10 rounded-2xl border border-dashed border-border/80 my-2">
-                <div className="text-4xl mb-3">🏪</div>
-                <h4 className="text-sm font-extrabold text-text-primary">
-                  {isStoreScoped ? 'New Store Setup — No Categories Stocked Yet' : 'No Categories Found'}
-                </h4>
-                <p className="text-xs text-text-secondary max-w-md mx-auto mt-1 mb-4">
-                  {isStoreScoped
-                    ? 'This store has 0 products stocked, so active store categories are empty. Inward items or assign products to this store to activate categories.'
-                    : 'Get started by creating your first product category using the button above.'}
-                </p>
-                {isStoreScoped && (
-                  <button
-                    type="button"
-                    onClick={() => setViewScope('all')}
-                    className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl transition-all cursor-pointer"
-                  >
-                    View Global Master Catalog ({categories.filter((c) => c.slug !== 'cafe' && c.slug !== 'restaurant').length} categories)
-                  </button>
-                )}
-              </div>
-            )
-          }
-
-          const parentCats = groceryCats.filter(c => !c.parentId)
-          const childCats = groceryCats.filter(c => !!c.parentId)
-          const processedChildIds = new Set<string>()
-
-          const renderRow = (c: CategoryWithCount, isSub: boolean, parentCat?: CategoryWithCount | null) => {
-            const directCount = activeScope === 'store' ? (storeProductCounts[c.id] || 0) : (c._count?.products || 0)
-            const subCats = !isSub ? childCats.filter(sub => sub.parentId === c.id) : []
-            const subProductsCount = subCats.reduce(
-              (sum, s) => sum + (activeScope === 'store' ? (storeProductCounts[s.id] || 0) : (s._count?.products || 0)),
-              0
-            )
-            const totalCount = directCount + subProductsCount
+        {filteredCategories.length === 0 ? (
+          <div className="text-center py-12 px-4 bg-muted/10 rounded-2xl border border-dashed border-border/80 my-2">
+            <div className="text-4xl mb-3">🏪</div>
+            <h4 className="text-sm font-extrabold text-text-primary">
+              {isStoreScoped ? 'New Store Setup — No Categories Found' : 'No Categories Found'}
+            </h4>
+            <p className="text-xs text-text-secondary max-w-md mx-auto mt-1 mb-2">
+              {isStoreScoped
+                ? 'This store has no active categories yet. Inward products or add a new category to get started.'
+                : 'Get started by creating your first product category using the button above.'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
+                  <th className="py-3 px-4">ID</th>
+                  <th className="py-3 px-4">Photo / Icon</th>
+                  <th className="py-3 px-4">Category Name</th>
+                  <th className="py-3 px-4">Slug Identifier</th>
+                  <th className="py-3 px-4 text-center">Sort Order</th>
+                  <th className="py-3 px-4 text-center">Items Stocked</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
+                {filteredCategories.map((c) => {
+                  const directCount = isStoreScoped
+                    ? storeProductCounts[c.id] || 0
+                    : c._count?.products || 0
 
                   return (
-                  <tr key={c.id} className={`hover:bg-muted/30 transition-colors ${isSub ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.02]' : 'bg-card'}`}>
-                    <td className="py-3 px-4 font-mono text-[11px] font-bold text-text-muted">
-                      <span className={isSub ? 'text-amber-600 dark:text-amber-400 pl-4 inline-block' : 'text-primary'}>
-                        {isSub && <span className="text-text-muted mr-1 font-sans">↳</span>}
+                    <tr key={c.id} className="hover:bg-muted/30 transition-colors bg-card">
+                      <td className="py-3 px-4 font-mono text-[11px] font-bold text-primary">
                         {c.id}
-                      </span>
-                    </td>
+                      </td>
 
-                    <td className="py-3 px-4">
-                      <span className="h-9 w-9 bg-muted/50 border flex items-center justify-center rounded-xl overflow-hidden shadow-2xs">
-                        {c.imageUrl && (c.imageUrl.startsWith('data:image/') || c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http')) ? (
-                          <img src={c.imageUrl} alt={c.name} className="h-full w-full object-cover" />
-                        ) : c.imageUrl && c.imageUrl.length < 5 ? (
-                          <span className="text-lg">{c.imageUrl}</span>
-                        ) : (
-                          <span className="text-base">📦</span>
-                        )}
-                      </span>
-                    </td>
+                      <td className="py-3 px-4">
+                        <span className="h-9 w-9 bg-muted/50 border flex items-center justify-center rounded-xl overflow-hidden shadow-2xs">
+                          {c.imageUrl && (c.imageUrl.startsWith('data:image/') || c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http')) ? (
+                            <img src={c.imageUrl} alt={c.name} className="h-full w-full object-cover" />
+                          ) : c.imageUrl && c.imageUrl.length < 5 ? (
+                            <span className="text-lg">{c.imageUrl}</span>
+                          ) : (
+                            <span className="text-base">📦</span>
+                          )}
+                        </span>
+                      </td>
 
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-1.5">
-                        {isSub && <span className="text-amber-500/70 font-mono font-bold text-xs pl-2">└──</span>}
-                        <span className={`font-black ${isSub ? 'text-xs text-text-secondary' : 'text-sm text-text-primary'}`}>
+                      <td className="py-3 px-4">
+                        <span className="font-black text-sm text-text-primary">
                           {c.name}
                         </span>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="py-3 px-4">
-                      {isSub ? (
-                        <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-amber-500/20">
-                          🏷️ Subcategory of {parentCat?.name || c.parentId}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border border-emerald-500/20">
-                          📁 Main Category
-                        </span>
-                      )}
-                    </td>
+                      <td className="py-3 px-4 font-mono text-[10px] text-text-muted">{c.slug}</td>
+                      <td className="py-3 px-4 text-center font-black">{c.sortOrder}</td>
 
-                    <td className="py-3 px-4 font-mono text-[10px] text-text-muted">{c.slug}</td>
-                    <td className="py-3 px-4 text-center font-black">{c.sortOrder}</td>
-
-                    <td className="py-3 px-4 text-center">
-                      {isSub ? (
-                        <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-black">
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                          directCount > 0 
+                            ? 'bg-primary/10 text-primary' 
+                            : 'bg-muted text-text-muted'
+                        }`}>
                           {directCount} Products
                         </span>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
-                            totalCount > 0 
-                              ? 'bg-primary/10 text-primary' 
-                              : 'bg-muted text-text-muted'
-                          }`}>
-                            {totalCount} Products
-                          </span>
-                          {subCats.length > 0 && subProductsCount > 0 && directCount > 0 && (
-                            <span className="text-[9px] text-text-muted mt-0.5 font-bold">
-                              ({directCount} direct + {subProductsCount} in {subCats.length} sub)
-                            </span>
-                          )}
-                          {subCats.length > 0 && subProductsCount > 0 && directCount === 0 && (
-                            <span className="text-[9px] text-amber-600 dark:text-amber-400 mt-0.5 font-bold">
-                              (Sum of {subCats.length} subcategories)
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
+                      </td>
 
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {!isSub && (
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
-                            onClick={() => {
-                              setNewCategory({ name: '', imageUrl: '', sortOrder: '0', parentId: c.id })
-                              setShowAddCategory(true)
-                            }}
-                            className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-extrabold rounded-lg transition-all cursor-pointer inline-flex items-center gap-1"
-                            title="Add subcategory directly inside this parent category"
+                            onClick={() => startEditingCategory(c)}
+                            className="px-2.5 py-1 border border-border hover:bg-muted text-[10px] font-bold rounded-lg text-text-secondary transition-all cursor-pointer"
                           >
-                            <span>+ Sub</span>
+                            Edit
                           </button>
-                        )}
 
-                        <button
-                          type="button"
-                          onClick={() => startEditingCategory(c)}
-                          className="px-2.5 py-1 border border-border hover:bg-muted text-[10px] font-bold rounded-lg text-text-secondary transition-all cursor-pointer"
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCategory(c.id)}
-                          disabled={deletingCategoryId === c.id}
-                          className="p-1.5 border border-border text-discount hover:bg-discount/10 hover:border-discount/20 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
-                        >
-                          {deletingCategoryId === c.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Trash className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCategory(c.id)}
+                            disabled={deletingCategoryId === c.id}
+                            className="p-1.5 border border-border text-discount hover:bg-discount/10 hover:border-discount/20 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
+                          >
+                            {deletingCategoryId === c.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   )
-                }
-
-                const rows: React.ReactNode[] = []
-
-                parentCats.forEach((parent) => {
-                  rows.push(renderRow(parent, false))
-                  const subs = childCats.filter(sub => sub.parentId === parent.id)
-                  subs.forEach((sub) => {
-                    processedChildIds.add(sub.id)
-                    rows.push(renderRow(sub, true, parent))
-                  })
-                })
-
-                // Orphaned subcategories (if any)
-                const orphans = childCats.filter(c => !processedChildIds.has(c.id))
-                orphans.forEach((orphan) => {
-                  rows.push(renderRow(orphan, true, null))
-                })
-
-                return (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
-                          <th className="py-3 px-4">ID</th>
-                          <th className="py-3 px-4">Photo / Icon</th>
-                          <th className="py-3 px-4">Category Name</th>
-                          <th className="py-3 px-4">Hierarchy Type</th>
-                          <th className="py-3 px-4">Slug Identifier</th>
-                          <th className="py-3 px-4 text-center">Sort Order</th>
-                          <th className="py-3 px-4 text-center">Items Stocked</th>
-                          <th className="py-3 px-4 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
-                        {rows}
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              })()}
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

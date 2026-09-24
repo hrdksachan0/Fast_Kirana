@@ -51,7 +51,13 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
 
       if (token) {
         session.user.id = token.id as string
-        session.user.role = token.role as any
+        const isMaster = isRootAdminAccount({
+          email: (token.email || session.user?.email) as string,
+          phone: (token.phone || (session.user as any)?.phone) as string,
+          role: token.role as string,
+          assignedStoreId: token.assignedStoreId as string,
+        })
+        session.user.role = isMaster ? 'ADMIN' : (token.role as any)
         session.user.phone = token.phone as string
         session.user.assignedRestaurantId = token.assignedRestaurantId as string
         session.user.assignedStoreId = token.assignedStoreId as string
