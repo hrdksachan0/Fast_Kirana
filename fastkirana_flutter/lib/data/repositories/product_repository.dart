@@ -16,16 +16,20 @@ class ProductRepository {
   static final Map<String, DateTime> _hubLastFetchTime = {};
   static final Map<String, List<Product>> _categoryCachedProducts = {};
   static final Map<String, DateTime> _categoryLastFetchTime = {};
+  static final Map<String, List<Category>> _hubCachedCategories = {};
+  static final Map<String, DateTime> _hubCategoryLastFetchTime = {};
   static List<Category>? _cachedCategories;
   // Keyed in-flight fetch map to prevent cross-contamination between different query types
   static final Map<String, Future<List<Product>>> _inFlightFetches = {};
+  // ETag cache for HTTP 304 Not Modified optimization
+  static final Map<String, String> _eTags = {};
 
   // ─── Disk cache keys ────────────────────────────────────────
   static String _diskProductsKey(String hubId) => 'cached_products_${hubId}_v6';
   static String _diskFetchTimestampKey(String hubId) => 'cached_products_ts_${hubId}_v6';
-  static const _diskCategoriesKey = 'cached_categories_v5';
-  static const _diskCategoryTimestampKey = 'cached_categories_timestamp_v5';
-  static const _cacheTTLMinutes = 15; // 15 minutes TTL (with instant stale-while-revalidate)
+  static String _diskCategoriesKey([String? hubId]) => 'cached_categories_${hubId ?? "global"}_v6';
+  static String _diskCategoryTimestampKey([String? hubId]) => 'cached_categories_ts_${hubId ?? "global"}_v6';
+  static const _cacheTTLMinutes = 2; // 2 minutes TTL for high freshness while retaining instant render
 
   // ─── Preload disk cache into memory ──────────────────────────
   // getProducts() always awaits this first to ensure cached data
@@ -94,10 +98,10 @@ class ProductRepository {
   }
 
   /// Returns true if the on-disk category cache is still fresh.
-  static Future<bool> _isDiskCategoryCacheFresh() async {
+  static Future<bool> _isDiskCategoryCacheFresh([String? hubId]) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final ts = prefs.getInt(_diskCategoryTimestampKey);
+      final ts = prefs.getInt(_diskCategoryTimestampKey(hubId));
       if (ts == null) return false;
       final age = DateTime.now().millisecondsSinceEpoch - ts;
       return age < _cacheTTLMinutes * 60 * 1000;
@@ -133,29 +137,29 @@ class ProductRepository {
     } catch (e) { LoggerService.error('ProductRepository: disk save failed for hub $hubId', e); }
   }
 
-  /// Load categories from disk.
-  static Future<List<Category>?> _loadCategoriesFromDisk() async {
+  /// Load categories from disk for a specific hub.
+  static Future<List<Category>?> _loadCategoriesFromDisk([String? hubId]) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_diskCategoriesKey);
+      final raw = prefs.getString(_diskCategoriesKey(hubId)) ?? prefs.getString('cached_categories_v5');
       if (raw == null || raw.isEmpty) return null;
       final List<dynamic> jsonList = jsonDecode(raw);
       return jsonList
           .map((j) => Category.fromJson(Map<String, dynamic>.from(j as Map)))
           .toList();
-    } catch (e) { LoggerService.error('ProductRepository: disk category load failed', e);
+    } catch (e) { LoggerService.error('ProductRepository: disk category load failed for hub $hubId', e);
       return null;
     }
   }
 
-  /// Save categories to disk.
-  static Future<void> _saveCategoriesToDisk(List<Category> categories) async {
+  /// Save categories to disk for a specific hub.
+  static Future<void> _saveCategoriesToDisk(List<Category> categories, [String? hubId]) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = categories.map((c) => c.toJson()).toList();
-      await prefs.setString(_diskCategoriesKey, jsonEncode(jsonList));
-      await prefs.setInt(_diskCategoryTimestampKey, DateTime.now().millisecondsSinceEpoch);
-    } catch (e) { LoggerService.error('ProductRepository: disk category save failed', e); }
+      await prefs.setString(_diskCategoriesKey(hubId), jsonEncode(jsonList));
+      await prefs.setInt(_diskCategoryTimestampKey(hubId), DateTime.now().millisecondsSinceEpoch);
+    } catch (e) { LoggerService.error('ProductRepository: disk category save failed for hub $hubId', e); }
   }
 
   /// Invalidate all cached data (call on pull-to-refresh or force refresh).
@@ -164,6 +168,8 @@ class ProductRepository {
     _hubLastFetchTime.clear();
     _categoryCachedProducts.clear();
     _categoryLastFetchTime.clear();
+    _hubCachedCategories.clear();
+    _hubCategoryLastFetchTime.clear();
     _cachedCategories = null;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -183,21 +189,25 @@ class ProductRepository {
       await prefs.remove('cached_products_timestamp_v4');
       await prefs.remove('cached_products_v5');
       await prefs.remove('cached_products_timestamp_v5');
-      await prefs.remove(_diskCategoriesKey);
-      await prefs.remove(_diskCategoryTimestampKey);
+      await prefs.remove(_diskCategoriesKey());
+      await prefs.remove(_diskCategoryTimestampKey());
     } catch (e) { LoggerService.error('ProductRepository: cache invalidation failed', e); }
   }
 
-  /// Invalidate cached products for a specific hub (e.g. when changing address/hub)
+  /// Invalidate cached products and categories for a specific hub (e.g. when changing address/hub)
   static Future<void> invalidateHubCache(String hubId) async {
     _hubCachedProducts.remove(hubId);
     _hubLastFetchTime.remove(hubId);
+    _hubCachedCategories.remove(hubId);
+    _hubCategoryLastFetchTime.remove(hubId);
     _categoryCachedProducts.removeWhere((key, _) => key.startsWith('$hubId|'));
     _categoryLastFetchTime.removeWhere((key, _) => key.startsWith('$hubId|'));
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_diskProductsKey(hubId));
       await prefs.remove(_diskFetchTimestampKey(hubId));
+      await prefs.remove(_diskCategoriesKey(hubId));
+      await prefs.remove(_diskCategoryTimestampKey(hubId));
     } catch (e) { LoggerService.error('ProductRepository: hub cache invalidation failed ($hubId)', e); }
   }
 
@@ -441,6 +451,9 @@ class ProductRepository {
         ? category
         : null;
 
+    final String etagKey = '${effectiveStoreId ?? ''}|${effectiveCatId ?? ''}|${effectiveCatSlug ?? ''}|${restaurantId ?? ''}|$limit';
+    final String? cachedETag = _eTags[etagKey];
+
     final response = await dio.get(
       '/api/products',
       queryParameters: {
@@ -452,7 +465,27 @@ class ProductRepository {
         if (effectiveCatSlug != null) 'category': effectiveCatSlug,
         if (effectiveStoreId != null) 'storeId': effectiveStoreId,
       },
+      options: Options(
+        headers: {
+          if (cachedETag != null) 'If-None-Match': cachedETag,
+        },
+        validateStatus: (status) => status != null && ((status >= 200 && status < 300) || status == 304),
+      ),
     );
+
+    if (response.statusCode == 304) {
+      final targetHub = effectiveStoreId ?? (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
+      final existing = _hubCachedProducts[targetHub];
+      if (existing != null && existing.isNotEmpty) {
+        debugPrint('[ProductRepo] 304 Not Modified: Using in-memory cached catalog (${existing.length} items)');
+        return existing;
+      }
+    }
+
+    final newETag = response.headers.value('etag');
+    if (newETag != null && newETag.isNotEmpty) {
+      _eTags[etagKey] = newETag;
+    }
 
     final data = response.data;
     List productsJson = [];
@@ -577,29 +610,39 @@ class ProductRepository {
     }
   }
 
-  Future<List<Category>> getCategories({bool forceRefresh = false}) async {
+  Future<List<Category>> getCategories({String? storeId, bool forceRefresh = false}) async {
+    final effectiveHub = (storeId != null && storeId.isNotEmpty) ? storeId : AppConfig.darkstoreId;
+    final cachedForHub = _hubCachedCategories[effectiveHub];
+    final lastFetch = _hubCategoryLastFetchTime[effectiveHub];
+    final isMemFresh = lastFetch != null && DateTime.now().difference(lastFetch).inMinutes < _cacheTTLMinutes;
+
     // 1. In-memory cache hit
-    if (!forceRefresh && _cachedCategories != null && _cachedCategories!.isNotEmpty) {
-      return _cachedCategories!;
+    if (!forceRefresh && isMemFresh && cachedForHub != null && cachedForHub.isNotEmpty) {
+      return cachedForHub;
     }
 
     // 2. Disk cache hit (survives app restarts — 0ms instant render)
     if (!forceRefresh) {
-      final diskCategories = await _loadCategoriesFromDisk();
+      final diskCategories = await _loadCategoriesFromDisk(effectiveHub);
       if (diskCategories != null && diskCategories.isNotEmpty) {
+        _hubCachedCategories[effectiveHub] = diskCategories;
         _cachedCategories = diskCategories;
-        final diskFresh = await _isDiskCategoryCacheFresh();
+        final diskFresh = await _isDiskCategoryCacheFresh(effectiveHub);
         if (diskFresh) {
           return diskCategories;
         }
         // Background refresh if stale without blocking the immediate UI return
-        dio.get('/api/categories').then((response) {
+        dio.get('/api/categories', queryParameters: {
+          if (effectiveHub.isNotEmpty && effectiveHub != 'all') 'storeId': effectiveHub,
+        }).then((response) {
           final data = response.data;
           if (data is List) {
             final cats = data.map((json) => Category.fromJson(Map<String, dynamic>.from(json as Map))).toList();
             if (cats.isNotEmpty) {
+              _hubCachedCategories[effectiveHub] = cats;
               _cachedCategories = cats;
-              _saveCategoriesToDisk(cats);
+              _hubCategoryLastFetchTime[effectiveHub] = DateTime.now();
+              _saveCategoriesToDisk(cats, effectiveHub);
             }
           }
         }).catchError((_) => null);
@@ -609,29 +652,34 @@ class ProductRepository {
 
     // 3. Network fetch
     try {
-      final response = await dio.get('/api/categories');
+      final response = await dio.get('/api/categories', queryParameters: {
+        if (effectiveHub.isNotEmpty && effectiveHub != 'all') 'storeId': effectiveHub,
+      });
       final data = response.data;
       if (data is List) {
         final cats = data.map((json) => Category.fromJson(Map<String, dynamic>.from(json as Map))).toList();
         if (cats.isNotEmpty) {
+          _hubCachedCategories[effectiveHub] = cats;
           _cachedCategories = cats;
-          _saveCategoriesToDisk(cats);
+          _hubCategoryLastFetchTime[effectiveHub] = DateTime.now();
+          _saveCategoriesToDisk(cats, effectiveHub);
           return cats;
         }
       }
     } catch (e, st) {
-      LoggerService.error('ProductRepository: getCategories failed', e, st);
+      LoggerService.error('ProductRepository: getCategories failed for storeId $effectiveHub', e, st);
     }
 
     // Disk cache fallback on network failure even if stale
-    final diskCats = await _loadCategoriesFromDisk();
+    final diskCats = await _loadCategoriesFromDisk(effectiveHub);
     if (diskCats != null && diskCats.isNotEmpty) {
+      _hubCachedCategories[effectiveHub] = diskCats;
       _cachedCategories = diskCats;
       return diskCats;
     }
 
     try {
-      final allProducts = await getProducts(limit: 30);
+      final allProducts = await getProducts(limit: 30, storeId: effectiveHub);
       final Map<String, Category> uniqueCategories = {};
 
       for (final p in allProducts) {
@@ -652,8 +700,9 @@ class ProductRepository {
 
       if (uniqueCategories.isNotEmpty) {
         final list = uniqueCategories.values.toList();
+        _hubCachedCategories[effectiveHub] = list;
         _cachedCategories = list;
-        _saveCategoriesToDisk(list);
+        _saveCategoriesToDisk(list, effectiveHub);
         return list;
       }
     } catch (e, st) { LoggerService.error('ProductRepository: categories fallback failed', e, st); }

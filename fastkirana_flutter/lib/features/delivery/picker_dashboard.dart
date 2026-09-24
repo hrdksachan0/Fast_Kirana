@@ -22,8 +22,10 @@ import 'widgets/order_recipient_helper.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/order_alarm_service.dart';
 import '../../widgets/app_confirmation_dialog.dart';
+import '../../core/utils/order_item_helper.dart';
 import 'widgets/edit_picker_product_modal.dart';
 import 'widgets/picker_catalog_browser_modal.dart';
+import 'picker_scan_screen.dart';
 
 class PickerDashboard extends ConsumerStatefulWidget {
   const PickerDashboard({super.key});
@@ -267,15 +269,17 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
   }
 
   void _toggleItemPicked(String orderId, String itemId) {
-    HapticFeedback.selectionClick();
     setState(() {
       if (!_pickedItemIds.containsKey(orderId)) {
         _pickedItemIds[orderId] = {};
       }
       if (_pickedItemIds[orderId]!.contains(itemId)) {
         _pickedItemIds[orderId]!.remove(itemId);
+        HapticFeedback.selectionClick();
       } else {
         _pickedItemIds[orderId]!.add(itemId);
+        HapticFeedback.lightImpact();
+        SystemSound.play(SystemSoundType.click);
       }
     });
   }
@@ -316,17 +320,20 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 0,
+        leadingWidth: Navigator.canPop(context) ? 44 : 16,
         leading: Navigator.canPop(context)
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: slateDark),
                 onPressed: () => Navigator.pop(context),
+                padding: EdgeInsets.zero,
               )
-            : null,
+            : const SizedBox(width: 16),
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (!Navigator.canPop(context)) const SizedBox(width: 12),
             Container(
-              padding: const EdgeInsets.all(7),
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
@@ -339,7 +346,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               child: const Icon(Icons.inventory_2_rounded, size: 18, color: brandOrange),
             ),
             const SizedBox(width: 8),
-            Expanded(
+            Flexible(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -347,13 +354,17 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Picker',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 15),
-                          fontWeight: FontWeight.w900,
-                          color: slateDark,
-                          letterSpacing: -0.3,
+                      Flexible(
+                        child: Text(
+                          'Packing Station',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 14.5),
+                            fontWeight: FontWeight.w800,
+                            color: slateDark,
+                            letterSpacing: -0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -390,9 +401,9 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                     ],
                   ),
                   Text(
-                    'Packing Station',
+                    'Picker Console',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                      fontSize: Responsive.scaledFontSize(context, 10),
                       fontWeight: FontWeight.w500,
                       color: slateMuted,
                     ),
@@ -405,104 +416,113 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
           ],
         ),
         actions: [
-          // Pricing Catalog & Inventory Action Pill
-          Bounceable(
-            onTap: () {
+          // Audio Alarm Alert Mute/Unmute
+          IconButton(
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              setState(() {
+                OrderAlarmService.instance.toggleMute();
+              });
+            },
+            tooltip: OrderAlarmService.instance.isMuted ? 'Unmute Order Alarms' : 'Mute Order Alarms',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            icon: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: OrderAlarmService.instance.isMuted
+                    ? const Color(0xFFF1F5F9)
+                    : const Color(0xFFFFF7ED),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: OrderAlarmService.instance.isMuted
+                      ? const Color(0xFFE2E8F0)
+                      : const Color(0xFFFED7AA),
+                ),
+              ),
+              child: Icon(
+                OrderAlarmService.instance.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                size: 16,
+                color: OrderAlarmService.instance.isMuted ? slateMuted : brandOrange,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+
+          // Pricing & Catalog Browser
+          IconButton(
+            onPressed: () {
               HapticFeedback.lightImpact();
               PickerCatalogBrowserModal.show(
                 context: context,
                 onProductUpdated: () => _fetchPickerOrders(silent: true),
               );
             },
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            tooltip: 'Catalog & Pricing',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            icon: Container(
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(16),
+                shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFFFED7AA)),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.sell_rounded, size: 13, color: brandOrange),
-                  const SizedBox(width: 3),
-                  Text(
-                    'Pricing',
-                    style: GoogleFonts.inter(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      color: brandOrange,
-                    ),
-                  ),
-                ],
-              ),
+              child: const Icon(Icons.sell_rounded, size: 16, color: brandOrange),
             ),
           ),
+          const SizedBox(width: 4),
 
-          // Refresh & Sync Action Pill
-          Bounceable(
-            onTap: () {
+          // Sync / Refresh Orders
+          IconButton(
+            onPressed: () {
               HapticFeedback.lightImpact();
               _fetchPickerOrders();
             },
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            tooltip: 'Sync Orders',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            icon: Container(
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFFF8FAFC),
+                shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _isRefreshing
-                      ? const SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(strokeWidth: 1.8, color: brandOrange),
-                        )
-                      : const Icon(Icons.sync_rounded, size: 13, color: slateMuted),
-                  const SizedBox(width: 3),
-                  Text(
-                    _isRefreshing ? '...' : 'Sync',
-                    style: GoogleFonts.inter(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      color: slateDark,
-                    ),
-                  ),
-                ],
-              ),
+              child: _isRefreshing
+                  ? const Center(
+                      child: SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: brandOrange),
+                      ),
+                    )
+                  : const Icon(Icons.sync_rounded, size: 17, color: slateDark),
             ),
           ),
+          const SizedBox(width: 4),
 
-          // Mute / Unmute Order Alarm Alert
+          // Logout Action
           IconButton(
-            icon: Icon(
-              OrderAlarmService.instance.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-              size: 19,
-              color: OrderAlarmService.instance.isMuted ? slateMuted : brandOrange,
-            ),
-            tooltip: OrderAlarmService.instance.isMuted ? 'Unmute Order Alert' : 'Mute Order Alert',
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            onPressed: () {
-              setState(() {
-                OrderAlarmService.instance.toggleMute();
-              });
-            },
-          ),
-
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, size: 19, color: slateMuted),
-            tooltip: 'Logout',
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             onPressed: _showLogoutDialog,
+            tooltip: 'Logout',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            icon: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Icon(Icons.logout_rounded, size: 16, color: slateMuted),
+            ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
@@ -533,43 +553,45 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
           ),
         ],
       ),
-      floatingActionButton: Bounceable(
-        onTap: _openAddGroceryModal,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFEA580C), Color(0xFFF97316)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: brandOrange.withValues(alpha: 0.35),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 19),
-              const SizedBox(width: 8),
-              Text(
-                'Add Grocery Item',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 13.5),
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: 0.2,
+      floatingActionButton: _orders.isEmpty
+          ? null
+          : Bounceable(
+              onTap: _openAddGroceryModal,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: brandOrange.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Add Grocery Item',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 13),
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
@@ -879,17 +901,61 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
 
           const SizedBox(height: 28),
 
-          // Quick Action Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // Quick Action Cards / Buttons in Empty State
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 10,
+            runSpacing: 10,
             children: [
+              // 1. Primary Action: Add Grocery Item
+              Bounceable(
+                onTap: _openAddGroceryModal,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: brandOrange.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add_shopping_cart_rounded, size: 15, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Add Item',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 12),
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 2. Catalog & Pricing Action
               Bounceable(
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  _fetchPickerOrders();
+                  PickerCatalogBrowserModal.show(
+                    context: context,
+                    onProductUpdated: () => _fetchPickerOrders(silent: true),
+                  );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -905,8 +971,46 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.refresh_rounded, size: 16, color: slateDark),
+                      const Icon(Icons.sell_rounded, size: 14, color: brandOrange),
                       const SizedBox(width: 6),
+                      Text(
+                        'Pricing & Stock',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 12),
+                          fontWeight: FontWeight.w700,
+                          color: slateDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 3. Refresh Action
+              Bounceable(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  _fetchPickerOrders();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.refresh_rounded, size: 15, color: slateDark),
+                      const SizedBox(width: 4),
                       Text(
                         'Check Now',
                         style: GoogleFonts.inter(
@@ -919,51 +1023,38 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Bounceable(
-                onTap: _openAddGroceryModal,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7ED),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFED7AA)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add_rounded, size: 16, color: brandOrange),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Add Item',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 12),
-                          fontWeight: FontWeight.w800,
-                          color: brandOrange,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ).animate().fadeIn(delay: 350.ms),
 
-          const SizedBox(height: 36),
+          const SizedBox(height: 28),
 
           // Warehouse fulfillment tip card
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('💡', style: TextStyle(fontSize: 18)),
-                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text('💡', style: TextStyle(fontSize: 16)),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -976,13 +1067,13 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                           color: slateDark,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
                         'Marking orders as "Packed" instantly notifies delivery riders for swift pickup and keeps dispatch under 10 minutes.',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11),
                           color: slateMuted,
-                          height: 1.4,
+                          height: 1.45,
                         ),
                       ),
                     ],
@@ -1005,6 +1096,21 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
 
     final dynamic rawItems = order['items'];
     final List items = (rawItems is List) ? rawItems : [];
+
+    final int totalUnits = items.fold<int>(0, (sum, it) {
+      final q = (it is Map ? (it['quantity'] as num?)?.toInt() : null) ?? 1;
+      return sum + q;
+    });
+
+    // Quantity-wise sorting: Highest quantity items first so pickers never miss multi-piece items!
+    final sortedItems = List<dynamic>.from(items)..sort((a, b) {
+      final qA = (a is Map ? (a['quantity'] as num?)?.toInt() : null) ?? 1;
+      final qB = (b is Map ? (b['quantity'] as num?)?.toInt() : null) ?? 1;
+      if (qB != qA) return qB.compareTo(qA);
+      final nA = (a is Map ? (a['name'] ?? a['title']) : '')?.toString() ?? '';
+      final nB = (b is Map ? (b['name'] ?? b['title']) : '')?.toString() ?? '';
+      return nA.compareTo(nB);
+    });
 
     final num total = (order['total'] is num)
         ? (order['total'] as num)
@@ -1067,6 +1173,23 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                             fontSize: Responsive.scaledFontSize(context, 13.5),
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: Text(
+                          '$totalUnits UNITS • ${items.length} ITEMS',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF1D4ED8),
+                            letterSpacing: 0.2,
                           ),
                         ),
                       ),
@@ -1220,13 +1343,56 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                       ),
                     ),
                   ),
+                if (!isPackedStatus) ...[
+                  const SizedBox(width: 6),
+                  Bounceable(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PickerScanScreen(
+                            orderId: orderId,
+                            readableId: readableId,
+                            expectedItems: items,
+                            onItemScanned: (itemId) {
+                              _toggleItemPicked(orderId, itemId);
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF6EE7B7)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.qr_code_scanner_rounded, size: 14, color: Color(0xFF059669)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Scan',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF059669),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
 
             const Divider(height: 18, color: slateBorder),
 
-            // Picking Items Checklist
-            ...items.map((item) {
+            // Picking Items Checklist (Sorted Quantity-Wise: Highest Qty First)
+            ...sortedItems.map((item) {
               final String itemId = (item['id'] ?? item['productId'] ?? '').toString();
               final String name = (item['name'] ?? item['title'] ?? 'Grocery Item').toString();
               final int qty = (item['quantity'] is num)
@@ -1239,7 +1405,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                   ? (item['total'] as num)
                   : (unitPrice * qty);
               final bool isPicked = isPackedStatus || pickedSet.contains(itemId);
-              final String? variant = item['selectedVariant'] ?? item['variant'] ?? item['unit'];
+              final String weightVariant = OrderItemHelper.resolveWeightOrVariant(item, name);
               final String imgUrl = _resolveItemImageUrl(item);
 
               return Bounceable(
@@ -1251,8 +1417,10 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                     color: isPicked ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isPicked ? const Color(0xFFA7F3D0) : slateBorder,
-                      width: 1.1,
+                      color: isPicked
+                          ? const Color(0xFFA7F3D0)
+                          : (qty > 1 ? const Color(0xFFFED7AA) : slateBorder),
+                      width: (qty > 1 && !isPicked) ? 1.4 : 1.1,
                     ),
                   ),
                   child: Row(
@@ -1319,23 +1487,58 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                       ),
                       const SizedBox(width: 8),
 
-                      // 3. Quantity Pill
+                      // 3. High-Visibility Quantity Pill (Prominent alert for multi-unit items)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isPicked ? const Color(0xFFD1FAE5) : Colors.white,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isPicked ? const Color(0xFFA7F3D0) : slateBorder,
-                          ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: qty > 1 ? 8 : 6,
+                          vertical: qty > 1 ? 4 : 2,
                         ),
-                        child: Text(
-                          '${qty}x',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 11.5),
-                            fontWeight: FontWeight.w900,
-                            color: isPicked ? const Color(0xFF047857) : brandOrange,
+                        decoration: BoxDecoration(
+                          color: isPicked
+                              ? const Color(0xFFD1FAE5)
+                              : (qty > 1 ? const Color(0xFFFFF7ED) : Colors.white),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isPicked
+                                ? const Color(0xFFA7F3D0)
+                                : (qty > 1 ? const Color(0xFFEA580C) : slateBorder),
+                            width: qty > 1 ? 1.8 : 1.0,
                           ),
+                          boxShadow: qty > 1 && !isPicked
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFFEA580C).withValues(alpha: 0.15),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${qty}x',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, qty > 1 ? 13.5 : 11.5),
+                                fontWeight: FontWeight.w900,
+                                color: isPicked
+                                    ? const Color(0xFF047857)
+                                    : (qty > 1 ? const Color(0xFFEA580C) : slateDark),
+                                height: 1.1,
+                              ),
+                            ),
+                            if (qty > 1)
+                              Text(
+                                'QTY',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 7.5),
+                                  fontWeight: FontWeight.w900,
+                                  color: isPicked ? const Color(0xFF047857) : const Color(0xFFEA580C),
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1358,18 +1561,39 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (variant != null && variant.toString().trim().isNotEmpty) ...[
-                              const SizedBox(height: 1),
-                              Text(
-                                variant.toString().trim(),
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 10.5),
-                                  fontWeight: FontWeight.w600,
-                                  color: slateMuted,
+                            if (qty > 1) ...[
+                              const SizedBox(height: 3),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: isPicked ? const Color(0xFFECFDF5) : const Color(0xFFFFF7ED),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: isPicked ? const Color(0xFFA7F3D0) : const Color(0xFFFED7AA),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  '⚠️ PICK $qty PIECES',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9),
+                                    fontWeight: FontWeight.w900,
+                                    color: isPicked ? const Color(0xFF047857) : const Color(0xFFC2410C),
+                                    letterSpacing: 0.2,
+                                  ),
                                 ),
                               ),
-                            ] else if (unitPrice > 0 && qty > 1) ...[
-                              const SizedBox(height: 1),
+                            ],
+                            if (weightVariant.isNotEmpty) ...[
+                              const SizedBox(height: 3),
+                              OrderItemHelper.buildWeightBadge(
+                                context,
+                                weightVariant,
+                                isPicked: isPicked,
+                              ),
+                            ],
+                            if (unitPrice > 0 && qty > 1) ...[
+                              const SizedBox(height: 2),
                               Text(
                                 '₹${unitPrice.toInt()} each',
                                 style: GoogleFonts.inter(
@@ -1416,7 +1640,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                                 'price': unitPrice,
                                 'mrp': item['mrp'] ?? unitPrice,
                                 'stock': item['stock'] ?? 20,
-                                'unit': variant ?? '1 pc',
+                                'unit': weightVariant.isNotEmpty ? weightVariant : '1 pc',
                                 'imageUrl': imgUrl,
                                 'barcode': item['barcode'],
                                 'variants': item['variants'] ?? item['product']?['variants'],

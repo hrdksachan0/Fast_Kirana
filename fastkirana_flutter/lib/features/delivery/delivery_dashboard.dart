@@ -898,9 +898,22 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       final subOrderIds = (safeOrder['subOrderIds'] as List<dynamic>?)?.cast<String>() ?? [];
 
       // Build the list of order IDs to update
-      final idsToUpdate = isCombined && subOrderIds.isNotEmpty ? subOrderIds : [orderId];
+      final partnerId = extra?['partnerOrderId']?.toString();
+      final idsToUpdate = isCombined && subOrderIds.isNotEmpty
+          ? subOrderIds
+          : ((partnerId != null && partnerId.isNotEmpty && partnerId != orderId) ? [orderId, partnerId] : [orderId]);
 
       bool anySuccess = false;
+
+      // Smart Batch API optimization for FastKirana FastAPI
+      if (extra?['isBatch'] == true && idsToUpdate.length > 1 && newStatus == 'SHIPPED') {
+        try {
+          final bRes = await dio.post('/api/delivery/batch/accept', data: {'orderIds': idsToUpdate});
+          if (bRes.statusCode == 200) {
+            anySuccess = true;
+          }
+        } catch (_) {}
+      }
 
       for (int i = 0; i < idsToUpdate.length; i++) {
         final currentId = idsToUpdate[i];

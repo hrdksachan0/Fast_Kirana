@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/utils/order_item_helper.dart';
 import '../../widgets/brand_button.dart';
 
 class DeliveryOrderDetailScreen extends StatelessWidget {
@@ -76,21 +77,92 @@ class DeliveryOrderDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // Items
-          Text('Items (4)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+          // Items Header with Units Summary
+          Row(
+            children: [
+              Text('Order Items (4)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppDesignSystem.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '5 UNITS TOTAL',
+                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w800, color: AppDesignSystem.primary),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
-          ...['Tomatoes 1kg', 'Milk 1L', 'Bread', 'Eggs 6pc'].asMap().entries.map((e) {
-            final qty = [2, 1, 1, 1][e.key];
-            final price = [45, 28, 35, 60][e.key];
+          ...([
+            {'name': 'Tomatoes 1kg', 'qty': 2, 'price': 45},
+            {'name': 'Milk 1L', 'qty': 1, 'price': 28},
+            {'name': 'Bread', 'qty': 1, 'price': 35},
+            {'name': 'Eggs 6pc', 'qty': 1, 'price': 60},
+          ]..sort((a, b) => (b['qty'] as int).compareTo(a['qty'] as int))).map((item) {
+            final name = item['name'] as String;
+            final qty = item['qty'] as int;
+            final price = item['price'] as int;
+            final isMulti = qty > 1;
+            final weightVariant = OrderItemHelper.resolveWeightOrVariant(item, name);
+
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppDesignSystem.borderLight)),
+              decoration: BoxDecoration(
+                color: isMulti ? const Color(0xFFFFF7ED) : AppDesignSystem.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isMulti ? const Color(0xFFF97316) : AppDesignSystem.borderLight,
+                  width: isMulti ? 1.5 : 1.0,
+                ),
+              ),
               child: Row(
                 children: [
-                  Text(e.value, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textPrimary)),
-                  const Spacer(),
-                  Text('x$qty', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.textSecondary)),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: isMulti ? FontWeight.w700 : FontWeight.w500, color: AppDesignSystem.textPrimary)),
+                        if (weightVariant.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          OrderItemHelper.buildWeightBadge(context, weightVariant),
+                        ],
+                        if (isMulti)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, size: 14, color: Color(0xFFEA580C)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'DELIVER $qty PIECES (CHECK QTY)',
+                                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: const Color(0xFFEA580C)),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isMulti ? const Color(0xFFEA580C) : AppDesignSystem.slate100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '${qty}x QTY',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 12),
+                        fontWeight: FontWeight.w800,
+                        color: isMulti ? Colors.white : AppDesignSystem.textSecondary,
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Text('₹${price * qty}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                 ],

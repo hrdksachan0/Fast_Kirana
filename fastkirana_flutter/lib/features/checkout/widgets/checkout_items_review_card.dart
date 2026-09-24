@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/app_cached_image.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../data/models/cart.dart';
@@ -177,27 +178,14 @@ class CheckoutItemsReviewCard extends StatelessWidget {
       child: Row(
         children: [
           if (item.product.imageUrl != null && item.product.imageUrl!.isNotEmpty)
-            ClipRRect(
+            AppCachedImage(
+              imageUrl: item.product.imageUrl,
+              width: 28,
+              height: 28,
+              fit: BoxFit.cover,
               borderRadius: BorderRadius.circular(6),
-              child: kIsWeb
-                  ? Image.network(
-                      item.product.imageUrl!,
-                      width: 28,
-                      height: 28,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.grey),
-                    )
-                  : CachedNetworkImage(
-                      imageUrl: item.product.imageUrl!,
-                      width: 28,
-                      height: 28,
-                      fit: BoxFit.cover,
-                      memCacheWidth: 56,
-                      memCacheHeight: 56,
-                      maxWidthDiskCache: 84,
-                      maxHeightDiskCache: 84,
-                      errorWidget: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.grey),
-                    ),
+              memCacheWidth: 56,
+              memCacheHeight: 56,
             ),
           const SizedBox(width: 8),
           Expanded(

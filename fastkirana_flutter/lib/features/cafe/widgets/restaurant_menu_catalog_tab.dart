@@ -13,6 +13,7 @@ class RestaurantMenuCatalogTab extends StatefulWidget {
   final String restaurantName;
   final VoidCallback onAddDish;
   final Function(Map<String, dynamic>) onToggleAvailability;
+  final Function(Map<String, dynamic> item)? onEditDish;
 
   const RestaurantMenuCatalogTab({
     super.key,
@@ -20,6 +21,7 @@ class RestaurantMenuCatalogTab extends StatefulWidget {
     required this.restaurantName,
     required this.onAddDish,
     required this.onToggleAvailability,
+    this.onEditDish,
   });
 
   @override
@@ -402,6 +404,39 @@ class _RestaurantMenuCatalogTabState extends State<RestaurantMenuCatalogTab> {
                               ],
                             ),
                           ),
+
+                          // Edit Rates & Info Button
+                          if (widget.onEditDish != null)
+                            Bounceable(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                widget.onEditDish!(item);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                                margin: const EdgeInsets.only(right: 6),
+                                decoration: BoxDecoration(
+                                  color: AppDesignSystem.slate50,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppDesignSystem.slate200),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.edit_note_rounded, color: AppDesignSystem.slate700, size: 18),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'Rates',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppDesignSystem.slate700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
 
                           // Availability Switch
                           Switch.adaptive(

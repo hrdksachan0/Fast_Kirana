@@ -22,6 +22,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/logger_service.dart';
+import '../../../core/services/customer_sound_service.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../data/models/cart.dart';
 import '../../../data/models/order.dart';
@@ -1101,8 +1102,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     // Save primary order locally
     await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);
 
-    // Haptic feedback
-    HapticFeedback.heavyImpact();
+    // Subtle pleasant confirmation chime and haptic sensation
+    unawaited(CustomerSoundService.instance.playOrderSuccessSound());
     await Future.delayed(const Duration(milliseconds: 200));
 
     // Clear cart and invalidate

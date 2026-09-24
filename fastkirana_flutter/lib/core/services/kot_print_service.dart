@@ -116,6 +116,19 @@ class KotPrintService {
               debugPrint('[KotPrintService] Supabase fallback KOT broadcast sent for #$cleanId');
             }
           });
+
+          final targetRestId = payload['restaurantId']?.toString();
+          if (targetRestId != null && targetRestId.isNotEmpty) {
+            final scopedChannel = sb.channel('restaurant-orders-live-$targetRestId');
+            scopedChannel.subscribe((status, [error]) async {
+              if (status == RealtimeSubscribeStatus.subscribed) {
+                await scopedChannel.sendBroadcastMessage(
+                  event: 'reprint-kot',
+                  payload: payload,
+                );
+              }
+            });
+          }
           success = true;
         }
       }

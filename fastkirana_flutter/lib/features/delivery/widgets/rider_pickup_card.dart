@@ -55,6 +55,13 @@ class RiderPickupCard extends StatelessWidget {
     final items = (order['items'] as List<dynamic>?) ?? [];
     final lat = (address?['lat'] as num?)?.toDouble() ?? AppConfig.darkstoreLat;
     final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
+    final batch = order['batch'] is Map ? (order['batch'] as Map<String, dynamic>) : null;
+    final isBatch = batch?['isBatch'] == true;
+    final partnerOrderId = batch?['partnerOrderId']?.toString();
+    final partnerOrderReadableId = batch?['partnerOrderReadableId']?.toString();
+    final bonusEarning = (batch?['bonusEarning'] as num?)?.toDouble() ?? 12.0;
+    final distanceMeters = batch?['distanceBetweenDropsMeters'] as num?;
+    final stopIndex = batch?['stopIndex'] ?? 1;
     // isUpdating is passed via constructor
 
     final recipient = OrderRecipientDetails.fromOrder(order);
@@ -132,6 +139,80 @@ class RiderPickupCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (isBatch) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('⚡🛵', style: TextStyle(fontSize: 16)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'SMART BATCH TRIP',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFDE047),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '+₹${bonusEarning.toInt()} BONUS',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFF78350F),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Stop $stopIndex of 2 • Paired with #${partnerOrderReadableId ?? partnerOrderId ?? ""} ${distanceMeters != null ? '($distanceMeters m apart)' : ''}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withValues(alpha: 0.95),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 // Header: Order ID + FOOD pill | Status Pill
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -746,21 +827,34 @@ class RiderPickupCard extends StatelessWidget {
                       )
                     else
                       Bounceable(
-                        onTap: isUpdating ? null : () => onUpdateStatus?.call(orderId, 'SHIPPED'),
+                        onTap: isUpdating
+                            ? null
+                            : () => onUpdateStatus?.call(
+                                  orderId,
+                                  'SHIPPED',
+                                  extra: isBatch && partnerOrderId != null
+                                      ? {'partnerOrderId': partnerOrderId, 'isBatch': true}
+                                      : null,
+                                ),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: isFood
-                                  ? [const Color(0xFFE11D48), const Color(0xFFBE123C)]
-                                  : [const Color(0xFF059669), const Color(0xFF047857)],
+                              colors: isBatch
+                                  ? [const Color(0xFF7C3AED), const Color(0xFF6D28D9)]
+                                  : (isFood
+                                      ? [const Color(0xFFE11D48), const Color(0xFFBE123C)]
+                                      : [const Color(0xFF059669), const Color(0xFF047857)]),
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: (isFood ? AppDesignSystem.rose500 : AppDesignSystem.emerald600).withValues(alpha: 0.35),
+                                color: (isBatch
+                                        ? const Color(0xFF7C3AED)
+                                        : (isFood ? AppDesignSystem.rose500 : AppDesignSystem.emerald600))
+                                    .withValues(alpha: 0.35),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3),
                               ),
@@ -776,10 +870,16 @@ class RiderPickupCard extends StatelessWidget {
                                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
                               else ...[
-                                const Icon(Icons.delivery_dining_rounded, size: 16, color: Colors.white),
+                                Icon(
+                                  isBatch ? Icons.alt_route_rounded : Icons.delivery_dining_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
                                 const SizedBox(width: 5),
                                 Text(
-                                  isFood ? 'Pick Up Food ➔' : 'Pick Up From Store ➔',
+                                  isBatch
+                                      ? 'Accept Batch (2 Orders • +₹${bonusEarning.toInt()}) ➔'
+                                      : (isFood ? 'Pick Up Food ➔' : 'Pick Up From Store ➔'),
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 12),
                                     fontWeight: FontWeight.w900,

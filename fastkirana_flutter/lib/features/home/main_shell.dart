@@ -23,6 +23,9 @@ import '../profile/profile_screen.dart';
 import '../delivery/delivery_dashboard.dart';
 import '../delivery/picker_dashboard.dart';
 import '../cafe/restaurant_dashboard.dart';
+import '../../data/repositories/banner_repository.dart';
+import '../../providers/banner_provider.dart';
+import '../../providers/product_provider.dart';
 
 final selectedTabProvider = StateProvider<int>((ref) => 0);
 
@@ -51,12 +54,26 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     });
   }
 
+  DateTime? _lastResumeRefresh;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       // Re-register any pending FCM token when the app comes to foreground
       if (!kIsWeb) {
         _reRegisterPendingToken();
+      }
+
+      // Auto-refresh banners & catalog silently if app has been in background for > 30s
+      final now = DateTime.now();
+      if (_lastResumeRefresh == null || now.difference(_lastResumeRefresh!).inSeconds > 30) {
+        _lastResumeRefresh = now;
+        BannerRepository.invalidateCache();
+        ref.invalidate(bannersProvider('grocery'));
+        ref.invalidate(bannersProvider('food'));
+        ref.invalidate(brandOfferCardsProvider('grocery'));
+        ref.invalidate(brandOfferCardsProvider('food'));
+        ref.invalidate(homeProductCatalogProvider);
       }
     }
   }

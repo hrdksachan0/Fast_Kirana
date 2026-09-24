@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/theme/design_system.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/config/app_config.dart';
 import 'edit_picker_product_modal.dart';
 
 class PickerCatalogBrowserModal extends ConsumerStatefulWidget {
@@ -65,7 +66,8 @@ class _PickerCatalogBrowserModalState extends ConsumerState<PickerCatalogBrowser
         '/api/picker/products',
         queryParameters: {
           if (query.trim().isNotEmpty) 'search': query.trim(),
-          'limit': 40,
+          if (AppConfig.darkstoreId.isNotEmpty) 'storeId': AppConfig.darkstoreId,
+          'limit': 60,
         },
         options: Options(
           headers: {'x-user-role': 'PICKER'},

@@ -14,6 +14,8 @@ import 'rider_cart_modal.dart';
 class RiderActiveDeliveryCard extends StatelessWidget {
   final Map<String, dynamic> order;
   final bool isUpdating;
+  final int? stopIndex;
+  final int? totalStops;
   final void Function(double lat, double lng, String label, {String? address})? onOpenNavigation;
   final void Function(Map<String, dynamic> order)? onShowDoorstepQr;
   final void Function(Map<String, dynamic> order, double lat, double lng)? onShowConfirmation;
@@ -29,6 +31,8 @@ class RiderActiveDeliveryCard extends StatelessWidget {
     super.key,
     required this.order,
     this.isUpdating = false,
+    this.stopIndex,
+    this.totalStops,
     this.onOpenNavigation,
     this.onShowDoorstepQr,
     this.onShowConfirmation,
@@ -55,6 +59,13 @@ class RiderActiveDeliveryCard extends StatelessWidget {
     final items = (order['items'] as List<dynamic>?) ?? [];
     final lat = (address?['lat'] as num?)?.toDouble() ?? AppConfig.darkstoreLat;
     final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
+    final batch = order['batch'] is Map ? (order['batch'] as Map<String, dynamic>) : null;
+    final isBatch = batch?['isBatch'] == true;
+    final effectiveStop = stopIndex ?? (batch?['stopIndex'] as int?) ?? 1;
+    final effectiveTotal = totalStops ?? (batch?['totalStops'] as int?) ?? (isBatch ? 2 : 1);
+    final partnerReadableId = batch?['partnerOrderReadableId']?.toString();
+    final bonusEarning = (batch?['bonusEarning'] as num?)?.toDouble() ?? 12.0;
+    final distanceMeters = batch?['distanceBetweenDropsMeters'] as num?;
     // isUpdating is passed via constructor
 
     final recipient = OrderRecipientDetails.fromOrder(order);
@@ -136,18 +147,45 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppDesignSystem.green100,
+                            color: effectiveStop == 1 ? AppDesignSystem.green100 : const Color(0xFFDBEAFE),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'STOP #1 • ACTIVE DROP',
+                            effectiveTotal > 1
+                                ? 'STOP #$effectiveStop OF $effectiveTotal • ${effectiveStop == 1 ? 'ACTIVE DROP' : 'NEXT DROP'}'
+                                : 'STOP #$effectiveStop • ACTIVE DROP',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 9.5),
                               fontWeight: FontWeight.w900,
-                              color: AppDesignSystem.green700,
+                              color: effectiveStop == 1 ? AppDesignSystem.green700 : const Color(0xFF1E40AF),
                             ),
                           ),
                         ),
+                        if (isBatch || effectiveTotal > 1) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Text('⚡', style: TextStyle(fontSize: 9.5)),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '+₹${bonusEarning.toInt()} Batch Bonus',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9),
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF047857),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         if (isFood) ...[
                           const SizedBox(width: 6),
                           Container(
@@ -368,6 +406,51 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                     ],
                   ),
                 ),
+
+                // Batched Partner Order preview
+                if (partnerReadableId != null && partnerReadableId.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFBFDBFE), width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.alt_route_rounded, size: 14, color: Color(0xFF2563EB)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Batched with #$partnerReadableId${distanceMeters != null ? ' (~${distanceMeters}m away)' : ''}',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10),
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1D4ED8),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFF93C5FD)),
+                          ),
+                          child: Text(
+                            effectiveStop == 1 ? 'Stop 2 is Next' : 'Drop after Stop 1',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 9),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF1E40AF),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 // Delivery Note callout if instructions are present
                 if (recipient.deliveryInstructions != null && recipient.deliveryInstructions!.isNotEmpty) ...[

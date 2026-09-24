@@ -2,6 +2,7 @@ import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/services/logger_service.dart';
+import '../../core/services/customer_sound_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -125,7 +126,8 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
     );
 
     _animController.forward();
-    HapticFeedback.heavyImpact();
+    // Swiggy-like pleasant confirmation chime & coin sound
+    CustomerSoundService.instance.playOrderSuccessSound();
 
     // Start live syncing with admin/backend order updates
     _fetchLiveOrderStatus();

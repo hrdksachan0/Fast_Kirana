@@ -15,7 +15,8 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) {
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getCategories();
+  final hub = ref.watch(currentStoreHubProvider);
+  return repo.getCategories(storeId: hub.id);
 });
 
 final trendingProductsProvider = FutureProvider<List<Product>>((ref) async {
@@ -67,15 +68,55 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
   final cartItems = cart?.items ?? [];
   final cleanIds = productIds.map((id) => id.split('_').first).toSet();
 
-  // 1. Detect active restaurant in cart (e.g. A.S. Restaurant or Wedson)
+  // 1. Detect active restaurant and food items in cart
   String? activeOutlet;
   String? activeRestaurantId;
+  bool hasFoodItem = false;
   for (final item in cartItems) {
     if (isRestaurantProduct(item.product)) {
       activeOutlet = getOutletName(item.product);
       activeRestaurantId = item.product.restaurantId ?? item.product.restaurant?.id;
-      break;
     }
+    final nameLower = item.product.name.toLowerCase();
+    if (nameLower.contains('biryani') ||
+        nameLower.contains('burger') ||
+        nameLower.contains('pizza') ||
+        nameLower.contains('roll') ||
+        nameLower.contains('meal') ||
+        nameLower.contains('thali') ||
+        nameLower.contains('noodle') ||
+        nameLower.contains('rice') ||
+        nameLower.contains('chicken') ||
+        nameLower.contains('paneer') ||
+        isRestaurantProduct(item.product)) {
+      hasFoodItem = true;
+    }
+  }
+
+  int foodUpsellScore(Product p) {
+    final n = p.name.toLowerCase();
+    final cat = (p.category?.slug ?? '').toLowerCase();
+    final tags = p.tags.map((t) => t.toLowerCase()).toList();
+
+    // Priority 0: Thums Up, Coke, Coca Cola, Pepsi, Sprite, Limca, Cold Drinks
+    if (n.contains('thums up') || n.contains('thumsup') || n.contains('coke') ||
+        n.contains('coca cola') || n.contains('pepsi') || n.contains('sprite') ||
+        n.contains('cold drink') || n.contains('limca') || n.contains('fanta') ||
+        n.contains('frooti') || tags.contains('cold-drink') || tags.contains('thums-up') || tags.contains('coke')) {
+      return 0;
+    }
+    // Priority 1: Ice Cream, Sundae, Kulfi, Shakes, Cold Coffee
+    if (cat.contains('ice-cream') || cat.contains('shake') ||
+        n.contains('ice cream') || n.contains('kulfi') || n.contains('cornetto') ||
+        n.contains('chocobar') || n.contains('cold coffee') || n.contains('shake') ||
+        tags.contains('ice-cream')) {
+      return 1;
+    }
+    // Priority 2: General beverages
+    if (cat == 'beverages' || cat == 'drinks' || tags.contains('beverages')) {
+      return 2;
+    }
+    return 3;
   }
 
   // 2. Strict Filter Function:
@@ -101,14 +142,17 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
     }
   }
 
-  // 3. Fetch from Next.js Upsell API
+  // 3. Fetch from Upsell API
   final upsells = await repo.getUpsellRecommendations(productIds);
   final filteredUpsells = upsells.where(isAllowed).toList();
   if (filteredUpsells.isNotEmpty) {
+    if (hasFoodItem) {
+      filteredUpsells.sort((a, b) => foodUpsellScore(a).compareTo(foodUpsellScore(b)));
+    }
     return filteredUpsells.take(8).toList();
   }
 
-  // 3. Smart Fallback: one single product fetch instead of 3 parallel calls
+  // 4. Smart Fallback: fetch dishes + chilled beverages & ice cream
   List<Product> all = [];
   try {
     if (activeRestaurantId != null || activeOutlet != null) {
@@ -119,6 +163,12 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
         repo.getProducts(category: 'beverages,ice-cream', limit: 40),
       ]);
       all = [...results[0], ...results[1]];
+    } else if (hasFoodItem) {
+      final results = await Future.wait([
+        repo.getProducts(category: 'beverages,ice-cream', limit: 40),
+        repo.getProducts(limit: 40),
+      ]);
+      all = [...results[0], ...results[1]];
     } else {
       all = await repo.getProducts(limit: 80);
     }
@@ -126,6 +176,10 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
     all = await repo.getProducts(limit: 80);
   }
 
-  return all.where(isAllowed).take(8).toList();
+  final candidateList = all.where(isAllowed).toList();
+  if (hasFoodItem) {
+    candidateList.sort((a, b) => foodUpsellScore(a).compareTo(foodUpsellScore(b)));
+  }
+  return candidateList.take(8).toList();
 });
 

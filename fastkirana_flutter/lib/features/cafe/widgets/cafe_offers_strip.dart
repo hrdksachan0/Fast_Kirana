@@ -90,6 +90,8 @@ class CafeOffersStrip extends ConsumerWidget {
     } else if (isBogo) {
       if (coupon.bogoType == 'BUY_LARGE_GET_SMALL') {
         title = 'BUY ${(coupon.triggerVariant ?? 'LARGE').toUpperCase()} GET ${(coupon.rewardVariant ?? 'SMALL').toUpperCase()} FREE';
+      } else if (coupon.bogoType == 'FREE_GIFT') {
+        title = 'BUY ${(coupon.triggerVariant ?? '1').toUpperCase()} GET FREE GIFT';
       } else if (coupon.bogoType == 'CHEAPEST_FREE') {
         title = 'BUY 2+, CHEAPEST ITEM FREE';
       } else {

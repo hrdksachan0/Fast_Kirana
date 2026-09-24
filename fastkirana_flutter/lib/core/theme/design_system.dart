@@ -251,6 +251,7 @@ class AppDesignSystem {
   static const Color violet200 = Color(0xFFE9D5FF);
   static const Color violet300 = Color(0xFFD8B4FE);
   static const Color violet700 = Color(0xFF6D28D9);
+  static const Color indigo600 = Color(0xFF4F46E5);
   static const Color cyan500 = Color(0xFF06B6D4);
   static const Color cyan400 = Color(0xFF38BDF8);
   static const Color cyan300 = Color(0xFF93C5FD);

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:collection/collection.dart';
 import '../../../core/theme/design_system.dart';
 import 'rider_active_delivery_card.dart';
 import 'rider_pickup_card.dart';
+import 'rider_batch_roadmap_card.dart';
 
 /// Active Deliveries & Ready for Pickup Tab for Rider Console
 class DeliveryOrdersTab extends StatelessWidget {
@@ -66,15 +68,26 @@ class DeliveryOrdersTab extends StatelessWidget {
 
           if (activeDeliveries.isEmpty)
             const EmptyOutForDeliveryCard()
-          else
-            ...activeDeliveries.map((o) => RiderActiveDeliveryCard(
+          else ...[
+            if (activeDeliveries.length >= 2)
+              RiderBatchRoadmapCard(
+                stop1Order: activeDeliveries[0],
+                stop2Order: activeDeliveries[1],
+                distanceBetweenMeters: activeDeliveries[0]['batch']?['distanceBetweenDropsMeters'] ??
+                    activeDeliveries[1]['batch']?['distanceBetweenDropsMeters'],
+                onOpenNavigation: onOpenNavigation,
+              ),
+            ...activeDeliveries.mapIndexed((idx, o) => RiderActiveDeliveryCard(
                   key: ValueKey(o['id']),
                   order: o,
+                  stopIndex: idx + 1,
+                  totalStops: activeDeliveries.length,
                   isUpdating: updatingOrderId == o['id']?.toString(),
                   onOpenNavigation: onOpenNavigation,
                   onShowDoorstepQr: onShowDoorstepQr,
                   onShowConfirmation: onShowConfirmation,
                 )),
+          ],
 
           const SizedBox(height: 22),
 

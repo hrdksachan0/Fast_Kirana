@@ -147,6 +147,142 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  void _showRateAppDialog(BuildContext context) {
+    int selectedStars = 5;
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 16,
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppDesignSystem.amber50,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppDesignSystem.amber400.withValues(alpha: 0.3), width: 2),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.star_rounded, size: 36, color: AppDesignSystem.warning),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Love FastKirana?',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 18),
+                    fontWeight: FontWeight.w900,
+                    color: AppDesignSystem.slate900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  selectedStars >= 4
+                      ? 'Your 5-star review motivates our 10-minute delivery fleet to serve you better!'
+                      : 'We are sorry to disappoint. How can we make your experience better?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 12),
+                    color: AppDesignSystem.slate500,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    final starIndex = index + 1;
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setDialogState(() => selectedStars = starIndex);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          starIndex <= selectedStars ? Icons.star_rounded : Icons.star_outline_rounded,
+                          size: 36,
+                          color: starIndex <= selectedStars ? AppDesignSystem.warning : AppDesignSystem.slate300,
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selectedStars >= 4 ? AppDesignSystem.emerald600 : AppDesignSystem.slate800,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(dialogCtx);
+                      HapticFeedback.mediumImpact();
+                      if (selectedStars >= 4) {
+                        // Launch Google Play Store directly
+                        final marketUri = Uri.parse('market://details?id=com.fastkirana.app');
+                        final webUri = Uri.parse('https://play.google.com/store/apps/details?id=com.fastkirana.app');
+                        try {
+                          if (await canLaunchUrl(marketUri)) {
+                            await launchUrl(marketUri, mode: LaunchMode.externalApplication);
+                          } else {
+                            await launchUrl(webUri, mode: LaunchMode.externalApplication);
+                          }
+                        } catch (_) {
+                          if (await canLaunchUrl(webUri)) {
+                            await launchUrl(webUri, mode: LaunchMode.externalApplication);
+                          }
+                        }
+                      } else {
+                        // 1-3 stars: route to direct WhatsApp support to solve grievance
+                        final waUri = Uri.parse(
+                          'https://wa.me/918112849854?text=${Uri.encodeComponent('Hi FastKirana Support, I gave a $selectedStars-star rating. Here is my feedback: ')}',
+                        );
+                        if (await canLaunchUrl(waUri)) {
+                          await launchUrl(waUri, mode: LaunchMode.externalApplication);
+                        }
+                      }
+                    },
+                    child: Text(
+                      selectedStars >= 4 ? 'Rate on Google Play ⭐' : 'Send Feedback on WhatsApp',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 13.5),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: Text(
+                    'Maybe Later',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 12),
+                      color: AppDesignSystem.slate400,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -186,6 +322,7 @@ class ProfileScreen extends ConsumerWidget {
       role == 'RESTAURANT'
     );
     final isPickerOnly = !isAdmin && (role == 'PICKER');
+    final isVendorOnly = !isAdmin && (role == 'VENDOR');
 
     final name = (user?.name?.isNotEmpty == true && user?.name != 'FastKirana Customer')
         ? user!.name!
@@ -195,7 +332,9 @@ class ProfileScreen extends ConsumerWidget {
                 ? 'Delivery Partner'
                 : (isChefOrOwnerOnly
                     ? 'Restaurant Chef'
-                    : (isPickerOnly ? 'Warehouse Picker' : 'FastKirana Customer'))));
+                    : (isPickerOnly
+                        ? 'Warehouse Picker'
+                        : (isVendorOnly ? 'Supplier Partner' : 'FastKirana Customer')))));
 
     String phoneDisplay;
     if (user?.phone?.isNotEmpty == true) {
@@ -229,13 +368,14 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
 
-              // ─── 2. Operations Suite (Admin, Rider, Chef, Picker) ──────────
+              // ─── 2. Operations Suite (Admin, Rider, Chef, Picker, Vendor) ──────────
               SliverToBoxAdapter(
                 child: ProfileOperationsSuite(
                   isAdmin: isAdmin,
                   isRiderOnly: isRiderOnly,
                   isChefOrOwnerOnly: isChefOrOwnerOnly,
                   isPickerOnly: isPickerOnly,
+                  isVendorOnly: isVendorOnly,
                   assignedRestaurantId: user?.assignedRestaurantId,
                 ),
               ),
@@ -351,16 +491,26 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                             const Divider(height: 1, color: AppDesignSystem.slate100),
                             ProfileMenuItem(
-                              icon: Icons.share_rounded,
+                              icon: Icons.star_rounded,
                               iconBg: AppDesignSystem.amber50,
                               iconColor: AppDesignSystem.amber600,
+                              title: 'Rate FastKirana App',
+                              subtitle: 'Love 10-min delivery? Rate us on Play Store',
+                              badge: '5.0 ★',
+                              onTap: () => _showRateAppDialog(context),
+                            ),
+                            const Divider(height: 1, color: AppDesignSystem.slate100),
+                            ProfileMenuItem(
+                              icon: Icons.share_rounded,
+                              iconBg: AppDesignSystem.blue50,
+                              iconColor: AppDesignSystem.blue600,
                               title: 'Share with Friends & Family',
                               subtitle: 'Invite neighbours to 10-min delivery',
                               onTap: () {
                                 HapticFeedback.lightImpact();
                                 Share.share(
-                                  '⚡ FastKirana Express: Order Groceries & Food in Ghatampur in 10-15 mins!\n\nDownload app: https://www.fastkirana.in',
-                                  subject: 'FastKirana Express Ghatampur',
+                                  '⚡ FastKirana Express: Order Groceries & Food in 10-15 mins!\n\nDownload app: https://www.fastkirana.in',
+                                  subject: 'FastKirana Express',
                                 );
                               },
                             ),

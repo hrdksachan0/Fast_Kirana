@@ -13,7 +13,7 @@ import '../../../providers/cart_provider.dart';
 import '../../../providers/store_settings_provider.dart';
 import '../../../widgets/unserviceable_location_banner.dart';
 import '../../auth/login_screen.dart';
-import '../../checkout/checkout_screen.dart';
+import 'cart_cross_sell_sheet.dart';
 
 /// Pinned Bottom Checkout Bar with Total Bill and Proceed Action
 class CartBottomCheckoutBar extends ConsumerWidget {
@@ -228,15 +228,14 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                       }
                     }
 
-                    Navigator.push(
+                    final cartProductIds = currentCart?.items.map((i) => i.productId).toList() ?? [];
+
+                    await CartCrossSellSheet.show(
                       context,
-                      FadeSlideRoute(
-                        page: CheckoutScreen(
-                          cookingInstruction: cookingInstruction.isNotEmpty ? cookingInstruction : null,
-                          couponCode: appliedCoupon,
-                          discountAmount: couponDiscount,
-                        ),
-                      ),
+                      cookingInstruction: cookingInstruction.isNotEmpty ? cookingInstruction : null,
+                      appliedCoupon: appliedCoupon,
+                      couponDiscount: couponDiscount,
+                      cartProductIds: cartProductIds,
                     );
                   },
                   child: Container(

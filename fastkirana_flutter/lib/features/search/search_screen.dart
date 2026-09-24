@@ -603,10 +603,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         final effectiveQueryWords = queryWords.isNotEmpty ? queryWords : rawWords;
 
         // 1. Dynamic matching for ANY restaurant registered in database or registry
-        final allRestaurants = [
-          ...restaurantsAsync.valueOrNull ?? [],
-          ...RestaurantRegistry.all,
-        ];
+        // Prefer live fetched list from backend database if available; fallback to registry only during initial offline boot
+        final liveRestaurants = restaurantsAsync.valueOrNull;
+        final List<Restaurant> allRestaurants = (liveRestaurants != null && liveRestaurants.isNotEmpty)
+            ? liveRestaurants
+            : RestaurantRegistry.all;
         final Map<String, Restaurant> uniqueRestMap = {};
         for (final r in allRestaurants) {
           uniqueRestMap[r.id.toLowerCase()] = r;

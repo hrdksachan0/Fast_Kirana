@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/routes/page_transitions.dart';
 import '../../admin/admin_dashboard.dart';
+import '../../admin/vendor_console_screen.dart';
 import '../../delivery/delivery_dashboard.dart';
 import '../../delivery/picker_dashboard.dart';
 import '../../cafe/restaurant_dashboard.dart';
@@ -14,7 +15,9 @@ class ProfileOperationsSuite extends StatelessWidget {
   final bool isRiderOnly;
   final bool isChefOrOwnerOnly;
   final bool isPickerOnly;
+  final bool isVendorOnly;
   final String? assignedRestaurantId;
+  final String? assignedVendorId;
 
   const ProfileOperationsSuite({
     super.key,
@@ -22,7 +25,9 @@ class ProfileOperationsSuite extends StatelessWidget {
     required this.isRiderOnly,
     required this.isChefOrOwnerOnly,
     required this.isPickerOnly,
+    this.isVendorOnly = false,
     this.assignedRestaurantId,
+    this.assignedVendorId,
   });
 
   @override
@@ -153,7 +158,107 @@ class ProfileOperationsSuite extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildOperationBentoTile(
+                      context: context,
+                      title: 'Vendor Hub',
+                      subtitle: 'Suppliers & Rates',
+                      emoji: '🏪',
+                      badge: 'VENDORS',
+                      bgTint: const Color(0xFFFFF7ED),
+                      borderColor: const Color(0xFFFED7AA),
+                      textColor: const Color(0xFFC2410C),
+                      onTap: () => Navigator.push(context, FadeSlideRoute(page: const VendorConsoleScreen())),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Spacer(),
+                ],
+              ),
             ],
+          ),
+        ),
+      );
+    }
+
+    if (isVendorOnly) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+        child: Bounceable(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              FadeSlideRoute(
+                page: VendorConsoleScreen(
+                  initialVendorId: assignedVendorId,
+                  isVendorSelf: true,
+                ),
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF334155)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+                  ),
+                  child: Center(child: Text('🏪', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Supplier Partner Portal',
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: Colors.white),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: const Color(0xFFEA580C), borderRadius: BorderRadius.circular(6)),
+                            child: Text('SUPPLIER', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Live store orders, products, rates & sales payouts ➔',
+                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+              ],
+            ),
           ),
         ),
       );

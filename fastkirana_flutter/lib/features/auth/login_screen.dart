@@ -617,7 +617,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ),
 
-                            const SizedBox(height: 50),
+                            const SizedBox(height: 18),
+
+                            // Partner / Supplier Portal Link
+                            Center(
+                              child: GestureDetector(
+                                onTap: () => Navigator.pushNamed(context, '/vendor/login'),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.storefront_rounded, size: 15, color: Color(0xFFEA580C)),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Vendor / Supplier Partner? Login here',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF334155),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF64748B)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 36),
                           ],
                         ),
                       ),

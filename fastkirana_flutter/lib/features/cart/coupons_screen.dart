@@ -291,12 +291,14 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     if (isBogo) {
       if (coupon.bogoType == 'BUY_LARGE_GET_SMALL') {
         conditionText = 'Buy ${coupon.triggerVariant ?? 'Large'} & get ${coupon.rewardVariant ?? 'Small'} 100% FREE!';
+      } else if (coupon.bogoType == 'FREE_GIFT') {
+        conditionText = 'Buy ${coupon.triggerVariant ?? '1'} & get a special gift 100% FREE! 🎁';
       } else if (coupon.bogoType == 'SAME_ITEM') {
         conditionText = 'Buy 1 item & get exact same dish 100% FREE!';
       } else if (coupon.bogoType == 'CHEAPEST_FREE') {
         conditionText = 'Buy 2 or more qualifying dishes, get cheapest 100% FREE!';
       } else {
-        conditionText = 'Buy 1 Get 1 Free on qualifying dishes';
+        conditionText = coupon.badgeText ?? 'Buy 1 Get 1 Free on qualifying dishes';
       }
       if (coupon.minOrder > 0) {
         conditionText += ' • Min order ₹${coupon.minOrder.toInt()}';

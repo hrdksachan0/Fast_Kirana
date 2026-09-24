@@ -28,8 +28,8 @@ class RestaurantRegistry {
         lng: 80.1714,
         isPureVeg: true,
         isOpen: true,
-        openTime: '10:00',
-        closeTime: '22:00',
+        openTime: '09:00',
+        closeTime: '23:59',
       ),
       Restaurant(
         id: 'REST-102',
@@ -42,8 +42,8 @@ class RestaurantRegistry {
         lat: 26.1550,
         lng: 80.1730,
         isOpen: true,
-        openTime: '10:00',
-        closeTime: '22:30',
+        openTime: '09:00',
+        closeTime: '23:59',
       ),
       Restaurant(
         id: 'REST-103',
@@ -56,8 +56,8 @@ class RestaurantRegistry {
         lat: 26.1510,
         lng: 80.1690,
         isOpen: true,
-        openTime: '10:00',
-        closeTime: '22:00',
+        openTime: '09:00',
+        closeTime: '23:59',
       ),
       Restaurant(
         id: 'REST-104',
@@ -70,22 +70,8 @@ class RestaurantRegistry {
         lat: 26.1484783,
         lng: 80.1667542,
         isOpen: true,
-        openTime: '10:00',
-        closeTime: '22:00',
-      ),
-      Restaurant(
-        id: 'REST-105',
-        name: 'Pari Sweets & Bakers',
-        slug: 'pari-milk-dairy',
-        description: 'Fresh Dairy, Sweets & Bakery items',
-        address: 'Ghatampur Market, UP',
-        phone: '+918112849854',
-        ownerPhone: '+918112849854',
-        lat: 26.1520,
-        lng: 80.1700,
-        isOpen: true,
-        openTime: '08:00',
-        closeTime: '22:00',
+        openTime: '09:00',
+        closeTime: '23:59',
       ),
     ];
 
@@ -136,12 +122,19 @@ class RestaurantRegistry {
     return dishKeywords.any((k) => n.contains(k));
   }
 
-  /// Register or update a list of restaurants fetched from DB/API
-  static void registerAll(List<Restaurant> list) {
+  /// Synchronize the registry with the source-of-truth list returned from backend/database.
+  /// Replaces previously registered restaurants so that deleted or deactivated restaurants are completely purged.
+  static void syncWithBackend(List<Restaurant> list) {
     _ensureInitialized();
+    _byKey.clear();
     for (final r in list) {
       register(r);
     }
+  }
+
+  /// Register or update a list of restaurants fetched from DB/API
+  static void registerAll(List<Restaurant> list) {
+    syncWithBackend(list);
   }
 
   /// Register an individual restaurant
@@ -272,11 +265,11 @@ class RestaurantScheduleHelper {
 
   /// Evaluates whether the current IST time is within the given open/close schedule.
   static bool isWithinOperatingHours({String? openTime, String? closeTime}) {
-    final effectiveOpen = (openTime != null && openTime.trim().isNotEmpty) ? openTime.trim() : '10:00';
-    final effectiveClose = (closeTime != null && closeTime.trim().isNotEmpty) ? closeTime.trim() : '22:30';
+    final effectiveOpen = (openTime != null && openTime.trim().isNotEmpty) ? openTime.trim() : '09:00';
+    final effectiveClose = (closeTime != null && closeTime.trim().isNotEmpty) ? closeTime.trim() : '23:59';
 
-    final openMin = parseTimeStringToMinutes(effectiveOpen) ?? 600; // 10:00 AM
-    final closeMin = parseTimeStringToMinutes(effectiveClose) ?? 1350; // 10:30 PM
+    final openMin = parseTimeStringToMinutes(effectiveOpen) ?? 540; // 09:00 AM
+    final closeMin = parseTimeStringToMinutes(effectiveClose) ?? 1439; // 11:59 PM
 
     // 24 hour check
     if (openMin == 0 && (closeMin >= 1439 || closeMin == 0)) {
@@ -286,7 +279,7 @@ class RestaurantScheduleHelper {
     final currentMin = getISTMinutes();
 
     if (closeMin >= openMin) {
-      // Standard daytime window: e.g. 10:00 (600) to 22:30 (1350)
+      // Standard daytime window: e.g. 09:00 (540) to 23:59 (1439)
       return currentMin >= openMin && currentMin < closeMin;
     } else {
       // Overnight window: e.g. 18:00 to 02:00
@@ -294,13 +287,13 @@ class RestaurantScheduleHelper {
     }
   }
 
-  /// Returns user-friendly schedule string e.g. "Opens at 10:00 AM" or "Closes at 10:30 PM"
+  /// Returns user-friendly schedule string e.g. "Opens at 09:00 AM" or "Closes at 11:59 PM"
   static String getScheduleDescription({String? openTime, String? closeTime}) {
-    final effectiveOpen = (openTime != null && openTime.trim().isNotEmpty) ? openTime.trim() : '10:00';
-    final effectiveClose = (closeTime != null && closeTime.trim().isNotEmpty) ? closeTime.trim() : '22:30';
+    final effectiveOpen = (openTime != null && openTime.trim().isNotEmpty) ? openTime.trim() : '09:00';
+    final effectiveClose = (closeTime != null && closeTime.trim().isNotEmpty) ? closeTime.trim() : '23:59';
 
-    final openMin = parseTimeStringToMinutes(effectiveOpen) ?? 600;
-    final closeMin = parseTimeStringToMinutes(effectiveClose) ?? 1350;
+    final openMin = parseTimeStringToMinutes(effectiveOpen) ?? 540;
+    final closeMin = parseTimeStringToMinutes(effectiveClose) ?? 1439;
 
     final isOpen = isWithinOperatingHours(openTime: effectiveOpen, closeTime: effectiveClose);
     if (isOpen) {

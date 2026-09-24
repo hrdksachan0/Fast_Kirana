@@ -11,6 +11,7 @@ import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
 import 'admin_orders_list.dart';
 import 'admin_products.dart';
+import 'vendor_console_screen.dart';
 import '../../core/theme/responsive.dart';
 import '../../widgets/app_confirmation_dialog.dart';
 
@@ -30,6 +31,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
   final List<Widget> _screens = const [
     AdminOrdersScreen(showAppBar: false),
     AdminProductsScreen(showAppBar: false),
+    VendorConsoleScreen(showAppBar: false),
   ];
 
   Future<void> _handleLogout() async {
@@ -277,7 +279,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
       // Modern Floating Pill Navigation Dock (Zero Overflow)
       bottomNavigationBar: Container(
         color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: SafeArea(
           child: Row(
             children: [
@@ -289,13 +291,22 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                   icon: Icons.receipt_long_rounded,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 5),
               Expanded(
                 child: _buildDockItem(
                   index: 1,
                   label: 'Products',
-                  sub: 'Grocery & Outlets',
+                  sub: 'Catalog & Stock',
                   icon: Icons.inventory_2_rounded,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: _buildDockItem(
+                  index: 2,
+                  label: 'Vendors',
+                  sub: 'Bikri & Ledger',
+                  icon: Icons.storefront_rounded,
                 ),
               ),
             ],
@@ -320,10 +331,10 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 5),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
             width: 1.2,
@@ -342,41 +353,47 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(5),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: isSelected ? primaryRed : const Color(0xFFE2E8F0),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(7),
               ),
               child: Icon(
                 icon,
                 color: isSelected ? Colors.white : const Color(0xFF64748B),
-                size: 16,
+                size: 15,
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 12.5),
-                    fontWeight: FontWeight.w900,
-                    color: isSelected ? Colors.white : const Color(0xFF0F172A),
-                    height: 1.1,
+            const SizedBox(width: 4),
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 11),
+                      fontWeight: FontWeight.w900,
+                      color: isSelected ? Colors.white : const Color(0xFF0F172A),
+                      height: 1.1,
+                    ),
                   ),
-                ),
-                Text(
-                  sub,
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 9),
-                    fontWeight: FontWeight.w600,
-                    color: isSelected ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                    height: 1.1,
+                  Text(
+                    sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 8.5),
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                      height: 1.1,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

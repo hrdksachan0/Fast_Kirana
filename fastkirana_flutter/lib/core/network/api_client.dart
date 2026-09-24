@@ -176,11 +176,12 @@ final dioProvider = Provider<Dio>((ref) {
         return handler.next(error);
       }
 
-      final isConnectionError = error.type == DioExceptionType.connectionError ||
+      final isConnectionOrServerError = error.type == DioExceptionType.connectionError ||
           error.type == DioExceptionType.connectionTimeout ||
-          error.type == DioExceptionType.unknown;
+          error.type == DioExceptionType.unknown ||
+          (error.response?.statusCode != null && error.response!.statusCode! >= 500);
 
-      if (isConnectionError && !error.requestOptions.extra.containsKey('retried_fallback')) {
+      if (isConnectionOrServerError && !error.requestOptions.extra.containsKey('retried_fallback')) {
         try {
           final targetPath = error.requestOptions.path.startsWith('http')
               ? error.requestOptions.path

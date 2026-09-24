@@ -8,6 +8,7 @@ import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/address.dart';
 import '../../data/repositories/product_repository.dart';
+import '../../data/repositories/banner_repository.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import 'widgets/home_footer.dart';
@@ -163,7 +164,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               color: AppDesignSystem.primary,
               onRefresh: () async {
                 HapticFeedback.mediumImpact();
+                await BannerRepository.invalidateCache();
                 await ProductRepository.invalidateAllCache();
+                ref.invalidate(homeProductCatalogProvider);
                 ref.invalidate(cartProvider);
                 ref.invalidate(categoriesProvider);
                 ref.invalidate(activeStoreHubsProvider);

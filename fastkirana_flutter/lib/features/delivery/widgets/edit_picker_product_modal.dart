@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/app_toast.dart';
+import '../../../core/config/app_config.dart';
 import '../../../providers/product_provider.dart';
 
 class EditPickerProductModal extends ConsumerStatefulWidget {
@@ -468,6 +469,7 @@ class _EditPickerProductModalState extends ConsumerState<EditPickerProductModal>
         'unit': unit.isNotEmpty ? unit : '1 pc',
         'isAvailable': _isAvailable && stock > 0,
         'variants': _variants,
+        if (AppConfig.darkstoreId.isNotEmpty) 'storeId': AppConfig.darkstoreId,
       };
 
       final response = await dio.patch(

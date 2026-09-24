@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:collection/collection.dart';
+import '../../../core/widgets/app_cached_image.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../data/models/product.dart';
@@ -25,6 +24,23 @@ class CartUpsellCarousel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final upsellAsync = ref.watch(cartUpsellProductsProvider(cartProductIds));
 
+    final cart = ref.watch(cartProvider).valueOrNull;
+    final cartItems = cart?.items ?? [];
+    final hasFoodItem = cartItems.any((i) {
+      final n = i.product.name.toLowerCase();
+      return n.contains('biryani') ||
+          n.contains('burger') ||
+          n.contains('pizza') ||
+          n.contains('roll') ||
+          n.contains('meal') ||
+          n.contains('thali') ||
+          n.contains('noodle') ||
+          n.contains('rice') ||
+          n.contains('chicken') ||
+          n.contains('paneer') ||
+          isRestaurantProduct(i.product);
+    });
+
     return upsellAsync.when(
       data: (products) {
         if (products.isEmpty) return const SizedBox.shrink();
@@ -34,23 +50,65 @@ class CartUpsellCarousel extends ConsumerWidget {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Row(
                   children: [
-                    Text('🛒', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
-                    const SizedBox(width: 6),
                     Text(
-                      'Frequently bought together',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 13),
-                        fontWeight: FontWeight.w800,
-                        color: AppDesignSystem.slate900,
-                      ),
+                      hasFoodItem ? '🥤' : '🛒',
+                      style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14)),
+                    ),
+                    const SizedBox(width: 6),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              hasFoodItem ? 'Aap Ye Bhool Gaye?' : 'Frequently bought together',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 13),
+                                fontWeight: FontWeight.w900,
+                                color: AppDesignSystem.slate900,
+                              ),
+                            ),
+                            if (hasFoodItem) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: AppDesignSystem.rose50,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppDesignSystem.red100, width: 0.8),
+                                ),
+                                child: Text(
+                                  '1-TAP ADD',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: AppDesignSystem.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        Text(
+                          hasFoodItem
+                              ? 'Chilled Coke, Thums Up & Ice Cream'
+                              : 'Add essentials for your home',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w600,
+                            color: AppDesignSystem.slate500,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
                 Text(
-                  'Slide for more →',
+                  'Slide →',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10.5),
                     fontWeight: FontWeight.w600,
@@ -96,6 +154,18 @@ class CartUpsellCard extends ConsumerWidget {
     final cartItem = cart?.items.firstWhereOrNull((i) => i.productId == product.id || i.product.id == product.id);
     final imageUrl = product.imageUrl ?? '';
 
+    final nameLower = product.name.toLowerCase();
+    final catLower = (product.category?.slug ?? '').toLowerCase();
+    final isDrinkOrIceCream = nameLower.contains('thums') ||
+        nameLower.contains('coke') ||
+        nameLower.contains('pepsi') ||
+        nameLower.contains('sprite') ||
+        nameLower.contains('drink') ||
+        nameLower.contains('ice cream') ||
+        nameLower.contains('kulfi') ||
+        catLower.contains('beverage') ||
+        catLower.contains('ice-cream');
+
     return Container(
       width: 132,
       margin: const EdgeInsets.only(right: 10),
@@ -115,32 +185,47 @@ class CartUpsellCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Centered Product Image
-          Container(
-            width: double.infinity,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppDesignSystem.slate50,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: imageUrl.isNotEmpty
-                  ? (kIsWeb
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 24, color: AppDesignSystem.slate400),
-                        )
-                      : CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.contain,
-                          memCacheWidth: 200,
-                          memCacheHeight: 200,
-                          errorWidget: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, size: 24, color: AppDesignSystem.slate400),
-                        ))
-                  : const Icon(Icons.shopping_bag_outlined, size: 24, color: AppDesignSystem.slate400),
-            ),
+          // Centered Product Image with Chilled/Dessert Badge
+          Stack(
+            children: [
+              Container(
+                width: double.infinity,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppDesignSystem.slate50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: AppCachedImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.contain,
+                    memCacheWidth: 200,
+                    memCacheHeight: 200,
+                  ),
+                ),
+              ),
+              if (isDrinkOrIceCream)
+                Positioned(
+                  top: 4,
+                  left: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      nameLower.contains('ice cream') || catLower.contains('ice-cream') ? '🍦 Dessert' : '❄️ Chilled',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 8),
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 8),
 

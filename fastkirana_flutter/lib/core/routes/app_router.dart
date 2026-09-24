@@ -14,6 +14,8 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/auth/admin_login.dart';
 import '../../features/auth/delivery_login.dart';
+import '../../features/auth/vendor_login.dart';
+import '../../features/admin/vendor_console_screen.dart';
 import '../../features/delivery/delivery_dashboard.dart';
 import '../../features/location/delivery_location_screen.dart';
 import '../../features/location/map_picker_screen.dart';
@@ -66,6 +68,19 @@ class AppRouter {
       case '/restaurant/dashboard':
       case '/kitchen':
         return FadeThroughRoute(page: const RestaurantDashboard());
+      case '/vendor':
+      case '/vendor/login':
+        return ZeptoSlideRoute(page: const VendorLoginScreen());
+      case '/vendor/console':
+      case '/vendor/dashboard':
+        final args = settings.arguments as Map<String, dynamic>?;
+        final vId = args?['vendorId'] as String?;
+        return FadeThroughRoute(
+          page: VendorConsoleScreen(
+            initialVendorId: vId,
+            isVendorSelf: true,
+          ),
+        );
       case '/otp':
         final identifier = (settings.arguments as String?) ?? '';
         return ZeptoSlideRoute(page: OtpScreen(identifier: identifier));

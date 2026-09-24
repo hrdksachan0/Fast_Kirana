@@ -9,6 +9,7 @@ import '../../../core/theme/design_system.dart';
 import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/app_toast.dart';
+import '../../../core/config/app_config.dart';
 import '../../../providers/product_provider.dart';
 
 class AddPickerProductModal extends ConsumerStatefulWidget {
@@ -233,6 +234,8 @@ class _AddPickerProductModalState
           'description': _descriptionController.text.trim(),
         if (_selectedExpiryDate != null)
           'expiryDate': _selectedExpiryDate!.toIso8601String(),
+        if (AppConfig.darkstoreId.isNotEmpty)
+          'storeId': AppConfig.darkstoreId,
         'tags': ['grocery', 'darkstore'],
       };
 

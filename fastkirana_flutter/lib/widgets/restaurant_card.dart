@@ -519,10 +519,10 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                           ),
                           child: Center(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFE11D48),
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.3),
@@ -530,14 +530,32 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                                   ),
                                 ],
                               ),
-                              child: Text(
-                                'CLOSED FOR ORDERS',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: Responsive.scaledFontSize(context, 11),
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 0.8,
-                                ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'CLOSED FOR ORDERS',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: Responsive.scaledFontSize(context, 11),
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    RestaurantScheduleHelper.getScheduleDescription(
+                                      openTime: r.openTime,
+                                      closeTime: r.closeTime,
+                                    ),
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: Responsive.scaledFontSize(context, 9.5),
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white.withValues(alpha: 0.95),
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),

@@ -8,6 +8,8 @@ class BannerRepository {
   final Dio dio;
   static const _diskBannersPrefix = 'cached_promo_banners_v15_';
   static final Map<String, List<Banner>> _inMemoryBanners = {};
+  static final Map<String, DateTime> _inMemoryBannersLastFetch = {};
+  static const _bannerTTLMinutes = 2; // Auto re-fetch every 2 minutes max
 
   BannerRepository(this.dio);
 
@@ -15,11 +17,26 @@ class BannerRepository {
   static const List<Banner> defaultFoodBanners = [];
   static List<Banner> get defaultBanners => defaultGroceryBanners;
 
+  /// Clear all banner caches (in-memory and disk)
+  static Future<void> invalidateCache() async {
+    _inMemoryBanners.clear();
+    _inMemoryBannersLastFetch.clear();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys().where((k) => k.startsWith(_diskBannersPrefix)).toList();
+      for (final k in keys) {
+        await prefs.remove(k);
+      }
+    } catch (_) {}
+  }
+
   Future<List<Banner>> getBanners({String? type, String? storeId, bool forceRefresh = false}) async {
     final key = '${type ?? "all"}_${storeId ?? "global"}';
+    final lastTime = _inMemoryBannersLastFetch[key];
+    final isMemFresh = lastTime != null && DateTime.now().difference(lastTime).inMinutes < _bannerTTLMinutes;
 
-    // 1. In-memory cache hit
-    if (!forceRefresh && _inMemoryBanners.containsKey(key)) {
+    // 1. In-memory cache hit (only if fresh and not forceRefresh)
+    if (!forceRefresh && isMemFresh && _inMemoryBanners.containsKey(key)) {
       return _inMemoryBanners[key]!;
     }
 
@@ -28,15 +45,17 @@ class BannerRepository {
       final diskBanners = await _loadBannersFromDisk(key);
       if (diskBanners != null) {
         _inMemoryBanners[key] = diskBanners;
+        _inMemoryBannersLastFetch[key] = DateTime.now();
         _fetchFromNetwork(type: type, storeId: storeId);
         return diskBanners;
       }
     }
 
-    // 3. Network fetch (first load or pull-to-refresh)
+    // 3. Network fetch (first load, pull-to-refresh, or expired TTL)
     final networkBanners = await _fetchFromNetwork(type: type, storeId: storeId);
     if (networkBanners != null) {
       _inMemoryBanners[key] = networkBanners;
+      _inMemoryBannersLastFetch[key] = DateTime.now();
       return networkBanners;
     }
 

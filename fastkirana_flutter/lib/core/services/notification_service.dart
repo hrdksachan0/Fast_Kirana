@@ -68,6 +68,35 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       debugPrint('NotificationService: Suppressing staff/admin alert for customer user in background.');
       return;
     }
+
+    // STRICT OUTLET ISOLATION IN BACKGROUND:
+    final assignedRestId = prefs.getString('assigned_restaurant_id') ?? '';
+    final notifRestId = (data['restaurantId'] ?? '').toString().trim();
+    final notifScreen = (data['screen'] ?? '').toString().trim();
+    final isRestStaff = userRole == 'RESTAURANT' || userRole == 'RESTAURANT_OWNER' || userRole == 'CHEF' || assignedRestId.isNotEmpty;
+
+    // 1. If assigned to an outlet and notification is for another restaurant, SUPPRESS!
+    if (isRestStaff && assignedRestId.isNotEmpty && notifRestId.isNotEmpty) {
+      if (assignedRestId.toLowerCase() != notifRestId.toLowerCase()) {
+        debugPrint('NotificationService: Suppressing alert in background for different restaurant ($notifRestId != $assignedRestId)');
+        return;
+      }
+    }
+    // 2. If restaurant staff and notification is grocery picker alert, SUPPRESS!
+    if (isRestStaff && (notifScreen == 'picker' || data['role'] == 'PICKER')) {
+      debugPrint('NotificationService: Suppressing grocery picker alert for restaurant staff in background.');
+      return;
+    }
+    // 3. If grocery picker and notification is restaurant console alert, SUPPRESS!
+    if (userRole == 'PICKER' && (notifScreen == 'restaurant-console' || notifRestId.isNotEmpty)) {
+      debugPrint('NotificationService: Suppressing restaurant alert for grocery picker in background.');
+      return;
+    }
+    // 4. If VENDOR, strictly suppress restaurant, picker, rider, and non-vendor alerts!
+    if (userRole == 'VENDOR' && data['type'] != 'VENDOR_NEW_ORDER' && data['screen'] != 'vendor-console') {
+      debugPrint('NotificationService: Suppressing non-vendor alert for vendor in background.');
+      return;
+    }
   } catch (_) {}
 
   // Detect cancel/reject notifications — those should be quiet and not trigger loud alarm
@@ -96,16 +125,21 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       orderStatus == 'DELIVERED' ||
       orderStatus == 'CONFIRMED' ||
       orderStatus == 'PREPARING' ||
+      orderStatus == 'COOKING' ||
       orderStatus == 'PACKED' ||
       orderStatus == 'ON_THE_WAY' ||
+      orderStatus == 'ARRIVING_SOON' ||
+      data['type'] == 'ORDER_STATUS_UPDATE' ||
       title.toString().toLowerCase().contains('out for delivery') ||
       title.toString().toLowerCase().contains('dispatched') ||
       title.toString().toLowerCase().contains('delivered') ||
       title.toString().toLowerCase().contains('on the way') ||
+      title.toString().toLowerCase().contains('arriving') ||
       (body ?? '').toString().toLowerCase().contains('out for delivery') ||
       (body ?? '').toString().toLowerCase().contains('dispatched') ||
       (body ?? '').toString().toLowerCase().contains('delivered') ||
-      (body ?? '').toString().toLowerCase().contains('on the way'));
+      (body ?? '').toString().toLowerCase().contains('on the way') ||
+      (body ?? '').toString().toLowerCase().contains('arriving'));
 
   if (notification != null && !isOrderAlert && !isOrderStatusUpdate) {
     // Android OS has already displayed the standard notification. Do NOT show a 2nd notification!
@@ -400,6 +434,35 @@ class NotificationService {
         debugPrint('NotificationService: Suppressed staff/admin alert for customer user in foreground.');
         return;
       }
+
+      // STRICT OUTLET ISOLATION IN FOREGROUND:
+      final assignedRestId = prefs.getString('assigned_restaurant_id') ?? '';
+      final notifRestId = (data['restaurantId'] ?? '').toString().trim();
+      final notifScreen = (data['screen'] ?? '').toString().trim();
+      final isRestStaff = userRole == 'RESTAURANT' || userRole == 'RESTAURANT_OWNER' || userRole == 'CHEF' || assignedRestId.isNotEmpty;
+
+      // 1. If assigned to an outlet and notification is for another restaurant, SUPPRESS!
+      if (isRestStaff && assignedRestId.isNotEmpty && notifRestId.isNotEmpty) {
+        if (assignedRestId.toLowerCase() != notifRestId.toLowerCase()) {
+          debugPrint('NotificationService: Suppressing foreground alert for different restaurant ($notifRestId != $assignedRestId)');
+          return;
+        }
+      }
+      // 2. If restaurant staff and notification is grocery picker alert, SUPPRESS!
+      if (isRestStaff && (notifScreen == 'picker' || data['role'] == 'PICKER')) {
+        debugPrint('NotificationService: Suppressing grocery picker alert for restaurant staff in foreground.');
+        return;
+      }
+      // 3. If grocery picker and notification is restaurant console alert, SUPPRESS!
+      if (userRole == 'PICKER' && (notifScreen == 'restaurant-console' || notifRestId.isNotEmpty)) {
+        debugPrint('NotificationService: Suppressing restaurant alert for grocery picker in foreground.');
+        return;
+      }
+      // 4. If VENDOR, strictly suppress restaurant, picker, rider, and non-vendor alerts!
+      if (userRole == 'VENDOR' && data['type'] != 'VENDOR_NEW_ORDER' && data['screen'] != 'vendor-console') {
+        debugPrint('NotificationService: Suppressing non-vendor alert for vendor in foreground.');
+        return;
+      }
     } catch (_) {}
 
     final rawOrderId = data['orderId'] ?? data['readableId'] ?? data['id'];
@@ -439,16 +502,21 @@ class NotificationService {
         orderStatus == 'DELIVERED' ||
         orderStatus == 'CONFIRMED' ||
         orderStatus == 'PREPARING' ||
+        orderStatus == 'COOKING' ||
         orderStatus == 'PACKED' ||
         orderStatus == 'ON_THE_WAY' ||
+        orderStatus == 'ARRIVING_SOON' ||
+        data['type'] == 'ORDER_STATUS_UPDATE' ||
         title.toString().toLowerCase().contains('out for delivery') ||
         title.toString().toLowerCase().contains('dispatched') ||
         title.toString().toLowerCase().contains('delivered') ||
         title.toString().toLowerCase().contains('on the way') ||
+        title.toString().toLowerCase().contains('arriving') ||
         body.toString().toLowerCase().contains('out for delivery') ||
         body.toString().toLowerCase().contains('dispatched') ||
         body.toString().toLowerCase().contains('delivered') ||
-        body.toString().toLowerCase().contains('on the way'));
+        body.toString().toLowerCase().contains('on the way') ||
+        body.toString().toLowerCase().contains('arriving'));
 
     final isOrderAlert = !isCancelledOrTerminal && (
         data['screen'] == 'restaurant-console' ||
@@ -641,8 +709,11 @@ class NotificationService {
         } else if (isDeliveryOrPicker) {
           if (storeId != null && storeId.isNotEmpty) {
             await _fcm?.subscribeToTopic('staff_orders_$storeId');
+            await _fcm?.subscribeToTopic('picker_orders_$storeId');
+            await _fcm?.subscribeToTopic('delivery_orders_$storeId');
+          } else {
+            await _fcm?.subscribeToTopic('staff_orders');
           }
-          await _fcm?.subscribeToTopic('staff_orders');
         } else if (resolvedRole == 'CUSTOMER' || resolvedRole == 'USER') {
           // Normal CUSTOMER / USER: Actively purge ANY leftover admin/staff/kitchen subscriptions on this device!
           final staffTopicsToPurge = [

@@ -46,7 +46,7 @@ class AdminOrdersScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
-    with AutomaticKeepAliveClientMixin<AdminOrdersScreen> {
+    with AutomaticKeepAliveClientMixin<AdminOrdersScreen>, WidgetsBindingObserver {
   @override
   bool get wantKeepAlive => true;
 
@@ -73,18 +73,41 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
   static const String _diskAdminOrdersKey = 'cached_admin_orders_v2';
 
+  static String _getTodayDateKey() {
+    final nowUtc = DateTime.now().toUtc();
+    final istNow = nowUtc.add(const Duration(hours: 5, minutes: 30));
+    return '${istNow.year}-${istNow.month.toString().padLeft(2, '0')}-${istNow.day.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _loadDiskOrders() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _lastTodaySales = prefs.getDouble('admin_last_today_sales') ?? _lastTodaySales;
-      _lastNetSales = prefs.getDouble('admin_last_net_sales') ?? _lastNetSales;
-      _lastTodayOrdersCount = prefs.getInt('admin_last_today_orders_count') ?? _lastTodayOrdersCount;
-      _lastActiveOrderCount = prefs.getInt('admin_last_active_orders_count') ?? _lastActiveOrderCount;
-      _lastLiveCount = prefs.getInt('admin_last_live_count') ?? _lastLiveCount;
-      _lastHistoryCount = prefs.getInt('admin_last_history_count') ?? _lastHistoryCount;
-      _lastPendingPaymentCount = prefs.getInt('admin_last_pending_payment_count') ?? _lastPendingPaymentCount;
-      _lastDeliveryFee = prefs.getDouble('admin_last_delivery_fee') ?? _lastDeliveryFee;
-      _lastPackagingFee = prefs.getDouble('admin_last_packaging_fee') ?? _lastPackagingFee;
+      final todayKey = _getTodayDateKey();
+      final savedDate = prefs.getString('admin_stats_saved_date');
+
+      // Only load cached metrics if they belong to TODAY!
+      if (savedDate == todayKey) {
+        _lastTodaySales = prefs.getDouble('admin_last_today_sales') ?? _lastTodaySales;
+        _lastNetSales = prefs.getDouble('admin_last_net_sales') ?? _lastNetSales;
+        _lastTodayOrdersCount = prefs.getInt('admin_last_today_orders_count') ?? _lastTodayOrdersCount;
+        _lastActiveOrderCount = prefs.getInt('admin_last_active_orders_count') ?? _lastActiveOrderCount;
+        _lastLiveCount = prefs.getInt('admin_last_live_count') ?? _lastLiveCount;
+        _lastHistoryCount = prefs.getInt('admin_last_history_count') ?? _lastHistoryCount;
+        _lastPendingPaymentCount = prefs.getInt('admin_last_pending_payment_count') ?? _lastPendingPaymentCount;
+        _lastDeliveryFee = prefs.getDouble('admin_last_delivery_fee') ?? _lastDeliveryFee;
+        _lastPackagingFee = prefs.getDouble('admin_last_packaging_fee') ?? _lastPackagingFee;
+      } else {
+        // Date changed! Reset previous metrics to 0 so yesterday's figures do not flash
+        _lastTodaySales = 0.0;
+        _lastNetSales = 0.0;
+        _lastTodayOrdersCount = 0;
+        _lastActiveOrderCount = 0;
+        _lastLiveCount = 0;
+        _lastHistoryCount = 0;
+        _lastPendingPaymentCount = 0;
+        _lastDeliveryFee = 0.0;
+        _lastPackagingFee = 0.0;
+      }
 
       final raw = prefs.getString(_diskAdminOrdersKey);
       if (raw != null && raw.isNotEmpty && mounted) {
@@ -140,6 +163,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('admin_stats_saved_date', _getTodayDateKey());
       await prefs.setDouble('admin_last_today_sales', todaySales);
       await prefs.setDouble('admin_last_net_sales', netSales);
       await prefs.setInt('admin_last_today_orders_count', todayOrdersCount);
@@ -155,6 +179,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   Timer? _liveSyncTimer;
   RealtimeChannel? _realtimeOrdersChannel;
   bool _isFetchingAdmin = false;
+  bool _needsRefetch = false;
 
   static const Color primaryRed = AppDesignSystem.primary;
 
@@ -289,6 +314,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initConnectivityAndOfflineQueue();
     _fetchAdminProfile();
     _fetchDeliveryRiders();
@@ -339,9 +365,9 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       },
     );
 
-    // 2. Calm fallback sync timer every 30 seconds
-    _liveSyncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (!_isDeviceOffline) {
+    // 2. Realtime continuous auto-refresh timer every 12 seconds
+    _liveSyncTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+      if (!_isDeviceOffline && mounted) {
         _silentFetchAdminOrders();
       }
     });
@@ -491,12 +517,22 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _stopPendingAlarm();
     _audioPlayer.dispose();
     _liveSyncTimer?.cancel();
     _connectivitySubscription?.cancel();
     SupabaseService.unsubscribe(_realtimeOrdersChannel);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      if (!_isDeviceOffline) {
+        _silentFetchAdminOrders();
+      }
+    }
   }
 
   Future<void> _fetchAdminOrders() async {
@@ -515,14 +551,18 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
     try {
       final dio = ref.read(dioProvider);
-      final List<Order> loaded = [];
-      final Set<String> seenIds = {};
+      final Map<String, Order> orderMap = {};
 
-      void addUnique(Order o) {
-        final key = o.id;
-        if (!seenIds.contains(key)) {
-          seenIds.add(key);
-          loaded.add(o);
+      void addOrUpdate(Order o) {
+        final existing = orderMap[o.id];
+        if (existing == null) {
+          orderMap[o.id] = o;
+        } else {
+          final existingItemCount = existing.items?.length ?? 0;
+          final newItemCount = o.items?.length ?? 0;
+          if (newItemCount > existingItemCount || o.createdAt.isAfter(existing.createdAt) || (o.status != existing.status && o.status != OrderStatus.pending)) {
+            orderMap[o.id] = o;
+          }
         }
       }
 
@@ -545,7 +585,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
                 .order('createdAt', ascending: false)
                 .limit(100);
             for (final j in res) {
-              try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
+              try { addOrUpdate(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
             }
           } catch (e) {
             debugPrint('Supabase orders fetch error: $e');
@@ -573,7 +613,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
             }
             for (final j in rawList) {
               if (j is Map<String, dynamic>) {
-                try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
+                try { addOrUpdate(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
               }
             }
           } catch (e) {
@@ -582,6 +622,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         }(),
       ]);
 
+      final loaded = orderMap.values.toList();
       if (loaded.isNotEmpty) {
         final mergedOrders = _mergeCombinedOrders(loaded);
         _cachedOrders = mergedOrders;
@@ -745,8 +786,12 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
 
   Future<void> _silentFetchAdminOrders() async {
-    if (_isFetchingAdmin) return;
+    if (_isFetchingAdmin) {
+      _needsRefetch = true;
+      return;
+    }
     _isFetchingAdmin = true;
+    _needsRefetch = false;
 
     if (!SecureStorage.isCacheLoaded || SecureStorage.cachedUserId == null) {
       await SecureStorage.loadCache();
@@ -754,16 +799,22 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
     try {
       final dio = ref.read(dioProvider);
-      final List<Order> loaded = [];
-      final Set<String> seenIds = {};
+      final Map<String, Order> orderMap = {};
 
-      void addUnique(Order o) {
-        if (seenIds.add(o.id)) {
-          loaded.add(o);
+      void addOrUpdate(Order o) {
+        final existing = orderMap[o.id];
+        if (existing == null) {
+          orderMap[o.id] = o;
+        } else {
+          final existingItemCount = existing.items?.length ?? 0;
+          final newItemCount = o.items?.length ?? 0;
+          if (newItemCount > existingItemCount || o.createdAt.isAfter(existing.createdAt) || (o.status != existing.status && o.status != OrderStatus.pending)) {
+            orderMap[o.id] = o;
+          }
         }
       }
 
-      // Run ALL 3 sources in PARALLEL (not sequential waterfall)
+      // Run Supabase + REST API in PARALLEL
       await Future.wait([
         // 1. Direct Supabase Query
         () async {
@@ -782,7 +833,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
                 .order('createdAt', ascending: false)
                 .limit(100);
             for (final j in res) {
-              try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
+              try { addOrUpdate(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
             }
           } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
         }(),
@@ -808,23 +859,14 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
             }
             for (final j in rawList) {
               if (j is Map<String, dynamic>) {
-                try { addUnique(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
+                try { addOrUpdate(Order.fromJson(j)); } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
               }
-            }
-          } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
-        }(),
-        // 3. Local cached orders
-        () async {
-          try {
-            final repo = OrderRepository(dio);
-            final local = await repo.getOrders('');
-            for (final o in local) {
-              addUnique(o);
             }
           } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); }
         }(),
       ]);
 
+      final loaded = orderMap.values.toList();
       if (loaded.isNotEmpty) {
         final mergedOrders = _mergeCombinedOrders(loaded);
         _cachedOrders = mergedOrders;
@@ -851,8 +893,14 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           _syncAlarmStateWithOrders(mergedOrders);
         }
       }
-    } catch (e, _) { LoggerService.error('AdminOrdersList: order parse', e); } finally {
+    } catch (e, _) {
+      LoggerService.error('AdminOrdersList: order parse', e);
+    } finally {
       _isFetchingAdmin = false;
+      if (_needsRefetch && mounted) {
+        _needsRefetch = false;
+        unawaited(_silentFetchAdminOrders());
+      }
     }
   }
 

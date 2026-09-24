@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/app_cached_image.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../data/models/cart.dart';
@@ -42,27 +43,12 @@ class CartItemRow extends ConsumerWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: (prod.imageUrl != null && prod.imageUrl!.isNotEmpty)
-                  ? (kIsWeb
-                      ? Image.network(
-                          prod.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 22),
-                          ),
-                        )
-                      : CachedNetworkImage(
-                          imageUrl: prod.imageUrl!,
-                          fit: BoxFit.cover,
-                          memCacheWidth: 200,
-                          memCacheHeight: 200,
-                          errorWidget: (_, __, ___) => const Center(
-                            child: Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 22),
-                          ),
-                        ))
-                  : const Center(
-                      child: Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 22),
-                    ),
+              child: AppCachedImage(
+                imageUrl: prod.imageUrl,
+                fit: BoxFit.cover,
+                memCacheWidth: 200,
+                memCacheHeight: 200,
+              ),
             ),
           ),
           const SizedBox(width: 10),

@@ -833,6 +833,16 @@ class ProductCard extends ConsumerStatefulWidget {
 class _ProductCardState extends ConsumerState<ProductCard> {
   bool _isPressed = false;
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final imgUrl = widget.product.imageUrl;
+    if (imgUrl != null && imgUrl.isNotEmpty && !imgUrl.startsWith('data:')) {
+      final resolved = imgUrl.startsWith('/') ? 'https://www.fastkirana.in$imgUrl' : imgUrl;
+      precacheImage(CachedNetworkImageProvider(resolved), context).catchError((_) {});
+    }
+  }
+
   double get _uiScale {
     final effectiveWidth = widget.width ?? (widget.isCompact
         ? (context.screenWidth - 74 - 24) / 2

@@ -12,6 +12,10 @@ class Coupon {
   final String? bogoType;
   final String? triggerVariant;
   final String? rewardVariant;
+  final String? defaultFreeDishId;
+  final String? bogoDishId;
+  final String? menuSection;
+  final int? maxFreeItems;
   final String? badgeText;
   final bool autoApply;
   final bool isActive;
@@ -29,6 +33,10 @@ class Coupon {
     this.bogoType,
     this.triggerVariant,
     this.rewardVariant,
+    this.defaultFreeDishId,
+    this.bogoDishId,
+    this.menuSection,
+    this.maxFreeItems,
     this.badgeText,
     this.autoApply = false,
     this.isActive = true,
@@ -63,6 +71,10 @@ class Coupon {
       bogoType: json['bogoType']?.toString(),
       triggerVariant: json['triggerVariant']?.toString(),
       rewardVariant: json['rewardVariant']?.toString(),
+      defaultFreeDishId: json['defaultFreeDishId']?.toString(),
+      bogoDishId: json['bogoDishId']?.toString(),
+      menuSection: json['menuSection']?.toString(),
+      maxFreeItems: (json['maxFreeItems'] as num?)?.toInt(),
       badgeText: json['badgeText']?.toString(),
       autoApply: json['autoApply'] == true || json['autoApply'] == 1 || json['autoApply'] == 'true',
       isActive: json['isActive'] == true || json['isActive'] == 1 || json['isActive'] == 'true',
