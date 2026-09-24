@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -14,13 +14,14 @@ import { RestaurantListing } from '@/components/home/restaurant-listing'
 import { DealsCurationHub } from '@/components/home/deals-curation-hub'
 import { DeliveryBanner } from '@/components/home/delivery-banner'
 import { LastOrderBanner } from '@/components/home/last-order-banner'
-import { ShoppingBag, Utensils, Zap, Percent } from 'lucide-react'
+import { ShoppingBag, Utensils, Zap, Percent, Loader2 } from 'lucide-react'
 import { triggerHaptic } from '@/lib/haptic'
 import { FloatingEmojis } from '@/components/shared/floating-emojis'
 
 import { FoodEditorialCuration } from '@/components/home/food-editorial-curation'
 import { HubComingSoon } from '@/components/home/hub-coming-soon'
 import { CuratedBrandOffersCarousel } from '@/components/home/curated-brand-offers-carousel'
+import { useUIStore } from '@/stores/ui-store'
 
 interface StorefrontClientProps {
   categories: Category[]
@@ -99,6 +100,122 @@ export function StorefrontClient({
   const modeParam = searchParams.get('mode')
   const [activeTab, setActiveTab] = useState<'grocery' | 'food'>('grocery')
 
+  // Live dark store hub isolation & coordinates
+  const activeStoreId = useUIStore((s) => s.activeStoreId)
+  const isLocationServiceable = useUIStore((s) => s.isLocationServiceable)
+  const activeCity = useUIStore((s) => s.activeCity)
+
+  // Scoped store state
+  const [currentGroceryProducts, setCurrentGroceryProducts] = useState<Product[]>(allGroceryProducts)
+  const [currentPromoBanners, setCurrentPromoBanners] = useState<any[]>(promoBanners)
+  const [currentRestaurants, setCurrentRestaurants] = useState<any[]>(restaurants)
+  const [isLoadingStoreData, setIsLoadingStoreData] = useState(false)
+  const lastFetchedStoreIdRef = useRef<string | null>(null)
+
+  // Reactively fetch products, banners, and restaurants when active dark store hub changes
+  useEffect(() => {
+    // If activeStoreId is null or default initial hub ('hub-209206') and we haven't fetched another hub yet
+    if (!activeStoreId || activeStoreId === 'hub-209206') {
+      if (lastFetchedStoreIdRef.current && lastFetchedStoreIdRef.current !== 'hub-209206') {
+        setCurrentGroceryProducts(allGroceryProducts)
+        setCurrentPromoBanners(promoBanners)
+        setCurrentRestaurants(restaurants)
+        lastFetchedStoreIdRef.current = 'hub-209206'
+      }
+      return
+    }
+
+    if (lastFetchedStoreIdRef.current === activeStoreId) return
+    lastFetchedStoreIdRef.current = activeStoreId
+
+    let isMounted = true
+    setIsLoadingStoreData(true)
+
+    Promise.all([
+      fetch(`/api/products?storeId=${encodeURIComponent(activeStoreId)}&limit=500`).then((r) => r.json()).catch(() => ({ products: [] })),
+      fetch(`/api/banners?storeId=${encodeURIComponent(activeStoreId)}`).then((r) => r.json()).catch(() => []),
+      fetch(`/api/restaurants?storeId=${encodeURIComponent(activeStoreId)}`).then((r) => r.json()).catch(() => []),
+    ])
+      .then(([prodRes, bannerRes, restRes]) => {
+        if (!isMounted) return
+        const prods = Array.isArray(prodRes?.products) ? prodRes.products : []
+        const banners = Array.isArray(bannerRes) ? bannerRes : []
+        const rests = Array.isArray(restRes) ? restRes : []
+
+        setCurrentGroceryProducts(prods)
+        setCurrentPromoBanners(banners)
+        setCurrentRestaurants(rests)
+      })
+      .catch((err) => {
+        console.error('Error fetching hub data:', err)
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingStoreData(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [activeStoreId, allGroceryProducts, promoBanners, restaurants])
+
+  // Derive hub-scoped category & curation lists
+  const currentFlashDeals = useMemo(() => {
+    if (activeStoreId && activeStoreId !== 'hub-209206') {
+      return currentGroceryProducts.filter((p) => p.isFlashDeal || (p.discount && p.discount > 0))
+    }
+    return flashDeals
+  }, [currentGroceryProducts, activeStoreId, flashDeals])
+
+  const currentBestSellers = useMemo(() => {
+    if (activeStoreId && activeStoreId !== 'hub-209206') {
+      return currentGroceryProducts.filter((p) => p.isBestSeller)
+    }
+    return bestSellers
+  }, [currentGroceryProducts, activeStoreId, bestSellers])
+
+  const currentTopPicks = useMemo(() => {
+    if (activeStoreId && activeStoreId !== 'hub-209206') {
+      return currentGroceryProducts.filter((p) => p.isTopPick)
+    }
+    return topPicks
+  }, [currentGroceryProducts, activeStoreId, topPicks])
+
+  const currentBreakfast = useMemo(() => {
+    if (activeStoreId && activeStoreId !== 'hub-209206') {
+      return currentGroceryProducts.filter((p) => p.category?.slug === 'dairy-breakfast' || p.category?.slug === 'tea-coffee')
+    }
+    return breakfastProducts
+  }, [currentGroceryProducts, activeStoreId, breakfastProducts])
+
+  const currentLunch = useMemo(() => {
+    if (activeStoreId && activeStoreId !== 'hub-209206') {
+      return currentGroceryProducts.filter((p) => p.category?.slug === 'staples' || p.category?.slug === 'vegetables-fruits')
+    }
+    return lunchProducts
+  }, [currentGroceryProducts, activeStoreId, lunchProducts])
+
+  const currentTea = useMemo(() => {
+    if (activeStoreId && activeStoreId !== 'hub-209206') {
+      return currentGroceryProducts.filter((p) => p.category?.slug === 'snacks-munchies' || p.category?.slug === 'biscuits-cookies')
+    }
+    return teaProducts
+  }, [currentGroceryProducts, activeStoreId, teaProducts])
+
+  const currentNight = useMemo(() => {
+    if (activeStoreId && activeStoreId !== 'hub-209206') {
+      return currentGroceryProducts.filter((p) => p.category?.slug === 'instant-food' || p.category?.slug === 'cold-drinks-juices')
+    }
+    return nightProducts
+  }, [currentGroceryProducts, activeStoreId, nightProducts])
+
+  const currentCategories = useMemo(() => {
+    if (!activeStoreId || activeStoreId === 'hub-209206') {
+      return categories
+    }
+    const catIdSet = new Set(currentGroceryProducts.map((p) => p.categoryId).filter(Boolean))
+    return categories.filter((c) => catIdSet.has(c.id))
+  }, [categories, currentGroceryProducts, activeStoreId])
+
   useEffect(() => {
     if (modeParam === 'food' || modeParam === 'grocery') {
       setActiveTab(modeParam as any)
@@ -116,7 +233,7 @@ export function StorefrontClient({
       {/* Dynamic Celebration Floating Emojis */}
       <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 
-      {/* Clean & Spacious Top Store Mode Switcher (Scrolls away naturally so middle screen stays 100% open) */}
+      {/* Clean & Spacious Top Store Mode Switcher */}
       <div className="w-full flex items-center justify-center pt-3 sm:pt-4 pb-2 mt-1 sm:mt-2 px-4 pointer-events-auto">
         <div 
           className="relative flex items-center w-full max-w-[420px] h-[58px] sm:h-[64px] p-2 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_14px_38px_-8px_rgba(0,0,0,0.18),0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] border-2 border-zinc-200/90 dark:border-zinc-800/90" 
@@ -142,7 +259,6 @@ export function StorefrontClient({
               />
             )}
             <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'grocery' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
-              {/* High-Contrast White Circle for Active Icon */}
               <div className={cn(
                 "w-9.5 h-9.5 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-xl sm:text-2xl select-none",
                 activeTab === 'grocery' ? "bg-white text-rose-600 shadow-md scale-105" : "bg-zinc-100 dark:bg-zinc-900"
@@ -172,7 +288,6 @@ export function StorefrontClient({
               />
             )}
             <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'food' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
-              {/* High-Contrast White Circle for Active Icon */}
               <div className={cn(
                 "w-9.5 h-9.5 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-xl sm:text-2xl select-none",
                 activeTab === 'food' ? "bg-white text-orange-600 shadow-md scale-105" : "bg-zinc-100 dark:bg-zinc-900"
@@ -197,18 +312,23 @@ export function StorefrontClient({
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="container mx-auto px-4 pt-2 flex flex-col gap-5 sm:gap-6 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
           >
-            {allGroceryProducts.length === 0 ? (
-              <HubComingSoon />
+            {isLoadingStoreData ? (
+              <div className="w-full py-20 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <p className="text-xs font-bold text-slate-500">Checking inventory for {activeCity}...</p>
+              </div>
+            ) : !isLocationServiceable || currentGroceryProducts.length === 0 ? (
+              <HubComingSoon hubName={activeCity} city={activeCity} />
             ) : (
               <>
                 {/* 1. Hero Banners */}
                 <div>
-                  <HeroArea initialBanners={promoBanners} />
+                  <HeroArea initialBanners={currentPromoBanners} />
                 </div>
 
                 {/* 2. Trending Categories */}
                 <div>
-                  <CategoryGrid categories={categories} />
+                  <CategoryGrid categories={currentCategories} />
                 </div>
 
                 {/* 3. Speed Strip */}
@@ -224,15 +344,15 @@ export function StorefrontClient({
                 {/* 4. Deals & Curations Hub (Products & Curated For You) */}
                 <div className="section-lazy-render">
                   <DealsCurationHub
-                    categories={categories}
-                    allProducts={allGroceryProducts}
-                    flashDeals={flashDeals}
-                    bestSellers={bestSellers}
-                    topPicks={topPicks}
-                    breakfastProducts={breakfastProducts}
-                    lunchProducts={lunchProducts}
-                    teaProducts={teaProducts}
-                    nightProducts={nightProducts}
+                    categories={currentCategories}
+                    allProducts={currentGroceryProducts}
+                    flashDeals={currentFlashDeals}
+                    bestSellers={currentBestSellers}
+                    topPicks={currentTopPicks}
+                    breakfastProducts={currentBreakfast}
+                    lunchProducts={currentLunch}
+                    teaProducts={currentTea}
+                    nightProducts={currentNight}
                     sortRules={sortRules}
                   />
                 </div>
@@ -261,11 +381,16 @@ export function StorefrontClient({
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="container mx-auto px-4 pt-4 flex flex-col gap-5 max-w-7xl relative z-10 min-h-[50vh]"
           >
-            <CuratedBrandOffersCarousel initialBanners={promoBanners} mode="food" sectionTitle="Trending Restaurant & Cafe Specials" />
-            {!restaurants || restaurants.length === 0 ? (
-              <HubComingSoon city="Local Restaurants & Kitchens" />
+            <CuratedBrandOffersCarousel initialBanners={currentPromoBanners} mode="food" sectionTitle="Trending Restaurant & Cafe Specials" />
+            {isLoadingStoreData ? (
+              <div className="w-full py-20 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <p className="text-xs font-bold text-slate-500">Connecting to {activeCity} partner kitchens...</p>
+              </div>
+            ) : !isLocationServiceable || !currentRestaurants || currentRestaurants.length === 0 ? (
+              <HubComingSoon city={`${activeCity} Partner Kitchens`} />
             ) : (
-              <RestaurantListing initialRestaurants={restaurants} />
+              <RestaurantListing initialRestaurants={currentRestaurants} />
             )}
           </motion.div>
         )}

@@ -90,7 +90,7 @@ async def get_current_user(
                 if db_user:
                     role_str = db_user.role.value if hasattr(db_user.role, "value") else str(db_user.role or "USER")
                     effective_role = role_str
-                    if x_user_role and x_user_role in ["ADMIN", "CHEF", "RESTAURANT_OWNER", "PICKER", "DELIVERY"]:
+                    if x_user_role and x_user_role in ["ADMIN", "CHEF", "RESTAURANT_OWNER", "PICKER", "DELIVERY", "VENDOR"]:
                         if role_str == "ADMIN":
                             effective_role = "ADMIN"
                         else:
@@ -111,11 +111,11 @@ async def get_current_user(
         # Fallback for Next.js staff/admin requests with verified headers
         norm_role = str(x_user_role or "").upper()
         if (
-            norm_role in ["ADMIN", "CHEF", "RESTAURANT_OWNER", "PICKER", "DELIVERY"]
+            norm_role in ["ADMIN", "CHEF", "RESTAURANT_OWNER", "PICKER", "DELIVERY", "VENDOR"]
             or (x_user_phone and "8112849854" in x_user_phone)
             or (x_user_email and ("admin" in x_user_email.lower() or "hrdk" in x_user_email.lower()))
         ):
-            effective_role = norm_role if norm_role in ["ADMIN", "CHEF", "RESTAURANT_OWNER", "PICKER", "DELIVERY"] else "ADMIN"
+            effective_role = norm_role if norm_role in ["ADMIN", "CHEF", "RESTAURANT_OWNER", "PICKER", "DELIVERY", "VENDOR"] else "ADMIN"
             return {
                 "id": x_user_id or "admin-user",
                 "sub": x_user_id or "admin-user",

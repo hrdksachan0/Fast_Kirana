@@ -276,7 +276,7 @@ async def get_vendor_details(
         delivered_items = oi_res.scalars().all()
 
         for oi in delivered_items:
-            if oi.isRefunded or not oi.productId:
+            if not oi.productId:
                 continue
 
             base_prod = product_map.get(oi.productId)
@@ -310,17 +310,31 @@ async def get_vendor_details(
     total_paid_in_period = sum(float(p.amount) for p in period_payouts if p.status == "PAID")
     pending_balance = max(0.0, total_payable_amount - total_paid_in_period)
 
-    # 5. Low stock alerts for PO
+    # 5. Low stock alerts for PO with StoreInventory overlay
+    effective_store = storeId or vendor.storeId
+    store_stock_map = {}
+    if effective_store and effective_store.lower() != "all" and product_ids:
+        si_stmt = select(StoreInventory).where(
+            and_(
+                StoreInventory.storeId == effective_store,
+                StoreInventory.productId.in_(product_ids)
+            )
+        )
+        si_res = await db.execute(si_stmt)
+        for si in si_res.scalars().all():
+            store_stock_map[si.productId] = si.stock
+
     low_stock_items = []
     for p in attached_products:
         min_stock = p.minStock or 5
-        if p.stock <= min_stock:
+        curr_stock = store_stock_map.get(p.id, p.stock)
+        if curr_stock <= min_stock:
             low_stock_items.append({
                 "id": p.id,
                 "name": p.name,
                 "unit": p.unit or "",
                 "barcode": p.barcode or "",
-                "stock": p.stock,
+                "stock": curr_stock,
                 "minStock": min_stock,
                 "costPrice": float(p.costPrice or 0.0),
                 "isLow": True,
@@ -367,7 +381,7 @@ async def get_vendor_details(
                 "price": float(p.price),
                 "mrp": float(p.mrp),
                 "costPrice": float(p.costPrice or 0.0),
-                "stock": p.stock,
+                "stock": store_stock_map.get(p.id, p.stock),
                 "category": p.category.name if p.category else "General",
                 "imageUrl": p.imageUrl or "",
                 "isAvailable": p.isAvailable,

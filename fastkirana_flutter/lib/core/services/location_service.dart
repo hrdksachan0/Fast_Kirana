@@ -377,22 +377,30 @@ class LocationService {
     // Resolve nearest hub if not explicitly passed
     StoreHub hub = nearestHub ?? StoreHub.defaultGhatampur;
     if (nearestHub == null) {
+      StoreHub? matchedGeofence;
       double minD = double.infinity;
       for (final h in StoreHub.defaultHubs) {
+        if (matchedGeofence == null && h.isPointInsideGeofence(lat, lng)) {
+          matchedGeofence = h;
+        }
         final d = Geolocator.distanceBetween(h.latitude, h.longitude, lat, lng) / 1000.0;
         if (d < minD) {
           minD = d;
           hub = h;
         }
       }
+      if (matchedGeofence != null) {
+        hub = matchedGeofence;
+      }
     }
 
     final hubCity = hub.city;
+    final hubIdPin = RegExp(r'\b\d{6}\b').firstMatch(hub.id)?.group(0);
     String houseNo = '';
     String street = '';
     String area = hubCity;
     String city = hubCity;
-    String pincode = hub.city.toLowerCase().contains('akbarpur') ? '224122' : '209206';
+    String pincode = hubIdPin ?? (hub.city.toLowerCase().contains('akbarpur') ? '224122' : (hub.city.toLowerCase().contains('pakur') ? '816107' : '209206'));
     String formatted = '$hubCity Market, UP';
 
     try {
@@ -404,7 +412,7 @@ class LocationService {
           street = place.thoroughfare ?? '';
           area = place.subLocality?.isNotEmpty == true ? place.subLocality! : (place.locality ?? hubCity);
           city = place.locality ?? place.administrativeArea ?? hubCity;
-          pincode = place.postalCode ?? (hub.city.toLowerCase().contains('akbarpur') ? '224122' : '209206');
+          pincode = place.postalCode ?? (hubIdPin ?? (hub.city.toLowerCase().contains('akbarpur') ? '224122' : (hub.city.toLowerCase().contains('pakur') ? '816107' : '209206')));
 
           final parts = [
             if (houseNo.isNotEmpty) houseNo,

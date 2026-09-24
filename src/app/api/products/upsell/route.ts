@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const productIdsStr = searchParams.get('productIds') || ''
+    const storeId = searchParams.get('storeId')
     
     const cartProductIds = productIdsStr.split(',').filter(Boolean)
     if (cartProductIds.length === 0) {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     // Allowed filter:
     // If cart has a restaurant item: recommend items from THAT SAME restaurant OR strictly Darkstore Beverages & Ice Cream (restaurantId: null, category: beverages/ice-cream)
     // If cart is pure grocery: recommend strictly Darkstore Groceries (restaurantId: null)
-    const typeFilter: Prisma.ProductWhereInput = activeRestaurantId
+    const baseTypeFilter: Prisma.ProductWhereInput = activeRestaurantId
       ? {
           OR: [
             { restaurantId: activeRestaurantId },
@@ -39,6 +40,29 @@ export async function GET(request: NextRequest) {
           ]
         }
       : { restaurantId: null }
+
+    const storeScope: Prisma.ProductWhereInput = (storeId && storeId !== 'all') ? {
+      OR: [
+        {
+          restaurantId: null,
+          inventories: {
+            some: {
+              storeId,
+              stock: { gt: 0 }
+            }
+          }
+        },
+        {
+          restaurant: {
+            storeId
+          }
+        }
+      ]
+    } : {}
+
+    const typeFilter: Prisma.ProductWhereInput = (storeId && storeId !== 'all')
+      ? { AND: [baseTypeFilter, storeScope] }
+      : baseTypeFilter
 
     // 2. Try to find products frequently bought together in past orders
     let recommendedProducts: any[] = []

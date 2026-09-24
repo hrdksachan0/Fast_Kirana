@@ -52,6 +52,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     }
   }, [open])
 
+  const activeStoreId = useUIStore((s) => s.activeStoreId)
   const [categories, setCategories] = useState<any[]>([])
   const [trendingSearches, setTrendingSearches] = useState<string[]>([])
 
@@ -66,8 +67,9 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       })
       .catch((err) => console.error('Failed to fetch categories:', err))
 
-    // Fetch trending searches (products)
-    fetch('/api/products?trending=true')
+    // Fetch trending searches (products scoped to active store)
+    const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
+    fetch(`/api/products?trending=true${storeParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (data && Array.isArray(data.products)) {
@@ -78,7 +80,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
         }
       })
       .catch((err) => console.error('Failed to fetch trending searches:', err))
-  }, [])
+  }, [activeStoreId])
 
   const toggleVoiceSearch = () => {
     if (isListening) {
@@ -205,7 +207,8 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     const handler = setTimeout(async () => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=20`)
+        const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
+        const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=20${storeParam}`)
         if (res.ok) {
           const data = await res.json()
           setSuggestions(data.products || [])
@@ -218,7 +221,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     }, 150)
 
     return () => clearTimeout(handler)
-  }, [query])
+  }, [query, activeStoreId])
 
   // Close on Escape key
   useEffect(() => {

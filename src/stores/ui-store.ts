@@ -70,6 +70,31 @@ export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lo
   return R * c
 }
 
+export function isPointInPolygon(point: { lat: number; lng: number }, polygon: any): boolean {
+  if (!polygon) return false
+  let polyArray = polygon
+  if (typeof polygon === 'string') {
+    try { polyArray = JSON.parse(polygon) } catch { return false }
+  }
+  if (!Array.isArray(polyArray) || polyArray.length < 3) return false
+
+  const x = point.lat
+  const y = point.lng
+  let inside = false
+  for (let i = 0, j = polyArray.length - 1; i < polyArray.length; j = i++) {
+    const ptI = polyArray[i]
+    const ptJ = polyArray[j]
+    const xi = typeof ptI?.lat === 'number' ? ptI.lat : (Array.isArray(ptI) ? Number(ptI[0]) : 0)
+    const yi = typeof ptI?.lng === 'number' ? ptI.lng : (Array.isArray(ptI) ? Number(ptI[1]) : 0)
+    const xj = typeof ptJ?.lat === 'number' ? ptJ.lat : (Array.isArray(ptJ) ? Number(ptJ[0]) : 0)
+    const yj = typeof ptJ?.lng === 'number' ? ptJ.lng : (Array.isArray(ptJ) ? Number(ptJ[1]) : 0)
+
+    const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) === 0 ? 0.000001 : (yj - yi)) + xi)
+    if (intersect) inside = !inside
+  }
+  return inside
+}
+
 function evaluateServiceability(
   coords: UserCoords | null,
   hubs: any[],
@@ -81,6 +106,23 @@ function evaluateServiceability(
 
   // 1. If we have active hubs loaded, check distance against ALL active hubs
   if (Array.isArray(hubs) && hubs.length > 0) {
+    // 1A. First priority: Exact Polygon Geofence match
+    for (const hub of hubs) {
+      if (hub.deliveryPolygon && isPointInPolygon(coords, hub.deliveryPolygon)) {
+        const dist = (hub.latitude && hub.longitude)
+          ? calculateDistanceKm(coords.lat, coords.lng, hub.latitude, hub.longitude)
+          : 0.5
+        const city = hub.city || hub.name?.replace(/\s+(Hub|Market|Central|Dark\s*Store).*$/i, '').trim() || 'Ghatampur'
+        return {
+          isServiceable: true,
+          distanceKm: dist,
+          matchedHubId: hub.id,
+          matchedCity: city,
+        }
+      }
+    }
+
+    // 1B. Second priority: Radial distance
     let closestMatchingHub: any = null
     let closestMatchingDist = Infinity
 
@@ -186,6 +228,10 @@ export const useUIStore = create<UIState>((set) => ({
     const city = hub.city || hub.name?.replace(/\s+(Hub|Market|Central|Dark\s*Store).*$/i, '').trim() || 'Ghatampur'
     if (typeof window !== 'undefined') {
       localStorage.setItem('fk-city', city)
+      if (hub.id) {
+        localStorage.setItem('fk-store-id', hub.id)
+        document.cookie = `fk_store_id=${encodeURIComponent(hub.id)}; path=/; max-age=2592000; SameSite=Lax`
+      }
       if (hub.latitude && hub.longitude) {
         localStorage.setItem('fk-coords', JSON.stringify({ lat: hub.latitude, lng: hub.longitude }))
       }
@@ -208,6 +254,13 @@ export const useUIStore = create<UIState>((set) => ({
     const state = useUIStore.getState()
     if (state.userCoords) {
       const evalRes = evaluateServiceability(state.userCoords, hubs, state.settings)
+      if (typeof window !== 'undefined') {
+        if (evalRes.matchedCity) localStorage.setItem('fk-city', evalRes.matchedCity)
+        if (evalRes.matchedHubId) {
+          localStorage.setItem('fk-store-id', evalRes.matchedHubId)
+          document.cookie = `fk_store_id=${encodeURIComponent(evalRes.matchedHubId)}; path=/; max-age=2592000; SameSite=Lax`
+        }
+      }
       set({
         isLocationServiceable: evalRes.isServiceable,
         userDistanceKm: evalRes.distanceKm,
@@ -221,6 +274,10 @@ export const useUIStore = create<UIState>((set) => ({
       localStorage.setItem('fk-coords', JSON.stringify(coords))
     }
     if (!coords) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('fk-store-id')
+        document.cookie = 'fk_store_id=; path=/; max-age=0'
+      }
       set({ userCoords: null, isLocationServiceable: true, userDistanceKm: null, activeStoreId: null })
       return
     }
@@ -228,8 +285,12 @@ export const useUIStore = create<UIState>((set) => ({
     const state = useUIStore.getState()
     const evalRes = evaluateServiceability(coords, state.availableHubs, state.settings)
 
-    if (typeof window !== 'undefined' && evalRes.matchedCity) {
-      localStorage.setItem('fk-city', evalRes.matchedCity)
+    if (typeof window !== 'undefined') {
+      if (evalRes.matchedCity) localStorage.setItem('fk-city', evalRes.matchedCity)
+      if (evalRes.matchedHubId) {
+        localStorage.setItem('fk-store-id', evalRes.matchedHubId)
+        document.cookie = `fk_store_id=${encodeURIComponent(evalRes.matchedHubId)}; path=/; max-age=2592000; SameSite=Lax`
+      }
     }
 
     set({
@@ -255,6 +316,10 @@ export const useUIStore = create<UIState>((set) => ({
     const state = useUIStore.getState()
     if (state.userCoords) {
       const evalRes = evaluateServiceability(state.userCoords, state.availableHubs, state.settings)
+      if (typeof window !== 'undefined' && evalRes.matchedHubId) {
+        localStorage.setItem('fk-store-id', evalRes.matchedHubId)
+        document.cookie = `fk_store_id=${encodeURIComponent(evalRes.matchedHubId)}; path=/; max-age=2592000; SameSite=Lax`
+      }
       set({
         isLocationServiceable: evalRes.isServiceable,
         userDistanceKm: evalRes.distanceKm,
@@ -268,10 +333,12 @@ export const useUIStore = create<UIState>((set) => ({
       const saved = localStorage.getItem('fk-location')
       const savedCoords = localStorage.getItem('fk-coords')
       const savedCity = localStorage.getItem('fk-city')
+      const savedStoreId = localStorage.getItem('fk-store-id')
       const savedShopName = localStorage.getItem('fk-shop-name')
       const savedShopPhone = localStorage.getItem('fk-shop-phone')
       if (saved) set({ selectedLocation: saved })
       if (savedCity) set({ activeCity: savedCity })
+      if (savedStoreId) set({ activeStoreId: savedStoreId })
       if (savedShopName) set({ shopName: savedShopName })
       if (savedShopPhone) set({ shopPhone: savedShopPhone })
       
@@ -291,6 +358,10 @@ export const useUIStore = create<UIState>((set) => ({
           if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
             const state = useUIStore.getState()
             const evalRes = evaluateServiceability(parsed, state.availableHubs, state.settings)
+            if (evalRes.matchedHubId) {
+              localStorage.setItem('fk-store-id', evalRes.matchedHubId)
+              document.cookie = `fk_store_id=${encodeURIComponent(evalRes.matchedHubId)}; path=/; max-age=2592000; SameSite=Lax`
+            }
             set({
               userCoords: parsed,
               isLocationServiceable: evalRes.isServiceable,
@@ -300,6 +371,15 @@ export const useUIStore = create<UIState>((set) => ({
             })
           }
         } catch {}
+      } else if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        // Silent bootstrap GPS check on first visit
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            useUIStore.getState().setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          },
+          () => {},
+          { timeout: 6000, maximumAge: 60000 }
+        )
       }
     }
   },

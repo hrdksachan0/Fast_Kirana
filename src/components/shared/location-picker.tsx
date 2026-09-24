@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, Navigation, Search, X, Loader2, Maximize2, Check, AlertCircle } from 'lucide-react'
-import { useUIStore } from '@/stores/ui-store'
+import { useUIStore, isPointInPolygon } from '@/stores/ui-store'
 import { FreeMapPicker } from '@/components/shared/free-map-picker'
 import { toast } from 'sonner'
 import { loadGoogleMapsScript } from '@/lib/google-maps'
@@ -31,6 +31,10 @@ export const POPULAR_LOCALITIES = [
   { name: 'Akbarpur Tehsil', city: 'Akbarpur', lat: 26.4380, lng: 82.5400 },
   { name: 'Akbarpur Railway Station', city: 'Akbarpur', lat: 26.4420, lng: 82.5480 },
   { name: 'Shahzadpur Market', city: 'Akbarpur', lat: 26.4310, lng: 82.5360 },
+  // Pakur Hub
+  { name: 'Pakur Railway Station', city: 'Pakur', lat: 24.6340, lng: 87.8520 },
+  { name: 'Pakur Court / DC Office', city: 'Pakur', lat: 24.6390, lng: 87.8570 },
+  { name: 'Harindanga Bazar', city: 'Pakur', lat: 24.6410, lng: 87.8540 },
 ]
 
 interface LocationPickerProps {
@@ -189,21 +193,51 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
       const map = new google.maps.Map(mapContainerRef.current, mapOptions)
       mapRef.current = map
 
-      // Draw delivery circles and markers for all active hubs
+      // Draw delivery zones (polygons or circles) and markers for all active hubs
       const hubsToDraw = hubs.length > 0 ? hubs : [{ latitude: storeLat, longitude: storeLng, deliveryRadiusKm: deliveryRadius, name: 'Store Hub' }]
       for (const h of hubsToDraw) {
         if (!h.latitude || !h.longitude) continue
-        new google.maps.Circle({
-          strokeColor: '#EA4335',
-          strokeOpacity: 0.8,
-          strokeWeight: 2,
-          fillColor: '#EA4335',
-          fillOpacity: 0.15,
-          map: map,
-          center: { lat: h.latitude, lng: h.longitude },
-          radius: (h.deliveryRadiusKm || 5.0) * 1000,
-          clickable: false
-        })
+
+        // Draw delivery polygon if available
+        let drewPolygon = false
+        if (h.deliveryPolygon) {
+          try {
+            let coords = h.deliveryPolygon
+            if (typeof coords === 'string') coords = JSON.parse(coords)
+            if (Array.isArray(coords) && coords.length >= 3) {
+              const paths = coords.map((pt: any) => ({
+                lat: typeof pt?.lat === 'number' ? pt.lat : (Array.isArray(pt) ? Number(pt[0]) : 0),
+                lng: typeof pt?.lng === 'number' ? pt.lng : (Array.isArray(pt) ? Number(pt[1]) : 0)
+              }))
+              new google.maps.Polygon({
+                paths,
+                strokeColor: '#10B981',
+                strokeOpacity: 0.85,
+                strokeWeight: 2,
+                fillColor: '#10B981',
+                fillOpacity: 0.15,
+                map: map,
+                clickable: false
+              })
+              drewPolygon = true
+            }
+          } catch (_) {}
+        }
+
+        // Fallback to circle if polygon not set
+        if (!drewPolygon) {
+          new google.maps.Circle({
+            strokeColor: '#EA4335',
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: '#EA4335',
+            fillOpacity: 0.15,
+            map: map,
+            center: { lat: h.latitude, lng: h.longitude },
+            radius: (h.deliveryRadiusKm || 5.0) * 1000,
+            clickable: false
+          })
+        }
 
         new google.maps.Marker({
           position: { lat: h.latitude, lng: h.longitude },
@@ -266,6 +300,20 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
   // Calculate distance to closest hub and serviceability
   const { matchedHub, nearestHub, distance, isWithinZone } = useMemo(() => {
     if (hubs.length > 0) {
+      // 1. Priority 1: Exact Polygon Geofence match
+      for (const h of hubs) {
+        if (h.deliveryPolygon && isPointInPolygon({ lat: currentLat, lng: currentLng }, h.deliveryPolygon)) {
+          const d = h.latitude && h.longitude ? getDistance(h.latitude, h.longitude, currentLat, currentLng) : 0
+          return {
+            matchedHub: h,
+            nearestHub: h,
+            distance: d,
+            isWithinZone: true,
+          }
+        }
+      }
+
+      // 2. Priority 2: Radial distance
       let closestInRadius: any = null
       let minInRadiusDist = Infinity
       let closestAny: any = null

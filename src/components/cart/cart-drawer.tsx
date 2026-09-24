@@ -28,6 +28,7 @@ export function CartDrawer() {
   const restaurantOpen = useUIStore((s) => s.restaurantOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
   const isLocationServiceable = useUIStore((s) => s.isLocationServiceable)
+  const activeStoreId = useUIStore((s) => s.activeStoreId)
   const setLocationPickerOpen = useUIStore((s) => s.setLocationPickerOpen)
   
   const {
@@ -151,7 +152,8 @@ export function CartDrawer() {
     }
     
     const productIds = items.map((i) => i.product.id).join(',')
-    fetch(`/api/products/upsell?productIds=${productIds}`)
+    const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
+    fetch(`/api/products/upsell?productIds=${productIds}${storeParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.products) {
@@ -159,7 +161,7 @@ export function CartDrawer() {
         }
       })
       .catch((err) => console.error('Failed to fetch upsell products:', err))
-  }, [isOpen, items])
+  }, [isOpen, items, activeStoreId])
 
   const groceryItems = items.filter((item) => !isCafeProduct(item.product))
   const cafeItems = items.filter((item) => isCafeProduct(item.product))

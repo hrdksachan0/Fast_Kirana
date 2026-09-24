@@ -78,6 +78,7 @@ export default function FeaturedCategoryCard({
   const cafeOpen = useUIStore((s) => s.cafeOpen);
   const restaurantOpen = useUIStore((s) => s.restaurantOpen);
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {};
+  const activeStoreId = useUIStore((s) => s.activeStoreId);
 
   const [liveProducts, setLiveProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,10 +95,11 @@ export default function FeaturedCategoryCard({
       setLoading(true);
       try {
         let url = '';
+        const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : '';
         if (theme === 'cafe') {
-          url = '/api/products?category=cafe,ice-cream,beverages&limit=100';
+          url = `/api/products?category=cafe,ice-cream,beverages&limit=100${storeParam}`;
         } else if (theme === 'restaurant') {
-          url = '/api/products?category=restaurant&limit=100';
+          url = `/api/products?category=restaurant&limit=100${storeParam}`;
         } else {
           setLiveProducts(products || []);
           setLoading(false);
@@ -127,7 +129,7 @@ export default function FeaturedCategoryCard({
     return () => {
       isMounted = false;
     };
-  }, [theme, products, title]);
+  }, [theme, products, title, activeStoreId]);
 
   // Helper matchers for database category structures
   const isTagMatch = (t1: string, t2: string) => {

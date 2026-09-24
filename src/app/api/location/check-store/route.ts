@@ -126,7 +126,6 @@ export async function GET(request: NextRequest) {
     let restaurantCount = 0
     if (targetStore.id) {
       try {
-        const storeCity = targetStore.name.replace(/\s+(Hub|Market|Central|Dark\s*Store|Express).*$/i, '').trim()
         const [invCount, restCount] = await Promise.all([
           prisma.storeInventory.count({
             where: { storeId: targetStore.id, stock: { gt: 0 } }
@@ -134,7 +133,7 @@ export async function GET(request: NextRequest) {
           prisma.restaurant.count({
             where: {
               isActive: true,
-              ...(storeCity ? { city: { contains: storeCity, mode: 'insensitive' as const } } : {})
+              storeId: targetStore.id
             }
           })
         ])

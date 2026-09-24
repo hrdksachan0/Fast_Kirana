@@ -122,6 +122,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const restaurantOpen = useUIStore((s) => s.restaurantOpen)
   const categoryStatus = useUIStore((s) => s.categoryStatus) || {}
+  const activeStoreId = useUIStore((s) => s.activeStoreId)
   const isCafeActive = cafeOpen && (categoryStatus['cafe'] !== false)
 
   const [activeCategoryTag, setActiveCategoryTag] = useState<string>('all')
@@ -193,7 +194,8 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
     setCafeProducts([])
     setActiveCategoryTag('all')
     const categoryQuery = (experienceMode as string) === 'restaurant' ? 'restaurant,ice-cream,beverages' : 'cafe,ice-cream,beverages'
-    fetch(`/api/products?category=${categoryQuery}&limit=9999`)
+    const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
+    fetch(`/api/products?category=${categoryQuery}&limit=9999${storeParam}`)
       .then(res => res.json())
       .then(productsRes => {
         const dbProducts = productsRes?.products || productsRes || []
@@ -352,7 +354,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
       .finally(() => {
         setIsLoading(false)
       })
-  }, [settings, experienceMode, categoryStatus])
+  }, [settings, experienceMode, categoryStatus, activeStoreId])
 
   const isClickingTabRef = useRef(false)
 
