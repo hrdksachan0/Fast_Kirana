@@ -87,8 +87,6 @@ async def get_categories(
 
         if not include_all:
             stmt = stmt.where(~Category.slug.in_(["cafe", "restaurant"]))
-            if storeId and storeId != "all":
-                stmt = stmt.having(func.count(Product.id) > 0)
 
         stmt = stmt.group_by(Category.id).order_by(Category.sortOrder.asc())
 
@@ -103,9 +101,16 @@ async def get_categories(
                 "parentId": category.parentId,
                 "sortOrder": category.sortOrder,
                 "_count": {
-                    "products": count
+                    "products": int(count or 0)
                 }
             })
+
+        # Aggregate child category product counts into parent categories (matching Next.js logic)
+        cat_map = {c["id"]: c for c in categories_data}
+        for c in categories_data:
+            pid = c.get("parentId")
+            if pid and pid in cat_map:
+                cat_map[pid]["_count"]["products"] += c["_count"]["products"]
 
         response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=180"
         return categories_data

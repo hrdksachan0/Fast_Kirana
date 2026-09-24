@@ -2238,41 +2238,111 @@ async def get_admin_inventory_alerts(
     now = datetime.utcnow()
     seven_days = now + timedelta(days=7)
 
-    # 1. OUT OF STOCK
-    oos_stmt = select(Product).where(
-        Product.stock == 0,
-        Product.isAvailable == True,
-        Product.restaurantId.is_(None)
-    )
-    oos_res = await db.execute(oos_stmt)
-    oos_prods = oos_res.scalars().all()
+    if storeId and storeId != "all":
+        # 1. OUT OF STOCK for specific store
+        oos_stmt = (
+            select(Product, StoreInventory.stock)
+            .join(StoreInventory, StoreInventory.productId == Product.id)
+            .where(
+                StoreInventory.storeId == storeId,
+                StoreInventory.stock == 0,
+                Product.isAvailable == True,
+                Product.restaurantId.is_(None)
+            )
+        )
+        oos_res = await db.execute(oos_stmt)
+        oos_prods = []
+        for p, s in oos_res.all():
+            p.stock = s
+            oos_prods.append(p)
 
-    # 2. LOW STOCK
-    low_stmt = select(Product).where(
-        Product.stock > 0,
-        Product.stock <= Product.minStock,
-        Product.isAvailable == True,
-        Product.restaurantId.is_(None)
-    )
-    low_res = await db.execute(low_stmt)
-    low_prods = low_res.scalars().all()
+        # 2. LOW STOCK for specific store
+        low_stmt = (
+            select(Product, StoreInventory.stock)
+            .join(StoreInventory, StoreInventory.productId == Product.id)
+            .where(
+                StoreInventory.storeId == storeId,
+                StoreInventory.stock > 0,
+                StoreInventory.stock <= Product.minStock,
+                Product.isAvailable == True,
+                Product.restaurantId.is_(None)
+            )
+        )
+        low_res = await db.execute(low_stmt)
+        low_prods = []
+        for p, s in low_res.all():
+            p.stock = s
+            low_prods.append(p)
 
-    # 3. EXPIRING SOON
-    exp_soon_stmt = select(Product).where(
-        Product.expiryDate.is_not(None),
-        Product.expiryDate > now,
-        Product.expiryDate <= seven_days
-    )
-    exp_soon_res = await db.execute(exp_soon_stmt)
-    exp_soon_prods = exp_soon_res.scalars().all()
+        # 3. EXPIRING SOON for specific store
+        exp_soon_stmt = (
+            select(Product, StoreInventory.stock)
+            .join(StoreInventory, StoreInventory.productId == Product.id)
+            .where(
+                StoreInventory.storeId == storeId,
+                Product.expiryDate.is_not(None),
+                Product.expiryDate > now,
+                Product.expiryDate <= seven_days
+            )
+        )
+        exp_soon_res = await db.execute(exp_soon_stmt)
+        exp_soon_prods = []
+        for p, s in exp_soon_res.all():
+            p.stock = s
+            exp_soon_prods.append(p)
 
-    # 4. EXPIRED
-    exp_stmt = select(Product).where(
-        Product.expiryDate.is_not(None),
-        Product.expiryDate <= now
-    )
-    exp_res = await db.execute(exp_stmt)
-    exp_prods = exp_res.scalars().all()
+        # 4. EXPIRED for specific store
+        exp_stmt = (
+            select(Product, StoreInventory.stock)
+            .join(StoreInventory, StoreInventory.productId == Product.id)
+            .where(
+                StoreInventory.storeId == storeId,
+                Product.expiryDate.is_not(None),
+                Product.expiryDate <= now
+            )
+        )
+        exp_res = await db.execute(exp_stmt)
+        exp_prods = []
+        for p, s in exp_res.all():
+            p.stock = s
+            exp_prods.append(p)
+    else:
+        # Global Master Catalog queries
+        # 1. OUT OF STOCK
+        oos_stmt = select(Product).where(
+            Product.stock == 0,
+            Product.isAvailable == True,
+            Product.restaurantId.is_(None)
+        )
+        oos_res = await db.execute(oos_stmt)
+        oos_prods = oos_res.scalars().all()
+
+        # 2. LOW STOCK
+        low_stmt = select(Product).where(
+            Product.stock > 0,
+            Product.stock <= Product.minStock,
+            Product.isAvailable == True,
+            Product.restaurantId.is_(None)
+        )
+        low_res = await db.execute(low_stmt)
+        low_prods = low_res.scalars().all()
+
+        # 3. EXPIRING SOON
+        exp_soon_stmt = select(Product).where(
+            Product.expiryDate.is_not(None),
+            Product.expiryDate > now,
+            Product.expiryDate <= seven_days
+        )
+        exp_soon_res = await db.execute(exp_soon_stmt)
+        exp_soon_prods = exp_soon_res.scalars().all()
+
+        # 4. EXPIRED
+        exp_stmt = select(Product).where(
+            Product.expiryDate.is_not(None),
+            Product.expiryDate <= now
+        )
+        exp_res = await db.execute(exp_stmt)
+        exp_prods = exp_res.scalars().all()
 
     # 5. PACKING DELAYS
     ten_min_ago = now - timedelta(minutes=10)

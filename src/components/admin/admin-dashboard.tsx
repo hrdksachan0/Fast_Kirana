@@ -770,13 +770,58 @@ export function AdminDashboard({
     return stats.activeOrderCount || 0
   }, [orderHook.orderCounts, stats.activeOrderCount])
 
+  // Dynamically compute active category count for the current store hub (0 for empty store)
+  const storeCategoryCount = useMemo(() => {
+    if (!selectedHubId || selectedHubId === 'all') {
+      return categoryHook.categories.filter((c: any) => c.slug !== 'cafe' && c.slug !== 'restaurant').length
+    }
+    // If store has 0 products, the store has 0 active stocked categories
+    if (productHook.productTotal === 0) return 0
+    const catIds = new Set(productHook.allProducts?.map((p: any) => p.categoryId).filter(Boolean))
+    return catIds.size
+  }, [selectedHubId, categoryHook.categories, productHook.productTotal, productHook.allProducts])
+
+  // Store-isolated alerts count state (0 for empty store)
+  const [storeAlertsCount, setStoreAlertsCount] = useState<number>(() => {
+    if (initialStoreId && initialStoreId !== 'all') {
+      return 0
+    }
+    return stats?.lowStockCount || 0
+  })
+
+  // Synchronize dynamic store alerts count whenever selectedHubId or product count changes
+  useEffect(() => {
+    if (!selectedHubId || selectedHubId === 'all') {
+      setStoreAlertsCount(stats?.lowStockCount || 0)
+      return
+    }
+    // A store with 0 products has 0 alerts
+    if (productHook.productTotal === 0) {
+      setStoreAlertsCount(0)
+      return
+    }
+    let active = true
+    fetch(`/api/admin/alerts?storeId=${encodeURIComponent(selectedHubId)}&t=${Date.now()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (active && data?.counts) {
+          const totalAlerts = data.counts.total ?? (data.counts.lowStock + data.counts.outOfStock + (data.counts.packingDelay || 0))
+          setStoreAlertsCount(totalAlerts || 0)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [selectedHubId, productHook.productTotal, stats?.lowStockCount])
+
   const tabConfig = useMemo(() => {
     return [
       { key: 'orders' as TabType, label: 'Orders', icon: ShoppingBag, count: orderHook.orderTotal },
       { key: 'liveops' as TabType, label: 'Live Ops Tracker', icon: Zap, count: activeCartsCount },
       { key: 'products' as TabType, label: 'Products', icon: Package, count: productHook.productTotal },
-      { key: 'categories' as TabType, label: 'Categories', icon: Layers, count: categoryHook.categories.length },
-      { key: 'alerts' as TabType, label: 'Stock Alerts', icon: AlertCircle, count: stats.lowStockCount },
+      { key: 'categories' as TabType, label: 'Categories', icon: Layers, count: storeCategoryCount },
+      { key: 'alerts' as TabType, label: 'Stock Alerts', icon: AlertCircle, count: storeAlertsCount },
       { key: 'inward' as TabType, label: 'Inward Items (GRN)', icon: Building2 },
       { key: 'vendors' as TabType, label: 'Vendor Console', icon: Truck },
       { key: 'bulk-update' as TabType, label: 'Bulk Update', icon: SlidersHorizontal },
@@ -798,8 +843,8 @@ export function AdminDashboard({
     orderHook.orderTotal,
     activeCartsCount,
     productHook.productTotal,
-    categoryHook.categories.length,
-    stats.lowStockCount,
+    storeCategoryCount,
+    storeAlertsCount,
     userHook.userTotal,
     reviewCouponHook.reviews.length,
     reviewCouponHook.coupons.length,
@@ -1029,6 +1074,7 @@ export function AdminDashboard({
                 handleExportCsv: productHook.handleExportCsv,
                 handleReplenishCsv: productHook.handleReplenishCsv,
                 renderPagination: renderPagination,
+                allProducts: productHook.allProducts,
               }}
               categoryProps={{
                 categories: categoryHook.categories,
@@ -1055,6 +1101,10 @@ export function AdminDashboard({
                 saveCategoryChanges: categoryHook.saveCategoryChanges,
                 startEditingCategory: categoryHook.startEditingCategory,
                 handleImageFileChange: handleImageFileChange,
+                selectedHubId: selectedHubId,
+                storeCategoryCount: storeCategoryCount,
+                productTotal: productHook.productTotal,
+                allProducts: productHook.allProducts,
               }}
             />
           )}

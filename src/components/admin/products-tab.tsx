@@ -316,18 +316,29 @@ export function ProductsTab({
                 </option>
               ))}
             </select>
-            <select
-              value={selectedCategoryFilter}
-              onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-              className="flex-1 md:flex-none px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none"
-            >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            {(() => {
+              const storeCatIds = new Set(allProducts?.map((p: any) => p.categoryId).filter(Boolean) || [])
+              const availableCategories = (allProducts && allProducts.length > 0)
+                ? categories.filter(c => storeCatIds.has(c.id))
+                : []
+
+              return (
+                <select
+                  value={selectedCategoryFilter}
+                  onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                  className="flex-1 md:flex-none px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-secondary focus:outline-none cursor-pointer"
+                >
+                  <option value="">
+                    {productTotal === 0 ? 'No Categories (New Store)' : `All Categories (${availableCategories.length})`}
+                  </option>
+                  {availableCategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )
+            })()}
           </div>
         </div>
 

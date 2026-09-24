@@ -13,11 +13,13 @@ import {
   Package,
   Navigation,
   ShoppingBag,
-  RotateCcw
+  RotateCcw,
+  Printer
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { formatAddress, formatPrice } from '@/lib/utils'
+import { printKOTReceipt } from '@/lib/kot-print'
 import { RecordRefundModal } from '@/components/admin/record-refund-modal'
 
 interface Address {
@@ -712,6 +714,23 @@ export default function OrderTrackingModal({
             <MessageSquare className="h-4 w-4" strokeWidth={2.2} />
             Kitchen Slip
           </button>
+
+          {/* Direct Thermal KOT Print */}
+          {(order.restaurantId || order.restaurantName || order.subOrders?.some((s: any) => s.type === 'RESTAURANT')) && (
+            <button
+              type="button"
+              onClick={() => {
+                const targetOrder = order.subOrders?.find((s: any) => s.type === 'RESTAURANT') || order
+                printKOTReceipt(targetOrder, targetOrder.restaurantName || targetOrder.shopName || 'RESTAURANT')
+                toast.success(`KOT printed for #${targetOrder.readableId || targetOrder.id?.slice(0, 8)} 🖨️`)
+              }}
+              className="h-10 px-3 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.97] shrink-0"
+              title="Print Kitchen Order Ticket (KOT)"
+            >
+              <Printer className="h-4 w-4" strokeWidth={2.2} />
+              <span>KOT</span>
+            </button>
+          )}
 
           {/* Copy */}
           <button

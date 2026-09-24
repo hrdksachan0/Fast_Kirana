@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import { PlusCircle, X, ImageIcon, Sparkles, Loader2, Trash } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -35,6 +35,10 @@ interface CategoriesTabProps {
   saveCategoryChanges: (e: React.FormEvent) => Promise<void>
   startEditingCategory: (c: any) => void
   handleImageFileChange: (form: 'new' | 'edit', e: React.ChangeEvent<HTMLInputElement>) => void
+  selectedHubId?: string
+  storeCategoryCount?: number
+  productTotal?: number
+  allProducts?: any[]
 }
 
 export function CategoriesTab({
@@ -62,20 +66,94 @@ export function CategoriesTab({
   saveCategoryChanges,
   startEditingCategory,
   handleImageFileChange,
+  selectedHubId,
+  storeCategoryCount,
+  productTotal,
+  allProducts,
 }: CategoriesTabProps) {
+  const isStoreScoped = Boolean(selectedHubId && selectedHubId !== 'all')
+  const [viewScope, setViewScope] = useState<'store' | 'all'>('store')
+
+  useEffect(() => {
+    if (isStoreScoped) {
+      setViewScope('store')
+    } else {
+      setViewScope('all')
+    }
+  }, [selectedHubId, isStoreScoped])
+
+  const { storeCatIds, storeProductCounts } = useMemo(() => {
+    const ids = new Set<string>()
+    const counts: Record<string, number> = {}
+    if (!allProducts || allProducts.length === 0) {
+      return { storeCatIds: ids, storeProductCounts: counts }
+    }
+    for (const p of allProducts) {
+      const catId = p.categoryId ? String(p.categoryId) : null
+      if (catId) {
+        ids.add(catId)
+        counts[catId] = (counts[catId] || 0) + 1
+      }
+      if (p.category?.parentId) {
+        ids.add(String(p.category.parentId))
+      }
+    }
+    return { storeCatIds: ids, storeProductCounts: counts }
+  }, [allProducts])
+
+  const activeScope = isStoreScoped ? viewScope : 'all'
+  const filteredCategories: CategoryWithCount[] = useMemo(() => {
+    if (activeScope === 'store') {
+      return categories.filter((c) => storeCatIds.has(c.id))
+    }
+    return categories
+  }, [categories, activeScope, storeCatIds])
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Controls header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-5 rounded-2xl border border-border shadow-sm">
         <div>
-          <h3 className="font-extrabold text-text-primary text-base flex items-center gap-2">
-            <span>📁 Grocery Categories &amp; Subcategories</span>
-            <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
-              {categories.filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant').length} Total
-            </span>
-          </h3>
-          <p className="text-xs text-text-secondary mt-0.5">
-            Create main categories and nested subcategories, upload category photos or select from photo library.
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h3 className="font-extrabold text-text-primary text-base flex items-center gap-2">
+              <span>📁 Grocery Categories &amp; Subcategories</span>
+            </h3>
+            {isStoreScoped && (
+              <div className="inline-flex items-center p-0.5 bg-muted/60 rounded-xl border border-border text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setViewScope('store')}
+                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                    viewScope === 'store'
+                      ? 'bg-primary text-primary-foreground shadow-xs font-black'
+                      : 'text-text-secondary hover:text-text-primary cursor-pointer'
+                  }`}
+                >
+                  🏪 Current Store ({storeCategoryCount ?? storeCatIds.size})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewScope('all')}
+                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                    viewScope === 'all'
+                      ? 'bg-primary text-primary-foreground shadow-xs font-black'
+                      : 'text-text-secondary hover:text-text-primary cursor-pointer'
+                  }`}
+                >
+                  🌐 Master Catalog ({categories.filter((c) => c.slug !== 'cafe' && c.slug !== 'restaurant').length})
+                </button>
+              </div>
+            )}
+            {!isStoreScoped && (
+              <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
+                {categories.filter((c) => c.slug !== 'cafe' && c.slug !== 'restaurant').length} Total
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-text-secondary mt-1">
+            {isStoreScoped && viewScope === 'store'
+              ? 'Showing only categories with inventory stocked in this outlet.'
+              : 'Create main categories and nested subcategories, upload category photos or select from photo library.'}
           </p>
         </div>
 
@@ -391,32 +469,46 @@ export function CategoriesTab({
 
       {/* Categories & Subcategories Tree List Table */}
       <div className="bg-card border border-border rounded-2xl p-5 shadow-sm overflow-hidden space-y-4">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
-                <th className="py-3 px-4">ID</th>
-                <th className="py-3 px-4">Photo / Icon</th>
-                <th className="py-3 px-4">Category Name</th>
-                <th className="py-3 px-4">Hierarchy Type</th>
-                <th className="py-3 px-4">Slug Identifier</th>
-                <th className="py-3 px-4 text-center">Sort Order</th>
-                <th className="py-3 px-4 text-center">Items Stocked</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
-              {(() => {
-                const groceryCats = categories.filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant')
-                const parentCats = groceryCats.filter(c => !c.parentId)
-                const childCats = groceryCats.filter(c => !!c.parentId)
-                const processedChildIds = new Set<string>()
+        {(() => {
+          const groceryCats = filteredCategories.filter(c => c.slug !== 'cafe' && c.slug !== 'restaurant')
 
-                const renderRow = (c: CategoryWithCount, isSub: boolean, parentCat?: CategoryWithCount | null) => {
-                  const directCount = c._count?.products || 0
-                  const subCats = !isSub ? childCats.filter(sub => sub.parentId === c.id) : []
-                  const subProductsCount = subCats.reduce((sum, s) => sum + (s._count?.products || 0), 0)
-                  const totalCount = directCount + subProductsCount
+          if (groceryCats.length === 0) {
+            return (
+              <div className="text-center py-12 px-4 bg-muted/10 rounded-2xl border border-dashed border-border/80 my-2">
+                <div className="text-4xl mb-3">🏪</div>
+                <h4 className="text-sm font-extrabold text-text-primary">
+                  {isStoreScoped ? 'New Store Setup — No Categories Stocked Yet' : 'No Categories Found'}
+                </h4>
+                <p className="text-xs text-text-secondary max-w-md mx-auto mt-1 mb-4">
+                  {isStoreScoped
+                    ? 'This store has 0 products stocked, so active store categories are empty. Inward items or assign products to this store to activate categories.'
+                    : 'Get started by creating your first product category using the button above.'}
+                </p>
+                {isStoreScoped && (
+                  <button
+                    type="button"
+                    onClick={() => setViewScope('all')}
+                    className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    View Global Master Catalog ({categories.filter((c) => c.slug !== 'cafe' && c.slug !== 'restaurant').length} categories)
+                  </button>
+                )}
+              </div>
+            )
+          }
+
+          const parentCats = groceryCats.filter(c => !c.parentId)
+          const childCats = groceryCats.filter(c => !!c.parentId)
+          const processedChildIds = new Set<string>()
+
+          const renderRow = (c: CategoryWithCount, isSub: boolean, parentCat?: CategoryWithCount | null) => {
+            const directCount = activeScope === 'store' ? (storeProductCounts[c.id] || 0) : (c._count?.products || 0)
+            const subCats = !isSub ? childCats.filter(sub => sub.parentId === c.id) : []
+            const subProductsCount = subCats.reduce(
+              (sum, s) => sum + (activeScope === 'store' ? (storeProductCounts[s.id] || 0) : (s._count?.products || 0)),
+              0
+            )
+            const totalCount = directCount + subProductsCount
 
                   return (
                   <tr key={c.id} className={`hover:bg-muted/30 transition-colors ${isSub ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.02]' : 'bg-card'}`}>
@@ -550,11 +642,28 @@ export function CategoriesTab({
                   rows.push(renderRow(orphan, true, null))
                 })
 
-                return rows
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
+                          <th className="py-3 px-4">ID</th>
+                          <th className="py-3 px-4">Photo / Icon</th>
+                          <th className="py-3 px-4">Category Name</th>
+                          <th className="py-3 px-4">Hierarchy Type</th>
+                          <th className="py-3 px-4">Slug Identifier</th>
+                          <th className="py-3 px-4 text-center">Sort Order</th>
+                          <th className="py-3 px-4 text-center">Items Stocked</th>
+                          <th className="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/40 font-semibold text-text-primary">
+                        {rows}
+                      </tbody>
+                    </table>
+                  </div>
+                )
               })()}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   )

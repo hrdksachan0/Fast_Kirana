@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, Resp
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import or_, and_, not_, func, text, exists
+from sqlalchemy.orm import selectinload
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import uuid
@@ -227,6 +228,78 @@ def generate_slug(name: str) -> str:
     return slug.strip('-')
 
 
+def serialize_product(p: Product, local_stock: Optional[int] = None) -> Dict[str, Any]:
+    stock_val = local_stock if local_stock is not None else (p.stock or 0)
+    is_avail = bool(p.isAvailable) if local_stock is None else (bool(p.isAvailable) and local_stock > 0)
+
+    cat_dict = None
+    if getattr(p, 'category', None):
+        cat_dict = {
+            "id": p.category.id,
+            "name": p.category.name,
+            "slug": p.category.slug,
+            "imageUrl": p.category.imageUrl,
+            "parentId": p.category.parentId,
+            "sortOrder": p.category.sortOrder or 0
+        }
+
+    rest_dict = None
+    if getattr(p, 'restaurant', None):
+        rest_dict = {
+            "id": p.restaurant.id,
+            "name": p.restaurant.name,
+            "slug": p.restaurant.slug,
+            "logoUrl": p.restaurant.logoUrl,
+            "bannerUrl": p.restaurant.bannerUrl,
+            "rating": float(p.restaurant.rating or 0.0),
+            "deliveryTime": p.restaurant.deliveryTime,
+            "isOpen": bool(p.restaurant.isOpen),
+            "openTime": p.restaurant.openTime,
+            "closeTime": p.restaurant.closeTime,
+            "lat": float(p.restaurant.lat) if p.restaurant.lat is not None else None,
+            "lng": float(p.restaurant.lng) if p.restaurant.lng is not None else None,
+            "deliveryRadiusKm": float(p.restaurant.deliveryRadiusKm or 5.0),
+            "address": p.restaurant.address
+        }
+
+    return {
+        "id": p.id,
+        "readableId": p.readableId,
+        "name": p.name,
+        "slug": p.slug,
+        "description": p.description,
+        "imageUrl": p.imageUrl,
+        "categoryId": p.categoryId,
+        "restaurantId": p.restaurantId,
+        "mrp": float(p.mrp or 0.0),
+        "price": float(p.price or 0.0),
+        "discount": float(p.discount or 0.0),
+        "unit": p.unit or "pcs",
+        "stock": stock_val,
+        "isAvailable": is_avail,
+        "tags": p.tags or [],
+        "variants": p.variants or [],
+        "addons": p.addons or [],
+        "minStock": p.minStock or 0,
+        "expiryDate": p.expiryDate.isoformat() if p.expiryDate else None,
+        "costPrice": float(p.costPrice or 0.0),
+        "location": p.location,
+        "isFlashDeal": bool(p.isFlashDeal),
+        "isTopPick": bool(p.isTopPick),
+        "isBestSeller": bool(p.isBestSeller),
+        "sortOrder": p.sortOrder or 0,
+        "availableStartTime": p.availableStartTime,
+        "availableEndTime": p.availableEndTime,
+        "barcode": p.barcode,
+        "vendor": p.vendor,
+        "vendorId": p.vendorId,
+        "createdAt": p.createdAt.isoformat() if p.createdAt else None,
+        "updatedAt": p.updatedAt.isoformat() if p.updatedAt else None,
+        "category": cat_dict,
+        "restaurant": rest_dict
+    }
+
+
 @router.get("")
 async def get_products(
     response: Response,
@@ -325,17 +398,29 @@ async def get_products(
         store_name = store_res.scalar() or ""
         store_city = re.sub(r"\s+(Hub|Market|Central|Dark\s*Store|Branch).*$", "", store_name, flags=re.IGNORECASE).strip() if store_name else ""
 
-        inv_sub_conditions = [
-            StoreInventory.productId == Product.id,
-            StoreInventory.storeId == storeId
-        ]
-        if not is_worker and not includeUnavailable and not admin:
-            inv_sub_conditions.append(StoreInventory.stock > 0)
+        # Check if this store has any inventory records seeded
+        has_inv_stmt = select(func.count(StoreInventory.productId)).where(StoreInventory.storeId == storeId)
+        has_inv_res = await db.execute(has_inv_stmt)
+        has_inv = (has_inv_res.scalar() or 0) > 0
 
-        grocery_scope = and_(
-            Product.restaurantId.is_(None),
-            exists().where(and_(*inv_sub_conditions))
-        )
+        if has_inv:
+            inv_sub_conditions = [
+                StoreInventory.productId == Product.id,
+                StoreInventory.storeId == storeId
+            ]
+            if not is_worker and not includeUnavailable and not admin:
+                inv_sub_conditions.append(StoreInventory.stock > 0)
+
+            grocery_scope = and_(
+                Product.restaurantId.is_(None),
+                exists().where(and_(*inv_sub_conditions))
+            )
+        else:
+            grocery_scope = and_(
+                Product.restaurantId.is_(None),
+                Product.isAvailable == True,
+                Product.stock > 0 if not is_worker and not includeUnavailable and not admin else True
+            )
 
         rest_conditions = []
         if store_city:
@@ -347,10 +432,14 @@ async def get_products(
         else:
             filters.append(grocery_scope)
 
-    # Category matching
+    # Category matching (Supports both direct category and child subcategories under parent)
     if categoryId:
         cat_ids = [c.strip() for c in categoryId.split(",") if c.strip()]
-        filters.append(Product.categoryId.in_(cat_ids))
+        filters.append(or_(
+            Product.categoryId.in_(cat_ids),
+            Product.category.has(Category.id.in_(cat_ids)),
+            Product.category.has(Category.parentId.in_(cat_ids))
+        ))
         if not restaurantId and not restaurantSlug:
             filters.append(Product.restaurantId == None)
     elif category:
@@ -368,7 +457,11 @@ async def get_products(
                 Product.category.has(Category.slug.in_(rest_slugs))
             ))
         else:
-            filters.append(Product.category.has(Category.slug.in_(slugs)))
+            filters.append(or_(
+                Product.category.has(Category.slug.in_(slugs)),
+                Product.category.has(Category.parent.has(Category.slug.in_(slugs))),
+                Product.categoryId.in_(slugs)
+            ))
             if not restaurantId and not restaurantSlug:
                 filters.append(Product.restaurantId == None)
 
@@ -406,18 +499,22 @@ async def get_products(
     # Trending items check
     if trending:
         # Load best selling items
-        stmt_trending = select(Product).where(
+        stmt_trending = select(Product).options(
+            selectinload(Product.category),
+            selectinload(Product.restaurant)
+        ).where(
             Product.isAvailable == True,
             Product.restaurantId == None,
             Product.category.has(Category.slug != "cafe")
         ).where(or_(Product.isTopPick == True, Product.isBestSeller == True)).limit(8)
         res_trending = await db.execute(stmt_trending)
         trending_products = res_trending.scalars().all()
+        serialized_trending = [serialize_product(p) for p in trending_products]
 
         return {
-            "products": trending_products,
+            "products": serialized_trending,
             "pagination": {
-                "total": len(trending_products),
+                "total": len(serialized_trending),
                 "page": 1,
                 "limit": 8,
                 "totalPages": 1
@@ -462,13 +559,19 @@ async def get_products(
                     or_conditions.append(Product.category.has(Category.name.ilike(f"%{opt}%")))
                 word_clauses.append(or_(*or_conditions))
 
-        stmt = select(Product).where(and_(*filters, *word_clauses))
+        stmt = select(Product).options(
+            selectinload(Product.category),
+            selectinload(Product.restaurant)
+        ).where(and_(*filters, *word_clauses))
         res = await db.execute(stmt)
         matched_products = res.scalars().all()
 
         # Fallback to general list if no matches
         if not matched_products:
-            stmt_fallback = select(Product).where(and_(*filters)).limit(500)
+            stmt_fallback = select(Product).options(
+                selectinload(Product.category),
+                selectinload(Product.restaurant)
+            ).where(and_(*filters)).limit(500)
             res_fallback = await db.execute(stmt_fallback)
             matched_products = res_fallback.scalars().all()
 
@@ -513,7 +616,10 @@ async def get_products(
         products = [m[0] for m in matches[memory_skip:memory_skip + limit]]
     else:
         # 2. Database cursor / offset pagination
-        stmt = select(Product).where(and_(*filters)).order_by(*order_by_clauses).limit(limit + 1)
+        stmt = select(Product).options(
+            selectinload(Product.category),
+            selectinload(Product.restaurant)
+        ).where(and_(*filters)).order_by(*order_by_clauses).limit(limit + 1)
         
         has_cursor = False
         if cursor:
@@ -547,8 +653,9 @@ async def get_products(
             total_res = await db.execute(total_stmt)
             total = total_res.scalar()
 
-    # Local store stock overrides
-    if storeId and products:
+    # Local store stock overrides applied ONLY to serialized dicts (NEVER modifying ORM instances!)
+    inv_map = {}
+    if storeId and storeId != "all" and products:
         prod_ids = [p.id for p in products]
         inv_stmt = select(StoreInventory).where(
             StoreInventory.storeId == storeId,
@@ -558,13 +665,13 @@ async def get_products(
         inv_list = inv_res.scalars().all()
         inv_map = {inv.productId: inv.stock for inv in inv_list}
 
-        for p in products:
-            local_stock = inv_map.get(p.id, 0)
-            p.stock = local_stock
-            p.isAvailable = p.isAvailable and local_stock > 0
+    serialized_products = []
+    for p in products:
+        local_stk = inv_map.get(p.id) if (storeId and storeId != "all" and p.id in inv_map) else None
+        serialized_products.append(serialize_product(p, local_stock=local_stk))
 
     response_data = {
-        "products": products,
+        "products": serialized_products,
         "pagination": {
             "total": None if total == -1 else total,
             "page": page,
@@ -583,8 +690,8 @@ async def get_products(
         search_cache[cache_key] = response_data
 
     # ETag generation and 304 Not Modified support
-    if is_cacheable and products:
-        etag_seed = f"{len(products)}:{products[0].id}:{products[-1].id}:{getattr(products[0], 'stock', 0)}:{getattr(products[-1], 'stock', 0)}"
+    if is_cacheable and serialized_products:
+        etag_seed = f"{len(serialized_products)}:{serialized_products[0]['id']}:{serialized_products[-1]['id']}:{serialized_products[0].get('stock', 0)}:{serialized_products[-1].get('stock', 0)}"
         etag = f'"{hashlib.md5(etag_seed.encode()).hexdigest()[:16]}"'
         response.headers["ETag"] = etag
         client_etag = request.headers.get("if-none-match")
@@ -1011,14 +1118,17 @@ async def get_product_details(
     """
     Get detailed product info by ID or Slug, including reviews and category metadata.
     """
-    stmt = select(Product).where(or_(Product.id == id, Product.slug == id))
+    stmt = select(Product).options(
+        selectinload(Product.category),
+        selectinload(Product.restaurant)
+    ).where(or_(Product.id == id, Product.slug == id))
     res = await db.execute(stmt)
     product = res.scalars().first()
 
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    return product
+    return serialize_product(product)
 
 
 @router.post("")

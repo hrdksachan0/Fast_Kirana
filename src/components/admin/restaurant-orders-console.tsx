@@ -96,6 +96,7 @@ interface Order {
   assignedChef?: { name: string } | null
   shopName?: string | null
   restaurantId?: string | null
+  notes?: string | null
 }
 
 const foodEmojis = ['🍲', '🍛', '🍜', '🍕', '🍔', '🌮', '🥪', '🍱', '🥘', '🥙', '🍢', '🍣']
@@ -490,13 +491,38 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
         let orderToPrint = ordersRef.current.find((o) => o.id === orderId || o.readableId === orderId || o.id === cleanId)
         if (!orderToPrint) {
           try {
-            const res = await fetch(`/api/orders/${cleanId}`)
+            const res = await fetch(`/api/orders/${cleanId}`, {
+              headers: authHeaders,
+            })
             if (res.ok) {
               const data = await res.json()
               orderToPrint = data.order || data
             }
           } catch (e) {
             console.error('Failed to fetch remote order for KOT print:', e)
+          }
+        }
+
+        // 🛡️ Reliable Instant Fallback: If order wasn't in memory/DB, construct directly from broadcast payload
+        if (!orderToPrint && payload.payload?.items && payload.payload.items.length > 0) {
+          orderToPrint = {
+            id: cleanId,
+            readableId: payload.payload.readableId,
+            restaurantId: payload.payload.restaurantId || effectiveRestaurantId || null,
+            status: 'CONFIRMED',
+            total: 0,
+            deliveryFee: 0,
+            taxes: 0,
+            miscFee: 0,
+            discount: 0,
+            createdAt: payload.payload.printedAt || new Date().toISOString(),
+            paymentMethod: 'ONLINE',
+            deliveryMethod: payload.payload.deliveryMethod || 'DELIVERY',
+            user: { name: payload.payload.customerName || 'Customer', phone: null },
+            address: { houseNo: '', street: '', area: '', city: '', pincode: '' },
+            items: payload.payload.items,
+            shopName: payload.payload.shopName,
+            notes: payload.payload.notes,
           }
         }
 
@@ -632,6 +658,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
 
       if (res.ok) {
         toast.success(`Accepted restaurant order! Timer set to ${selectedPrepTime} mins.`)
+        silentPrintKOT(order, restaurant?.name || 'RESTAURANT')
         setActiveOrder(order)
         const initialPicked: Record<string, number> = {}
         order.items.forEach(item => {
@@ -660,6 +687,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
 
       if (res.ok) {
         toast.success(`Accepted restaurant order! Timer set to 30 mins.`)
+        silentPrintKOT(order, restaurant?.name || 'RESTAURANT')
         setActiveOrder(order)
         const initialPicked: Record<string, number> = {}
         order.items.forEach(item => {
@@ -1218,15 +1246,13 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
                           <Edit className="h-3.5 w-3.5" /> Edit
                         </button>
                       )}
-                      {isClaimedByMe && (
-                        <button
-                          onClick={() => printKOTReceipt(order)}
-                          className="p-2 bg-card hover:bg-muted text-text-secondary rounded-xl border border-border transition-all cursor-pointer shadow-xs flex items-center justify-center shrink-0"
-                          title="Print Kitchen Order Ticket (KOT)"
-                        >
-                          <Printer className="h-4 w-4 text-red-650" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => printKOTReceipt(order)}
+                        className="p-2 bg-card hover:bg-muted text-text-secondary rounded-xl border border-border transition-all cursor-pointer shadow-xs flex items-center justify-center shrink-0"
+                        title="Print Kitchen Order Ticket (KOT)"
+                      >
+                        <Printer className="h-4 w-4 text-red-650" />
+                      </button>
                       
                       {!isClaimedByMe && !isClaimedByOther && (
                         <div className="flex gap-1.5">

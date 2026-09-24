@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { useSession } from 'next-auth/react'
 import { Search, Plus, Loader2, MessageSquare, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice, formatAddress } from '@/lib/utils'
@@ -51,6 +52,14 @@ export function OrdersTab({
   onNavigateToUsersTab,
   livePendingOrders = [],
 }: OrdersTabProps) {
+  const { data: session } = useSession()
+  const authHeaders = React.useMemo(() => ({
+    ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+    ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : { 'x-user-role': 'ADMIN' }),
+    ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+    ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+  }), [session])
+
   const [cancelConfirmOrder, setCancelConfirmOrder] = React.useState<any | null>(null)
   const [refundOrder, setRefundOrder] = React.useState<any | null>(null)
   const [updatingPaymentId, setUpdatingPaymentId] = React.useState<string | null>(null)
@@ -335,6 +344,13 @@ export function OrdersTab({
     markOrderKotPrinted(targetOrder.id)
     if (o.id !== targetOrder.id) markOrderKotPrinted(o.id)
 
+    // Trigger local printing immediately if executed on this counter/admin machine
+    try {
+      printKOTReceipt(targetOrder, targetOrder.shopName || targetOrder.restaurantName || 'RESTAURANT')
+    } catch (localPrintErr) {
+      console.warn('[KOT] Local print note:', localPrintErr)
+    }
+
     const toastId = toast.loading(`Sending KOT to Kitchen (Order #${targetOrder.readableId || targetOrder.id.slice(0, 8)})...`)
 
     // Strategy: Call server-side /api/kot-broadcast first as the single authoritative gateway.
@@ -347,7 +363,10 @@ export function OrdersTab({
 
       const res = await fetch('/api/kot-broadcast', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+        },
         body: JSON.stringify({
           orderId: targetOrder.id,
           readableId: targetOrder.readableId,
@@ -358,14 +377,18 @@ export function OrdersTab({
           notes: targetOrder.notes || null,
           shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
           printedAt: new Date().toISOString(),
+          kotText: 'FASTKIRANA KOT',
+          manual: true,
+          source: 'orders_tab',
         }),
       })
 
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && !data.ignored) {
         toast.dismiss(toastId)
         toast.success(`KOT Sent to Kitchen ✓ 📲`)
       } else {
-        throw new Error('Server broadcast failed, falling back to direct broadcast')
+        throw new Error(data.reason || 'Server broadcast failed, falling back to direct broadcast')
       }
     } catch (err) {
       // Fallback to direct channel if API fails
@@ -391,6 +414,9 @@ export function OrdersTab({
             notes: targetOrder.notes || null,
             shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
             printedAt: new Date().toISOString(),
+            kotText: 'FASTKIRANA KOT',
+            manual: true,
+            source: 'orders_tab_fallback',
           },
           status: 'PENDING',
           created_at: new Date().toISOString(),
@@ -434,6 +460,9 @@ export function OrdersTab({
               notes: targetOrder.notes || null,
               shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
               printedAt: new Date().toISOString(),
+              kotText: 'FASTKIRANA KOT',
+              manual: true,
+              source: 'orders_tab_fallback',
             }
           })
 

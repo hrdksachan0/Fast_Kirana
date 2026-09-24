@@ -28,6 +28,12 @@ class KotBroadcastRequest(BaseModel):
     kotText: Optional[str] = None
     items: Optional[List[Dict[str, Any]]] = None
     notes: Optional[str] = None
+    customerName: Optional[str] = None
+    deliveryMethod: Optional[str] = None
+    shopName: Optional[str] = None
+    printedAt: Optional[str] = None
+    manual: Optional[bool] = None
+    source: Optional[str] = None
 
 
 @router.post("/kot-broadcast")
@@ -82,6 +88,12 @@ async def broadcast_kot(
         "kotText": req.kotText,
         "items": req.items,
         "notes": req.notes,
+        "customerName": req.customerName,
+        "deliveryMethod": req.deliveryMethod or "DELIVERY",
+        "shopName": req.shopName,
+        "printedAt": req.printedAt,
+        "manual": req.manual,
+        "source": req.source,
         "timestamp": int(now * 1000)
     }
 
@@ -125,14 +137,26 @@ async def broadcast_kot(
     # 2. Broadcast via internal WebSockets with strict restaurant outlet channel
     try:
         kot_evt = {
-            "event": "kot_broadcast",
+            "event": "reprint-kot",
+            "type": "broadcast",
             "orderId": clean_id,
             "restaurantId": target_restaurant_id,
             "payload": payload
         }
         if target_restaurant_id:
             await manager.broadcast_to_channel(f"restaurant_{target_restaurant_id}", kot_evt)
+            await manager.broadcast_to_channel(f"restaurant-orders-{target_restaurant_id}", kot_evt)
+        await manager.broadcast_to_channel("restaurant-orders-live", kot_evt)
         await manager.broadcast(kot_evt)
+
+        # Also emit legacy event name for backward compatibility
+        legacy_evt = {
+            "event": "kot_broadcast",
+            "orderId": clean_id,
+            "restaurantId": target_restaurant_id,
+            "payload": payload
+        }
+        await manager.broadcast(legacy_evt)
     except Exception as ws_err:
         logger.warning(f"[KOT Broadcast] WebSocket broadcast note: {ws_err}")
 
@@ -141,26 +165,61 @@ async def broadcast_kot(
     supabase_key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if supabase_url and supabase_key:
         try:
-            channel_name = f"restaurant-orders-{target_restaurant_id}" if target_restaurant_id else "restaurant-orders-live"
+            base_sb_url = supabase_url.rstrip('/')
+            topics = ["restaurant-orders-live", "realtime:restaurant-orders-live"]
+            if target_restaurant_id:
+                topics.extend([
+                    f"restaurant-orders-{target_restaurant_id}",
+                    f"realtime:restaurant-orders-{target_restaurant_id}"
+                ])
+
+            messages = [
+                {
+                    "topic": t,
+                    "event": "reprint-kot",
+                    "payload": payload
+                }
+                for t in topics
+            ]
+
             async with httpx.AsyncClient(timeout=4.0) as client:
-                await client.post(
-                    f"{supabase_url.rstrip('/')}/rest/v1/kitchen_kot_queue",
-                    headers={
-                        "apikey": supabase_key,
-                        "Authorization": f"Bearer {supabase_key}",
-                        "Content-Type": "application/json",
-                        "Prefer": "resolution=merge-duplicates"
-                    },
-                    json={
-                        "order_id": clean_id,
-                        "readable_id": clean_readable or clean_id,
-                        "restaurant_id": target_restaurant_id,
-                        "payload": payload,
-                        "status": "PENDING"
-                    }
-                )
+                # 3a. Supabase Realtime Broadcast REST API
+                try:
+                    await client.post(
+                        f"{base_sb_url}/realtime/v1/api/broadcast",
+                        headers={
+                            "apikey": supabase_key,
+                            "Authorization": f"Bearer {supabase_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={"messages": messages}
+                    )
+                    logger.info(f"[KOT Broadcast] Successfully pushed Realtime broadcast to Supabase for #{clean_readable or clean_id}")
+                except Exception as r_err:
+                    logger.debug(f"[KOT Broadcast] Supabase Realtime HTTP broadcast note: {r_err}")
+
+                # 3b. Push to persistent queue table
+                try:
+                    await client.post(
+                        f"{base_sb_url}/rest/v1/kitchen_kot_queue",
+                        headers={
+                            "apikey": supabase_key,
+                            "Authorization": f"Bearer {supabase_key}",
+                            "Content-Type": "application/json",
+                            "Prefer": "resolution=merge-duplicates"
+                        },
+                        json={
+                            "order_id": clean_id,
+                            "readable_id": clean_readable or clean_id,
+                            "restaurant_id": target_restaurant_id,
+                            "payload": payload,
+                            "status": "PENDING"
+                        }
+                    )
+                except Exception as rest_err:
+                    logger.debug(f"[KOT Broadcast] Supabase REST queue note: {rest_err}")
         except Exception as sb_err:
-            logger.debug(f"[KOT Broadcast] Supabase REST push note: {sb_err}")
+            logger.debug(f"[KOT Broadcast] Supabase push note: {sb_err}")
 
     return {
         "success": True,
