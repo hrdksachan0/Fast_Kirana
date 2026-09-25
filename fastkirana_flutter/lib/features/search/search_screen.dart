@@ -91,11 +91,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   // Common Hindi / Hinglish grocery and food synonyms
   static const Map<String, List<String>> _hinglishSynonyms = {
-    'doodh': ['milk', 'dairy', 'doodh'],
-    'milk': ['doodh', 'dairy', 'milk'],
+    'doodh': ['milk', 'dairy', 'doodh', 'amul', 'ananda'],
+    'milk': ['doodh', 'dairy', 'milk', 'amul'],
     'dahi': ['curd', 'yogurt', 'dahi'],
     'curd': ['dahi', 'yogurt', 'curd'],
-    'makhan': ['butter', 'makhan'],
+    'makhan': ['butter', 'makhan', 'amul butter'],
     'butter': ['makhan', 'butter', 'amul'],
     'paneer': ['paneer', 'cottage cheese'],
     'tel': ['oil', 'mustard', 'refined', 'fortune', 'tel'],
@@ -107,8 +107,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     'rice': ['chawal', 'basmati', 'rice'],
     'daal': ['dal', 'daal', 'pulses', 'arhar', 'chana', 'moong'],
     'dal': ['daal', 'dal', 'pulses', 'arhar', 'chana', 'moong'],
-    'cheeni': ['sugar', 'cheeni', 'shakkar'],
-    'sugar': ['cheeni', 'sugar'],
+    'cheeni': ['sugar', 'cheeni', 'shakkar', 'chini'],
+    'sugar': ['cheeni', 'sugar', 'shakkar', 'chini'],
     'namak': ['salt', 'tata salt', 'namak'],
     'salt': ['namak', 'salt'],
     'chai': ['tea', 'chai', 'patti', 'taj mahal', 'red label'],
@@ -119,7 +119,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     'onion': ['pyaz', 'onion'],
     'tamatar': ['tomato', 'tamatar'],
     'tomato': ['tamatar', 'tomato'],
-    'biscuit': ['biscuits', 'parle', 'good day', 'oreo', 'cookies'],
+    'biscuit': ['biscuits', 'parle', 'good day', 'oreo', 'cookies', 'biskit'],
     'chips': ['lays', 'kurkure', 'chips', 'crisps', 'bingo'],
     'maggie': ['maggi', 'maggie', 'noodles', 'instant noodles'],
     'maggi': ['maggie', 'maggi', 'noodles', 'instant noodles'],
@@ -128,9 +128,48 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     'sabzi': ['vegetables', 'fresh', 'farm'],
     'fal': ['fruits', 'apple', 'banana', 'mango', 'orange'],
     'fruits': ['fal', 'fruits', 'apple', 'banana'],
-    'meetha': ['sweets', 'chocolates', 'dessert', 'ice cream', 'mithai'],
+    'meetha': ['sweets', 'chocolates', 'dessert', 'ice cream', 'mithai', 'soan papdi'],
     'chocolate': ['chocolates', 'cadbury', 'kitkat', 'silk', 'dairy milk'],
     'icecream': ['ice cream', 'desserts', 'amul', 'cone', 'cup'],
+
+    // 🌸 Women's Hygiene & Personal Care
+    'woman': ['women', 'womens', 'pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'female'],
+    'women': ['woman', 'womens', 'pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'female'],
+    'womens': ['women', 'woman', 'pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene'],
+    'pad': ['pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'women'],
+    'pads': ['pad', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'women'],
+    'sanitary': ['pad', 'pads', 'whisper', 'stayfree', 'hygiene', 'women', 'sofy'],
+    'whisper': ['whisper', 'pad', 'pads', 'sanitary', 'women', 'hygiene'],
+    'stayfree': ['stayfree', 'pad', 'pads', 'sanitary', 'women'],
+    'sofy': ['sofy', 'pad', 'pads', 'sanitary', 'women'],
+    'periods': ['pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'women'],
+
+    // 🧔 Men's Grooming
+    'man': ['men', 'shaving', 'razor', 'gillette', 'blade'],
+    'men': ['man', 'shaving', 'razor', 'gillette', 'blade', 'grooming'],
+    'razor': ['shaving', 'blade', 'gillette', 'guard'],
+    'shaving': ['razor', 'blade', 'gillette', 'foam', 'gel'],
+    'gillette': ['razor', 'blade', 'shaving', 'guard'],
+
+    // 🍬 Sweets & Mithai
+    'soan': ['soan papdi', 'papdi', 'mithai', 'haldiram', 'bikano', 'sweets'],
+    'papdi': ['soan papdi', 'soan', 'mithai', 'sweets'],
+    'soan papdi': ['soan', 'papdi', 'mithai', 'haldiram', 'bikano', 'sweets'],
+    'mithai': ['sweets', 'soan papdi', 'gulab jamun', 'rasgulla', 'laddu', 'barfi'],
+    'sweets': ['mithai', 'chocolates', 'dessert', 'soan papdi', 'gulab jamun'],
+
+    // 👶 Baby Care
+    'baby': ['diaper', 'diapers', 'pampers', 'huggies', 'mamy poko', 'wipes', 'baby soap'],
+    'diaper': ['diapers', 'pampers', 'huggies', 'mamy poko', 'baby'],
+    'diapers': ['diaper', 'pampers', 'huggies', 'mamy poko', 'baby'],
+    'pampers': ['diaper', 'diapers', 'baby', 'huggies'],
+
+    // 🧼 Personal Care & Hygiene
+    'sabun': ['soap', 'lifebuoy', 'dettol', 'lux', 'dove', 'santoor'],
+    'soap': ['sabun', 'lifebuoy', 'dettol', 'lux', 'dove', 'santoor', 'pears'],
+    'shampoo': ['clinic plus', 'head and shoulders', 'sunsilk', 'dove', 'pantene'],
+    'toothpaste': ['colgate', 'pepsodent', 'dant kanti', 'sensodyne', 'brush', 'paste'],
+    'paste': ['toothpaste', 'colgate', 'brush'],
   };
 
   void _selectCategory(String categoryId, String categoryName) {
@@ -673,7 +712,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           final catSlug = (p.category?.slug ?? '').toLowerCase();
           final desc = (p.description ?? '').toLowerCase();
           final tags = p.tags.map((t) => t.toLowerCase()).toList();
-          final unit = p.unit.toLowerCase();
           final variantNames = p.parsedVariants.map((v) => v.name.toLowerCase()).toList();
 
           int score = 0;
@@ -706,7 +744,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           }
 
           // Variant name match with query
-          if (variantNames.any((vn) => vn == queryClean || vn.contains(queryClean) || queryClean.contains(vn))) {
+          if (variantNames.any((vn) => vn == queryClean || vn.contains(queryClean) || (vn.length >= 4 && queryClean.contains(vn)))) {
             score += 45;
           }
 
@@ -722,16 +760,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             if (pName.contains(term)) {
               score += 40;
             }
-            if (variantNames.any((vn) => vn.contains(term) || term.contains(vn))) {
+            if (variantNames.any((vn) => vn == term || vn.contains(term) || (vn.length >= 4 && term.contains(vn)))) {
               score += 40;
             }
-            if (tags.any((t) => t.contains(term) || term.contains(t))) {
+            if (tags.any((t) => t == term || t.contains(term) || (t.length >= 4 && term.contains(t)))) {
               score += 35;
             }
             if (catName.contains(term) || catSlug.contains(term)) {
               score += 25;
             }
-            if (desc.contains(term) || unit.contains(term)) {
+            if (term.length >= 3 && desc.contains(term)) {
               score += 15;
             }
 

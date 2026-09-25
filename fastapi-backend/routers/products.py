@@ -117,14 +117,46 @@ SYNONYM_DICTIONARY = {
     'pani': ['water', 'bisleri', 'aquafina'],
     'cold drink': ['colddrink', 'pepsi', 'coke', 'thums up', 'sprite', 'beverage', 'soda'],
     'colddrink': ['cold drink', 'pepsi', 'coke', 'sprite', 'beverage'],
-    'sabun': ['soap', 'lifebuoy', 'dettol', 'lux', 'dove'],
+    'sabun': ['soap', 'lifebuoy', 'dettol', 'lux', 'dove', 'santoor'],
     'saboon': ['soap'],
     'surf': ['detergent', 'washing powder', 'aerial', 'tide', 'wheel'],
     'detergent': ['washing powder', 'surf'],
     'manjan': ['toothpaste', 'colgate', 'pepsodent', 'paste'],
     'paste': ['toothpaste', 'colgate'],
-    'shampoo': ['clinic plus', 'head and shoulders', 'sunsilk'],
+    'shampoo': ['clinic plus', 'head and shoulders', 'sunsilk', 'dove'],
     'tel malish': ['hair oil', 'coconut oil', 'bajaj', 'dabur'],
+
+    # 🌸 Women's Hygiene & Personal Care
+    'woman': ['women', 'womens', 'pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'female'],
+    'women': ['woman', 'womens', 'pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'female'],
+    'womens': ['women', 'woman', 'pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene'],
+    'pad': ['pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'women'],
+    'pads': ['pad', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'women'],
+    'sanitary': ['pad', 'pads', 'whisper', 'stayfree', 'hygiene', 'women', 'sofy'],
+    'whisper': ['whisper', 'pad', 'pads', 'sanitary', 'women', 'hygiene'],
+    'stayfree': ['stayfree', 'pad', 'pads', 'sanitary', 'women'],
+    'sofy': ['sofy', 'pad', 'pads', 'sanitary', 'women'],
+    'periods': ['pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'women'],
+
+    # 🧔 Men's Grooming
+    'man': ['men', 'shaving', 'razor', 'gillette', 'blade'],
+    'men': ['man', 'shaving', 'razor', 'gillette', 'blade', 'grooming'],
+    'razor': ['shaving', 'blade', 'gillette', 'guard'],
+    'shaving': ['razor', 'blade', 'gillette', 'foam', 'gel'],
+    'gillette': ['razor', 'blade', 'shaving', 'guard'],
+
+    # 🍬 Sweets & Mithai
+    'soan': ['soan papdi', 'papdi', 'mithai', 'haldiram', 'bikano', 'sweets'],
+    'papdi': ['soan papdi', 'soan', 'mithai', 'sweets'],
+    'soan papdi': ['soan', 'papdi', 'mithai', 'haldiram', 'bikano', 'sweets'],
+    'mithai': ['sweets', 'soan papdi', 'gulab jamun', 'rasgulla', 'laddu', 'barfi'],
+    'sweets': ['mithai', 'chocolates', 'dessert', 'soan papdi', 'gulab jamun'],
+
+    # 👶 Baby Care
+    'baby': ['diaper', 'diapers', 'pampers', 'huggies', 'mamy poko', 'wipes', 'baby soap'],
+    'diaper': ['diapers', 'pampers', 'huggies', 'mamy poko', 'baby'],
+    'diapers': ['diaper', 'pampers', 'huggies', 'mamy poko', 'baby'],
+    'pampers': ['diaper', 'diapers', 'baby', 'huggies'],
 }
 
 # Stop words for product search (Hinglish + English)
@@ -163,7 +195,7 @@ def get_levenshtein_distance(a: str, b: str) -> int:
 
 
 def get_fuzzy_score(query: str, target: str) -> float:
-    """Fuzzy matching logic mirroring Next.js helper."""
+    """Fuzzy matching logic with strict 70% threshold and initial letter guards."""
     q = query.lower().strip()
     t = target.lower().strip()
 
@@ -182,14 +214,20 @@ def get_fuzzy_score(query: str, target: str) -> float:
         for tw in t_words:
             if tw == qw:
                 best_word_score = max(best_word_score, 90.0)
-            elif qw in tw or tw in qw:
+            elif (len(qw) >= 4 and qw in tw) or (len(tw) >= 4 and tw in qw):
                 best_word_score = max(best_word_score, 70.0)
             else:
+                if len(qw) <= 3:
+                    continue
+                # Typos overwhelmingly share the first letter
+                if qw[0] != tw[0]:
+                    continue
                 dist = get_levenshtein_distance(qw, tw)
                 max_len = max(len(qw), len(tw))
                 if max_len > 0:
                     sim = 1.0 - (dist / max_len)
-                    if sim > 0.5:
+                    # Require at least 70% character similarity to prevent false positives
+                    if sim >= 0.70:
                         best_word_score = max(best_word_score, round(sim * 80.0, 2))
         total_score += best_word_score
 
@@ -592,6 +630,7 @@ async def get_products(
         matched_products = res.scalars().all()
 
         # Fallback to general list if no matches
+        is_sql_match = bool(matched_products)
         if not matched_products:
             stmt_fallback = select(Product).options(
                 selectinload(Product.category),
@@ -604,25 +643,42 @@ async def get_products(
         scored_products = []
         for p in matched_products:
             name_score = get_fuzzy_score(normalized_search, p.name)
-            p_tags = p.tags or []
-            tag_score = 85.0 if any(get_fuzzy_score(normalized_search, t) > 60 for t in p_tags) else 0.0
+            p_tags = [t.lower() for t in (p.tags or [])]
+            p_words = set(re.findall(r'\b\w+\b', p.name.lower()))
+
+            # Exact or synonym tag match bonus
+            tag_score = 90.0 if any(
+                t == normalized_search or t in SYNONYM_DICTIONARY.get(normalized_search, [])
+                for t in p_tags
+            ) else (85.0 if any(get_fuzzy_score(normalized_search, t) > 60 for t in p_tags) else 0.0)
+
             desc_score = get_fuzzy_score(normalized_search, p.description or "") * 0.5
 
-            # Synonym match bonus
+            # Synonym match bonus (require whole-word match or substantial substring)
             syn_score = 0.0
             for opt in (phrase_syns if phrase_syns else []):
-                if opt in p.name.lower() or any(opt in t.lower() for t in p_tags):
+                if opt in p_words:
+                    syn_score = max(syn_score, 85.0)
+                elif len(opt) >= 4 and opt in p.name.lower():
+                    syn_score = max(syn_score, 75.0)
+                elif any(opt in t for t in p_tags):
                     syn_score = max(syn_score, 80.0)
+
             for w in search_words:
                 for syn in SYNONYM_DICTIONARY.get(w, []):
-                    if syn in p.name.lower() or any(syn in t.lower() for t in p_tags):
-                        syn_score = max(syn_score, 75.0)
+                    if syn in p_words:
+                        syn_score = max(syn_score, 85.0)
+                    elif len(syn) >= 4 and syn in p.name.lower():
+                        syn_score = max(syn_score, 70.0)
+                    elif any(syn == t or (len(syn) >= 4 and syn in t) for t in p_tags):
+                        syn_score = max(syn_score, 80.0)
 
-            score = max(name_score, tag_score, desc_score, syn_score, 50.0)
-            scored_products.append((p, score))
+            score = max(name_score, tag_score, desc_score, syn_score)
+            if score > 35:
+                scored_products.append((p, score))
 
         # Filter > 35 and sort by score
-        matches = [item for item in scored_products if item[1] > 35]
+        matches = scored_products
         matches.sort(key=lambda x: x[1], reverse=True)
 
         # M3 FIX: Prioritize in-stock items before out-of-stock for customer searches

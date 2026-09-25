@@ -122,7 +122,13 @@ class FuzzyMatcher {
   }
 
   /// Checks if any word in [targetText] matches [queryWord] fuzzily.
-  /// Returns the minimum distance found, or null if no word matched within [maxDistance].
+  /// Returns the minimum distance found, or null if no word matched within tolerance.
+  /// Enforces:
+  /// - Words <= 3 chars: exact match only (distance 0).
+  /// - Words 4-5 chars: at most 1 typo (distance <= 1).
+  /// - Words >= 6 chars: at most [maxDistance] (default 2).
+  /// - Minimum 70% character similarity ratio.
+  /// - Initial character match requirement when distance >= 2 or word <= 5 chars.
   static int? bestTokenFuzzyDistance(
     String queryWord,
     String targetText, {
@@ -137,12 +143,42 @@ class FuzzyMatcher {
         .where((w) => w.length >= 2);
 
     int? bestDist;
-    final effectiveMax = q.length <= 4 ? 1 : maxDistance;
+
+    // Adaptive maximum allowed edit distance based on word length:
+    final int allowedMax;
+    if (q.length <= 3) {
+      allowedMax = 0; // Short words (tea, dal, oil) must match exactly
+    } else if (q.length <= 5) {
+      allowedMax = 1; // 4-5 char words (magi, layz, woman) allow at most 1 edit
+    } else {
+      allowedMax = maxDistance; // 6+ char words (chocolate, aashirvaad) allow up to 2
+    }
 
     for (final token in targetTokens) {
       if (token == q) return 0;
-      final dist = damerauLevenshtein(q, token, maxDistance: effectiveMax);
-      if (dist <= effectiveMax) {
+      if (allowedMax == 0) continue;
+
+      // Fast length difference pruning
+      final lenDiff = (q.length - token.length).abs();
+      if (lenDiff > allowedMax) continue;
+
+      // Typos overwhelmingly retain the first character.
+      // If the first character differs, reject if word is <= 5 chars or length differs
+      if (q[0] != token[0]) {
+        if (q.length <= 5 || lenDiff != 0) continue;
+      }
+
+      final dist = damerauLevenshtein(q, token, maxDistance: allowedMax);
+      if (dist <= allowedMax) {
+        final maxLen = max(q.length, token.length);
+        final similarity = 1.0 - (dist / maxLen);
+
+        // Require at least 70% character similarity to eliminate false positives
+        if (similarity < 0.70) continue;
+
+        // If distance >= 2, the first letter MUST match
+        if (dist >= 2 && q[0] != token[0]) continue;
+
         if (bestDist == null || dist < bestDist) {
           bestDist = dist;
           if (bestDist == 0) return 0;
