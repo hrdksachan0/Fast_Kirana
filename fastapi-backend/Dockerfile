@@ -1,4 +1,4 @@
-FROM python:3.11-slim as builder
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -10,10 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+# Copy requirements from root or subdirectory
+COPY fastapi-backend/requirements.txt* requirements.txt* ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy source code
+COPY fastapi-backend/ ./
+
+EXPOSE 8080
 
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
-
