@@ -61,11 +61,22 @@ export function LiveOpsTab({
         )
       : 0
 
-  const pendingCount = liveOrders.filter((o) => o.status === 'PENDING').length
-  const confirmedCount = liveOrders.filter((o) => o.status === 'CONFIRMED').length
-  const packedCount = liveOrders.filter((o) => o.status === 'PACKED').length
-  const shippedCount = liveOrders.filter((o) => o.status === 'SHIPPED').length
-  const deliveredCount = liveOrders.filter((o) => o.status === 'DELIVERED').length
+  // Consolidate multi-outlet sub-orders sharing combinedId so each combined checkout counts as 1 master order
+  const consolidatedLiveOrders = useMemo(() => {
+    const seen = new Set<string>()
+    return (liveOrders || []).filter((o) => {
+      const key = o.combinedId || o.id
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [liveOrders])
+
+  const pendingCount = consolidatedLiveOrders.filter((o) => o.status === 'PENDING').length
+  const confirmedCount = consolidatedLiveOrders.filter((o) => o.status === 'CONFIRMED').length
+  const packedCount = consolidatedLiveOrders.filter((o) => o.status === 'PACKED').length
+  const shippedCount = consolidatedLiveOrders.filter((o) => o.status === 'SHIPPED').length
+  const deliveredCount = consolidatedLiveOrders.filter((o) => o.status === 'DELIVERED').length
 
   return (
     <div className="space-y-6 animate-fade-in">
