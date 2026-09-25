@@ -42,6 +42,17 @@ async def lifespan(app: FastAPI):
         FastAPICache.init(InMemoryBackend(), prefix="fastkirana-cache")
     yield
 
+from starlette.types import ASGIApp, Scope, Receive, Send
+
+class TrailingSlashMiddleware:
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope["path"] != "/" and scope["path"].endswith("/"):
+            scope["path"] = scope["path"].rstrip("/")
+        await self.app(scope, receive, send)
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="High-Performance Python FastAPI Microservice for FastKirana E-Commerce, AI Demand Forecasting, Real-Time WebSockets, & Rider Wallet Ledger.",
@@ -49,9 +60,11 @@ app = FastAPI(
     docs_url="/docs" if settings.APP_ENV != "production" else "/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
-    redirect_slashes=False,
+    redirect_slashes=True,
     default_response_class=ORJSONResponse,
 )
+
+app.add_middleware(TrailingSlashMiddleware)
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")

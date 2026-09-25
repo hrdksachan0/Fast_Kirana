@@ -3716,7 +3716,7 @@ async def apply_bulk_update(
                 oldMrp=float(prod.mrp or prod.price),
                 newMrp=float(prod.mrp or prod.price),
                 changeType=f"BULK_{mode}",
-                changedBy=current_admin.email or current_admin.name or "ADMIN",
+                changedBy=(current_admin.get("email") if isinstance(current_admin, dict) else getattr(current_admin, "email", None)) or (current_admin.get("name") if isinstance(current_admin, dict) else getattr(current_admin, "name", None)) or "ADMIN",
                 batchId=batch_id,
                 createdAt=datetime.utcnow()
             ))

@@ -314,7 +314,8 @@ async def get_catalog_version(
     if restaurantId:
         p_filter.append(Product.restaurantId == restaurantId)
     elif storeId and storeId != "all":
-        p_filter.append(or_(Product.storeId == storeId, Product.storeId == None))
+        rest_scope = Product.restaurant.has(Restaurant.storeId == storeId)
+        p_filter.append(or_(Product.restaurantId == None, rest_scope))
 
     p_stmt = select(
         func.max(Product.updatedAt),
@@ -324,7 +325,9 @@ async def get_catalog_version(
         p_stmt = p_stmt.where(and_(*p_filter))
 
     p_res = await db.execute(p_stmt)
-    p_max_dt, p_count = p_res.first()
+    first_row = p_res.first()
+    p_max_dt = first_row[0] if first_row else None
+    p_count = first_row[1] if first_row else 0
 
     c_stmt = select(func.max(Category.updatedAt))
     c_res = await db.execute(c_stmt)

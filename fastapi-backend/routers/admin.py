@@ -23,13 +23,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def _get_admin_attr(admin_obj: Any, attr: str, default: Any = None) -> Any:
+    if isinstance(admin_obj, dict):
+        return admin_obj.get(attr, default)
+    return getattr(admin_obj, attr, default)
+
 router = APIRouter(prefix="/admin", tags=["Admin Reconciliation & Reports"])
 
 
 @router.get("/rider-cash")
 async def get_admin_rider_cash_summary(
     storeId: Optional[str] = Query(None),
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -41,7 +46,7 @@ async def get_admin_rider_cash_summary(
     rider_stmt = select(User).options(selectinload(User.riderWallet)).where(
         User.role == Role.DELIVERY
     )
-    effective_store = storeId or current_admin.assignedStoreId
+    effective_store = storeId or _get_admin_attr(current_admin, "assignedStoreId")
     if effective_store and effective_store.lower() != 'all':
         rider_stmt = rider_stmt.where(User.assignedStoreId == effective_store)
 
@@ -184,7 +189,7 @@ async def get_admin_rider_cash_summary(
 @router.post("/rider-cash")
 async def settle_rider_cash(
     payload: CashDepositRequest,
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -204,7 +209,7 @@ async def settle_rider_cash(
     transaction = CashDepositTransaction(
         id=f"tx_{uuid.uuid4().hex[:12]}",
         riderId=payload.riderId,
-        adminId=current_admin.id,
+        adminId=_get_admin_attr(current_admin, "id"),
         amount=deposit_amount,
         status="APPROVED",
         notes=payload.notes
@@ -239,7 +244,7 @@ async def settle_rider_cash(
 async def delete_rider_cash_log(
     id: Optional[str] = Query(None),
     clearAll: Optional[bool] = Query(False),
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a specific cash deposit log or clear all deposit logs."""
@@ -268,7 +273,7 @@ async def delete_rider_cash_log(
 @router.patch("/settings")
 async def save_admin_settings(
     payload: Dict[str, Any] = Body(...),
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -325,7 +330,7 @@ async def get_sales_reports(
     startDate: Optional[str] = Query(None),
     endDate: Optional[str] = Query(None),
     storeId: Optional[str] = Query(None),
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -345,7 +350,7 @@ async def get_sales_reports(
             end = datetime.combine(now.date(), time.max)
 
         # 1. Fetch delivered orders with storeId filtering
-        effective_store = storeId or current_admin.assignedStoreId
+        effective_store = storeId or _get_admin_attr(current_admin, "assignedStoreId")
         orders_stmt = select(Order).where(
             Order.status == OrderStatus.DELIVERED,
             Order.createdAt >= start,
@@ -702,7 +707,7 @@ async def get_admin_all_orders(
     status_filter: Optional[str] = None,
     storeId: Optional[str] = None,
     limit: int = 100,
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -802,7 +807,7 @@ async def get_admin_all_orders(
 
 @router.get("/dashboard")
 async def get_admin_dashboard(
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -836,7 +841,7 @@ async def get_admin_dashboard(
 @router.get("/forecast")
 async def get_admin_inventory_forecast(
     storeId: Optional[str] = Query(None),
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1004,29 +1009,36 @@ async def get_admin_inventory_forecast(
 
 @router.get("/me")
 async def get_admin_me(
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get current logged in admin info and assigned store/hub.
     """
+    admin_id = _get_admin_attr(current_admin, "id")
+    admin_name = _get_admin_attr(current_admin, "name")
+    admin_email = _get_admin_attr(current_admin, "email")
+    admin_phone = _get_admin_attr(current_admin, "phone")
+    admin_role = _get_admin_attr(current_admin, "role")
+    admin_store = _get_admin_attr(current_admin, "assignedStoreId")
+
     store_name = None
-    if current_admin.assignedStoreId:
-        st_res = await db.execute(select(DarkStore).where(DarkStore.id == current_admin.assignedStoreId))
+    if admin_store:
+        st_res = await db.execute(select(DarkStore).where(DarkStore.id == admin_store))
         store_obj = st_res.scalars().first()
         if store_obj:
             store_name = store_obj.name
 
     return {
         "user": {
-            "id": current_admin.id,
-            "name": current_admin.name,
-            "email": current_admin.email,
-            "phone": current_admin.phone,
-            "role": current_admin.role.value if hasattr(current_admin.role, 'value') else str(current_admin.role),
-            "assignedStoreId": current_admin.assignedStoreId,
+            "id": admin_id,
+            "name": admin_name,
+            "email": admin_email,
+            "phone": admin_phone,
+            "role": admin_role.value if hasattr(admin_role, 'value') else str(admin_role or "ADMIN"),
+            "assignedStoreId": admin_store,
         },
-        "assignedStoreId": current_admin.assignedStoreId,
+        "assignedStoreId": admin_store,
         "storeName": store_name
     }
 
@@ -1034,14 +1046,14 @@ async def get_admin_me(
 @router.get("/riders")
 async def get_admin_riders(
     storeId: Optional[str] = None,
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get active delivery riders/partners for order assignment.
     """
     stmt = select(User).where(User.role == Role.DELIVERY)
-    effective_store = storeId or current_admin.assignedStoreId
+    effective_store = storeId or _get_admin_attr(current_admin, "assignedStoreId")
     if effective_store and effective_store.lower() != 'all':
         stmt = stmt.where(User.assignedStoreId == effective_store)
     stmt = stmt.order_by(User.name.asc())
@@ -1065,7 +1077,7 @@ async def get_admin_riders(
 @router.get("/users/{user_id}/addresses")
 async def get_admin_user_addresses(
     user_id: str,
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1095,7 +1107,7 @@ async def get_admin_user_addresses(
 @router.patch("/users/block")
 async def block_user_alias(
     payload: dict = Body(...),
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1116,7 +1128,8 @@ async def block_user_alias(
         raise HTTPException(status_code=404, detail="User not found")
     if user.role == Role.ADMIN:
         raise HTTPException(status_code=400, detail="Administrator accounts cannot be blocked")
-    if user.id == current_admin.id:
+    admin_id = _get_admin_attr(current_admin, "id")
+    if user.id == admin_id:
         raise HTTPException(status_code=400, detail="You cannot block your own admin account")
 
     user.isBlocked = is_blocked
@@ -1140,7 +1153,7 @@ async def block_user_alias(
 @router.patch("/users")
 async def admin_update_user(
     payload: dict = Body(...),
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1206,7 +1219,7 @@ async def admin_update_user(
 @router.post("/users/password")
 async def admin_set_user_password(
     payload: dict = Body(...),
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1263,7 +1276,7 @@ async def admin_set_user_password(
 @router.post("/orders/sync-razorpay")
 async def admin_sync_razorpay_order(
     payload: dict = Body(...),
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1347,7 +1360,7 @@ async def get_admin_detailed_orders_report(
     startDate: Optional[str] = None,
     endDate: Optional[str] = None,
     storeId: Optional[str] = None,
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1400,7 +1413,7 @@ superadmin_router = APIRouter(prefix="/superadmin", tags=["Superadmin Dashboard"
 
 @superadmin_router.get("/stats")
 async def get_superadmin_stats(
-    current_admin: User = Depends(require_admin),
+    current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
