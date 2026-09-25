@@ -180,6 +180,18 @@ async def get_public_settings(
         settings_map["cafe_open"] = "true" if check_is_store_open(settings_map, "cafe") else "false"
         settings_map["restaurant_open"] = "true" if check_is_store_open(settings_map, "restaurant") else "false"
 
+        # Populate outlet statuses
+        try:
+            rest_res = await db.execute(select(Restaurant).where(Restaurant.isActive == True))
+            for r in rest_res.scalars().all():
+                from routers.stores_service import check_restaurant_is_open
+                r_open = check_restaurant_is_open(r)
+                settings_map[f"outlet_open_{r.id}"] = "true" if r_open else "false"
+                if r.slug:
+                    settings_map[f"outlet_open_{r.slug}"] = "true" if r_open else "false"
+        except Exception as rest_err:
+            logger.warning(f"Failed to populate outlet statuses in settings: {rest_err}")
+
         response.headers["Cache-Control"] = "public, max-age=5, stale-while-revalidate=30"
         return settings_map
     except Exception as e:
@@ -223,6 +235,25 @@ async def update_settings(
                 base_setting.value = str(value)
             else:
                 db.add(StoreSetting(key=key, value=str(value)))
+
+    # Sync DarkStore table fields for this specific hub
+    if is_store_scoped and store_id:
+        hub_res = await db.execute(select(DarkStore).where(DarkStore.id == store_id))
+        hub_obj = hub_res.scalars().first()
+        if hub_obj:
+            if "grocery_mart_open" in data:
+                hub_obj.groceryOpen = str(data["grocery_mart_open"]).lower() == "true"
+            if "delivery_radius" in data:
+                try:
+                    hub_obj.deliveryRadiusKm = float(data["delivery_radius"])
+                except Exception:
+                    pass
+            if "store_lat" in data and "store_lng" in data:
+                try:
+                    hub_obj.latitude = float(data["store_lat"])
+                    hub_obj.longitude = float(data["store_lng"])
+                except Exception:
+                    pass
 
     await db.commit()
     return {"success": True}

@@ -12,6 +12,7 @@ from database import get_db
 from models import Restaurant, User, Product, Order, Category
 from routers.auth import get_current_user, require_admin, require_auth
 from routers.websockets import manager
+from routers.stores_service import check_restaurant_is_open
 
 router = APIRouter(prefix="/restaurants", tags=["Restaurants"])
 
@@ -108,7 +109,9 @@ async def get_restaurants(
             "lng": r.lng,
             "isVeg": r.isVeg,
             "isPureVeg": r.isPureVeg,
-            "isOpen": r.isOpen,
+            "isOpen": check_restaurant_is_open(r),
+            "isCurrentlyOpen": check_restaurant_is_open(r),
+            "isManuallyOpen": r.isOpen,
             "openTime": r.openTime,
             "closeTime": r.closeTime,
             "sortOrder": r.sortOrder,
@@ -287,7 +290,9 @@ async def get_restaurant_details(
         "lng": restaurant.lng,
         "isVeg": restaurant.isVeg,
         "isPureVeg": restaurant.isPureVeg,
-        "isOpen": restaurant.isOpen,
+        "isOpen": check_restaurant_is_open(restaurant),
+        "isCurrentlyOpen": check_restaurant_is_open(restaurant),
+        "isManuallyOpen": restaurant.isOpen,
         "openTime": restaurant.openTime,
         "closeTime": restaurant.closeTime,
         "sortOrder": restaurant.sortOrder,

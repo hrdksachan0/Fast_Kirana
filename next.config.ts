@@ -320,7 +320,7 @@ const nextConfig: NextConfig = {
         source: '/api/admin/orders',
         destination: `${apiDest}/api/admin/orders`,
       },
-      // Online Payment Gateway (Cashfree) -> FastAPI
+      // Online Payment Gateways -> FastAPI
       {
         source: '/api/payment/cashfree/:path*',
         destination: `${apiDest}/api/payment/cashfree/:path*`,
@@ -328,6 +328,104 @@ const nextConfig: NextConfig = {
       {
         source: '/api/payments/cashfree/:path*',
         destination: `${apiDest}/api/payments/cashfree/:path*`,
+      },
+      {
+        source: '/api/payment/razorpay/:path*',
+        destination: `${apiDest}/api/payment/razorpay/:path*`,
+      },
+      {
+        source: '/api/payments/razorpay/:path*',
+        destination: `${apiDest}/api/payments/razorpay/:path*`,
+      },
+      {
+        source: '/api/payment/paytm/:path*',
+        destination: `${apiDest}/api/payment/paytm/:path*`,
+      },
+      {
+        source: '/api/payments/paytm/:path*',
+        destination: `${apiDest}/api/payments/paytm/:path*`,
+      },
+      // Restaurant Dashboard, Reports & KOT Kitchen -> FastAPI
+      {
+        source: '/api/restaurant-dashboard/:path*',
+        destination: `${apiDest}/api/restaurant-dashboard/:path*`,
+      },
+      {
+        source: '/api/restaurant-dashboard',
+        destination: `${apiDest}/api/restaurant-dashboard`,
+      },
+      {
+        source: '/api/restaurant-report/:path*',
+        destination: `${apiDest}/api/restaurant-report/:path*`,
+      },
+      {
+        source: '/api/restaurant-report',
+        destination: `${apiDest}/api/restaurant-report`,
+      },
+      {
+        source: '/api/restaurant/:path*',
+        destination: `${apiDest}/api/restaurant/:path*`,
+      },
+      {
+        source: '/api/restaurant',
+        destination: `${apiDest}/api/restaurant`,
+      },
+      {
+        source: '/api/kot-broadcast/:path*',
+        destination: `${apiDest}/api/kot-broadcast/:path*`,
+      },
+      {
+        source: '/api/kot-broadcast',
+        destination: `${apiDest}/api/kot-broadcast`,
+      },
+      // Settings, Search, Upload, Push, SuperAdmin & Cron -> FastAPI
+      {
+        source: '/api/settings/:path*',
+        destination: `${apiDest}/api/settings/:path*`,
+      },
+      {
+        source: '/api/settings',
+        destination: `${apiDest}/api/settings`,
+      },
+      {
+        source: '/api/search/:path*',
+        destination: `${apiDest}/api/search/:path*`,
+      },
+      {
+        source: '/api/search',
+        destination: `${apiDest}/api/search`,
+      },
+      {
+        source: '/api/upload/:path*',
+        destination: `${apiDest}/api/upload/:path*`,
+      },
+      {
+        source: '/api/upload',
+        destination: `${apiDest}/api/upload`,
+      },
+      {
+        source: '/api/push/:path*',
+        destination: `${apiDest}/api/push/:path*`,
+      },
+      {
+        source: '/api/push',
+        destination: `${apiDest}/api/push`,
+      },
+      {
+        source: '/api/superadmin/:path*',
+        destination: `${apiDest}/api/superadmin/:path*`,
+      },
+      {
+        source: '/api/superadmin',
+        destination: `${apiDest}/api/superadmin`,
+      },
+      {
+        source: '/api/cron/:path*',
+        destination: `${apiDest}/api/cron/:path*`,
+      },
+      {
+        source: '/api/cron',
+        destination: `${apiDest}/api/cron`,
       },
     ];
 

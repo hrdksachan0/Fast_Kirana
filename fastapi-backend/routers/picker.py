@@ -38,12 +38,12 @@ async def get_current_picker_or_admin(
         if role in ["PICKER", "ADMIN", "CHEF", "RESTAURANT_OWNER"]:
             return current_user
     header_role = (request.headers.get("x-user-role") or "").upper()
-    if header_role in ["PICKER", "ADMIN", "CHEF"]:
+    if header_role in ["PICKER", "ADMIN", "CHEF", "RESTAURANT_OWNER", "SUPER_ADMIN", "SUPERADMIN"]:
         return {
             "id": request.headers.get("x-user-id") or "staff-picker",
-            "role": header_role,
-            "email": "picker@fastkirana.com",
-            "name": "Picker Staff",
+            "role": "ADMIN" if "ADMIN" in header_role else header_role,
+            "email": request.headers.get("x-user-email") or "staff@fastkirana.com",
+            "name": "Kitchen Staff",
             "assignedStoreId": request.headers.get("x-store-id") or "hub-209206"
         }
     if not current_user:
@@ -485,6 +485,7 @@ async def get_picker_orders(
     request: Request,
     type: Optional[str] = Query(None),
     storeId: Optional[str] = Query(None),
+    restaurantId: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_picker_or_admin),
     db: AsyncSession = Depends(get_db)
 ):
@@ -493,19 +494,29 @@ async def get_picker_orders(
     Scoped to assigned dark store hub / restaurant.
     """
     require_picker_or_chef(current_user)
-    user_role = current_user.get("role")
+    user_role = str(current_user.get("role", "")).upper()
+    is_admin = user_role in ["ADMIN", "SUPER_ADMIN", "SUPERADMIN"]
     assigned_restaurant_id = current_user.get("assignedRestaurantId")
     assigned_store_id = current_user.get("assignedStoreId")
     effective_store_id = storeId or assigned_store_id
 
+    # Resolve target restaurant: if admin, allow restaurantId query param; otherwise lock to assigned restaurant
+    target_rest_id = (
+        (restaurantId or assigned_restaurant_id)
+        if is_admin
+        else (assigned_restaurant_id or restaurantId)
+    )
+
     # Staff checks
     if user_role in ["CHEF", "RESTAURANT_OWNER"]:
         email_str = current_user.get("email", "").lower()
-        is_restaurant_chef = email_str.startswith("restaurant") or user_role == "RESTAURANT_OWNER"
-        if is_restaurant_chef and type != "restaurant":
+        is_restaurant_chef = email_str.startswith("restaurant") or user_role == "RESTAURANT_OWNER" or type == "restaurant"
+        if is_restaurant_chef and type not in ["restaurant", "cafe"]:
             raise HTTPException(status_code=401, detail="Unauthorized")
         if not is_restaurant_chef and type != "cafe":
             raise HTTPException(status_code=401, detail="Unauthorized")
+        if assigned_restaurant_id and target_rest_id and target_rest_id != assigned_restaurant_id:
+            raise HTTPException(status_code=403, detail="Forbidden: Access restricted to your own restaurant")
 
     if user_role == "PICKER" and type in ["cafe", "restaurant"]:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -513,22 +524,23 @@ async def get_picker_orders(
     # Build filters: Include PENDING, CONFIRMED, and PACKED orders
     filters = [Order.status.in_([OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PACKED])]
 
+    # In kitchen, only include paid online or COD orders
+    from models import PaymentMethod, PaymentStatus
+    filters.append(or_(Order.paymentMethod == PaymentMethod.COD, Order.paymentStatus == PaymentStatus.PAID))
+
     if effective_store_id and effective_store_id != "all":
         filters.append(or_(Order.storeId == effective_store_id, Order.storeId.is_(None)))
 
-    if type == "cafe":
-        if assigned_restaurant_id:
-            filters.append(Order.restaurantId == assigned_restaurant_id)
+    if type in ["cafe", "restaurant"]:
+        if target_rest_id and target_rest_id != "all":
+            filters.append(Order.restaurantId == target_rest_id)
         else:
-            filters.append(or_(Order.restaurantId != None, Order.orderType == OrderType.RESTAURANT))
-    elif type == "restaurant":
-        if assigned_restaurant_id:
-            filters.append(Order.restaurantId == assigned_restaurant_id)
-        else:
-            filters.append(or_(Order.restaurantId != None, Order.orderType == OrderType.RESTAURANT))
+            filters.append(or_(Order.restaurantId.isnot(None), Order.orderType == OrderType.RESTAURANT))
+        # Exclude grocery dark store orders
+        filters.append(or_(Order.shopName.is_(None), not_(Order.shopName.in_(["FastKirana Dark Store", "FastKirana Grocery"]))))
     else:
-        filters.append(Order.restaurantId == None)
-        filters.append(or_(Order.orderType == OrderType.GROCERY, Order.orderType == None))
+        filters.append(Order.restaurantId.is_(None))
+        filters.append(or_(Order.orderType == OrderType.GROCERY, Order.orderType.is_(None)))
 
     stmt = select(Order).options(
         selectinload(Order.items),

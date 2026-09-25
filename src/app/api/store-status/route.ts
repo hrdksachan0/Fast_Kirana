@@ -79,6 +79,31 @@ export async function GET(request: NextRequest) {
       settingsMap[s.key] = s.value
     }
 
+    if (hubId && hubId !== 'all') {
+      const storePrefix = `store:${hubId}:`
+      const [hubSettings, hubDoc] = await Promise.all([
+        prisma.storeSetting.findMany({
+          where: { key: { startsWith: storePrefix } },
+          select: { key: true, value: true },
+        }),
+        prisma.darkStore.findUnique({
+          where: { id: hubId },
+          select: { groceryOpen: true, deliveryRadiusKm: true, latitude: true, longitude: true },
+        }),
+      ])
+      hubSettings.forEach((s) => {
+        settingsMap[s.key.slice(storePrefix.length)] = s.value
+      })
+      if (hubDoc) {
+        if (hubDoc.groceryOpen !== null && hubDoc.groceryOpen !== undefined && settingsMap['grocery_auto_timing'] !== 'true') {
+          settingsMap['grocery_mart_open'] = hubDoc.groceryOpen ? 'true' : 'false'
+        }
+        if (hubDoc.deliveryRadiusKm) {
+          settingsMap['delivery_radius'] = String(hubDoc.deliveryRadiusKm)
+        }
+      }
+    }
+
     // Compute live operational statuses
     const isGroceryOpen = checkIsStoreOpen(settingsMap, 'grocery')
     const isCafeOpen = checkIsStoreOpen(settingsMap, 'cafe')

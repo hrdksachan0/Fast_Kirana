@@ -290,6 +290,7 @@ export function AdminDashboard({
     setCartsRefreshKey,
     orderRefreshKey,
     setOrderRefreshKey,
+    playNewOrderChime,
   } = useAdminRealtime({
     selectedHubId,
     initialOrders,
@@ -320,6 +321,7 @@ export function AdminDashboard({
     initialOrderCounts,
     selectedHubId,
     orderRefreshKey,
+    onNewOrderDetected: playNewOrderChime,
   })
 
   // Users Hook

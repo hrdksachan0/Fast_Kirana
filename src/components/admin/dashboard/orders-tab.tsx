@@ -495,7 +495,9 @@ export function OrdersTab({
     const restSub = o.subOrders?.find((s: any) => s.type === 'RESTAURANT')
     const orderId = restSub?.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
     const outletName = restSub?.shopName || (o.restaurantId ? (o.restaurantName || o.shopName) : null) || 'Restaurant'
-    const orderTime = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : ''
+    const rawCreatedAt = typeof o.createdAt === 'string' ? o.createdAt.trim() : ''
+    const dateToParse = rawCreatedAt && /T\d{2}:\d{2}/.test(rawCreatedAt) && !rawCreatedAt.endsWith('Z') && !rawCreatedAt.includes('+') ? `${rawCreatedAt}Z` : o.createdAt
+    const orderTime = o.createdAt && !isNaN(new Date(dateToParse).getTime()) ? new Date(dateToParse).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : ''
     
     let text = `🍽️ *FASTKIRANA KITCHEN ORDER*\n`
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
@@ -1019,7 +1021,13 @@ export function OrdersTab({
                             ID: {o.id.slice(0, 10)}...
                           </div>
                           <div className="text-[9.5px] font-bold text-text-secondary mt-1 flex items-center gap-1">
-                            ⏰ {o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
+                            ⏰ {(() => {
+                              if (!o.createdAt) return ''
+                              const raw = typeof o.createdAt === 'string' ? o.createdAt.trim() : ''
+                              const toParse = raw && /T\d{2}:\d{2}/.test(raw) && !raw.endsWith('Z') && !raw.includes('+') ? `${raw}Z` : o.createdAt
+                              const d = new Date(toParse)
+                              return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
+                            })()}
                           </div>
                         </td>
 

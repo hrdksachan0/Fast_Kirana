@@ -115,7 +115,9 @@ export function Navbar() {
 
   const fetchStatus = useCallback(() => {
     lastFetchRef.current = Date.now()
-    fetch('/api/store-status')
+    const currentStoreId = useUIStore.getState().activeStoreId
+    const storeParam = currentStoreId && currentStoreId !== 'all' ? `?storeId=${encodeURIComponent(currentStoreId)}` : ''
+    fetch(`/api/store-status${storeParam}`)
       .then(res => res.json())
       .then(data => {
         const gOpen = data.grocery_mart_open !== 'false'

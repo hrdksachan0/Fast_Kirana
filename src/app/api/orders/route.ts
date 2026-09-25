@@ -1482,6 +1482,32 @@ export async function POST(request: NextRequest) {
           })
         }
 
+        // Real-time broadcast to FastAPI WebSocket server for instant Admin Live Action Queue updates
+        try {
+          const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+          const cleanFastApiUrl = fastApiUrl.replace(/\/+$/, '')
+          for (const order of createdOrders) {
+            fetch(`${cleanFastApiUrl}/api/ws/broadcast`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                channel: 'general',
+                message: {
+                  event: 'NEW_ORDER',
+                  type: 'new-order',
+                  orderId: order.id,
+                  readableId: order.readableId,
+                  shopName: order.shopName,
+                  status: order.status,
+                  total: Number(order.total),
+                  storeId: order.storeId,
+                  restaurantId: order.restaurantId,
+                },
+              }),
+            }).catch(() => {})
+          }
+        } catch (_) {}
+
         // Multi-channel notifications via domain dispatcher (Push, FCM, WhatsApp)
         dispatchOrderNotifications({
           createdOrders,

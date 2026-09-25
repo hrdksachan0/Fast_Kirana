@@ -28,6 +28,7 @@ import { CheckoutMobileBar } from '@/components/checkout/checkout-mobile-bar'
 import { SlideToOrder } from '@/components/checkout/slide-to-order'
 import { PaymentSelectionModal } from '@/components/checkout/payment-selection-modal'
 import { PaymentFailedCodModal } from '@/components/checkout/payment-failed-cod-modal'
+import { CheckoutProcessingOverlay } from '@/components/checkout/checkout-processing-overlay'
 
 export default function CheckoutPage() {
   const {
@@ -410,6 +411,12 @@ export default function CheckoutPage() {
             activeCheckoutAddressRef.current?.addresses || addresses
           )
         }}
+      />
+
+      {/* Full-Screen Processing & Verification Celebration Overlay */}
+      <CheckoutProcessingOverlay
+        state={payment.overlayState}
+        orderReadableId={payment.orderReadableId}
       />
     </div>
   )

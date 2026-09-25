@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
@@ -119,13 +119,15 @@ export function useAdminRealtime({
     }
   }, [isChimeMuted])
 
+  const knownLiveOrderIds = useRef<Set<string>>(new Set())
+
   const fetchLiveOrdersList = useCallback(async () => {
     try {
       const storeQuery =
         selectedHubId && selectedHubId !== 'all'
           ? `&storeId=${encodeURIComponent(selectedHubId)}`
           : ''
-      const res = await fetch(`/api/admin/orders?limit=100${storeQuery}`)
+      const res = await fetch(`/api/admin/orders?limit=100${storeQuery}&t=${Date.now()}`)
       if (res.ok) {
         const data = await res.json()
         const fetched = Array.isArray(data?.orders)
@@ -133,15 +135,56 @@ export function useAdminRealtime({
           : Array.isArray(data)
           ? data
           : []
+
+        // If previously populated, detect any incoming new pending orders
+        if (knownLiveOrderIds.current.size > 0) {
+          const newlyArrived = fetched.filter(
+            (o: any) =>
+              !knownLiveOrderIds.current.has(o.id) &&
+              (o.status === 'PENDING' || o.status === 'ADMIN_PENDING')
+          )
+          if (newlyArrived.length > 0) {
+            const first = newlyArrived[0]
+            toast.success(`🛎️ New Order Received: #${(first.readableId || first.id).slice(0, 8)}`)
+            playNewOrderChime()
+            setOrderRefreshKey((prev) => prev + 1)
+          }
+        }
+
+        knownLiveOrderIds.current = new Set(fetched.map((o: any) => o.id))
         setLiveOrders(fetched)
       }
     } catch (err) {
       console.error('Failed to poll live orders:', err)
     }
-  }, [selectedHubId])
+  }, [selectedHubId, playNewOrderChime])
 
+  // Active polling every 7 seconds for live order synchronization + visibility refocus refetch
   useEffect(() => {
     fetchLiveOrdersList()
+
+    const livePollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      fetchLiveOrdersList()
+    }, 7000)
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchLiveOrdersList()
+        setOrderRefreshKey((prev) => prev + 1)
+      }
+    }
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibility)
+    }
+
+    return () => {
+      clearInterval(livePollInterval)
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility)
+      }
+    }
   }, [fetchLiveOrdersList])
 
   // Tri-channel listener: Supabase, SSE, Railway WebSocket
@@ -153,7 +196,7 @@ export function useAdminRealtime({
       updateTimeout = setTimeout(() => {
         fetchLiveOrdersList()
         setOrderRefreshKey((prev) => prev + 1)
-      }, 1000)
+      }, 800)
     }
 
     const channel = supabase
@@ -191,6 +234,19 @@ export function useAdminRealtime({
         { event: '*', schema: 'public', table: 'cart_items' },
         () => setCartsRefreshKey((prev) => prev + 1)
       )
+      .on('broadcast', { event: 'new-order' }, (payload) => {
+        const orderData = payload?.payload?.orders?.[0] || payload?.payload?.order || payload?.payload
+        const orderStoreId = orderData?.storeId
+        if (selectedHubId && selectedHubId !== 'all' && orderStoreId && orderStoreId !== selectedHubId) {
+          return
+        }
+        toast.success(`🛎️ New Order Received: #${(orderData?.readableId || orderData?.id || '').slice(0, 8)}`)
+        playNewOrderChime()
+        debouncedRefresh()
+      })
+      .on('broadcast', { event: 'order-status-update' }, () => {
+        debouncedRefresh()
+      })
       .on('broadcast', { event: 'order-payment-updated' }, (payload) => {
         toast.success(`💳 Order #${payload.payload?.orderId?.slice(0, 8)} marked PAID!`)
         debouncedRefresh()
@@ -200,21 +256,41 @@ export function useAdminRealtime({
     let isSubscribed = true
     let railwayWs: WebSocket | null = null
     let reconnectTimeout: NodeJS.Timeout | null = null
+    let pingInterval: NodeJS.Timeout | null = null
 
     const connectRailwayWs = () => {
       if (!isSubscribed) return
       try {
-        const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkiran-backend-production.up.railway.app'
+        const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-0cdd.up.railway.app'
         const cleanUrl = rawFastApiUrl.replace(/\/+$/, '')
         const wsUrl = cleanUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws'
         railwayWs = new WebSocket(wsUrl)
 
+        railwayWs.onopen = () => {
+          if (pingInterval) clearInterval(pingInterval)
+          pingInterval = setInterval(() => {
+            if (railwayWs && railwayWs.readyState === WebSocket.OPEN) {
+              try {
+                railwayWs.send('ping')
+              } catch (_) {}
+            }
+          }, 20000)
+        }
+
         railwayWs.onmessage = (event) => {
           try {
+            if (event.data === 'ping' || event.data === 'pong' || event.data === 'PONG') return
             const payload = JSON.parse(event.data)
+            if (payload?.event === 'PONG') return
+
             const ev = payload.event || payload.type
             if (ev === 'NEW_ORDER' || ev === 'ORDER_CREATED' || ev === 'new-order') {
-              toast.success(`🛎️ New Order Received!`)
+              const orderStoreId = payload.storeId || payload.order?.storeId
+              if (selectedHubId && selectedHubId !== 'all' && orderStoreId && orderStoreId !== selectedHubId) {
+                return
+              }
+              const displayId = payload.readableId || payload.orderId || payload.order?.readableId || ''
+              toast.success(`🛎️ New Order Received! ${displayId ? '#' + displayId.slice(0, 8) : ''}`)
               playNewOrderChime()
               debouncedRefresh()
             } else if (
@@ -237,6 +313,7 @@ export function useAdminRealtime({
         }
 
         railwayWs.onclose = () => {
+          if (pingInterval) clearInterval(pingInterval)
           if (isSubscribed) {
             reconnectTimeout = setTimeout(connectRailwayWs, 3000)
           }
@@ -257,11 +334,12 @@ export function useAdminRealtime({
     return () => {
       isSubscribed = false
       supabase.removeChannel(channel)
+      if (pingInterval) clearInterval(pingInterval)
       if (reconnectTimeout) clearTimeout(reconnectTimeout)
       if (railwayWs) railwayWs.close()
       if (updateTimeout) clearTimeout(updateTimeout)
     }
-  }, [fetchLiveOrdersList, playNewOrderChime, onNewOrder, onOrderUpdated])
+  }, [fetchLiveOrdersList, playNewOrderChime, onNewOrder, onOrderUpdated, selectedHubId])
 
   // Active carts badge count fetch
   useEffect(() => {

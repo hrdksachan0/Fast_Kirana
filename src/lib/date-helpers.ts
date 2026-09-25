@@ -3,12 +3,21 @@ import { format, addMinutes, parseISO, getHours, getMinutes } from 'date-fns'
 // Re-export IST timezone helpers from formatters.ts for convenience
 export { getISTHour, getISTMinute, getISTTotalMinutes, formatISODate, isStoreOpen } from './formatters'
 
+function parseDateInput(date?: string | Date | null): Date | null {
+  if (!date) return null
+  if (date instanceof Date) return isNaN(date.getTime()) ? null : date
+  const s = String(date).trim()
+  if (!s) return null
+  const dateToParse = /T\d{2}:\d{2}/.test(s) && !s.endsWith('Z') && !s.includes('+') ? `${s}Z` : s
+  const d = new Date(dateToParse)
+  return isNaN(d.getTime()) ? null : d
+}
+
 // --- Time ---
 export function formatDate(date?: string | Date | null, pattern = 'PP'): string {
-  if (!date) return ''
+  const d = parseDateInput(date)
+  if (!d) return ''
   try {
-    const d = new Date(date)
-    if (isNaN(d.getTime())) return ''
     return format(d, pattern)
   } catch {
     return ''
@@ -16,10 +25,9 @@ export function formatDate(date?: string | Date | null, pattern = 'PP'): string 
 }
 
 export function formatOrderTime(date?: string | Date | null): string {
-  if (!date) return ''
+  const d = parseDateInput(date)
+  if (!d) return ''
   try {
-    const d = new Date(date)
-    if (isNaN(d.getTime())) return ''
     return format(d, 'h:mm a')
   } catch {
     return ''
@@ -27,10 +35,9 @@ export function formatOrderTime(date?: string | Date | null): string {
 }
 
 export function formatTime(date?: string | Date | null): string {
-  if (!date) return ''
+  const d = parseDateInput(date)
+  if (!d) return ''
   try {
-    const d = new Date(date)
-    if (isNaN(d.getTime())) return ''
     return format(d, 'h:mm a')
   } catch {
     return ''

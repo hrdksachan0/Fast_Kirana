@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import or_, and_, text
 from typing import Optional, Dict, Any, List
+from datetime import datetime, timedelta
 import math
 import time
 import re
@@ -195,6 +196,98 @@ async def get_store_hubs(
         return {"success": False, "error": "Failed to fetch hubs", "hubs": []}
 
 
+def get_ist_now() -> datetime:
+    # Always compute exact Indian Standard Time: UTC + 5:30
+    return datetime.utcnow() + timedelta(hours=5, minutes=30)
+
+
+def parse_time_to_minutes(time_str: str) -> Optional[int]:
+    if not time_str or not isinstance(time_str, str):
+        return None
+    clean = str(time_str).strip().upper()
+    is_pm = "PM" in clean
+    is_am = "AM" in clean
+    clean = re.sub(r"[A-Z]", "", clean).strip()
+    parts = clean.split(":")
+    if len(parts) < 2:
+        return None
+    try:
+        h = int(parts[0])
+        m = int(parts[1])
+        if is_pm and h < 12:
+            h += 12
+        if is_am and h == 12:
+            h = 0
+        return h * 60 + m
+    except Exception:
+        return None
+
+
+def check_is_store_open(settings_map: Dict[str, str], prefix: str) -> bool:
+    auto_timing = settings_map.get(f"{prefix}_auto_timing") == "true"
+    if not auto_timing:
+        if prefix == "grocery":
+            return settings_map.get("grocery_mart_open") != "false"
+        if prefix == "cafe":
+            return settings_map.get("cafe_open") != "false"
+        return settings_map.get("restaurant_open") != "false"
+
+    open_time = settings_map.get(f"{prefix}_open_time") or ("06:00" if prefix == "grocery" else "10:00")
+    close_time = settings_map.get(f"{prefix}_close_time") or ("23:59" if prefix == "grocery" else "22:00")
+
+    ist_now = get_ist_now()
+    current_min = ist_now.hour * 60 + ist_now.minute
+
+    open_min = parse_time_to_minutes(open_time) or (6 * 60 if prefix == "grocery" else 10 * 60)
+    close_min = parse_time_to_minutes(close_time) or (23 * 60 + 59 if prefix == "grocery" else 22 * 60)
+
+    if (open_min == 0 and close_min >= 1439) or (open_min == close_min):
+        return True
+
+    if close_min >= open_min:
+        return open_min <= current_min <= close_min
+    else:
+        # Crosses midnight, e.g. 18:00 to 02:00
+        return current_min >= open_min or current_min <= close_min
+
+
+def check_restaurant_is_open(restaurant: Any) -> bool:
+    if not restaurant or not getattr(restaurant, "isActive", True):
+        return False
+
+    # 1. Operating hours check in IST
+    open_time = getattr(restaurant, "openTime", None)
+    close_time = getattr(restaurant, "closeTime", None)
+
+    if open_time and close_time:
+        open_min = parse_time_to_minutes(open_time)
+        close_min = parse_time_to_minutes(close_time)
+        if open_min is not None and close_min is not None:
+            is_24h = open_min == 0 and (close_min >= 1439 or close_min == 0)
+            if not is_24h:
+                ist_now = get_ist_now()
+                current_min = ist_now.hour * 60 + ist_now.minute
+                if close_min >= open_min:
+                    is_within = open_min <= current_min <= close_min
+                else:
+                    is_within = current_min >= open_min or current_min <= close_min
+                if not is_within:
+                    return False
+
+    # 2. Check if manually paused today
+    if not getattr(restaurant, "isOpen", True):
+        up_at = getattr(restaurant, "updatedAt", None)
+        if up_at:
+            ist_now = get_ist_now()
+            ist_up = up_at + timedelta(hours=5, minutes=30)
+            # If paused on a previous day, auto-reopen today on schedule!
+            if ist_up.date() < ist_now.date():
+                return True
+        return False
+
+    return True
+
+
 # ─── 2. GET /store-status ───────────────────────────────────────────────────────
 
 @router.get("/store-status")
@@ -205,7 +298,7 @@ async def get_store_status(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Check live operational status for grocery, cafe, and restaurants.
+    Check live operational status for grocery, cafe, and restaurants in Indian Standard Time (IST).
     Uses in-memory cache (<5ms response).
     """
     global _status_cache, _status_cache_time
@@ -223,7 +316,24 @@ async def get_store_status(
         stmt = select(StoreSetting)
         res = await db.execute(stmt)
         settings_list = res.scalars().all()
-        settings_map = {s.key: s.value for s in settings_list}
+        settings_map = {s.key: s.value for s in settings_list if not s.key.startswith("store:")}
+
+        # Layer store-scoped overrides if a specific dark store hub is queried
+        if target_hub_id and target_hub_id != "all":
+            store_prefix = f"store:{target_hub_id}:"
+            for s in settings_list:
+                if s.key.startswith(store_prefix):
+                    sub_key = s.key[len(store_prefix):]
+                    settings_map[sub_key] = s.value
+
+            hub_stmt = select(DarkStore).where(DarkStore.id == target_hub_id)
+            hub_res = await db.execute(hub_stmt)
+            hub = hub_res.scalars().first()
+            if hub:
+                if hub.groceryOpen is not None and settings_map.get("grocery_auto_timing") != "true":
+                    settings_map["grocery_mart_open"] = "true" if hub.groceryOpen else "false"
+                if hub.deliveryRadiusKm:
+                    settings_map["delivery_radius"] = str(hub.deliveryRadiusKm)
 
         # Restaurants query
         rest_stmt = select(Restaurant).where(Restaurant.isActive == True)
@@ -232,21 +342,32 @@ async def get_store_status(
 
         outlet_statuses = {}
         for r in restaurants:
-            outlet_statuses[r.id] = bool(r.isOpen)
+            r_open = check_restaurant_is_open(r)
+            outlet_statuses[r.id] = r_open
             if r.slug:
-                outlet_statuses[r.slug] = bool(r.isOpen)
+                outlet_statuses[r.slug] = r_open
 
-        # Check hub grocery open status if hubId provided
-        grocery_mart_open = settings_map.get("grocery_mart_open", "true").lower() == "true"
-        if target_hub_id and target_hub_id != "all":
-            hub_stmt = select(DarkStore).where(DarkStore.id == target_hub_id)
-            hub_res = await db.execute(hub_stmt)
-            hub = hub_res.scalars().first()
-            if hub and hasattr(hub, "groceryOpen"):
-                grocery_mart_open = bool(hub.groceryOpen)
+        # Evaluate live IST operational status
+        grocery_mart_open = check_is_store_open(settings_map, "grocery")
+        cafe_open = check_is_store_open(settings_map, "cafe")
+        restaurant_open = check_is_store_open(settings_map, "restaurant")
 
-        cafe_open = settings_map.get("cafe_open", "true").lower() == "true"
-        restaurant_open = settings_map.get("restaurant_open", "true").lower() == "true"
+        # Specific outlet overrides for main brands if active
+        wedson = next((r for r in restaurants if "wedson" in (r.slug or "").lower() or "wedson" in (r.name or "").lower()), None)
+        if wedson:
+            restaurant_open = check_restaurant_is_open(wedson)
+            if wedson.openTime:
+                settings_map["restaurant_open_time"] = wedson.openTime
+            if wedson.closeTime:
+                settings_map["restaurant_close_time"] = wedson.closeTime
+
+        cafe_outlet = next((r for r in restaurants if "cafe" in (r.slug or "").lower() or "cafe" in (r.name or "").lower() or "a.s." in (r.name or "").lower()), None)
+        if cafe_outlet:
+            cafe_open = check_restaurant_is_open(cafe_outlet)
+            if cafe_outlet.openTime:
+                settings_map["cafe_open_time"] = cafe_outlet.openTime
+            if cafe_outlet.closeTime:
+                settings_map["cafe_close_time"] = cafe_outlet.closeTime
 
         surge_fee = float(settings_map.get("surge_fee", "0") or 0)
         surge_active = surge_fee > 0

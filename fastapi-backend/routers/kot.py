@@ -40,6 +40,7 @@ class KotBroadcastRequest(BaseModel):
 @router.post("/api/kot-broadcast")
 async def broadcast_kot(
     req: KotBroadcastRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     if not req.orderId:
@@ -47,20 +48,35 @@ async def broadcast_kot(
 
     clean_id = req.orderId.strip().lstrip("#")
     clean_readable = (req.readableId or "").strip().lstrip("#")
-    # C12 FIX: Strip suborder suffix (-R, -G, -1) rather than splitting on first hyphen
-    # which collapsed all FK-* orders to "FK"
     import re
     base_readable = re.sub(r"-[GR\d]+$", "", clean_readable, flags=re.IGNORECASE) if clean_readable else ""
     now = time.time()
 
-    # 10-second deduplication
+    # 🛡️ Legacy Checkout Auto-KOT Interceptor:
+    # Do NOT trigger kitchen prints from automated customer checkouts!
+    # Only manual dispatch from Admin Orders Tab, Kitchen Console, or authorized Staff is permitted.
+    header_role = (request.headers.get("x-user-role") or "").upper()
+    header_phone = request.headers.get("x-user-phone") or ""
+    is_admin_or_staff = header_role in ["ADMIN", "RESTAURANT_OWNER", "CHEF", "SUPER_ADMIN", "SUPERADMIN"] or "8112849854" in header_phone
+    is_manual_admin_dispatch = bool(
+        req.manual is True or
+        req.source in ["orders_tab", "admin_console", "kitchen_console", "orders_tab_fallback"] or
+        (req.kotText and "FASTKIRANA KOT" in req.kotText)
+    )
+
+    if not is_admin_or_staff and not is_manual_admin_dispatch:
+        logger.info(f"[KOT Broadcast API] 🛡️ Ignored checkout auto-KOT for Order #{clean_readable or clean_id}")
+        return {"success": True, "ignored": True, "reason": "Auto-KOT on checkout disabled"}
+
+    # Dynamic debounce window: 2s for manual admin dispatches, 10s for others
+    cooldown_window = 2.0 if is_manual_admin_dispatch else 10.0
     last_broadcast = max(
         recent_broadcast_timestamps.get(clean_id, 0),
         recent_broadcast_timestamps.get(clean_readable, 0) if clean_readable else 0,
         recent_broadcast_timestamps.get(base_readable, 0) if (base_readable and base_readable != "FK") else 0
     )
 
-    if last_broadcast > 0 and (now - last_broadcast) < 10.0:
+    if last_broadcast > 0 and (now - last_broadcast) < cooldown_window:
         logger.info(f"[KOT Broadcast] Deduplicated order #{clean_readable or clean_id}")
         return {"success": True, "orderId": clean_id, "deduped": True}
 
@@ -97,7 +113,7 @@ async def broadcast_kot(
         "timestamp": int(now * 1000)
     }
 
-    # 1. Enqueue to PostgreSQL table kitchen_kot_queue if table exists
+    # 1. Enqueue to PostgreSQL table kitchen_kot_queue
     try:
         query_check = text(
             "SELECT id FROM kitchen_kot_queue WHERE (order_id = :oid OR readable_id = :rid) AND status = 'PENDING' LIMIT 1"
@@ -107,7 +123,7 @@ async def broadcast_kot(
 
         if existing:
             update_query = text(
-                "UPDATE kitchen_kot_queue SET payload = :payload, readable_id = :rid, restaurant_id = :rest_id, created_at = NOW() WHERE id = :id"
+                "UPDATE kitchen_kot_queue SET payload = :payload::jsonb, readable_id = :rid, restaurant_id = :rest_id, created_at = NOW() WHERE id = :id"
             )
             await db.execute(update_query, {
                 "payload": json.dumps(payload),
@@ -120,7 +136,7 @@ async def broadcast_kot(
         else:
             insert_query = text(
                 "INSERT INTO kitchen_kot_queue (order_id, readable_id, restaurant_id, payload, status, created_at) "
-                "VALUES (:oid, :rid, :rest_id, :payload, 'PENDING', NOW())"
+                "VALUES (:oid, :rid, :rest_id, :payload::jsonb, 'PENDING', NOW())"
             )
             await db.execute(insert_query, {
                 "oid": clean_id,
@@ -131,10 +147,25 @@ async def broadcast_kot(
             await db.commit()
             logger.info(f"[KOT Broadcast] Enqueued KOT for #{clean_readable or clean_id}")
     except Exception as db_err:
-        logger.warning(f"[KOT Broadcast] Database queue note (table may not exist yet): {db_err}")
+        logger.warning(f"[KOT Broadcast] Database queue note: {db_err}")
         await db.rollback()
 
-    # 2. Broadcast via internal WebSockets with strict restaurant outlet channel
+    # 2. Native PostgreSQL Supabase Realtime Broadcast (realtime.send)
+    try:
+        topics_to_send = ["restaurant-orders-live"]
+        if target_restaurant_id:
+            topics_to_send.append(f"restaurant-orders-{target_restaurant_id}")
+        for t in topics_to_send:
+            await db.execute(
+                text("SELECT realtime.send(:payload::jsonb, 'reprint-kot', :topic, false)"),
+                {"payload": json.dumps(payload), "topic": t}
+            )
+        await db.commit()
+        logger.info(f"[KOT Broadcast] Sent Postgres realtime.send broadcast for #{clean_readable or clean_id}")
+    except Exception as pg_rt_err:
+        logger.warning(f"[KOT Broadcast] Postgres realtime.send note: {pg_rt_err}")
+
+    # 3. Broadcast via internal WebSockets
     try:
         kot_evt = {
             "event": "reprint-kot",

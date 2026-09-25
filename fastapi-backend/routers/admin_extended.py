@@ -1959,7 +1959,7 @@ async def admin_get_live_carts(
             "userName": user_name,
             "userEmail": user_email,
             "userPhone": user_phone,
-            "updatedAt": c.updatedAt.isoformat() if c.updatedAt else None,
+            "updatedAt": (c.updatedAt.isoformat() + "Z") if c.updatedAt else None,
             "items": items_list,
             "subtotal": round(subtotal, 2),
             "address": addr_str,

@@ -119,7 +119,9 @@ export function BottleneckBanner({
             const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
             const isPacked = order.status === 'PACKED'
             const baseTime = order.status === 'PENDING' ? order.createdAt : (order.updatedAt || order.createdAt)
-            const delayMin = Math.floor((new Date().getTime() - new Date(baseTime).getTime()) / 60000)
+            const rawBaseStr = typeof baseTime === 'string' ? baseTime.trim() : ''
+            const baseDateToParse = rawBaseStr && !rawBaseStr.endsWith('Z') && !rawBaseStr.includes('+') ? `${rawBaseStr}Z` : baseTime
+            const delayMin = Math.max(0, Math.floor((Date.now() - new Date(baseDateToParse).getTime()) / 60000))
 
             let delayType = 'Grocery Picker'
             let delayColor = 'border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-400'

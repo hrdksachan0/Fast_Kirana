@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 
 interface UseAdminOrdersProps {
@@ -8,6 +8,7 @@ interface UseAdminOrdersProps {
   initialOrderCounts?: Record<string, number>
   selectedHubId: string
   orderRefreshKey: number
+  onNewOrderDetected?: (order: any) => void
 }
 
 export function useAdminOrders({
@@ -15,6 +16,7 @@ export function useAdminOrders({
   initialOrderCounts,
   selectedHubId,
   orderRefreshKey,
+  onNewOrderDetected,
 }: UseAdminOrdersProps) {
   const { data: session } = useSession()
   const authHeaders = useMemo(() => ({
@@ -68,6 +70,8 @@ export function useAdminOrders({
     setOrderPage(1)
   }, [orderStatusFilter, orderSearchQuery, selectedHubId])
 
+  const prevKnownOrderIds = useRef<Set<string>>(new Set())
+
   const fetchOrders = useCallback(async () => {
     try {
       const storeQueryParam =
@@ -87,6 +91,20 @@ export function useAdminOrders({
           : Array.isArray(data?.orders)
           ? data.orders
           : []
+
+        // If previously populated, detect newly received pending orders
+        if (prevKnownOrderIds.current.size > 0) {
+          const freshPending = fetchedOrders.filter(
+            (o: any) =>
+              !prevKnownOrderIds.current.has(o.id) &&
+              (o.status === 'PENDING' || o.status === 'ADMIN_PENDING')
+          )
+          if (freshPending.length > 0) {
+            onNewOrderDetected?.(freshPending[0])
+          }
+        }
+        prevKnownOrderIds.current = new Set(fetchedOrders.map((o: any) => o.id))
+
         setOrders(fetchedOrders)
         setOrderTotal(typeof data?.total === 'number' ? data.total : fetchedOrders.length)
         if (typeof data.todaySales === 'number') setApiTodaySales(data.todaySales)
@@ -104,15 +122,17 @@ export function useAdminOrders({
     } finally {
       setIsLoadingOrders(false)
     }
-  }, [orderPage, orderStatusFilter, orderSearchQuery, selectedHubId, authHeaders])
+  }, [orderPage, orderStatusFilter, orderSearchQuery, selectedHubId, authHeaders, onNewOrderDetected])
 
   useEffect(() => {
     fetchOrders()
 
+    // 6-second fast polling for active live action queue, 30s for history
+    const pollInterval = ordersSubTab === 'active' ? 6000 : 30000
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       fetchOrders()
-    }, 120000)
+    }, pollInterval)
 
     const handleVisibility = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
@@ -130,7 +150,7 @@ export function useAdminOrders({
         document.removeEventListener('visibilitychange', handleVisibility)
       }
     }
-  }, [fetchOrders, orderRefreshKey])
+  }, [fetchOrders, orderRefreshKey, ordersSubTab])
 
   const handleOpenOrderModal = useCallback(async (order: any) => {
     if (!order) return

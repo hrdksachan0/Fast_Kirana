@@ -132,6 +132,14 @@ def get_product_limit(p: Product) -> int:
     return 10
 
 
+def to_iso_utc(dt: Optional[datetime]) -> Optional[str]:
+    if not dt:
+        return None
+    if getattr(dt, "tzinfo", None) is None:
+        return dt.isoformat() + "Z"
+    return dt.isoformat()
+
+
 async def geocode_address(address_str: str) -> Optional[dict]:
     api_key = os.getenv("GOOGLE_MAPS_API_KEY") or os.getenv("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY")
     if not api_key:
@@ -1621,7 +1629,7 @@ async def create_order(
             "total": float(main_order.total or 0),
             "paymentMethod": main_order.paymentMethod.value,
             "paymentStatus": main_order.paymentStatus.value,
-            "estimatedDelivery": main_order.estimatedDelivery.isoformat() if main_order.estimatedDelivery else None,
+            "estimatedDelivery": to_iso_utc(main_order.estimatedDelivery),
             "deliveryMethod": main_order.deliveryMethod,
             "isB2B": main_order.isB2B,
             "shopName": main_order.shopName,
@@ -1631,12 +1639,12 @@ async def create_order(
             "customerName": user_obj.name if user_obj else None,
             "customerPhone": (user_obj.phone if user_obj else None) or (address.phone if address else None),
             "customerAddress": f"{address.houseNo or ''}, {address.street or ''}, {address.area or ''}, {address.city or ''}, {address.pincode or ''}" if address else None,
-            "createdAt": main_order.createdAt.isoformat() if main_order.createdAt else None,
-            "updatedAt": main_order.updatedAt.isoformat() if main_order.updatedAt else None,
-            "confirmedAt": main_order.confirmedAt.isoformat() if main_order.confirmedAt else None,
-            "packedAt": main_order.packedAt.isoformat() if main_order.packedAt else None,
-            "shippedAt": main_order.shippedAt.isoformat() if main_order.shippedAt else None,
-            "deliveredAt": main_order.deliveredAt.isoformat() if main_order.deliveredAt else None,
+            "createdAt": to_iso_utc(main_order.createdAt),
+            "updatedAt": to_iso_utc(main_order.updatedAt),
+            "confirmedAt": to_iso_utc(main_order.confirmedAt),
+            "packedAt": to_iso_utc(main_order.packedAt),
+            "shippedAt": to_iso_utc(main_order.shippedAt),
+            "deliveredAt": to_iso_utc(main_order.deliveredAt),
             "items": order_items_payload,
             "address": {
                 "id": address.id,
@@ -1724,9 +1732,9 @@ async def list_orders(
                 "total": float(order.total),
                 "paymentMethod": order.paymentMethod.value,
                 "paymentStatus": order.paymentStatus.value,
-                "estimatedDelivery": order.estimatedDelivery.isoformat() if order.estimatedDelivery else None,
-                "createdAt": order.createdAt.isoformat() if order.createdAt else None,
-                "updatedAt": order.updatedAt.isoformat() if order.updatedAt else None,
+                "estimatedDelivery": to_iso_utc(order.estimatedDelivery),
+                "createdAt": to_iso_utc(order.createdAt),
+                "updatedAt": to_iso_utc(order.updatedAt),
                 "deliveryMethod": order.deliveryMethod,
                 "isB2B": order.isB2B,
                 "shopName": order.shopName,

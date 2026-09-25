@@ -82,14 +82,20 @@ export function LiveCartsPanel({
             </thead>
             <tbody className="divide-y divide-border/40 font-medium">
               {activeCarts.map((cart) => {
-                const timeAgoMin = Math.floor(
-                  (new Date().getTime() - new Date(cart.updatedAt).getTime()) / 60000
-                )
+                const rawDateStr = typeof cart.updatedAt === 'string' ? cart.updatedAt.trim() : ''
+                const dateToParse = rawDateStr && !rawDateStr.endsWith('Z') && !rawDateStr.includes('+')
+                  ? `${rawDateStr}Z`
+                  : cart.updatedAt
+                const cartTime = new Date(dateToParse).getTime()
+                const diffMs = Date.now() - cartTime
+                const timeAgoMin = isNaN(diffMs) ? 0 : Math.max(0, Math.floor(diffMs / 60000))
+
                 let timeString = `${timeAgoMin}m ago`
-                if (timeAgoMin === 0) timeString = 'Just now'
+                if (timeAgoMin <= 1) timeString = 'Just now'
                 else if (timeAgoMin >= 60) {
                   const hours = Math.floor(timeAgoMin / 60)
-                  timeString = `${hours}h ago`
+                  const remainingMins = timeAgoMin % 60
+                  timeString = remainingMins > 0 ? `${hours}h ${remainingMins}m ago` : `${hours}h ago`
                 }
 
                 return (

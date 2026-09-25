@@ -40,6 +40,16 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+@router.post("/broadcast")
+async def http_broadcast(payload: dict):
+    """
+    HTTP POST trigger to broadcast events to any WebSocket channel (e.g. general, order_{id}, etc.)
+    """
+    channel = payload.get("channel", "general")
+    message = payload.get("message", payload)
+    await manager.broadcast_to_channel(channel, message)
+    return {"success": True, "channel": channel}
+
 @router.websocket("")
 @router.websocket("/")
 async def root_websocket(websocket: WebSocket):
@@ -51,7 +61,10 @@ async def root_websocket(websocket: WebSocket):
         await websocket.send_text(json.dumps({"event": "CONNECTED", "message": "Connected to FastKirana WebSocket Server"}))
         while True:
             data = await websocket.receive_text()
-            await websocket.send_text(json.dumps({"event": "ECHO", "data": data}))
+            if data == "ping" or data == '{"type":"ping"}':
+                await websocket.send_text(json.dumps({"event": "PONG"}))
+            else:
+                await websocket.send_text(json.dumps({"event": "ECHO", "data": data}))
     except WebSocketDisconnect:
         manager.disconnect(websocket, "general")
 

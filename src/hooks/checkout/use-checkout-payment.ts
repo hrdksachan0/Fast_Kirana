@@ -91,6 +91,8 @@ export function useCheckoutPayment({
     readableId?: string
     totalAmount: number
   } | null>(null)
+  const [overlayState, setOverlayState] = useState<'creating-order' | 'awaiting-payment' | 'verifying-payment' | 'success' | null>(null)
+  const [orderReadableId, setOrderReadableId] = useState<string | undefined>(undefined)
 
   // Preload Payment SDKs
   const loadCashfreeScript = (): Promise<boolean> => {
@@ -140,6 +142,7 @@ export function useCheckoutPayment({
       activeAddresses.find((a) => a.id === activeAddressId) || selectedAddress
 
     setIsPlacingOrder(true)
+    setOverlayState('creating-order')
     try {
       const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
       const settings: SettingsMap = await settingsRes.json()
@@ -156,6 +159,7 @@ export function useCheckoutPayment({
         triggerHaptic('warning')
         toast.error(validation.error!)
         setIsPlacingOrder(false)
+        setOverlayState(null)
         return
       }
 
@@ -194,15 +198,41 @@ export function useCheckoutPayment({
 
       if (res.ok) {
         triggerHaptic('success')
-        toast.success('Order placed successfully! Redirecting to tracking...')
+        setOrderReadableId(data.readableId || data.id?.slice(0, 8))
+        setOverlayState('success')
         clearCart()
-        router.push(`/order/${data.id}/success`)
+
+        // Play success chime
+        try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+          if (AudioContextClass) {
+            const ctx = new AudioContextClass()
+            const now = ctx.currentTime
+            const osc = ctx.createOscillator()
+            const gain = ctx.createGain()
+            osc.type = 'triangle'
+            osc.frequency.setValueAtTime(880, now)
+            gain.gain.setValueAtTime(0.12, now)
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5)
+            osc.connect(gain)
+            gain.connect(ctx.destination)
+            osc.start(now)
+            osc.stop(now + 0.5)
+          }
+        } catch (_) {}
+
+        // Hard redirect after showing success celebration for 1.5s
+        setTimeout(() => {
+          window.location.replace(`/order/${data.id}/success`)
+        }, 1500)
       } else {
+        setOverlayState(null)
         toast.error(data.error || 'Failed to place order')
+        setIsPlacingOrder(false)
       }
     } catch (err) {
+      setOverlayState(null)
       toast.error('Connection error. Please try again.')
-    } finally {
       setIsPlacingOrder(false)
     }
   }
@@ -219,6 +249,7 @@ export function useCheckoutPayment({
       activeAddresses.find((a) => a.id === activeAddressId) || selectedAddress
 
     setIsPlacingOrder(true)
+    setOverlayState('creating-order')
     try {
       const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
       const settings: SettingsMap = await settingsRes.json()
@@ -235,6 +266,7 @@ export function useCheckoutPayment({
         triggerHaptic('warning')
         toast.error(validation.error!)
         setIsPlacingOrder(false)
+        setOverlayState(null)
         return
       }
 
@@ -274,6 +306,7 @@ export function useCheckoutPayment({
       if (!orderRes.ok) {
         toast.error(orderData.error || 'Failed to initialize order')
         setIsPlacingOrder(false)
+        setOverlayState(null)
         return
       }
 
@@ -281,8 +314,12 @@ export function useCheckoutPayment({
       if (orderData.paymentStatus === 'PAID' || Number(orderData.total || 0) <= 0) {
         clearCart()
         triggerHaptic('success')
+        setOrderReadableId(orderData.readableId || orderData.id?.slice(0, 8))
+        setOverlayState('success')
         toast.success('🎉 Order placed successfully! (100% Free Promo)')
-        window.location.href = `/order/${orderData.id}/success`
+        setTimeout(() => {
+          window.location.replace(`/order/${orderData.id}/success`)
+        }, 1200)
         return
       }
 
@@ -300,6 +337,7 @@ export function useCheckoutPayment({
         console.warn('Cashfree session failed:', cfData.error)
         toast.error(cfData.error || 'Cashfree payment session could not be created.')
         setIsPlacingOrder(false)
+        setOverlayState(null)
         setFailedPaymentOrder({
           id: orderData.id,
           readableId: orderData.readableId,
@@ -313,6 +351,7 @@ export function useCheckoutPayment({
         console.warn('Cashfree SDK failed to load')
         toast.error('Payment gateway SDK failed to load.')
         setIsPlacingOrder(false)
+        setOverlayState(null)
         setFailedPaymentOrder({
           id: orderData.id,
           readableId: orderData.readableId,
@@ -337,14 +376,18 @@ export function useCheckoutPayment({
             body: JSON.stringify({ orderId: orderData.id, cfOrderId: cfData.orderId }),
           })
           const verifyData = await verifyRes.json()
-          if (verifyRes.ok && verifyData.paymentStatus === 'PAID') {
+          if (verifyRes.ok && (verifyData.paymentStatus === 'PAID' || verifyData.isPaid === true)) {
             paymentSuccess = true
             clearInterval(pollTimer)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             clearCart()
             triggerHaptic('success')
+            setOrderReadableId(orderData.readableId || orderData.id?.slice(0, 8))
+            setOverlayState('success')
             toast.success('🎉 Payment Verified Successfully!')
-            window.location.href = `/order/${orderData.id}/success`
+            setTimeout(() => {
+              window.location.replace(`/order/${orderData.id}/success`)
+            }, 1200)
             return true
           }
         } catch (_) {}
@@ -358,14 +401,18 @@ export function useCheckoutPayment({
           return
         }
         await checkVerification()
-      }, 2500)
+      }, 2000)
 
       const handleVisibilityChange = async () => {
         if (document.visibilityState === 'visible') {
+          setOverlayState('verifying-payment')
           await checkVerification()
         }
       }
       document.addEventListener('visibilitychange', handleVisibilityChange)
+
+      // Signal awaiting payment state before modal opens
+      setOverlayState('awaiting-payment')
 
       try {
         const result = await cashfree.checkout({
@@ -373,16 +420,24 @@ export function useCheckoutPayment({
           redirectTarget: '_modal',
         })
 
-        const isVerified = await checkVerification()
+        // When user returns or modal dismisses, aggressively verify payment
+        setOverlayState('verifying-payment')
+        let isVerified = false
+        for (let attempt = 0; attempt < 10; attempt++) {
+          isVerified = await checkVerification()
+          if (isVerified || paymentSuccess) break
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+        }
+
         if (!isVerified && !paymentSuccess) {
           clearInterval(pollTimer)
           document.removeEventListener('visibilitychange', handleVisibilityChange)
           setIsPlacingOrder(false)
+          setOverlayState(null)
           if (result?.error) {
             console.log('Cashfree modal closed with note:', result.error)
           }
           triggerHaptic('warning')
-          // Trigger the 1-min Fallback Modal to either Cancel or Convert to COD!
           setFailedPaymentOrder({
             id: orderData.id,
             readableId: orderData.readableId,
@@ -391,11 +446,19 @@ export function useCheckoutPayment({
         }
       } catch (checkoutErr) {
         console.warn('Cashfree checkout modal error:', checkoutErr)
-        const isVerified = await checkVerification()
+        setOverlayState('verifying-payment')
+        let isVerified = false
+        for (let attempt = 0; attempt < 8; attempt++) {
+          isVerified = await checkVerification()
+          if (isVerified || paymentSuccess) break
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+        }
+
         if (!isVerified && !paymentSuccess) {
           clearInterval(pollTimer)
           document.removeEventListener('visibilitychange', handleVisibilityChange)
           setIsPlacingOrder(false)
+          setOverlayState(null)
           setFailedPaymentOrder({
             id: orderData.id,
             readableId: orderData.readableId,
@@ -407,6 +470,7 @@ export function useCheckoutPayment({
       console.error('Error during Cashfree checkout:', err)
       toast.error('An unexpected error occurred during checkout.')
       setIsPlacingOrder(false)
+      setOverlayState(null)
     }
   }
 
@@ -544,6 +608,9 @@ export function useCheckoutPayment({
     activePendingOrderId,
     failedPaymentOrder,
     setFailedPaymentOrder,
+    overlayState,
+    setOverlayState,
+    orderReadableId,
     clearCart,
     handlePlaceOrder,
     handleCashfreeCheckout,
