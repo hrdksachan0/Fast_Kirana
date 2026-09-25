@@ -279,25 +279,11 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       console.error('Customer order placement FCM error:', fcmErr)
     }
 
-    // 4. WhatsApp Order Alerts: Strict Store-Wise & Restaurant Owner Routing
+    // 4. WhatsApp Order Alerts: Strictly route ONLY to Hub Admin — NO restaurant owner
     const orderAlertPhones = new Set<string>()
 
-    if (isRestaurant && order.restaurantId) {
-      // 1. Restaurant / Cafe: Strictly send to Restaurant Owner — NO darkstore admin
-      try {
-        const rest = await prisma.restaurant.findUnique({
-          where: { id: order.restaurantId },
-          select: { ownerPhone: true },
-        })
-        if (rest?.ownerPhone) {
-          const clean = rest.ownerPhone.replace(/\D/g, '').slice(-10)
-          if (clean.length === 10) orderAlertPhones.add(clean)
-        }
-      } catch (e) {
-        console.warn('Failed to lookup restaurant ownerPhone for WhatsApp:', e)
-      }
-    } else if (order.storeId && ctx.settingsMap) {
-      // 2. DarkStore / Grocery: Strictly location-wise to this store's staff/phones
+    if (order.storeId && ctx.settingsMap) {
+      // Location-wise to this store's staff/phones
       const storePrefix = `store:${order.storeId}:`
       const storeContact = ctx.settingsMap[`${storePrefix}contact_phone`] || ctx.settingsMap[`${storePrefix}store_phone`]
       const notifyStore = ctx.settingsMap[`${storePrefix}whatsapp_notify_store_phone`] !== 'false'
@@ -316,8 +302,10 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       if (ctx.settingsMap[`${storePrefix}whatsapp_notify_8112849854`] !== 'false') {
         orderAlertPhones.add('8112849854')
       }
-    } else {
-      // 3. Fallback
+    }
+
+    // Fallback if no hub-specific phones configured
+    if (orderAlertPhones.size === 0) {
       adminPhones.forEach((p) => orderAlertPhones.add(p))
     }
 

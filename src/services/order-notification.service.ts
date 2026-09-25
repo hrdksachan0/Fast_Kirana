@@ -217,26 +217,12 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         console.warn('FCM dispatch note:', fcmErr)
       }
 
-      // 4. WhatsApp Order Alerts: Strict Store-Wise & Restaurant Owner Routing
+      // 4. WhatsApp Order Alerts: Strictly route ONLY to Hub Admin — NO restaurant owner
       try {
         const orderAlertPhones = new Set<string>()
 
-        if (order.restaurantId) {
-          // 1. Restaurant / Cafe: Strictly send to Restaurant Owner — NO darkstore admin
-          try {
-            const rest = await prisma.restaurant.findUnique({
-              where: { id: order.restaurantId },
-              select: { ownerPhone: true },
-            })
-            if (rest?.ownerPhone) {
-              const clean = rest.ownerPhone.replace(/\D/g, '').slice(-10)
-              if (clean.length === 10) orderAlertPhones.add(clean)
-            }
-          } catch (e) {
-            console.warn('Failed to query restaurant ownerPhone for WhatsApp:', e)
-          }
-        } else if (order.storeId && settingsMap) {
-          // 2. DarkStore / Grocery: Strictly location-wise to this store's staff/phones
+        if (order.storeId && settingsMap) {
+          // Location-wise to this hub's staff/phones
           const storePrefix = `store:${order.storeId}:`
           const storeContact = settingsMap[`${storePrefix}contact_phone`] || settingsMap[`${storePrefix}store_phone`]
           const notifyStore = settingsMap[`${storePrefix}whatsapp_notify_store_phone`] !== 'false'
@@ -255,8 +241,10 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
           if (settingsMap[`${storePrefix}whatsapp_notify_8112849854`] !== 'false') {
             orderAlertPhones.add('8112849854')
           }
-        } else {
-          // 3. Fallback
+        }
+
+        if (orderAlertPhones.size === 0) {
+          // Fallback to global admin
           adminPhones.forEach((p) => orderAlertPhones.add(p))
         }
 

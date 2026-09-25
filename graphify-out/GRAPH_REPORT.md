@@ -1,7 +1,7 @@
 # Graph Report - Fastkirana  (2026-09-25)
 
 ## Corpus Check
-- 1058 files · ~3,499,021 words
+- 1058 files · ~3,498,773 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ce4d188f`
+- Built from commit: `d3f28054`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -102,7 +102,7 @@
 - CORE DIRECTIVE: IMAGE-FIRST WEBSITE DESIGN TO CODE
 - web/manifest.json
 - product_provider.dart
-- revalidateStorefront
+- checkStoreOperatingStatus
 - CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION
 - login_screen.dart
 - main_shell.dart
@@ -540,8 +540,8 @@ Cohesion: 0.06
 Nodes (34): dart:ui, extractRestaurantItems, formatKOTDate, generateKOTPdfDocument, KotPrintService, printKOTReceipt, _recentPrintTimestamps, sendRemoteKOTToKitchen (+26 more)
 
 ### Community 17 - "POST"
-Cohesion: 0.09
-Nodes (28): AdminPage(), revalidate, GET(), checkAdmin(), GET(), PATCH(), POST(), GET() (+20 more)
+Cohesion: 0.10
+Nodes (27): AdminPage(), revalidate, GET(), checkAdmin(), GET(), PATCH(), POST(), GET() (+19 more)
 
 ### Community 18 - "../core/utils/restaurant_utils.dart"
 Cohesion: 0.04
@@ -823,9 +823,9 @@ Nodes (10): background_color, description, display, icons, name, orientation, pr
 Cohesion: 0.08
 Nodes (25): ProductRepository, activeOutlet, activeRestaurantId, all, candidateList, cart, cartItems, cleanIds (+17 more)
 
-### Community 87 - "revalidateStorefront"
-Cohesion: 0.05
-Nodes (58): DELETE(), GET(), POST(), PUT(), computeNewValue(), DELETE(), generateBatchId(), GET() (+50 more)
+### Community 87 - "checkStoreOperatingStatus"
+Cohesion: 0.08
+Nodes (38): POST(), ServiceabilityAction, ServiceabilityTarget, PATCH(), DELETE(), GET(), PATCH(), POST() (+30 more)
 
 ### Community 88 - "CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION"
 Cohesion: 0.06
@@ -981,7 +981,7 @@ Nodes (9): Bundle, ByteArray, MainActivity, RecognitionListener, FlutterActivity
 
 ### Community 132 - "prisma.ts"
 Cohesion: 0.03
-Nodes (78): GET(), PATCH(), POST(), PUT(), dynamic, POST(), DELETE(), GET() (+70 more)
+Nodes (99): GET(), PATCH(), POST(), PUT(), DELETE(), GET(), POST(), PUT() (+91 more)
 
 ### Community 133 - "useUIStore"
 Cohesion: 0.04
