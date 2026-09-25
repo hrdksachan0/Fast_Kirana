@@ -141,6 +141,12 @@ def clear_stores_cache():
     _status_cache_time = 0
 
 
+@router.post("/stores/clear-cache")
+async def api_clear_stores_cache():
+    clear_stores_cache()
+    return {"success": True, "message": "Stores and status caches cleared"}
+
+
 # ─── 1. GET /stores/hubs ────────────────────────────────────────────────────────
 
 @router.get("/stores/hubs")

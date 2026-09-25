@@ -93,16 +93,65 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = f"{process_time:.4f}s"
     return response
 
-# Global Exception Handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import RequestValidationError
+import uuid
+
+# Global Exception Handlers for transparent, actionable UX feedback
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    detail_str = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": detail_str,
+            "detail": detail_str,
+            "message": detail_str,
+            "statusCode": exc.status_code
+        },
+        headers=getattr(exc, "headers", None)
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = exc.errors()
+    error_messages = []
+    for err in errors:
+        loc = " -> ".join([str(l) for l in err.get("loc", []) if l != "body"])
+        msg = err.get("msg", "Invalid value")
+        error_messages.append(f"{loc}: {msg}" if loc else msg)
+    summary = "; ".join(error_messages) if error_messages else "Invalid request data"
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "error": summary,
+            "detail": summary,
+            "message": summary,
+            "rawErrors": errors,
+            "statusCode": 422
+        }
+    )
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     correlation_id = str(uuid.uuid4())
     print(f"CRITICAL ERROR [CorrelationID: {correlation_id}] on {request.url}: {exc}")
     if settings.SENTRY_DSN:
         sentry_sdk.capture_exception(exc)
+    err_str = str(exc) or "An internal server error occurred. Please contact support."
     return JSONResponse(
         status_code=500,
-        content={"error": str(exc) or "An internal server error occurred. Please contact support.", "detail": str(exc), "correlationId": correlation_id}
+        content={
+            "success": False,
+            "error": err_str,
+            "detail": err_str,
+            "message": err_str,
+            "correlationId": correlation_id,
+            "statusCode": 500
+        }
     )
 
 # Include API Routers

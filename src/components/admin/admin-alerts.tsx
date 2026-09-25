@@ -171,9 +171,10 @@ export function AdminAlerts({ onProductUpdated, storeId }: AdminAlertsProps) {
 
   // Filter alerts by sub-tab and search query
   const filteredAlerts = alerts.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase())
+    const itemName = String(item?.name || item?.slug || item?.id || '')
+    const matchesSearch = itemName.toLowerCase().includes((search || '').toLowerCase())
     if (activeSubTab === 'ALL') return matchesSearch
-    return item.alertType === activeSubTab && matchesSearch
+    return item?.alertType === activeSubTab && matchesSearch
   })
 
   // Format Expiry Date safely
@@ -345,13 +346,13 @@ export function AdminAlerts({ onProductUpdated, storeId }: AdminAlertsProps) {
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-lg border">
                           {item.imageUrl ? (
-                            <img src={item.imageUrl} alt={item.name} className="h-7 w-7 object-contain" />
+                            <img src={item.imageUrl} alt={item.name || 'Product'} className="h-7 w-7 object-contain" />
                           ) : (
                             '📦'
                           )}
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-text-primary block leading-tight">{item.name}</span>
+                          <span className="text-xs font-bold text-text-primary block leading-tight">{item.name || item.slug || 'Product'}</span>
                           <span className="text-[10px] text-text-muted block mt-0.5">ID: {item.id}</span>
                         </div>
                       </div>

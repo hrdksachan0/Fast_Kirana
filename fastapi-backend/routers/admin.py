@@ -19,6 +19,7 @@ from models import (
 from schemas import CashDepositRequest, FinancialSummaryOut
 from routers.auth import require_admin
 from routers.websockets import manager
+from routers.stores_service import clear_stores_cache
 import logging
 
 logger = logging.getLogger(__name__)
@@ -284,28 +285,65 @@ async def save_admin_settings(
 ):
     """
     Update administrative store configuration settings (run database writes only for changed keys).
+    Supports storeId scoped overrides and synchronizes dark stores table and in-memory caches.
     """
     try:
+        store_id = payload.pop("storeId", None)
+        is_store_scoped = bool(store_id and store_id != "all")
+        prefix = f"store:{store_id}:" if is_store_scoped else ""
+
         stmt = select(StoreSetting)
         res = await db.execute(stmt)
         current_settings = res.scalars().all()
         current_map = {s.key: s.value for s in current_settings}
 
-        changed_entries = []
         for key, val in payload.items():
             str_val = str(val)
-            if key not in current_map or current_map[key] != str_val:
-                changed_entries.append((key, str_val))
-
-        for key, str_val in changed_entries:
-            stmt_key = select(StoreSetting).where(StoreSetting.key == key)
+            scoped_key = f"{prefix}{key}" if is_store_scoped else key
+            
+            stmt_key = select(StoreSetting).where(StoreSetting.key == scoped_key)
             res_key = await db.execute(stmt_key)
             existing = res_key.scalars().first()
             if existing:
                 existing.value = str_val
             else:
-                new_s = StoreSetting(key=key, value=str_val)
+                new_s = StoreSetting(id=f"ss_{uuid.uuid4().hex[:16]}", key=scoped_key, value=str_val)
                 db.add(new_s)
+
+            # If base Ghatampur hub, sync un-scoped legacy keys too
+            if store_id == "hub-209206":
+                base_stmt = select(StoreSetting).where(StoreSetting.key == key)
+                base_res = await db.execute(base_stmt)
+                base_existing = base_res.scalars().first()
+                if base_existing:
+                    base_existing.value = str_val
+                else:
+                    db.add(StoreSetting(id=f"ss_{uuid.uuid4().hex[:16]}", key=key, value=str_val))
+
+        # Sync DarkStore table fields for this specific hub or default central hub
+        target_hub_id = store_id if is_store_scoped else "hub-209206"
+        hub_res = await db.execute(select(DarkStore).where(DarkStore.id == target_hub_id))
+        hub_obj = hub_res.scalars().first()
+        if hub_obj:
+            if "grocery_mart_open" in payload:
+                is_open = str(payload["grocery_mart_open"]).lower() == "true"
+                hub_obj.groceryOpen = is_open
+                if is_open:
+                    hub_obj.closeReason = None
+                    hub_obj.pauseUntil = None
+                else:
+                    hub_obj.closeReason = "MANUAL_OFF"
+            if "delivery_radius" in payload:
+                try:
+                    hub_obj.deliveryRadiusKm = float(payload["delivery_radius"])
+                except Exception:
+                    pass
+            if "store_lat" in payload and "store_lng" in payload:
+                try:
+                    hub_obj.latitude = float(payload["store_lat"])
+                    hub_obj.longitude = float(payload["store_lng"])
+                except Exception:
+                    pass
 
         # M14 FIX: Sync active restaurants if restaurant timings updated
         r_open = payload.get("restaurant_open_time")
@@ -322,8 +360,8 @@ async def save_admin_settings(
             except Exception as r_err:
                 pass
 
-        if changed_entries:
-            await db.commit()
+        await db.commit()
+        clear_stores_cache()
 
         return {"success": True}
     except Exception as e:

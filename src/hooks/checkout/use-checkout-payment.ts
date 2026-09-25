@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { triggerHaptic } from '@/lib/haptic'
+import { getApiErrorMessage } from '@/lib/api-error'
 import type { CartItem } from '@/stores/cart-store'
 import { Address } from '@/types'
 import {
@@ -227,12 +228,12 @@ export function useCheckoutPayment({
         }, 1500)
       } else {
         setOverlayState(null)
-        toast.error(data.error || data.detail || data.message || 'Failed to place order')
+        toast.error(getApiErrorMessage(data, 'Failed to place order'))
         setIsPlacingOrder(false)
       }
     } catch (err) {
       setOverlayState(null)
-      toast.error('Connection error. Please try again.')
+      toast.error(getApiErrorMessage(err, 'Connection error. Please try again.'))
       setIsPlacingOrder(false)
     }
   }
@@ -304,7 +305,7 @@ export function useCheckoutPayment({
       const orderData = await orderRes.json()
 
       if (!orderRes.ok) {
-        toast.error(orderData.error || orderData.detail || orderData.message || 'Failed to initialize order')
+        toast.error(getApiErrorMessage(orderData, 'Failed to initialize order'))
         setIsPlacingOrder(false)
         setOverlayState(null)
         return
@@ -335,7 +336,7 @@ export function useCheckoutPayment({
 
       if (!cfRes.ok || !cfData.paymentSessionId) {
         console.warn('Cashfree session failed:', cfData.error || cfData.detail)
-        toast.error(cfData.error || cfData.detail || cfData.message || 'Cashfree payment session could not be created.')
+        toast.error(getApiErrorMessage(cfData, 'Cashfree payment session could not be created.'))
         setIsPlacingOrder(false)
         setOverlayState(null)
         setFailedPaymentOrder({

@@ -508,25 +508,38 @@ async def create_order(
     """
     user_id = current_user.get("id") or current_user.get("sub") if current_user else payload.get("userId")
     
-    # If no user_id, resolve or create guest user
-    if not user_id:
-        phone = payload.get("phone") or "7054470303"
-        clean_phone = phone.replace("+91", "").strip()
-        guest_stmt = select(User).where(User.phone == clean_phone)
-        guest_res = await db.execute(guest_stmt)
-        guest_user = guest_res.scalars().first()
-        if not guest_user:
-            guest_id = f"guest_{generate_id()}"
-            guest_user = User(
-                id=guest_id,
-                name=payload.get("userName") or "FastKirana Customer",
-                email=f"{clean_phone}@guest.fastkirana.in",
+    # ── RESILIENT USER RESOLUTION (Supports Web, Flutter, Guests) ──
+    user_obj = None
+    if user_id:
+        user_stmt = select(User).where(User.id == user_id)
+        user_res = await db.execute(user_stmt)
+        user_obj = user_res.scalars().first()
+
+    # If user doesn't exist by ID, resolve by phone or auto-create in PostgreSQL
+    if not user_obj:
+        raw_p = payload.get("phone") or payload.get("userPhone") or payload.get("buyerPhone") or "7054470303"
+        clean_phone = "".join(filter(str.isdigit, str(raw_p)))[-10:]
+        if not clean_phone:
+            clean_phone = "7054470303"
+
+        phone_stmt = select(User).where(User.phone == clean_phone)
+        phone_res = await db.execute(phone_stmt)
+        user_obj = phone_res.scalars().first()
+
+        if not user_obj:
+            user_id = user_id if (user_id and not user_id.startswith("default_") and not user_id.startswith("guest_")) else f"usr_{uuid.uuid4().hex[:16]}"
+            user_name = payload.get("userName") or payload.get("buyerName") or payload.get("customerName") or "FastKirana Customer"
+            user_obj = User(
+                id=user_id,
+                name=user_name,
+                email=f"{clean_phone}@fastkirana.in",
                 phone=clean_phone,
                 role="USER"
             )
-            db.add(guest_user)
+            db.add(user_obj)
             await db.flush()
-        user_id = guest_user.id
+        else:
+            user_id = user_obj.id
 
     # H2 FIX: Idempotency lock check
     idempotency_key = (
@@ -701,8 +714,53 @@ async def create_order(
     address_res = await db.execute(address_stmt)
     address = address_res.scalars().first()
 
+    # Resilient fallback: If addressId is invalid/missing/default (e.g. Flutter addr_default or unsynced ID)
+    if not address and user_id:
+        user_addr_stmt = select(Address).where(Address.userId == user_id)
+        user_addr_res = await db.execute(user_addr_stmt)
+        address = user_addr_res.scalars().first()
+        if address:
+            final_address_id = address.id
+
     if not address:
-        raise HTTPException(status_code=400, detail="Selected address is invalid")
+        cust_addr = str(payload.get("customerAddress") or payload.get("address") or "").strip()
+        addr_parts = [p.strip() for p in cust_addr.split(",") if p.strip()] if cust_addr else []
+
+        h_no = payload.get("houseNo") or (addr_parts[0] if len(addr_parts) > 0 else "Ghatampur Express Zone")
+        st = payload.get("street") or (addr_parts[1] if len(addr_parts) > 1 else "Main Road")
+        ar = payload.get("area") or (addr_parts[2] if len(addr_parts) > 2 else "Ghatampur")
+        ct = payload.get("city") or (addr_parts[3] if len(addr_parts) > 3 else "Ghatampur")
+        pin = str(payload.get("pincode") or (addr_parts[4] if len(addr_parts) > 4 else "209206"))
+        p_raw = payload.get("phone") or payload.get("customerPhone") or payload.get("userPhone") or "7054470303"
+        p_clean = "".join(filter(str.isdigit, str(p_raw)))[-10:]
+        p_val = f"+91{p_clean}" if len(p_clean) == 10 else "+917054470303"
+
+        lat_val = payload.get("lat") or payload.get("latitude")
+        lng_val = payload.get("lng") or payload.get("longitude")
+        try:
+            f_lat = float(lat_val) if lat_val is not None else 26.1534185
+            f_lng = float(lng_val) if lng_val is not None else 80.1714024
+        except (ValueError, TypeError):
+            f_lat, f_lng = 26.1534185, 80.1714024
+
+        new_addr_id = f"addr_{uuid.uuid4().hex[:16]}"
+        address = Address(
+            id=new_addr_id,
+            userId=user_id,
+            label="Home",
+            houseNo=h_no,
+            street=st,
+            area=ar,
+            city=ct,
+            pincode=pin,
+            phone=p_val,
+            lat=f_lat,
+            lng=f_lng,
+            isDefault=True
+        )
+        db.add(address)
+        await db.flush()
+        final_address_id = address.id
 
     # Update phone if passed
     raw_phone = payload.get("phone") or payload.get("customerPhone")

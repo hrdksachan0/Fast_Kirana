@@ -14,6 +14,7 @@ logger = logging.getLogger("settings")
 from database import get_db
 from models import Store, StoreSetting
 from routers.auth import require_auth, require_admin
+from routers.stores_service import clear_stores_cache
 
 router = APIRouter(prefix="/settings", tags=["Settings & Location"])
 
@@ -239,26 +240,33 @@ async def update_settings(
             else:
                 db.add(StoreSetting(key=key, value=str(value)))
 
-    # Sync DarkStore table fields for this specific hub
-    if is_store_scoped and store_id:
-        hub_res = await db.execute(select(DarkStore).where(DarkStore.id == store_id))
-        hub_obj = hub_res.scalars().first()
-        if hub_obj:
-            if "grocery_mart_open" in data:
-                hub_obj.groceryOpen = str(data["grocery_mart_open"]).lower() == "true"
-            if "delivery_radius" in data:
-                try:
-                    hub_obj.deliveryRadiusKm = float(data["delivery_radius"])
-                except Exception:
-                    pass
-            if "store_lat" in data and "store_lng" in data:
-                try:
-                    hub_obj.latitude = float(data["store_lat"])
-                    hub_obj.longitude = float(data["store_lng"])
-                except Exception:
-                    pass
+    # Sync DarkStore table fields for this specific hub or default central hub
+    target_hub_id = store_id if (is_store_scoped and store_id) else "hub-209206"
+    hub_res = await db.execute(select(DarkStore).where(DarkStore.id == target_hub_id))
+    hub_obj = hub_res.scalars().first()
+    if hub_obj:
+        if "grocery_mart_open" in data:
+            is_open = str(data["grocery_mart_open"]).lower() == "true"
+            hub_obj.groceryOpen = is_open
+            if is_open:
+                hub_obj.closeReason = None
+                hub_obj.pauseUntil = None
+            else:
+                hub_obj.closeReason = "MANUAL_OFF"
+        if "delivery_radius" in data:
+            try:
+                hub_obj.deliveryRadiusKm = float(data["delivery_radius"])
+            except Exception:
+                pass
+        if "store_lat" in data and "store_lng" in data:
+            try:
+                hub_obj.latitude = float(data["store_lat"])
+                hub_obj.longitude = float(data["store_lng"])
+            except Exception:
+                pass
 
     await db.commit()
+    clear_stores_cache()
     return {"success": True}
 
 

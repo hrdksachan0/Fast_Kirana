@@ -45,14 +45,24 @@ class AppException implements Exception {
           return AppException.network('Connection timed out. Please check your network connection.', originalError: error);
         case DioExceptionType.badResponse:
           final statusCode = error.response?.statusCode;
-          if (statusCode == 401 || statusCode == 403) {
-            return AppException.auth('Authentication required or session expired.', originalError: error);
-          } else if (statusCode != null && statusCode >= 500) {
-            return AppException.server('Server temporarily unavailable ($statusCode).', originalError: error);
-          }
           final resData = error.response?.data;
-          if (resData is Map && resData.containsKey('message')) {
-            return AppException.validation(resData['message'].toString(), originalError: error);
+          String? serverMsg;
+          if (resData is Map) {
+            final val = resData['detail'] ?? resData['error'] ?? resData['message'];
+            if (val != null) {
+              serverMsg = val is List ? val.map((e) => e.toString()).join(', ') : val.toString();
+            }
+          } else if (resData is String && resData.isNotEmpty && !resData.startsWith('<')) {
+            serverMsg = resData;
+          }
+
+          if (statusCode == 401 || statusCode == 403) {
+            return AppException.auth(serverMsg ?? 'Authentication required or session expired.', originalError: error);
+          } else if (statusCode != null && statusCode >= 500) {
+            return AppException.server(serverMsg ?? 'Server temporarily unavailable ($statusCode).', originalError: error);
+          }
+          if (serverMsg != null && serverMsg.isNotEmpty) {
+            return AppException.validation(serverMsg, originalError: error);
           }
           return AppException('Request failed with status $statusCode', code: 'API_ERROR', isRetryable: true, originalError: error);
         case DioExceptionType.cancel:
@@ -94,6 +104,9 @@ class AppException implements Exception {
       case 'VALIDATION':
         return message;
       case 'SERVER':
+        if (message.isNotEmpty && !message.startsWith('Server temporarily unavailable')) {
+          return message;
+        }
         return "Something went wrong on our end. Try again in a moment.";
       default:
         return message;

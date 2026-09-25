@@ -28,6 +28,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { formatPrice, formatDisplayEmail, formatPhone, cn } from '@/lib/utils'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
 import { STORE_PINCODE, SERVICE_AREA_NAME } from '@/lib/store-config'
 import { getDeliveryRules } from '@/lib/distance'
@@ -569,13 +570,15 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         onClose()
       } else {
         const data = await res.json()
-        const errMessage = data.error || data.detail || data.message || 'Failed to place order'
+        const errMessage = getApiErrorMessage(data, 'Failed to place order')
         setSubmitError(errMessage)
         toast.error(errMessage)
       }
     } catch (err: any) {
       console.error('Failed to submit order:', err)
-      setSubmitError(err.message || 'Failed to connect to the server')
+      const errMessage = getApiErrorMessage(err, 'Failed to connect to the server')
+      setSubmitError(errMessage)
+      toast.error(errMessage)
     } finally {
       setIsSubmitting(false)
     }

@@ -1,4 +1,5 @@
 import enum
+import uuid
 from datetime import datetime
 from typing import Optional, List, Any
 from sqlalchemy import (
@@ -143,6 +144,7 @@ class Product(Base):
     reviews = relationship("Review", back_populates="product", cascade="all, delete-orphan")
     batches = relationship("ProductBatch", back_populates="product", cascade="all, delete-orphan")
     stockLogs = relationship("StockLog", back_populates="product", cascade="all, delete-orphan")
+    images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
 
 
 class Address(Base):
@@ -211,6 +213,7 @@ class Order(Base):
     deliveryFee: Mapped[float] = mapped_column(Float, default=0.0)
     taxes: Mapped[float] = mapped_column(Float, default=0.0)
     miscFee: Mapped[float] = mapped_column(Float, default=0.0)
+    refundAmount: Mapped[float] = mapped_column(Float, default=0.0)
     total: Mapped[float] = mapped_column(Float)
     paymentMethod: Mapped[str] = mapped_column(SAEnum(PaymentMethod, name="PaymentMethod", create_type=False, native_enum=True), default="COD")
     paymentStatus: Mapped[str] = mapped_column(SAEnum(PaymentStatus, name="PaymentStatus", create_type=False, native_enum=True), default="PENDING")
@@ -266,6 +269,8 @@ class OrderItem(Base):
     costPrice: Mapped[float] = mapped_column(Float, default=0.0)
     variants: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    refundAmount: Mapped[float] = mapped_column(Float, default=0.0)
+    isRefunded: Mapped[bool] = mapped_column(Boolean, default=False)
 
     order = relationship("Order", back_populates="items")
     product = relationship("Product")
@@ -303,9 +308,16 @@ class CashDepositTransaction(Base):
 class StoreSetting(Base):
     __tablename__ = "store_settings"
 
-    key: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: f"ss_{uuid.uuid4().hex[:16]}")
+    key: Mapped[str] = mapped_column(String, unique=True, index=True)
     value: Mapped[str] = mapped_column(Text)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        if "id" not in kwargs or not kwargs["id"]:
+            kwargs["id"] = f"ss_{uuid.uuid4().hex[:16]}"
+        super().__init__(**kwargs)
 
 
 class Review(Base):
@@ -384,6 +396,8 @@ class Restaurant(Base):
     isVeg: Mapped[bool] = mapped_column(Boolean, default=False)
     isPureVeg: Mapped[bool] = mapped_column(Boolean, default=False)
     isOpen: Mapped[bool] = mapped_column(Boolean, default=True)
+    pauseUntil: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    closeReason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     openTime: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     closeTime: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     sortOrder: Mapped[int] = mapped_column(Integer, default=0)
@@ -508,6 +522,9 @@ class DarkStore(Base):
     isActive: Mapped[bool] = mapped_column(Boolean, default=True)
     surgeCharge: Mapped[float] = mapped_column(Float, default=0.0)
     groceryOpen: Mapped[bool] = mapped_column(Boolean, default=True)
+    pauseUntil: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    closeReason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    closedByUserId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -518,6 +535,12 @@ class StoreInventory(Base):
     productId: Mapped[str] = mapped_column(String, ForeignKey("products.id", ondelete="CASCADE"), primary_key=True)
     storeId: Mapped[str] = mapped_column(String, ForeignKey("dark_stores.id", ondelete="CASCADE"), primary_key=True)
     stock: Mapped[int] = mapped_column(Integer, default=0)
+    reservedStock: Mapped[int] = mapped_column(Integer, default=0)
+    priceOverride: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    aisleLocation: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    minStockAlert: Mapped[int] = mapped_column(Integer, default=5)
+    isAvailable: Mapped[bool] = mapped_column(Boolean, default=True)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class ProductBatch(Base):
@@ -679,3 +702,104 @@ class RestaurantPayout(Base):
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     restaurant = relationship("Restaurant")
+
+
+class SuperAdmin(Base):
+    __tablename__ = "super_admins"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    phone: Mapped[str] = mapped_column(String, unique=True, index=True)
+    email: Mapped[str] = mapped_column(String)
+    label: Mapped[str] = mapped_column(String)
+    assignedRestaurantId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    grantedBy: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class StockHold(Base):
+    __tablename__ = "stock_holds"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    storeId: Mapped[str] = mapped_column(String, index=True)
+    productId: Mapped[str] = mapped_column(String, index=True)
+    cartId: Mapped[str] = mapped_column(String)
+    quantity: Mapped[int] = mapped_column(Integer)
+    expiresAt: Mapped[datetime] = mapped_column(DateTime, index=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("storeId", "productId", "cartId", name="stock_holds_store_product_cart_unique"),
+        Index("idx_stock_holds_store_product", "storeId", "productId"),
+        Index("idx_stock_holds_expires_at", "expiresAt"),
+    )
+
+
+class ProductImage(Base):
+    __tablename__ = "product_images"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    productId: Mapped[str] = mapped_column(String, ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    url: Mapped[str] = mapped_column(String)
+    sortOrder: Mapped[int] = mapped_column(Integer, default=0)
+
+    product = relationship("Product", back_populates="images")
+
+
+class RestaurantMenu(Base):
+    __tablename__ = "restaurant_menus"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    restaurantId: Mapped[str] = mapped_column(String, ForeignKey("restaurants.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String)
+    slug: Mapped[str] = mapped_column(String)
+    emoji: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    sortOrder: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    restaurant = relationship("Restaurant")
+    dishes = relationship("FoodDish", back_populates="menu", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        UniqueConstraint("restaurantId", "slug", name="restaurant_menus_restaurant_slug_unique"),
+    )
+
+
+class FoodDish(Base):
+    __tablename__ = "food_dishes"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    restaurantId: Mapped[str] = mapped_column(String, ForeignKey("restaurants.id", ondelete="CASCADE"), index=True)
+    menuId: Mapped[str] = mapped_column(String, ForeignKey("restaurant_menus.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String)
+    slug: Mapped[str] = mapped_column(String)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    imageUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    price: Mapped[float] = mapped_column(Float)
+    mrp: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    isVeg: Mapped[bool] = mapped_column(Boolean, default=True)
+    isAvailable: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    sortOrder: Mapped[int] = mapped_column(Integer, default=0)
+    tags: Mapped[Optional[list]] = mapped_column(JSON, default=list)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    restaurant = relationship("Restaurant")
+    menu = relationship("RestaurantMenu", back_populates="dishes")
+    variants = relationship("DishVariant", back_populates="dish", cascade="all, delete-orphan")
+
+
+class DishVariant(Base):
+    __tablename__ = "dish_variants"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    dishId: Mapped[str] = mapped_column(String, ForeignKey("food_dishes.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String)
+    price: Mapped[float] = mapped_column(Float)
+    isDefault: Mapped[bool] = mapped_column(Boolean, default=False)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    dish = relationship("FoodDish", back_populates="variants")

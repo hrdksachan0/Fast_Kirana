@@ -81,6 +81,11 @@ export async function POST(request: NextRequest) {
       await clearSettingsCache()
       await revalidateStorefront()
 
+      try {
+        const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+        await fetch(`${fastApiUrl}/api/stores/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(3000) }).catch(() => {})
+      } catch (_) {}
+
       return NextResponse.json({
         success: true,
         targetType: 'HUB',

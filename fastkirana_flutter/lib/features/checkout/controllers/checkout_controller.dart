@@ -961,8 +961,11 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           String errorMsg = 'Failed to place order. Please check your connection and try again.';
           if (e is DioException) {
             final serverErr = e.response?.data;
-            if (serverErr is Map && serverErr['error'] != null) {
-              errorMsg = serverErr['error'].toString();
+            if (serverErr is Map) {
+              final msg = serverErr['detail'] ?? serverErr['error'] ?? serverErr['message'];
+              if (msg != null && msg.toString().isNotEmpty) {
+                errorMsg = msg.toString();
+              }
             } else if (serverErr is String && serverErr.isNotEmpty) {
               errorMsg = serverErr;
             }

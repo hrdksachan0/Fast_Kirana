@@ -1582,12 +1582,12 @@ async def admin_restaurant_sales(
     }
 
 
-@router.get("/alerts")
-async def admin_get_alerts(
+@router.get("/alerts/quick-counts")
+async def admin_get_alerts_quick_counts(
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Admin alerts (low stock, pending orders etc)."""
+    """Admin quick alerts (low stock, pending orders count)."""
     low_stock_stmt = select(func.count(Product.id)).where(
         and_(Product.stock < Product.minStock, Product.isAvailable == True)
     )
@@ -2396,16 +2396,16 @@ async def admin_create_order_behalf(
 
 
 # ============================================================
-# BULK UPDATE
+# BATCH PATCH PRODUCTS
 # ============================================================
 
-@router.post("/bulk-update")
-async def admin_bulk_update(
+@router.post("/products/batch-patch")
+async def admin_batch_patch_products(
     data: Dict[str, Any] = Body(...),
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Bulk update products."""
+    """Programmatic batch patch products."""
     ids = data.get("ids", [])
     updates = data.get("updates", {})
     if not ids or not updates:
@@ -2692,7 +2692,7 @@ Return ONLY a valid JSON object with these EXACT keys:
 @router.get("/alerts")
 async def get_admin_inventory_alerts(
     storeId: Optional[str] = Query(None),
-    current_admin: User = Depends(require_admin),
+    current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Fetch all active inventory & packing delay alerts."""
@@ -2861,31 +2861,31 @@ async def get_admin_inventory_alerts(
     alerts = []
     for p in filtered_oos:
         alerts.append({
-            "id": p.id, "name": p.name, "slug": p.slug, "imageUrl": p.imageUrl,
-            "stock": p.stock, "minStock": p.minStock,
+            "id": p.id, "name": p.name or p.slug or "Product", "slug": p.slug or "", "imageUrl": p.imageUrl,
+            "stock": p.stock or 0, "minStock": p.minStock or 0,
             "expiryDate": p.expiryDate.isoformat() if p.expiryDate else None,
-            "categoryId": p.categoryId, "alertType": "OUT_OF_STOCK"
+            "categoryId": p.categoryId or "", "alertType": "OUT_OF_STOCK"
         })
     for p in filtered_low:
         alerts.append({
-            "id": p.id, "name": p.name, "slug": p.slug, "imageUrl": p.imageUrl,
-            "stock": p.stock, "minStock": p.minStock,
+            "id": p.id, "name": p.name or p.slug or "Product", "slug": p.slug or "", "imageUrl": p.imageUrl,
+            "stock": p.stock or 0, "minStock": p.minStock or 0,
             "expiryDate": p.expiryDate.isoformat() if p.expiryDate else None,
-            "categoryId": p.categoryId, "alertType": "LOW_STOCK"
+            "categoryId": p.categoryId or "", "alertType": "LOW_STOCK"
         })
     for p in filtered_exp_soon:
         alerts.append({
-            "id": p.id, "name": p.name, "slug": p.slug, "imageUrl": p.imageUrl,
-            "stock": p.stock, "minStock": p.minStock,
+            "id": p.id, "name": p.name or p.slug or "Product", "slug": p.slug or "", "imageUrl": p.imageUrl,
+            "stock": p.stock or 0, "minStock": p.minStock or 0,
             "expiryDate": p.expiryDate.isoformat() if p.expiryDate else None,
-            "categoryId": p.categoryId, "alertType": "EXPIRING_SOON"
+            "categoryId": p.categoryId or "", "alertType": "EXPIRING_SOON"
         })
     for p in filtered_exp:
         alerts.append({
-            "id": p.id, "name": p.name, "slug": p.slug, "imageUrl": p.imageUrl,
-            "stock": p.stock, "minStock": p.minStock,
+            "id": p.id, "name": p.name or p.slug or "Product", "slug": p.slug or "", "imageUrl": p.imageUrl,
+            "stock": p.stock or 0, "minStock": p.minStock or 0,
             "expiryDate": p.expiryDate.isoformat() if p.expiryDate else None,
-            "categoryId": p.categoryId, "alertType": "EXPIRED"
+            "categoryId": p.categoryId or "", "alertType": "EXPIRED"
         })
     alerts.extend(filtered_delays)
 
@@ -2904,7 +2904,7 @@ async def get_admin_inventory_alerts(
 
 @router.post("/alerts")
 async def generate_admin_stock_alerts(
-    current_admin: User = Depends(require_admin),
+    current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Generate or refresh StockAlert records in database."""
@@ -2947,7 +2947,7 @@ async def generate_admin_stock_alerts(
 @router.patch("/alerts")
 async def mark_alerts_as_read(
     payload: Dict[str, Any] = Body(...),
-    current_admin: User = Depends(require_admin),
+    current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Mark alerts as read."""
@@ -2970,7 +2970,7 @@ async def mark_alerts_as_read(
 @router.put("/alerts")
 async def snooze_alert(
     payload: Dict[str, Any] = Body(...),
-    current_admin: User = Depends(require_admin),
+    current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Snooze an alert for 30 minutes."""
@@ -3690,10 +3690,28 @@ def compute_new_bulk_val(old_val: float, mode: str, val: float) -> float:
 @router.post("/bulk-update")
 async def apply_bulk_update(
     payload: Dict[str, Any] = Body(...),
-    current_admin: User = Depends(require_admin),
+    current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Apply (or preview) a bulk update on products."""
+    # 1. Direct programmatic { ids: [...], updates: {...} } format
+    if "ids" in payload and "updates" in payload:
+        ids = payload.get("ids", [])
+        updates = payload.get("updates", {})
+        if not ids or not updates:
+            raise HTTPException(status_code=400, detail="ids and updates required")
+        stmt = select(Product).where(Product.id.in_(ids))
+        products = (await db.execute(stmt)).scalars().all()
+        updated = 0
+        for p in products:
+            for k, v in updates.items():
+                if hasattr(p, k):
+                    setattr(p, k, v)
+                    updated += 1
+        await db.commit()
+        return {"success": True, "updated": updated}
+
+    # 2. Rich form format from Admin UI
     update_type = payload.get("updateType")
     mode = payload.get("mode")
     value = payload.get("value")
@@ -3713,7 +3731,13 @@ async def apply_bulk_update(
             if restaurant_id == "GROCERY":
                 stmt = stmt.where(Product.restaurantId.is_(None))
             else:
-                stmt = stmt.where(Product.restaurantId == restaurant_id)
+                stmt = stmt.where(
+                    or_(
+                        Product.restaurantId == restaurant_id,
+                        Product.restaurant.has(Restaurant.id == restaurant_id),
+                        Product.restaurant.has(Restaurant.slug == restaurant_id),
+                    )
+                )
         if category_id and category_id != "ALL":
             stmt = stmt.where(Product.categoryId == category_id)
 
@@ -3731,19 +3755,19 @@ async def apply_bulk_update(
         if update_type == "PRICE":
             old_v = float(p.price)
             new_v = round(compute_new_bulk_val(old_v, mode, float(value)))
-            changes.append({"productId": p.id, "name": p.name, "oldValue": old_v, "newValue": new_v})
+            changes.append({"productId": p.id, "name": p.name or p.slug or "Product", "oldValue": old_v, "newValue": new_v})
         elif update_type == "STOCK":
             old_v = float(p.stock or 0)
             new_v = max(0, int(round(compute_new_bulk_val(old_v, mode, float(value)))))
-            changes.append({"productId": p.id, "name": p.name, "oldValue": old_v, "newValue": new_v})
+            changes.append({"productId": p.id, "name": p.name or p.slug or "Product", "oldValue": old_v, "newValue": new_v})
         elif update_type == "AVAILABILITY":
             old_v = bool(p.isAvailable)
             new_v = (value == 1 or value is True)
-            changes.append({"productId": p.id, "name": p.name, "oldValue": old_v, "newValue": new_v})
+            changes.append({"productId": p.id, "name": p.name or p.slug or "Product", "oldValue": old_v, "newValue": new_v})
         elif update_type == "MIN_STOCK":
             old_v = float(p.minStock or 0)
             new_v = max(0, int(round(compute_new_bulk_val(old_v, mode, float(value)))))
-            changes.append({"productId": p.id, "name": p.name, "oldValue": old_v, "newValue": new_v})
+            changes.append({"productId": p.id, "name": p.name or p.slug or "Product", "oldValue": old_v, "newValue": new_v})
 
     if preview:
         return {
@@ -3756,6 +3780,16 @@ async def apply_bulk_update(
 
     # Apply changes
     p_map = {p.id: p for p in products}
+    admin_identifier = (
+        current_admin.get("email")
+        if isinstance(current_admin, dict)
+        else getattr(current_admin, "email", None)
+    ) or (
+        current_admin.get("name")
+        if isinstance(current_admin, dict)
+        else getattr(current_admin, "name", None)
+    ) or "ADMIN"
+
     for ch in changes:
         prod = p_map.get(ch["productId"])
         if not prod:
@@ -3772,7 +3806,7 @@ async def apply_bulk_update(
                 oldMrp=float(prod.mrp or prod.price),
                 newMrp=float(prod.mrp or prod.price),
                 changeType=f"BULK_{mode}",
-                changedBy=(current_admin.get("email") if isinstance(current_admin, dict) else getattr(current_admin, "email", None)) or (current_admin.get("name") if isinstance(current_admin, dict) else getattr(current_admin, "name", None)) or "ADMIN",
+                changedBy=admin_identifier,
                 batchId=batch_id,
                 createdAt=datetime.utcnow()
             ))
@@ -3791,7 +3825,7 @@ async def apply_bulk_update(
 async def get_bulk_update_history(
     batchId: Optional[str] = Query(None),
     limit: int = Query(20),
-    current_admin: User = Depends(require_admin),
+    current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Fetch price change history batches."""
@@ -3811,8 +3845,8 @@ async def get_bulk_update_history(
                     "productName": r.product.name if r.product else "Product",
                     "oldPrice": float(r.oldPrice),
                     "newPrice": float(r.newPrice),
-                    "oldMrp": float(r.oldMrp),
-                    "newMrp": float(r.newMrp),
+                    "oldMrp": float(r.oldMrp or r.oldPrice),
+                    "newMrp": float(r.newMrp or r.newPrice),
                     "changeType": r.changeType,
                     "changedBy": r.changedBy,
                     "batchId": r.batchId,
@@ -3822,38 +3856,78 @@ async def get_bulk_update_history(
             ]
         }
 
-    # Distinct batches
-    stmt = select(PriceHistory.batchId, PriceHistory.createdAt, PriceHistory.changeType).where(
-        PriceHistory.batchId.is_not(None)
-    ).distinct(PriceHistory.batchId).order_by(PriceHistory.createdAt.desc()).limit(limit)
-    rows = (await db.execute(stmt)).all()
+    # Recent distinct batchIds grouped by batchId
+    subq = (
+        select(PriceHistory.batchId, func.max(PriceHistory.createdAt).label("max_created"))
+        .where(PriceHistory.batchId.is_not(None))
+        .group_by(PriceHistory.batchId)
+        .order_by(desc("max_created"))
+        .limit(limit)
+    )
+    b_rows = (await db.execute(subq)).all()
+    batch_ids = [r[0] for r in b_rows if r[0]]
+
+    if not batch_ids:
+        return {"success": True, "totalBatches": 0, "batches": []}
+
+    records_stmt = (
+        select(PriceHistory)
+        .options(selectinload(PriceHistory.product))
+        .where(PriceHistory.batchId.in_(batch_ids))
+        .order_by(PriceHistory.createdAt.desc())
+    )
+    all_records = (await db.execute(records_stmt)).scalars().all()
+
+    grouped: Dict[str, Dict[str, Any]] = {}
+    for r in all_records:
+        bid = r.batchId
+        if bid not in grouped:
+            grouped[bid] = {
+                "batchId": bid,
+                "changeType": r.changeType,
+                "createdAt": r.createdAt.isoformat() if r.createdAt else None,
+                "count": 0,
+                "records": [],
+            }
+        grouped[bid]["count"] += 1
+        grouped[bid]["records"].append({
+            "id": r.id,
+            "productId": r.productId,
+            "productName": r.product.name if r.product else "Product",
+            "oldPrice": float(r.oldPrice),
+            "newPrice": float(r.newPrice),
+        })
+
+    batches = [grouped[bid] for bid in batch_ids if bid in grouped]
 
     return {
         "success": True,
-        "totalBatches": len(rows),
-        "batches": [
-            {
-                "batchId": r[0],
-                "createdAt": r[1].isoformat() if r[1] else None,
-                "changeType": r[2],
-            }
-            for r in rows
-        ]
+        "totalBatches": len(batches),
+        "batches": batches,
     }
 
 
 @router.delete("/bulk-update")
 async def undo_bulk_update(
-    payload: Dict[str, Any] = Body(...),
-    current_admin: User = Depends(require_admin),
+    request: Request,
+    batchId: Optional[str] = Query(None),
+    current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Undo a bulk update by batchId."""
-    batch_id = payload.get("batchId")
-    if not batch_id:
+    target_batch_id = batchId
+    if not target_batch_id:
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                target_batch_id = body.get("batchId")
+        except Exception:
+            pass
+
+    if not target_batch_id:
         raise HTTPException(status_code=400, detail="Missing required field: batchId")
 
-    stmt = select(PriceHistory).where(PriceHistory.batchId == batch_id)
+    stmt = select(PriceHistory).where(PriceHistory.batchId == target_batch_id)
     records = (await db.execute(stmt)).scalars().all()
     if not records:
         raise HTTPException(status_code=404, detail="No records found for the given batchId")
