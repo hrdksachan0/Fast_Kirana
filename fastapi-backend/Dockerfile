@@ -10,12 +10,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements from root or subdirectory
-COPY fastapi-backend/requirements.txt* requirements.txt* ./
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy requirements from either context
+COPY requirements.txt* fastapi-backend/requirements.txt* ./
+RUN if [ -f "requirements.txt" ]; then pip install --no-cache-dir -r requirements.txt; elif [ -f "fastapi-backend/requirements.txt" ]; then pip install --no-cache-dir -r fastapi-backend/requirements.txt; fi
 
-# Copy source code
-COPY fastapi-backend/ ./
+# Copy source files
+COPY . .
+
+# Normalize directory if built from root
+RUN if [ -d "fastapi-backend" ]; then cp -rn fastapi-backend/* . 2>/dev/null || true; fi
 
 EXPOSE 8080
 
