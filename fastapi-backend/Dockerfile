@@ -22,4 +22,4 @@ RUN if [ -d "fastapi-backend" ]; then cp -rn fastapi-backend/* . 2>/dev/null || 
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} --workers ${WEB_CONCURRENCY:-4} --loop uvloop --http httptools"]
