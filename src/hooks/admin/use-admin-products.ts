@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ProductEditForm } from '@/components/admin/product-edit-modal'
 import { PRODUCT_TEMPLATES } from '@/lib/constants'
 import { toast } from 'sonner'
@@ -28,6 +28,14 @@ export function useAdminProducts({
   sessionUserPhone,
   activeTab,
 }: UseAdminProductsProps) {
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(sessionUserId ? { 'x-user-id': sessionUserId } : {}),
+    ...(sessionUserRole ? { 'x-user-role': sessionUserRole } : { 'x-user-role': 'ADMIN' }),
+    ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+    ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+  }), [sessionUserId, sessionUserRole, sessionUserEmail, sessionUserPhone])
+
   const [products, setProducts] = useState<any[]>(Array.isArray(initialProducts) ? initialProducts : [])
   const [allProducts, setAllProducts] = useState<any[]>(Array.isArray(initialAllProducts) ? initialAllProducts : [])
   const [productPage, setProductPage] = useState(1)
@@ -126,7 +134,8 @@ export function useAdminProducts({
       const res = await fetch(
         `/api/admin/products?page=${productPage}&limit=10&categoryId=${selectedCategoryFilter}&search=${encodeURIComponent(
           searchQuery
-        )}&type=${selectedTypeFilter}${storeQuery}&t=${Date.now()}`
+        )}&type=${selectedTypeFilter}${storeQuery}&t=${Date.now()}`,
+        { headers: authHeaders }
       )
       if (res.ok) {
         const data = await res.json()
@@ -143,7 +152,7 @@ export function useAdminProducts({
     } finally {
       setIsLoadingProducts(false)
     }
-  }, [productPage, selectedCategoryFilter, searchQuery, selectedTypeFilter, selectedHubId])
+  }, [productPage, selectedCategoryFilter, searchQuery, selectedTypeFilter, selectedHubId, authHeaders])
 
   useEffect(() => {
     fetchProducts()
@@ -163,7 +172,7 @@ export function useAdminProducts({
           selectedHubId && selectedHubId !== 'all'
             ? `&storeId=${encodeURIComponent(selectedHubId)}`
             : ''
-        const res = await fetch(`/api/products?limit=1000${storeQuery}&t=${Date.now()}`)
+        const res = await fetch(`/api/products?limit=1000${storeQuery}&t=${Date.now()}`, { headers: authHeaders })
         if (res.ok && active) {
           const data = await res.json()
           if (Array.isArray(data?.products)) {
@@ -213,7 +222,7 @@ export function useAdminProducts({
       handleNewProductTypeChange('cafe')
     } else {
       const matchedCat = categories.find(
-        (c) => c.name.toLowerCase().trim() === template.categoryName.toLowerCase().trim()
+        (c) => (c.name || '').toLowerCase().trim() === (template.categoryName || '').toLowerCase().trim()
       )
       categoryId = matchedCat?.id || categories.find((c) => c.slug !== 'cafe')?.id || ''
       handleNewProductTypeChange('grocery')
@@ -336,7 +345,7 @@ export function useAdminProducts({
     setIsExporting(true)
     try {
       const url = `/api/admin/products?limit=5000${type !== 'all' ? `&type=${type}` : ''}`
-      const res = await fetch(url)
+      const res = await fetch(url, { headers: authHeaders })
       const data = await res.json()
 
       if (!res.ok) {
@@ -452,7 +461,7 @@ export function useAdminProducts({
     setIsExporting(true)
     try {
       const url = '/api/admin/products?limit=5000'
-      const res = await fetch(url)
+      const res = await fetch(url, { headers: authHeaders })
       const data = await res.json()
 
       if (!res.ok) {

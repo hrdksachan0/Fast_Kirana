@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { Search, Loader2, Plus, Check, Trash2, Percent, Zap, Star, Trophy, Smartphone } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -30,6 +31,15 @@ interface AdminPromotionsProps {
 }
 
 export function AdminPromotions({ storeId }: AdminPromotionsProps = {}) {
+  const { data: session } = useSession()
+  const authHeaders = useMemo(() => ({
+    'Content-Type': 'application/json',
+    ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
+    ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : { 'x-user-role': 'ADMIN' }),
+    ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
+    ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
+  }), [session])
+
   const [activeTab, setActiveTab] = useState<'highlights' | 'search'>('highlights')
   const [activeHighlightType, setActiveHighlightType] = useState<HighlightType>('flash')
   const [searchQuery, setSearchQuery] = useState('')
@@ -54,9 +64,9 @@ export function AdminPromotions({ storeId }: AdminPromotionsProps = {}) {
     try {
       const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
       const [flashRes, topRes, bestRes] = await Promise.all([
-        fetch(`/api/admin/products?flashDeals=true&limit=100${storeParam}`).then(r => r.json()),
-        fetch(`/api/admin/products?topPicks=true&limit=100${storeParam}`).then(r => r.json()),
-        fetch(`/api/admin/products?bestSellers=true&limit=100${storeParam}`).then(r => r.json()),
+        fetch(`/api/admin/products?flashDeals=true&limit=100${storeParam}`, { headers: authHeaders }).then(r => r.json()),
+        fetch(`/api/admin/products?topPicks=true&limit=100${storeParam}`, { headers: authHeaders }).then(r => r.json()),
+        fetch(`/api/admin/products?bestSellers=true&limit=100${storeParam}`, { headers: authHeaders }).then(r => r.json()),
       ])
       
       setFlashProducts(flashRes.products || [])
@@ -76,7 +86,7 @@ export function AdminPromotions({ storeId }: AdminPromotionsProps = {}) {
     setIsLoading(true)
     try {
       const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/products?search=${encodeURIComponent(searchQuery)}&limit=50${storeParam}`)
+      const res = await fetch(`/api/admin/products?search=${encodeURIComponent(searchQuery)}&limit=50${storeParam}`, { headers: authHeaders })
       if (res.ok) {
         const data = await res.json()
         setSearchProducts(data.products || [])
@@ -110,7 +120,7 @@ export function AdminPromotions({ storeId }: AdminPromotionsProps = {}) {
     try {
       const res = await fetch(`/api/products/${product.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ [field]: newValue }),
       })
 

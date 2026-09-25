@@ -3,7 +3,7 @@ import { format, addMinutes, parseISO, getHours, getMinutes } from 'date-fns'
 // Re-export IST timezone helpers from formatters.ts for convenience
 export { getISTHour, getISTMinute, getISTTotalMinutes, formatISODate, isStoreOpen } from './formatters'
 
-function parseDateInput(date?: string | Date | null): Date | null {
+export function parseDateInput(date?: string | Date | null): Date | null {
   if (!date) return null
   if (date instanceof Date) return isNaN(date.getTime()) ? null : date
   const s = String(date).trim()

@@ -720,19 +720,20 @@ export function AdminDashboard({
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
+    const q = (productHook.searchQuery || '').toLowerCase().trim()
     return (Array.isArray(productHook.products) ? productHook.products : []).filter((p) => {
-      const matchesSearch =
-        p.name.toLowerCase().includes(productHook.searchQuery.toLowerCase()) ||
-        (p.description &&
-          p.description.toLowerCase().includes(productHook.searchQuery.toLowerCase()))
+      if (!p) return false
+      const pName = String(p.name || '').toLowerCase()
+      const pDesc = p.description ? String(p.description).toLowerCase() : ''
+      const matchesSearch = !q || pName.includes(q) || pDesc.includes(q)
 
       const matchesCategory =
         !productHook.selectedCategoryFilter ||
         p.categoryId === productHook.selectedCategoryFilter
 
-      const isCafeItem = p.tags?.some((t: string) => t.toLowerCase() === 'cafe')
+      const isCafeItem = Array.isArray(p.tags) && p.tags.some((t: any) => String(t || '').toLowerCase() === 'cafe')
       const isRestaurantItem =
-        !!p.restaurantId || p.tags?.some((t: string) => t.toLowerCase() === 'restaurant')
+        !!p.restaurantId || (Array.isArray(p.tags) && p.tags.some((t: any) => String(t || '').toLowerCase() === 'restaurant'))
 
       let matchesType = true
       if (productHook.selectedTypeFilter === 'all') {
@@ -744,13 +745,14 @@ export function AdminDashboard({
       } else if (productHook.selectedTypeFilter === 'restaurant') {
         matchesType = isRestaurantItem
       } else {
+        const filterTypeLower = String(productHook.selectedTypeFilter || '').toLowerCase()
         matchesType =
           p.restaurantId === productHook.selectedTypeFilter ||
           (p as any).restaurant?.id === productHook.selectedTypeFilter ||
           (p as any).restaurant?.slug === productHook.selectedTypeFilter ||
-          (productHook.selectedTypeFilter.toLowerCase().includes('bal') &&
-            ((p.restaurantId && p.restaurantId.toLowerCase().includes('bal')) ||
-              p.name?.toLowerCase().includes('bal udyan')))
+          (filterTypeLower.includes('bal') &&
+            ((p.restaurantId && String(p.restaurantId).toLowerCase().includes('bal')) ||
+              (p.name && String(p.name).toLowerCase().includes('bal udyan'))))
       }
 
       return matchesSearch && matchesCategory && matchesType

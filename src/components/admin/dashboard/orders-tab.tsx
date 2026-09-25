@@ -614,14 +614,18 @@ export function OrdersTab({
       : (o.status === orderStatusFilter || (o.subOrders && o.subOrders.some((s: any) => s.status === orderStatusFilter)))
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
     const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
-    const q = orderSearchQuery.toLowerCase().trim().replace(/^#/, '')
+    const q = (orderSearchQuery || '').toLowerCase().trim().replace(/^#/, '')
     const matchesSearch = 
       q === '' || 
-      o.id.toLowerCase().includes(q) || 
-      (o.readableId && String(o.readableId).includes(q)) ||
-      ((o.userName || o.user?.name) && (o.userName || o.user?.name).toLowerCase().includes(q)) || 
-      ((o.userEmail || o.user?.email) && (o.userEmail || o.user?.email).toLowerCase().includes(q)) ||
-      ((o.userPhone || o.user?.phone || o.address?.phone) && (o.userPhone || o.user?.phone || o.address?.phone).includes(q))
+      (o?.id ? String(o.id).toLowerCase().includes(q) : false) || 
+      (o?.readableId ? String(o.readableId).toLowerCase().includes(q) : false) ||
+      (o?.userName ? String(o.userName).toLowerCase().includes(q) : false) || 
+      (o?.user?.name ? String(o.user.name).toLowerCase().includes(q) : false) || 
+      (o?.userEmail ? String(o.userEmail).toLowerCase().includes(q) : false) || 
+      (o?.user?.email ? String(o.user.email).toLowerCase().includes(q) : false) ||
+      (o?.userPhone ? String(o.userPhone).includes(q) : false) || 
+      (o?.user?.phone ? String(o.user.phone).includes(q) : false) || 
+      (o?.address?.phone ? String(o.address.phone).includes(q) : false)
     return matchesFilter && matchesShop && matchesMethod && matchesSearch
   })
 
@@ -630,14 +634,18 @@ export function OrdersTab({
     const matchesFilter = orderStatusFilter === 'ALL' || activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter || (o.subOrders && o.subOrders.some((s: any) => s.status === orderStatusFilter))
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
     const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
-    const q = orderSearchQuery.toLowerCase().trim().replace(/^#/, '')
+    const q = (orderSearchQuery || '').toLowerCase().trim().replace(/^#/, '')
     const matchesSearch = 
       q === '' || 
-      o.id.toLowerCase().includes(q) || 
-      (o.readableId && String(o.readableId).includes(q)) ||
-      ((o.userName || o.user?.name) && (o.userName || o.user?.name).toLowerCase().includes(q)) || 
-      ((o.userEmail || o.user?.email) && (o.userEmail || o.user?.email).toLowerCase().includes(q)) ||
-      ((o.userPhone || o.user?.phone || o.address?.phone) && (o.userPhone || o.user?.phone || o.address?.phone).includes(q))
+      (o?.id ? String(o.id).toLowerCase().includes(q) : false) || 
+      (o?.readableId ? String(o.readableId).toLowerCase().includes(q) : false) ||
+      (o?.userName ? String(o.userName).toLowerCase().includes(q) : false) || 
+      (o?.user?.name ? String(o.user.name).toLowerCase().includes(q) : false) || 
+      (o?.userEmail ? String(o.userEmail).toLowerCase().includes(q) : false) || 
+      (o?.user?.email ? String(o.user.email).toLowerCase().includes(q) : false) ||
+      (o?.userPhone ? String(o.userPhone).includes(q) : false) || 
+      (o?.user?.phone ? String(o.user.phone).includes(q) : false) || 
+      (o?.address?.phone ? String(o.address.phone).includes(q) : false)
     return matchesFilter && matchesShop && matchesMethod && matchesSearch
   })
 

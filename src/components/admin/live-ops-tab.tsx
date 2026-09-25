@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, Utensils, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { LiveCartsPanel } from '@/components/admin/dashboard/live-carts-panel'
+import { parseDateInput } from '@/lib/date-helpers'
 
 interface LiveOpsTabProps {
   liveOrders: any[]
@@ -158,8 +159,10 @@ export function LiveOpsTab({
             {delayedOrders.map((order) => {
               const baseTime =
                 order.status === 'PENDING' ? order.createdAt : order.updatedAt || order.createdAt
-              const delayMin = Math.floor(
-                (new Date().getTime() - new Date(baseTime).getTime()) / 60000
+              const baseDate = parseDateInput(baseTime) || new Date()
+              const delayMin = Math.max(
+                0,
+                Math.floor((new Date().getTime() - baseDate.getTime()) / 60000)
               )
 
               const pendingIdx = livePendingOrders.findIndex((po) => po.id === order.id)

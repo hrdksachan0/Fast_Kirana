@@ -319,7 +319,7 @@ export function StoreHubsManager({
     if (!activeStore) return true
     if (!r.city) return false
     const rCity = r.city.trim().toLowerCase()
-    const cleanStoreName = activeStore.name.toLowerCase().trim()
+    const cleanStoreName = (activeStore.name || '').toLowerCase().trim()
     // Explicit storeId link takes precedence
     if (r.storeId && activeStore.id) {
       return r.storeId === activeStore.id

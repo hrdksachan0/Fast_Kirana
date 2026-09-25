@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
 import { getAuthToken } from '@/lib/fastapi'
+import { parseDateInput } from '@/lib/date-helpers'
 
 interface UseAdminRealtimeProps {
   selectedHubId: string
@@ -429,25 +430,36 @@ export function useAdminRealtime({
   const livePendingOrders = useMemo(() => {
     return (Array.isArray(liveOrders) ? liveOrders : [])
       .filter((o: any) => o.status === 'PENDING')
-      .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .sort((a: any, b: any) => {
+        const timeA = parseDateInput(a.createdAt)?.getTime() || 0
+        const timeB = parseDateInput(b.createdAt)?.getTime() || 0
+        return timeA - timeB
+      })
   }, [liveOrders])
 
   // Filter delayed orders
   const delayedOrders = useMemo(() => {
+    const now = Date.now()
     return (Array.isArray(liveOrders) ? liveOrders : []).filter((order) => {
       const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
       if (order.status === 'PENDING') {
-        const diffMs = new Date().getTime() - new Date(order.createdAt).getTime()
+        const d = parseDateInput(order.createdAt)
+        if (!d) return false
+        const diffMs = now - d.getTime()
         return diffMs > (isRestaurant ? 30 : 10) * 60 * 1000
       }
       if (order.status === 'PACKED') {
         const baseTime = order.updatedAt || order.createdAt
-        const diffMs = new Date().getTime() - new Date(baseTime).getTime()
+        const d = parseDateInput(baseTime)
+        if (!d) return false
+        const diffMs = now - d.getTime()
         return diffMs > 10 * 60 * 1000
       }
       if (order.status === 'CONFIRMED') {
         const baseTime = order.updatedAt || order.createdAt
-        const diffMs = new Date().getTime() - new Date(baseTime).getTime()
+        const d = parseDateInput(baseTime)
+        if (!d) return false
+        const diffMs = now - d.getTime()
         if (isRestaurant) {
           return diffMs > 30 * 60 * 1000
         } else {

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from sqlalchemy import func, and_, or_, desc, text, update, delete
+from sqlalchemy import func, and_, or_, desc, text, update, delete, case
 from datetime import datetime, date, time, timedelta
 import uuid
 import re
@@ -27,6 +27,12 @@ def _get_admin_attr(admin_obj: Any, attr: str, default: Any = None) -> Any:
     if isinstance(admin_obj, dict):
         return admin_obj.get(attr, default)
     return getattr(admin_obj, attr, default)
+
+def to_iso_utc(dt: Any) -> Optional[str]:
+    if not dt:
+        return None
+    iso = dt.isoformat()
+    return iso if iso.endswith("Z") else f"{iso}Z"
 
 router = APIRouter(prefix="/admin", tags=["Admin Reconciliation & Reports"])
 
@@ -752,13 +758,13 @@ async def get_admin_all_orders(
             "total": float(o.total or 0.0),
             "paymentMethod": o.paymentMethod.value if hasattr(o.paymentMethod, 'value') else str(o.paymentMethod),
             "paymentStatus": o.paymentStatus.value if hasattr(o.paymentStatus, 'value') else str(o.paymentStatus),
-            "estimatedDelivery": o.estimatedDelivery.isoformat() if o.estimatedDelivery else None,
-            "createdAt": o.createdAt.isoformat() if o.createdAt else None,
-            "updatedAt": o.updatedAt.isoformat() if o.updatedAt else None,
-            "confirmedAt": o.confirmedAt.isoformat() if o.confirmedAt else None,
-            "packedAt": o.packedAt.isoformat() if o.packedAt else None,
-            "shippedAt": o.shippedAt.isoformat() if o.shippedAt else None,
-            "deliveredAt": o.deliveredAt.isoformat() if o.deliveredAt else None,
+            "estimatedDelivery": to_iso_utc(o.estimatedDelivery),
+            "createdAt": to_iso_utc(o.createdAt),
+            "updatedAt": to_iso_utc(o.updatedAt),
+            "confirmedAt": to_iso_utc(o.confirmedAt),
+            "packedAt": to_iso_utc(o.packedAt),
+            "shippedAt": to_iso_utc(o.shippedAt),
+            "deliveredAt": to_iso_utc(o.deliveredAt),
             "deliveryUserId": o.deliveryUserId,
             "assignedPickerId": o.assignedPickerId,
             "assignedChefId": o.assignedChefId,

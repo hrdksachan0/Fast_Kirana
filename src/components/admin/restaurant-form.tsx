@@ -209,8 +209,11 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
                 const clean = targetStore.name.replace(/\s*(central\s*hub|dark\s*store|hub|store)\s*/gi, '').trim()
                 setFormData(prev => ({ ...prev, city: prev.city || clean }))
               }
-            } else if (restaurant.city) {
-              const matched = stores.find(s => s.name.toLowerCase().includes(restaurant.city.toLowerCase()) || restaurant.city.toLowerCase().includes(s.name.toLowerCase().replace(/central|hub|dark\s*store/gi, '').trim()))
+              const rCity = String(restaurant.city || '').toLowerCase()
+              const matched = stores.find(s => {
+                const sName = String(s.name || '').toLowerCase()
+                return sName.includes(rCity) || rCity.includes(sName.replace(/central|hub|dark\s*store/gi, '').trim())
+              })
               if (matched) {
                 setSelectedStoreHubId(matched.id)
               }

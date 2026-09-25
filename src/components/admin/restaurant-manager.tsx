@@ -56,10 +56,12 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const [editingRestaurant, setEditingRestaurant] = useState<any | null>(null)
 
-  const filteredRestaurants = restaurants.filter(r => 
-    r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    r.city.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredRestaurants = restaurants.filter(r => {
+    const q = (searchQuery || '').toLowerCase()
+    const rName = String(r.name || '').toLowerCase()
+    const rCity = String(r.city || '').toLowerCase()
+    return rName.includes(q) || rCity.includes(q)
+  })
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {

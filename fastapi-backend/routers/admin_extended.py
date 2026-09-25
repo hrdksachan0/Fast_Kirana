@@ -12,7 +12,7 @@ import hashlib
 logger = logging.getLogger("admin_extended")
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, and_, desc, text, or_, case, delete
+from sqlalchemy import func, and_, desc, text, or_, case, delete, not_, exists, update
 from sqlalchemy.orm import selectinload
 from datetime import datetime, date, timedelta
 from typing import Optional, List, Dict, Any
@@ -20,6 +20,9 @@ import uuid
 import random
 import string
 import re
+import os
+import json
+import time
 
 from database import get_db
 from models import (
