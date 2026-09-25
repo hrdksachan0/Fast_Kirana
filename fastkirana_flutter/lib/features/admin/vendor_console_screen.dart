@@ -1389,16 +1389,6 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       ),
     );
   }
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: color),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ── Tab 1: Product-Wise Sales (Bikri) ──
   Widget _buildSalesTab() {

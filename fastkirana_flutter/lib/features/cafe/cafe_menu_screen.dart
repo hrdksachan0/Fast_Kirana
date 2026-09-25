@@ -16,6 +16,7 @@ import 'package:share_plus/share_plus.dart';
 import 'models/cafe_menu_section.dart';
 import 'widgets/cafe_reviews_tab.dart';
 import 'widgets/cafe_offers_strip.dart';
+import '../../providers/coupon_provider.dart';
 
 class CafeMenuScreen extends ConsumerStatefulWidget {
   final String restaurantId;

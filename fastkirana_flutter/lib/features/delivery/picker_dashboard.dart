@@ -791,7 +791,6 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
       ),
     );
   }
-  }
 
   Widget _buildEmptyState() {
     return SingleChildScrollView(

@@ -1,0 +1,10 @@
+-- AlterTable
+ALTER TABLE "dark_stores" 
+ADD COLUMN IF NOT EXISTS "pauseUntil" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "closeReason" TEXT,
+ADD COLUMN IF NOT EXISTS "closedByUserId" TEXT;
+
+-- AlterTable
+ALTER TABLE "restaurants" 
+ADD COLUMN IF NOT EXISTS "pauseUntil" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "closeReason" TEXT;
