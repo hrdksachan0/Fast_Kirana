@@ -1255,6 +1255,31 @@ async def create_order(
         is_auto_approve = auto_approve_setting.lower() == "true"
         initial_order_status = OrderStatus.PENDING if (is_online_paid or is_auto_approve) else OrderStatus.ADMIN_PENDING
 
+        # Construct notes preserving customer instructions, Order for someone else (gifting), and packaging
+        incoming_notes = (payload.get("notes") or "").strip()
+        is_order_for_someone = bool(payload.get("isOrderForSomeone"))
+        receiver_name = (payload.get("receiverName") or "").strip()
+        receiver_phone = (payload.get("receiverPhone") or "").strip()
+
+        notes_parts = []
+        if is_order_for_someone and receiver_name:
+            order_for_str = f"🎁 Order for: {receiver_name}"
+            if receiver_phone:
+                order_for_str += f" ({receiver_phone})"
+            if incoming_notes and "Order for:" in incoming_notes:
+                notes_parts.append(incoming_notes)
+            else:
+                notes_parts.append(order_for_str)
+                if incoming_notes:
+                    notes_parts.append(incoming_notes)
+        elif incoming_notes:
+            notes_parts.append(incoming_notes)
+
+        if is_premium_packaging and not any("Premium Thermal Packaging" in p for p in notes_parts):
+            notes_parts.append("✨ Premium Thermal Packaging Requested (+₹15)")
+
+        final_order_notes = " | ".join(notes_parts) if notes_parts else None
+
         new_order = Order(
             id=generate_id("ord_"),
             readableId=readable_id,
@@ -1278,7 +1303,7 @@ async def create_order(
             shopName=final_shop_name,
             shopPhone=final_shop_phone,
             restaurantId=restaurant_id,
-            notes="✨ Premium Thermal Packaging Requested (+₹15)" if is_premium_packaging else None
+            notes=final_order_notes
         )
 
         db.add(new_order)

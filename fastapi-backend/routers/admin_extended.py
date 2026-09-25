@@ -610,6 +610,10 @@ async def admin_get_orders(
             "paymentStatus": o.paymentStatus.value if hasattr(o.paymentStatus, 'value') else str(o.paymentStatus),
             "createdAt": o.createdAt.isoformat() if o.createdAt else None,
             "updatedAt": o.updatedAt.isoformat() if o.updatedAt else None,
+            "confirmedAt": o.confirmedAt.isoformat() if o.confirmedAt else None,
+            "packedAt": o.packedAt.isoformat() if o.packedAt else None,
+            "shippedAt": o.shippedAt.isoformat() if o.shippedAt else None,
+            "deliveredAt": o.deliveredAt.isoformat() if o.deliveredAt else None,
             "userName": user_name,
             "userEmail": user_email,
             "userPhone": user_phone,
@@ -790,7 +794,11 @@ async def admin_get_users(
 ):
     """Admin user listing with filters."""
     skip = (page - 1) * limit
-    and_clauses = [User.deletedAt.is_(None)]
+    and_clauses = [
+        User.deletedAt.is_(None),
+        or_(User.email.is_(None), not_(User.email.like("guest-%"))),
+        or_(User.name.is_(None), not_(User.name.like("Guest Shopper%"))),
+    ]
 
     if role and role != 'ALL':
         and_clauses.append(User.role == Role(role))

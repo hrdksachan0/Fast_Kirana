@@ -56,8 +56,15 @@ interface Order {
   packedAt?: string
   shippedAt?: string
   userName?: string
+  customerName?: string
   userEmail?: string
   userPhone?: string
+  user?: {
+    id?: string
+    name?: string
+    email?: string
+    phone?: string
+  }
   address?: Address
   notes?: string
   deliveryInstructions?: string
