@@ -69,6 +69,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   List<Map<String, dynamic>> _menuItems = [];
   List<Map<String, dynamic>> _salesOrders = []; // All orders (incl. delivered) for Sales tab
   Map<String, dynamic> _salesSummary = {};
+  bool _isLoadingSales = false;
   
   Timer? _autoRefreshTimer;
   bool _isFetchingOrders = false;
@@ -539,6 +540,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       _menuTabLoaded = true;
       _fetchMenuItems();
     } else if (newTab == 2) {
+      if (_salesOrders.isEmpty) {
+        setState(() => _isLoadingSales = true);
+      }
       _fetchSalesSummary();
       _fetchSalesOrders();
     }
@@ -905,6 +909,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
 
   /// Fetch ALL orders (including DELIVERED) for the Sales tab - separate from live queue
   Future<void> _fetchSalesOrders({DateTime? startDate, DateTime? endDate}) async {
+    if (_salesOrders.isEmpty || startDate != null) {
+      if (mounted) setState(() => _isLoadingSales = true);
+    }
     try {
       final dio = ref.read(dioProvider);
       final params = <String>[];
@@ -957,6 +964,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       }
     } catch (e) {
       debugPrint('[Sales Orders Fetch Error]: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingSales = false);
+      }
     }
   }
 
@@ -1498,6 +1509,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
                                 salesOrders: _salesOrders,
                                 salesSummary: _salesSummary,
                                 commissionRate: _commissionRate,
+                                isLoading: _isLoadingSales,
                                 primaryRed: primaryRed,
                                 brandGreen: brandGreen,
                                 slateDark: slateDark,

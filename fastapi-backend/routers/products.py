@@ -329,12 +329,12 @@ async def get_catalog_version(
     p_max_dt = first_row[0] if first_row else None
     p_count = first_row[1] if first_row else 0
 
-    c_stmt = select(func.max(Category.updatedAt))
+    c_stmt = select(func.count(Category.id))
     c_res = await db.execute(c_stmt)
-    c_max_dt = c_res.scalar()
+    c_count = c_res.scalar() or 0
 
-    p_version = int(p_max_dt.timestamp() * 1000) if p_max_dt else 0
-    c_version = int(c_max_dt.timestamp() * 1000) if c_max_dt else 0
+    p_version = int(p_max_dt.timestamp() * 1000) if p_max_dt else int(datetime.utcnow().timestamp() * 1000)
+    c_version = int(c_count * 1000)
 
     return {
         "success": True,

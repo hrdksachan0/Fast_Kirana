@@ -11,6 +11,7 @@ class RestaurantSalesReportTab extends StatefulWidget {
   final List<dynamic> salesOrders;
   final Map<String, dynamic> salesSummary;
   final double commissionRate;
+  final bool isLoading;
   final Color primaryRed;
   final Color brandGreen;
   final Color slateDark;
@@ -23,6 +24,7 @@ class RestaurantSalesReportTab extends StatefulWidget {
     required this.salesOrders,
     required this.salesSummary,
     required this.commissionRate,
+    this.isLoading = false,
     this.primaryRed = AppDesignSystem.primary,
     this.brandGreen = AppDesignSystem.success,
     this.slateDark = AppDesignSystem.slate900,
@@ -188,19 +190,42 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
       }
     }
 
+    final num apiTodaySales = (widget.salesSummary['todaySales'] is num)
+        ? (widget.salesSummary['todaySales'] as num)
+        : (num.tryParse(widget.salesSummary['todaySales']?.toString() ?? '0') ?? 0);
+    final int apiTodayOrders = (widget.salesSummary['todayOrders'] is num)
+        ? (widget.salesSummary['todayOrders'] as num).toInt()
+        : (int.tryParse(widget.salesSummary['todayOrders']?.toString() ?? '0') ?? 0);
+
     final num apiTotalSales = (widget.salesSummary['totalSales'] is num)
         ? (widget.salesSummary['totalSales'] as num)
         : (num.tryParse(widget.salesSummary['totalSales']?.toString() ?? '0') ?? 0);
+    final int apiTotalOrders = (widget.salesSummary['totalOrders'] is num)
+        ? (widget.salesSummary['totalOrders'] as num).toInt()
+        : (int.tryParse(widget.salesSummary['totalOrders']?.toString() ?? '0') ?? 0);
 
-    final double totalSales = calculatedGrossSales > 0
-        ? calculatedGrossSales
-        : (_selectedSalesPeriod == 'TODAY' && apiTotalSales > 0
-            ? apiTotalSales.toDouble()
-            : 0.0);
+    double totalSales = 0.0;
+    int ordersCount = 0;
 
-    final int ordersCount = filteredOrdersList.length;
+    if (widget.salesOrders.isNotEmpty) {
+      // Single source of truth: accurate orders filtered for the active period
+      totalSales = calculatedGrossSales;
+      ordersCount = filteredOrdersList.length;
+    } else if (!widget.isLoading) {
+      // Fallback only if loading is complete and order list is genuinely empty
+      if (_selectedSalesPeriod == 'TODAY') {
+        totalSales = apiTodaySales.toDouble();
+        ordersCount = apiTodayOrders;
+      } else if (_selectedSalesPeriod == 'ALL') {
+        totalSales = apiTotalSales.toDouble();
+        ordersCount = apiTotalOrders;
+      } else {
+        totalSales = 0.0;
+        ordersCount = 0;
+      }
+    }
+
     final double commPercent = widget.commissionRate;
-
     final double commissionDeduction = totalSales * (commPercent / 100.0);
     final double netProfit = math.max(0.0, totalSales - commissionDeduction);
 
@@ -349,7 +374,9 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '₹${netProfit.toStringAsFixed(2)}',
+                  (widget.isLoading && widget.salesOrders.isEmpty)
+                      ? '₹ ...'
+                      : '₹${netProfit.toStringAsFixed(2)}',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 28),
                     fontWeight: FontWeight.w900,
@@ -361,7 +388,9 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Food Sales: ₹${totalSales.toStringAsFixed(0)}',
+                      (widget.isLoading && widget.salesOrders.isEmpty)
+                          ? 'Food Sales: ₹ ...'
+                          : 'Food Sales: ₹${totalSales.toStringAsFixed(0)}',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12.5),
                         color: Colors.white,
@@ -369,7 +398,9 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
                       ),
                     ),
                     Text(
-                      'Orders: $ordersCount',
+                      (widget.isLoading && widget.salesOrders.isEmpty)
+                          ? 'Orders: ...'
+                          : 'Orders: $ordersCount',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12.5),
                         color: Colors.white,
@@ -395,23 +426,37 @@ class _RestaurantSalesReportTabState extends State<RestaurantSalesReportTab> {
           const SizedBox(height: 10),
           _buildSummaryRow(
             'Food Item Sales (Gross)',
-            '₹${totalSales.toStringAsFixed(2)}',
+            (widget.isLoading && widget.salesOrders.isEmpty) ? '₹ ...' : '₹${totalSales.toStringAsFixed(2)}',
             widget.slateDark,
           ),
           _buildSummaryRow(
             'Platform Commission (${commPercent.toInt()}%)',
-            commissionDeduction > 0 ? '-₹${commissionDeduction.toStringAsFixed(2)}' : '-${commPercent.toInt()}%',
+            (widget.isLoading && widget.salesOrders.isEmpty)
+                ? '-${commPercent.toInt()}%'
+                : (commissionDeduction > 0 ? '-₹${commissionDeduction.toStringAsFixed(2)}' : '-${commPercent.toInt()}%'),
             widget.primaryRed,
           ),
           _buildSummaryRow(
             'Net Payable Settlement',
-            '₹${netProfit.toStringAsFixed(2)}',
+            (widget.isLoading && widget.salesOrders.isEmpty) ? '₹ ...' : '₹${netProfit.toStringAsFixed(2)}',
             widget.brandGreen,
           ),
           const SizedBox(height: 22),
 
           // 4. Settled Orders for this period
-          if (filteredOrdersList.isNotEmpty) ...[
+          if (widget.isLoading && widget.salesOrders.isEmpty) ...[
+            const SizedBox(height: 24),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.2, color: widget.primaryRed),
+                ),
+              ),
+            ),
+          ] else if (filteredOrdersList.isNotEmpty) ...[
             Text(
               'Orders in this Period ($ordersCount)',
               style: GoogleFonts.inter(
