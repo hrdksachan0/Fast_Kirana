@@ -76,9 +76,14 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-0cdd.up.railway.app';
-    const useFastApiProxy = process.env.USE_FASTAPI_PROXY === 'true';
+    const useFastApiProxy = process.env.USE_FASTAPI_PROXY !== 'false';
 
     const fastApiRewrites = [
+      // Health Check -> Railway FastAPI
+      {
+        source: '/api/health',
+        destination: `${apiDest}/health`,
+      },
       // Core High-Traffic Customer & Store APIs -> Railway FastAPI
       {
         source: '/api/products/:path*',
