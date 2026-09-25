@@ -7,7 +7,6 @@ import { PayOnlineButton } from '@/components/order/pay-online-button'
 import { useOrderTracker, Order } from '@/hooks/order/use-order-tracker'
 import { TrackerStatusHero } from '@/components/order/tracker/tracker-status-hero'
 import { TrackerRiderCard } from '@/components/order/tracker/tracker-rider-card'
-import { TrackerMapView } from '@/components/order/tracker/tracker-map-view'
 import { TrackerItemsSummary } from '@/components/order/tracker/tracker-items-summary'
 import { TrackerCancelModal } from '@/components/order/tracker/tracker-cancel-modal'
 
@@ -169,14 +168,7 @@ export function OrderTracker({
         onOpenCancelModal={() => setIsCancelModalOpen(true)}
       />
 
-      {/* 2. Interactive Live Map (When Out for Delivery or Pickup) */}
-      {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
-        <TrackerMapView
-          order={order}
-          storeLat={storeLat}
-          storeLng={storeLng}
-        />
-      )}
+
 
       {/* 3. Rider Contact & Self-Pickup Card */}
       <TrackerRiderCard

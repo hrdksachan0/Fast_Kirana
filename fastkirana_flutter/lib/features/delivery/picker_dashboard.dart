@@ -319,103 +319,112 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleSpacing: 0,
-        leadingWidth: Navigator.canPop(context) ? 48 : 16,
+        titleSpacing: 6,
+        leadingWidth: Navigator.canPop(context) ? 44 : 12,
         leading: Navigator.canPop(context)
             ? Padding(
-                padding: const EdgeInsets.only(left: 10),
+                padding: const EdgeInsets.only(left: 8),
                 child: IconButton(
                   icon: Container(
-                    width: 34,
-                    height: 34,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC),
                       shape: BoxShape.circle,
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
-                    child: const Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: slateDark),
+                    child: const Icon(Icons.arrow_back_ios_new_rounded, size: 13, color: slateDark),
                   ),
                   onPressed: () => Navigator.pop(context),
                   padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints.tightFor(width: 32, height: 32),
                 ),
               )
-            : const SizedBox(width: 16),
+            : const SizedBox(width: 12),
         title: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(9),
                 border: Border.all(color: const Color(0xFFFED7AA), width: 1.1),
               ),
-              child: const Icon(Icons.inventory_2_rounded, size: 18, color: brandOrange),
+              child: const Icon(Icons.inventory_2_rounded, size: 16, color: brandOrange),
             ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Packing Station',
-                      style: GoogleFonts.outfit(
-                        fontSize: Responsive.scaledFontSize(context, 16),
-                        fontWeight: FontWeight.w800,
-                        color: slateDark,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFA7F3D0)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: brandGreen,
-                              shape: BoxShape.circle,
-                            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Packing Station',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w800,
+                            color: slateDark,
+                            letterSpacing: -0.3,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'LIVE',
-                            style: GoogleFonts.inter(
-                              fontSize: 8.5,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF047857),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                Text(
-                  'Darkstore Order Fulfillment',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 10.5),
-                    fontWeight: FontWeight.w500,
-                    color: slateMuted,
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: const BoxDecoration(
+                                color: brandGreen,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              'LIVE',
+                              style: GoogleFonts.inter(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF047857),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  Text(
+                    'Darkstore Hub',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: slateMuted,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -430,10 +439,11 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
             },
             tooltip: OrderAlarmService.instance.isMuted ? 'Unmute Order Alarms' : 'Mute Order Alarms',
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
             icon: Container(
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: OrderAlarmService.instance.isMuted
                     ? const Color(0xFFF1F5F9)
@@ -447,7 +457,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               ),
               child: Icon(
                 OrderAlarmService.instance.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                size: 16,
+                size: 15,
                 color: OrderAlarmService.instance.isMuted ? slateMuted : brandOrange,
               ),
             ),
@@ -462,10 +472,11 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
             },
             tooltip: 'Sync Orders',
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
             icon: Container(
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
                 shape: BoxShape.circle,
@@ -474,12 +485,12 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
               child: _isRefreshing
                   ? const Center(
                       child: SizedBox(
-                        width: 14,
-                        height: 14,
+                        width: 13,
+                        height: 13,
                         child: CircularProgressIndicator(strokeWidth: 2, color: brandOrange),
                       ),
                     )
-                  : const Icon(Icons.sync_rounded, size: 17, color: slateDark),
+                  : const Icon(Icons.sync_rounded, size: 16, color: slateDark),
             ),
           ),
           const SizedBox(width: 4),
@@ -487,15 +498,17 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
           // More Options Menu (Pricing, Add item, Logout)
           PopupMenuButton<String>(
             tooltip: 'More Actions',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
             icon: Container(
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: const Icon(Icons.more_vert_rounded, size: 18, color: slateDark),
+              child: const Icon(Icons.more_vert_rounded, size: 17, color: slateDark),
             ),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             offset: const Offset(0, 42),

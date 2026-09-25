@@ -48,6 +48,11 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     'lowStockCount': 0,
   };
   List<Map<String, dynamic>> _itemizedSales = [];
+  List<Map<String, dynamic>> _dailySales = [];
+  String _selectedSalesPeriod = 'THIS_MONTH';
+  DateTime? _customStartDate;
+  DateTime? _customEndDate;
+  String _salesViewMode = 'DATE_WISE'; // 'DATE_WISE' or 'PRODUCT_WISE'
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _payouts = [];
   List<Map<String, dynamic>> _lowStockItems = [];
@@ -174,16 +179,110 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     }
   }
 
-  Future<void> _fetchVendorDetails(String vendorId) async {
+  Future<void> _selectCustomDateRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2023),
+      lastDate: DateTime(now.year + 1),
+      initialDateRange: DateTimeRange(
+        start: _customStartDate ?? now.subtract(const Duration(days: 7)),
+        end: _customEndDate ?? now,
+      ),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: primaryRed,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: slateDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedSalesPeriod = 'CUSTOM';
+        _customStartDate = picked.start;
+        _customEndDate = picked.end;
+      });
+      if (_selectedVendorId != null) {
+        _fetchVendorDetails(
+          _selectedVendorId!,
+          startDate: picked.start,
+          endDate: picked.end,
+        );
+      }
+    }
+  }
+
+  void _onPeriodTap(String periodId) {
+    HapticFeedback.lightImpact();
+    if (periodId == 'CUSTOM') {
+      _selectCustomDateRange();
+      return;
+    }
+
+    final now = DateTime.now();
+    DateTime? start;
+    DateTime? end;
+
+    if (periodId == 'TODAY') {
+      start = DateTime(now.year, now.month, now.day);
+      end = DateTime(now.year, now.month, now.day);
+    } else if (periodId == 'YESTERDAY') {
+      final y = now.subtract(const Duration(days: 1));
+      start = DateTime(y.year, y.month, y.day);
+      end = DateTime(y.year, y.month, y.day);
+    } else if (periodId == 'WEEK') {
+      start = now.subtract(const Duration(days: 7));
+      end = now;
+    } else if (periodId == 'THIS_MONTH') {
+      start = DateTime(now.year, now.month, 1);
+      end = now;
+    } else if (periodId == 'ALL') {
+      start = DateTime(2020, 1, 1);
+      end = DateTime(2030, 12, 31);
+    }
+
+    setState(() {
+      _selectedSalesPeriod = periodId;
+    });
+
+    if (_selectedVendorId != null) {
+      _fetchVendorDetails(
+        _selectedVendorId!,
+        startDate: start,
+        endDate: end,
+      );
+    }
+  }
+
+  Future<void> _fetchVendorDetails(String vendorId, {DateTime? startDate, DateTime? endDate}) async {
     setState(() => _isLoadingDetails = true);
     try {
       final dio = ref.read(dioProvider);
-      final res = await dio.get('/api/vendors/$vendorId?t=${DateTime.now().millisecondsSinceEpoch}');
+      final params = <String>['t=${DateTime.now().millisecondsSinceEpoch}'];
+      if (startDate != null) {
+        params.add('startDate=${DateFormat('yyyy-MM-dd').format(startDate)}');
+      }
+      if (endDate != null) {
+        params.add('endDate=${DateFormat('yyyy-MM-dd').format(endDate)}');
+      }
+      final queryStr = '?${params.join('&')}';
+      final res = await dio.get('/api/vendors/$vendorId$queryStr');
       if (res.statusCode == 200 && res.data != null) {
         final data = res.data;
         final vProfile = data['vendor'] != null ? Map<String, dynamic>.from(data['vendor']) : null;
         final kpisMap = data['kpis'] != null ? Map<String, dynamic>.from(data['kpis']) : <String, dynamic>{};
         final salesList = (data['itemizedSales'] as List<dynamic>?)
+            ?.map((e) => Map<String, dynamic>.from(e))
+            .toList() ?? [];
+        final dailyList = (data['dailySales'] as List<dynamic>?)
             ?.map((e) => Map<String, dynamic>.from(e))
             .toList() ?? [];
         final prodsList = (data['products'] as List<dynamic>?)
@@ -209,6 +308,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
             _vendorProfile = vProfile;
             _kpis = kpisMap;
             _itemizedSales = salesList;
+            _dailySales = dailyList;
             _products = prodsList;
             _payouts = paysList;
             _lowStockItems = lowList;
@@ -1247,7 +1347,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.category_rounded, size: 12, color: Color(0xFFFBBF24)),
+                        const Icon(Icons.storefront_rounded, size: 12, color: Color(0xFFFBBF24)),
                         const SizedBox(width: 5),
                         Text(
                           _vendorProfile!['companyName'] ?? _vendorProfile!['category'] ?? 'Supplier',
@@ -1275,54 +1375,62 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 8, 14, 6),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _buildKPITile(
-              label: 'ATTACHED',
-              value: '$productsCount items',
-              icon: Icons.layers_rounded,
-              bgColor: const Color(0xFFEFF6FF),
-              borderColor: const Color(0xFFDBEAFE),
-              textColor: const Color(0xFF1D4ED8),
-              iconColor: const Color(0xFF2563EB),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _buildKPITile(
+                  label: 'ATTACHED ITEMS',
+                  value: '$productsCount items',
+                  icon: Icons.layers_rounded,
+                  bgColor: const Color(0xFFEFF6FF),
+                  borderColor: const Color(0xFFDBEAFE),
+                  textColor: const Color(0xFF1D4ED8),
+                  iconColor: const Color(0xFF2563EB),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildKPITile(
+                  label: 'TOTAL UNITS SOLD',
+                  value: '$units units',
+                  icon: Icons.shopping_bag_rounded,
+                  bgColor: const Color(0xFFECFDF5),
+                  borderColor: const Color(0xFFA7F3D0),
+                  textColor: const Color(0xFF047857),
+                  iconColor: const Color(0xFF059669),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _buildKPITile(
-              label: 'SOLD (BIKRI)',
-              value: '$units units',
-              icon: Icons.shopping_bag_rounded,
-              bgColor: const Color(0xFFECFDF5),
-              borderColor: const Color(0xFFA7F3D0),
-              textColor: const Color(0xFF047857),
-              iconColor: const Color(0xFF059669),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _buildKPITile(
-              label: 'PAYABLE',
-              value: '₹${payable.toStringAsFixed(0)}',
-              icon: Icons.payments_rounded,
-              bgColor: const Color(0xFFF8FAFC),
-              borderColor: const Color(0xFFE2E8F0),
-              textColor: slateDark,
-              iconColor: slateDark,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _buildKPITile(
-              label: 'BALANCE DUE',
-              value: '₹${balance.toStringAsFixed(0)}',
-              icon: Icons.account_balance_wallet_rounded,
-              bgColor: const Color(0xFFFFF7ED),
-              borderColor: const Color(0xFFFED7AA),
-              textColor: const Color(0xFFC2410C),
-              iconColor: const Color(0xFFEA580C),
-            ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildKPITile(
+                  label: 'TOTAL PAYABLE',
+                  value: '₹${payable.toStringAsFixed(0)}',
+                  icon: Icons.payments_rounded,
+                  bgColor: const Color(0xFFF8FAFC),
+                  borderColor: const Color(0xFFE2E8F0),
+                  textColor: slateDark,
+                  iconColor: slateDark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildKPITile(
+                  label: 'BALANCE DUE',
+                  value: '₹${balance.toStringAsFixed(0)}',
+                  icon: Icons.account_balance_wallet_rounded,
+                  bgColor: const Color(0xFFFFF7ED),
+                  borderColor: const Color(0xFFFED7AA),
+                  textColor: const Color(0xFFC2410C),
+                  iconColor: const Color(0xFFEA580C),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1339,50 +1447,59 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     required Color iconColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor, width: 1.1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 12, color: iconColor),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 15, color: iconColor),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    fontSize: 8,
+                    fontSize: 9,
                     fontWeight: FontWeight.w800,
-                    color: textColor.withValues(alpha: 0.8),
+                    color: textColor.withValues(alpha: 0.75),
                     letterSpacing: 0.3,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w900,
-              color: textColor,
+                const SizedBox(height: 1),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                    color: textColor,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1390,9 +1507,19 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     );
   }
 
-  // ── Tab 1: Product-Wise Sales (Bikri) ──
+  // ── Tab 1: Sales (Bikri) with Date Filter & Date-Wise / Product-Wise Views ──
   Widget _buildSalesTab() {
-    final filtered = _itemizedSales.where((it) {
+    final periods = [
+      {'id': 'TODAY', 'label': 'Today'},
+      {'id': 'YESTERDAY', 'label': 'Yesterday'},
+      {'id': 'WEEK', 'label': 'Last 7 Days'},
+      {'id': 'THIS_MONTH', 'label': 'This Month'},
+      {'id': 'CUSTOM', 'label': 'Custom 📅'},
+      {'id': 'ALL', 'label': 'All Time'},
+    ];
+
+    // Filtered product-wise items
+    final filteredProducts = _itemizedSales.where((it) {
       if (_searchQuery.isEmpty) return true;
       final name = (it['name'] ?? '').toString().toLowerCase();
       final barcode = (it['barcode'] ?? '').toString().toLowerCase();
@@ -1400,6 +1527,515 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       return name.contains(_searchQuery) || barcode.contains(_searchQuery) || unit.contains(_searchQuery);
     }).toList();
 
+    // Filtered daily items
+    final filteredDaily = _dailySales.where((day) {
+      if (_searchQuery.isEmpty) return true;
+      final dateStr = (day['date'] ?? '').toString().toLowerCase();
+      if (dateStr.contains(_searchQuery)) return true;
+      final items = (day['items'] as List<dynamic>?) ?? [];
+      return items.any((it) {
+        final name = (it['name'] ?? '').toString().toLowerCase();
+        final unit = (it['unit'] ?? '').toString().toLowerCase();
+        return name.contains(_searchQuery) || unit.contains(_searchQuery);
+      });
+    }).toList();
+
+    final totalUnitsSold = (_kpis['totalUnitsSold'] as num?)?.toInt() ?? 0;
+    final totalPayable = (_kpis['totalPayableAmount'] as num?)?.toDouble() ?? 0.0;
+
+    return Column(
+      children: [
+        // 1. Date Filter Chips Bar
+        Container(
+          height: 38,
+          margin: const EdgeInsets.only(top: 6, bottom: 4),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            itemCount: periods.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 6),
+            itemBuilder: (context, index) {
+              final p = periods[index];
+              final id = p['id']!;
+              final isSelected = _selectedSalesPeriod == id;
+
+              return Bounceable(
+                onTap: () => _onPeriodTap(id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isSelected ? primaryRed : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected ? primaryRed : const Color(0xFFE2E8F0),
+                      width: 1.1,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: primaryRed.withValues(alpha: 0.25),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      p['label']!,
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                        color: isSelected ? Colors.white : slateDark,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+
+        // 2. Custom Date Range Banner (if CUSTOM is selected)
+        if (_selectedSalesPeriod == 'CUSTOM' && _customStartDate != null && _customEndDate != null)
+          Container(
+            margin: const EdgeInsets.fromLTRB(14, 2, 14, 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.date_range_rounded, size: 14, color: Color(0xFF2563EB)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${DateFormat('dd MMM yyyy').format(_customStartDate!)} - ${DateFormat('dd MMM yyyy').format(_customEndDate!)}',
+                    style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: const Color(0xFF1E40AF)),
+                  ),
+                ),
+                Bounceable(
+                  onTap: _selectCustomDateRange,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(
+                      'Change',
+                      style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // 3. Mini KPI Strip & View Mode Switcher
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+          child: Row(
+            children: [
+              // Period Stats Chip
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.local_shipping_outlined, size: 13, color: brandGreen),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$totalUnitsSold pcs sold',
+                            style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800, color: slateDark),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '₹${totalPayable.toStringAsFixed(0)}',
+                        style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w900, color: primaryRed),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // View Mode Toggle (Date-Wise vs Product-Wise)
+              Container(
+                padding: const EdgeInsets.all(2.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Row(
+                  children: [
+                    Bounceable(
+                      onTap: () {
+                        if (_salesViewMode != 'DATE_WISE') {
+                          HapticFeedback.selectionClick();
+                          setState(() => _salesViewMode = 'DATE_WISE');
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: _salesViewMode == 'DATE_WISE' ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(7),
+                          boxShadow: _salesViewMode == 'DATE_WISE'
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 11,
+                              color: _salesViewMode == 'DATE_WISE' ? primaryRed : slateMuted,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Rozana',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: _salesViewMode == 'DATE_WISE' ? FontWeight.w800 : FontWeight.w600,
+                                color: _salesViewMode == 'DATE_WISE' ? slateDark : slateMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Bounceable(
+                      onTap: () {
+                        if (_salesViewMode != 'PRODUCT_WISE') {
+                          HapticFeedback.selectionClick();
+                          setState(() => _salesViewMode = 'PRODUCT_WISE');
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: _salesViewMode == 'PRODUCT_WISE' ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(7),
+                          boxShadow: _salesViewMode == 'PRODUCT_WISE'
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              size: 11,
+                              color: _salesViewMode == 'PRODUCT_WISE' ? primaryRed : slateMuted,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Items',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: _salesViewMode == 'PRODUCT_WISE' ? FontWeight.w800 : FontWeight.w600,
+                                color: _salesViewMode == 'PRODUCT_WISE' ? slateDark : slateMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 4. Tab Body: Date-Wise or Product-Wise
+        Expanded(
+          child: _salesViewMode == 'DATE_WISE'
+              ? _buildDateWiseSalesList(filteredDaily)
+              : _buildProductWiseSalesList(filteredProducts),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateWiseSalesList(List<Map<String, dynamic>> dailyList) {
+    if (dailyList.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+              child: const Icon(Icons.event_busy_rounded, color: slateMuted, size: 32),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No sales recorded in this period',
+              style: GoogleFonts.inter(color: slateDark, fontSize: 13.5, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Try selecting another period like "All Time" or "Last 7 Days"',
+              style: GoogleFonts.inter(color: slateMuted, fontSize: 11),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(14, 2, 14, 80),
+      itemCount: dailyList.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final day = dailyList[index];
+        final rawDate = day['date']?.toString() ?? '';
+        final totalUnits = (day['totalUnits'] as num?)?.toInt() ?? 0;
+        final totalPayable = (day['totalPayable'] as num?)?.toDouble() ?? 0.0;
+        final items = (day['items'] as List<dynamic>?)
+                ?.map((e) => Map<String, dynamic>.from(e))
+                .toList() ??
+            [];
+
+        String formattedDate = rawDate;
+        String dayBadge = '';
+        try {
+          final dt = DateTime.parse(rawDate);
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final checkDt = DateTime(dt.year, dt.month, dt.day);
+          if (checkDt == today) {
+            dayBadge = 'TODAY';
+            formattedDate = DateFormat('dd MMMM yyyy').format(dt);
+          } else if (checkDt == today.subtract(const Duration(days: 1))) {
+            dayBadge = 'YESTERDAY';
+            formattedDate = DateFormat('dd MMMM yyyy').format(dt);
+          } else {
+            formattedDate = DateFormat('EEE, dd MMM yyyy').format(dt);
+          }
+        } catch (_) {}
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: slateBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              initiallyExpanded: index == 0,
+              tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: dayBadge == 'TODAY'
+                      ? primaryRed.withValues(alpha: 0.1)
+                      : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: Icon(
+                    dayBadge == 'TODAY' ? Icons.today_rounded : Icons.calendar_today_rounded,
+                    size: 18,
+                    color: dayBadge == 'TODAY' ? primaryRed : slateDark,
+                  ),
+                ),
+              ),
+              title: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      formattedDate,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: slateDark,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (dayBadge.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: dayBadge == 'TODAY' ? primaryRed : const Color(0xFF475569),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        dayBadge,
+                        style: GoogleFonts.inter(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Text(
+                        '$totalUnits units sold',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF15803D),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${items.length} items',
+                      style: GoogleFonts.inter(fontSize: 10, color: slateMuted, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              trailing: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₹${totalPayable.toStringAsFixed(0)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: slateDark,
+                    ),
+                  ),
+                  Text(
+                    'Vendor Payable',
+                    style: GoogleFonts.inter(fontSize: 8.5, color: slateMuted, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              children: [
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 8),
+                ...items.map((it) {
+                  final name = it['name'] ?? 'Item';
+                  final unit = (it['unit'] ?? '').toString().trim();
+                  final cost = (it['unitCostPrice'] as num?)?.toDouble() ?? 0.0;
+                  final sold = (it['unitsSold'] as num?)?.toInt() ?? 0;
+                  final payable = (it['totalPayable'] as num?)?.toDouble() ?? 0.0;
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: brandGreen,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: slateDark,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (unit.isNotEmpty)
+                                Text(
+                                  unit,
+                                  style: GoogleFonts.inter(fontSize: 10, color: slateMuted),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '₹${payable.toStringAsFixed(0)}',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: slateDark,
+                              ),
+                            ),
+                            Text(
+                              '$sold pcs @ ₹${cost.toStringAsFixed(0)}',
+                              style: GoogleFonts.inter(
+                                fontSize: 9.5,
+                                color: slateMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProductWiseSalesList(List<Map<String, dynamic>> filtered) {
     if (filtered.isEmpty) {
       return Center(
         child: Text('No product sales recorded in period', style: GoogleFonts.inter(color: slateMuted, fontSize: 13)),

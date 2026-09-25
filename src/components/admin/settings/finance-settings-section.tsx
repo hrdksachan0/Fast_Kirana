@@ -497,16 +497,16 @@ export function FinanceSettingsSection({
         </div>
       </div>
 
-      {/* ── SECTION 3: Fees, Packaging, and Doorstep UPI QR ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        {/* Left: General Fees & Order Thresholds */}
-        <div className="bg-card border border-border/80 p-5 rounded-3xl shadow-xs space-y-4">
-          <h4 className="text-xs font-black text-text-primary uppercase tracking-wider flex items-center gap-1.5 border-b border-border/60 pb-2.5">
-            <IndianRupee className="w-3.5 h-3.5 text-primary" />
-            General Order Value Thresholds
-          </h4>
+      {/* ── SECTION 3: Order Thresholds, Packaging & Doorstep UPI ── */}
+      <div className="bg-card border border-border/80 p-5 rounded-3xl shadow-xs space-y-4">
+        <h4 className="text-xs font-black text-text-primary uppercase tracking-wider flex items-center gap-1.5 border-b border-border/60 pb-2.5">
+          <IndianRupee className="w-3.5 h-3.5 text-primary" />
+          Order Thresholds, Packaging & Doorstep UPI
+        </h4>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+          
+          {/* ─ Left Column: Order Value Thresholds ─ */}
           <div className="space-y-3">
             {/* Minimum Order Value */}
             <div className="space-y-1">
@@ -552,15 +552,8 @@ export function FinanceSettingsSection({
               </p>
             </div>
           </div>
-        </div>
 
-        {/* Right: Packaging & Doorstep UPI VPA */}
-        <div className="bg-card border border-border/80 p-5 rounded-3xl shadow-xs space-y-4">
-          <h4 className="text-xs font-black text-text-primary uppercase tracking-wider flex items-center gap-1.5 border-b border-border/60 pb-2.5">
-            <QrCode className="w-3.5 h-3.5 text-primary" />
-            Packaging Charges & Doorstep UPI
-          </h4>
-
+          {/* ─ Right Column: Packaging & UPI ─ */}
           <div className="space-y-3">
             {/* Packaging / Misc Fee */}
             <div className="grid grid-cols-2 gap-3">
@@ -616,8 +609,8 @@ export function FinanceSettingsSection({
               </p>
             </div>
           </div>
-        </div>
 
+        </div>
       </div>
 
     </div>

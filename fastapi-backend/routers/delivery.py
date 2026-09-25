@@ -157,7 +157,7 @@ async def get_delivery_orders(
     ]
 
     stmt = select(Order).options(
-        selectinload(Order.items),
+        selectinload(Order.items).selectinload(OrderItem.product),
         selectinload(Order.address),
         selectinload(Order.user)
     ).where(
@@ -180,7 +180,7 @@ async def get_delivery_orders(
     combined_ids = list(set([o.combinedId for o in orders if o.combinedId]))
     companion_orders = []
     if combined_ids:
-        comp_stmt = select(Order).options(selectinload(Order.items)).where(Order.combinedId.in_(combined_ids))
+        comp_stmt = select(Order).options(selectinload(Order.items).selectinload(OrderItem.product)).where(Order.combinedId.in_(combined_ids))
         comp_res = await db.execute(comp_stmt)
         companion_orders = comp_res.scalars().all()
 
@@ -325,7 +325,18 @@ async def get_delivery_orders(
                     "shopName": matching.shopName,
                     "status": matching.status.value if hasattr(matching.status, "value") else str(matching.status),
                     "total": float(matching.total),
-                    "items": [{"id": i.id, "name": i.name, "quantity": i.quantity} for i in matching.items]
+                    "items": [
+                        {
+                            "id": i.id,
+                            "productId": i.productId,
+                            "name": i.name,
+                            "quantity": i.quantity,
+                            "price": float(i.price) if hasattr(i, "price") and i.price is not None else 0.0,
+                            "imageUrl": i.imageUrl or (i.product.imageUrl if i.product else None),
+                            "selectedVariant": getattr(i, "selectedVariant", None),
+                            "unit": (i.product.unit if i.product and i.product.unit else None) or getattr(i, "selectedVariant", None)
+                        } for i in matching.items
+                    ]
                 }
 
         result.append({
@@ -357,7 +368,18 @@ async def get_delivery_orders(
             "deliveredAt": o.deliveredAt.isoformat() if o.deliveredAt else None,
             "deliveryLat": o.deliveryLat,
             "deliveryLng": o.deliveryLng,
-            "items": [{"id": i.id, "name": i.name, "price": float(i.price), "quantity": i.quantity, "selectedVariant": getattr(i, "selectedVariant", None)} for i in o.items],
+            "items": [
+                {
+                    "id": i.id,
+                    "productId": i.productId,
+                    "name": i.name,
+                    "price": float(i.price),
+                    "quantity": i.quantity,
+                    "imageUrl": i.imageUrl or (i.product.imageUrl if i.product else None),
+                    "selectedVariant": getattr(i, "selectedVariant", None),
+                    "unit": (i.product.unit if i.product and i.product.unit else None) or getattr(i, "selectedVariant", None)
+                } for i in o.items
+            ],
             "user": {"name": o.user.name or "Customer", "phone": o.user.phone} if o.user else {"name": "Customer", "phone": None},
             "address": {
                 "id": o.address.id,
