@@ -598,13 +598,21 @@ export function AdminBanners({
       setLoading(true)
       const targetStoreId = (propStoreId && propStoreId !== 'all') ? propStoreId : storeId
       const q = targetStoreId ? `?storeId=${encodeURIComponent(targetStoreId)}` : ''
-      const res = await fetch(`/api/admin/banners${q}`)
-      if (!res.ok) throw new Error('Failed to load banners')
+      let res = await fetch(`/api/admin/banners${q}`)
+      if (!res.ok) {
+        // Fallback to public banners endpoint served by FastAPI
+        res = await fetch(`/api/banners${q}`)
+      }
+      if (!res.ok) {
+        setBanners([])
+        return
+      }
       const data = await res.json()
-      setBanners(data || [])
+      const bannerList = Array.isArray(data) ? data : (Array.isArray(data?.banners) ? data.banners : [])
+      setBanners(bannerList)
     } catch (err: any) {
-      console.error(err)
-      toast.error(err.message || 'Could not load promo banners')
+      console.warn('Could not load promo banners:', err)
+      setBanners([])
     } finally {
       setLoading(false)
     }

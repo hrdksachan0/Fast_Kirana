@@ -517,10 +517,10 @@ async def create_order(
 
     # If user doesn't exist by ID, resolve by phone or auto-create in PostgreSQL
     if not user_obj:
-        raw_p = payload.get("phone") or payload.get("userPhone") or payload.get("buyerPhone") or payload.get("customerPhone") or ""
+        raw_p = payload.get("phone") or payload.get("userPhone") or payload.get("buyerPhone") or "7054470303"
         clean_phone = "".join(filter(str.isdigit, str(raw_p)))[-10:]
         if not clean_phone:
-            clean_phone = f"99{uuid.uuid4().int % 100000000:08d}"
+            clean_phone = "7054470303"
 
         phone_stmt = select(User).where(User.phone == clean_phone)
         phone_res = await db.execute(phone_stmt)
@@ -636,12 +636,6 @@ async def create_order(
     if not items:
         raise HTTPException(status_code=400, detail="No valid items in order")
 
-    # Fetch store settings flat map
-    settings_stmt = select(StoreSetting)
-    settings_res = await db.execute(settings_stmt)
-    settings_map = {s.key: s.value for s in settings_res.scalars().all()}
-    default_support_phone = settings_map.get("contact_phone") or os.getenv("SUPPORT_PHONE", "+918112849854")
-
     if delivery_method != "PICKUP" and not address_id:
         user_addr_stmt = select(Address).where(Address.userId == user_id)
         user_addr_res = await db.execute(user_addr_stmt)
@@ -651,46 +645,30 @@ async def create_order(
             final_address_id = existing_addr.id
         else:
             new_addr_id = f"addr_{uuid.uuid4().hex[:16]}"
-            addr_dtl = payload.get("addressDetails") if isinstance(payload.get("addressDetails"), dict) else {}
-            cust_addr = str(payload.get("customerAddress") or payload.get("address") or "").strip()
-            addr_parts = [p.strip() for p in cust_addr.split(",") if p.strip()] if cust_addr else []
-
-            p_raw = addr_dtl.get("phone") or payload.get("phone") or payload.get("customerPhone") or payload.get("userPhone") or (user.phone if user else "")
-            p_clean = "".join(filter(str.isdigit, str(p_raw)))[-10:] if p_raw else ""
-            p_val = f"+91{p_clean}" if len(p_clean) == 10 else default_support_phone
-
-            h_no = addr_dtl.get("houseNo") or payload.get("houseNo") or (addr_parts[0] if len(addr_parts) > 0 else "") or "Delivery Address"
-            st = addr_dtl.get("street") or payload.get("street") or (addr_parts[1] if len(addr_parts) > 1 else cust_addr) or "Main Road"
-            ar = addr_dtl.get("area") or payload.get("area") or (addr_parts[2] if len(addr_parts) > 2 else "") or "Ghatampur"
-            ct = addr_dtl.get("city") or payload.get("city") or (addr_parts[3] if len(addr_parts) > 3 else "") or "Kanpur Nagar"
-            pin = str(addr_dtl.get("pincode") or payload.get("pincode") or (addr_parts[4] if len(addr_parts) > 4 else "")) or "209206"
-
-            lat_val = addr_dtl.get("latitude") or payload.get("lat") or payload.get("latitude")
-            lng_val = addr_dtl.get("longitude") or payload.get("lng") or payload.get("longitude")
-            try:
-                f_lat = float(lat_val) if lat_val is not None else 26.1534185
-                f_lng = float(lng_val) if lng_val is not None else 80.1714024
-            except (ValueError, TypeError):
-                f_lat, f_lng = 26.1534185, 80.1714024
-
             new_address = Address(
                 id=new_addr_id,
                 userId=user_id,
-                label=payload.get("addressLabel") or "Delivery Address",
-                houseNo=h_no,
-                street=st,
-                area=ar,
-                city=ct,
-                pincode=pin,
-                phone=p_val,
-                lat=f_lat,
-                lng=f_lng,
+                label="Home",
+                houseNo="Ghatampur Express Zone",
+                street="NH34 Main Road",
+                area="Ghatampur",
+                city="Kanpur Nagar",
+                pincode="209206",
+                phone=payload.get("phone") or "7054470303",
+                lat=26.1534,
+                lng=80.1714,
                 isDefault=True
             )
             db.add(new_address)
             await db.flush()
             address_id = new_addr_id
             final_address_id = new_addr_id
+
+    # Fetch store settings flat map
+    settings_stmt = select(StoreSetting)
+    settings_res = await db.execute(settings_stmt)
+    settings_map = {s.key: s.value for s in settings_res.scalars().all()}
+    default_support_phone = settings_map.get("contact_phone") or os.getenv("SUPPORT_PHONE", "+918112849854")
     
     # 1. Resolve address
     final_address_id = address_id
@@ -745,22 +723,20 @@ async def create_order(
             final_address_id = address.id
 
     if not address:
-        addr_dtl = payload.get("addressDetails") if isinstance(payload.get("addressDetails"), dict) else {}
         cust_addr = str(payload.get("customerAddress") or payload.get("address") or "").strip()
         addr_parts = [p.strip() for p in cust_addr.split(",") if p.strip()] if cust_addr else []
 
-        h_no = addr_dtl.get("houseNo") or payload.get("houseNo") or (addr_parts[0] if len(addr_parts) > 0 else "") or "Delivery Address"
-        st = addr_dtl.get("street") or payload.get("street") or (addr_parts[1] if len(addr_parts) > 1 else cust_addr) or "Main Road"
-        ar = addr_dtl.get("area") or payload.get("area") or (addr_parts[2] if len(addr_parts) > 2 else "") or "Ghatampur"
-        ct = addr_dtl.get("city") or payload.get("city") or (addr_parts[3] if len(addr_parts) > 3 else "") or "Kanpur Nagar"
-        pin = str(addr_dtl.get("pincode") or payload.get("pincode") or (addr_parts[4] if len(addr_parts) > 4 else "")) or "209206"
+        h_no = payload.get("houseNo") or (addr_parts[0] if len(addr_parts) > 0 else "Ghatampur Express Zone")
+        st = payload.get("street") or (addr_parts[1] if len(addr_parts) > 1 else "Main Road")
+        ar = payload.get("area") or (addr_parts[2] if len(addr_parts) > 2 else "Ghatampur")
+        ct = payload.get("city") or (addr_parts[3] if len(addr_parts) > 3 else "Ghatampur")
+        pin = str(payload.get("pincode") or (addr_parts[4] if len(addr_parts) > 4 else "209206"))
+        p_raw = payload.get("phone") or payload.get("customerPhone") or payload.get("userPhone") or "7054470303"
+        p_clean = "".join(filter(str.isdigit, str(p_raw)))[-10:]
+        p_val = f"+91{p_clean}" if len(p_clean) == 10 else "+917054470303"
 
-        p_raw = addr_dtl.get("phone") or payload.get("phone") or payload.get("customerPhone") or payload.get("userPhone") or (user.phone if user else "")
-        p_clean = "".join(filter(str.isdigit, str(p_raw)))[-10:] if p_raw else ""
-        p_val = f"+91{p_clean}" if len(p_clean) == 10 else default_support_phone
-
-        lat_val = addr_dtl.get("latitude") or payload.get("lat") or payload.get("latitude")
-        lng_val = addr_dtl.get("longitude") or payload.get("lng") or payload.get("longitude")
+        lat_val = payload.get("lat") or payload.get("latitude")
+        lng_val = payload.get("lng") or payload.get("longitude")
         try:
             f_lat = float(lat_val) if lat_val is not None else 26.1534185
             f_lng = float(lng_val) if lng_val is not None else 80.1714024
@@ -771,7 +747,7 @@ async def create_order(
         address = Address(
             id=new_addr_id,
             userId=user_id,
-            label=payload.get("addressLabel") or "Delivery Address",
+            label="Home",
             houseNo=h_no,
             street=st,
             area=ar,

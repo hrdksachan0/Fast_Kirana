@@ -30,31 +30,25 @@ export async function PATCH(request: NextRequest) {
       })
 
       if (changedEntries.length > 0) {
-        const updates: Promise<any>[] = []
-
-        changedEntries.forEach(([key, value]) => {
-          const scopedKey = `${storePrefix}${key}`
-          updates.push(
-            prisma.storeSetting.upsert({
+        await prisma.$transaction(async (tx) => {
+          for (const [key, value] of changedEntries) {
+            const scopedKey = `${storePrefix}${key}`
+            await tx.storeSetting.upsert({
               where: { key: scopedKey },
               update: { value: String(value) },
               create: { key: scopedKey, value: String(value) },
             })
-          )
 
-          // If updating Ghatampur base hub, keep legacy un-prefixed keys in sync for backward compatibility
-          if (storeId === 'hub-209206') {
-            updates.push(
-              prisma.storeSetting.upsert({
+            // If updating Ghatampur base hub, keep legacy un-prefixed keys in sync for backward compatibility
+            if (storeId === 'hub-209206') {
+              await tx.storeSetting.upsert({
                 where: { key },
                 update: { value: String(value) },
                 create: { key, value: String(value) },
               })
-            )
+            }
           }
         })
-
-        await Promise.all(updates)
 
         // Sync DarkStore table fields for this specific hub
         const darkStoreUpdateData: Record<string, any> = {}
@@ -114,15 +108,15 @@ export async function PATCH(request: NextRequest) {
       })
 
       if (changedEntries.length > 0) {
-        const updates = changedEntries.map(([key, value]) => {
-          return prisma.storeSetting.upsert({
-            where: { key },
-            update: { value: String(value) },
-            create: { key, value: String(value) },
-          })
+        await prisma.$transaction(async (tx) => {
+          for (const [key, value] of changedEntries) {
+            await tx.storeSetting.upsert({
+              where: { key },
+              update: { value: String(value) },
+              create: { key, value: String(value) },
+            })
+          }
         })
-
-        await Promise.all(updates)
 
         // Sync dark stores table if radius or coords changed
         const darkStoreGlobalUpdate: Record<string, any> = {}
@@ -176,23 +170,21 @@ export async function PATCH(request: NextRequest) {
           }
         }
 
-        await clearSettingsCache()
+        clearSettingsCache().catch(() => {})
       }
     }
 
-    // 3. Trigger storefront revalidation asynchronously without blocking the response
+    // 3. Trigger storefront revalidation and cache clear asynchronously without blocking the response
     Promise.resolve().then(() => {
       try {
+        clearSettingsCache().catch(() => {})
         revalidateStorefront()
+        const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+        fetch(`${fastApiUrl}/api/stores/clear-cache`, { method: 'POST' }).catch(() => {})
       } catch (err) {
         console.error('Background revalidation failed:', err)
       }
     })
-
-    try {
-      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
-      await fetch(`${fastApiUrl}/api/stores/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(3000) }).catch(() => {})
-    } catch (_) {}
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
