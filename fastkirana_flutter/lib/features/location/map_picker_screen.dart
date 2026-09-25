@@ -278,17 +278,23 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Floating Tooltip Badge (Swiggy/Zepto Style)
+                  // Floating Tooltip Badge (Modern Glassmorphic Pill)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                     decoration: BoxDecoration(
-                      color: _isServiceable ? AppDesignSystem.slate900 : AppDesignSystem.red600,
-                      borderRadius: BorderRadius.circular(20),
+                      color: _isServiceable ? const Color(0xFF0F172A) : const Color(0xFF991B1B),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _isServiceable
+                            ? Colors.white.withValues(alpha: 0.18)
+                            : const Color(0xFFF87171).withValues(alpha: 0.4),
+                        width: 1,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.22),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 14,
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
@@ -296,27 +302,28 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _isServiceable ? Icons.bolt_rounded : Icons.info_outline_rounded,
+                          _isServiceable ? Icons.electric_bolt_rounded : Icons.location_off_rounded,
                           size: 14,
                           color: _isServiceable ? const Color(0xFFFBBF24) : Colors.white,
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 6),
                         Text(
                           _isServiceable
-                              ? 'Delivery in ~${_calculateEtaText(_distanceKm)}'
+                              ? 'Delivering to this point'
                               : 'Location outside delivery area',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 11),
-                            fontWeight: FontWeight.w700,
+                            fontSize: Responsive.scaledFontSize(context, 11.5),
+                            fontWeight: FontWeight.w800,
                             color: Colors.white,
+                            letterSpacing: 0.1,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
 
-                  // Pin Icon
+                  // Pin Icon with Layered Radiant Glow
                   AnimatedBuilder(
                     animation: _pulseAnim,
                     builder: (context, child) {
@@ -326,18 +333,24 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       );
                     },
                     child: Container(
-                      width: 48,
-                      height: 48,
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _isServiceable ? AppDesignSystem.orange600 : AppDesignSystem.red600,
-                        border: Border.all(color: Colors.white, width: 3),
+                        gradient: LinearGradient(
+                          colors: _isServiceable
+                              ? [const Color(0xFFFF8A00), const Color(0xFFE20A22)]
+                              : [const Color(0xFFEF4444), const Color(0xFF991B1B)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        border: Border.all(color: Colors.white, width: 3.5),
                         boxShadow: [
                           BoxShadow(
-                            color: (_isServiceable ? AppDesignSystem.orange600 : AppDesignSystem.red600)
+                            color: (_isServiceable ? const Color(0xFFE20A22) : const Color(0xFFDC2626))
                                 .withValues(alpha: 0.45),
-                            blurRadius: 14,
-                            offset: const Offset(0, 6),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
@@ -350,7 +363,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 5),
 
                   // Pin Drop Shadow Dot
                   Container(
@@ -483,21 +496,21 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
             ),
           ),
 
-          // 5. BOTTOM CONFIRMATION SHEET CARD (Swiggy Style)
+          // 5. BOTTOM CONFIRMATION SHEET CARD (Modern Card Aesthetic)
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 26),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0x1A0F172A),
-                    blurRadius: 28,
-                    offset: Offset(0, -6),
+                    color: Color(0x1F0F172A),
+                    blurRadius: 32,
+                    offset: Offset(0, -8),
                   ),
                 ],
               ),
@@ -507,14 +520,63 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Status
-                    Text(
-                      'Order will be delivered here',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12),
-                        fontWeight: FontWeight.w600,
-                        color: AppDesignSystem.slate500,
+                    // Center Top Handle Drag Bar
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppDesignSystem.slate200,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Header Status
+                    Row(
+                      children: [
+                        Text(
+                          'ORDER WILL BE DELIVERED HERE',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w800,
+                            color: AppDesignSystem.slate400,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (_isServiceable)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF16A34A),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Live Area',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF15803D),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 10),
 
@@ -523,15 +585,26 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
-                            color: AppDesignSystem.orange50,
-                            borderRadius: BorderRadius.circular(12),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: const Color(0xFFFECDD3),
+                              width: 1.2,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.location_on_rounded,
-                            size: 24,
-                            color: AppDesignSystem.orange600,
+                          child: const Center(
+                            child: Icon(
+                              Icons.location_on_rounded,
+                              size: 24,
+                              color: Color(0xFFE20A22),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -541,14 +614,14 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                             children: [
                               Text(
                                 _areaName,
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 17),
-                                  fontWeight: FontWeight.w900,
+                                style: GoogleFonts.outfit(
+                                  fontSize: Responsive.scaledFontSize(context, 18),
+                                  fontWeight: FontWeight.w800,
                                   color: AppDesignSystem.slate900,
                                   letterSpacing: -0.3,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 3),
                               Text(
                                 _fullAddress,
                                 style: GoogleFonts.inter(
@@ -568,20 +641,21 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
 
                     const SizedBox(height: 12),
 
-                    // Live Delivery ETA & Distance Pill
+                    // Live Delivery Serviceability Pill (Timing Removed)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8.5),
                       decoration: BoxDecoration(
                         color: _isServiceable ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: _isServiceable ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
+                          width: 1.1,
                         ),
                       ),
                       child: Row(
                         children: [
                           Icon(
-                            _isServiceable ? Icons.bolt_rounded : Icons.info_outline_rounded,
+                            _isServiceable ? Icons.verified_rounded : Icons.info_outline_rounded,
                             size: 16,
                             color: _isServiceable ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                           ),
@@ -589,8 +663,8 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                           Expanded(
                             child: Text(
                               _isServiceable
-                                  ? 'Delivery in ~${_calculateEtaText(_distanceKm)} • Rapid Delivery'
-                                  : 'Location outside active delivery zone',
+                                  ? 'Fast & Reliable Direct Doorstep Delivery'
+                                  : 'Delivery is currently unavailable at this location',
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11.5),
                                 fontWeight: FontWeight.w700,
@@ -654,15 +728,18 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                         width: double.infinity,
                         height: 52,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppDesignSystem.orange600, AppDesignSystem.orange500],
+                          gradient: LinearGradient(
+                            colors: _isServiceable
+                                ? const [Color(0xFFE20A22), Color(0xFFFF4D62)]
+                                : [AppDesignSystem.slate400, AppDesignSystem.slate500],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: AppDesignSystem.orange600.withValues(alpha: 0.38),
+                              color: (_isServiceable ? const Color(0xFFE20A22) : Colors.black)
+                                  .withValues(alpha: 0.32),
                               blurRadius: 16,
                               offset: const Offset(0, 6),
                             ),
@@ -676,12 +753,12 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                                 'Confirm & proceed',
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 15.5),
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                   letterSpacing: 0.3,
                                 ),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 8),
                               const Icon(
                                 Icons.arrow_forward_rounded,
                                 size: 18,

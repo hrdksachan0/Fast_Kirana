@@ -35,8 +35,9 @@ class FastApiClient {
             ...(headers as Record<string, string> | undefined),
         };
 
-        if (token) {
-            finalHeaders["Authorization"] = `Bearer ${token}`;
+        const resolvedToken = token || (await getAuthToken());
+        if (resolvedToken) {
+            finalHeaders["Authorization"] = `Bearer ${resolvedToken}`;
         }
 
         const url = path.startsWith("http")
@@ -87,13 +88,22 @@ class FastApiClient {
 
 export const fastApi = new FastApiClient(API_BASE);
 
+function getCookie(name: string): string | null {
+    if (typeof document === "undefined") return null;
+    const match = document.cookie.match(new RegExp(`(^|;\\s*)(${name})=([^;]*)`));
+    return match ? decodeURIComponent(match[3]) : null;
+}
+
 /**
- * Helper: get JWT from NextAuth session
+ * Helper: get JWT from NextAuth session, cookies, or localStorage
  */
 export async function getAuthToken(): Promise<string | null> {
     if (typeof window === "undefined") return null;
-    // Token stored by NextAuth after login
-    return localStorage.getItem("fastkirana_token") ||
+    return localStorage.getItem("fastapi_token") ||
+        localStorage.getItem("fastkirana_token") ||
+        getCookie("fastapi_token") ||
+        getCookie("fastkirana_token") ||
+        sessionStorage.getItem("fastapi_token") ||
         sessionStorage.getItem("fastkirana_token") ||
         null;
 }

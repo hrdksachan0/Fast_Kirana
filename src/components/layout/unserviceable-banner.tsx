@@ -45,17 +45,17 @@ export function UnserviceableLocationBanner() {
     const hub = targetHub || availableHubs[0]
     if (hub && hub.latitude && hub.longitude) {
       setUserCoords({ lat: hub.latitude, lng: hub.longitude })
-      setSelectedLocation(`${hub.city || hub.name} Central`)
+      setSelectedLocation(`${hub.city || hub.name} (Family & Friends)`)
       setShowModal(false)
-      toast.success(`Switched to ${hub.name} (Delivering in 10-15 mins)`, {
-        icon: '🚀',
+      toast.success(`Switched to ${hub.name} • Ordering for Loved Ones 🎁`, {
+        icon: '🎁',
       })
     } else {
       setUserCoords({ lat: hubLat, lng: hubLng })
-      setSelectedLocation('Ghatampur Central Market')
+      setSelectedLocation('Ghatampur (Family & Friends)')
       setShowModal(false)
-      toast.success(`Switched to ${hubName} (Delivering in 10-15 mins)`, {
-        icon: '🚀',
+      toast.success(`Switched to ${hubName} • Ordering for Loved Ones 🎁`, {
+        icon: '🎁',
       })
     }
   }
@@ -85,35 +85,34 @@ export function UnserviceableLocationBanner() {
 
   return (
     <>
-      {/* ── 1. Sticky Top Unserviceable Notice (Zepto / Swiggy Style) ── */}
-      <div className="bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 text-white px-3 py-2 text-xs font-semibold shadow-md flex items-center justify-between gap-2 z-40 relative">
+      {/* ── 1. Sticky Top Order For Someone Notice with Clear Unserviceable Status ── */}
+      <div className="bg-gradient-to-r from-rose-600 via-orange-600 to-amber-600 text-white px-3 py-2 text-xs font-semibold shadow-md flex items-center justify-between gap-2 z-40 relative">
         <div className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
           <span className="flex h-2 w-2 relative shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
           </span>
           <span className="truncate">
-            📍 <strong>Outside Delivery Zone</strong>
-            {userDistanceKm ? ` (${userDistanceKm.toFixed(1)} km away)` : ''} — Delivery is currently not available at your location.
+            📍 <strong>Unserviceable Area</strong> — Delivery not available here. <strong>Order for loved ones in Ghatampur?</strong>
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => setLocationPickerOpen(true)}
-            className="bg-white text-rose-600 hover:bg-white/90 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm transition-transform active:scale-95"
+            onClick={() => handleSwitchToHub()}
+            className="bg-white text-orange-600 hover:bg-white/90 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm transition-transform active:scale-95"
           >
-            Change Location
+            Order for Loved Ones 🎁
           </button>
           <button
             onClick={() => setShowModal(true)}
-            className="text-white/80 hover:text-white underline text-[11px] font-medium"
+            className="text-white/90 hover:text-white underline text-[11px] font-medium"
           >
             Details
           </button>
         </div>
       </div>
 
-      {/* ── 2. Full-Screen Interactive Dialog (Swiggy / Zepto "We Are Not Here Yet" Screen) ── */}
+      {/* ── 2. Full-Screen Interactive Dialog: Order For Someone Else ── */}
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/65 backdrop-blur-md animate-fade-in">
@@ -124,8 +123,8 @@ export function UnserviceableLocationBanner() {
               className="bg-card border border-border/80 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative overflow-hidden text-center"
             >
               {/* Background decorative gradient */}
-              <div className="absolute -top-12 -right-12 w-36 h-36 bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
-              <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute -top-12 -right-12 w-36 h-36 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
 
               {/* Close Button */}
               <button
@@ -139,67 +138,56 @@ export function UnserviceableLocationBanner() {
                 <X className="w-5 h-5" />
               </button>
 
-              {/* Radar Location Pin Illustration */}
-              <div className="relative mx-auto mb-5 w-20 h-20 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full bg-rose-500/10 animate-ping opacity-75" />
-                <div className="absolute inset-2 rounded-full bg-rose-500/20 animate-pulse" />
-                <div className="relative z-10 w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-500 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-rose-500/30">
-                  <MapPin className="w-7 h-7" />
+              {/* Gift & Alert Illustration */}
+              <div className="relative mx-auto mb-4 w-20 h-20 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full bg-orange-500/15 animate-ping opacity-75" />
+                <div className="absolute inset-2 rounded-full bg-orange-500/25 animate-pulse" />
+                <div className="relative z-10 w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-500 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-orange-500/30 text-2xl">
+                  🎁
                 </div>
+              </div>
+
+              {/* Unserviceable Status Pill */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-600 text-[11px] font-black uppercase tracking-wider mb-2">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Unserviceable Area {userDistanceKm ? `(${userDistanceKm.toFixed(1)} km outside zone)` : ''}</span>
               </div>
 
               {/* Title & Description */}
               <h3 className="text-xl font-black text-text-primary tracking-tight">
-                We're Not Delivering Here Yet!
+                Aapke Area Me Delivery Uplabdh Nahi Hai
               </h3>
-              <p className="text-xs text-text-secondary mt-2 leading-relaxed font-medium">
-                FastKirana currently operates local express hubs in Ghatampur and Akbarpur. Please choose an address within our delivery zones to start ordering.
-              </p>
+              
+              <div className="my-2.5 px-3 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-600 font-bold text-xs">
+                Lekin aap Ghatampur me apno ke liye order kar sakte hain! 🎁
+              </div>
 
-              {/* Distance badge */}
-              {userDistanceKm && (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-600 text-[11px] font-bold mt-3">
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>Your location is {userDistanceKm.toFixed(1)} km outside our delivery zone</span>
-                </div>
-              )}
+              <p className="text-xs text-text-secondary mt-1 leading-relaxed font-medium">
+                Aapki current location hamare delivery radius se bahar hai. Lekin agar aapka parivar ya dost Ghatampur me rehte hain, toh aap unke liye express kirana aur khana order kar sakte hain!
+              </p>
 
               {/* Action Buttons */}
               <div className="mt-6 space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchToHub()}
+                  className="w-full bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 text-white py-3.5 px-4 rounded-2xl font-black text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  <span>🎁</span>
+                  <span>Order for Loved Ones in Ghatampur</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
                     setShowModal(false)
                     setLocationPickerOpen(true)
                   }}
-                  className="w-full bg-[#e20a22] hover:bg-[#c9081e] text-white py-3 px-4 rounded-2xl font-black text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  className="w-full bg-muted/60 hover:bg-muted text-text-primary py-2.5 px-4 rounded-2xl font-bold text-xs border border-border/60 transition-colors flex items-center justify-center gap-2"
                 >
-                  <MapPin className="w-4 h-4" />
-                  <span>Choose Serviceable Area / Landmark</span>
+                  <MapPin className="w-4 h-4 text-orange-500" />
+                  <span>Choose or Add Recipient Address</span>
                 </button>
-
-                {availableHubs && availableHubs.length > 0 ? (
-                  availableHubs.map((hub) => (
-                    <button
-                      key={hub.id}
-                      type="button"
-                      onClick={() => handleSwitchToHub(hub)}
-                      className="w-full bg-muted/60 hover:bg-muted text-text-primary py-2.5 px-4 rounded-2xl font-bold text-xs border border-border/60 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Navigation className="w-4 h-4 text-text-secondary" />
-                      <span>Switch to {hub.city || hub.name} Hub</span>
-                    </button>
-                  ))
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchToHub()}
-                    className="w-full bg-muted/60 hover:bg-muted text-text-primary py-2.5 px-4 rounded-2xl font-bold text-xs border border-border/60 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Navigation className="w-4 h-4 text-text-secondary" />
-                    <span>Switch to Ghatampur Central Hub</span>
-                  </button>
-                )}
               </div>
 
               {/* Notify Me When Launched */}

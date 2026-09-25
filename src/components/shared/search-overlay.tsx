@@ -218,7 +218,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       } finally {
         setLoading(false)
       }
-    }, 150)
+    }, 250)
 
     return () => clearTimeout(handler)
   }, [query, activeStoreId])

@@ -19,41 +19,68 @@ class HubComingSoonView extends ConsumerWidget {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFFED7AA)),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFFFFBF7),
+            Color(0xFFFFFFFF),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: const Color(0xFFFFEAD8),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFEA580C).withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
+            spreadRadius: -2,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 1. Launching Soon Badge
+          // 1. Top Launching Soon Pill Badge
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF7ED),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFFDBA74)),
+              border: Border.all(
+                color: const Color(0xFFFDBA74).withValues(alpha: 0.8),
+                width: 1.2,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('🚀', style: TextStyle(fontSize: 14)),
-                const SizedBox(width: 6),
+                const Icon(
+                  Icons.rocket_launch_rounded,
+                  size: 14,
+                  color: Color(0xFFEA580C),
+                ),
+                const SizedBox(width: 7),
                 Text(
                   'LAUNCHING SOON IN YOUR AREA',
                   style: GoogleFonts.inter(
                     fontSize: 10.5,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFFEA580C),
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFFC2410C),
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -61,35 +88,84 @@ class HubComingSoonView extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // 2. Big Animated Hub Graphic
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          // 2. Multi-layered Animated Emblem Graphic
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer Soft Halo
+              Container(
+                width: 86,
+                height: 86,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFFEDD5).withValues(alpha: 0.5),
+                ),
               ),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFFED7AA), width: 2),
-            ),
-            child: const Center(
-              child: Text('🏬', style: TextStyle(fontSize: 36)),
-            ),
+              // Main Radiant Sphere
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF7A00), Color(0xFFE20A22)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFE20A22).withValues(alpha: 0.28),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.storefront_rounded,
+                    color: Colors.white,
+                    size: 34,
+                  ),
+                ),
+              ),
+              // Floating Sparkle Badge
+              Positioned(
+                bottom: 0,
+                right: 2,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Color(0xFFF59E0B),
+                    size: 14,
+                  ),
+                ),
+              ),
+            ],
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 18),
 
           // 3. Headline
           Text(
             'FastKirana is Coming Soon to $cityName!',
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 18),
-              fontWeight: FontWeight.w900,
+            style: GoogleFonts.outfit(
+              fontSize: Responsive.scaledFontSize(context, 20),
+              fontWeight: FontWeight.w800,
               color: AppDesignSystem.slate900,
               letterSpacing: -0.4,
             ),
@@ -97,34 +173,61 @@ class HubComingSoonView extends ConsumerWidget {
 
           const SizedBox(height: 8),
 
-          // 4. Subtitle Description
-          Text(
-            'We are setting up our local darkstore inventory and onboarding authentic neighborhood restaurants. 10-15 minute grocery & meal delivery will be live in $cityName very soon!',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 12.5),
-              fontWeight: FontWeight.w500,
-              color: AppDesignSystem.slate600,
-              height: 1.45,
+          // 4. Subtitle (Timing removed)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              'We are setting up our local darkstores and onboarding your favorite neighborhood kitchens. Fresh groceries, essentials, and meals will be live in $cityName very soon!',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 12.5),
+                fontWeight: FontWeight.w400,
+                color: AppDesignSystem.slate600,
+                height: 1.5,
+              ),
             ),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
 
-          // 5. Feature Highlights
+          // 5. Value Proposition Highlights (Timing-free aesthetic chips)
           Wrap(
             spacing: 8,
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              _buildFeaturePill(context, '⚡ 10-15 Min Delivery'),
-              _buildFeaturePill(context, '🥬 Farm-Fresh Produce'),
-              _buildFeaturePill(context, '🍲 Top Local Kitchens'),
-              _buildFeaturePill(context, '💰 Zero Markups'),
+              _buildFeatureChip(
+                icon: '🥬',
+                label: 'Farm-Fresh Produce',
+                bgColor: const Color(0xFFF0FDF4),
+                borderColor: const Color(0xFFBBF7D0),
+                textColor: const Color(0xFF15803D),
+              ),
+              _buildFeatureChip(
+                icon: '🍲',
+                label: 'Top Local Kitchens',
+                bgColor: const Color(0xFFFFF7ED),
+                borderColor: const Color(0xFFFED7AA),
+                textColor: const Color(0xFFC2410C),
+              ),
+              _buildFeatureChip(
+                icon: '🛍️',
+                label: 'Daily Essentials',
+                bgColor: const Color(0xFFF0F9FF),
+                borderColor: const Color(0xFFBAE6FD),
+                textColor: const Color(0xFF0369A1),
+              ),
+              _buildFeatureChip(
+                icon: '💰',
+                label: 'Direct Store Prices',
+                bgColor: const Color(0xFFFEFCE8),
+                borderColor: const Color(0xFFFEF08A),
+                textColor: const Color(0xFF854D0E),
+              ),
             ],
           ),
 
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
 
           // 6. Primary Action: Notify Me on WhatsApp
           Bounceable(
@@ -152,21 +255,33 @@ class HubComingSoonView extends ConsumerWidget {
                   BoxShadow(
                     color: const Color(0xFF25D366).withValues(alpha: 0.35),
                     blurRadius: 14,
-                    offset: const Offset(0, 4),
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.notifications_active_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 9),
                   Text(
                     'Notify Me on WhatsApp When Live',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 13.5),
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ],
@@ -189,13 +304,18 @@ class HubComingSoonView extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 13),
               decoration: BoxDecoration(
-                color: AppDesignSystem.slate100,
+                color: const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.location_on_rounded, color: AppDesignSystem.slate700, size: 18),
+                  const Icon(
+                    Icons.location_on_outlined,
+                    color: AppDesignSystem.slate700,
+                    size: 17,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Select Another Delivery Location',
@@ -214,21 +334,34 @@ class HubComingSoonView extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeaturePill(BuildContext context, String label) {
+  Widget _buildFeatureChip({
+    required String icon,
+    required String label,
+    required Color bgColor,
+    required Color borderColor,
+    required Color textColor,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 1.1),
       ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: Responsive.scaledFontSize(context, 11),
-          fontWeight: FontWeight.w700,
-          color: AppDesignSystem.slate700,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 13)),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: textColor,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -481,8 +481,16 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         fillHeight: true,
         child: Stack(
           children: [
-            NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            RefreshIndicator(
+              color: AppDesignSystem.primary,
+              onRefresh: () async {
+                ref.invalidate(restaurantMenuProvider(widget.restaurantId));
+                ref.invalidate(restaurantReviewsProvider(widget.restaurantId));
+                ref.invalidate(restaurantCouponsProvider(widget.restaurantId));
+                ref.invalidate(restaurantsProvider);
+              },
+              child: NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) => [
               // ─── 1. HERO SLIVER APP BAR (White & Clean on Collapse, Rich on Expand) ───
               SliverAppBar(
                 pinned: true,
@@ -849,6 +857,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
               ],
             ),
           ),
+        ),
 
           // ─── 6. STICKY CART BAR (Unified Exact Homepage Design) ───
           FloatingCartBar(bottomOffset: MediaQuery.of(context).padding.bottom + 10),

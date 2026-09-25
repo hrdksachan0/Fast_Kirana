@@ -22,31 +22,52 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final cityName = nearestHub.city.isNotEmpty ? nearestHub.city : 'Ghatampur';
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFFECDD3)),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFFFFBF7),
+            Color(0xFFFFFFFF),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: const Color(0xFFFFD5CE),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFE11D48).withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: const Color(0xFFEA580C).withValues(alpha: 0.08),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
+            spreadRadius: -2,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 1. Radar Pill Badge
+          // 1. Prominent Status Pill: UNSERVICEABLE AREA
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF1F2),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFFDA4AF)),
+              border: Border.all(
+                color: const Color(0xFFFDA4AF),
+                width: 1.2,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -59,49 +80,98 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 7),
                 Text(
-                  'OUTSIDE DELIVERY ZONE',
+                  'UNSERVICEABLE AREA • ${distanceKm.toStringAsFixed(1)} KM OUTSIDE ZONE',
                   style: GoogleFonts.inter(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFFBE123C),
-                    letterSpacing: 0.8,
+                    letterSpacing: 0.6,
                   ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
-          // 2. Map Pin Icon
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          // 2. Emblem Graphic: Gift Box with Location Alert Pin
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer Soft Halo
+              Container(
+                width: 86,
+                height: 86,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFFEDD5).withValues(alpha: 0.5),
+                ),
               ),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFFECDD3), width: 2),
-            ),
-            child: const Center(
-              child: Icon(Icons.wrong_location_rounded, size: 36, color: Color(0xFFE11D48)),
-            ),
+              // Main Radiant Sphere
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF7A00), Color(0xFFEA580C)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFEA580C).withValues(alpha: 0.32),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.card_giftcard_rounded,
+                    color: Colors.white,
+                    size: 34,
+                  ),
+                ),
+              ),
+              // Location Off Badge
+              Positioned(
+                bottom: 0,
+                right: 2,
+                child: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.location_off_rounded,
+                    color: Color(0xFFE11D48),
+                    size: 14,
+                  ),
+                ),
+              ),
+            ],
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
-          // 3. Headline
+          // 3. Headline: Current Location Not Serviceable
           Text(
-            'We Are Not Available Here Yet',
+            'Aapke Area Me Delivery Uplabdh Nahi Hai',
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 18),
-              fontWeight: FontWeight.w900,
+            style: GoogleFonts.outfit(
+              fontSize: Responsive.scaledFontSize(context, 19),
+              fontWeight: FontWeight.w800,
               color: AppDesignSystem.slate900,
               letterSpacing: -0.4,
             ),
@@ -109,48 +179,96 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
 
           const SizedBox(height: 8),
 
-          // 4. Distance to Nearest Hub Pill
+          // 4. Highlight Banner: "Lekin apno ke liye order karein!"
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFFED7AA), width: 1.1),
             ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🎁', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    'Lekin aap $cityName me apno ke liye order kar sakte hain!',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 12),
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFFC2410C),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // 5. Clear Explanatory Body
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              'Nearest Hub: ${nearestHub.city} (${distanceKm.toStringAsFixed(1)} km away)',
+              'Aapki current location hamare delivery radius se bahar hai. Lekin agar aapka parivar, rishtedar ya dost $cityName me rehte hain, toh aap unke liye fresh kirana aur khana order kar sakte hain!',
+              textAlign: TextAlign.center,
               style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 11.5),
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF0F172A),
+                fontSize: Responsive.scaledFontSize(context, 12),
+                fontWeight: FontWeight.w400,
+                color: AppDesignSystem.slate600,
+                height: 1.5,
               ),
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
 
-          // 5. Explanatory Body
-          Text(
-            'FastKirana currently operates rapid 10-15 minute grocery and food delivery within 5.0 km of our active dark stores in Ghatampur and Akbarpur.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 12.5),
-              fontWeight: FontWeight.w500,
-              color: AppDesignSystem.slate600,
-              height: 1.45,
-            ),
+          // 6. Value Proposition Highlights (Chips)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              _buildFeatureChip(
+                icon: '⚡',
+                label: 'Express Delivery',
+                bgColor: const Color(0xFFFFF7ED),
+                borderColor: const Color(0xFFFED7AA),
+                textColor: const Color(0xFFC2410C),
+              ),
+              _buildFeatureChip(
+                icon: '🥬',
+                label: 'Fresh Produce & Food',
+                bgColor: const Color(0xFFF0FDF4),
+                borderColor: const Color(0xFFBBF7D0),
+                textColor: const Color(0xFF15803D),
+              ),
+              _buildFeatureChip(
+                icon: '📞',
+                label: 'Rider Calls Recipient',
+                bgColor: const Color(0xFFF0F9FF),
+                borderColor: const Color(0xFFBAE6FD),
+                textColor: const Color(0xFF0369A1),
+              ),
+            ],
           ),
 
           const SizedBox(height: 22),
 
-          // 6. Action 1: Request Delivery in My Area (Notify Me)
+          // 7. PRIMARY CTA: Order for Loved Ones in Ghatampur (1-Tap Switch)
           Bounceable(
             onTap: () {
-              HapticFeedback.mediumImpact();
-              HubWaitlistSheet.show(
+              UnserviceableLocationBanner.resetToActiveHub(
+                ref,
                 context,
-                hubName: '${nearestHub.city} Outskirts (${distanceKm.toStringAsFixed(1)}km away)',
-                areaName: 'Outside Delivery Zone',
+                isOrderForSomeone: true,
               );
             },
             child: Container(
@@ -158,30 +276,35 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF25D366), Color(0xFF128C7E)],
+                  colors: [Color(0xFFFF7A00), Color(0xFFEA580C)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF25D366).withValues(alpha: 0.35),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
+                    color: const Color(0xFFEA580C).withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.card_giftcard_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 9),
                   Text(
-                    'Request FastKirana in My Area',
+                    'Order for Someone in $cityName',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 13.5),
+                      fontSize: Responsive.scaledFontSize(context, 14),
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ],
@@ -191,7 +314,7 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
 
           const SizedBox(height: 10),
 
-          // 7. Action 2: Change Location
+          // 8. SECONDARY CTA: Change Location
           Bounceable(
             onTap: () {
               HapticFeedback.lightImpact();
@@ -202,33 +325,27 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
             },
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 13),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFE11D48).withValues(alpha: 0.35),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.edit_location_alt_rounded, color: Colors.white, size: 18),
+                  const Icon(
+                    Icons.edit_location_alt_rounded,
+                    color: Color(0xFF0F172A),
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Change Delivery Location',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 13.5),
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      fontSize: Responsive.scaledFontSize(context, 13),
+                      fontWeight: FontWeight.w700,
+                      color: AppDesignSystem.slate800,
                     ),
                   ),
                 ],
@@ -236,32 +353,72 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
-          // 8. Action 3: Browse Nearest Hub (Secondary)
+          // 9. TERTIARY / WAITLIST: Notify when available here
           Bounceable(
             onTap: () {
               HapticFeedback.lightImpact();
-              UnserviceableLocationBanner.resetToActiveHub(ref, context);
+              HubWaitlistSheet.show(
+                context,
+                hubName: '$cityName Outskirts (${distanceKm.toStringAsFixed(1)}km away)',
+                areaName: 'Outside Delivery Zone',
+              );
             },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Center(
-                child: Text(
-                  'Switch to ${nearestHub.city} Hub (Browse Mode)',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 12.5),
-                    fontWeight: FontWeight.w800,
-                    color: AppDesignSystem.slate700,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.notifications_active_outlined,
+                    color: Color(0xFF16A34A),
+                    size: 14,
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Want delivery at your current location? Notify me on WhatsApp',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 11),
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF16A34A),
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureChip({
+    required String icon,
+    required String label,
+    required Color bgColor,
+    required Color borderColor,
+    required Color textColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 1.1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 13)),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: textColor,
             ),
           ),
         ],

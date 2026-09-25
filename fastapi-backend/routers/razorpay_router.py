@@ -2,6 +2,7 @@ import hmac
 import hashlib
 import json
 import logging
+import asyncio
 from typing import Dict, Any, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Body, Request, Response, BackgroundTasks
@@ -370,3 +371,134 @@ async def sync_razorpay_order(
         "updated": True,
         "message": "Order payment verified and confirmed successfully!",
     }
+
+
+@router.get("/webhook")
+async def razorpay_webhook_health():
+    """Razorpay Webhook health check endpoint."""
+    return {"status": "active", "service": "Razorpay Webhook Endpoint Active"}
+
+
+@router.post("/webhook")
+async def razorpay_webhook(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Razorpay Server-to-Server Webhook handler.
+    C4 FIX: Verifies HMAC SHA256 signature, ensures idempotency,
+    updates order and sibling orders to PAID, and notifies via WebSockets and FCM.
+    """
+    try:
+        raw_body = await request.body()
+        payload = json.loads(raw_body) if raw_body else {}
+    except Exception:
+        return Response(status_code=400, content="Invalid JSON payload")
+
+    signature = request.headers.get("x-razorpay-signature", "")
+    webhook_secret = getattr(settings, "RAZORPAY_WEBHOOK_SECRET", None) or settings.RAZORPAY_KEY_SECRET
+
+    if not webhook_secret:
+        logger.error("FATAL: RAZORPAY_WEBHOOK_SECRET / RAZORPAY_KEY_SECRET not configured")
+        return Response(status_code=503, content="Webhook secret not configured")
+
+    if not signature:
+        logger.error("Webhook received without x-razorpay-signature header")
+        return Response(status_code=401, content="Missing signature")
+
+    expected_signature = hmac.new(
+        webhook_secret.encode("utf-8"),
+        raw_body,
+        hashlib.sha256
+    ).hexdigest()
+
+    if not hmac.compare_digest(expected_signature, signature):
+        logger.error("Webhook signature mismatch — rejecting")
+        return Response(status_code=401, content="Invalid webhook signature")
+
+    event = payload.get("event")
+    logger.info(f"Razorpay Webhook received verified event: {event}")
+
+    if event in ["payment.captured", "order.paid"]:
+        payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
+        order_entity = payload.get("payload", {}).get("order", {}).get("entity", {})
+
+        notes = payment_entity.get("notes") or order_entity.get("notes") or {}
+        target_order_id = notes.get("orderId") or order_entity.get("receipt") or notes.get("receipt")
+
+        order = None
+        if target_order_id:
+            clean_id = str(target_order_id).strip()
+            stmt = select(Order).where(or_(Order.id == clean_id, Order.readableId == clean_id))
+            res = await db.execute(stmt)
+            order = res.scalars().first()
+
+        # Fallback search by amount if target_order_id not matched
+        if not order:
+            amount_rupees = float(payment_entity.get("amount") or order_entity.get("amount") or 0) / 100.0
+            if amount_rupees > 0:
+                stmt = select(Order).where(
+                    Order.paymentStatus == PaymentStatus.PENDING,
+                    Order.total == amount_rupees
+                ).order_by(Order.createdAt.desc())
+                res = await db.execute(stmt)
+                order = res.scalars().first()
+
+        if not order:
+            logger.warning("Razorpay Webhook: No matching pending order found")
+            return {"status": "ok", "message": "No matching order found"}
+
+        if order.paymentStatus == PaymentStatus.PAID:
+            return {"status": "ok", "message": "Order already marked as PAID"}
+
+        now = datetime.utcnow()
+        if order.combinedId:
+            comb_stmt = select(Order).where(Order.combinedId == order.combinedId)
+            comb_res = await db.execute(comb_stmt)
+            for o in comb_res.scalars().all():
+                o.paymentStatus = PaymentStatus.PAID
+                o.paymentMethod = "ONLINE"
+                if o.status == OrderStatus.ADMIN_PENDING:
+                    o.status = OrderStatus.PENDING
+                o.updatedAt = now
+        else:
+            order.paymentStatus = PaymentStatus.PAID
+            order.paymentMethod = "ONLINE"
+            if order.status == OrderStatus.ADMIN_PENDING:
+                order.status = OrderStatus.PENDING
+            order.updatedAt = now
+
+        await db.commit()
+        await db.refresh(order)
+
+        # Real-time WebSocket Broadcast
+        try:
+            from routers.websockets import manager
+            display_id = str(order.readableId or order.id[:6]).upper()
+            asyncio.create_task(manager.broadcast({
+                "type": "PAYMENT_CONFIRMED",
+                "orderId": order.id,
+                "readableId": display_id,
+                "paymentStatus": "PAID",
+                "paymentMethod": "ONLINE",
+                "status": order.status.value,
+                "total": float(order.total)
+            }))
+        except Exception as ws_err:
+            logger.warning(f"WebSocket broadcast error: {ws_err}")
+
+        # Send FCM notification in background
+        if background_tasks:
+            background_tasks.add_task(
+                send_fcm_topic_notification,
+                topic="admin_notifications",
+                title="💳 Online Payment Order Confirmed!",
+                body=f"Order #{order.readableId or order.id[:6]} of ₹{order.total} — PAID via Razorpay ✅",
+                data={"orderId": order.id, "type": "ORDER_PAID"}
+            )
+
+        return {"status": "ok", "message": f"Order {order.id} marked as PAID"}
+
+    return {"status": "ignored", "event": event}
+

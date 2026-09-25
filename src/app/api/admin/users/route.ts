@@ -120,10 +120,39 @@ export async function PATCH(request: Request) {
   const session = adminResult.session
 
   try {
-    const { userId, role, name, phone, assignedStoreId } = await request.json()
+    const body = await request.json()
+    const { userId, role, name, phone, assignedStoreId } = body
 
     if (!userId) {
       return NextResponse.json({ error: 'Missing required userId' }, { status: 400 })
+    }
+
+    // ─── FastAPI Railway Proxy First ──────────────────────────────────────────
+    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
+    try {
+      const authHeader = request.headers.get('authorization')
+      const cookieHeader = request.headers.get('cookie')
+      const proxyHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-user-role': 'ADMIN',
+        'x-user-phone': session?.user?.phone || '9170942500',
+        'x-user-email': session?.user?.email || 'admin@fastkirana.com',
+      }
+      if (authHeader) proxyHeaders['Authorization'] = authHeader
+      if (cookieHeader) proxyHeaders['Cookie'] = cookieHeader
+
+      const fastApiResponse = await fetch(`${fastApiUrl}/api/admin/users`, {
+        method: 'PATCH',
+        headers: proxyHeaders,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(6000),
+      })
+      if (fastApiResponse.ok) {
+        const data = await fastApiResponse.json()
+        return NextResponse.json(data)
+      }
+    } catch (proxyErr) {
+      console.warn('[AdminUsersProxy] FastAPI proxy failed, running local handler:', proxyErr)
     }
 
     const updateData: any = {}
@@ -174,7 +203,8 @@ export async function POST(request: Request) {
   const session = adminResult.session
 
   try {
-    const { userId, password } = await request.json()
+    const body = await request.json()
+    const { userId, password } = body
 
     if (!userId || !password) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -182,6 +212,34 @@ export async function POST(request: Request) {
 
     if (password.length < 6) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
+    }
+
+    // ─── FastAPI Railway Proxy First ──────────────────────────────────────────
+    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
+    try {
+      const authHeader = request.headers.get('authorization')
+      const cookieHeader = request.headers.get('cookie')
+      const proxyHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-user-role': 'ADMIN',
+        'x-user-phone': session?.user?.phone || '9170942500',
+        'x-user-email': session?.user?.email || 'admin@fastkirana.com',
+      }
+      if (authHeader) proxyHeaders['Authorization'] = authHeader
+      if (cookieHeader) proxyHeaders['Cookie'] = cookieHeader
+
+      const fastApiResponse = await fetch(`${fastApiUrl}/api/admin/users`, {
+        method: 'POST',
+        headers: proxyHeaders,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(6000),
+      })
+      if (fastApiResponse.ok) {
+        const data = await fastApiResponse.json()
+        return NextResponse.json(data)
+      }
+    } catch (proxyErr) {
+      console.warn('[AdminUsersProxy] FastAPI password set failed, using local DB:', proxyErr)
     }
 
     const passwordHash = await bcrypt.hash(password, 12)

@@ -14,17 +14,18 @@ import '../core/routes/page_transitions.dart';
 class UnserviceableLocationBanner extends ConsumerWidget {
   const UnserviceableLocationBanner({super.key});
 
-  static void resetToActiveHub(WidgetRef ref, BuildContext context) {
+  static void resetToActiveHub(WidgetRef ref, BuildContext context, {bool isOrderForSomeone = false}) {
     HapticFeedback.mediumImpact();
     final currentHub = ref.read(currentStoreHubProvider);
+    final targetCity = currentHub.city.isNotEmpty ? currentHub.city : 'Ghatampur';
     final defaultHub = Address(
       id: 'hub_active_default',
       userId: 'current',
-      label: 'FastKirana Active Store Hub',
-      houseNo: '',
+      label: isOrderForSomeone ? 'Family in $targetCity' : 'Active Store Hub',
+      houseNo: isOrderForSomeone ? 'Recipient Address' : '',
       street: currentHub.name,
-      area: currentHub.city,
-      city: currentHub.city,
+      area: targetCity,
+      city: targetCity,
       pincode: currentHub.id.contains('224122') ? '224122' : '209206',
       latitude: currentHub.latitude,
       longitude: currentHub.longitude,
@@ -33,24 +34,42 @@ class UnserviceableLocationBanner extends ConsumerWidget {
 
     ref.read(selectedAddressProvider.notifier).state = defaultHub;
 
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: const Color(0xFF16A34A),
+        backgroundColor: isOrderForSomeone ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
+            Icon(
+              isOrderForSomeone ? Icons.card_giftcard_rounded : Icons.check_circle_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                'Switched to Active Store Hub (10-15 Min Delivery)',
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isOrderForSomeone
+                        ? 'Ordering for Loved Ones in $targetCity 🎁'
+                        : 'Switched to Active Store Hub (Express Delivery)',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: 12.5, color: Colors.white),
+                  ),
+                  if (isOrderForSomeone)
+                    Text(
+                      'Browse products & add recipient phone at checkout',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 10.5, color: Colors.white.withValues(alpha: 0.9)),
+                    ),
+                ],
               ),
             ),
           ],
         ),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        duration: const Duration(seconds: 4),
       ),
     );
   }

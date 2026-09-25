@@ -4,9 +4,10 @@ Migrated from Next.js API routes to FastAPI.
 Covers: dashboard, products, orders, users, coupons, inventory, reports, etc.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, BackgroundTasks, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, BackgroundTasks, Request, Response
 from utils.push import send_push_notification
 import logging
+import hashlib
 
 logger = logging.getLogger("admin_extended")
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1839,6 +1840,8 @@ async def admin_update_rider_payout(
 
 @router.get("/live-carts")
 async def admin_get_live_carts(
+    request: Request,
+    response: Response,
     storeId: Optional[str] = Query(None),
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
@@ -1860,6 +1863,41 @@ async def admin_get_live_carts(
     )
     result = await db.execute(stmt)
     carts_db = result.scalars().unique().all()
+
+    # Store scoping
+    if storeId and storeId != "all":
+        filtered_carts = []
+        for c in carts_db:
+            u = c.user
+            if not u:
+                continue
+            user_store = getattr(u, "assignedStoreId", None)
+            if storeId == "hub-209206":
+                if user_store in ["hub-816107", "hub-224122"]:
+                    continue
+                filtered_carts.append(c)
+            else:
+                pin = storeId.replace("hub-", "")
+                has_pin = u.addresses and any(a.pincode == pin for a in u.addresses if a.pincode)
+                if user_store == storeId or has_pin:
+                    filtered_carts.append(c)
+        carts_db = filtered_carts
+
+    # ─── Delta Polling ETag Optimization (HTTP 304 Not Modified) ───
+    scope_key = str(storeId or "all")
+    if carts_db:
+        latest_ts = max((c.updatedAt.isoformat() if c.updatedAt else "") for c in carts_db)
+        cart_etag = f'"{hashlib.md5(f"{len(carts_db)}:{latest_ts}:{scope_key}".encode()).hexdigest()}"'
+        response.headers["ETag"] = cart_etag
+        response.headers["Cache-Control"] = "no-cache, private, must-revalidate"
+        if request.headers.get("if-none-match") == cart_etag:
+            return Response(status_code=304)
+    else:
+        empty_etag = f'"{hashlib.md5(f"0:{scope_key}".encode()).hexdigest()}"'
+        response.headers["ETag"] = empty_etag
+        response.headers["Cache-Control"] = "no-cache, private, must-revalidate"
+        if request.headers.get("if-none-match") == empty_etag:
+            return Response(status_code=304)
 
     carts = []
     for c in carts_db:
@@ -1994,7 +2032,7 @@ async def admin_get_stores(
             "createdAt": s.createdAt.isoformat() if s.createdAt else None,
         })
 
-    return {"stores": store_list}
+    return store_list
 
 
 @router.post("/stores")

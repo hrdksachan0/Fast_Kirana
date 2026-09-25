@@ -13,7 +13,11 @@ final dioProvider = Provider<Dio>((ref) {
     connectTimeout: const Duration(seconds: 15),
     receiveTimeout: const Duration(seconds: 20),
     sendTimeout: const Duration(seconds: 20),
-    headers: {'Content-Type': 'application/json'},
+    headers: {
+      'Content-Type': 'application/json',
+      'Connection': 'keep-alive',
+      'Accept-Encoding': 'gzip, deflate, br',
+    },
   ));
 
   // ─── Request/Response Logging (debug builds only) ───────────────────

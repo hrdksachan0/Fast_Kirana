@@ -605,6 +605,9 @@ model DarkStore {
   surgeCharge     Float    @default(0.0)
   deliveryRadiusKm Float   @default(5.0) // Admin controlled nearby radius (km)
   groceryOpen     Boolean  @default(true)
+  pauseUntil      DateTime? // Auto-resume timestamp for Busy Mode
+  closeReason     String?   // Reason for closure (e.g., 'HEAVY_RAIN', 'RUSH', 'STOCK_AUDIT', 'MAINTENANCE')
+  closedByUserId  String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -671,6 +674,8 @@ model Restaurant {
   isVeg           Boolean   @default(false)
   isPureVeg       Boolean   @default(false)
   isOpen          Boolean   @default(true)
+  pauseUntil      DateTime? // Auto-resume timestamp for Kitchen Busy Mode
+  closeReason     String?   // Reason for kitchen closure
   openTime        String?
   closeTime       String?
   sortOrder       Int       @default(0)

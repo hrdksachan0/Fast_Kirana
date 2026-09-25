@@ -38,7 +38,7 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
   bool _isGrocerySelected = false; // Food mode default (Food first, then Grocery)
   final int _selectedFilterIndex = 0;
   Timer? _orderSyncTimer;
@@ -59,6 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     // Live Order Sync with Admin Updates (60s fallback — Supabase handles instant real-time)
     _orderSyncTimer = Timer.periodic(const Duration(seconds: 60), (_) {
@@ -109,10 +110,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _homeScrollController.removeListener(_onHomeScroll);
     _homeScrollController.dispose();
     _orderSyncTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkAndRevalidateCatalog();
+    }
+  }
+
+  Future<void> _checkAndRevalidateCatalog() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final hub = ref.read(currentStoreHubProvider);
+      final changed = await ProductRepository.checkAndRevalidateCatalog(dio, hub.id);
+      if (changed && mounted) {
+        debugPrint('[HomeScreen] SWR: Catalog refreshed on app resume!');
+        refreshAllCatalogProviders(ref);
+      }
+    } catch (_) {}
   }
 
   void _onHomeScroll() {

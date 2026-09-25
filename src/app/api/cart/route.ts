@@ -83,6 +83,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, items: [], subtotal: 0, count: 0 })
     }
 
+    // 1. Try FastAPI backend on Railway first
+    const fastApiUrl = (
+      process.env.NEXT_PUBLIC_FASTAPI_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'https://fastkiran-backend-production.up.railway.app'
+    ).replace(/\/+$/, '')
+
+    const token =
+      (session as any)?.fastapiToken ||
+      request.headers.get('authorization')?.replace('Bearer ', '') ||
+      ''
+
+    try {
+      const fastRes = await fetch(`${fastApiUrl}/api/cart`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+          ...(guestId ? { 'x-guest-id': guestId } : {}),
+          ...(userId ? { 'x-user-id': userId } : {}),
+        },
+        cache: 'no-store',
+      })
+      if (fastRes.ok) {
+        const data = await fastRes.json()
+        return NextResponse.json(data)
+      }
+    } catch (fastErr) {
+      console.warn('[CartProxy] FastAPI get failed, falling back to local DB:', fastErr)
+    }
+
     const cart = await prisma.cart.findUnique({
       where: { userId },
       include: {
@@ -176,6 +205,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User or guest session is required' }, { status: 400 })
     }
 
+    // 1. Try FastAPI backend on Railway first
+    const fastApiUrl = (
+      process.env.NEXT_PUBLIC_FASTAPI_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'https://fastkiran-backend-production.up.railway.app'
+    ).replace(/\/+$/, '')
+
+    const token =
+      (session as any)?.fastapiToken ||
+      request.headers.get('authorization')?.replace('Bearer ', '') ||
+      ''
+
+    try {
+      const fastRes = await fetch(`${fastApiUrl}/api/cart`, {
+        method: 'POST',
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+          ...(guestId ? { 'x-guest-id': guestId } : {}),
+          ...(userId ? { 'x-user-id': userId } : {}),
+        },
+        body: JSON.stringify({ items: itemsData, guestId }),
+      })
+      if (fastRes.ok) {
+        const data = await fastRes.json()
+        return NextResponse.json(data)
+      }
+    } catch (fastErr) {
+      console.warn('[CartProxy] FastAPI sync error, falling back to local DB:', fastErr)
+    }
+
     const cart = await getOrCreateCart(userId)
     if (!cart) {
       return NextResponse.json({ error: 'Failed to find or create cart' }, { status: 500 })
@@ -233,6 +293,35 @@ export async function DELETE(request: NextRequest) {
     if (!userId && guestId) {
       const guestUser = await getOrCreateGuestUser(guestId)
       userId = guestUser?.id
+    }
+
+    // 1. Try FastAPI backend on Railway first
+    const fastApiUrl = (
+      process.env.NEXT_PUBLIC_FASTAPI_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'https://fastkiran-backend-production.up.railway.app'
+    ).replace(/\/+$/, '')
+
+    const token =
+      (session as any)?.fastapiToken ||
+      request.headers.get('authorization')?.replace('Bearer ', '') ||
+      ''
+
+    try {
+      const fastRes = await fetch(`${fastApiUrl}/api/cart`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+          ...(guestId ? { 'x-guest-id': guestId } : {}),
+          ...(userId ? { 'x-user-id': userId } : {}),
+        },
+      })
+      if (fastRes.ok) {
+        const data = await fastRes.json()
+        return NextResponse.json(data)
+      }
+    } catch (fastErr) {
+      console.warn('[CartProxy] FastAPI delete error, falling back to local DB:', fastErr)
     }
 
     if (userId) {

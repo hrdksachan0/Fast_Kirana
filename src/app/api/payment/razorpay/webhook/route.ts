@@ -39,6 +39,27 @@ export async function POST(req: Request) {
 
     console.log(`Razorpay Webhook received verified event: ${event}`)
 
+    // ─── FastAPI Railway Proxy First ──────────────────────────────────────────
+    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
+    try {
+      const fastApiResponse = await fetch(`${fastApiUrl}/api/payment/razorpay/webhook`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-razorpay-signature': signature,
+        },
+        body: rawBody,
+        signal: AbortSignal.timeout(8000),
+      })
+      if (fastApiResponse.ok) {
+        const data = await fastApiResponse.json()
+        console.log('[RazorpayWebhook] Successfully processed via FastAPI backend:', data)
+        return NextResponse.json(data)
+      }
+    } catch (proxyErr) {
+      console.warn('[RazorpayWebhook] FastAPI proxy failed or timed out, executing local DB handler:', proxyErr)
+    }
+
     if (event === 'payment.captured' || event === 'order.paid') {
       const paymentEntity = payload.payload?.payment?.entity || {}
       const orderEntity = payload.payload?.order?.entity || {}

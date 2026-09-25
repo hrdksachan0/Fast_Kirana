@@ -244,6 +244,13 @@ class Order(Base):
     address = relationship("Address", back_populates="orders")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
 
+    __table_args__ = (
+        Index("idx_orders_store_status_created", "storeId", "status", "createdAt"),
+        Index("idx_orders_user_created", "userId", "createdAt"),
+        Index("idx_orders_combined_status", "combinedId", "status"),
+        Index("idx_orders_delivery_status", "deliveryUserId", "status"),
+    )
+
 
 class OrderItem(Base):
     __tablename__ = "order_items"

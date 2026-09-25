@@ -12,7 +12,9 @@ export function SupabaseAuthBridge() {
       try {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('fastapi_token')
+          localStorage.removeItem('fastkirana_token')
           document.cookie = 'fastapi_token=; path=/; max-age=0; SameSite=Lax; Secure'
+          document.cookie = 'fastkirana_token=; path=/; max-age=0; SameSite=Lax; Secure'
         }
       } catch {}
       return
@@ -25,7 +27,9 @@ export function SupabaseAuthBridge() {
     if (fastToken && typeof window !== 'undefined') {
       try {
         localStorage.setItem('fastapi_token', fastToken)
+        localStorage.setItem('fastkirana_token', fastToken)
         document.cookie = `fastapi_token=${fastToken}; path=/; max-age=2592000; SameSite=Lax; Secure`
+        document.cookie = `fastkirana_token=${fastToken}; path=/; max-age=2592000; SameSite=Lax; Secure`
       } catch (e) {
         console.error('[FastApiBridge] Cookie/storage set error:', e)
       }

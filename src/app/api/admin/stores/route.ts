@@ -9,6 +9,32 @@ export async function GET(request: NextRequest) {
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
+  // ─── FastAPI Railway Proxy First ──────────────────────────────────────────
+  const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
+  try {
+    const authHeader = request.headers.get('authorization')
+    const proxyHeaders: Record<string, string> = {
+      'x-user-role': 'ADMIN',
+      'x-user-phone': session?.user?.phone || '9170942500',
+      'x-user-email': session?.user?.email || 'admin@fastkirana.com',
+    }
+    if (authHeader) proxyHeaders['Authorization'] = authHeader
+
+    const fastApiResponse = await fetch(`${fastApiUrl}/api/admin/stores`, {
+      method: 'GET',
+      headers: proxyHeaders,
+      signal: AbortSignal.timeout(6000),
+    })
+    if (fastApiResponse.ok) {
+      const data = await fastApiResponse.json()
+      if (Array.isArray(data)) {
+        return NextResponse.json(data)
+      }
+    }
+  } catch (proxyErr) {
+    console.warn('[AdminStoresProxy] FastAPI proxy failed, running local handler:', proxyErr)
+  }
+
   try {
     const stores = await prisma.darkStore.findMany({
       orderBy: { createdAt: 'desc' },

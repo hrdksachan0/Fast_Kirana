@@ -72,6 +72,16 @@ class OfflineSyncService {
 
       for (final item in list) {
         final map = Map<String, dynamic>.from(item as Map);
+        final createdAtStr = map['createdAt']?.toString();
+        if (createdAtStr != null) {
+          final created = DateTime.tryParse(createdAtStr);
+          if (created != null && DateTime.now().difference(created).inHours >= 24) {
+            LoggerService.info('[OfflineSync] Dropping stale action (>24h) from $queueName: ${map['id']}');
+            successful++;
+            continue;
+          }
+        }
+
         try {
           final ok = await executor(map);
           if (ok) {

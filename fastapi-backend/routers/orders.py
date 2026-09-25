@@ -1325,11 +1325,18 @@ async def create_order(
                         inv_stmt = select(StoreInventory).where(
                             StoreInventory.productId == prod.id,
                             StoreInventory.storeId == store_id
-                        )
+                        ).with_for_update()
                         inv_res = await db.execute(inv_stmt)
                         existing_inv = inv_res.scalars().first()
                         if existing_inv:
+                            if existing_inv.stock < qty:
+                                raise HTTPException(
+                                    status_code=400,
+                                    detail=f"Insufficient hub stock for \"{prod.name}\". Only {existing_inv.stock} available."
+                                )
                             existing_inv.stock = max(0, existing_inv.stock - qty)
+                    except HTTPException:
+                        raise
                     except Exception as inv_err:
                         logger.warning(f"Could not decrement StoreInventory for product {prod.id} at store {store_id}: {inv_err}")
 
@@ -2063,6 +2070,7 @@ async def update_order(
     prep_time = payload.get("prepTime")
     is_rider_cash = payload.get("isRiderCash", True)
     payment_collected_by = payload.get("paymentCollectedBy")
+    delivery_user_id = payload.get("deliveryUserId")
 
     if not target_status_str:
         raise HTTPException(status_code=400, detail="status is required")
@@ -2259,7 +2267,23 @@ async def update_order(
             safe_photo = None
 
         cash_amount_custom = payload.get("cashAmount")
-        is_owner_or_online = payment_collected_by in ["OWNER", "ONLINE"] or is_rider_cash is False
+
+        # Admin / Staff delivery handling:
+        # If order is delivered by ADMIN/STAFF (and not by a DELIVERY rider from the rider app):
+        # The money is collected by the store/owner, NOT the rider, unless paymentCollectedBy == 'RIDER'.
+        if is_admin and not is_delivery:
+            if payment_collected_by != "RIDER":
+                is_owner_or_online = True
+            else:
+                is_owner_or_online = payment_collected_by in ["OWNER", "ONLINE"] or is_rider_cash is False
+            # When admin delivers directly, do NOT attribute to any rider unless admin explicitly passed deliveryUserId
+            if "deliveryUserId" in payload:
+                order.deliveryUserId = delivery_user_id
+            elif not is_delivery:
+                # Direct admin delivery — clear any auto-assigned rider so it doesn't count against riders
+                order.deliveryUserId = None
+        else:
+            is_owner_or_online = payment_collected_by in ["OWNER", "ONLINE"] or is_rider_cash is False
 
         if cash_amount_custom is not None:
             try:
@@ -2278,8 +2302,8 @@ async def update_order(
         order.deliveryLng = float(delivery_lng) if delivery_lng is not None else None
         order.deliveredAt = datetime.utcnow()
 
-        # Update Rider Wallet for Cash collected
-        if order_cash_collected > 0 and order.deliveryUserId:
+        # Update Rider Wallet for Cash collected ONLY if a genuine delivery rider collected it
+        if order_cash_collected > 0 and order.deliveryUserId and (is_delivery or payment_collected_by == "RIDER"):
             wallet_stmt = select(RiderWallet).where(RiderWallet.userId == order.deliveryUserId)
             wallet_res = await db.execute(wallet_stmt)
             wallet = wallet_res.scalars().first()
@@ -2301,12 +2325,9 @@ async def update_order(
     elif target_status == OrderStatus.SHIPPED:
         if role == Role.DELIVERY:
             order.deliveryUserId = user_id
-        elif not order.deliveryUserId:
-            rider_stmt = select(User.id).where(or_(User.email == "delivery@fastkirana.com", User.role == Role.DELIVERY)).limit(1)
-            rider_res = await db.execute(rider_stmt)
-            rider_id = rider_res.scalars().first()
-            if rider_id:
-                order.deliveryUserId = rider_id
+        elif delivery_user_id:
+            order.deliveryUserId = delivery_user_id
+        # Never auto-assign a fallback rider! Order stays unassigned until a rider claims it or admin assigns it.
         if delivery_lat is not None and delivery_lng is not None:
             order.deliveryLat = float(delivery_lat)
             order.deliveryLng = float(delivery_lng)

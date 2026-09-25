@@ -4,6 +4,22 @@ import { prisma } from '@/lib/prisma'
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
+
+    // ─── FastAPI Railway Proxy First ──────────────────────────────────────────
+    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
+    try {
+      const fastApiResponse = await fetch(`${fastApiUrl}/api/banners?${searchParams.toString()}`, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(4000),
+      })
+      if (fastApiResponse.ok) {
+        const data = await fastApiResponse.json()
+        if (Array.isArray(data)) {
+          return NextResponse.json(data)
+        }
+      }
+    } catch (_) {}
+
     const type = searchParams.get('type') // e.g. 'grocery' or 'cafe'
 
     const whereClause: any = {

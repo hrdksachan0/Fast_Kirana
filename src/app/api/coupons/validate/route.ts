@@ -16,6 +16,28 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth()
 
+    // ─── FastAPI Railway Proxy First ──────────────────────────────────────────
+    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
+    try {
+      const authHeader = request.headers.get('authorization')
+      const proxyHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (authHeader) proxyHeaders['Authorization'] = authHeader
+      if (session?.user?.id) proxyHeaders['x-user-id'] = session.user.id
+
+      const fastApiResponse = await fetch(`${fastApiUrl}/api/coupons/validate`, {
+        method: 'POST',
+        headers: proxyHeaders,
+        body: JSON.stringify(validation.data),
+        signal: AbortSignal.timeout(4000),
+      })
+      if (fastApiResponse.ok) {
+        const data = await fastApiResponse.json()
+        return NextResponse.json(data)
+      }
+    } catch (_) {}
+
     const coupon = await prisma.coupon.findUnique({
       where: { code: code.toUpperCase() },
     })

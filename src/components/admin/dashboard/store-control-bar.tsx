@@ -20,6 +20,7 @@ import {
   Layers,
   Utensils
 } from 'lucide-react'
+import { StoreStatusPill } from '@/components/admin/store-status-pill'
 
 interface StoreControlBarProps {
   storeHubName?: string
@@ -255,23 +256,18 @@ export function StoreControlBar({
               </button>
             )}
 
-            {/* 1-Click Store Open / Close Switch Button */}
-            {onToggleGroceryMart && (
-              <button
-                type="button"
-                onClick={onToggleGroceryMart}
-                disabled={isTogglingStore}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border shadow-xs transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 shrink-0 ${
-                  groceryMartOpen
-                    ? 'bg-rose-500/10 text-rose-600 border-rose-500/30 hover:bg-rose-500/20'
-                    : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20'
-                }`}
-                title={groceryMartOpen ? 'Pause Store & Stop Incoming Orders' : 'Open Store & Accept Orders'}
-              >
-                <Power className="w-3.5 h-3.5" />
-                <span>{isTogglingStore ? 'Updating...' : groceryMartOpen ? 'Pause Store' : 'Open Store'}</span>
-              </button>
-            )}
+            {/* Zepto/Swiggy Standard Store Serviceability Status Pill & Modal */}
+            <StoreStatusPill
+              storeId={selectedHubId || 'hub-209206'}
+              storeName={displayStoreName}
+              isOpen={groceryMartOpen}
+              pauseUntil={currentStore?.pauseUntil}
+              closeReason={currentStore?.closeReason}
+              onStatusUpdated={() => {
+                onToggleGroceryMart?.()
+              }}
+              disabled={isTogglingStore}
+            />
 
             {/* Store Timing & Settings Shortcut */}
             <button

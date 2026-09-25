@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, ORJSONResponse
 import os
 import time
 from config import settings
@@ -50,6 +50,7 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
     redirect_slashes=False,
+    default_response_class=ORJSONResponse,
 )
 
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware

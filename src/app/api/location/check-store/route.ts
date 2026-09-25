@@ -47,6 +47,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid coordinates' }, { status: 400 })
     }
 
+    // ─── FastAPI Railway Proxy First ──────────────────────────────────────────
+    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
+    try {
+      const fastApiResponse = await fetch(`${fastApiUrl}/api/location/check-store?lat=${lat}&lng=${lng}`, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(4000),
+      })
+      if (fastApiResponse.ok) {
+        const data = await fastApiResponse.json()
+        if (data && data.id) {
+          return NextResponse.json(data)
+        }
+      }
+    } catch (_) {}
+
     // Fetch all active dark stores
     const stores = await prisma.darkStore.findMany({
       where: { isActive: true }

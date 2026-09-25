@@ -807,14 +807,40 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.isVendorSelf ? 'Vendor Partner Portal' : 'Vendor Management Console',
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.isVendorSelf ? 'Vendor Portal' : 'Vendor Console',
+                        style: GoogleFonts.outfit(fontSize: 16.5, fontWeight: FontWeight.w800, color: Colors.white),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: widget.isVendorSelf ? const Color(0xFF10B981).withValues(alpha: 0.2) : primaryRed.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: widget.isVendorSelf ? const Color(0xFF10B981).withValues(alpha: 0.4) : primaryRed.withValues(alpha: 0.4),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          widget.isVendorSelf ? 'LIVE' : 'ADMIN',
+                          style: GoogleFonts.inter(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: widget.isVendorSelf ? const Color(0xFF34D399) : const Color(0xFFF87171),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
                     widget.isVendorSelf
                         ? (_vendorProfile?['name'] ?? 'Supplier Hub · Live')
-                        : 'Suppliers, Attached Products & Sales',
+                        : 'Live Dispatch, Sales & Inventory',
                     style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8)),
                   ),
                 ],
@@ -864,8 +890,10 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                         unselectedLabelColor: slateMuted,
                         indicatorColor: primaryRed,
                         indicatorWeight: 3,
-                        labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800),
-                        unselectedLabelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                        indicatorSize: TabBarIndicatorSize.label,
+                        dividerColor: const Color(0xFFF1F5F9),
+                        labelStyle: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800),
+                        unselectedLabelStyle: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
                         tabs: [
                           Tab(
                             child: Row(
@@ -873,13 +901,16 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                               children: [
                                 const Text('🔔 Live Orders'),
                                 if (_liveOrders.where((o) => o['status'] != 'DELIVERED').isNotEmpty) ...[
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 5),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                    decoration: BoxDecoration(color: primaryRed, borderRadius: BorderRadius.circular(10)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: primaryRed,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
                                     child: Text(
                                       '${_liveOrders.where((o) => o['status'] != 'DELIVERED').length}',
-                                      style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w900),
+                                      style: const TextStyle(fontSize: 9.5, color: Colors.white, fontWeight: FontWeight.w900),
                                     ),
                                   ),
                                 ],
@@ -894,11 +925,11 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                               children: [
                                 const Text('📱 Reorder'),
                                 if (_lowStockItems.isNotEmpty) ...[
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 5),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                     decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
-                                    child: Text('${_lowStockItems.length}', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w900)),
+                                    child: Text('${_lowStockItems.length}', style: const TextStyle(fontSize: 9.5, color: Colors.white, fontWeight: FontWeight.w900)),
                                   ),
                                 ],
                               ],
@@ -911,19 +942,41 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
                     // Search Strip
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search product name, weight or barcode...',
-                          hintStyle: GoogleFonts.inter(fontSize: 12, color: slateMuted),
-                          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: slateMuted),
-                          filled: true,
-                          fillColor: Colors.white,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: slateBorder)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: slateBorder)),
+                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+                      child: Container(
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          style: GoogleFonts.inter(fontSize: 12.5, color: slateDark, fontWeight: FontWeight.w600),
+                          decoration: InputDecoration(
+                            hintText: 'Search product name, weight or barcode...',
+                            hintStyle: GoogleFonts.inter(fontSize: 12, color: slateMuted),
+                            prefixIcon: const Icon(Icons.search_rounded, size: 18, color: slateMuted),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear_rounded, size: 16, color: slateMuted),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                          ),
                         ),
                       ),
                     ),
@@ -1064,12 +1117,13 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
     return Container(
       color: slateDark,
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
             child: Row(
               children: _vendors.map((v) {
                 final id = v['id']?.toString() ?? '';
@@ -1088,34 +1142,64 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                       _fetchLiveOrders(id);
                     },
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? primaryRed : slateCard,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isSelected ? primaryRed : const Color(0xFF334155), width: 1.2),
+                        gradient: isSelected
+                            ? const LinearGradient(
+                                colors: [Color(0xFFE20A22), Color(0xFFFF3B30)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
+                        color: isSelected ? null : const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected ? Colors.transparent : const Color(0xFF334155),
+                          width: 1.2,
+                        ),
                         boxShadow: isSelected
-                            ? [BoxShadow(color: primaryRed.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFFE20A22).withValues(alpha: 0.35),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
                             : null,
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.inventory_2_rounded, size: 14, color: isSelected ? Colors.white : const Color(0xFF94A3B8)),
-                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.storefront_rounded,
+                            size: 14,
+                            color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                          ),
+                          const SizedBox(width: 7),
                           Text(
                             name,
                             style: GoogleFonts.inter(
-                              fontSize: 12,
+                              fontSize: 12.5,
                               fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                               color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '($code)',
-                            style: GoogleFonts.inter(
-                              fontSize: 9.5,
-                              color: isSelected ? Colors.white.withValues(alpha: 0.8) : slateMuted,
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Colors.white.withValues(alpha: 0.22)
+                                  : const Color(0xFF0F172A),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              code,
+                              style: GoogleFonts.inter(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                              ),
                             ),
                           ),
                         ],
@@ -1127,24 +1211,51 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
             ),
           ),
           if (_vendorProfile != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Row(
               children: [
                 if ((_vendorProfile!['phone'] ?? '').isNotEmpty) ...[
-                  const Icon(Icons.phone_rounded, size: 12, color: Color(0xFF94A3B8)),
-                  const SizedBox(width: 4),
-                  Text(_vendorProfile!['phone'], style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8))),
-                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF334155), width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.phone_rounded, size: 12, color: Color(0xFF38BDF8)),
+                        const SizedBox(width: 5),
+                        Text(
+                          _vendorProfile!['phone'],
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFE2E8F0)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                 ],
-                if ((_vendorProfile!['companyName'] ?? '').isNotEmpty) ...[
-                  const Icon(Icons.business_rounded, size: 12, color: Color(0xFF94A3B8)),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      _vendorProfile!['companyName'],
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8)),
+                if ((_vendorProfile!['companyName'] ?? _vendorProfile!['category'] ?? '').isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF334155), width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.category_rounded, size: 12, color: Color(0xFFFBBF24)),
+                        const SizedBox(width: 5),
+                        Text(
+                          _vendorProfile!['companyName'] ?? _vendorProfile!['category'] ?? 'Supplier',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFE2E8F0)),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -1163,48 +1274,121 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     final productsCount = (_kpis['totalProducts'] as num?)?.toInt() ?? _products.length;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: slateBorder),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2)),
-        ],
-      ),
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 6),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildKPIColumn('ATTACHED', '$productsCount items', Icons.layers_rounded, Colors.indigo),
-          const SizedBox(height: 24, child: VerticalDivider(color: slateBorder)),
-          _buildKPIColumn('SOLD (BIKRI)', '$units units', Icons.shopping_cart_checkout_rounded, brandGreen),
-          const SizedBox(height: 24, child: VerticalDivider(color: slateBorder)),
-          _buildKPIColumn('PAYABLE', '₹${payable.toStringAsFixed(0)}', Icons.payments_rounded, slateDark),
-          const SizedBox(height: 24, child: VerticalDivider(color: slateBorder)),
-          _buildKPIColumn('BALANCE DUE', '₹${balance.toStringAsFixed(0)}', Icons.account_balance_wallet_rounded, brandOrange),
+          Expanded(
+            child: _buildKPITile(
+              label: 'ATTACHED',
+              value: '$productsCount items',
+              icon: Icons.layers_rounded,
+              bgColor: const Color(0xFFEFF6FF),
+              borderColor: const Color(0xFFDBEAFE),
+              textColor: const Color(0xFF1D4ED8),
+              iconColor: const Color(0xFF2563EB),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildKPITile(
+              label: 'SOLD (BIKRI)',
+              value: '$units units',
+              icon: Icons.shopping_bag_rounded,
+              bgColor: const Color(0xFFECFDF5),
+              borderColor: const Color(0xFFA7F3D0),
+              textColor: const Color(0xFF047857),
+              iconColor: const Color(0xFF059669),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildKPITile(
+              label: 'PAYABLE',
+              value: '₹${payable.toStringAsFixed(0)}',
+              icon: Icons.payments_rounded,
+              bgColor: const Color(0xFFF8FAFC),
+              borderColor: const Color(0xFFE2E8F0),
+              textColor: slateDark,
+              iconColor: slateDark,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildKPITile(
+              label: 'BALANCE DUE',
+              value: '₹${balance.toStringAsFixed(0)}',
+              icon: Icons.account_balance_wallet_rounded,
+              bgColor: const Color(0xFFFFF7ED),
+              borderColor: const Color(0xFFFED7AA),
+              textColor: const Color(0xFFC2410C),
+              iconColor: const Color(0xFFEA580C),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildKPIColumn(String label, String value, IconData icon, Color color) {
-    return Expanded(
+  Widget _buildKPITile({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color bgColor,
+    required Color borderColor,
+    required Color textColor,
+    required Color iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor, width: 1.1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 11, color: color),
-              const SizedBox(width: 3),
-              Text(
-                label,
-                style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w800, color: slateMuted, letterSpacing: 0.3),
+              Icon(icon, size: 12, color: iconColor),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w800,
+                    color: textColor.withValues(alpha: 0.8),
+                    letterSpacing: 0.3,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
           Text(
             value,
             maxLines: 1,
@@ -1833,8 +2017,20 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       children: [
         // Live Header Summary Strip
         Container(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-          color: Colors.white,
+          margin: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Row(
             children: [
               Container(
@@ -1845,44 +2041,45 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Text(
                 'Live Store Dispatch Queue',
-                style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800, color: slateDark),
+                style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w800, color: slateDark),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                 decoration: BoxDecoration(
-                  color: nonDeliveredCount > 0 ? primaryRed.withValues(alpha: 0.1) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(6),
+                  color: nonDeliveredCount > 0 ? const Color(0xFFFEE2E2) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '$nonDeliveredCount Active',
                   style: GoogleFonts.inter(
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: nonDeliveredCount > 0 ? primaryRed : slateMuted,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              if (totalVendorPendingVal > 0)
+              if (totalVendorPendingVal > 0) ...[
+                const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                   decoration: BoxDecoration(
                     color: const Color(0xFFDCFCE7),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
                   ),
                   child: Text(
                     '₹${totalVendorPendingVal.toStringAsFixed(0)} Due',
-                    style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
+                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF15803D)),
                   ),
                 ),
+              ],
             ],
           ),
         ),
-        const Divider(height: 1, color: slateBorder),
 
         Expanded(
           child: _isLoadingLiveOrders && _liveOrders.isEmpty
@@ -1895,7 +2092,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(18),
+                              padding: const EdgeInsets.all(20),
                               decoration: const BoxDecoration(
                                 color: Color(0xFFEFF6FF),
                                 shape: BoxShape.circle,
@@ -1905,7 +2102,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                             const SizedBox(height: 14),
                             Text(
                               'No Active Live Orders Right Now',
-                              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: slateDark),
+                              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w800, color: slateDark),
                             ),
                             const SizedBox(height: 6),
                             Text(
@@ -1926,7 +2123,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                       },
                       child: ListView.separated(
                         physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 90),
+                        padding: const EdgeInsets.fromLTRB(14, 4, 14, 90),
                         itemCount: activeOrders.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
@@ -1941,18 +2138,23 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
                           Color statusBg;
                           Color statusFg;
+                          IconData statusIcon;
                           if (isDelivered) {
                             statusBg = const Color(0xFFDCFCE7);
                             statusFg = const Color(0xFF15803D);
+                            statusIcon = Icons.check_circle_rounded;
                           } else if (status == 'CONFIRMED' || status == 'PENDING') {
                             statusBg = const Color(0xFFDBEAFE);
                             statusFg = const Color(0xFF1D4ED8);
+                            statusIcon = Icons.timelapse_rounded;
                           } else if (status == 'PACKED') {
                             statusBg = const Color(0xFFFFEDD5);
                             statusFg = const Color(0xFFC2410C);
+                            statusIcon = Icons.inventory_rounded;
                           } else {
                             statusBg = const Color(0xFFF3E8FF);
                             statusFg = const Color(0xFF7E22CE);
+                            statusIcon = Icons.info_outline_rounded;
                           }
 
                           String timeFormatted = '';
@@ -1975,37 +2177,37 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                           return Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: isDelivered ? slateBorder : (status == 'CONFIRMED' ? const Color(0xFF93C5FD) : slateBorder),
+                                color: isDelivered ? const Color(0xFFE2E8F0) : const Color(0xFFBFDBFE),
                                 width: isDelivered ? 1.0 : 1.4,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Order Header
+                                // Order Header Strip
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                   decoration: const BoxDecoration(
                                     color: Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
-                                    border: Border(bottom: BorderSide(color: slateBorder)),
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(17)),
+                                    border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
                                   ),
                                   child: Row(
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: slateDark,
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Text(
                                           '#$readableId',
@@ -2018,38 +2220,55 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                                       ),
                                       const SizedBox(width: 8),
                                       if (timeFormatted.isNotEmpty)
-                                        Text(
-                                          timeFormatted,
-                                          style: GoogleFonts.inter(fontSize: 11, color: slateMuted, fontWeight: FontWeight.w600),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.access_time_rounded, size: 12, color: slateMuted),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              timeFormatted,
+                                              style: GoogleFonts.inter(fontSize: 11, color: slateMuted, fontWeight: FontWeight.w600),
+                                            ),
+                                          ],
                                         ),
                                       const Spacer(),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: statusBg,
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
-                                        child: Text(
-                                          status,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w900,
-                                            color: statusFg,
-                                          ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(statusIcon, size: 11, color: statusFg),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              status,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w900,
+                                                color: statusFg,
+                                                letterSpacing: 0.2,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
 
-                                // Items List (prominent quantities & pack sizes)
+                                // Items List (Prominent Quantities & Pack Sizes)
                                 Padding(
-                                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+                                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
                                   child: Column(
                                     children: items.map((it) {
                                       final name = (it['name'] ?? 'Product').toString();
                                       final qty = (it['quantity'] as num?)?.toInt() ?? 1;
-                                      final cost = (it['cost'] as num?)?.toDouble() ?? 0.0;
+                                      final cost = (it['cost'] as num?)?.toDouble()
+                                          ?? (it['costPrice'] as num?)?.toDouble()
+                                          ?? 0.0;
                                       final itemTotal = (it['totalCost'] as num?)?.toDouble() ?? (cost * qty);
                                       final imgUrl = _resolveImgUrl(it['imageUrl']);
                                       final weightVariant = OrderItemHelper.resolveWeightOrVariant(it, name);
@@ -2059,12 +2278,12 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                                         child: Row(
                                           crossAxisAlignment: CrossAxisAlignment.center,
                                           children: [
-                                            // Prominent Quantity Box (zero-error picking / kitchen style)
+                                            // Prominent Quantity Box
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                                               decoration: BoxDecoration(
                                                 color: const Color(0xFFFEF2F2),
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius: BorderRadius.circular(10),
                                                 border: Border.all(color: const Color(0xFFFECACA), width: 1.2),
                                               ),
                                               child: Text(
@@ -2080,15 +2299,19 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
                                             // Product Image
                                             ClipRRect(
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius: BorderRadius.circular(10),
                                               child: Container(
-                                                width: 40,
-                                                height: 40,
-                                                color: const Color(0xFFF1F5F9),
+                                                width: 44,
+                                                height: 44,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFF8FAFC),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                                ),
                                                 child: imgUrl.isNotEmpty
                                                     ? CachedNetworkImage(
                                                         imageUrl: imgUrl,
-                                                        fit: BoxFit.cover,
+                                                        fit: BoxFit.contain,
                                                         errorWidget: (_, __, ___) => const Icon(Icons.image_not_supported_rounded, size: 18, color: slateMuted),
                                                       )
                                                     : const Icon(Icons.shopping_bag_outlined, size: 20, color: slateMuted),
@@ -2104,11 +2327,11 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                                                   Text(
                                                     name,
                                                     style: GoogleFonts.inter(
-                                                      fontSize: 12.5,
+                                                      fontSize: 13,
                                                       fontWeight: FontWeight.w800,
                                                       color: slateDark,
                                                     ),
-                                                    maxLines: 1,
+                                                    maxLines: 2,
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                   const SizedBox(height: 3),
@@ -2132,7 +2355,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                                             Text(
                                               '₹${itemTotal.toStringAsFixed(0)}',
                                               style: GoogleFonts.inter(
-                                                fontSize: 13,
+                                                fontSize: 14,
                                                 fontWeight: FontWeight.w900,
                                                 color: slateDark,
                                               ),
@@ -2144,9 +2367,9 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                                   ),
                                 ),
 
-                                const Divider(height: 1, color: slateBorder),
+                                const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
-                                // Footer: Vendor Value and Action Buttons
+                                // Footer: Vendor Payout Value and Action Buttons
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                   child: Row(
@@ -2156,33 +2379,44 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                                         children: [
                                           Text(
                                             'Supplier Payout Value',
-                                            style: GoogleFonts.inter(fontSize: 10, color: slateMuted, fontWeight: FontWeight.w600),
+                                            style: GoogleFonts.inter(fontSize: 10.5, color: slateMuted, fontWeight: FontWeight.w600),
                                           ),
                                           Text(
                                             '₹${totalVal.toStringAsFixed(0)}',
                                             style: GoogleFonts.inter(
-                                              fontSize: 16,
+                                              fontSize: 17,
                                               fontWeight: FontWeight.w900,
-                                              color: brandGreen,
+                                              color: const Color(0xFF15803D),
                                             ),
                                           ),
                                         ],
                                       ),
                                       const Spacer(),
-                                      OutlinedButton.icon(
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: slateDark,
-                                          side: const BorderSide(color: slateBorder),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                          visualDensity: VisualDensity.compact,
+                                      Bounceable(
+                                        onTap: () => _shareVendorOrderWhatsApp(ord),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF0FDF4),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: const Color(0xFFBBF7D0)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.share_rounded, size: 14, color: Color(0xFF16A34A)),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Dispatch Slip',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: const Color(0xFF15803D),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                        icon: const Icon(Icons.share_rounded, size: 14, color: brandGreen),
-                                        label: Text(
-                                          'Dispatch Slip',
-                                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800),
-                                        ),
-                                        onPressed: () => _shareVendorOrderWhatsApp(ord),
                                       ),
                                     ],
                                   ),

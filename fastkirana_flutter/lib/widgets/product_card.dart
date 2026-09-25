@@ -1332,41 +1332,43 @@ class ProductCardSkeleton extends StatelessWidget {
     final uiScale = (cardWidth / baseWidth).clamp(0.90, 1.10);
     double s(double v) => v * uiScale;
 
-    return Container(
-      width: cardWidth,
-      padding: EdgeInsets.all(s(7)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(s(14)),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: s(1.0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: isCompact ? s(92) : s(106),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(s(12)),
+    return RepaintBoundary(
+      child: Container(
+        width: cardWidth,
+        padding: EdgeInsets.all(s(7)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(s(14)),
+          border: Border.all(color: const Color(0xFFF1F5F9), width: s(1.0)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: isCompact ? s(92) : s(106),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(s(12)),
+              ),
             ),
-          ),
-          SizedBox(height: s(6)),
-          Container(width: s(70), height: s(9), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
-          SizedBox(height: s(5)),
-          Container(width: double.infinity, height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
-          SizedBox(height: s(5)),
-          Container(width: s(40), height: s(10), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
-          SizedBox(height: s(6)),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(width: s(36), height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
-              Container(width: s(52), height: s(26), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(6)))),
-            ],
-          ),
-        ],
+            SizedBox(height: s(6)),
+            Container(width: s(70), height: s(9), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+            SizedBox(height: s(5)),
+            Container(width: double.infinity, height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+            SizedBox(height: s(5)),
+            Container(width: s(40), height: s(10), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+            SizedBox(height: s(6)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(width: s(36), height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+                Container(width: s(52), height: s(26), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(6)))),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

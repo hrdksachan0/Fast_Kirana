@@ -598,7 +598,8 @@ export async function PATCH(
         paymentMethod === 'ONLINE' || 
         paymentCollectedBy === 'ONLINE' || 
         paymentCollectedBy === 'OWNER' || 
-        isRiderCash === false
+        isRiderCash === false ||
+        (userRole !== 'DELIVERY' && paymentCollectedBy !== 'RIDER')
 
       const newPaymentMethod = isDoorstepQrOrOnline 
         ? 'UPI' 
@@ -606,12 +607,17 @@ export async function PATCH(
             ? paymentMethod 
             : (['COD', 'UPI', 'CARD', 'WALLET'].includes(existingOrder.paymentMethod) ? existingOrder.paymentMethod : 'COD'))
 
+      const finalDelivUserId = userRole === 'DELIVERY' 
+        ? existingOrder.deliveryUserId 
+        : (deliveryUserId !== undefined ? deliveryUserId : null)
+
       if (shouldUpdateAllCombined && existingOrder.combinedId) {
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
               "paymentStatus" = 'PAID'::"PaymentStatus",
               "paymentMethod" = ${newPaymentMethod}::"PaymentMethod",
+              "deliveryUserId" = ${finalDelivUserId},
               "deliveryPhoto" = ${safePhoto}, 
               "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(String(deliveryLat)) : null}, 
               "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(String(deliveryLng)) : null}, 
@@ -625,6 +631,7 @@ export async function PATCH(
           SET status = ${status}::"OrderStatus", 
               "paymentStatus" = 'PAID'::"PaymentStatus",
               "paymentMethod" = ${newPaymentMethod}::"PaymentMethod",
+              "deliveryUserId" = ${finalDelivUserId},
               "deliveryPhoto" = ${safePhoto}, 
               "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(String(deliveryLat)) : null}, 
               "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(String(deliveryLng)) : null}, 
@@ -634,8 +641,8 @@ export async function PATCH(
         `
       }
 
-      // If order assigned to a delivery rider, update RiderWallet for cash collected or change given (-/+)
-      if (existingOrder.status !== 'DELIVERED' && existingOrder.deliveryUserId) {
+      // If order assigned to a delivery rider, update RiderWallet for cash collected ONLY if a rider delivered it
+      if (existingOrder.status !== 'DELIVERED' && existingOrder.deliveryUserId && (userRole === 'DELIVERY' || paymentCollectedBy === 'RIDER')) {
         try {
           const riderId = existingOrder.deliveryUserId
           const orderTotal = parseFloat(existingOrder.total) || 0
@@ -677,12 +684,8 @@ export async function PATCH(
       const latVal = deliveryLat !== undefined && deliveryLat !== null ? parseFloat(String(deliveryLat)) : null
       const lngVal = deliveryLng !== undefined && deliveryLng !== null ? parseFloat(String(deliveryLng)) : null
 
-      const defaultDeliveryRider = await prisma.user.findFirst({
-        where: { OR: [{ email: 'delivery@fastkirana.com' }, { role: 'DELIVERY' }] },
-        select: { id: true }
-      })
       const isDeliveryRole = userRole === 'DELIVERY'
-      const targetRiderId = isDeliveryRole ? (session?.user?.id || headerUserId || userId) : (deliveryUserId || existingOrder.deliveryUserId || defaultDeliveryRider?.id || null)
+      const targetRiderId = isDeliveryRole ? (session?.user?.id || headerUserId || userId) : (deliveryUserId || existingOrder.deliveryUserId || null)
 
       if (shouldUpdateAllCombined && existingOrder.combinedId) {
         if (latVal !== null && lngVal !== null) {

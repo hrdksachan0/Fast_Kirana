@@ -5,7 +5,7 @@ import { requireAdmin } from '@/lib/auth-guard'
 import { getStoreUserFilter } from '@/lib/store-resolver'
 
 export async function GET(request: Request) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
@@ -13,6 +13,54 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
 
+    // 1. Try FastAPI backend on Railway first
+    const fastApiUrl = (
+      process.env.NEXT_PUBLIC_FASTAPI_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'https://fastkiran-backend-production.up.railway.app'
+    ).replace(/\/+$/, '')
+
+    const token =
+      (session as any)?.fastapiToken ||
+      request.headers.get('authorization')?.replace('Bearer ', '') ||
+      ''
+
+    const query = storeId ? `?storeId=${encodeURIComponent(storeId)}` : ''
+
+    const incomingIfNoneMatch = request.headers.get('if-none-match') || ''
+
+    try {
+      const headers: Record<string, string> = {
+        Authorization: token ? `Bearer ${token}` : '',
+        'x-user-role': session?.user?.role || 'ADMIN',
+        'x-user-phone': (session?.user as any)?.phone || '',
+        'x-user-email': session?.user?.email || '',
+        'x-user-id': session?.user?.id || '',
+        'Content-Type': 'application/json',
+      }
+      if (incomingIfNoneMatch) {
+        headers['if-none-match'] = incomingIfNoneMatch
+      }
+
+      const fastRes = await fetch(`${fastApiUrl}/api/admin/live-carts${query}`, {
+        headers,
+        cache: 'no-store',
+      })
+      if (fastRes.status === 304) {
+        return new NextResponse(null, { status: 304 })
+      }
+      if (fastRes.ok) {
+        const data = await fastRes.json()
+        const resHeaders: Record<string, string> = {}
+        const etag = fastRes.headers.get('etag')
+        if (etag) resHeaders['ETag'] = etag
+        return NextResponse.json(data, { headers: resHeaders })
+      }
+    } catch (fastErr) {
+      console.warn('[LiveCartsProxy] FastAPI fetch failed, falling back to local DB:', fastErr)
+    }
+
+    // 2. Fallback to direct DB query if FastAPI is unreachable
     const whereClause: any = {
       items: {
         some: {} // has at least one item

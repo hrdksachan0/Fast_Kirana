@@ -90,6 +90,22 @@ interface LowStockItem {
   isLow: boolean
 }
 
+interface DailySaleItem {
+  productId: string
+  name: string
+  unit: string
+  unitCostPrice: number
+  unitsSold: number
+  totalPayable: number
+}
+
+interface DailySale {
+  date: string
+  totalUnits: number
+  totalPayable: number
+  items: DailySaleItem[]
+}
+
 interface ProductItem {
   id: string
   name: string
@@ -128,13 +144,22 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
   // Date range filter
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], [])
+  const yesterdayStr = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    return d.toISOString().split('T')[0]
+  }, [])
   const firstDayThisMonth = useMemo(() => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
   }, [])
   const [startDate, setStartDate] = useState<string>(firstDayThisMonth)
   const [endDate, setEndDate] = useState<string>(todayStr)
-  const [dateFilterPreset, setDateFilterPreset] = useState<'thisMonth' | 'lastMonth' | 'last30' | 'custom'>('thisMonth')
+  const [dateFilterPreset, setDateFilterPreset] = useState<'today' | 'yesterday' | 'last7' | 'thisMonth' | 'lastMonth' | 'last30' | 'custom'>('thisMonth')
+
+  // Sales view toggle: product-wise vs date-wise
+  const [salesView, setSalesView] = useState<'product' | 'datewise'>('product')
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
 
   // Details Data
   const [vendorDetails, setVendorDetails] = useState<Vendor | null>(null)
@@ -148,6 +173,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     lowStockCount: 0,
   })
   const [itemizedSales, setItemizedSales] = useState<ItemizedSale[]>([])
+  const [dailySales, setDailySales] = useState<DailySale[]>([])
   const [payouts, setPayouts] = useState<VendorPayout[]>([])
   const [productsCatalog, setProductsCatalog] = useState<ProductItem[]>([])
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([])
@@ -248,6 +274,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
           lowStockCount: 0,
         })
         setItemizedSales(data.itemizedSales || [])
+        setDailySales(data.dailySales || [])
         setPayouts(data.payouts || [])
         setProductsCatalog(data.products || [])
         setLowStockItems(data.lowStockItems || [])
@@ -274,10 +301,21 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
   }, [fetchVendorDetails])
 
   // Preset Date Handlers
-  const handlePresetDate = (preset: 'thisMonth' | 'lastMonth' | 'last30') => {
+  const handlePresetDate = (preset: 'today' | 'yesterday' | 'last7' | 'thisMonth' | 'lastMonth' | 'last30') => {
     setDateFilterPreset(preset)
     const now = new Date()
-    if (preset === 'thisMonth') {
+    if (preset === 'today') {
+      setStartDate(todayStr)
+      setEndDate(todayStr)
+    } else if (preset === 'yesterday') {
+      setStartDate(yesterdayStr)
+      setEndDate(yesterdayStr)
+    } else if (preset === 'last7') {
+      const d = new Date()
+      d.setDate(d.getDate() - 6)
+      setStartDate(d.toISOString().split('T')[0])
+      setEndDate(todayStr)
+    } else if (preset === 'thisMonth') {
       const s = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
       const e = todayStr
       setStartDate(s)
@@ -568,7 +606,42 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
       const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows)
       const wsPayouts = XLSX.utils.aoa_to_sheet(payoutRows)
 
+      // Sheet 3: Date-wise Sales Breakdown
+      const dailyRows: any[] = [
+        ['FASTKIRANA - DATE-WISE SALES BREAKDOWN'],
+        ['Vendor Name:', vendorDetails.name],
+        ['Period:', `${startDate} to ${endDate}`],
+        [],
+        ['Date', 'Product Name', 'Unit', 'Units Sold', 'Unit Cost (Rs)', 'Total Payable (Rs)'],
+      ]
+
+      dailySales.forEach((day) => {
+        // Add a day header row
+        dailyRows.push([
+          new Date(day.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }),
+          `— ${day.totalUnits} units —`,
+          '',
+          day.totalUnits,
+          '',
+          day.totalPayable,
+        ])
+        // Add per-product rows for this day
+        day.items.forEach((item) => {
+          dailyRows.push([
+            '',
+            `  ${item.name}`,
+            item.unit || '',
+            item.unitsSold,
+            item.unitCostPrice,
+            item.totalPayable,
+          ])
+        })
+      })
+
+      const wsDailySales = XLSX.utils.aoa_to_sheet(dailyRows)
+
       XLSX.utils.book_append_sheet(wb, wsSummary, 'Billing_Summary')
+      XLSX.utils.book_append_sheet(wb, wsDailySales, 'Daily_Sales')
       XLSX.utils.book_append_sheet(wb, wsPayouts, 'Recorded_Payouts')
 
       const sanitizedVendorName = vendorDetails.name.replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -801,66 +874,83 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
       )}
 
       {/* ── Date Range Controls ── */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-3.5 rounded-2xl border border-border shadow-sm">
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-          <button
-            type="button"
-            onClick={() => handlePresetDate('thisMonth')}
-            className={`px-3 py-1.5 text-xs font-black rounded-xl transition cursor-pointer select-none ${
-              dateFilterPreset === 'thisMonth'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-muted/60 text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            This Month
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePresetDate('lastMonth')}
-            className={`px-3 py-1.5 text-xs font-black rounded-xl transition cursor-pointer select-none ${
-              dateFilterPreset === 'lastMonth'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-muted/60 text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            Last Month
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePresetDate('last30')}
-            className={`px-3 py-1.5 text-xs font-black rounded-xl transition cursor-pointer select-none ${
-              dateFilterPreset === 'last30'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-muted/60 text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            Last 30 Days
-          </button>
+      <div className="flex flex-col gap-3 bg-card p-3.5 rounded-2xl border border-border shadow-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            {([
+              { key: 'today', label: 'Today' },
+              { key: 'yesterday', label: 'Yesterday' },
+              { key: 'last7', label: 'Last 7 Days' },
+              { key: 'thisMonth', label: 'This Month' },
+              { key: 'lastMonth', label: 'Last Month' },
+              { key: 'last30', label: 'Last 30 Days' },
+            ] as const).map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handlePresetDate(key)}
+                className={`px-3 py-1.5 text-xs font-black rounded-xl transition cursor-pointer select-none whitespace-nowrap ${
+                  dateFilterPreset === key
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-muted/60 text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-muted/40 px-3 py-1.5 rounded-xl border border-border/60">
+              <Calendar className="h-3.5 w-3.5 text-text-muted" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value)
+                  setDateFilterPreset('custom')
+                }}
+                className="bg-transparent text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
+              />
+              <span className="text-text-muted text-xs">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value)
+                  setDateFilterPreset('custom')
+                }}
+                className="bg-transparent text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-muted/40 px-3 py-1.5 rounded-xl border border-border/60">
-            <Calendar className="h-3.5 w-3.5 text-text-muted" />
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value)
-                setDateFilterPreset('custom')
-              }}
-              className="bg-transparent text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
-            />
-            <span className="text-text-muted text-xs">to</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value)
-                setDateFilterPreset('custom')
-              }}
-              className="bg-transparent text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
-            />
-          </div>
+        {/* View Toggle: Product-wise vs Date-wise */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted mr-1">View:</span>
+          <button
+            type="button"
+            onClick={() => setSalesView('product')}
+            className={`px-3 py-1 text-[11px] font-black rounded-lg transition cursor-pointer select-none ${
+              salesView === 'product'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-muted/50 text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            📦 Product-wise
+          </button>
+          <button
+            type="button"
+            onClick={() => setSalesView('datewise')}
+            className={`px-3 py-1 text-[11px] font-black rounded-lg transition cursor-pointer select-none ${
+              salesView === 'datewise'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-muted/50 text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            📅 Date-wise
+          </button>
         </div>
       </div>
 
@@ -1020,7 +1110,8 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
             </div>
           </div>
 
-          {/* Delivered Sales Table */}
+          {/* Delivered Sales Table — Product-wise view */}
+          {salesView === 'product' && (
           <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -1093,6 +1184,107 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
               </table>
             </div>
           </div>
+          )}
+
+          {/* Delivered Sales Table — Date-wise view */}
+          {salesView === 'datewise' && (
+          <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-muted/50 border-b border-border text-[11px] font-black uppercase text-text-muted">
+                  <tr>
+                    <th className="p-3 w-8"></th>
+                    <th className="p-3">Date</th>
+                    <th className="p-3 text-right">Total Units Sold</th>
+                    <th className="p-3 text-right">Total Payable (Cost)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60 font-medium">
+                  {loadingDetails ? (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-center text-text-muted">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+                        Calculating date-wise sales...
+                      </td>
+                    </tr>
+                  ) : dailySales.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-center text-text-muted">
+                        No daily sales found for this vendor in the selected period.
+                      </td>
+                    </tr>
+                  ) : (
+                    dailySales.map((day) => {
+                      const isExpanded = expandedDays.has(day.date)
+                      const formattedDate = new Date(day.date + 'T00:00:00').toLocaleDateString('en-IN', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                      return (
+                        <>
+                          <tr
+                            key={day.date}
+                            className="hover:bg-muted/30 transition cursor-pointer"
+                            onClick={() => {
+                              setExpandedDays((prev) => {
+                                const next = new Set(prev)
+                                if (next.has(day.date)) {
+                                  next.delete(day.date)
+                                } else {
+                                  next.add(day.date)
+                                }
+                                return next
+                              })
+                            }}
+                          >
+                            <td className="p-3 text-center">
+                              <ChevronRight
+                                className={`h-3.5 w-3.5 text-text-muted transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                              />
+                            </td>
+                            <td className="p-3 font-bold text-text-primary">
+                              📅 {formattedDate}
+                            </td>
+                            <td className="p-3 text-right font-black text-emerald-600">
+                              {day.totalUnits} units
+                            </td>
+                            <td className="p-3 text-right font-black text-primary">
+                              {formatPrice(day.totalPayable)}
+                            </td>
+                          </tr>
+                          {isExpanded && day.items.map((item) => (
+                            <tr key={`${day.date}-${item.productId}`} className="bg-muted/20">
+                              <td className="p-2"></td>
+                              <td className="p-2 pl-8 text-text-secondary">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[11px]">↳</span>
+                                  <span className="font-medium">{item.name}</span>
+                                  {item.unit && (
+                                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-muted text-text-muted border border-border">
+                                      {item.unit}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-2 text-right text-text-secondary font-bold text-[11px]">
+                                {item.unitsSold} × {formatPrice(item.unitCostPrice)}
+                              </td>
+                              <td className="p-2 text-right font-bold text-[11px] text-text-primary">
+                                {formatPrice(item.totalPayable)}
+                              </td>
+                            </tr>
+                          ))}
+                        </>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          )}
 
           {/* Recorded Payouts History Section */}
           <div className="space-y-3 pt-4">

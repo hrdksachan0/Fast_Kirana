@@ -278,6 +278,13 @@ function LoginForm() {
           if (sessData?.user?.role) {
             activeRole = sessData.user.role
           }
+          const fastToken = sessData?.fastapiToken || sessData?.user?.fastapiToken
+          if (fastToken) {
+            localStorage.setItem('fastapi_token', fastToken)
+            localStorage.setItem('fastkirana_token', fastToken)
+            document.cookie = `fastapi_token=${fastToken}; path=/; max-age=2592000; SameSite=Lax; Secure`
+            document.cookie = `fastkirana_token=${fastToken}; path=/; max-age=2592000; SameSite=Lax; Secure`
+          }
         } catch (e) {
           // ignore
         }
@@ -380,6 +387,13 @@ function LoginForm() {
         const sessData = await sessRes.json()
         if (sessData?.user?.role) {
           activeRole = sessData.user.role
+        }
+        const fastToken = sessData?.fastapiToken || sessData?.user?.fastapiToken
+        if (fastToken) {
+          localStorage.setItem('fastapi_token', fastToken)
+          localStorage.setItem('fastkirana_token', fastToken)
+          document.cookie = `fastapi_token=${fastToken}; path=/; max-age=2592000; SameSite=Lax; Secure`
+          document.cookie = `fastkirana_token=${fastToken}; path=/; max-age=2592000; SameSite=Lax; Secure`
         }
       } catch (e) {
         // ignore

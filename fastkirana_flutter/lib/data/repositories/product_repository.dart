@@ -211,6 +211,37 @@ class ProductRepository {
     } catch (e) { LoggerService.error('ProductRepository: hub cache invalidation failed ($hubId)', e); }
   }
 
+  /// Zepto/Swiggy SWR Epoch Revalidation:
+  /// Checks server's 100-byte /api/products/catalog-version.
+  /// If the server version is newer than local disk version,
+  /// it invalidates the cache and signals that fresh data is available.
+  static Future<bool> checkAndRevalidateCatalog(Dio dio, [String? hubId]) async {
+    try {
+      final effectiveHub = (hubId != null && hubId.isNotEmpty) ? hubId : AppConfig.darkstoreId;
+      final prefs = await SharedPreferences.getInstance();
+      final localVersion = prefs.getString('catalog_version_$effectiveHub') ?? '';
+
+      final res = await dio.get('/api/products/catalog-version', queryParameters: {
+        if (effectiveHub.isNotEmpty && effectiveHub != 'all') 'storeId': effectiveHub,
+        't': DateTime.now().millisecondsSinceEpoch,
+      });
+
+      if (res.statusCode == 200 && res.data != null) {
+        final serverVersion = res.data['productsVersion']?.toString() ?? '';
+        if (serverVersion.isNotEmpty && serverVersion != localVersion) {
+          debugPrint('[ProductRepository] SWR: Catalog changed (local: $localVersion -> server: $serverVersion). Invalidating cache!');
+          await prefs.setString('catalog_version_$effectiveHub', serverVersion);
+          await invalidateHubCache(effectiveHub);
+          return true; // Catalog changed
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[ProductRepository] SWR version check error: $e');
+      return false;
+    }
+  }
+
   /// Resolves any category slug or ID to its canonical Category ID in the database.
   static String resolveCategoryId(String slugOrId) {
     switch (slugOrId.toLowerCase().trim()) {

@@ -259,11 +259,13 @@ async def get_vendor_details(
 
     total_units_sold = 0
     total_payable_amount = 0.0
+    # Date-wise sales breakdown: { "2026-09-24": { totalUnits, totalPayable, items: [...] } }
+    daily_sales_map: Dict[str, Dict[str, Any]] = {}
 
     if product_ids:
-        # Query order items belonging to these products
+        # Query order items WITH parent order (for createdAt date grouping)
         oi_stmt = (
-            select(OrderItem)
+            select(OrderItem, Order.createdAt)
             .join(Order, OrderItem.orderId == Order.id)
             .where(
                 and_(
@@ -271,11 +273,12 @@ async def get_vendor_details(
                     *order_filters
                 )
             )
+            .order_by(desc(Order.createdAt))
         )
         oi_res = await db.execute(oi_stmt)
-        delivered_items = oi_res.scalars().all()
+        delivered_rows = oi_res.all()
 
-        for oi in delivered_items:
+        for oi, order_created_at in delivered_rows:
             if not oi.productId:
                 continue
 
@@ -292,6 +295,41 @@ async def get_vendor_details(
                 item_sales_summary[oi.productId]["totalPayable"] += item_payable
                 if effective_cost > 0:
                     item_sales_summary[oi.productId]["unitCostPrice"] = effective_cost
+
+            # Build daily breakdown
+            day_key = order_created_at.strftime("%Y-%m-%d") if order_created_at else "unknown"
+            if day_key not in daily_sales_map:
+                daily_sales_map[day_key] = {
+                    "date": day_key,
+                    "totalUnits": 0,
+                    "totalPayable": 0.0,
+                    "items": {},
+                }
+            day_entry = daily_sales_map[day_key]
+            day_entry["totalUnits"] += qty
+            day_entry["totalPayable"] += item_payable
+
+            prod_name = base_prod.name if base_prod else oi.name
+            prod_unit = (base_prod.unit or "") if base_prod else ""
+            if oi.productId not in day_entry["items"]:
+                day_entry["items"][oi.productId] = {
+                    "productId": oi.productId,
+                    "name": prod_name,
+                    "unit": prod_unit,
+                    "unitCostPrice": effective_cost,
+                    "unitsSold": 0,
+                    "totalPayable": 0.0,
+                }
+            day_entry["items"][oi.productId]["unitsSold"] += qty
+            day_entry["items"][oi.productId]["totalPayable"] += item_payable
+
+    # Flatten daily items from dict to sorted list, sort days descending
+    daily_sales = []
+    for day_key in sorted(daily_sales_map.keys(), reverse=True):
+        day = daily_sales_map[day_key]
+        day["items"] = sorted(day["items"].values(), key=lambda x: x["totalPayable"], reverse=True)
+        day["totalPayable"] = round(day["totalPayable"], 2)
+        daily_sales.append(day)
 
     itemized_sales = sorted(
         item_sales_summary.values(),
@@ -405,6 +443,7 @@ async def get_vendor_details(
             for p in payouts_list
         ],
         "lowStockItems": low_stock_items,
+        "dailySales": daily_sales,
     }
 
 
@@ -552,7 +591,13 @@ async def get_vendor_live_orders(
     ).where(
         and_(
             Order.createdAt >= cutoff,
-            Order.status != OrderStatus.CANCELLED,
+            Order.status.in_([
+                OrderStatus.PENDING,
+                OrderStatus.ADMIN_PENDING,
+                OrderStatus.CONFIRMED,
+                OrderStatus.PACKED,
+                OrderStatus.SHIPPED,
+            ]),
             Order.items.any(OrderItem.productId.in_(vendor_prod_ids))
         )
     ).order_by(desc(Order.createdAt)).limit(50)
@@ -786,94 +831,8 @@ async def update_vendor_product_prices(
     }
 
 
-@vendors_router.get("/{vendor_id}/live-orders")
-async def get_vendor_live_orders(
-    vendor_id: str,
-    current_user: dict = Depends(require_auth),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Get live incoming orders that contain products connected to this vendor.
-    Like restaurants get kitchen orders!
-    """
-    check_vendor_or_admin_access(current_user, vendor_id)
 
-    # 1. Fetch vendor to know their ID & Name
-    v_stmt = select(Vendor).where(Vendor.id == vendor_id)
-    v_res = await db.execute(v_stmt)
-    vendor = v_res.scalars().first()
-    if not vendor:
-        raise HTTPException(status_code=404, detail="Vendor not found")
 
-    # 2. Find active orders in last 48 hours
-    cutoff = datetime.utcnow() - timedelta(hours=48)
-    o_stmt = select(Order).options(
-        selectinload(Order.items).selectinload(OrderItem.product)
-    ).where(
-        and_(
-            Order.createdAt >= cutoff,
-            Order.status.in_([
-                OrderStatus.CONFIRMED,
-                OrderStatus.PENDING,
-                OrderStatus.PACKED,
-                OrderStatus.SHIPPED,
-                OrderStatus.ADMIN_PENDING,
-                OrderStatus.DELIVERED,
-            ])
-        )
-    ).order_by(desc(Order.createdAt))
-
-    o_res = await db.execute(o_stmt)
-    all_orders = o_res.scalars().all()
-
-    vendor_name_clean = vendor.name.lower().strip() if vendor.name else ""
-
-    live_orders = []
-    for ord in all_orders:
-        matched_items = []
-        for it in ord.items:
-            prod = it.product
-            if not prod:
-                continue
-            is_match = False
-            if prod.vendorId and prod.vendorId == vendor_id:
-                is_match = True
-            elif prod.vendor and prod.vendor.lower().strip() == vendor_name_clean:
-                is_match = True
-
-            if is_match:
-                cost = float(prod.costPrice or prod.price or 0.0)
-                matched_items.append({
-                    "id": it.id,
-                    "productId": prod.id,
-                    "name": prod.name,
-                    "quantity": it.quantity,
-                    "cost": cost,
-                    "totalCost": cost * it.quantity,
-                    "unit": prod.unit or "",
-                    "imageUrl": prod.imageUrl or "",
-                    "variant": it.selectedVariant or "",
-                })
-
-        if matched_items:
-            total_val = sum(i["totalCost"] for i in matched_items)
-            live_orders.append({
-                "orderId": ord.id,
-                "readableId": ord.readableId or ord.id[-6:],
-                "status": ord.status.value,
-                "createdAt": ord.createdAt.isoformat() if ord.createdAt else "",
-                "totalVendorValue": total_val,
-                "itemCount": len(matched_items),
-                "items": matched_items,
-                "isDelivered": ord.status == OrderStatus.DELIVERED,
-            })
-
-    return {
-        "success": True,
-        "vendorId": vendor_id,
-        "count": len(live_orders),
-        "orders": live_orders,
-    }
 
 
 @vendors_router.post("/payout")

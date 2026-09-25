@@ -196,23 +196,36 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
           if (orderId == null || newStatus == null) return true;
 
-          final response = await dio.patch(
-            '/api/orders/$orderId',
-            data: {
-              'status': newStatus,
-              'deliveryUserId': userId,
-              if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
-              if (extra != null) ...extra,
-            },
-            options: Options(
-              headers: {
-                'x-user-id': userId,
-                'x-user-role': 'DELIVERY',
+          try {
+            final response = await dio.patch(
+              '/api/orders/$orderId',
+              data: {
+                'status': newStatus,
+                'deliveryUserId': userId,
+                if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
+                if (extra != null) ...extra,
               },
-            ),
-          );
+              options: Options(
+                headers: {
+                  'x-user-id': userId,
+                  'x-user-role': 'DELIVERY',
+                },
+              ),
+            );
 
-          return response.statusCode == 200 || response.statusCode == 204;
+            return response.statusCode == 200 || response.statusCode == 204;
+          } on DioException catch (dioErr) {
+            final code = dioErr.response?.statusCode;
+            // If the order was already completed, cancelled, or not found (400, 404, 409, 422),
+            // consider it resolved/discarded so it doesn't get stuck in the offline queue forever!
+            if (code != null && code >= 400 && code < 500) {
+              debugPrint('[DeliveryDashboard] Offline action resolved/discarded ($code): $dioErr');
+              return true;
+            }
+            return false;
+          } catch (_) {
+            return false;
+          }
         },
       );
 

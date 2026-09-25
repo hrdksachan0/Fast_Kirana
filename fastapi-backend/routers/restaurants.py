@@ -233,6 +233,17 @@ async def get_restaurant_details(
     o_count_res = await db.execute(o_count_stmt)
     o_count = o_count_res.scalar()
 
+    # Dynamic live rating & review count calculation from RestaurantReview
+    rev_stmt = select(
+        func.count(RestaurantReview.id),
+        func.avg(RestaurantReview.rating)
+    ).where(RestaurantReview.restaurantId == restaurant.id)
+    rev_res = await db.execute(rev_stmt)
+    rev_count, rev_avg = rev_res.first()
+
+    effective_rating = round(float(rev_avg), 1) if (rev_count and rev_count > 0 and rev_avg is not None) else (restaurant.rating or 4.5)
+    effective_review_count = int(rev_count) if (rev_count and rev_count > 0) else (restaurant.reviewCount or 0)
+
     r_dict = {
         "id": restaurant.id,
         "name": restaurant.name,
@@ -259,7 +270,8 @@ async def get_restaurant_details(
         "ownerPhone": restaurant.ownerPhone,
         "ownerEmail": restaurant.ownerEmail,
         "isActive": restaurant.isActive,
-        "rating": restaurant.rating,
+        "rating": effective_rating,
+        "reviewCount": effective_review_count,
         "menuSections": restaurant.menuSections,
         "createdAt": restaurant.createdAt,
         "updatedAt": restaurant.updatedAt,
@@ -654,6 +666,17 @@ async def get_restaurant_menu(
 
     final_sections.sort(key=lambda s: s["sortOrder"])
 
+    # Dynamic live rating & review count calculation from RestaurantReview
+    rev_stmt = select(
+        func.count(RestaurantReview.id),
+        func.avg(RestaurantReview.rating)
+    ).where(RestaurantReview.restaurantId == restaurant.id)
+    rev_res = await db.execute(rev_stmt)
+    rev_count, rev_avg = rev_res.first()
+
+    effective_rating = round(float(rev_avg), 1) if (rev_count and rev_count > 0 and rev_avg is not None) else (restaurant.rating or 4.5)
+    effective_review_count = int(rev_count) if (rev_count and rev_count > 0) else (restaurant.reviewCount or 0)
+
     return {
         "success": True,
         "restaurant": {
@@ -665,8 +688,8 @@ async def get_restaurant_menu(
             "bannerUrl": restaurant.bannerUrl,
             "address": restaurant.address,
             "phone": restaurant.ownerPhone,
-            "rating": restaurant.rating,
-            "reviewCount": restaurant.reviewCount,
+            "rating": effective_rating,
+            "reviewCount": effective_review_count,
             "isVeg": restaurant.isVeg,
             "isPureVeg": restaurant.isPureVeg,
             "isOpen": restaurant.isOpen,

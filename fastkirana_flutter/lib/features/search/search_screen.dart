@@ -250,7 +250,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               autofocus: widget.initialQuery == null || widget.initialQuery!.isEmpty,
                               onChanged: (val) {
                                 _debounce?.cancel();
-                                _debounce = Timer(const Duration(milliseconds: 120), () {
+                                _debounce = Timer(const Duration(milliseconds: 250), () {
                                   if (mounted) setState(() => _query = val.trim());
                                 });
                               },

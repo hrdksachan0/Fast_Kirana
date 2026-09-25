@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
+import { getAuthToken } from '@/lib/fastapi'
 
 interface UseAdminRealtimeProps {
   selectedHubId: string
@@ -271,7 +272,11 @@ export function useAdminRealtime({
           selectedHubId && selectedHubId !== 'all'
             ? `&storeId=${encodeURIComponent(selectedHubId)}`
             : ''
-        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`)
+        const token = await getAuthToken()
+        const headers: Record<string, string> = {}
+        if (token) headers['Authorization'] = `Bearer ${token}`
+
+        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`, { headers })
         if (res.ok && active) {
           const data = await res.json()
           setActiveCartsCount(data.count || 0)
@@ -302,7 +307,11 @@ export function useAdminRealtime({
           selectedHubId && selectedHubId !== 'all'
             ? `&storeId=${encodeURIComponent(selectedHubId)}`
             : ''
-        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`)
+        const token = await getAuthToken()
+        const headers: Record<string, string> = {}
+        if (token) headers['Authorization'] = `Bearer ${token}`
+
+        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`, { headers })
         if (res.ok && active) {
           const data = await res.json()
           setActiveCarts(data.carts || [])

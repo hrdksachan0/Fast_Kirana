@@ -182,3 +182,12 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
   return candidateList.take(8).toList();
 });
 
+/// Invalidate and refresh all product, category and banner providers cleanly on pull-to-refresh or SWR change
+void refreshAllCatalogProviders(WidgetRef ref) {
+  ProductRepository.invalidateAllCache();
+  ref.invalidate(homeProductCatalogProvider);
+  ref.invalidate(trendingProductsProvider);
+  ref.invalidate(categoriesProvider);
+  ref.invalidate(productsProvider);
+}
+

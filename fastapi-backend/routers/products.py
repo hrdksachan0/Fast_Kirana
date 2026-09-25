@@ -300,6 +300,50 @@ def serialize_product(p: Product, local_stock: Optional[int] = None) -> Dict[str
     }
 
 
+@router.get("/catalog-version")
+async def get_catalog_version(
+    storeId: Optional[str] = Query(None),
+    restaurantId: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Ultra-lightweight version epoch endpoint (Zepto/Swiggy pattern).
+    Allows client to check if anything changed in <5ms without transferring the full catalog.
+    """
+    p_filter = []
+    if restaurantId:
+        p_filter.append(Product.restaurantId == restaurantId)
+    elif storeId and storeId != "all":
+        p_filter.append(or_(Product.storeId == storeId, Product.storeId == None))
+
+    p_stmt = select(
+        func.max(Product.updatedAt),
+        func.count(Product.id)
+    )
+    if p_filter:
+        p_stmt = p_stmt.where(and_(*p_filter))
+
+    p_res = await db.execute(p_stmt)
+    p_max_dt, p_count = p_res.first()
+
+    c_stmt = select(func.max(Category.updatedAt))
+    c_res = await db.execute(c_stmt)
+    c_max_dt = c_res.scalar()
+
+    p_version = int(p_max_dt.timestamp() * 1000) if p_max_dt else 0
+    c_version = int(c_max_dt.timestamp() * 1000) if c_max_dt else 0
+
+    return {
+        "success": True,
+        "storeId": storeId,
+        "restaurantId": restaurantId,
+        "productsVersion": str(p_version),
+        "categoriesVersion": str(c_version),
+        "productsCount": int(p_count or 0),
+        "timestamp": int(datetime.utcnow().timestamp() * 1000)
+    }
+
+
 @router.get("")
 async def get_products(
     response: Response,
@@ -1174,16 +1218,16 @@ async def create_product(
     product = Product(
         id=str(uuid.uuid4()),
         readableId=readable_id,
-        name=name,
+        name=name.strip(),
         slug=slug,
-        description=payload.get("description"),
-        imageUrl=payload.get("imageUrl") or "📦",
+        description=payload.get("description") or "",
+        imageUrl=(str(payload.get("imageUrl") or "").strip()) or "📦",
         categoryId=final_cat_id,
         restaurantId=final_rest_id,
         mrp=raw_mrp,
         price=raw_price,
         discount=discount,
-        unit=payload.get("unit", "pcs"),
+        unit=str(payload.get("unit", "pcs")).strip(),
         stock=99999 if final_rest_id else int(payload.get("stock", 0)),
         isAvailable=bool(payload.get("isAvailable", True)),
         tags=payload.get("tags") if isinstance(payload.get("tags"), list) else [],
@@ -1199,7 +1243,7 @@ async def create_product(
         sortOrder=int(payload.get("sortOrder", 0)),
         availableStartTime=payload.get("availableStartTime"),
         availableEndTime=payload.get("availableEndTime"),
-        barcode=payload.get("barcode"),
+        barcode=str(payload.get("barcode", "")).strip() if payload.get("barcode") else None,
         vendor=payload.get("vendor"),
         vendorId=payload.get("vendorId")
     )
@@ -1370,7 +1414,13 @@ async def update_product(
     for key in updatable_fields:
         if key in payload:
             val = payload[key]
-            if val == "":
+            if isinstance(val, str):
+                val = val.strip()
+                if key == 'description':
+                    pass  # keep trimmed string, even if empty
+                elif val == "":
+                    val = None
+            elif val == "":
                 val = None
             setattr(product, key, val)
 

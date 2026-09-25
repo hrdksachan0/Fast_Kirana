@@ -1137,6 +1137,129 @@ async def block_user_alias(
     }
 
 
+@router.patch("/users")
+async def admin_update_user(
+    payload: dict = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    H19 FIX: Admin updates user details (role, name, phone, assignedStoreId).
+    Includes safeguard to prevent downgrading master/superadmin accounts.
+    """
+    user_id = payload.get("userId") or payload.get("id")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Missing required userId")
+
+    stmt = select(User).where(User.id == user_id)
+    res = await db.execute(stmt)
+    user = res.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    name = payload.get("name")
+    phone = payload.get("phone")
+    role_str = payload.get("role")
+    assigned_store_id = payload.get("assignedStoreId")
+
+    if name:
+        user.name = str(name).strip()
+    if phone:
+        user.phone = str(phone).strip()
+    if "assignedStoreId" in payload:
+        user.assignedStoreId = assigned_store_id if assigned_store_id else None
+
+    if role_str:
+        allowed_roles = [r.value for r in Role]
+        if role_str not in allowed_roles:
+            raise HTTPException(status_code=400, detail=f"Invalid role. Allowed: {allowed_roles}")
+
+        # Root admin downgrade safeguard
+        is_root_admin = (
+            user.email in ["admin@fastkirana.com", "superadmin@fastkirana.com"]
+            or (user.phone and ("7054470303" in user.phone or "9170942500" in user.phone))
+        )
+        if is_root_admin and role_str != Role.ADMIN.value:
+            raise HTTPException(status_code=403, detail="Root Admin accounts cannot be downgraded")
+
+        user.role = Role(role_str)
+
+    user.updatedAt = datetime.utcnow()
+    await db.commit()
+    await db.refresh(user)
+
+    return {
+        "success": True,
+        "message": "User details updated successfully",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "role": user.role.value if hasattr(user.role, "value") else str(user.role),
+            "assignedStoreId": user.assignedStoreId
+        }
+    }
+
+
+@router.post("/users")
+@router.post("/users/password")
+async def admin_set_user_password(
+    payload: dict = Body(...),
+    current_admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    H20 FIX: Admin sets or resets password for staff/worker/customer accounts.
+    Syncs password across all alternate phone representations.
+    """
+    from routers.auth import hash_password
+
+    user_id = payload.get("userId") or payload.get("id")
+    password = payload.get("password")
+
+    if not user_id or not password:
+        raise HTTPException(status_code=400, detail="userId and password are required")
+
+    if len(str(password)) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    stmt = select(User).where(User.id == user_id)
+    res = await db.execute(stmt)
+    user = res.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    new_hash = hash_password(str(password))
+
+    # If user has phone, sync to all matching phone accounts
+    if user.phone:
+        raw_digits = re.sub(r"\D", "", user.phone)[-10:]
+        phone_variants = [user.phone, raw_digits, f"+91{raw_digits}"]
+        sync_stmt = (
+            update(User)
+            .where(
+                or_(
+                    User.id == user.id,
+                    User.phone.in_(phone_variants),
+                    User.email == f"wa-{raw_digits}@fastkirana.com"
+                )
+            )
+            .values(passwordHash=new_hash, updatedAt=datetime.utcnow())
+        )
+        await db.execute(sync_stmt)
+    else:
+        user.passwordHash = new_hash
+        user.updatedAt = datetime.utcnow()
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "message": f"Password updated successfully for user {user.name or user.email or user.phone}"
+    }
+
+
 @router.post("/orders/sync-razorpay")
 async def admin_sync_razorpay_order(
     payload: dict = Body(...),
