@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth-guard'
 
-export async function GET() {
-  const adminResult = await requireAdmin()
+export async function GET(request: Request) {
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
 
   try {
@@ -20,8 +20,23 @@ export async function GET() {
     })
     return NextResponse.json(coupons)
   } catch (error: any) {
-    console.error('Failed to fetch coupons:', error)
-    return NextResponse.json({ error: 'Failed to fetch coupons' }, { status: 500 })
+    console.error('Failed to fetch coupons from Prisma, attempting FastAPI fallback:', error)
+    try {
+      const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+      const res = await fetch(`${apiDest}/api/coupons`, {
+        headers: { 'Content-Type': 'application/json' },
+        next: { revalidate: 0 },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          return NextResponse.json(data)
+        }
+      }
+    } catch (fallbackErr) {
+      console.error('FastAPI coupon fallback also failed:', fallbackErr)
+    }
+    return NextResponse.json([], { status: 200 })
   }
 }
 

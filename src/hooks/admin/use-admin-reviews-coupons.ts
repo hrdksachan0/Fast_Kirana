@@ -27,7 +27,7 @@ export function useAdminReviewsCoupons({
   }), [session])
 
   // Reviews state
-  const [reviews, setReviews] = useState(initialReviews || [])
+  const [reviews, setReviews] = useState<any[]>(Array.isArray(initialReviews) ? initialReviews : [])
   const [isLoadingReviews, setIsLoadingReviews] = useState(false)
   const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null)
   const [reviewSearch, setReviewSearch] = useState('')
@@ -40,7 +40,7 @@ export function useAdminReviewsCoupons({
   })
 
   // Coupons state
-  const [coupons, setCoupons] = useState(initialCoupons || [])
+  const [coupons, setCoupons] = useState<any[]>(Array.isArray(initialCoupons) ? initialCoupons : [])
   const [isLoadingCoupons, setIsLoadingCoupons] = useState(false)
   const [showAddCoupon, setShowAddCoupon] = useState(false)
   const [isCreatingCoupon, setIsCreatingCoupon] = useState(false)
@@ -103,10 +103,13 @@ export function useAdminReviewsCoupons({
           const res = await fetch(`/api/admin/reviews?t=${Date.now()}${storeQuery}`, { headers: authHeaders })
           if (res.ok) {
             const data = await res.json()
-            setReviews(data)
+            setReviews(Array.isArray(data) ? data : (Array.isArray(data?.reviews) ? data.reviews : []))
+          } else {
+            setReviews([])
           }
         } catch (err) {
           console.error('Failed to load reviews:', err)
+          setReviews([])
         } finally {
           setIsLoadingReviews(false)
         }
@@ -124,10 +127,13 @@ export function useAdminReviewsCoupons({
           const res = await fetch(`/api/admin/coupons?t=${Date.now()}`, { headers: authHeaders })
           if (res.ok) {
             const data = await res.json()
-            setCoupons(data)
+            setCoupons(Array.isArray(data) ? data : (Array.isArray(data?.coupons) ? data.coupons : []))
+          } else {
+            setCoupons([])
           }
         } catch (err) {
           console.error('Failed to load coupons:', err)
+          setCoupons([])
         } finally {
           setIsLoadingCoupons(false)
         }

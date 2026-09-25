@@ -45,8 +45,25 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(parsedBanners)
   } catch (error: any) {
-    console.error('Error fetching admin banners:', error)
-    return NextResponse.json({ error: 'Failed to fetch banners' }, { status: 500 })
+    console.error('Error fetching admin banners from Prisma, attempting FastAPI proxy fallback:', error)
+    try {
+      const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+      const { searchParams } = new URL(request.url)
+      const q = searchParams.toString() ? `?${searchParams.toString()}` : ''
+      const res = await fetch(`${apiDest}/api/banners${q}`, {
+        headers: { 'Content-Type': 'application/json' },
+        next: { revalidate: 0 },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          return NextResponse.json(data)
+        }
+      }
+    } catch (fallbackErr) {
+      console.error('FastAPI fallback also failed:', fallbackErr)
+    }
+    return NextResponse.json([], { status: 200 })
   }
 }
 
