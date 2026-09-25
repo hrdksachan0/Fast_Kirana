@@ -284,41 +284,14 @@ const nextConfig: NextConfig = {
         source: '/api/admin/reviews',
         destination: `${apiDest}/api/admin/reviews`,
       },
-      // Admin Stores Hub Management -> FastAPI
+      // ALL Admin APIs (Products, Orders, Users, Stores, Coupons, Vendors, Inventory, Reports, Alerts, etc.) -> FastAPI
       {
-        source: '/api/admin/stores/:path*',
-        destination: `${apiDest}/api/admin/stores/:path*`,
+        source: '/api/admin/:path*',
+        destination: `${apiDest}/api/admin/:path*`,
       },
       {
-        source: '/api/admin/stores',
-        destination: `${apiDest}/api/admin/stores`,
-      },
-      // Admin Products & Catalog Management -> FastAPI
-      {
-        source: '/api/admin/products/:path*',
-        destination: `${apiDest}/api/admin/products/:path*`,
-      },
-      {
-        source: '/api/admin/products',
-        destination: `${apiDest}/api/admin/products`,
-      },
-      // Admin Users & Staff Management -> FastAPI
-      {
-        source: '/api/admin/users/:path*',
-        destination: `${apiDest}/api/admin/users/:path*`,
-      },
-      {
-        source: '/api/admin/users',
-        destination: `${apiDest}/api/admin/users`,
-      },
-      // Admin Order Management & Actions -> FastAPI
-      {
-        source: '/api/admin/orders/:path*',
-        destination: `${apiDest}/api/admin/orders/:path*`,
-      },
-      {
-        source: '/api/admin/orders',
-        destination: `${apiDest}/api/admin/orders`,
+        source: '/api/admin',
+        destination: `${apiDest}/api/admin`,
       },
       // Online Payment Gateways -> FastAPI
       {
@@ -418,6 +391,40 @@ const nextConfig: NextConfig = {
       {
         source: '/api/superadmin',
         destination: `${apiDest}/api/superadmin`,
+      },
+      // SSE Realtime Updates -> FastAPI
+      {
+        source: '/api/sse/:path*',
+        destination: `${apiDest}/api/sse/:path*`,
+      },
+      {
+        source: '/api/sse',
+        destination: `${apiDest}/api/sse`,
+      },
+      // Geocoding, Telemetry & Diagnostics -> FastAPI
+      {
+        source: '/api/geocode/:path*',
+        destination: `${apiDest}/api/geocode/:path*`,
+      },
+      {
+        source: '/api/geocode',
+        destination: `${apiDest}/api/geocode`,
+      },
+      {
+        source: '/api/telemetry/:path*',
+        destination: `${apiDest}/api/telemetry/:path*`,
+      },
+      {
+        source: '/api/telemetry',
+        destination: `${apiDest}/api/telemetry`,
+      },
+      {
+        source: '/api/diagnostics',
+        destination: `${apiDest}/api/diagnostics`,
+      },
+      {
+        source: '/api/revalidate-bridge',
+        destination: `${apiDest}/api/revalidate-bridge`,
       },
       {
         source: '/api/cron/:path*',

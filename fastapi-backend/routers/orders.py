@@ -655,8 +655,7 @@ async def create_order(
     settings_stmt = select(StoreSetting)
     settings_res = await db.execute(settings_stmt)
     settings_map = {s.key: s.value for s in settings_res.scalars().all()}
-
-    default_support_phone = settings_map.get("contact_phone", "+917054470303")
+    default_support_phone = settings_map.get("contact_phone") or os.getenv("SUPPORT_PHONE", "+918112849854")
     
     # 1. Resolve address
     final_address_id = address_id
@@ -1861,7 +1860,7 @@ async def list_orders(
                 "paymentMethod": o.paymentMethod.value,
                 "paymentStatus": o.paymentStatus.value,
                 "deliveryMethod": o.deliveryMethod or "DELIVERY",
-                "createdAt": o.createdAt.isoformat() if o.createdAt else None,
+                "createdAt": to_iso_utc(o.createdAt),
                 "shopName": o.shopName or ("FastKirana DarkStore" if not o.restaurantId else "Restaurant"),
                 "restaurantId": o.restaurantId,
                 "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": float(i.price), "imageUrl": i.imageUrl} for i in o.items],
@@ -1905,7 +1904,7 @@ async def list_orders(
                 "paymentMethod": main_order.paymentMethod.value,
                 "paymentStatus": main_order.paymentStatus.value,
                 "deliveryMethod": main_order.deliveryMethod or "DELIVERY",
-                "createdAt": main_order.createdAt.isoformat() if main_order.createdAt else None,
+                "createdAt": to_iso_utc(main_order.createdAt),
                 "shopName": main_order.shopName or ("FastKirana DarkStore" if not main_order.restaurantId else "Restaurant"),
                 "restaurantId": main_order.restaurantId,
                 "items": all_items,
@@ -2042,9 +2041,9 @@ async def get_order_details(
                 "total": sum(float(co.total) for co in combined_orders),
                 "paymentMethod": order.paymentMethod.value,
                 "paymentStatus": order.paymentStatus.value,
-                "estimatedDelivery": order.estimatedDelivery.isoformat() if order.estimatedDelivery else None,
-                "createdAt": order.createdAt.isoformat() if order.createdAt else None,
-                "updatedAt": order.updatedAt.isoformat() if order.updatedAt else None,
+                "estimatedDelivery": to_iso_utc(order.estimatedDelivery),
+                "createdAt": to_iso_utc(order.createdAt),
+                "updatedAt": to_iso_utc(order.updatedAt),
                 "deliveryMethod": order.deliveryMethod,
                 "isB2B": order.isB2B,
                 "shopName": order.shopName,
@@ -2102,9 +2101,9 @@ async def get_order_details(
         "total": float(order.total),
         "paymentMethod": order.paymentMethod.value,
         "paymentStatus": order.paymentStatus.value,
-        "estimatedDelivery": order.estimatedDelivery.isoformat() if order.estimatedDelivery else None,
-        "createdAt": order.createdAt.isoformat() if order.createdAt else None,
-        "updatedAt": order.updatedAt.isoformat() if order.updatedAt else None,
+        "estimatedDelivery": to_iso_utc(order.estimatedDelivery),
+        "createdAt": to_iso_utc(order.createdAt),
+        "updatedAt": to_iso_utc(order.updatedAt),
         "deliveryMethod": order.deliveryMethod,
         "isB2B": order.isB2B,
         "shopName": order.shopName,
@@ -2575,9 +2574,9 @@ async def update_order(
         "total": float(order.total),
         "paymentMethod": order.paymentMethod.value,
         "paymentStatus": order.paymentStatus.value,
-        "estimatedDelivery": order.estimatedDelivery.isoformat() if order.estimatedDelivery else None,
-        "createdAt": order.createdAt.isoformat() if order.createdAt else None,
-        "updatedAt": order.updatedAt.isoformat() if order.updatedAt else None,
+        "estimatedDelivery": to_iso_utc(order.estimatedDelivery),
+        "createdAt": to_iso_utc(order.createdAt),
+        "updatedAt": to_iso_utc(order.updatedAt),
         "deliveryPhoto": order.deliveryPhoto,
         "deliveryLat": order.deliveryLat,
         "deliveryLng": order.deliveryLng,
@@ -2585,10 +2584,10 @@ async def update_order(
         "deliveryUserId": order.deliveryUserId,
         "assignedPickerId": order.assignedPickerId,
         "assignedChefId": order.assignedChefId,
-        "confirmedAt": order.confirmedAt.isoformat() if order.confirmedAt else None,
-        "packedAt": order.packedAt.isoformat() if order.packedAt else None,
-        "shippedAt": order.shippedAt.isoformat() if order.shippedAt else None,
-        "deliveredAt": order.deliveredAt.isoformat() if order.deliveredAt else None,
+        "confirmedAt": to_iso_utc(order.confirmedAt),
+        "packedAt": to_iso_utc(order.packedAt),
+        "shippedAt": to_iso_utc(order.shippedAt),
+        "deliveredAt": to_iso_utc(order.deliveredAt),
         "shopName": order.shopName,
         "shopPhone": order.shopPhone,
         "notes": order.notes,
@@ -2653,11 +2652,11 @@ async def track_order(
             }
 
     status_steps = [
-        {"status": "PENDING", "label": "Order Placed", "completed": True, "time": order.createdAt.isoformat() if order.createdAt else None},
-        {"status": "CONFIRMED", "label": "Order Confirmed", "completed": order.confirmedAt is not None, "time": order.confirmedAt.isoformat() if order.confirmedAt else None},
-        {"status": "PACKED", "label": "Packing / Preparing", "completed": order.packedAt is not None, "time": order.packedAt.isoformat() if order.packedAt else None},
-        {"status": "SHIPPED", "label": "Out for Delivery", "completed": order.shippedAt is not None or order.status == OrderStatus.SHIPPED, "time": order.shippedAt.isoformat() if order.shippedAt else None},
-        {"status": "DELIVERED", "label": "Delivered", "completed": order.deliveredAt is not None or order.status == OrderStatus.DELIVERED, "time": order.deliveredAt.isoformat() if order.deliveredAt else None}
+        {"status": "PENDING", "label": "Order Placed", "completed": True, "time": to_iso_utc(order.createdAt)},
+        {"status": "CONFIRMED", "label": "Order Confirmed", "completed": order.confirmedAt is not None, "time": to_iso_utc(order.confirmedAt)},
+        {"status": "PACKED", "label": "Packing / Preparing", "completed": order.packedAt is not None, "time": to_iso_utc(order.packedAt)},
+        {"status": "SHIPPED", "label": "Out for Delivery", "completed": order.shippedAt is not None or order.status == OrderStatus.SHIPPED, "time": to_iso_utc(order.shippedAt)},
+        {"status": "DELIVERED", "label": "Delivered", "completed": order.deliveredAt is not None or order.status == OrderStatus.DELIVERED, "time": to_iso_utc(order.deliveredAt)}
     ]
 
     return {

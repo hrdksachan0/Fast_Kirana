@@ -21,6 +21,7 @@ import Link from 'next/link'
 import { formatAddress, formatPrice } from '@/lib/utils'
 import { printKOTReceipt } from '@/lib/kot-print'
 import { RecordRefundModal } from '@/components/admin/record-refund-modal'
+import { formatOrderTime, formatDate } from '@/lib/date-helpers'
 
 interface Address {
   phone?: string
@@ -134,7 +135,7 @@ export default function OrderTrackingModal({
     const restSub = o.subOrders?.find(s => s.type === 'RESTAURANT')
     const orderId = restSub?.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
     const outletName = restSub?.shopName || (o.restaurantId ? (o.restaurantName || o.shopName) : null) || 'Restaurant'
-    const orderTime = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''
+    const orderTime = formatOrderTime(o.createdAt)
     
     let text = `🍽️ *FASTKIRANA KITCHEN ORDER*\n`
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
@@ -239,12 +240,8 @@ export default function OrderTrackingModal({
   const isOrderPickup = order.deliveryMethod === 'RETAIL' || order.deliveryMethod === 'TAKEAWAY' || order.isSelfPickup === true || isPickup
   const riderName = order.deliveryUser?.name || order.deliveryBoyName || ((order.status === 'SHIPPED' || order.status === 'DELIVERED') && order.deliveryUserId ? 'FastKirana Delivery Partner' : null)
   const riderPhone = order.deliveryUser?.phone || order.deliveryBoyPhone || null
-  const orderTime = order.createdAt 
-    ? new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-    : ''
-  const orderDate = order.createdAt
-    ? new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-    : ''
+  const orderTime = formatOrderTime(order.createdAt)
+  const orderDate = formatDate(order.createdAt)
 
   return (
     <div

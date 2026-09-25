@@ -14,11 +14,16 @@ export function parseDateInput(date?: string | Date | null): Date | null {
 }
 
 // --- Time ---
-export function formatDate(date?: string | Date | null, pattern = 'PP'): string {
+export function formatDate(date?: string | Date | null, _pattern = 'PP'): string {
   const d = parseDateInput(date)
   if (!d) return ''
   try {
-    return format(d, pattern)
+    return d.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
   } catch {
     return ''
   }
@@ -28,7 +33,12 @@ export function formatOrderTime(date?: string | Date | null): string {
   const d = parseDateInput(date)
   if (!d) return ''
   try {
-    return format(d, 'h:mm a')
+    return d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
   } catch {
     return ''
   }
@@ -38,7 +48,12 @@ export function formatTime(date?: string | Date | null): string {
   const d = parseDateInput(date)
   if (!d) return ''
   try {
-    return format(d, 'h:mm a')
+    return d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
   } catch {
     return ''
   }

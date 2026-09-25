@@ -4,6 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy import or_
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
+import os
 import re
 import uuid
 import logging
@@ -15,6 +16,8 @@ from models import Store, StoreSetting
 from routers.auth import require_auth, require_admin
 
 router = APIRouter(prefix="/settings", tags=["Settings & Location"])
+
+DEFAULT_SUPPORT_PHONE = os.getenv("SUPPORT_PHONE", "+91 8112849854")
 
 DEFAULT_SETTINGS = {
     "deliveries_count": "10,000+",
@@ -37,7 +40,7 @@ DEFAULT_SETTINGS = {
     "store_lat": "26.1534185",
     "store_lng": "80.1714024",
     "store_pincode": "209206",
-    "store_phone": "+91 70544 70303",
+    "store_phone": DEFAULT_SUPPORT_PHONE,
     "store_address": "NH34, Ghatampur, Kanpur Nagar",
     "shop_name": "FastKirana Dark Store",
     "min_order_value": "20",
@@ -55,7 +58,7 @@ DEFAULT_SETTINGS = {
     "delivery_threshold_tier2": "249",
     "delivery_threshold_tier3": "349",
     "delivery_fee": "25",
-    "contact_phone": "+91 70544 70303",
+    "contact_phone": DEFAULT_SUPPORT_PHONE,
     "contact_email": "help@fastkirana.com",
     "contact_timings": "6 AM - 12 AM",
     "contact_address": "NH34, Ghatampur, Kanpur Nagar",

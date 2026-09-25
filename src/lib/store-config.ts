@@ -14,7 +14,7 @@ export const STORE_LNG = 80.1714024
 
 export const STORE_PINCODE = '209206'
 export const STORE_ADDRESS = 'NH34, Ghatampur, Kanpur Nagar'
-export const STORE_PHONE = '+91 70544 70303'
+export const STORE_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE || '+91 8112849854'
 export const SHOP_NAME = 'FastKirana Dark Store'
 export const SERVICE_AREA_NAME = 'Ghatampur'
 
