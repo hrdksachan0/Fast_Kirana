@@ -270,21 +270,14 @@ export function useCheckoutPricing({
 
   if (deliveryMethod === 'DELIVERY') {
     const activeThreshold =
-      groceryCartItems.length > 0 && cafeCartItems.length > 0
-        ? combinedThreshold
-        : cafeCartItems.length > 0
-        ? cafeThreshold
-        : groceryThreshold
-
-    const targetThreshold =
       deliveryRules && deliveryRules.isServiceable
         ? deliveryRules.freeDeliveryThreshold
-        : activeThreshold
+        : parseFloat(storeSettingsMap['delivery_threshold_tier1'] || storeSettingsMap['grocery_free_delivery_threshold'] || '149')
 
     const feeToCharge =
       deliveryRules && deliveryRules.isServiceable ? deliveryRules.deliveryFee : deliveryFeeVal
 
-    if (adjustedSubtotal < targetThreshold) {
+    if (adjustedSubtotal < activeThreshold) {
       if (groceryCartItems.length > 0) {
         groceryDeliveryFee = feeToCharge
       } else if (cafeCartItems.length > 0) {

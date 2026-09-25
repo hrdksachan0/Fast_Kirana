@@ -101,7 +101,7 @@ class HelpSupportScreen extends StatelessWidget {
             _faqItem(
               context,
               'What are the delivery charges?',
-              'Orders above ₹199 get free delivery. Below that, ₹35 delivery fee applies.',
+              'Orders above ₹149 get free delivery in local zone (0-2 km). Delivery fee starts at ₹25 for lower cart values.',
             ),
             _faqItem(
               context,

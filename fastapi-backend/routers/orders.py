@@ -31,65 +31,83 @@ logger = logging.getLogger("orders")
 router = APIRouter(prefix="/orders", tags=["Orders & Checkout Engine"])
 
 
-def get_delivery_rules(distance_km: float, max_radius_km: float = 5.0, surge_fee: float = 0.0) -> dict:
+def get_delivery_rules(distance_km: float, max_radius_km: float = 5.0, surge_fee: float = 0.0, settings_map: dict = None) -> dict:
+    if settings_map is None:
+        settings_map = {}
+
+    tier1_fee = float(settings_map.get("delivery_fee_tier1", settings_map.get("delivery_fee", 25.0)))
+    tier2_fee = float(settings_map.get("delivery_fee_tier2", 35.0))
+    tier3_fee = float(settings_map.get("delivery_fee_tier3", 50.0))
+    per_km_beyond_5km = float(settings_map.get("delivery_fee_per_km_beyond_5km", 10.0))
+
+    tier1_threshold = float(settings_map.get("delivery_threshold_tier1", settings_map.get("grocery_free_delivery_threshold", 149.0)))
+    tier2_threshold = float(settings_map.get("delivery_threshold_tier2", 249.0))
+    tier3_threshold = float(settings_map.get("delivery_threshold_tier3", 349.0))
+
+    # 1. Strictly check if distance exceeds max allowed radius
     if distance_km > max_radius_km:
         return {
             "distanceKm": distance_km,
             "minOrder": 0.0,
             "deliveryFee": 0.0,
-            "freeDeliveryThreshold": 499.0,
+            "freeDeliveryThreshold": tier3_threshold + 100.0,
             "isServiceable": False,
             "zoneName": f"Outside Delivery Zone (> {max_radius_km:.1f} km)",
             "surgeFee": surge_fee,
             "maxRadiusKm": max_radius_km,
         }
-    
-    # Zone 1: 0 - 2.0 km (Local Ghatampur)
+
+    # Zone 1: 0 - 2.0 km
     if distance_km <= 2.0:
         return {
             "distanceKm": distance_km,
             "minOrder": 0.0,
-            "deliveryFee": 25.0 + surge_fee,
-            "freeDeliveryThreshold": 199.0,
+            "deliveryFee": tier1_fee + surge_fee,
+            "freeDeliveryThreshold": tier1_threshold,
             "isServiceable": True,
-            "zoneName": "0 - 2 km (Local Ghatampur Zone)",
+            "zoneName": "0 - 2 km (Local Zone)",
             "surgeFee": surge_fee,
             "maxRadiusKm": max_radius_km,
         }
 
-    # Zone 2: 2.0 - 3.0 km (Suburban Zone)
+    # Zone 2: 2.0 - 3.0 km
     if distance_km <= 3.0:
         return {
             "distanceKm": distance_km,
             "minOrder": 0.0,
-            "deliveryFee": 35.0 + surge_fee,
-            "freeDeliveryThreshold": 299.0,
+            "deliveryFee": tier2_fee + surge_fee,
+            "freeDeliveryThreshold": tier2_threshold,
             "isServiceable": True,
             "zoneName": "2 - 3 km (Suburban Zone)",
             "surgeFee": surge_fee,
             "maxRadiusKm": max_radius_km,
         }
 
-    # Zone 3: 3.0 - 5.0 km (Extended Zone)
+    # Zone 3: 3.0 - 5.0 km
     if distance_km <= 5.0:
         return {
             "distanceKm": distance_km,
             "minOrder": 0.0,
-            "deliveryFee": 50.0 + surge_fee,
-            "freeDeliveryThreshold": 399.0,
+            "deliveryFee": tier3_fee + surge_fee,
+            "freeDeliveryThreshold": tier3_threshold,
             "isServiceable": True,
             "zoneName": "3 - 5 km (Extended Zone)",
             "surgeFee": surge_fee,
             "maxRadiusKm": max_radius_km,
         }
 
+    # Zone 4: Long Distance Beyond 5 km (up to max_radius_km, e.g. when manually increased)
+    extra_km = math.ceil(distance_km - 5.0)
+    long_distance_fee = tier3_fee + (extra_km * per_km_beyond_5km)
+    long_distance_threshold = tier3_threshold + (extra_km * 50.0)
+
     return {
         "distanceKm": distance_km,
         "minOrder": 0.0,
-        "deliveryFee": 70.0 + surge_fee,
-        "freeDeliveryThreshold": 499.0,
-        "isServiceable": False,
-        "zoneName": f"Outside Delivery Zone (> {max_radius_km:.1f} km)",
+        "deliveryFee": long_distance_fee + surge_fee,
+        "freeDeliveryThreshold": long_distance_threshold,
+        "isServiceable": True,
+        "zoneName": f"5 - {max_radius_km:.0f} km (Long Distance Zone)",
         "surgeFee": surge_fee,
         "maxRadiusKm": max_radius_km,
     }
@@ -754,7 +772,7 @@ async def create_order(
             surge_charge = float(matched_hub.surgeCharge or 0.0)
 
             dist_km = get_distance_km(hub_lat, hub_lng, target_lat, target_lng)
-            delivery_rules = get_delivery_rules(dist_km, max_radius, surge_charge)
+            delivery_rules = get_delivery_rules(dist_km, max_radius, surge_charge, settings_map)
 
             if not delivery_rules["isServiceable"] or dist_km > max_radius:
                 raise HTTPException(
@@ -769,7 +787,7 @@ async def create_order(
             surge_charge = float(settings_map.get("surge_charge", 0.0))
 
             dist_km = get_distance_km(store_lat, store_lng, target_lat, target_lng)
-            delivery_rules = get_delivery_rules(dist_km, max_radius, surge_charge)
+            delivery_rules = get_delivery_rules(dist_km, max_radius, surge_charge, settings_map)
 
             if not delivery_rules["isServiceable"] or dist_km > max_radius:
                 raise HTTPException(
@@ -1174,7 +1192,7 @@ async def create_order(
     delivery_fee_charge = 0.0
 
     if delivery_method == "DELIVERY" and not is_b2b:
-        default_threshold = float(settings_map.get("grocery_free_delivery_threshold", 199.0))
+        default_threshold = float(settings_map.get("delivery_threshold_tier1", settings_map.get("grocery_free_delivery_threshold", 149.0)))
         free_delivery_threshold = delivery_rules["freeDeliveryThreshold"] if delivery_rules else default_threshold
         if subtotal < free_delivery_threshold:
             delivery_fee_charge = delivery_rules["deliveryFee"] if delivery_rules else delivery_fee_val
@@ -3193,7 +3211,7 @@ async def edit_order(
 
     # Global combined delivery fee calculation
     total_combined_subtotal = sum(p["subtotalVal"] for p in prepared)
-    combined_threshold = float(settings_map.get("combined_free_delivery_threshold") or 350.0)
+    combined_threshold = float(settings_map.get("delivery_threshold_tier1", settings_map.get("grocery_free_delivery_threshold", 149.0)))
     is_combined_free = (str(order.deliveryMethod) != "DELIVERY") or (total_combined_subtotal >= combined_threshold)
 
     single_delivery_assigned = is_combined_free

@@ -5,9 +5,9 @@ import { useUIStore } from '@/stores/ui-store'
 
 export function DeliveryBanner() {
   const settings = useUIStore((s) => s.settings) || {}
-  const t1Threshold = settings['delivery_threshold_tier1'] || settings['grocery_free_delivery_threshold'] || '199'
-  const t2Threshold = settings['delivery_threshold_tier2'] || '299'
-  const t3Threshold = settings['delivery_threshold_tier3'] || '399'
+  const t1Threshold = settings['delivery_threshold_tier1'] || settings['grocery_free_delivery_threshold'] || '149'
+  const t2Threshold = settings['delivery_threshold_tier2'] || '249'
+  const t3Threshold = settings['delivery_threshold_tier3'] || '349'
   const t1Fee = settings['delivery_fee_tier1'] || settings['delivery_fee'] || '25'
   const t2Fee = settings['delivery_fee_tier2'] || '35'
   const t3Fee = settings['delivery_fee_tier3'] || '50'

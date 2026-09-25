@@ -41,9 +41,9 @@ class StoreSettings with _$StoreSettings {
       return val.toString().toLowerCase() == 'true';
     }
 
-    final gThresh = parseDouble(json['grocery_free_delivery_threshold'], 199.0);
-    final cThresh = parseDouble(json['cafe_free_delivery_threshold'], 199.0);
-    final combThresh = parseDouble(json['combined_free_delivery_threshold'], 199.0);
+    final gThresh = parseDouble(json['grocery_free_delivery_threshold'], 149.0);
+    final cThresh = parseDouble(json['cafe_free_delivery_threshold'], 149.0);
+    final combThresh = parseDouble(json['combined_free_delivery_threshold'], 149.0);
     final fallbackThresh = parseDouble(json['free_delivery_threshold'], combThresh);
 
     return StoreSettings(
@@ -110,11 +110,11 @@ class StoreSettings with _$StoreSettings {
   }
 
   double get deliveryFeeTier1 => _parseDoubleVal(raw['delivery_fee_tier1'], 25.0);
-  double get deliveryThresholdTier1 => _parseDoubleVal(raw['delivery_threshold_tier1'], 199.0);
+  double get deliveryThresholdTier1 => _parseDoubleVal(raw['delivery_threshold_tier1'], 149.0);
   double get deliveryFeeTier2 => _parseDoubleVal(raw['delivery_fee_tier2'], 35.0);
-  double get deliveryThresholdTier2 => _parseDoubleVal(raw['delivery_threshold_tier2'], 299.0);
+  double get deliveryThresholdTier2 => _parseDoubleVal(raw['delivery_threshold_tier2'], 249.0);
   double get deliveryFeeTier3 => _parseDoubleVal(raw['delivery_fee_tier3'], 50.0);
-  double get deliveryThresholdTier3 => _parseDoubleVal(raw['delivery_threshold_tier3'], 399.0);
+  double get deliveryThresholdTier3 => _parseDoubleVal(raw['delivery_threshold_tier3'], 349.0);
   double get deliveryFeePerKmBeyond5km => _parseDoubleVal(raw['delivery_fee_per_km_beyond_5km'], 10.0);
   String get storeName => raw['store_name']?.toString() ?? raw['shop_name']?.toString() ?? '';
 }

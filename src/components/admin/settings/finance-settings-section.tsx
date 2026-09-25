@@ -24,8 +24,6 @@ interface FinanceSettingsSectionProps {
   setDeliveryFee: (v: string) => void
   minOrderValue: string
   setMinOrderValue: (v: string) => void
-  combinedFreeDeliveryThreshold: string
-  setCombinedFreeDeliveryThreshold: (v: string) => void
   groceryFreeDeliveryThreshold: string
   setGroceryFreeDeliveryThreshold: (v: string) => void
   deliveryRadius: string
@@ -70,8 +68,6 @@ export function FinanceSettingsSection({
   setDeliveryFee,
   minOrderValue,
   setMinOrderValue,
-  combinedFreeDeliveryThreshold,
-  setCombinedFreeDeliveryThreshold,
   groceryFreeDeliveryThreshold,
   setGroceryFreeDeliveryThreshold,
   deliveryRadius,
@@ -527,28 +523,6 @@ export function FinanceSettingsSection({
               </div>
               <p className="text-[9.5px] text-text-muted font-medium">
                 Orders below this amount will not be allowed to proceed to checkout (0 = no minimum).
-              </p>
-            </div>
-
-            {/* Combined Free Delivery Threshold */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary">
-                Combined Order Free Delivery Threshold (₹) *
-              </label>
-              <div className="relative">
-                <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={combinedFreeDeliveryThreshold}
-                  onChange={(e) => setCombinedFreeDeliveryThreshold(e.target.value)}
-                  className="w-full bg-muted/40 border border-border pl-9 pr-3 py-2 rounded-xl text-xs font-black focus:outline-none focus:border-primary"
-                  placeholder="200"
-                />
-              </div>
-              <p className="text-[9.5px] text-text-muted font-medium">
-                If customer orders grocery and food together, delivery is free when cart exceeds this value.
               </p>
             </div>
           </div>

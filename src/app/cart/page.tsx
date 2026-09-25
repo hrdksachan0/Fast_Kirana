@@ -321,11 +321,11 @@ export default function CartPage() {
 
   const activeThreshold = deliveryRules.isServiceable
     ? deliveryRules.freeDeliveryThreshold
-    : (settings.combined_free_delivery_threshold
-        ? parseFloat(settings.combined_free_delivery_threshold)
+    : (settings.delivery_threshold_tier1
+        ? parseFloat(settings.delivery_threshold_tier1)
         : (settings.grocery_free_delivery_threshold
             ? parseFloat(settings.grocery_free_delivery_threshold)
-            : (settings.delivery_threshold_tier1 ? parseFloat(settings.delivery_threshold_tier1) : GROCERY_FREE_DELIVERY_THRESHOLD)))
+            : GROCERY_FREE_DELIVERY_THRESHOLD))
 
   const deliveryFeeVal = deliveryRules.isServiceable
     ? deliveryRules.deliveryFee

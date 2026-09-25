@@ -53,17 +53,17 @@ export default function ShippingPolicyPage() {
                   <tr>
                     <td className="px-4 py-3 font-semibold text-foreground">0 to 2.0 km (Ghatampur City)</td>
                     <td className="px-4 py-3">₹25</td>
-                    <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">Above ₹199</td>
+                    <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">Above ₹149</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-semibold text-foreground">2.0 to 3.0 km (Suburban Area)</td>
                     <td className="px-4 py-3">₹35</td>
-                    <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">Above ₹299</td>
+                    <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">Above ₹249</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-semibold text-foreground">3.0 to 5.0 km (Extended Zone)</td>
                     <td className="px-4 py-3">₹50</td>
-                    <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">Above ₹399</td>
+                    <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">Above ₹349</td>
                   </tr>
                 </tbody>
               </table>

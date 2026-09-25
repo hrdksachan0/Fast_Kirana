@@ -419,10 +419,10 @@ export function Navbar() {
               <Link
                 href="/faq"
                 className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-black tracking-tight transition-all duration-300 shadow-2xs hover:scale-105"
-                title={`Delivery Fee Tiers: 0-2km ₹${settings.delivery_threshold_tier1 || '199'}+ | 2-3km ₹${settings.delivery_threshold_tier2 || '299'}+ | 3-5km ₹${settings.delivery_threshold_tier3 || '399'}+`}
+                title={`Delivery Fee Tiers: 0-2km ₹${settings.delivery_threshold_tier1 || '149'}+ | 2-3km ₹${settings.delivery_threshold_tier2 || '249'}+ | 3-5km ₹${settings.delivery_threshold_tier3 || '349'}+`}
               >
                 <span>⚡</span>
-                <span>Free Delivery ₹{settings.delivery_threshold_tier1 || settings.grocery_free_delivery_threshold || '199'}+</span>
+                <span>Free Delivery ₹{settings.delivery_threshold_tier1 || settings.grocery_free_delivery_threshold || '149'}+</span>
               </Link>
 
               <button

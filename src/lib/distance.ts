@@ -78,8 +78,7 @@ export function getDeliveryRules(
   const tier3Fee = options.tier3Fee ?? (options.settings?.delivery_fee_tier3 ? parseFloat(options.settings.delivery_fee_tier3) : 50)
   const perKmFeeBeyond5km = options.perKmFeeBeyond5km ?? (options.settings?.delivery_fee_per_km_beyond_5km ? parseFloat(options.settings.delivery_fee_per_km_beyond_5km) : 10)
 
-  // Configurable free delivery thresholds from store settings
-  const tier1Threshold = options.tier1Threshold ?? (options.settings?.delivery_threshold_tier1 ? parseFloat(options.settings.delivery_threshold_tier1) : (options.settings?.grocery_free_delivery_threshold ? parseFloat(options.settings.grocery_free_delivery_threshold) : 199))
+  const tier1Threshold = options.tier1Threshold ?? (options.settings?.delivery_threshold_tier1 ? parseFloat(options.settings.delivery_threshold_tier1) : (options.settings?.grocery_free_delivery_threshold ? parseFloat(options.settings.grocery_free_delivery_threshold) : 149))
   const tier2Threshold = options.tier2Threshold ?? (options.settings?.delivery_threshold_tier2 ? parseFloat(options.settings.delivery_threshold_tier2) : 299)
   const tier3Threshold = options.tier3Threshold ?? (options.settings?.delivery_threshold_tier3 ? parseFloat(options.settings.delivery_threshold_tier3) : 399)
 

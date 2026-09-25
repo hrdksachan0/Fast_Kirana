@@ -759,8 +759,6 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
                 setDeliveryFee={setDeliveryFee}
                 minOrderValue={minOrderValue}
                 setMinOrderValue={setMinOrderValue}
-                combinedFreeDeliveryThreshold={combinedFreeDeliveryThreshold}
-                setCombinedFreeDeliveryThreshold={setCombinedFreeDeliveryThreshold}
                 groceryFreeDeliveryThreshold={groceryFreeDeliveryThreshold}
                 setGroceryFreeDeliveryThreshold={setGroceryFreeDeliveryThreshold}
                 deliveryRadius={deliveryRadius}

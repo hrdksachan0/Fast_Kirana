@@ -31,9 +31,9 @@ export const RESTAURANT_PICKUP_ADDRESS = 'A.S Restaurant, Ghatampur, Kanpur Naga
 
 // ── Free Delivery Thresholds ─────────────────────────────────────────────────
 
-export const GROCERY_FREE_DELIVERY_THRESHOLD = 200
-export const CAFE_FREE_DELIVERY_THRESHOLD = 200
-export const COMBINED_FREE_DELIVERY_THRESHOLD = 200
+export const GROCERY_FREE_DELIVERY_THRESHOLD = 149
+export const CAFE_FREE_DELIVERY_THRESHOLD = 149
+export const COMBINED_FREE_DELIVERY_THRESHOLD = 149
 export const DELIVERY_FEE = 25
 
 // ── Helper: resolve from settings map ────────────────────────────────────────

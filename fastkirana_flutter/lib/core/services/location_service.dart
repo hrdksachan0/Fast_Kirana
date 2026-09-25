@@ -195,13 +195,13 @@ class LocationService {
     final surgeFee = (baseSurgeFee * dynamicEta.surgeMultiplier).roundToDouble();
 
     final tier1Fee = settings?.deliveryFeeTier1 ?? 25.0;
-    final tier1Threshold = settings?.deliveryThresholdTier1 ?? 199.0;
+    final tier1Threshold = settings?.deliveryThresholdTier1 ?? 149.0;
 
     final tier2Fee = settings?.deliveryFeeTier2 ?? 35.0;
-    final tier2Threshold = settings?.deliveryThresholdTier2 ?? 299.0;
+    final tier2Threshold = settings?.deliveryThresholdTier2 ?? 249.0;
 
     final tier3Fee = settings?.deliveryFeeTier3 ?? 50.0;
-    final tier3Threshold = settings?.deliveryThresholdTier3 ?? 399.0;
+    final tier3Threshold = settings?.deliveryThresholdTier3 ?? 349.0;
 
     final resolvedStoreName = (storeName?.isNotEmpty == true)
         ? storeName!

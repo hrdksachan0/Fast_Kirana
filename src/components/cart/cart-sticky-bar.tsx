@@ -67,13 +67,13 @@ export function CartStickyBar() {
 
   // Dynamic Free Delivery Threshold based on live Admin Store Settings
   const dynamicThreshold = (() => {
-    const rawT1 = parseFloat(settings['delivery_threshold_tier1'] || settings['grocery_free_delivery_threshold'] || '199')
-    const rawT2 = parseFloat(settings['delivery_threshold_tier2'] || '299')
-    const rawT3 = parseFloat(settings['delivery_threshold_tier3'] || '399')
+    const rawT1 = parseFloat(settings['delivery_threshold_tier1'] || settings['grocery_free_delivery_threshold'] || '149')
+    const rawT2 = parseFloat(settings['delivery_threshold_tier2'] || '249')
+    const rawT3 = parseFloat(settings['delivery_threshold_tier3'] || '349')
 
-    const t1 = !isNaN(rawT1) && rawT1 > 0 ? rawT1 : 199
-    const t2 = !isNaN(rawT2) && rawT2 > 0 ? rawT2 : 299
-    const t3 = !isNaN(rawT3) && rawT3 > 0 ? rawT3 : 399
+    const t1 = !isNaN(rawT1) && rawT1 > 0 ? rawT1 : 149
+    const t2 = !isNaN(rawT2) && rawT2 > 0 ? rawT2 : 249
+    const t3 = !isNaN(rawT3) && rawT3 > 0 ? rawT3 : 349
 
     if (userDistanceKm !== null && userDistanceKm !== undefined && !isNaN(Number(userDistanceKm))) {
       const dist = Number(userDistanceKm)
@@ -84,7 +84,7 @@ export function CartStickyBar() {
     return t1
   })()
 
-  const safeThreshold = dynamicThreshold > 0 ? dynamicThreshold : 199
+  const safeThreshold = dynamicThreshold > 0 ? dynamicThreshold : 149
   const needsForFreeDelivery = safeThreshold - subtotal
   const deliveryProgress = Math.min((subtotal / safeThreshold) * 100, 100)
   const hasFreeDelivery = needsForFreeDelivery <= 0
