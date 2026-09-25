@@ -237,10 +237,15 @@ def get_fuzzy_score(query: str, target: str) -> float:
 def get_product_type(p) -> str:
     if not p:
         return "GROCERY"
-    category_slug = p.category.slug if p.category else ""
+    category_slug = ""
+    # Safe check in __dict__ avoids triggering lazy loading IO in SQLAlchemy async
+    if "category" in p.__dict__ and p.__dict__["category"]:
+        category_slug = getattr(p.__dict__["category"], "slug", "") or ""
+    elif hasattr(p, "category_slug"):
+        category_slug = getattr(p, "category_slug", "") or ""
     slug = category_slug.lower()
     tags = [t.lower() for t in (p.tags or [])]
-    restaurant_id = p.restaurantId
+    restaurant_id = getattr(p, "restaurantId", None)
 
     if restaurant_id or "restaurant" in slug or "restaurant" in tags or any("restaurant" in t for t in tags):
         return "RESTAURANT"
@@ -1135,7 +1140,7 @@ async def validate_checkout_cart(
     if not product_ids:
         return {"hasChanges": False, "updates": []}
 
-    stmt = select(Product).where(Product.id.in_(product_ids))
+    stmt = select(Product).options(selectinload(Product.category)).where(Product.id.in_(product_ids))
     res = await db.execute(stmt)
     db_products = res.scalars().all()
 

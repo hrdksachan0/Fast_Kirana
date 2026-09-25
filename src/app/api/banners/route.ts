@@ -6,7 +6,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
 
     // ─── FastAPI Railway Proxy First ──────────────────────────────────────────
-    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
+    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
     try {
       const fastApiResponse = await fetch(`${fastApiUrl}/api/banners?${searchParams.toString()}`, {
         headers: { 'Accept': 'application/json' },
@@ -79,9 +79,8 @@ export async function GET(request: Request) {
 
       // Hub / Store Scoping:
       // If storeId is provided, show banners matching this storeId OR global banners (storeId is null, empty, or 'all')
-      // If banner has a specific storeId that does NOT match the requested storeId, filter it out!
       if (storeId && storeId !== 'all') {
-        if (b.storeId !== storeId) {
+        if (b.storeId && b.storeId !== 'all' && b.storeId !== storeId) {
           return false
         }
       }

@@ -57,8 +57,11 @@ async function loadCache() {
       }
     }
     loaded = true
-  } catch (e) {
-    console.warn('[SuperAdminConfig] DB table super_admins not yet ready, using default fallback cache')
+  } catch (e: any) {
+    // Graceful fallback is already active with default accounts; keep production logs clean
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[SuperAdminConfig] DB cache fallback active:', e?.message || e)
+    }
   }
 }
 

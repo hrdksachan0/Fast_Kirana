@@ -779,6 +779,14 @@ async def create_order(
             surge_charge = float(matched_hub.surgeCharge or 0.0)
 
             dist_km = get_distance_km(hub_lat, hub_lng, target_lat, target_lng)
+            # Cell-tower drift auto-heal (matches frontend checkout.ts logic)
+            p_code = (address.pincode or "").strip()
+            c_name = (address.city or "").lower().strip()
+            is_explicit_local = p_code in ["209206", "224122"] or "ghatampur" in c_name or "akbarpur" in c_name
+            if dist_km > max_radius and is_explicit_local:
+                logger.warning(f"[Auto-Heal] Address {address.id} cell-tower drift ({dist_km:.1f} km) for local pincode {p_code}. Treating as local express zone.")
+                dist_km = 1.5
+
             delivery_rules = get_delivery_rules(dist_km, max_radius, surge_charge, settings_map)
 
             if not delivery_rules["isServiceable"] or dist_km > max_radius:
@@ -794,6 +802,13 @@ async def create_order(
             surge_charge = float(settings_map.get("surge_charge", 0.0))
 
             dist_km = get_distance_km(store_lat, store_lng, target_lat, target_lng)
+            p_code = (address.pincode or "").strip()
+            c_name = (address.city or "").lower().strip()
+            is_explicit_local = p_code in ["209206", "224122"] or "ghatampur" in c_name or "akbarpur" in c_name
+            if dist_km > max_radius and is_explicit_local:
+                logger.warning(f"[Auto-Heal] Address {address.id} cell-tower drift ({dist_km:.1f} km) for local pincode {p_code}. Treating as local express zone.")
+                dist_km = 1.5
+
             delivery_rules = get_delivery_rules(dist_km, max_radius, surge_charge, settings_map)
 
             if not delivery_rules["isServiceable"] or dist_km > max_radius:
@@ -1705,6 +1720,11 @@ async def create_order(
 
         return result_payload
 
+    except HTTPException:
+        await db.rollback()
+        if "idempotency_key" in locals() and idempotency_key:
+            release_idempotency_lock(idempotency_key)
+        raise
     except Exception as e:
         await db.rollback()
         logger.error(f"Failed to place order: {str(e)}")

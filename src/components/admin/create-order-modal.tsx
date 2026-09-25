@@ -569,8 +569,9 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         onClose()
       } else {
         const data = await res.json()
-        setSubmitError(data.error || 'Failed to place order')
-        toast.error(data.error || 'Failed to place order')
+        const errMessage = data.error || data.detail || data.message || 'Failed to place order'
+        setSubmitError(errMessage)
+        toast.error(errMessage)
       }
     } catch (err: any) {
       console.error('Failed to submit order:', err)

@@ -9,7 +9,7 @@ import json
 import time
 
 from database import get_db
-from models import Restaurant, User, Product, Order, Category
+from models import Restaurant, User, Product, Order, Category, RestaurantReview
 from routers.auth import get_current_user, require_admin, require_auth
 from routers.websockets import manager
 from routers.stores_service import check_restaurant_is_open

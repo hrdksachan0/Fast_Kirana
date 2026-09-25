@@ -227,7 +227,7 @@ export function useCheckoutPayment({
         }, 1500)
       } else {
         setOverlayState(null)
-        toast.error(data.error || 'Failed to place order')
+        toast.error(data.error || data.detail || data.message || 'Failed to place order')
         setIsPlacingOrder(false)
       }
     } catch (err) {
@@ -304,7 +304,7 @@ export function useCheckoutPayment({
       const orderData = await orderRes.json()
 
       if (!orderRes.ok) {
-        toast.error(orderData.error || 'Failed to initialize order')
+        toast.error(orderData.error || orderData.detail || orderData.message || 'Failed to initialize order')
         setIsPlacingOrder(false)
         setOverlayState(null)
         return
@@ -334,8 +334,8 @@ export function useCheckoutPayment({
       const cfData = await cfRes.json()
 
       if (!cfRes.ok || !cfData.paymentSessionId) {
-        console.warn('Cashfree session failed:', cfData.error)
-        toast.error(cfData.error || 'Cashfree payment session could not be created.')
+        console.warn('Cashfree session failed:', cfData.error || cfData.detail)
+        toast.error(cfData.error || cfData.detail || cfData.message || 'Cashfree payment session could not be created.')
         setIsPlacingOrder(false)
         setOverlayState(null)
         setFailedPaymentOrder({

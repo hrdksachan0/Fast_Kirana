@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import desc
+from sqlalchemy import desc, delete
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uuid
@@ -197,15 +197,11 @@ async def sync_cart(
     if not cart:
         raise HTTPException(status_code=500, detail="Failed to find or create cart")
 
-    # Delete existing items
-    existing_items_result = await db.execute(
-        select(CartItem).where(CartItem.cartId == cart.id)
-    )
-    existing_items = existing_items_result.scalars().all()
-    for item in existing_items:
-        await db.delete(item)
+    # Atomic delete and flush to ensure no unique constraint violation on insert
+    await db.execute(delete(CartItem).where(CartItem.cartId == cart.id))
+    await db.flush()
 
-    # Filter valid products
+    # Filter valid products and deduplicate incoming payload by (productId, selectedVariant)
     valid_count = 0
     if items_data:
         product_ids = [str(i.get("productId") or "") for i in items_data if i.get("productId")]
@@ -214,18 +210,33 @@ async def sync_cart(
             p_res = await db.execute(p_stmt)
             valid_pids = set(p_res.scalars().all())
 
+            deduped_items: Dict[tuple, Dict[str, Any]] = {}
             for item_data in items_data:
                 product_id = item_data.get("productId")
                 if not product_id or product_id not in valid_pids:
                     continue
 
+                variant = item_data.get("selectedVariant") or None
+                key = (product_id, variant)
+                qty = max(1, int(item_data.get("quantity", 1)))
+                if key in deduped_items:
+                    deduped_items[key]["quantity"] += qty
+                else:
+                    deduped_items[key] = {
+                        "productId": product_id,
+                        "quantity": qty,
+                        "selectedVariant": variant,
+                        "notes": item_data.get("notes"),
+                    }
+
+            for item in deduped_items.values():
                 new_item = CartItem(
                     id=generate_id("ci_"),
                     cartId=cart.id,
-                    productId=product_id,
-                    quantity=max(1, int(item_data.get("quantity", 1))),
-                    selectedVariant=item_data.get("selectedVariant"),
-                    notes=item_data.get("notes"),
+                    productId=item["productId"],
+                    quantity=item["quantity"],
+                    selectedVariant=item["selectedVariant"],
+                    notes=item["notes"],
                 )
                 db.add(new_item)
                 valid_count += 1

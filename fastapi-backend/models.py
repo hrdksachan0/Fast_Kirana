@@ -544,6 +544,9 @@ class StockLog(Base):
     quantity: Mapped[int] = mapped_column(Integer)
     type: Mapped[str] = mapped_column(String)
     prevStock: Mapped[int] = mapped_column(Integer)
+    newStock: Mapped[int] = mapped_column(Integer)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
     product = relationship("Product", back_populates="stockLogs")
 
 

@@ -80,13 +80,13 @@ async def get_banners(
             b_platform = extra.get("platform") or "all"
             b_store_id = extra.get("storeId") or extra.get("hubId") or getattr(b, "storeId", None)
 
-            # Filtering checks
+            # Filtering checks: allow global placements and global stores
             if placement and b_placement != placement and b_placement != "all":
                 continue
             if platform and b_platform != platform and b_platform != "all":
                 continue
             if storeId and storeId != "all":
-                if b_store_id != storeId:
+                if b_store_id and b_store_id != "all" and b_store_id != storeId:
                     continue
 
             parsed_banners.append({
