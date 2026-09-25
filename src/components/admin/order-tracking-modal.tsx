@@ -218,7 +218,7 @@ export default function OrderTrackingModal({
 
   if (!order) return null
 
-  const customerPhone = order.userPhone || order.address?.phone
+  const customerPhone = order.userPhone || order.address?.phone || order.user?.phone
   const totalItemCount = order.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0
   const statusStyle = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING
   const hasPremiumPackaging = Boolean(
@@ -368,14 +368,14 @@ export default function OrderTrackingModal({
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500/15 to-indigo-500/15 flex items-center justify-center shrink-0">
                 <span className="text-sm font-black text-blue-600 dark:text-blue-400">
-                  {(order.userName || 'C')[0].toUpperCase()}
+                  {(order.userName || order.user?.name || order.customerName || 'C')[0].toUpperCase()}
                 </span>
               </div>
               <div className="min-w-0">
                 <div className="font-bold text-sm text-text-primary truncate">
-                  {order.userName || 'Walk-in Customer'}
+                  {order.userName || order.user?.name || order.customerName || (order.deliveryMethod === 'RETAIL' ? 'Walk-in Customer' : 'Customer')}
                 </div>
-                <div className="text-[10px] text-text-muted truncate">{order.userEmail || ''}</div>
+                <div className="text-[10px] text-text-muted truncate">{order.userEmail || order.user?.email || ''}</div>
               </div>
             </div>
 

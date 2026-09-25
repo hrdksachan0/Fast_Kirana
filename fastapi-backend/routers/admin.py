@@ -767,9 +767,14 @@ async def get_admin_all_orders(
             "shopName": o.shopName,
             "shopPhone": o.shopPhone,
             "couponCode": o.couponCode,
+            "userName": (o.user.name.strip() if (o.user and o.user.name) else None) or "Customer",
+            "userEmail": (o.user.email if o.user else None) or "",
+            "userPhone": (o.address.phone if (o.address and o.address.phone) else None) or (o.user.phone if (o.user and o.user.phone) else None) or o.shopPhone or None,
+            "deliveryBoyName": o.deliveryUser.name if o.deliveryUser else None,
+            "deliveryBoyPhone": o.deliveryUser.phone if o.deliveryUser else None,
             "user": {
                 "id": o.user.id if o.user else None,
-                "name": o.user.name or "Customer",
+                "name": (o.user.name.strip() if (o.user and o.user.name) else None) or "Customer",
                 "phone": o.user.phone,
                 "email": o.user.email
             } if o.user else None,

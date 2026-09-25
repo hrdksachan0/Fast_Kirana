@@ -1998,6 +1998,10 @@ async def get_order_details(
             grocery_sub = next((s for s in sub_orders if s["type"] == "GROCERY"), None)
             restaurant_sub = next((s for s in sub_orders if s["type"] == "RESTAURANT"), None)
 
+            user_name = (order.user.name.strip() if (order.user and order.user.name) else None) or "Customer"
+            user_email = (order.user.email if order.user else None) or ""
+            user_phone = (order.address.phone if (order.address and order.address.phone) else None) or (order.user.phone if (order.user and order.user.phone) else None) or order.shopPhone or None
+
             return {
                 "id": order.id,
                 "userId": order.userId,
@@ -2024,6 +2028,15 @@ async def get_order_details(
                 "deliveryLng": order.deliveryLng,
                 "notes": order.notes,
                 "couponCode": order.couponCode,
+                "userName": user_name,
+                "userEmail": user_email,
+                "userPhone": user_phone,
+                "user": {
+                    "id": order.user.id if order.user else None,
+                    "name": user_name,
+                    "email": user_email,
+                    "phone": order.user.phone if order.user else None,
+                } if order.user else None,
                 "items": [{"id": i.id, "productId": i.productId, "name": i.name, "price": float(i.price), "quantity": i.quantity, "imageUrl": i.imageUrl} for i in all_items],
                 "address": {
                     "id": order.address.id,
@@ -2046,6 +2059,10 @@ async def get_order_details(
             }
 
     # Single order payload fallback
+    user_name = (order.user.name.strip() if (order.user and order.user.name) else None) or "Customer"
+    user_email = (order.user.email if order.user else None) or ""
+    user_phone = (order.address.phone if (order.address and order.address.phone) else None) or (order.user.phone if (order.user and order.user.phone) else None) or order.shopPhone or None
+
     return {
         "id": order.id,
         "readableId": order.readableId,
@@ -2071,6 +2088,15 @@ async def get_order_details(
         "deliveryLng": order.deliveryLng,
         "notes": order.notes,
         "couponCode": order.couponCode,
+        "userName": user_name,
+        "userEmail": user_email,
+        "userPhone": user_phone,
+        "user": {
+            "id": order.user.id if order.user else None,
+            "name": user_name,
+            "email": user_email,
+            "phone": order.user.phone if order.user else None,
+        } if order.user else None,
         "items": [{"id": i.id, "productId": i.productId, "name": i.name, "price": float(i.price), "quantity": i.quantity, "imageUrl": i.imageUrl} for i in order.items],
         "address": {
             "id": order.address.id,

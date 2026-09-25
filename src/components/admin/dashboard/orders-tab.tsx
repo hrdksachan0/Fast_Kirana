@@ -619,10 +619,9 @@ export function OrdersTab({
       q === '' || 
       o.id.toLowerCase().includes(q) || 
       (o.readableId && String(o.readableId).includes(q)) ||
-      (o.userName && o.userName.toLowerCase().includes(q)) || 
-      (o.userEmail && o.userEmail.toLowerCase().includes(q)) ||
-      (o.userPhone && o.userPhone.includes(q)) ||
-      (o.address?.phone && o.address.phone.includes(q))
+      ((o.userName || o.user?.name) && (o.userName || o.user?.name).toLowerCase().includes(q)) || 
+      ((o.userEmail || o.user?.email) && (o.userEmail || o.user?.email).toLowerCase().includes(q)) ||
+      ((o.userPhone || o.user?.phone || o.address?.phone) && (o.userPhone || o.user?.phone || o.address?.phone).includes(q))
     return matchesFilter && matchesShop && matchesMethod && matchesSearch
   })
 
@@ -636,10 +635,9 @@ export function OrdersTab({
       q === '' || 
       o.id.toLowerCase().includes(q) || 
       (o.readableId && String(o.readableId).includes(q)) ||
-      (o.userName && o.userName.toLowerCase().includes(q)) || 
-      (o.userEmail && o.userEmail.toLowerCase().includes(q)) ||
-      (o.userPhone && o.userPhone.includes(q)) ||
-      (o.address?.phone && o.address.phone.includes(q))
+      ((o.userName || o.user?.name) && (o.userName || o.user?.name).toLowerCase().includes(q)) || 
+      ((o.userEmail || o.user?.email) && (o.userEmail || o.user?.email).toLowerCase().includes(q)) ||
+      ((o.userPhone || o.user?.phone || o.address?.phone) && (o.userPhone || o.user?.phone || o.address?.phone).includes(q))
     return matchesFilter && matchesShop && matchesMethod && matchesSearch
   })
 
@@ -1061,11 +1059,11 @@ export function OrdersTab({
                           onClick={() => onOpenOrderModal(o)}
                           title="Click to view full order items & details"
                         >
-                          <div className="font-bold group-hover/cell:text-amber-600 transition-colors">{o.userName || 'No Name'}</div>
-                          <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
-                          {(o.userPhone || o.address?.phone) && (
+                          <div className="font-bold group-hover/cell:text-amber-600 transition-colors">{o.userName || o.user?.name || o.customerName || 'Customer'}</div>
+                          <div className="text-[10px] text-text-muted font-normal">{o.userEmail || o.user?.email || ''}</div>
+                          {(o.userPhone || o.user?.phone || o.address?.phone) && (
                             <div className="text-[10px] text-text-secondary font-bold font-mono mt-0.5">
-                              📞 {o.userPhone || o.address?.phone}
+                              📞 {o.userPhone || o.user?.phone || o.address?.phone}
                             </div>
                           )}
                           {(o.deliveryUser || o.deliveryBoyName || ((o.status === 'SHIPPED' || o.status === 'DELIVERED') && o.deliveryUserId)) && (
@@ -1631,8 +1629,8 @@ export function OrdersTab({
                           onClick={() => onOpenOrderModal(o)}
                           title="Click to view full order items & details"
                         >
-                          <div className="font-bold group-hover/cell:text-primary transition-colors">{o.userName || 'No Name'}</div>
-                          <div className="text-[10px] text-text-muted font-normal">{o.userEmail}</div>
+                          <div className="font-bold group-hover/cell:text-primary transition-colors">{o.userName || o.user?.name || o.customerName || 'Customer'}</div>
+                          <div className="text-[10px] text-text-muted font-normal">{o.userEmail || o.user?.email || ''}</div>
                         </td>
                         <td className="py-3 px-3 text-[11px]">
                           {(() => {

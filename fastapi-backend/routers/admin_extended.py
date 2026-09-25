@@ -552,6 +552,8 @@ async def admin_get_orders(
     stmt = select(Order).options(
         selectinload(Order.user),
         selectinload(Order.address),
+        selectinload(Order.deliveryUser),
+        selectinload(Order.items),
     )
 
     and_clauses = []
@@ -580,26 +582,69 @@ async def admin_get_orders(
     result = await db.execute(stmt)
     orders = result.scalars().all()
 
-    from schemas import OrderOut
     order_list = []
     for o in orders:
+        user_name = (o.user.name.strip() if (o.user and o.user.name) else None) or "Customer"
+        user_phone = (o.address.phone if (o.address and o.address.phone) else None) or (o.user.phone if (o.user and o.user.phone) else None) or o.shopPhone or None
+        user_email = (o.user.email if o.user else None) or ""
         order_list.append({
             "id": o.id,
             "readableId": o.readableId,
             "userId": o.userId,
+            "addressId": o.addressId,
+            "restaurantId": o.restaurantId,
+            "combinedId": o.combinedId,
+            "orderType": o.orderType.value if hasattr(o.orderType, 'value') else str(o.orderType or 'GROCERY'),
+            "deliveryMethod": o.deliveryMethod or "DELIVERY",
+            "storeId": o.storeId,
+            "notes": o.notes,
+            "isB2B": bool(o.isB2B),
             "status": o.status.value if hasattr(o.status, 'value') else str(o.status),
-            "total": float(o.total),
-            "subtotal": float(o.subtotal),
+            "total": float(o.total or 0.0),
+            "subtotal": float(o.subtotal or 0.0),
+            "discount": float(o.discount or 0.0),
+            "deliveryFee": float(o.deliveryFee or 0.0),
+            "taxes": float(o.taxes or 0.0),
+            "miscFee": float(o.miscFee or 0.0),
             "paymentMethod": o.paymentMethod.value if hasattr(o.paymentMethod, 'value') else str(o.paymentMethod),
             "paymentStatus": o.paymentStatus.value if hasattr(o.paymentStatus, 'value') else str(o.paymentStatus),
             "createdAt": o.createdAt.isoformat() if o.createdAt else None,
             "updatedAt": o.updatedAt.isoformat() if o.updatedAt else None,
+            "userName": user_name,
+            "userEmail": user_email,
+            "userPhone": user_phone,
+            "deliveryBoyName": o.deliveryUser.name if (hasattr(o, 'deliveryUser') and o.deliveryUser) else None,
+            "deliveryBoyPhone": o.deliveryUser.phone if (hasattr(o, 'deliveryUser') and o.deliveryUser) else None,
+            "shopName": o.shopName,
+            "shopPhone": o.shopPhone,
             "user": {
                 "id": o.user.id if o.user else None,
-                "name": o.user.name if o.user else None,
-                "email": o.user.email if o.user else None,
+                "name": user_name,
+                "email": user_email,
                 "phone": o.user.phone if o.user else None,
             } if o.user else None,
+            "address": {
+                "id": o.address.id if o.address else None,
+                "houseNo": o.address.houseNo if o.address else "",
+                "street": o.address.street if o.address else "",
+                "area": o.address.area if o.address else "",
+                "city": o.address.city if o.address else "",
+                "pincode": o.address.pincode if o.address else "",
+                "phone": o.address.phone if o.address else "",
+            } if o.address else None,
+            "items": [
+                {
+                    "id": i.id,
+                    "orderId": i.orderId,
+                    "productId": i.productId,
+                    "name": i.name,
+                    "quantity": i.quantity,
+                    "price": float(i.price or 0.0),
+                    "imageUrl": i.imageUrl,
+                    "selectedVariant": i.selectedVariant,
+                    "notes": i.notes,
+                } for i in (o.items or [])
+            ]
         })
 
     return {"orders": order_list, "total": total, "page": page, "limit": limit}
