@@ -1490,6 +1490,7 @@ export async function POST(request: NextRequest) {
           adminPhones,
           origin,
           userPhone: body.phone || body.customerPhone || address?.phone,
+          settingsMap,
         }).catch((notifErr) => {
           console.error('Failed to dispatch order notifications:', notifErr)
         })

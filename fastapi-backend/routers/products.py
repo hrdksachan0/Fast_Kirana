@@ -495,6 +495,24 @@ async def get_products(
         rest_scope = Product.restaurant.has(Restaurant.storeId == storeId)
         filters.append(or_(grocery_scope, rest_scope))
 
+        # Store-wise category status check (hide closed categories for customers)
+        if not admin and not is_worker:
+            try:
+                store_prefix = f"store:{storeId}:category_open_"
+                closed_cats_res = await db.execute(
+                    select(StoreSetting.key).where(
+                        and_(
+                            StoreSetting.key.startswith(store_prefix),
+                            StoreSetting.value == "false"
+                        )
+                    )
+                )
+                closed_slugs = [k[len(store_prefix):] for k in closed_cats_res.scalars().all()]
+                if closed_slugs:
+                    filters.append(not_(Product.category.has(Category.slug.in_(closed_slugs))))
+            except Exception as cat_err:
+                logger.warning(f"Failed to check closed categories for store {storeId}: {cat_err}")
+
     # Category matching (Supports both direct category and child subcategories under parent)
     if categoryId:
         cat_ids = [c.strip() for c in categoryId.split(",") if c.strip()]
@@ -791,6 +809,7 @@ async def get_products(
 
 @router.get("/buy-again")
 async def get_buy_again(
+    storeId: Optional[str] = Query(None),
     current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -821,7 +840,7 @@ async def get_buy_again(
 
                 # Hydrate products
                 p_ids = list(set([oi.productId for oi in order_items if oi.productId]))
-                prod_stmt = select(Product).where(Product.id.in_(p_ids))
+                prod_stmt = select(Product).options(selectinload(Product.category), selectinload(Product.restaurant)).where(Product.id.in_(p_ids))
                 prod_res = await db.execute(prod_stmt)
                 db_prods = prod_res.scalars().all()
                 prod_map = {p.id: p for p in db_prods}
@@ -844,10 +863,25 @@ async def get_buy_again(
     # Fallback to popular items
     if len(products) < 6:
         existing_ids = [p.id for p in products]
-        fallback_stmt = select(Product).where(
-            Product.id.not_in(existing_ids) if existing_ids else True,
-            Product.isAvailable == True,
-            Product.stock > 0
+        fallback_conditions = [Product.isAvailable == True]
+        if existing_ids:
+            fallback_conditions.append(Product.id.not_in(existing_ids))
+
+        if storeId and storeId != "all":
+            inv_sub = [StoreInventory.productId == Product.id, StoreInventory.storeId == storeId, StoreInventory.stock > 0]
+            fallback_conditions.append(or_(
+                Product.restaurant.has(Restaurant.storeId == storeId),
+                and_(Product.restaurantId.is_(None), exists().where(and_(*inv_sub))),
+                and_(Product.restaurantId.is_(None), Product.stock > 0)
+            ))
+        else:
+            fallback_conditions.append(or_(
+                Product.restaurantId.is_not(None),
+                Product.stock > 0
+            ))
+
+        fallback_stmt = select(Product).options(selectinload(Product.category), selectinload(Product.restaurant)).where(
+            and_(*fallback_conditions)
         ).limit(8 - len(products))
         fallback_res = await db.execute(fallback_stmt)
         popular_products = fallback_res.scalars().all()
@@ -857,20 +891,27 @@ async def get_buy_again(
             ordered_product_days[p.id] = mock_days[idx % len(mock_days)]
             products.append(p)
 
-    # Format output
+    # Format output with live stock, availability, and restaurant info
     formatted = []
     for p in products[:8]:
         category_slug = p.category.slug if p.category else "general"
+        is_restaurant = bool(p.restaurantId)
+        stock_val = p.stock if p.stock is not None and p.stock > 0 else (999 if is_restaurant else (p.stock if p.stock is not None else 50))
         formatted.append({
             "id": p.id,
             "name": p.name,
             "slug": p.slug,
             "imageUrl": p.imageUrl,
-            "price": p.price,
-            "mrp": p.mrp,
-            "unit": p.unit,
+            "price": float(p.price) if p.price is not None else 0.0,
+            "mrp": float(p.mrp) if p.mrp is not None else float(p.price or 0.0),
+            "unit": p.unit or "",
+            "stock": stock_val,
+            "isAvailable": p.isAvailable is not False and (is_restaurant or stock_val > 0),
+            "restaurantId": p.restaurantId,
+            "restaurantName": p.restaurant.name if getattr(p, "restaurant", None) else None,
             "lastOrderedDays": ordered_product_days.get(p.id, 3),
-            "categorySlug": category_slug
+            "categorySlug": category_slug,
+            "category": {"id": p.category.id, "name": p.category.name, "slug": p.category.slug} if p.category else None
         })
 
     return formatted

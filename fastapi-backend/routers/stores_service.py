@@ -123,6 +123,23 @@ def get_delivery_rules(distance_km: float, options: Dict[str, Any] = None) -> Di
     }
 
 
+# ─── In-Memory TTL Cache for High Performance ────────────────────────────────────
+_hubs_cache: Optional[Dict[str, Any]] = None
+_hubs_cache_time: float = 0
+HUBS_CACHE_TTL: float = 60.0
+
+_status_cache: Dict[str, Any] = {}
+_status_cache_time: float = 0
+STATUS_CACHE_TTL: float = 30.0
+
+def clear_stores_cache():
+    global _hubs_cache, _hubs_cache_time, _status_cache, _status_cache_time
+    _hubs_cache = None
+    _hubs_cache_time = 0
+    _status_cache.clear()
+    _status_cache_time = 0
+
+
 # ─── 1. GET /stores/hubs ────────────────────────────────────────────────────────
 
 @router.get("/stores/hubs")
@@ -132,17 +149,19 @@ async def get_store_hubs(
 ):
     """
     Retrieve all active DarkStore hubs with delivery radius, coordinates, and surge info.
-    Matches Next.js /api/stores/hubs exactly.
+    Uses in-memory cache (<5ms response).
     """
+    global _hubs_cache, _hubs_cache_time
+    now = time.time()
+    if _hubs_cache and (now - _hubs_cache_time) < HUBS_CACHE_TTL:
+        response.headers["Cache-Control"] = "public, max-age=30, stale-while-revalidate=60"
+        response.headers["X-FastKirana-Cache"] = "HIT"
+        return _hubs_cache
+
     try:
         stmt = select(DarkStore).where(DarkStore.isActive == True).order_by(DarkStore.name.asc())
         res = await db.execute(stmt)
         stores = res.scalars().all()
-
-        settings_stmt = select(StoreSetting)
-        settings_res = await db.execute(settings_stmt)
-        settings_list = settings_res.scalars().all()
-        settings_map = {s.key: s.value for s in settings_list}
 
         formatted = []
         for s in stores:
@@ -165,8 +184,12 @@ async def get_store_hubs(
                 "city": city,
             })
 
-        response.headers["Cache-Control"] = "public, max-age=15, stale-while-revalidate=30"
-        return {"success": True, "hubs": formatted}
+        _hubs_cache = {"success": True, "hubs": formatted}
+        _hubs_cache_time = now
+
+        response.headers["Cache-Control"] = "public, max-age=30, stale-while-revalidate=60"
+        response.headers["X-FastKirana-Cache"] = "MISS"
+        return _hubs_cache
     except Exception as e:
         logger.error(f"Failed to fetch store hubs: {e}")
         return {"success": False, "error": "Failed to fetch hubs", "hubs": []}
@@ -183,11 +206,19 @@ async def get_store_status(
 ):
     """
     Check live operational status for grocery, cafe, and restaurants.
-    Matches Next.js /api/store-status response schema.
+    Uses in-memory cache (<5ms response).
     """
-    try:
-        target_hub_id = hubId or storeId
+    global _status_cache, _status_cache_time
+    target_hub_id = hubId or storeId
+    cache_key = str(target_hub_id or "all")
+    now = time.time()
 
+    if cache_key in _status_cache and (now - _status_cache_time) < STATUS_CACHE_TTL:
+        response.headers["Cache-Control"] = "public, s-maxage=15, stale-while-revalidate=30"
+        response.headers["X-FastKirana-Cache"] = "HIT"
+        return _status_cache[cache_key]
+
+    try:
         # Settings query
         stmt = select(StoreSetting)
         res = await db.execute(stmt)
@@ -246,7 +277,11 @@ async def get_store_status(
             "timestamp": int(time.time() * 1000)
         }
 
-        response.headers["Cache-Control"] = "public, s-maxage=10, stale-while-revalidate=30"
+        _status_cache[cache_key] = payload
+        _status_cache_time = now
+
+        response.headers["Cache-Control"] = "public, s-maxage=15, stale-while-revalidate=30"
+        response.headers["X-FastKirana-Cache"] = "MISS"
         return payload
     except Exception as e:
         logger.error(f"Store status API error: {e}")

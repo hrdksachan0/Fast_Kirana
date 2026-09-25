@@ -27,10 +27,20 @@ def slugify(text: str) -> str:
     return text
 
 
+_categories_cache: Dict[str, Any] = {}
+_categories_cache_time: float = 0
+CATEGORIES_CACHE_TTL: float = 60.0
+
+def clear_categories_cache():
+    global _categories_cache, _categories_cache_time
+    _categories_cache.clear()
+    _categories_cache_time = 0
+
 async def trigger_revalidation(category_slug: Optional[str] = None):
     """
     Trigger Next.js frontend cache revalidation in the background.
     """
+    clear_categories_cache()
     try:
         app_url = os.getenv("NEXT_PUBLIC_APP_URL", "http://localhost:3000")
         auth_secret = os.getenv("AUTH_SECRET", "")
@@ -56,8 +66,17 @@ async def get_categories(
     """
     Get all categories. If not admin/all, filters out 'cafe' and 'restaurant'.
     If storeId is provided, isolates product count and category availability by dark store hub.
+    Uses ultra-fast memory cache (<5ms response).
     """
+    import time
     include_all = (admin == "true") or (all == "true")
+    cache_key = f"{include_all}:{storeId or 'all'}"
+    now = time.time()
+
+    if cache_key in _categories_cache and (now - _categories_cache_time) < CATEGORIES_CACHE_TTL:
+        response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=180"
+        response.headers["X-FastKirana-Cache"] = "HIT"
+        return _categories_cache[cache_key]
 
     try:
         if storeId and storeId != "all":
@@ -112,7 +131,11 @@ async def get_categories(
             if pid and pid in cat_map:
                 cat_map[pid]["_count"]["products"] += c["_count"]["products"]
 
+        _categories_cache[cache_key] = categories_data
+        globals()["_categories_cache_time"] = now
+
         response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=180"
+        response.headers["X-FastKirana-Cache"] = "MISS"
         return categories_data
     except Exception as e:
         raise HTTPException(

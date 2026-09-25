@@ -25,18 +25,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     // 1. Fetch WhatsApp & alert settings
     let settingsMap = ctx.settingsMap
     if (!settingsMap) {
-      const settings = await prisma.storeSetting.findMany({
-        where: {
-          key: {
-            in: [
-              'whatsapp_notify_7054470303',
-              'whatsapp_notify_8112849854',
-              'order_alert_phone',
-              'contact_phone'
-            ]
-          }
-        }
-      })
+      const settings = await prisma.storeSetting.findMany()
       settingsMap = {}
       for (const s of settings) {
         settingsMap[s.key] = s.value
@@ -228,13 +217,54 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         console.warn('FCM dispatch note:', fcmErr)
       }
 
-      // 4. WhatsApp Order Alert to Store Admin
+      // 4. WhatsApp Order Alerts: Strict Store-Wise & Restaurant Owner Routing
       try {
+        const orderAlertPhones = new Set<string>()
+
+        if (order.restaurantId) {
+          // 1. Restaurant / Cafe: Strictly send to Restaurant Owner — NO darkstore admin
+          try {
+            const rest = await prisma.restaurant.findUnique({
+              where: { id: order.restaurantId },
+              select: { ownerPhone: true },
+            })
+            if (rest?.ownerPhone) {
+              const clean = rest.ownerPhone.replace(/\D/g, '').slice(-10)
+              if (clean.length === 10) orderAlertPhones.add(clean)
+            }
+          } catch (e) {
+            console.warn('Failed to query restaurant ownerPhone for WhatsApp:', e)
+          }
+        } else if (order.storeId && settingsMap) {
+          // 2. DarkStore / Grocery: Strictly location-wise to this store's staff/phones
+          const storePrefix = `store:${order.storeId}:`
+          const storeContact = settingsMap[`${storePrefix}contact_phone`] || settingsMap[`${storePrefix}store_phone`]
+          const notifyStore = settingsMap[`${storePrefix}whatsapp_notify_store_phone`] !== 'false'
+          if (notifyStore && storeContact) {
+            const clean = storeContact.replace(/\D/g, '').slice(-10)
+            if (clean.length === 10) orderAlertPhones.add(clean)
+          }
+          const addl = settingsMap[`${storePrefix}store_alert_phones`] || settingsMap[`${storePrefix}order_alert_phone`]
+          if (addl) {
+            const matches = addl.match(/\b\d{10}\b/g)
+            if (matches) matches.forEach((m: string) => orderAlertPhones.add(m))
+          }
+          if (settingsMap[`${storePrefix}whatsapp_notify_7054470303`] === 'true') {
+            orderAlertPhones.add('7054470303')
+          }
+          if (settingsMap[`${storePrefix}whatsapp_notify_8112849854`] !== 'false') {
+            orderAlertPhones.add('8112849854')
+          }
+        } else {
+          // 3. Fallback
+          adminPhones.forEach((p) => orderAlertPhones.add(p))
+        }
+
         const adminText = isOnlinePaid
           ? `💳 *NEW PAID ONLINE ORDER* #${displayId} for [${order.shopName || 'Store'}] of ₹${order.total} from ${customerName} (${customerPhone}). Address: ${addressText}. Manage: ${cleanAppUrl}/admin`
           : `🛎️ *NEW ORDER* #${displayId} for [${order.shopName || 'Store'}] of ₹${order.total} (${order.paymentMethod}) from ${customerName} (${customerPhone}). Address: ${addressText}. Manage: ${cleanAppUrl}/admin`
 
-        for (const phone of adminPhones) {
+        for (const phone of Array.from(orderAlertPhones)) {
           sendWhatsAppOrderAlert(phone, adminText).catch(() => {})
         }
       } catch (waErr) {

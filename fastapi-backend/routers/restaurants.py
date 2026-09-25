@@ -24,8 +24,19 @@ def generate_restaurant_slug(name: str) -> str:
     return slug.strip('-')
 
 
+_restaurants_cache: Dict[str, Any] = {}
+_restaurants_cache_time: float = 0
+RESTAURANTS_CACHE_TTL: float = 60.0
+
+def clear_restaurants_cache():
+    global _restaurants_cache, _restaurants_cache_time
+    _restaurants_cache.clear()
+    _restaurants_cache_time = 0
+
+
 @router.get("")
 async def get_restaurants(
+    response: Response,
     cuisine: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     storeId: Optional[str] = Query(None),
@@ -35,9 +46,19 @@ async def get_restaurants(
 ):
     """
     List active or all restaurants, with cuisine, search, and storeId hub city isolation.
+    Uses ultra-fast in-memory cache for public requests (<5ms response).
     """
     role = current_user.get("role") if current_user else None
     is_admin = role == "ADMIN"
+
+    # Serve public requests from cache
+    cache_key = f"{cuisine}:{search}:{storeId or 'all'}:{all}"
+    now = time.time()
+    if not is_admin and not all and not search:
+        if cache_key in _restaurants_cache and (now - _restaurants_cache_time) < RESTAURANTS_CACHE_TTL:
+            response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
+            response.headers["X-FastKirana-Cache"] = "HIT"
+            return _restaurants_cache[cache_key]
 
     filters = []
     if not is_admin or not all:
@@ -109,6 +130,12 @@ async def get_restaurants(
         }
         result.append(r_dict)
 
+    if not is_admin and not all and not search:
+        _restaurants_cache[cache_key] = result
+        globals()["_restaurants_cache_time"] = now
+        response.headers["X-FastKirana-Cache"] = "MISS"
+
+    response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
     return result
 
 

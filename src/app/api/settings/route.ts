@@ -89,6 +89,8 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   app_update_url: 'https://fastkirana.in/app-release.apk',
   app_update_message: 'FastKirana ka naya update available hai! Faster performance, bug fixes aur smooth ordering ke liye abhi update karein.',
   app_force_update: 'false',
+  whatsapp_notify_store_phone: 'true',
+  store_alert_phones: '',
 }
 
 export function checkIsStoreOpen(settingsMap: Record<string, string>, prefix: 'grocery' | 'cafe' | 'restaurant'): boolean {

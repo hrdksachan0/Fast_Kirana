@@ -145,6 +145,8 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
   const [restaurantPickupAddress, setRestaurantPickupAddress] = useState(RESTAURANT_PICKUP_ADDRESS)
   const [notifyPhone1, setNotifyPhone1] = useState(true)
   const [notifyPhone2, setNotifyPhone2] = useState(true)
+  const [notifyStorePhone, setNotifyStorePhone] = useState(true)
+  const [storeAlertPhones, setStoreAlertPhones] = useState('')
   const [groceryFreeDeliveryThreshold, setGroceryFreeDeliveryThreshold] = useState('199')
   const [cafeFreeDeliveryThreshold, setCafeFreeDeliveryThreshold] = useState('199')
   const [combinedFreeDeliveryThreshold, setCombinedFreeDeliveryThreshold] = useState('200')
@@ -259,6 +261,8 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
         if (data.restaurant_pickup_address) setRestaurantPickupAddress(data.restaurant_pickup_address)
         if (data.whatsapp_notify_7054470303 !== undefined) setNotifyPhone1(data.whatsapp_notify_7054470303 !== 'false')
         if (data.whatsapp_notify_8112849854 !== undefined) setNotifyPhone2(data.whatsapp_notify_8112849854 !== 'false')
+        if (data.whatsapp_notify_store_phone !== undefined) setNotifyStorePhone(data.whatsapp_notify_store_phone !== 'false')
+        if (data.store_alert_phones !== undefined) setStoreAlertPhones(data.store_alert_phones)
         if (data.grocery_free_delivery_threshold) setGroceryFreeDeliveryThreshold(data.grocery_free_delivery_threshold)
         if (data.cafe_free_delivery_threshold) setCafeFreeDeliveryThreshold(data.cafe_free_delivery_threshold)
         if (data.combined_free_delivery_threshold) setCombinedFreeDeliveryThreshold(data.combined_free_delivery_threshold)
@@ -365,6 +369,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
         },
         body: JSON.stringify({
           storeId: storeId && storeId !== 'all' ? storeId : undefined,
+          ...categorySettingsPayload,
           deliveries_count: deliveriesCount.trim(),
           rating_value: ratingValue.trim(),
           happy_families: happyFamilies.trim(),
@@ -409,6 +414,8 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
           grocery_pickup_address: groceryPickupAddress.trim(),
           whatsapp_notify_7054470303: notifyPhone1 ? 'true' : 'false',
           whatsapp_notify_8112849854: notifyPhone2 ? 'true' : 'false',
+          whatsapp_notify_store_phone: notifyStorePhone ? 'true' : 'false',
+          store_alert_phones: storeAlertPhones.trim(),
           hero_greeting_closed: heroGreetingClosed.trim(),
           hero_subtitle_closed: heroSubtitleClosed.trim(),
           hero_greeting_morning: heroGreetingMorning.trim(),
@@ -695,37 +702,103 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
                   setGroceryPickupAddress={setGroceryPickupAddress}
                 />
 
-                {/* WhatsApp Order Notifications Settings */}
-                <div className="border-t border-border/40 pt-4 space-y-2">
-                  <h4 className="text-xs font-black text-text-primary">💬 WhatsApp Order Alerts Configuration</h4>
-                  <p className="text-[10px] text-text-muted font-bold leading-relaxed">
-                    Select which admin phone numbers should receive instant WhatsApp notifications when a customer places a new order.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-5 bg-muted/20 p-4 rounded-2xl border border-border/40 w-fit">
-                    <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
+                {/* Store-Wise WhatsApp Order Notifications Settings */}
+                <div className="border-t border-border/40 pt-5 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div>
+                      <h4 className="text-xs font-black text-text-primary flex items-center gap-1.5">
+                        <span>💬</span> Store-Wise WhatsApp Order Alerts
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase">
+                          {storeHubName || (storeId && storeId !== 'all' ? storeId : 'All Stores (Global)')}
+                        </span>
+                      </h4>
+                      <p className="text-[10px] text-text-muted font-bold leading-relaxed mt-0.5">
+                        Configure which WhatsApp numbers receive instant alerts when a customer places an order at this store.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/20 p-4 rounded-2xl border border-border/40 space-y-3.5">
+                    {/* Store Contact Phone Alert Checkbox */}
+                    <div className="flex flex-wrap items-center gap-4 border-b border-border/30 pb-3">
+                      <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={notifyStorePhone}
+                          onChange={(e) => setNotifyStorePhone(e.target.checked)}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                        />
+                        <span className="flex items-center gap-1.5">
+                          <span>🏪</span>
+                          <span>Send alerts to Store Contact Phone</span>
+                          <span className="font-mono text-primary bg-primary/10 px-2 py-0.5 rounded-md text-[11px]">
+                            {contactPhone || 'No phone set in Contact Phone above'}
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Additional Store WhatsApp Alert Numbers Input */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary flex items-center gap-1">
+                        <span>📱</span> Additional Store Alert Numbers (Store Manager / Hub Supervisor)
+                      </label>
                       <input
-                        type="checkbox"
-                        checked={notifyPhone1}
-                        onChange={(e) => setNotifyPhone1(e.target.checked)}
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                        type="text"
+                        value={storeAlertPhones}
+                        onChange={(e) => setStoreAlertPhones(e.target.value)}
+                        placeholder="e.g. 9696678006, 9876543210 (comma separated 10-digit numbers)"
+                        className="w-full bg-background border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold shadow-xs placeholder:text-text-muted/50"
                       />
-                      <span>Send alerts to +91 70544 70303</span>
-                    </label>
-                    <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={notifyPhone2}
-                        onChange={(e) => setNotifyPhone2(e.target.checked)}
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
-                      />
-                      <span>Send alerts to +91 81128 49854</span>
-                    </label>
+                      <p className="text-[9px] text-text-muted">
+                        Phone numbers entered here will strictly receive WhatsApp alerts for orders placed at this store hub.
+                      </p>
+                    </div>
+
+                    {/* Global / Admin Overrides */}
+                    <div className="border-t border-border/30 pt-3">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary block mb-2">
+                        Central Admin Alerts
+                      </span>
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={notifyPhone1}
+                            onChange={(e) => setNotifyPhone1(e.target.checked)}
+                            className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                          />
+                          <span>Send alerts to Master Admin (+91 70544 70303)</span>
+                        </label>
+                        <label className="flex items-center gap-2.5 text-xs font-bold text-text-primary cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={notifyPhone2}
+                            onChange={(e) => setNotifyPhone2(e.target.checked)}
+                            className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                          />
+                          <span>Send alerts to Ops Admin (+91 81128 49854)</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Category-Wise Statuses Section */}
-                <div className="border-t border-border/40 pt-4">
-                  <h4 className="text-xs font-black text-text-primary mb-3">🏪 Category-Wise Status (Open/Closed)</h4>
+                {/* Store-Wise Category Statuses Section */}
+                <div className="border-t border-border/40 pt-5 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div>
+                      <h4 className="text-xs font-black text-text-primary flex items-center gap-1.5">
+                        <span>🏪</span> Category-Wise Status (Open / Closed)
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase">
+                          {storeHubName || (storeId && storeId !== 'all' ? storeId : 'All Stores (Global)')}
+                        </span>
+                      </h4>
+                      <p className="text-[10px] text-text-muted font-bold leading-relaxed mt-0.5">
+                        Control category availability for this store. Closing a category marks its products as temporarily unavailable for customers ordering from this location.
+                      </p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {categories.map((cat) => (
                       <div key={cat.id} className="space-y-1.5">

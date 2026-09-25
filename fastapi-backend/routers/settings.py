@@ -83,6 +83,8 @@ DEFAULT_SETTINGS = {
     "cafe_profit_share": "15",
     "cafe_default_margin": "30",
     "restaurant_default_margin": "30",
+    "whatsapp_notify_store_phone": "true",
+    "store_alert_phones": "",
 }
 
 

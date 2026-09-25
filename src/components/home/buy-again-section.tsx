@@ -22,6 +22,8 @@ interface BuyAgainItem {
   categorySlug: string
   stock?: number
   isAvailable?: boolean
+  restaurantId?: string | null
+  restaurant?: any
   category?: any
 }
 
@@ -29,6 +31,7 @@ export function BuyAgainSection() {
   const scrollRef = useRef<HTMLDivElement>(null)
   
   // Select store closure settings
+  const activeStoreId = useUIStore((s) => s.activeStoreId)
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
   const restaurantOpen = useUIStore((s) => s.restaurantOpen)
@@ -41,7 +44,8 @@ export function BuyAgainSection() {
   useEffect(() => {
     async function fetchItems() {
       try {
-        const res = await fetch('/api/products/buy-again')
+        const storeParam = activeStoreId ? `?storeId=${encodeURIComponent(activeStoreId)}` : ''
+        const res = await fetch(`/api/products/buy-again${storeParam}`)
         if (res.ok) {
           const data = await res.json()
           setItems(data)
@@ -53,7 +57,7 @@ export function BuyAgainSection() {
       }
     }
     fetchItems()
-  }, [])
+  }, [activeStoreId])
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -71,9 +75,10 @@ export function BuyAgainSection() {
     e.stopPropagation()
     triggerHaptic('light')
 
-    const resolvedStock = typeof item.stock === 'number' ? item.stock : 0
-    const resolvedIsAvailable = item.isAvailable !== false
-    if (resolvedStock <= 0 || !resolvedIsAvailable) {
+    const isRestaurant = Boolean(item.restaurantId || (item as any).restaurant || item.categorySlug === 'cafe')
+    const resolvedStock = typeof item.stock === 'number' ? item.stock : (item.isAvailable !== false ? (isRestaurant ? 999 : 50) : 0)
+    const resolvedIsAvailable = item.isAvailable !== false && (isRestaurant || resolvedStock > 0)
+    if (!resolvedIsAvailable) {
       toast.error(`Sorry, ${item.name} is currently out of stock!`)
       return
     }
@@ -237,8 +242,9 @@ export function BuyAgainSection() {
                   <div className="w-full h-7">
                     <AnimatePresence mode="wait">
                       {(() => {
-                        const itemStock = typeof item.stock === 'number' ? item.stock : 0
-                        const isSoldOut = itemStock <= 0 || item.isAvailable === false
+                        const isRestaurant = Boolean(item.restaurantId || (item as any).restaurant || item.categorySlug === 'cafe')
+                        const itemStock = typeof item.stock === 'number' ? item.stock : (item.isAvailable !== false ? (isRestaurant ? 999 : 50) : 0)
+                        const isSoldOut = (!isRestaurant && typeof item.stock === 'number' && item.stock <= 0) || item.isAvailable === false
 
                         if (quantity === 0) {
                           return (

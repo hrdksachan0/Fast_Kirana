@@ -8,7 +8,18 @@ from typing import Optional, List, Dict, Any
 from database import get_db
 from models import PromoBanner
 
+import time
+
 router = APIRouter(prefix="/banners", tags=["Promotional Banners"])
+
+_banners_cache: Dict[str, Any] = {}
+_banners_cache_time: float = 0
+BANNERS_CACHE_TTL: float = 60.0
+
+def clear_banners_cache():
+    global _banners_cache, _banners_cache_time
+    _banners_cache.clear()
+    _banners_cache_time = 0
 
 
 @router.get("")
@@ -21,9 +32,14 @@ async def get_banners(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get active promotional banners. Supports filtering by type, placement, platform, and storeId.
-    Parses JSON metadata stored in banner code string.
+    Get active promotional banners with ultra-fast in-memory caching.
     """
+    cache_key = f"{type}:{placement}:{platform}:{storeId or 'all'}"
+    now = time.time()
+    if cache_key in _banners_cache and (now - _banners_cache_time) < BANNERS_CACHE_TTL:
+        response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
+        response.headers["X-FastKirana-Cache"] = "HIT"
+        return _banners_cache[cache_key]
     try:
         stmt = select(PromoBanner).where(PromoBanner.isActive == True)
 
@@ -93,7 +109,11 @@ async def get_banners(
                 "accentColor": extra.get("accentColor"),
             })
 
+        _banners_cache[cache_key] = parsed_banners
+        globals()["_banners_cache_time"] = now
+
         response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
+        response.headers["X-FastKirana-Cache"] = "MISS"
         return parsed_banners
     except Exception as e:
         raise HTTPException(

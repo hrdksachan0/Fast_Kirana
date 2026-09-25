@@ -12,6 +12,7 @@ export interface OrderNotificationContext {
   adminPhones: string[]
   origin: string
   userPhone?: string
+  settingsMap?: Record<string, string>
 }
 
 /**
@@ -278,8 +279,49 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       console.error('Customer order placement FCM error:', fcmErr)
     }
 
-    // 4. WhatsApp Order Alert to Admin Phones
-    if (adminPhones.length > 0) {
+    // 4. WhatsApp Order Alerts: Strict Store-Wise & Restaurant Owner Routing
+    const orderAlertPhones = new Set<string>()
+
+    if (isRestaurant && order.restaurantId) {
+      // 1. Restaurant / Cafe: Strictly send to Restaurant Owner — NO darkstore admin
+      try {
+        const rest = await prisma.restaurant.findUnique({
+          where: { id: order.restaurantId },
+          select: { ownerPhone: true },
+        })
+        if (rest?.ownerPhone) {
+          const clean = rest.ownerPhone.replace(/\D/g, '').slice(-10)
+          if (clean.length === 10) orderAlertPhones.add(clean)
+        }
+      } catch (e) {
+        console.warn('Failed to lookup restaurant ownerPhone for WhatsApp:', e)
+      }
+    } else if (order.storeId && ctx.settingsMap) {
+      // 2. DarkStore / Grocery: Strictly location-wise to this store's staff/phones
+      const storePrefix = `store:${order.storeId}:`
+      const storeContact = ctx.settingsMap[`${storePrefix}contact_phone`] || ctx.settingsMap[`${storePrefix}store_phone`]
+      const notifyStore = ctx.settingsMap[`${storePrefix}whatsapp_notify_store_phone`] !== 'false'
+      if (notifyStore && storeContact) {
+        const clean = storeContact.replace(/\D/g, '').slice(-10)
+        if (clean.length === 10) orderAlertPhones.add(clean)
+      }
+      const addl = ctx.settingsMap[`${storePrefix}store_alert_phones`] || ctx.settingsMap[`${storePrefix}order_alert_phone`]
+      if (addl) {
+        const matches = addl.match(/\b\d{10}\b/g)
+        if (matches) matches.forEach((m: string) => orderAlertPhones.add(m))
+      }
+      if (ctx.settingsMap[`${storePrefix}whatsapp_notify_7054470303`] === 'true') {
+        orderAlertPhones.add('7054470303')
+      }
+      if (ctx.settingsMap[`${storePrefix}whatsapp_notify_8112849854`] !== 'false') {
+        orderAlertPhones.add('8112849854')
+      }
+    } else {
+      // 3. Fallback
+      adminPhones.forEach((p) => orderAlertPhones.add(p))
+    }
+
+    if (orderAlertPhones.size > 0) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
       const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
       const outletName = order.shopName || (isRestaurant ? 'Restaurant' : 'FastKirana Dark Store')
@@ -291,9 +333,9 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         ? `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Payment: Online PAID ✅. Manage: ${cleanAppUrl}/admin`
         : `🛎️ *COD Order* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Payment: Cash On Delivery. Manage: ${cleanAppUrl}/admin`
 
-      const whatsappPromises = adminPhones.map((phone) =>
+      const whatsappPromises = Array.from(orderAlertPhones).map((phone) =>
         sendWhatsAppOrderAlert(phone, adminText).catch((err: any) =>
-          console.error(`Failed to send admin (${phone}) WhatsApp order alert:`, err)
+          console.error(`Failed to send WhatsApp order alert (${phone}):`, err)
         )
       )
       await Promise.allSettled(whatsappPromises)

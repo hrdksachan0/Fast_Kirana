@@ -6,6 +6,8 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const storeId = searchParams.get('storeId')
     const session = await auth()
     const userId = session?.user?.id
 
@@ -32,7 +34,10 @@ export async function GET(request: NextRequest) {
           include: {
             product: {
               include: {
-                category: true
+                category: true,
+                restaurant: {
+                  select: { id: true, name: true, isOpen: true }
+                }
               }
             }
           }
@@ -59,18 +64,39 @@ export async function GET(request: NextRequest) {
     // If we have fewer than 6 products, fill with popular items from the DB
     if (products.length < 6) {
       const existingIds = products.map(p => p.id)
-      const popularProducts = await prisma.product.findMany({
-        where: {
-          id: {
-            notIn: existingIds
-          },
-          isAvailable: true,
-          stock: {
-            gt: 0
-          }
+      const whereCondition: any = {
+        id: {
+          notIn: existingIds
         },
+        isAvailable: true,
+      }
+
+      if (storeId && storeId !== 'all') {
+        whereCondition.OR = [
+          { restaurant: { storeId } },
+          {
+            restaurantId: null,
+            inventories: { some: { storeId, stock: { gt: 0 } } }
+          },
+          {
+            restaurantId: null,
+            stock: { gt: 0 }
+          }
+        ]
+      } else {
+        whereCondition.OR = [
+          { restaurantId: { not: null } },
+          { stock: { gt: 0 } }
+        ]
+      }
+
+      const popularProducts = await prisma.product.findMany({
+        where: whereCondition,
         include: {
-          category: true
+          category: true,
+          restaurant: {
+            select: { id: true, name: true, isOpen: true }
+          }
         },
         take: 8 - products.length
       })
@@ -83,18 +109,29 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Format output
+    // Format output with live stock, availability, and restaurant info
     const formatted = products.map(p => {
+      const isRestaurant = Boolean(p.restaurantId || p.restaurant)
+      const stockVal = typeof p.stock === 'number' && p.stock > 0
+        ? p.stock
+        : (isRestaurant ? 999 : (typeof p.stock === 'number' ? p.stock : 50))
+      const isAvailableVal = p.isAvailable !== false && (isRestaurant || stockVal > 0)
       return {
         id: p.id,
         name: p.name,
         slug: p.slug,
         imageUrl: p.imageUrl,
         price: p.price,
-        mrp: p.mrp,
-        unit: p.unit,
+        mrp: p.mrp || p.price,
+        unit: p.unit || '',
+        stock: stockVal,
+        isAvailable: isAvailableVal,
+        restaurantId: p.restaurantId,
+        restaurantName: p.restaurant?.name,
+        restaurant: p.restaurant,
         lastOrderedDays: orderedProductMap.get(p.id) || 3,
-        categorySlug: p.category ? p.category.slug : 'general'
+        categorySlug: p.category ? p.category.slug : 'general',
+        category: p.category ? { id: p.category.id, name: p.category.name, slug: p.category.slug } : undefined,
       }
     })
 
