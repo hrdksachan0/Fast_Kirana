@@ -1649,7 +1649,37 @@ async def get_daily_finance_reconciliation(
     order_res = await db.execute(order_stmt)
     all_orders = order_res.scalars().all()
 
-    # 3. Categorize transactions and compute metrics
+    # 3. Parallel Cashfree API Check for Online Orders
+    cashfree_paid_ids = set()
+    try:
+        from routers.cashfree_router import _get_cashfree_headers, CASHFREE_BASE_URL
+        headers = _get_cashfree_headers()
+        import httpx
+
+        async def _check_cf(client, o):
+            for cid in [o.id, o.readableId]:
+                if not cid:
+                    continue
+                try:
+                    res = await client.get(f"{CASHFREE_BASE_URL}/orders/{cid}", headers=headers)
+                    if res.status_code == 200:
+                        data = res.json()
+                        if data.get("order_status") == "PAID":
+                            return o.id
+                except Exception:
+                    pass
+            return None
+
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            cf_tasks = [_check_cf(client, o) for o in all_orders]
+            cf_results = await asyncio.gather(*cf_tasks)
+            for cid in cf_results:
+                if cid:
+                    cashfree_paid_ids.add(cid)
+    except Exception as cf_err:
+        logger.warning(f"Could not batch check Cashfree status: {cf_err}")
+
+    # 4. Categorize transactions and compute metrics
     cashfree_online_total = 0.0
     cashfree_online_count = 0
 
@@ -1677,38 +1707,37 @@ async def get_daily_finance_reconciliation(
         o_status = str(o.status.value if hasattr(o.status, "value") else o.status).upper()
         notes = str(o.notes or "")
         is_doorstep_qr = "Doorstep UPI" in notes or "QR Scan" in notes or "Rider QR" in notes
+        is_in_cashfree = o.id in cashfree_paid_ids or "Cashfree PG" in notes or "CF_" in notes
 
         if o_status == "CANCELLED":
             verified_by = "Order Cancelled"
             category = "CANCELLED"
+        elif is_in_cashfree:
+            cashfree_online_total += tot
+            cashfree_online_count += 1
+            category = "CASHFREE_ONLINE"
+            verified_by = "Cashfree Gateway (Auto)"
         elif p_status == "PAID":
-            if is_doorstep_qr:
+            if is_doorstep_qr or (p_method in ["UPI", "ONLINE"] and o.deliveryUserId is not None):
                 rider_qr_total += tot
                 rider_qr_count += 1
                 category = "RIDER_QR"
                 verified_by = f"Rider QR ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
-            elif p_method in ["UPI", "CARD", "WALLET", "ONLINE", "RAZORPAY", "CASHFREE"]:
-                cashfree_online_total += tot
-                cashfree_online_count += 1
-                category = "CASHFREE_ONLINE"
-                verified_by = "Cashfree Gateway (Auto)"
+            elif o.cashSettledToAdmin:
+                counter_cash_total += tot
+                counter_cash_count += 1
+                category = "COUNTER_CASH"
+                verified_by = "Settled to Counter"
+            elif o_status == "DELIVERED":
+                rider_cash_total += tot
+                rider_cash_count += 1
+                category = "RIDER_CASH"
+                verified_by = f"Rider Cash ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
             else:
-                # COD marked as PAID in cash
-                if o.cashSettledToAdmin:
-                    counter_cash_total += tot
-                    counter_cash_count += 1
-                    category = "COUNTER_CASH"
-                    verified_by = "Settled to Counter"
-                elif o_status == "DELIVERED":
-                    rider_cash_total += tot
-                    rider_cash_count += 1
-                    category = "RIDER_CASH"
-                    verified_by = f"Rider Cash ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
-                else:
-                    counter_cash_total += tot
-                    counter_cash_count += 1
-                    category = "COUNTER_CASH"
-                    verified_by = "Cash Paid"
+                counter_cash_total += tot
+                counter_cash_count += 1
+                category = "COUNTER_CASH"
+                verified_by = "Cash Paid"
         else:
             # Payment status PENDING / FAILED
             if p_method == "COD":

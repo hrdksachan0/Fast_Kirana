@@ -281,6 +281,10 @@ async def verify_cashfree_payment(
         payment_id_str = str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}"
         order.paymentStatus = PaymentStatus.PAID
         order.paymentMethod = PaymentMethod.UPI
+        cf_note = f"Cashfree PG Paid (Ref: {payment_id_str})"
+        if not order.notes or "Cashfree PG Paid" not in order.notes:
+            order.notes = f"{order.notes} | {cf_note}" if order.notes else cf_note
+
         if order.status == OrderStatus.ADMIN_PENDING:
             order.status = OrderStatus.PENDING
 
@@ -291,6 +295,8 @@ async def verify_cashfree_payment(
             for co in comb_res.scalars().all():
                 co.paymentStatus = PaymentStatus.PAID
                 co.paymentMethod = PaymentMethod.UPI
+                if not co.notes or "Cashfree PG Paid" not in co.notes:
+                    co.notes = f"{co.notes} | {cf_note}" if co.notes else cf_note
                 if co.status == OrderStatus.ADMIN_PENDING:
                     co.status = OrderStatus.PENDING
 
@@ -394,6 +400,11 @@ async def cashfree_webhook(
         if order and order.paymentStatus != PaymentStatus.PAID:
             order.paymentStatus = PaymentStatus.PAID
             order.paymentMethod = PaymentMethod.UPI
+            cf_ref = payment_data.get("cf_payment_id") or cf_order_id
+            cf_note = f"Cashfree PG Paid (Ref: {cf_ref})"
+            if not order.notes or "Cashfree PG Paid" not in order.notes:
+                order.notes = f"{order.notes} | {cf_note}" if order.notes else cf_note
+
             if order.status == OrderStatus.ADMIN_PENDING:
                 order.status = OrderStatus.PENDING
 
@@ -403,6 +414,8 @@ async def cashfree_webhook(
                 for co in comb_res.scalars().all():
                     co.paymentStatus = PaymentStatus.PAID
                     co.paymentMethod = PaymentMethod.UPI
+                    if not co.notes or "Cashfree PG Paid" not in co.notes:
+                        co.notes = f"{co.notes} | {cf_note}" if co.notes else cf_note
                     if co.status == OrderStatus.ADMIN_PENDING:
                         co.status = OrderStatus.PENDING
 

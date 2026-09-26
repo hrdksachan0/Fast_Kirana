@@ -49,6 +49,44 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
+    // Check Cashfree Gateway in parallel for today's orders
+    const cashfreePaidIds = new Set<string>()
+    const cfAppId = process.env.CASHFREE_APP_ID
+    const cfSecret = process.env.CASHFREE_SECRET_KEY
+    const cfEnv = (process.env.CASHFREE_ENV || 'PRODUCTION').toUpperCase()
+    const cfBaseUrl = cfEnv === 'PRODUCTION' ? 'https://api.cashfree.com/pg' : 'https://sandbox.cashfree.com/pg'
+
+    if (cfAppId && cfSecret && orders.length > 0) {
+      try {
+        const cfChecks = orders.map(async (o: any) => {
+          for (const cid of [o.id, o.readableId]) {
+            if (!cid) continue
+            try {
+              const res = await fetch(`${cfBaseUrl}/orders/${cid}`, {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-api-version': '2023-08-01',
+                  'x-client-id': cfAppId,
+                  'x-client-secret': cfSecret,
+                },
+                signal: AbortSignal.timeout(3000),
+              })
+              if (res.ok) {
+                const data = await res.json()
+                if (data.order_status === 'PAID') {
+                  cashfreePaidIds.add(o.id)
+                  break
+                }
+              }
+            } catch (_) {}
+          }
+        })
+        await Promise.all(cfChecks)
+      } catch (err) {
+        console.warn('Could not batch check Cashfree status in Next.js route:', err)
+      }
+    }
+
     let cashfreeOnlineTotal = 0
     let cashfreeOnlineCount = 0
     let riderQrTotal = 0
@@ -69,6 +107,7 @@ export async function GET(req: NextRequest) {
       const oStatus = String(o.status || 'PENDING').toUpperCase()
       const notes = String(o.notes || '')
       const isDoorstepQr = notes.includes('Doorstep UPI') || notes.includes('QR Scan') || notes.includes('Rider QR')
+      const isInCashfree = cashfreePaidIds.has(o.id) || notes.includes('Cashfree PG') || notes.includes('CF_')
 
       let category = 'PENDING_DELIVERY'
       let verifiedBy = 'Pending'
@@ -76,37 +115,33 @@ export async function GET(req: NextRequest) {
       if (oStatus === 'CANCELLED') {
         category = 'CANCELLED'
         verifiedBy = 'Order Cancelled'
+      } else if (isInCashfree) {
+        cashfreeOnlineTotal += tot
+        cashfreeOnlineCount += 1
+        category = 'CASHFREE_ONLINE'
+        verifiedBy = 'Cashfree Gateway (Auto)'
       } else if (pStatus === 'PAID') {
-        if (isDoorstepQr) {
+        if (isDoorstepQr || (['UPI', 'ONLINE'].includes(pMethod) && o.deliveryUserId)) {
           // Rider collected UPI at doorstep
           riderQrTotal += tot
           riderQrCount += 1
           category = 'RIDER_QR'
           verifiedBy = `Rider QR (${o.deliveryUser?.name || 'Rider'})`
-        } else if (['UPI', 'CARD', 'WALLET', 'ONLINE', 'RAZORPAY', 'CASHFREE'].includes(pMethod)) {
-          // Paid directly via Cashfree / Online Gateway
-          cashfreeOnlineTotal += tot
-          cashfreeOnlineCount += 1
-          category = 'CASHFREE_ONLINE'
-          verifiedBy = 'Cashfree Gateway (Auto)'
+        } else if (o.cashSettledToAdmin) {
+          counterCashTotal += tot
+          counterCashCount += 1
+          category = 'COUNTER_CASH'
+          verifiedBy = 'Settled to Counter'
+        } else if (oStatus === 'DELIVERED') {
+          riderCashTotal += tot
+          riderCashCount += 1
+          category = 'RIDER_CASH'
+          verifiedBy = `Rider Cash (${o.deliveryUser?.name || 'Rider'})`
         } else {
-          // COD Paid in Cash
-          if (o.cashSettledToAdmin) {
-            counterCashTotal += tot
-            counterCashCount += 1
-            category = 'COUNTER_CASH'
-            verifiedBy = 'Settled to Counter'
-          } else if (oStatus === 'DELIVERED') {
-            riderCashTotal += tot
-            riderCashCount += 1
-            category = 'RIDER_CASH'
-            verifiedBy = `Rider Cash (${o.deliveryUser?.name || 'Rider'})`
-          } else {
-            counterCashTotal += tot
-            counterCashCount += 1
-            category = 'COUNTER_CASH'
-            verifiedBy = 'Cash Paid'
-          }
+          counterCashTotal += tot
+          counterCashCount += 1
+          category = 'COUNTER_CASH'
+          verifiedBy = 'Cash Paid'
         }
       } else {
         // Pending

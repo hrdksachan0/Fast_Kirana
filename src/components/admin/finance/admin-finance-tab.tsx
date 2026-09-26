@@ -661,7 +661,12 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                       {formatPrice(tx.total)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {tx.paymentStatus === 'PAID' ? (
+                      {tx.category === 'CANCELLED' ? (
+                        <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-md">
+                          <X className="w-2.5 h-2.5" />
+                          CANCELLED
+                        </span>
+                      ) : tx.paymentStatus === 'PAID' ? (
                         <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md">
                           <CheckCircle2 className="w-2.5 h-2.5" />
                           {tx.category === 'CASHFREE_ONLINE' ? 'UPI (Cashfree)' : tx.category === 'RIDER_QR' ? 'UPI (Rider QR)' : `${tx.paymentMethod} (PAID)`}
@@ -676,7 +681,9 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg border ${
-                          tx.category === 'CASHFREE_ONLINE' || tx.category === 'ONLINE_BANK'
+                          tx.category === 'CANCELLED'
+                            ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                            : tx.category === 'CASHFREE_ONLINE' || tx.category === 'ONLINE_BANK'
                             ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                             : tx.category === 'RIDER_QR'
                             ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30'
@@ -691,7 +698,11 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center whitespace-nowrap">
-                      {tx.category === 'CASHFREE_ONLINE' || tx.category === 'ONLINE_BANK' ? (
+                      {tx.category === 'CANCELLED' ? (
+                        <span className="text-[10px] font-bold text-rose-500">
+                          Cancelled
+                        </span>
+                      ) : tx.category === 'CASHFREE_ONLINE' || tx.category === 'ONLINE_BANK' ? (
                         <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-center gap-1">
                           <Check className="w-3 h-3" /> In Bank (Cashfree)
                         </span>
@@ -708,8 +719,8 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                           <Clock className="w-3 h-3" /> With Rider (Cash)
                         </span>
                       ) : (
-                        <span className="text-[10px] font-medium text-text-secondary">
-                          Delivering
+                        <span className="text-[10px] font-medium text-amber-600">
+                          Pending Delivery
                         </span>
                       )}
                     </td>
