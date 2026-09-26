@@ -381,22 +381,30 @@ async def get_sales_reports(
     Generate dynamic sales dashboards reporting overall revenue, product breakdowns, and restaurant commissions.
     """
     try:
-        now = datetime.utcnow()
+        now_utc = datetime.utcnow()
+        ist_offset = timedelta(hours=5, minutes=30)
+        now_ist = now_utc + ist_offset
+
         if startDate:
-            start = datetime.strptime(f"{startDate} 00:00:00", "%Y-%m-%d %H:%M:%S")
+            start_local = datetime.strptime(f"{startDate} 00:00:00", "%Y-%m-%d %H:%M:%S")
+            start = start_local - ist_offset
         else:
-            start = now - timedelta(days=30)
-            start = datetime.combine(start.date(), time.min)
+            start_local = datetime.combine((now_ist - timedelta(days=30)).date(), time.min)
+            start = start_local - ist_offset
+            startDate = start_local.strftime("%Y-%m-%d")
 
         if endDate:
-            end = datetime.strptime(f"{endDate} 23:59:59", "%Y-%m-%d %H:%M:%S")
+            end_local = datetime.strptime(f"{endDate} 23:59:59", "%Y-%m-%d %H:%M:%S")
+            end = end_local - ist_offset
         else:
-            end = datetime.combine(now.date(), time.max)
+            end_local = datetime.combine(now_ist.date(), time.max)
+            end = end_local - ist_offset
+            endDate = end_local.strftime("%Y-%m-%d")
 
         # 1. Fetch delivered orders with storeId filtering
         effective_store = storeId or _get_admin_attr(current_admin, "assignedStoreId")
         orders_stmt = select(Order).where(
-            Order.status == OrderStatus.DELIVERED,
+            Order.status.in_([OrderStatus.DELIVERED, "DELIVERED"]),
             Order.createdAt >= start,
             Order.createdAt <= end
         )
@@ -407,13 +415,14 @@ async def get_sales_reports(
         orders_res = await db.execute(orders_stmt)
         orders = orders_res.scalars().all()
 
-        # 2. Fetch order items (use raw SQL join for speed and variants hydration)
+        # 2. Fetch order items with LEFT JOINs to avoid dropping items missing categories/products
         store_clause = 'AND o."storeId" = :store_id' if effective_store and effective_store.lower() != 'all' else ''
         items_sql = f"""
             SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
                    COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
-                   c.name as "categoryName",
-                   c.slug as "categorySlug",
+                   COALESCE(p.vendor, 'Direct / FastKirana') as "vendor",
+                   COALESCE(c.name, r.name, o."shopName", 'General') as "categoryName",
+                   COALESCE(c.slug, r.slug, 'general') as "categorySlug",
                    p.tags as "productTags",
                    COALESCE(oi.variants, p.variants) as "variants", 
                    oi."selectedVariant",
@@ -421,11 +430,13 @@ async def get_sales_reports(
                    COALESCE(p."restaurantId", o."restaurantId") as "restaurantId",
                    r.name as "restaurantName",
                    r."commissionRate" as "restaurantCommissionRate",
-                   o."orderType"::text as "orderType"
+                   o."orderType"::text as "orderType",
+                   COALESCE(oi."refundAmount", 0)::float as "refundAmount",
+                   COALESCE(oi."isRefunded", false) as "isRefunded"
             FROM order_items oi
-            JOIN products p ON oi."productId" = p.id
-            JOIN categories c ON p."categoryId" = c.id
             JOIN orders o ON oi."orderId" = o.id
+            LEFT JOIN products p ON oi."productId" = p.id
+            LEFT JOIN categories c ON p."categoryId" = c.id
             LEFT JOIN restaurants r ON COALESCE(p."restaurantId", o."restaurantId") = r.id
             WHERE o.status::text = 'DELIVERED'
               AND o."createdAt" >= :start
@@ -461,8 +472,8 @@ async def get_sales_reports(
         dynamic_commission_rate = float(settings_map.get("restaurant_commission", "10.0")) / 100.0
 
         def is_pure_grocery_item(item) -> bool:
-            c_name = (item["categoryName"] or "").lower().strip()
-            c_slug = (item["categorySlug"] or "").lower().strip()
+            c_name = (item.get("categoryName") or "").lower().strip()
+            c_slug = (item.get("categorySlug") or "").lower().strip()
             return (
                 "ice cream" in c_name or "ice-cream" in c_slug or
                 "beverage" in c_name or "drink" in c_name or "beverage" in c_slug or
@@ -477,19 +488,19 @@ async def get_sales_reports(
             )
 
         def resolve_restaurant_for_item(item):
-            r_id = item["restaurantId"]
+            r_id = item.get("restaurantId")
             if r_id and r_id in restaurant_by_id:
                 return restaurant_by_id[r_id]
 
-            r_name = (item["restaurantName"] or "").lower().strip()
+            r_name = (item.get("restaurantName") or "").lower().strip()
             if r_name and r_name in restaurant_by_name:
                 return restaurant_by_name[r_name]
 
-            s_name = (item["shopName"] or "").lower().strip()
+            s_name = (item.get("shopName") or "").lower().strip()
             if s_name and s_name in restaurant_by_name:
                 return restaurant_by_name[s_name]
 
-            cat_lower = (item["categoryName"] or "").lower().strip()
+            cat_lower = (item.get("categoryName") or "").lower().strip()
             if "wedson" in cat_lower:
                 return next((r for r in all_restaurants if "wedson" in r.slug or "wedson" in r.name.lower()), None)
             if "as" in cat_lower or "a.s" in cat_lower:
@@ -497,7 +508,7 @@ async def get_sales_reports(
             if "bal udyan" in cat_lower or "baludyan" in cat_lower:
                 return next((r for r in all_restaurants if "bal" in r.slug or "bal udyan" in r.name.lower()), None)
 
-            tags = item["productTags"] or []
+            tags = item.get("productTags") or []
             for t in tags:
                 t_lower = str(t).lower().strip()
                 if t_lower in restaurant_by_slug:
@@ -508,15 +519,22 @@ async def get_sales_reports(
         missing_cost_products_map = {}
 
         def get_item_metrics(item):
-            item_rev = item["price"] * item["quantity"]
+            gross_rev = float(item["price"] or 0.0) * float(item["quantity"] or 1)
+            item_refund = float(item.get("refundAmount") or 0.0)
+            item_rev = max(0.0, gross_rev - item_refund)
+            
+            if item.get("isRefunded") and item_rev == 0:
+                return 0.0, 0.0, 0.0, None
+
             is_g = is_pure_grocery_item(item)
             matched_rest = resolve_restaurant_for_item(item) if not is_g else None
+            cat_name_lower = (item.get("categoryName") or "").lower().strip()
             is_r = not is_g and (
                 bool(matched_rest) or
-                bool(item["restaurantId"]) or
-                item["orderType"] == "RESTAURANT" or
-                "restaurant" in item["categoryName"].lower() or
-                "cafe" in item["categoryName"].lower()
+                bool(item.get("restaurantId")) or
+                item.get("orderType") == "RESTAURANT" or
+                "restaurant" in cat_name_lower or
+                "cafe" in cat_name_lower
             )
 
             if is_r:
@@ -524,7 +542,7 @@ async def get_sales_reports(
                 if matched_rest and matched_rest.commissionRate is not None:
                     raw_rate = float(matched_rest.commissionRate)
                     comm_rate = raw_rate / 100.0 if raw_rate > 1.0 else raw_rate
-                elif item["restaurantCommissionRate"] is not None:
+                elif item.get("restaurantCommissionRate") is not None:
                     raw_rate = float(item["restaurantCommissionRate"])
                     comm_rate = raw_rate / 100.0 if raw_rate > 1.0 else raw_rate
 
@@ -532,9 +550,9 @@ async def get_sales_reports(
                 item_cost = item_rev * (1.0 - comm_rate)
                 return item_cost, item_rev, item_profit, matched_rest
 
-            cost_price = item["costPrice"]
+            cost_price = float(item.get("costPrice") or 0.0)
 
-            if item["selectedVariant"] and item["variants"]:
+            if item.get("selectedVariant") and item.get("variants"):
                 try:
                     variants_list = item["variants"]
                     if isinstance(variants_list, str):
@@ -547,15 +565,16 @@ async def get_sales_reports(
                     pass
 
             has_cost = cost_price > 0
-            cost_per_unit = cost_price if has_cost else (item["price"] * 0.75)
+            cost_per_unit = cost_price if has_cost else (float(item["price"] or 0.0) * 0.75)
+            prod_key = item.get("productId") or f"manual_{re.sub(r'[^a-z0-9]', '_', (item.get('name') or 'item').lower())}"
             if not has_cost:
-                missing_cost_products_map[item["productId"]] = {
-                    "id": item["productId"],
-                    "name": item["name"],
-                    "price": float(item["price"])
+                missing_cost_products_map[prod_key] = {
+                    "id": prod_key,
+                    "name": item.get("name") or "Unnamed Product",
+                    "price": float(item.get("price") or 0.0)
                 }
 
-            item_cost = cost_per_unit * item["quantity"]
+            item_cost = cost_per_unit * float(item.get("quantity") or 1)
             item_profit = item_rev - item_cost
 
             return item_cost, item_rev, item_profit, None
@@ -568,11 +587,17 @@ async def get_sales_reports(
         total_taxes = 0.0
         total_delivery_fee = 0.0
         total_product_sales = 0.0
-        total_orders = len([o for o in orders if o.deliveryMethod != "RETAIL"])
+
+        # Treat combined sub-orders sharing combinedId as 1 single customer order
+        unique_delivered_order_ids = set(
+            (o.combinedId or o.id) for o in orders if o.deliveryMethod != "RETAIL"
+        )
+        total_orders = len(unique_delivered_order_ids)
 
         daily_data = {}
-        curr_d = start
-        while curr_d <= end:
+        curr_d = start_local.date()
+        end_d = end_local.date()
+        while curr_d <= end_d:
             d_str = curr_d.strftime("%Y-%m-%d")
             daily_data[d_str] = {"date": d_str, "sales": 0.0, "profit": 0.0, "orders": 0}
             curr_d += timedelta(days=1)
@@ -590,17 +615,30 @@ async def get_sales_reports(
         retail_sales = 0.0
         retail_profit = 0.0
 
+        seen_daily_combined = set()
+        seen_delivery_combined = set()
+        seen_pickup_combined = set()
+        seen_retail_combined = set()
+
         for order in orders:
             is_pickup = order.deliveryMethod == "PICKUP"
             is_retail = order.deliveryMethod == "RETAIL"
-            date_str = order.createdAt.strftime("%Y-%m-%d")
-            order_sales = float(order.subtotal or 0.0) - float(order.discount or 0.0)
+            order_master_key = order.combinedId or order.id
+            created_at_ist = (order.createdAt + ist_offset) if order.createdAt else now_ist
+            date_str = created_at_ist.strftime("%Y-%m-%d")
+
+            raw_sales = float(order.total or order.subtotal or 0.0) if is_retail else (float(order.subtotal or 0.0) - float(order.discount or 0.0))
+            order_sales = max(0.0, raw_sales - float(getattr(order, 'refundAmount', 0.0) or 0.0))
 
             if date_str not in daily_data:
                 daily_data[date_str] = {"date": date_str, "sales": 0.0, "profit": 0.0, "orders": 0}
 
             if not is_retail:
-                daily_data[date_str]["orders"] += 1
+                daily_key = f"{date_str}_{order_master_key}"
+                if daily_key not in seen_daily_combined:
+                    seen_daily_combined.add(daily_key)
+                    daily_data[date_str]["orders"] += 1
+
                 daily_data[date_str]["sales"] += order_sales
                 total_rev += order_sales
                 total_misc_fee += float(order.miscFee or 0.0)
@@ -619,28 +657,28 @@ async def get_sales_reports(
                     continue
 
                 is_g = is_pure_grocery_item(item)
-                cat_lower = (item["categoryName"] or "").lower().strip()
-                target_category_name = item["categoryName"]
+                cat_lower = (item.get("categoryName") or "").lower().strip()
+                target_category_name = item.get("categoryName") or "General"
                 target_type = "grocery"
 
                 if is_g:
-                    target_category_name = item["categoryName"]
+                    target_category_name = item.get("categoryName") or "Grocery Essentials"
                     target_type = "grocery"
                 elif matched_rest:
-                    target_category_name = matched_rest.name
+                    target_category_name = matched_rest.name or "Restaurant"
                     target_type = "restaurant"
-                elif item["restaurantId"] or item["orderType"] == "RESTAURANT" or "restaurant" in cat_lower or "cafe" in cat_lower:
+                elif item.get("restaurantId") or item.get("orderType") == "RESTAURANT" or "restaurant" in cat_lower or "cafe" in cat_lower:
                     target_type = "restaurant"
-                    if item["restaurantName"]:
+                    if item.get("restaurantName"):
                         target_category_name = item["restaurantName"]
-                    elif item["shopName"]:
+                    elif item.get("shopName"):
                         target_category_name = item["shopName"]
                     elif "restaurant" in cat_lower:
                         target_category_name = "Wedson Restaurant"
                     else:
-                        target_category_name = item["categoryName"]
+                        target_category_name = item.get("categoryName") or "Restaurant Food"
                 else:
-                    target_category_name = item["categoryName"]
+                    target_category_name = item.get("categoryName") or "General Store"
                     target_type = "grocery"
 
                 # Category aggregation
@@ -656,28 +694,29 @@ async def get_sales_reports(
                 category_data[target_category_name]["sales"] += rev
                 category_data[target_category_name]["cost"] += cost
                 category_data[target_category_name]["profit"] += profit
-                category_data[target_category_name]["quantity"] += item["quantity"]
+                category_data[target_category_name]["quantity"] += int(item.get("quantity") or 1)
 
                 # Product aggregation
-                p_id = item["productId"]
+                p_id = item.get("productId") or f"manual_{re.sub(r'[^a-z0-9]', '_', (item.get('name') or 'item').lower())}"
                 if p_id not in product_data:
                     product_data[p_id] = {
                         "productId": p_id,
-                        "name": item["name"],
-                        "mrp": float(item["mrp"]),
-                        "price": float(item["price"]),
-                        "costPrice": float(item["costPrice"] or 0),
+                        "name": item.get("name") or "Unnamed Product",
+                        "mrp": float(item.get("mrp") or item.get("price") or 0.0),
+                        "price": float(item.get("price") or 0.0),
+                        "costPrice": float(item.get("costPrice") or 0.0),
                         "quantity": 0,
                         "sales": 0.0,
                         "profit": 0.0,
                         "categoryName": target_category_name,
+                        "vendor": item.get("vendor") or "Direct / FastKirana",
                         "type": target_type
                     }
-                product_data[p_id]["quantity"] += item["quantity"]
+                product_data[p_id]["quantity"] += int(item.get("quantity") or 1)
                 product_data[p_id]["sales"] += rev
                 product_data[p_id]["profit"] += profit
 
-            order_profit = float(order.total) - order_cost
+            order_profit = float(order.total or 0.0) - order_cost
 
             if not is_retail:
                 daily_data[date_str]["profit"] += order_profit
@@ -685,15 +724,21 @@ async def get_sales_reports(
                 total_cost += order_cost
 
             if is_pickup:
-                pickup_orders_count += 1
+                if order_master_key not in seen_pickup_combined:
+                    seen_pickup_combined.add(order_master_key)
+                    pickup_orders_count += 1
                 pickup_sales += order_sales
                 pickup_profit += order_profit
             elif is_retail:
-                retail_orders_count += 1
+                if order_master_key not in seen_retail_combined:
+                    seen_retail_combined.add(order_master_key)
+                    retail_orders_count += 1
                 retail_sales += order_sales
                 retail_profit += order_profit
             else:
-                delivery_orders_count += 1
+                if order_master_key not in seen_delivery_combined:
+                    seen_delivery_combined.add(order_master_key)
+                    delivery_orders_count += 1
                 delivery_sales += order_sales
                 delivery_profit += order_profit
 

@@ -1385,17 +1385,23 @@ async def admin_restaurant_sales(
     Comprehensive restaurant-wise sales, commission, and payout reconciliation.
     Matching Next.js admin restaurant-sales API.
     """
-    now = datetime.utcnow()
+    now_utc = datetime.utcnow()
+    ist_offset = timedelta(hours=5, minutes=30)
+    now_ist = now_utc + ist_offset
+
     if startDate:
-        start = datetime.strptime(f"{startDate} 00:00:00", "%Y-%m-%d %H:%M:%S")
+        start_local = datetime.strptime(f"{startDate} 00:00:00", "%Y-%m-%d %H:%M:%S")
+        start = start_local - ist_offset
     else:
-        start = now - timedelta(days=7)
-        start = datetime.combine(start.date(), datetime.min.time())
+        start_local = datetime.combine((now_ist - timedelta(days=7)).date(), datetime.min.time())
+        start = start_local - ist_offset
 
     if endDate:
-        end = datetime.strptime(f"{endDate} 23:59:59", "%Y-%m-%d %H:%M:%S")
+        end_local = datetime.strptime(f"{endDate} 23:59:59", "%Y-%m-%d %H:%M:%S")
+        end = end_local - ist_offset
     else:
-        end = datetime.combine(now.date(), datetime.max.time())
+        end_local = datetime.combine(now_ist.date(), datetime.max.time())
+        end = end_local - ist_offset
 
     effective_store = storeId or (getattr(current_admin, "assignedStoreId", None) if hasattr(current_admin, "assignedStoreId") else (current_admin.get("assignedStoreId") if isinstance(current_admin, dict) else None))
 
@@ -1420,8 +1426,11 @@ async def admin_restaurant_sales(
     # 3. Fetch delivered orders in period
     o_stmt = select(Order).where(
         and_(
-            Order.status == OrderStatus.DELIVERED,
-            Order.restaurantId.isnot(None),
+            Order.status.in_([OrderStatus.DELIVERED, "DELIVERED"]),
+            or_(
+                Order.restaurantId.isnot(None),
+                Order.orderType.in_([OrderType.RESTAURANT, "RESTAURANT"])
+            ),
             Order.createdAt >= start,
             Order.createdAt <= end
         )
@@ -1436,13 +1445,16 @@ async def admin_restaurant_sales(
     if order_ids:
         items_sql = """
             SELECT oi."orderId", oi.name, oi.quantity, oi.price, o."restaurantId", 
-                   p."restaurantId" as "prodRestaurantId", c.name as "categoryName", c.slug as "categorySlug"
+                   p."restaurantId" as "prodRestaurantId", c.name as "categoryName", c.slug as "categorySlug",
+                   COALESCE(oi."refundAmount", 0)::float as "refundAmount",
+                   COALESCE(oi."isRefunded", false) as "isRefunded",
+                   COALESCE(o."refundAmount", 0)::float as "orderRefundAmount"
             FROM order_items oi
             JOIN orders o ON oi."orderId" = o.id
             LEFT JOIN products p ON oi."productId" = p.id
             LEFT JOIN categories c ON p."categoryId" = c.id
             WHERE o.status::text = 'DELIVERED'
-              AND o."restaurantId" IS NOT NULL
+              AND (o."restaurantId" IS NOT NULL OR o."orderType"::text = 'RESTAURANT' OR p."restaurantId" IS NOT NULL)
               AND o."createdAt" >= :start
               AND o."createdAt" <= :end
         """
@@ -1520,9 +1532,17 @@ async def admin_restaurant_sales(
             if not r_stats:
                 continue
 
-            order_rest_sales = sum(float(it["price"] or 0) * int(it["quantity"] or 1) for it in rest_items)
+            order_rest_sales = 0.0
+            for it in rest_items:
+                gross = float(it.get("price") or 0.0) * float(it.get("quantity") or 1)
+                net = max(0.0, gross - float(it.get("refundAmount") or 0.0))
+                if it.get("isRefunded") and net == 0:
+                    continue
+                order_rest_sales += net
+
             discount_share = (float(o.discount) * (order_rest_sales / float(o.subtotal))) if (o.subtotal and o.subtotal > 0) else 0.0
-            product_sales = max(0.0, order_rest_sales - discount_share)
+            order_refund = float(getattr(o, 'refundAmount', 0.0) or 0.0)
+            product_sales = max(0.0, order_rest_sales - discount_share - order_refund)
 
             comm_rate = float(r_stats["commissionRate"])
             if comm_rate > 1.0:
