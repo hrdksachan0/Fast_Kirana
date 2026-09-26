@@ -108,15 +108,38 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'Delivering to $locationLabel',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
-                              fontWeight: FontWeight.w700,
-                              color: AppDesignSystem.textSecondary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Delivering to $locationLabel',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    fontWeight: FontWeight.w700,
+                                    color: AppDesignSystem.textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: AppDesignSystem.primaryGreen.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  currentHub.id.toUpperCase(),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.primaryGreen,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 2),
                           // Location title + dropdown arrow

@@ -91,7 +91,12 @@ export function CategoriesTab({
   const filteredCategories: CategoryWithCount[] = useMemo(() => {
     const validCats = categories.filter((c) => c.slug !== 'cafe' && c.slug !== 'restaurant')
     if (isStoreScoped) {
-      return validCats.filter((c) => storeCatIds.has(c.id))
+      const storeCats = validCats.filter((c) => storeCatIds.has(c.id))
+      // HUB FALLBACK: If store has stocked products, show store-active categories; otherwise show all master categories
+      if (storeCats.length > 0) {
+        return storeCats
+      }
+      return validCats
     }
     return validCats
   }, [categories, isStoreScoped, storeCatIds])
@@ -107,7 +112,7 @@ export function CategoriesTab({
             </h3>
             {isStoreScoped ? (
               <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
-                🏪 Store Categories: {filteredCategories.length}
+                🏪 Store Categories: {filteredCategories.length} {storeCatIds.size === 0 && '(Catalog Default)'}
               </span>
             ) : (
               <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
@@ -117,7 +122,7 @@ export function CategoriesTab({
           </div>
           <p className="text-xs text-text-secondary mt-1">
             {isStoreScoped
-              ? 'Showing only categories active in this store outlet.'
+              ? 'Showing categories available in this store outlet with fallback to master catalog.'
               : 'Manage product categories and upload category photos.'}
           </p>
         </div>

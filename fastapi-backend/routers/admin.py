@@ -902,6 +902,7 @@ async def get_admin_dashboard(
 
 
 @router.get("/forecast")
+@router.get("/inventory/forecast")
 async def get_admin_inventory_forecast(
     storeId: Optional[str] = Query(None),
     current_admin: Any = Depends(require_admin),
@@ -912,24 +913,33 @@ async def get_admin_inventory_forecast(
     """
     try:
         from models import StoreInventory
+        
+        # Check if storeId has localized inventory; if 0, fall back to hub-209206 (Ghatampur Central Hub)
+        effective_store_id = storeId
+        if storeId and storeId.lower() != 'all':
+            inv_cnt_stmt = select(func.count()).select_from(StoreInventory).where(StoreInventory.storeId == storeId)
+            inv_cnt = (await db.execute(inv_cnt_stmt)).scalar() or 0
+            if inv_cnt == 0:
+                effective_store_id = "hub-209206"
+
         # Load active products from categories other than cafe
         products_stmt = select(Product).options(selectinload(Product.category)).join(Category).where(
             Product.isAvailable == True,
             Product.restaurantId.is_(None),
             Category.slug != "cafe"
         )
-        if storeId and storeId.lower() != 'all':
+        if effective_store_id and effective_store_id.lower() != 'all':
             products_stmt = products_stmt.where(
                 Product.id.in_(
-                    select(StoreInventory.productId).where(StoreInventory.storeId == storeId)
+                    select(StoreInventory.productId).where(StoreInventory.storeId == effective_store_id)
                 )
             )
         products_res = await db.execute(products_stmt)
         products = products_res.scalars().all()
 
         local_stock_map = {}
-        if storeId and storeId.lower() != 'all':
-            inv_res = await db.execute(select(StoreInventory).where(StoreInventory.storeId == storeId))
+        if effective_store_id and effective_store_id.lower() != 'all':
+            inv_res = await db.execute(select(StoreInventory).where(StoreInventory.storeId == effective_store_id))
             for inv in inv_res.scalars().all():
                 local_stock_map[inv.productId] = int(inv.stock or 0)
 
@@ -939,8 +949,11 @@ async def get_admin_inventory_forecast(
             Order.status.in_([OrderStatus.DELIVERED, OrderStatus.SHIPPED, OrderStatus.PACKED, OrderStatus.CONFIRMED]),
             Order.createdAt >= thirty_days_ago
         )
-        if storeId and storeId.lower() != 'all':
-            items_stmt = items_stmt.where(Order.storeId == storeId)
+        if effective_store_id and effective_store_id.lower() != 'all':
+            # Check if store has orders; if not, fall back to all orders for velocity
+            store_orders_cnt = (await db.execute(select(func.count()).select_from(Order).where(Order.storeId == effective_store_id))).scalar() or 0
+            if store_orders_cnt > 0:
+                items_stmt = items_stmt.where(Order.storeId == effective_store_id)
         items_res = await db.execute(items_stmt)
         order_items = items_res.all()
 

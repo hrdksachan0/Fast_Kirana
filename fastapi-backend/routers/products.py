@@ -432,10 +432,11 @@ async def get_products(
     is_worker = role in ["ADMIN", "CHEF"]
 
     normalized_search = search.strip().lower().replace("  ", " ") if search else ""
+    target_store = storeId if storeId and storeId.lower() != "all" else "hub-209206"
 
     # Check cache for public catalog and search requests (<5ms response)
     is_cacheable = not is_worker and not includeUnavailable and not admin
-    cache_key = f"prod:{storeId or 'all'}:{normalized_search}:{category or ''}:{categoryId or ''}:{sort or ''}:{page}:{limit}:{restaurantId or ''}:{restaurantSlug or ''}:{excludeRestaurant}"
+    cache_key = f"prod:{target_store}:{normalized_search}:{category or ''}:{categoryId or ''}:{sort or ''}:{page}:{limit}:{restaurantId or ''}:{restaurantSlug or ''}:{excludeRestaurant}"
     now = time.time()
 
     if is_cacheable and cache_key in search_cache and (now - search_cache_time.get(cache_key, 0)) < PRODUCTS_CACHE_TTL:
@@ -499,42 +500,39 @@ async def get_products(
     elif excludeRestaurant or (not is_worker and not includeUnavailable and not category):
         filters.append(Product.restaurantId == None)
 
-    # H10 FIX: Strict Store Isolation (Exclude restaurants from other cities, require localized store inventory for grocery)
-    if storeId and storeId != "all":
-        # Grocery: Only products that have inventory in this store!
-        inv_sub_conditions = [
-            StoreInventory.productId == Product.id,
-            StoreInventory.storeId == storeId
-        ]
-        if not is_worker and not includeUnavailable and not admin:
-            inv_sub_conditions.append(StoreInventory.stock > 0)
+    # Strict Store ID Isolation: Every query is strictly bound to the requested target_store
+    inv_sub_conditions = [
+        StoreInventory.productId == Product.id,
+        StoreInventory.storeId == target_store
+    ]
+    if not is_worker and not includeUnavailable and not admin:
+        inv_sub_conditions.append(StoreInventory.stock > 0)
 
-        grocery_scope = and_(
-            Product.restaurantId.is_(None),
-            exists().where(and_(*inv_sub_conditions))
-        )
+    grocery_scope = and_(
+        Product.restaurantId.is_(None),
+        exists().where(and_(*inv_sub_conditions))
+    )
 
-        # Restaurant dishes: Only restaurants belonging to this storeId!
-        rest_scope = Product.restaurant.has(Restaurant.storeId == storeId)
-        filters.append(or_(grocery_scope, rest_scope))
+    rest_scope = Product.restaurant.has(Restaurant.storeId == target_store)
+    filters.append(or_(grocery_scope, rest_scope))
 
-        # Store-wise category status check (hide closed categories for customers)
-        if not admin and not is_worker:
-            try:
-                store_prefix = f"store:{storeId}:category_open_"
-                closed_cats_res = await db.execute(
-                    select(StoreSetting.key).where(
-                        and_(
-                            StoreSetting.key.startswith(store_prefix),
-                            StoreSetting.value == "false"
-                        )
+    # Store-wise category status check (hide closed categories for customers)
+    if not admin and not is_worker:
+        try:
+            store_prefix = f"store:{target_store}:category_open_"
+            closed_cats_res = await db.execute(
+                select(StoreSetting.key).where(
+                    and_(
+                        StoreSetting.key.startswith(store_prefix),
+                        StoreSetting.value == "false"
                     )
                 )
-                closed_slugs = [k[len(store_prefix):] for k in closed_cats_res.scalars().all()]
-                if closed_slugs:
-                    filters.append(not_(Product.category.has(Category.slug.in_(closed_slugs))))
-            except Exception as cat_err:
-                logger.warning(f"Failed to check closed categories for store {storeId}: {cat_err}")
+            )
+            closed_slugs = [k[len(store_prefix):] for k in closed_cats_res.scalars().all()]
+            if closed_slugs:
+                filters.append(not_(Product.category.has(Category.slug.in_(closed_slugs))))
+        except Exception as cat_err:
+            logger.warning(f"Failed to check closed categories for store {target_store}: {cat_err}")
 
     # Category matching (Supports both direct category and child subcategories under parent)
     if categoryId:
@@ -777,10 +775,10 @@ async def get_products(
 
     # Local store stock overrides applied ONLY to serialized dicts (NEVER modifying ORM instances!)
     inv_map = {}
-    if storeId and storeId != "all" and products:
+    if target_store and products:
         prod_ids = [p.id for p in products]
         inv_stmt = select(StoreInventory).where(
-            StoreInventory.storeId == storeId,
+            StoreInventory.storeId == target_store,
             StoreInventory.productId.in_(prod_ids)
         )
         inv_res = await db.execute(inv_stmt)
@@ -789,13 +787,10 @@ async def get_products(
 
     serialized_products = []
     for p in products:
-        if storeId and storeId != "all":
-            if p.restaurantId:
-                local_stk = p.stock or 99999
-            else:
-                local_stk = inv_map.get(p.id, p.stock or 0)
+        if p.restaurantId:
+            local_stk = p.stock or 99999
         else:
-            local_stk = None
+            local_stk = inv_map.get(p.id, 0)
         serialized_products.append(serialize_product(p, local_stock=local_stk))
 
     response_data = {
