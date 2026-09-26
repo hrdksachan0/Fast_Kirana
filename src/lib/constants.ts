@@ -311,7 +311,7 @@ export const HUB_CONFIG = [
     description: 'Live order queue, dispatch tracking, and real-time ops',
     color: 'from-amber-500/10 to-orange-500/10',
     activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
-    tabs: ['orders', 'liveops'] as const
+    tabs: ['orders', 'finance', 'liveops'] as const
   },
   {
     key: 'grocery',
