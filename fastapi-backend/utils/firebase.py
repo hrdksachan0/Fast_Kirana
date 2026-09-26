@@ -46,6 +46,28 @@ def init_firebase() -> bool:
                 return True
             except Exception as e:
                 logger.error(f"Failed to initialize Firebase from credentials file: {str(e)}")
+
+        # Method 3: Load from individual FIREBASE_* environment variables (Railway / Cloud)
+        client_email = os.getenv("FIREBASE_CLIENT_EMAIL")
+        private_key = os.getenv("FIREBASE_PRIVATE_KEY")
+        project_id = os.getenv("FIREBASE_PROJECT_ID")
+        if client_email and private_key and project_id:
+            try:
+                clean_key = private_key.replace("\\n", "\n").strip().strip('"').strip("'")
+                cred_dict = {
+                    "type": "service_account",
+                    "project_id": project_id.strip(),
+                    "client_email": client_email.strip(),
+                    "private_key": clean_key,
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+                cred = credentials.Certificate(cred_dict)
+                firebase_admin.initialize_app(cred)
+                _firebase_initialized = True
+                logger.info("✅ Firebase Admin initialized successfully from individual FIREBASE_* envs.")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to initialize Firebase from individual FIREBASE_* envs: {str(e)}")
         
         logger.warning("⚠️ Firebase credentials not configured. FCM notifications will be skipped.")
         return False
