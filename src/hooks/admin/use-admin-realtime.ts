@@ -128,7 +128,7 @@ export function useAdminRealtime({
         selectedHubId && selectedHubId !== 'all'
           ? `&storeId=${encodeURIComponent(selectedHubId)}`
           : ''
-      const res = await fetch(`/api/admin/orders?limit=100${storeQuery}&t=${Date.now()}`)
+      const res = await fetch(`/api/admin/orders?limit=30${storeQuery}&t=${Date.now()}`)
       if (res.ok) {
         const data = await res.json()
         const fetched = Array.isArray(data?.orders)
@@ -160,14 +160,14 @@ export function useAdminRealtime({
     }
   }, [selectedHubId, playNewOrderChime])
 
-  // Active polling every 7 seconds for live order synchronization + visibility refocus refetch
+  // Active polling every 12 seconds for live order synchronization + visibility refocus refetch
   useEffect(() => {
     fetchLiveOrdersList()
 
     const livePollInterval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       fetchLiveOrdersList()
-    }, 7000)
+    }, 12000)
 
     const handleVisibility = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {

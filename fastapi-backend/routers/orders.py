@@ -30,6 +30,24 @@ logger = logging.getLogger("orders")
 
 router = APIRouter(prefix="/orders", tags=["Orders & Checkout Engine"])
 
+import time
+
+_order_details_cache: Dict[str, Any] = {}
+_order_details_cache_time: Dict[str, float] = {}
+ORDER_DETAILS_CACHE_TTL: float = 4.0  # 4 seconds TTL for high frequency tracking polling
+
+def clear_order_cache(order_id: Optional[str] = None):
+    global _order_details_cache, _order_details_cache_time
+    if order_id:
+        prefix = f"{order_id}:"
+        for k in list(_order_details_cache.keys()):
+            if k.startswith(prefix):
+                _order_details_cache.pop(k, None)
+                _order_details_cache_time.pop(k, None)
+    else:
+        _order_details_cache.clear()
+        _order_details_cache_time.clear()
+
 
 def get_delivery_rules(distance_km: float, max_radius_km: float = 5.0, surge_fee: float = 0.0, settings_map: dict = None) -> dict:
     if settings_map is None:
@@ -157,6 +175,76 @@ def safe_float(val: Any, default: float = 0.0) -> float:
         return default
 
 
+# ── Weather-based Surge Evaluation (mirrors surge-manager.ts AUTO mode) ──
+_weather_cache: Dict[str, dict] = {}
+_weather_cache_ts: Dict[str, float] = {}
+WEATHER_CACHE_TTL = 300  # 5 minutes
+
+
+async def fetch_live_weather(lat: float = 26.1534, lng: float = 80.1714) -> dict:
+    """Fetch current weather from Open-Meteo. Returns {temperature, condition, isRaining}."""
+    import time as _time
+    key = f"{lat:.2f},{lng:.2f}"
+    now = _time.time()
+    if key in _weather_cache and (now - _weather_cache_ts.get(key, 0)) < WEATHER_CACHE_TTL:
+        return _weather_cache[key]
+
+    try:
+        async with httpx.AsyncClient(timeout=3) as client:
+            resp = await client.get(
+                f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=temperature_2m,rain,showers,weather_code"
+            )
+            if resp.status_code != 200:
+                return _weather_cache.get(key, {"temperature": 30, "condition": "Clear", "isRaining": False})
+            data = resp.json()
+            current = data.get("current", {})
+            code = int(current.get("weather_code", 0))
+            rain = float(current.get("rain", 0))
+            showers = float(current.get("showers", 0))
+            temp = float(current.get("temperature_2m", 30))
+
+            heavy_rain_codes = [63, 65, 81, 82, 95, 96, 99]
+            is_raining = (rain >= 1.5 or showers >= 1.5) or (rain >= 0.5 and code in heavy_rain_codes)
+
+            condition = "Clear"
+            if is_raining:
+                condition = "Thunderstorm" if code in [95, 96, 99] else "Rain"
+            elif code in [1, 2, 3]:
+                condition = "Cloudy"
+
+            result = {"temperature": temp, "condition": condition, "isRaining": is_raining}
+            _weather_cache[key] = result
+            _weather_cache_ts[key] = now
+            return result
+    except Exception as e:
+        logger.warning(f"Weather fetch error: {e}")
+        return _weather_cache.get(key, {"temperature": 30, "condition": "Clear", "isRaining": False})
+
+
+async def evaluate_surge_fee(settings_map: dict, hub_lat: float = 26.1534, hub_lng: float = 80.1714, hub_surge_charge: float = 0.0) -> float:
+    """Evaluate effective surge fee based on mode (AUTO/MANUAL_ON/MANUAL_OFF)."""
+    mode = (settings_map.get("surge_mode") or "MANUAL_OFF").upper()
+    max_cap = float(settings_map.get("surge_max_cap", 25))
+
+    if mode == "MANUAL_OFF":
+        return 0.0
+    if mode == "MANUAL_ON":
+        manual_amt = float(settings_map.get("surge_manual_amount", 20))
+        return min(manual_amt, max_cap)
+
+    # AUTO mode: check hub-level surgeCharge first, then weather, then demand
+    if hub_surge_charge > 0:
+        return min(hub_surge_charge, max_cap)
+
+    weather = await fetch_live_weather(hub_lat, hub_lng)
+    if weather.get("isRaining"):
+        rain_amt = float(settings_map.get("surge_rain_amount", 20))
+        logger.info(f"[Surge] Rain detected at ({hub_lat:.2f},{hub_lng:.2f}): {weather}. Applying rain surge Rs.{rain_amt}")
+        return min(rain_amt, max_cap)
+
+    # Demand-based surge would require DB query; skip for checkout speed (handled by settings pre-evaluation)
+    demand_fee = float(settings_map.get("surge_charge", 0))
+    return min(demand_fee, max_cap) if demand_fee > 0 else 0.0
 
 async def geocode_address(address_str: str) -> Optional[dict]:
     api_key = os.getenv("GOOGLE_MAPS_API_KEY") or os.getenv("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY")
@@ -852,7 +940,7 @@ async def create_order(
             hub_lat = float(matched_hub.latitude)
             hub_lng = float(matched_hub.longitude)
             max_radius = float(matched_hub.deliveryRadiusKm or 5.0)
-            surge_charge = float(matched_hub.surgeCharge or 0.0)
+            surge_charge = await evaluate_surge_fee(settings_map, hub_lat, hub_lng, float(matched_hub.surgeCharge or 0.0))
 
             dist_km = get_distance_km(hub_lat, hub_lng, target_lat, target_lng)
             # Cell-tower drift auto-heal (matches frontend checkout.ts logic)
@@ -875,7 +963,7 @@ async def create_order(
             store_lat = float(settings_map.get("store_lat", 26.1534185))
             store_lng = float(settings_map.get("store_lng", 80.1714024))
             max_radius = float(settings_map.get("delivery_radius", settings_map.get("max_delivery_radius", 5.0)))
-            surge_charge = float(settings_map.get("surge_charge", 0.0))
+            surge_charge = await evaluate_surge_fee(settings_map, store_lat, store_lng)
 
             dist_km = get_distance_km(store_lat, store_lng, target_lat, target_lng)
             p_code = (address.pincode or "").strip()
@@ -2053,6 +2141,11 @@ async def get_order_details(
     role = current_user.get("role")
     is_staff = role in ["ADMIN", "CHEF", "DELIVERY", "PICKER", "RESTAURANT_OWNER"]
 
+    now = time.time()
+    cache_key = f"{id}:{user_id}:{role}"
+    if cache_key in _order_details_cache and (now - _order_details_cache_time.get(cache_key, 0)) < ORDER_DETAILS_CACHE_TTL:
+        return _order_details_cache[cache_key]
+
     stmt = select(Order).options(
         selectinload(Order.items),
         selectinload(Order.address),
@@ -2141,7 +2234,7 @@ async def get_order_details(
             user_email = (order.user.email if order.user else None) or ""
             user_phone = (order.address.phone if (order.address and order.address.phone) else None) or (order.user.phone if (order.user and order.user.phone) else None) or order.shopPhone or None
 
-            return {
+            comb_resp = {
                 "id": order.id,
                 "userId": order.userId,
                 "addressId": order.addressId,
@@ -2196,13 +2289,16 @@ async def get_order_details(
                 "restaurantItems": restaurant_sub["items"] if restaurant_sub else [],
                 "subOrders": sub_orders
             }
+            _order_details_cache[cache_key] = comb_resp
+            _order_details_cache_time[cache_key] = now
+            return comb_resp
 
     # Single order payload fallback
     user_name = (order.user.name.strip() if (order.user and order.user.name) else None) or "Customer"
     user_email = (order.user.email if order.user else None) or ""
     user_phone = (order.address.phone if (order.address and order.address.phone) else None) or (order.user.phone if (order.user and order.user.phone) else None) or order.shopPhone or None
 
-    return {
+    single_resp = {
         "id": order.id,
         "readableId": order.readableId,
         "userId": order.userId,
@@ -2249,6 +2345,9 @@ async def get_order_details(
         } if order.address else None,
         "deliveryUser": delivery_user
     }
+    _order_details_cache[cache_key] = single_resp
+    _order_details_cache_time[cache_key] = now
+    return single_resp
 
 
 @router.patch("/{id}")
@@ -2594,6 +2693,9 @@ async def update_order(
 
     await db.commit()
     await db.refresh(order)
+    clear_order_cache(order.id)
+    if order.combinedId:
+        clear_order_cache(order.combinedId)
 
     # Dispatch real-time WebSocket alerts
     await manager.broadcast_to_channel("general", {
@@ -2897,6 +2999,9 @@ async def update_order_payment(
 
     await db.commit()
     await db.refresh(order)
+    clear_order_cache(order.id)
+    if order.combinedId:
+        clear_order_cache(order.combinedId)
 
     return {
         "message": "Order payment updated successfully",
@@ -2960,6 +3065,9 @@ async def convert_order_to_cod(
 
     await db.commit()
     await db.refresh(order)
+    clear_order_cache(order.id)
+    if order.combinedId:
+        clear_order_cache(order.combinedId)
 
     # Broadcast real-time WebSocket update
     try:

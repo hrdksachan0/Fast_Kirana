@@ -12,11 +12,27 @@ import logging
 logger = logging.getLogger("settings")
 
 from database import get_db
-from models import Store, StoreSetting
+from models import Store, StoreSetting, DarkStore, StoreInventory, Restaurant
 from routers.auth import require_auth, require_admin
 from routers.stores_service import clear_stores_cache
+import time
 
 router = APIRouter(prefix="/settings", tags=["Settings & Location"])
+
+_settings_cache: Dict[str, Any] = {}
+_settings_cache_time: Dict[str, float] = {}
+SETTINGS_CACHE_TTL: float = 30.0
+
+def clear_settings_cache():
+    global _settings_cache, _settings_cache_time
+    _settings_cache.clear()
+    _settings_cache_time.clear()
+
+@router.post("/clear-cache")
+async def api_clear_settings_cache():
+    clear_settings_cache()
+    clear_stores_cache()
+    return {"success": True, "message": "Settings and stores cache cleared"}
 
 DEFAULT_SUPPORT_PHONE = os.getenv("SUPPORT_PHONE", "+91 8112849854")
 
@@ -145,8 +161,17 @@ async def get_public_settings(
     """
     Get public app settings (delivery zones, payment config, etc.)
     with dynamic open/close scheduler under IST timezone and multi-hub layering.
+    Uses ultra-fast memory cache (<5ms response).
     """
     effective_store_id = storeId or hubId
+    cache_key = str(effective_store_id or "default")
+    now = time.time()
+
+    if cache_key in _settings_cache and (now - _settings_cache_time.get(cache_key, 0)) < SETTINGS_CACHE_TTL:
+        response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
+        response.headers["X-FastKirana-Cache"] = "HIT"
+        return _settings_cache[cache_key]
+
     try:
         result = await db.execute(select(StoreSetting))
         settings_list = result.scalars().all()
@@ -196,7 +221,12 @@ async def get_public_settings(
         except Exception as rest_err:
             logger.warning(f"Failed to populate outlet statuses in settings: {rest_err}")
 
-        response.headers["Cache-Control"] = "public, max-age=5, stale-while-revalidate=30"
+        # Store in cache
+        _settings_cache[cache_key] = settings_map
+        _settings_cache_time[cache_key] = now
+
+        response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
+        response.headers["X-FastKirana-Cache"] = "MISS"
         return settings_map
     except Exception as e:
         logger.error(f"Error in get_public_settings: {e}")
@@ -206,7 +236,7 @@ async def get_public_settings(
         settings_map["cafe_open"] = "true" if check_is_store_open(settings_map, "cafe") else "false"
         settings_map["restaurant_open"] = "true" if check_is_store_open(settings_map, "restaurant") else "false"
 
-        response.headers["Cache-Control"] = "public, max-age=5, stale-while-revalidate=30"
+        response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
         return settings_map
 
 
@@ -267,6 +297,7 @@ async def update_settings(
 
     await db.commit()
     clear_stores_cache()
+    clear_settings_cache()
     return {"success": True}
 
 

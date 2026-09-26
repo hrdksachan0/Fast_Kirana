@@ -413,7 +413,7 @@ export function useOrderTracker({
       } catch (err) {
         console.error('Error during fallback order polling:', err)
       }
-    }, 4000)
+    }, 8000)
 
     return () => clearInterval(pollInterval)
   }, [order.id, order.status, compOrder?.id, compOrder?.status])

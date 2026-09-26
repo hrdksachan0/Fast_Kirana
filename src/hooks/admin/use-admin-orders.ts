@@ -127,8 +127,8 @@ export function useAdminOrders({
   useEffect(() => {
     fetchOrders()
 
-    // 6-second fast polling for active live action queue, 30s for history
-    const pollInterval = ordersSubTab === 'active' ? 6000 : 30000
+    // 10-second fast polling for active live action queue, 30s for history
+    const pollInterval = ordersSubTab === 'active' ? 10000 : 30000
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       fetchOrders()

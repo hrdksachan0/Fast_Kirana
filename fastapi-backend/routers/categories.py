@@ -28,13 +28,18 @@ def slugify(text: str) -> str:
 
 
 _categories_cache: Dict[str, Any] = {}
-_categories_cache_time: float = 0
+_categories_cache_time: Dict[str, float] = {}
 CATEGORIES_CACHE_TTL: float = 60.0
 
 def clear_categories_cache():
     global _categories_cache, _categories_cache_time
     _categories_cache.clear()
-    _categories_cache_time = 0
+    _categories_cache_time.clear()
+
+@router.post("/clear-cache")
+async def api_clear_categories_cache():
+    clear_categories_cache()
+    return {"success": True, "message": "Categories cache cleared"}
 
 async def trigger_revalidation(category_slug: Optional[str] = None):
     """
@@ -73,7 +78,7 @@ async def get_categories(
     cache_key = f"{include_all}:{storeId or 'all'}"
     now = time.time()
 
-    if cache_key in _categories_cache and (now - _categories_cache_time) < CATEGORIES_CACHE_TTL:
+    if cache_key in _categories_cache and (now - _categories_cache_time.get(cache_key, 0)) < CATEGORIES_CACHE_TTL:
         response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=180"
         response.headers["X-FastKirana-Cache"] = "HIT"
         return _categories_cache[cache_key]
@@ -132,7 +137,7 @@ async def get_categories(
                 cat_map[pid]["_count"]["products"] += c["_count"]["products"]
 
         _categories_cache[cache_key] = categories_data
-        globals()["_categories_cache_time"] = now
+        _categories_cache_time[cache_key] = now
 
         response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=180"
         response.headers["X-FastKirana-Cache"] = "MISS"

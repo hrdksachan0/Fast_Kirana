@@ -170,8 +170,20 @@ OUTLET_WEDSON_ID = "cms2p1lyx0001n0idod904lfu"
 LEGACY_AS_RESTAURANT_ID = "as-restaurant-id"
 LEGACY_WEDSON_ID = "wedson-id"
 
-# Simple in-memory search cache to prevent heavy re-ranking
-search_cache = {}
+# In-memory product & search cache to prevent heavy re-ranking and repeated DB queries
+search_cache: Dict[str, Any] = {}
+search_cache_time: Dict[str, float] = {}
+PRODUCTS_CACHE_TTL: float = 30.0
+
+def clear_products_cache():
+    global search_cache, search_cache_time
+    search_cache.clear()
+    search_cache_time.clear()
+
+@router.post("/clear-cache")
+async def api_clear_products_cache():
+    clear_products_cache()
+    return {"success": True, "message": "Products cache cleared"}
 
 
 def get_levenshtein_distance(a: str, b: str) -> int:
@@ -420,9 +432,14 @@ async def get_products(
 
     normalized_search = search.strip().lower().replace("  ", " ") if search else ""
 
-    # Check search cache
-    cache_key = f"search:{storeId or 'all'}:{normalized_search}:{category or ''}:{sort or ''}:{page}:{limit}:{is_worker}:{restaurantId or ''}:{restaurantSlug or ''}"
-    if normalized_search and cache_key in search_cache:
+    # Check cache for public catalog and search requests (<5ms response)
+    is_cacheable = not is_worker and not includeUnavailable and not admin
+    cache_key = f"prod:{storeId or 'all'}:{normalized_search}:{category or ''}:{categoryId or ''}:{sort or ''}:{page}:{limit}:{restaurantId or ''}:{restaurantSlug or ''}:{excludeRestaurant}"
+    now = time.time()
+
+    if is_cacheable and cache_key in search_cache and (now - search_cache_time.get(cache_key, 0)) < PRODUCTS_CACHE_TTL:
+        response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
+        response.headers["X-FastKirana-Cache"] = "HIT"
         return search_cache[cache_key]
 
     # Filters
@@ -791,13 +808,14 @@ async def get_products(
         }
     }
 
-    # Save search cache with bounded LRU eviction
-    is_cacheable = not is_worker and not includeUnavailable and not admin
-    if normalized_search and is_cacheable:
-        if len(search_cache) > 500:
-            for k in list(search_cache.keys())[:100]:
+    # Save cache with bounded LRU eviction
+    if is_cacheable:
+        if len(search_cache) > 1000:
+            for k in list(search_cache.keys())[:200]:
                 search_cache.pop(k, None)
+                search_cache_time.pop(k, None)
         search_cache[cache_key] = response_data
+        search_cache_time[cache_key] = now
 
     # ETag generation and 304 Not Modified support
     if is_cacheable and serialized_products:
@@ -806,9 +824,11 @@ async def get_products(
         response.headers["ETag"] = etag
         client_etag = request.headers.get("if-none-match")
         if client_etag and client_etag.strip() == etag:
-            return Response(status_code=304, headers={"ETag": etag, "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30"})
+            return Response(status_code=304, headers={"ETag": etag, "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60"})
 
-    response.headers["Cache-Control"] = "public, s-maxage=15, stale-while-revalidate=30" if is_cacheable else "no-store, max-age=0, must-revalidate"
+    response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60" if is_cacheable else "no-store, max-age=0, must-revalidate"
+    if is_cacheable:
+        response.headers["X-FastKirana-Cache"] = "MISS"
     return response_data
 
 
@@ -1403,7 +1423,7 @@ async def create_product(
             logger.warning(f"Could not seed store_inventories for product {product.id}: {seed_err}")
 
         await db.commit()
-        search_cache.clear()
+        clear_products_cache()
         return product
     except Exception as e:
         await db.rollback()
@@ -1645,7 +1665,7 @@ async def update_product(
     try:
         await db.commit()
         await db.refresh(product)
-        search_cache.clear()
+        clear_products_cache()
 
         # Real-time WebSocket event dispatch with strict restaurant channel isolation
         try:
@@ -1713,7 +1733,7 @@ async def delete_product(
 
         await db.delete(product)
         await db.commit()
-        search_cache.clear()
+        clear_products_cache()
 
         return {"message": "Product permanently deleted"}
     except Exception as e:
