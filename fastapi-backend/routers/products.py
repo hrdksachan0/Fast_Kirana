@@ -983,139 +983,151 @@ async def get_upsell_recommendations(
     """
     Get cross-selling upsell product recommendations based on cart contents, isolated by local hub stock.
     """
-    cart_product_ids = [pid for pid in productIds.split(",") if pid]
-    if not cart_product_ids:
-        return {"products": []}
+    try:
+        cart_product_ids = [pid for pid in productIds.split(",") if pid]
+        if not cart_product_ids:
+            return {"products": []}
 
-    stmt = select(Product).where(Product.id.in_(cart_product_ids))
-    res = await db.execute(stmt)
-    cart_products = res.scalars().all()
+        stmt = select(Product).options(selectinload(Product.category), selectinload(Product.restaurant)).where(Product.id.in_(cart_product_ids))
+        res = await db.execute(stmt)
+        cart_products = res.scalars().all()
 
-    cart_tags = set(t.lower() for p in cart_products for t in (p.tags or []))
+        cart_tags = set(t.lower() for p in cart_products for t in (p.tags or []))
 
-    is_as_cart = any(p.restaurantId == OUTLET_AS_RESTAURANT_ID or any(t in ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant'] for t in [tag.lower() for tag in (p.tags or [])]) for p in cart_products)
-    is_wedson_cart = any(p.restaurantId == OUTLET_WEDSON_ID or any(t in ['wedson', 'wedson-restaurant'] for t in [tag.lower() for tag in (p.tags or [])]) for p in cart_products)
-    is_cafe_category_cart = any((p.category.slug in ['cafe', 'fastkirana-cafe'] if p.category else False) or any(t in ['cafe', 'shakes'] for t in [tag.lower() for tag in (p.tags or [])]) for p in cart_products)
+        is_as_cart = any(p.restaurantId == OUTLET_AS_RESTAURANT_ID or any(t in ['as-restaurant', 'as-cafe', 'as_restaurant', 'a.s restaurant'] for t in [tag.lower() for tag in (p.tags or [])]) for p in cart_products)
+        is_wedson_cart = any(p.restaurantId == OUTLET_WEDSON_ID or any(t in ['wedson', 'wedson-restaurant'] for t in [tag.lower() for tag in (p.tags or [])]) for p in cart_products)
+        is_cafe_category_cart = any((p.category.slug in ['cafe', 'fastkirana-cafe'] if p.category else False) or any(t in ['cafe', 'shakes'] for t in [tag.lower() for tag in (p.tags or [])]) for p in cart_products)
 
-    # Food/meal item detection in cart
-    has_food_item = any(
-        any(k in p.name.lower() for k in ['biryani', 'burger', 'pizza', 'roll', 'meal', 'thali', 'noodle', 'rice', 'chicken', 'paneer'])
-        or is_as_cart or is_wedson_cart or is_cafe_category_cart
-        for p in cart_products
-    )
+        # Food/meal item detection in cart
+        has_food_item = any(
+            any(k in p.name.lower() for k in ['biryani', 'burger', 'pizza', 'roll', 'meal', 'thali', 'noodle', 'rice', 'chicken', 'paneer'])
+            or is_as_cart or is_wedson_cart or is_cafe_category_cart
+            for p in cart_products
+        )
 
-    # Establish filter boundaries
-    type_filters = []
-    if is_as_cart:
-        type_filters.append(or_(
-            Product.restaurantId == OUTLET_AS_RESTAURANT_ID,
-            func.array_to_string(Product.tags, ',').ilike('%as-restaurant%'),
-            func.array_to_string(Product.tags, ',').ilike('%as-cafe%'),
-            and_(Product.restaurantId == None, or_(
-                func.array_to_string(Product.tags, ',').ilike('%beverages%'),
-                func.array_to_string(Product.tags, ',').ilike('%ice-cream%'),
-                func.array_to_string(Product.tags, ',').ilike('%drinks%'),
-                func.array_to_string(Product.tags, ',').ilike('%cold-drink%')
+        # Establish filter boundaries
+        type_filters = []
+        if is_as_cart:
+            type_filters.append(or_(
+                Product.restaurantId == OUTLET_AS_RESTAURANT_ID,
+                func.array_to_string(Product.tags, ',').ilike('%as-restaurant%'),
+                func.array_to_string(Product.tags, ',').ilike('%as-cafe%'),
+                and_(Product.restaurantId == None, or_(
+                    func.array_to_string(Product.tags, ',').ilike('%beverages%'),
+                    func.array_to_string(Product.tags, ',').ilike('%ice-cream%'),
+                    func.array_to_string(Product.tags, ',').ilike('%drinks%'),
+                    func.array_to_string(Product.tags, ',').ilike('%cold-drink%')
+                ))
             ))
-        ))
-    elif is_wedson_cart:
-        type_filters.append(or_(
-            Product.restaurantId == OUTLET_WEDSON_ID,
-            func.array_to_string(Product.tags, ',').ilike('%wedson%'),
-            and_(Product.restaurantId == None, or_(
-                func.array_to_string(Product.tags, ',').ilike('%beverages%'),
-                func.array_to_string(Product.tags, ',').ilike('%ice-cream%'),
-                func.array_to_string(Product.tags, ',').ilike('%drinks%'),
-                func.array_to_string(Product.tags, ',').ilike('%cold-drink%')
+        elif is_wedson_cart:
+            type_filters.append(or_(
+                Product.restaurantId == OUTLET_WEDSON_ID,
+                func.array_to_string(Product.tags, ',').ilike('%wedson%'),
+                and_(Product.restaurantId == None, or_(
+                    func.array_to_string(Product.tags, ',').ilike('%beverages%'),
+                    func.array_to_string(Product.tags, ',').ilike('%ice-cream%'),
+                    func.array_to_string(Product.tags, ',').ilike('%drinks%'),
+                    func.array_to_string(Product.tags, ',').ilike('%cold-drink%')
+                ))
             ))
-        ))
-    elif is_cafe_category_cart:
-        type_filters.append(or_(
-            Product.category.has(Category.slug.in_(['cafe', 'fastkirana-cafe', 'ice-cream', 'beverages', 'shakes'])),
-            func.array_to_string(Product.tags, ',').ilike('%cafe%'),
-            func.array_to_string(Product.tags, ',').ilike('%beverages%')
-        ))
-    else:
-        grocery_conditions = [
-            Product.restaurantId == None,
-        ]
-        if storeId and storeId != "all":
-            grocery_conditions.append(
-                exists().where(
-                    and_(
-                        StoreInventory.productId == Product.id,
-                        StoreInventory.storeId == storeId,
-                        StoreInventory.stock > 0
+        elif is_cafe_category_cart:
+            type_filters.append(or_(
+                Product.category.has(Category.slug.in_(['cafe', 'fastkirana-cafe', 'ice-cream', 'beverages', 'shakes'])),
+                func.array_to_string(Product.tags, ',').ilike('%cafe%'),
+                func.array_to_string(Product.tags, ',').ilike('%beverages%')
+            ))
+        else:
+            grocery_conditions = [
+                Product.restaurantId == None,
+            ]
+            if storeId and storeId != "all":
+                grocery_conditions.append(
+                    exists().where(
+                        and_(
+                            StoreInventory.productId == Product.id,
+                            StoreInventory.storeId == storeId,
+                            StoreInventory.stock > 0
+                        )
                     )
                 )
-            )
-        type_filters.append(and_(*grocery_conditions))
+            type_filters.append(and_(*grocery_conditions))
 
-    recommended_products = []
+        recommended_products = []
 
-    # Fallback to association rules based on tags
-    target_tags = set()
-    if has_food_item:
-        target_tags.update(['beverages', 'cold-drink', 'drinks', 'ice-cream', 'shakes', 'coolers', 'thums-up', 'coke', 'pepsi', 'sprite', 'cold-coffee'])
+        # Fallback to association rules based on tags
+        target_tags = set()
+        if has_food_item:
+            target_tags.update(['beverages', 'cold-drink', 'drinks', 'ice-cream', 'shakes', 'coolers', 'thums-up', 'coke', 'pepsi', 'sprite', 'cold-coffee'])
 
-    if is_as_cart or is_wedson_cart:
-        target_tags.update(['north-indian', 'curry', 'roti', 'naan', 'south-indian', 'biryani-rice', 'chinese'])
-    elif is_cafe_category_cart:
-        if 'burgers' in cart_tags or 'burger' in cart_tags:
-            target_tags.update(['shakes', 'mocktails', 'coolers', 'cold-drink', 'beverages', 'drinks', 'fries'])
-        if 'sandwiches' in cart_tags or 'sandwich' in cart_tags:
-            target_tags.update(['shakes', 'mocktails', 'cold-coffee', 'beverages'])
-        if 'hot-beverage' in cart_tags or 'tea' in cart_tags or 'coffee' in cart_tags:
-            target_tags.update(['bakery', 'snacks', 'hot-bite'])
-    else:
-        if 'staples' in cart_tags or 'cooking' in cart_tags:
-            target_tags.update(['dairy', 'breakfast', 'oil', 'spices'])
-        if 'breakfast' in cart_tags or 'dairy' in cart_tags:
-            target_tags.update(['bakery', 'bread', 'snacks', 'tea', 'coffee'])
-        if 'atta' in cart_tags or 'wheat' in cart_tags:
-            target_tags.update(['oil', 'salt', 'rice'])
+        if is_as_cart or is_wedson_cart:
+            target_tags.update(['north-indian', 'curry', 'roti', 'naan', 'south-indian', 'biryani-rice', 'chinese'])
+        elif is_cafe_category_cart:
+            if 'burgers' in cart_tags or 'burger' in cart_tags:
+                target_tags.update(['shakes', 'mocktails', 'coolers', 'cold-drink', 'beverages', 'drinks', 'fries'])
+            if 'sandwiches' in cart_tags or 'sandwich' in cart_tags:
+                target_tags.update(['shakes', 'mocktails', 'cold-coffee', 'beverages'])
+            if 'hot-beverage' in cart_tags or 'tea' in cart_tags or 'coffee' in cart_tags:
+                target_tags.update(['bakery', 'snacks', 'hot-bite'])
+        else:
+            if 'staples' in cart_tags or 'cooking' in cart_tags:
+                target_tags.update(['dairy', 'breakfast', 'oil', 'spices'])
+            if 'breakfast' in cart_tags or 'dairy' in cart_tags:
+                target_tags.update(['bakery', 'bread', 'snacks', 'tea', 'coffee'])
+            if 'atta' in cart_tags or 'wheat' in cart_tags:
+                target_tags.update(['oil', 'salt', 'rice'])
 
-    exclude_ids = list(set(cart_product_ids + [p.id for p in recommended_products]))
-
-    if target_tags:
-        tag_match_conditions = [func.array_to_string(Product.tags, ',').ilike(f"%{t}%") for t in target_tags]
-        stmt_tags = select(Product).where(
-            Product.id.not_in(exclude_ids),
-            Product.isAvailable == True,
-            Product.stock > 0,
-            or_(*tag_match_conditions),
-            *type_filters
-        ).limit(8)
-        res_tags = await db.execute(stmt_tags)
-        recommended_products.extend(res_tags.scalars().all())
-
-    # Fallback: general cheap popular items
-    if len(recommended_products) < 6:
         exclude_ids = list(set(cart_product_ids + [p.id for p in recommended_products]))
-        stmt_fallback = select(Product).where(
-            Product.id.not_in(exclude_ids),
-            Product.isAvailable == True,
-            Product.stock > 0,
-            Product.price < 200.0,
-            *type_filters
-        ).order_by(Product.isBestSeller.desc(), Product.sortOrder.desc()).limit(8 - len(recommended_products))
-        res_fallback = await db.execute(stmt_fallback)
-        recommended_products.extend(res_fallback.scalars().all())
 
-    if has_food_item:
-        def food_upsell_rank(prod):
-            n = prod.name.lower()
-            tags_str = ",".join(prod.tags or []).lower()
-            if any(k in n or k in tags_str for k in ['thums up', 'thumsup', 'coke', 'coca cola', 'pepsi', 'sprite', 'cold drink', 'limca', 'fanta', 'frooti']):
-                return 0
-            if any(k in n or k in tags_str for k in ['ice cream', 'ice-cream', 'cornetto', 'chocobar', 'kulfi', 'cone', 'shake', 'cold coffee']):
-                return 1
-            if any(k in n or k in tags_str for k in ['beverage', 'drink', 'juice']):
-                return 2
-            return 3
-        recommended_products.sort(key=food_upsell_rank)
+        if target_tags:
+            tag_match_conditions = [func.array_to_string(Product.tags, ',').ilike(f"%{t}%") for t in target_tags]
+            stmt_tags = select(Product).options(selectinload(Product.category), selectinload(Product.restaurant)).where(
+                Product.id.not_in(exclude_ids),
+                Product.isAvailable == True,
+                Product.stock > 0,
+                or_(*tag_match_conditions),
+                *type_filters
+            ).limit(8)
+            res_tags = await db.execute(stmt_tags)
+            recommended_products.extend(res_tags.scalars().all())
 
-    return {"products": recommended_products[:8]}
+        # Fallback: general cheap popular items
+        if len(recommended_products) < 6:
+            exclude_ids = list(set(cart_product_ids + [p.id for p in recommended_products]))
+            stmt_fallback = select(Product).options(selectinload(Product.category), selectinload(Product.restaurant)).where(
+                Product.id.not_in(exclude_ids),
+                Product.isAvailable == True,
+                Product.stock > 0,
+                Product.price < 200.0,
+                *type_filters
+            ).order_by(Product.isBestSeller.desc(), Product.sortOrder.desc()).limit(8 - len(recommended_products))
+            res_fallback = await db.execute(stmt_fallback)
+            recommended_products.extend(res_fallback.scalars().all())
+
+        if has_food_item:
+            def food_upsell_rank(prod):
+                n = (prod.name or "").lower()
+                tags_str = ",".join(prod.tags or []).lower()
+                if any(k in n or k in tags_str for k in ['thums up', 'thumsup', 'coke', 'coca cola', 'pepsi', 'sprite', 'cold drink', 'limca', 'fanta', 'frooti']):
+                    return 0
+                if any(k in n or k in tags_str for k in ['ice cream', 'ice-cream', 'cornetto', 'chocobar', 'kulfi', 'cone', 'shake', 'cold coffee']):
+                    return 1
+                if any(k in n or k in tags_str for k in ['beverage', 'drink', 'juice']):
+                    return 2
+                return 3
+            recommended_products.sort(key=food_upsell_rank)
+
+        # De-duplicate and serialize
+        seen_ids = set()
+        unique_products = []
+        for p in recommended_products:
+            if p.id not in seen_ids:
+                seen_ids.add(p.id)
+                unique_products.append(serialize_product(p))
+
+        return {"products": unique_products[:8]}
+    except Exception as e:
+        logger.warning(f"Error generating upsell recommendations: {e}")
+        return {"products": []}
 
 
 @router.post("/validate-cart")

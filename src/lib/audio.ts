@@ -195,3 +195,38 @@ export function playOrderChime() {
     playSuccessChime()
   }
 }
+
+/**
+ * Loud, clear voice announcement for Store Hub / Picker / Chef
+ * e.g. "Naya Order number 1980 - 4 items"
+ */
+export function speakOrderAlert(readableId: number | string, itemCount: number) {
+  if (typeof window === 'undefined') return
+  try {
+    // 1. Play kitchen wake-up chime first
+    playKitchenAlarmChime()
+
+    // 2. Speak Hindi/Indian-English voice announcement via Web Speech API
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel() // clear any prior speech
+      const text = `Naya Order number ${readableId}, ${itemCount} items`
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.rate = 1.0
+      utterance.pitch = 1.05
+      utterance.volume = 1.0
+      utterance.lang = 'hi-IN'
+
+      // Fallback voice search for en-IN or hi-IN
+      const voices = window.speechSynthesis.getVoices()
+      const indianVoice = voices.find(v => v.lang.includes('IN') || v.lang.includes('hi'))
+      if (indianVoice) {
+        utterance.voice = indianVoice
+      }
+
+      window.speechSynthesis.speak(utterance)
+    }
+  } catch (err) {
+    console.warn('Voice announcement failed:', err)
+  }
+}
+

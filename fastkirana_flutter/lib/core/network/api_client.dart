@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../services/secure_storage_service.dart';
+import '../../data/models/user_session.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
@@ -63,47 +64,25 @@ final dioProvider = Provider<Dio>((ref) {
             !options.path.contains('/api/user');
 
         if (!isAuthRoute && !isPublicGetRoute) {
-          final rawUserData = SecureStorage.cachedUserData;
-          String? userId = SecureStorage.cachedUserId;
-          String? directPhone = SecureStorage.cachedUserPhone;
-          String? userEmail = SecureStorage.cachedUserEmail;
-          String? userName = SecureStorage.cachedUserName;
-          String? userRole = SecureStorage.cachedUserRole;
-          String? userPhone = directPhone;
-
-          if (userId == null || userRole == null) {
+          var session = SecureStorage.cachedUserSession;
+          if (session == null) {
             final prefs = await SharedPreferences.getInstance();
-            userId ??= prefs.getString('user_id');
-            userRole ??= prefs.getString('user_role');
-            directPhone ??= prefs.getString('user_phone');
-            userEmail ??= prefs.getString('user_email');
-            userName ??= prefs.getString('user_name');
-            userPhone ??= directPhone;
+            final uid = prefs.getString('user_id');
+            if (uid != null && uid.isNotEmpty) {
+              session = UserSession(
+                id: uid,
+                role: prefs.getString('user_role') ?? 'USER',
+                phone: prefs.getString('user_phone'),
+                email: prefs.getString('user_email'),
+                name: prefs.getString('user_name'),
+              );
+            }
           }
 
-          if (rawUserData != null && rawUserData.isNotEmpty) {
-            parse(String k) => rawUserData[k];
-            userId ??= parse('id');
-            userEmail = parse('email') ?? userEmail;
-            userName = parse('name') ?? userName;
-            userRole = parse('role') ?? userRole;
-            userPhone ??= parse('phone');
-          }
-
-          if (userId != null && userId.isNotEmpty) {
-            options.headers.putIfAbsent('x-user-id', () => userId);
-          }
-          if (userPhone != null && userPhone.isNotEmpty) {
-            options.headers.putIfAbsent('x-user-phone', () => userPhone);
-          }
-          if (userEmail != null && userEmail.isNotEmpty) {
-            options.headers.putIfAbsent('x-user-email', () => userEmail);
-          }
-          if (userName != null && userName.isNotEmpty) {
-            options.headers.putIfAbsent('x-user-name', () => userName);
-          }
-          if (userRole != null && userRole.isNotEmpty) {
-            options.headers.putIfAbsent('x-user-role', () => userRole);
+          if (session != null && session.isValid) {
+            session.toHeaderMap().forEach((headerKey, headerValue) {
+              options.headers.putIfAbsent(headerKey, () => headerValue);
+            });
           }
         }
       } catch (e, _) { LoggerService.error('ApiClient: request interceptor', e); }

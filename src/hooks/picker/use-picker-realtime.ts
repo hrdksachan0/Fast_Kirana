@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
-import { playNotificationChime, playSuccessChime } from '@/lib/audio'
+import { playNotificationChime, playSuccessChime, speakOrderAlert } from '@/lib/audio'
 import { supabase } from '@/lib/supabase-client'
 import { triggerHaptic } from '@/lib/haptic'
 import { Order } from './use-picker-types'
@@ -43,7 +43,9 @@ export function usePickerRealtime({
     return () => clearInterval(t)
   }, [])
 
-  // Audio alert and repeating chime when pending/unpacked orders are in the queue
+  const announcedOrderIdsRef = useRef<Set<string>>(new Set())
+
+  // Audio alert and voice announcement when pending/unpacked orders are in the queue
   useEffect(() => {
     if (status !== 'authenticated') return
 
@@ -52,12 +54,20 @@ export function usePickerRealtime({
     )
     if (pendingOrders.length === 0) return
 
-    playNotificationChime()
-    triggerHaptic('success')
-    toast.info('New order(s) waiting to be picked!', {
-      id: 'new-order-alert',
-      icon: '📦',
-    })
+    // Find new unannounced order to announce aloud via SpeechSynthesis
+    const unannounced = pendingOrders.find((o) => !announcedOrderIdsRef.current.has(o.id))
+    if (unannounced) {
+      announcedOrderIdsRef.current.add(unannounced.id)
+      const itemCount = unannounced.items?.length || 1
+      speakOrderAlert(unannounced.readableId || unannounced.id.slice(-4), itemCount)
+      triggerHaptic('success')
+      toast.info(`📦 Naya Order #${unannounced.readableId} (${itemCount} items) aa gaya!`, {
+        id: `order-alert-${unannounced.id}`,
+        duration: 8000,
+      })
+    } else {
+      playNotificationChime()
+    }
 
     const intervalId = setInterval(() => {
       const currentPending = orders.filter(
@@ -68,7 +78,7 @@ export function usePickerRealtime({
       } else {
         clearInterval(intervalId)
       }
-    }, 5000)
+    }, 10000)
 
     return () => clearInterval(intervalId)
   }, [orders, status])
@@ -232,9 +242,15 @@ export function usePickerRealtime({
           }
 
           if (payload.eventType === 'INSERT') {
-            playNotificationChime()
+            const ins = payload.new as any
+            const rId = ins?.readableId || (ins?.id ? String(ins.id).slice(-4) : '')
+            if (rId) {
+              speakOrderAlert(rId, 1)
+            } else {
+              playNotificationChime()
+            }
             triggerHaptic('success')
-            toast.info('New incoming order in queue!')
+            toast.info(`📦 Naya Order #${rId || ''} queue me aa gaya!`, { icon: '📦' })
           }
 
           if (updateTimeout) clearTimeout(updateTimeout)

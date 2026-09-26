@@ -117,23 +117,28 @@ class DeliveryModeHeader extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  '10 MINS ⚡',
-                                  style: AppDesignSystem.captionBold.copyWith(
-                                    color: AppDesignSystem.primary,
-                                    fontSize: 11,
-                                    letterSpacing: 0.5,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '10 MINS ⚡',
+                                    style: AppDesignSystem.captionBold.copyWith(
+                                      color: AppDesignSystem.primary,
+                                      fontSize: 11,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  size: 16,
-                                  color: AppDesignSystem.slate700,
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    size: 16,
+                                    color: AppDesignSystem.slate700,
+                                  ),
+                                ],
+                              ),
                             ),
                             Text(
                               activeLocationTitle.isNotEmpty
@@ -156,7 +161,13 @@ class DeliveryModeHeader extends StatelessWidget {
               ),
 
               // Mode Switcher (Grocery vs Cafe Toggle Pill)
-              _buildSegmentedModeToggle(context),
+              Flexible(
+                fit: FlexFit.loose,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: _buildSegmentedModeToggle(context),
+                ),
+              ),
 
               const SizedBox(width: 8),
 

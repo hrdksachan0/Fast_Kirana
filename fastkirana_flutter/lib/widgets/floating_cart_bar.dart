@@ -171,35 +171,40 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  '$itemCount ${itemCount == 1 ? 'Item' : 'Items'}',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: Responsive.scaledFontSize(context, 13.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: -0.2,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '$itemCount ${itemCount == 1 ? 'Item' : 'Items'}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: Responsive.scaledFontSize(context, 13.5),
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: -0.2,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '  •  ',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.65),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                  Text(
+                                    '  •  ',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.65),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '₹${total.toInt()}',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: Responsive.scaledFontSize(context, 14.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    letterSpacing: -0.3,
+                                  Text(
+                                    '₹${total.toInt()}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: Responsive.scaledFontSize(context, 14.5),
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: -0.3,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(

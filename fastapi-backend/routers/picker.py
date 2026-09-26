@@ -619,6 +619,13 @@ async def get_picker_orders(
                 } if p_obj else None
             })
 
+        # Sort items in category / shelf walking sequence for 3-minute pick efficiency
+        order_items.sort(key=lambda x: (
+            ((x.get("product") or {}).get("category") or {}).get("name") or "ZZZ",
+            (x.get("product") or {}).get("location") or "ZZZ",
+            x.get("name") or ""
+        ))
+
         assigned_picker = workers.get(o.assignedPickerId)
         if assigned_picker:
             picker_phone = str(assigned_picker.get("phone") or "")

@@ -207,6 +207,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ products: recommendedProducts.slice(0, 6) })
   } catch (error: any) {
     console.error('Upsell recommendation error:', error)
-    return NextResponse.json({ error: 'Failed to generate recommendations' }, { status: 500 })
+    return NextResponse.json({ products: [] }, { status: 200 })
   }
 }

@@ -2516,6 +2516,14 @@ async def update_order(
 
     elif target_status == OrderStatus.PACKED:
         order.packedAt = datetime.utcnow()
+        # Automated nearest rider dispatch if order is unassigned
+        if not order.deliveryUserId:
+            try:
+                from routers.delivery import dispatch_nearest_rider_for_order
+                background_tasks.add_task(dispatch_nearest_rider_for_order, order.id, db)
+            except Exception as disp_err:
+                logger.warning(f"Could not queue auto dispatch on PACKED: {disp_err}")
+
 
     elif target_status == OrderStatus.CONFIRMED:
         order.confirmedAt = datetime.utcnow()
@@ -2571,6 +2579,20 @@ async def update_order(
         "lat": order.deliveryLat,
         "lng": order.deliveryLng
     })
+
+    if order.readableId:
+        try:
+            await manager.broadcast_to_channel(f"order_{order.readableId}", {
+                "event": "STATUS_UPDATE",
+                "orderId": order.id,
+                "readableId": order.readableId,
+                "restaurantId": order.restaurantId,
+                "status": order.status.value,
+                "lat": order.deliveryLat,
+                "lng": order.deliveryLng
+            })
+        except Exception:
+            pass
 
     # Strict restaurant channel real-time update
     if order.restaurantId:

@@ -759,3 +759,172 @@ async def accept_batch_orders(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to batch accept orders: {str(e)}")
 
+
+# ─── AUTOMATED RIDER DISPATCH & DISTANCE MATRIX ───────────────────────────────────
+
+async def dispatch_nearest_rider_for_order(order_id: str, db: AsyncSession, max_distance_km: float = 12.0) -> Optional[dict]:
+    """
+    Automated Rider Dispatch & Distance Matrix:
+    1. Resolves pickup location (Darkstore hub or restaurant).
+    2. Finds active, online delivery riders (Role.DELIVERY, not blocked).
+    3. Calculates real-time Haversine distance from rider's live coordinates to pickup point.
+    4. Evaluates active workload: prioritizes free riders or riders with <= 2 active tasks.
+    5. Assigns nearest eligible rider, updates order.deliveryUserId, commits, and broadcasts:
+       - WebSocket alert to rider's personal channel (f"rider_{rider.id}")
+       - WebSocket status update to customer tracking room (f"order_{order.id}")
+    """
+    clean_id = str(order_id).strip().lstrip("#")
+    stmt = select(Order).options(
+        selectinload(Order.restaurant),
+        selectinload(Order.address)
+    ).where(or_(Order.id == clean_id, Order.readableId == clean_id))
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+
+    if not order:
+        return None
+
+    if order.deliveryUserId:
+        r_stmt = select(User).where(User.id == order.deliveryUserId)
+        r_res = await db.execute(r_stmt)
+        assigned_user = r_res.scalars().first()
+        return {
+            "status": "ALREADY_ASSIGNED",
+            "riderId": order.deliveryUserId,
+            "riderName": assigned_user.name if assigned_user else "Assigned Rider"
+        }
+
+    # Determine pickup coordinates
+    if order.restaurant and order.restaurant.lat is not None and order.restaurant.lng is not None:
+        pickup_lat = float(order.restaurant.lat)
+        pickup_lng = float(order.restaurant.lng)
+        pickup_name = order.restaurant.name or "Restaurant"
+    else:
+        pickup_lat = 26.1534185
+        pickup_lng = 80.1714024
+        pickup_name = "FastKirana Darkstore Hub"
+
+    # Query active, unblocked delivery partners
+    from models import Role
+    riders_stmt = select(User).where(
+        User.role == Role.DELIVERY,
+        User.isBlocked == False
+    )
+    riders_res = await db.execute(riders_stmt)
+    candidate_riders = riders_res.scalars().all()
+
+    if not candidate_riders:
+        return None
+
+    # Score each candidate rider
+    scored_riders = []
+    for r in candidate_riders:
+        r_lat = r.liveLat if r.liveLat is not None else pickup_lat
+        r_lng = r.liveLng if r.liveLng is not None else pickup_lng
+
+        dist_km = haversine_km(pickup_lat, pickup_lng, float(r_lat), float(r_lng))
+        if dist_km > max_distance_km:
+            continue
+
+        # Count rider's active in-flight orders
+        active_cnt_stmt = select(func.count(Order.id)).where(
+            Order.deliveryUserId == r.id,
+            Order.status.in_([OrderStatus.CONFIRMED, OrderStatus.PACKED, OrderStatus.SHIPPED])
+        )
+        active_cnt_res = await db.execute(active_cnt_stmt)
+        active_count = active_cnt_res.scalar() or 0
+
+        # Maximum 3 concurrent deliveries per rider to prevent overload
+        if active_count >= 3:
+            continue
+
+        # Composite score: distance + workload penalty (2.0 km equivalent per active order)
+        dispatch_score = dist_km + (active_count * 2.0)
+        scored_riders.append({
+            "rider": r,
+            "distance_km": dist_km,
+            "active_orders": active_count,
+            "score": dispatch_score
+        })
+
+    if not scored_riders:
+        return None
+
+    # Pick lowest score (nearest + least burdened)
+    scored_riders.sort(key=lambda x: x["score"])
+    best = scored_riders[0]
+    best_rider = best["rider"]
+
+    # Assign to order
+    order.deliveryUserId = best_rider.id
+    order.deliveryLat = float(best_rider.liveLat or pickup_lat)
+    order.deliveryLng = float(best_rider.liveLng or pickup_lng)
+    await db.commit()
+    await db.refresh(order)
+
+    # 1. Alert rider via dedicated WebSocket room
+    try:
+        await manager.broadcast_to_channel(f"rider_{best_rider.id}", {
+            "event": "NEW_DELIVERY_TASK",
+            "orderId": order.id,
+            "readableId": order.readableId,
+            "pickupName": pickup_name,
+            "pickupLat": pickup_lat,
+            "pickupLng": pickup_lng,
+            "customerAddress": order.address.street if order.address else "Ghatampur",
+            "distanceKm": round(best["distance_km"], 2),
+            "total": float(order.total),
+            "paymentMethod": order.paymentMethod.value,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+    except Exception:
+        pass
+
+    # 2. Alert customer tracking room with rider details
+    try:
+        await manager.broadcast_to_channel(f"order_{order.id}", {
+            "event": "RIDER_ASSIGNED",
+            "orderId": order.id,
+            "riderName": best_rider.name,
+            "riderPhone": best_rider.phone,
+            "riderLat": float(order.deliveryLat),
+            "riderLng": float(order.deliveryLng),
+            "timestamp": datetime.utcnow().isoformat()
+        })
+    except Exception:
+        pass
+
+    return {
+        "status": "ASSIGNED",
+        "riderId": best_rider.id,
+        "riderName": best_rider.name,
+        "riderPhone": best_rider.phone,
+        "distanceKm": round(best["distance_km"], 2),
+        "activeWorkload": best["active_orders"]
+    }
+
+
+@router.post("/auto-dispatch/{order_id}")
+async def auto_dispatch_endpoint(
+    order_id: str,
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Automated Rider Dispatch & Distance Matrix:
+    Instantly finds the nearest online delivery partner using GPS Haversine distance,
+    assigns them to the order, and broadcasts real-time alerts to both rider & customer.
+    """
+    result = await dispatch_nearest_rider_for_order(order_id, db)
+    if not result:
+        return {
+            "success": False,
+            "message": "No online delivery partners currently available in range (12 km)."
+        }
+    return {
+        "success": True,
+        "message": f"Assigned to {result.get('riderName')} ({result.get('distanceKm')} km away)",
+        "dispatch": result
+    }
+
+

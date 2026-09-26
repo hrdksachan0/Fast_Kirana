@@ -6,14 +6,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfupi.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfupipayment.dart';
-import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cftheme/cftheme.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
+import 'payment_gateway_handler.dart';
 
 import '../../../core/theme/design_system.dart';
 import '../../../core/routes/page_transitions.dart';
@@ -116,7 +110,7 @@ final checkoutControllerProvider =
 
 class CheckoutController extends StateNotifier<CheckoutState> {
   final Ref ref;
-  final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
+  late final PaymentGatewayHandler _paymentHandler = PaymentGatewayHandler(dio: ref.read(dioProvider));
   BuildContext? _currentContext;
 
   // Parameters cached for payment callbacks
@@ -144,9 +138,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       );
     }
 
-    if (!kIsWeb) {
-      _cfService.setCallback(_onCashfreeSuccess, _onCashfreeError);
-    }
+    _paymentHandler.initialize(
+      onSuccess: _onCashfreeSuccess,
+      onError: _onCashfreeError,
+    );
   }
 
   // ─── State Modifiers ───────────────────────────────────────────────────────
@@ -207,36 +202,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     }
 
     state = state.copyWith(isPlacingOrder: true);
-    final dio = ref.read(dioProvider);
 
-    bool verifiedPaid = false;
-    String? resolvedPaymentId;
-
-    for (int attempt = 0; attempt < 3; attempt++) {
-      if (attempt > 0) {
-        await Future.delayed(const Duration(milliseconds: 1500));
-      }
-      try {
-        final verifyRes = await dio.post(
-          '/api/payment/cashfree/verify',
-          data: {'orderId': cfOrderId, 'cfOrderId': cfOrderId},
-          options: Options(
-            sendTimeout: const Duration(seconds: 6),
-            receiveTimeout: const Duration(seconds: 6),
-          ),
-        );
-        if (verifyRes.statusCode == 200 && verifyRes.data != null) {
-          final data = verifyRes.data;
-          if (data['isPaid'] == true || data['paymentStatus'] == 'PAID') {
-            verifiedPaid = true;
-            resolvedPaymentId = data['cfPaymentId']?.toString() ?? 'CF_$cfOrderId';
-            break;
-          }
-        }
-      } catch (e) {
-        debugPrint('Cashfree verification check attempt $attempt note: $e');
-      }
-    }
+    final verification = await _paymentHandler.verifyPayment(cfOrderId);
+    final verifiedPaid = verification.isPaid;
+    final resolvedPaymentId = verification.paymentId;
 
     final context = _currentContext;
     if (!verifiedPaid || resolvedPaymentId == null) {
@@ -288,13 +257,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     HapticFeedback.lightImpact();
 
     try {
-      final dio = ref.read(dioProvider);
-      final verifyRes = await dio.post(
-        '/api/payment/cashfree/verify',
-        data: {'orderId': cfOrderId, 'cfOrderId': cfOrderId},
-        options: Options(sendTimeout: const Duration(seconds: 4), receiveTimeout: const Duration(seconds: 4)),
-      );
-      if (verifyRes.data != null && (verifyRes.data['isPaid'] == true || verifyRes.data['paymentStatus'] == 'PAID')) {
+      final fastVerify = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 1);
+      if (fastVerify.isPaid) {
         debugPrint('✅ Payment verified as PAID on server despite error callback! Routing to success...');
         await _onCashfreeSuccess(cfOrderId);
         return;
@@ -521,80 +485,20 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         final hasValidEmail = userEmail != null && userEmail.contains('@') && userEmail.contains('.');
         final customerName = user?.name ?? 'FastKirana Customer';
 
-        bool cashfreeLaunched = false;
-        try {
-          final dio = ref.read(dioProvider);
-          final cfRes = await dio.post(
-            '/api/payment/cashfree/create-order',
-            data: {
-              'amount': grandTotal,
-              if (state.pendingCashfreeOrderId != null) 'orderId': state.pendingCashfreeOrderId,
-              'customerPhone': cleanPhone.length == 10 ? cleanPhone : '9999999999',
-              if (hasValidEmail) 'customerEmail': userEmail.trim(),
-              'customerName': customerName,
-            },
-            options: Options(sendTimeout: const Duration(seconds: 12), receiveTimeout: const Duration(seconds: 12)),
-          );
+        final cfOrderId = await _paymentHandler.launchPayment(
+          amount: grandTotal,
+          customerPhone: rawPhone,
+          customerEmail: userEmail,
+          customerName: customerName,
+          existingOrderId: state.pendingCashfreeOrderId,
+        );
 
-          if (cfRes.data != null && cfRes.data['paymentSessionId'] != null) {
-            final paymentSessionId = cfRes.data['paymentSessionId'].toString();
-            final cfOrderId = cfRes.data['orderId']?.toString() ?? 'cf_${DateTime.now().millisecondsSinceEpoch}';
-            state = state.copyWith(pendingCashfreeOrderId: cfOrderId);
-
-            const env = AppConfig.cashfreeEnv == 'SANDBOX' ? CFEnvironment.SANDBOX : CFEnvironment.PRODUCTION;
-            final session = CFSessionBuilder()
-                .setEnvironment(env)
-                .setOrderId(cfOrderId)
-                .setPaymentSessionId(paymentSessionId)
-                .build();
-
-            final theme = CFThemeBuilder()
-                .setNavigationBarBackgroundColorColor("#E20A22")
-                .setNavigationBarTextColor("#FFFFFF")
-                .setButtonBackgroundColor("#E20A22")
-                .setButtonTextColor("#FFFFFF")
-                .setPrimaryTextColor("#0F172A")
-                .setBackgroundColor("#FFFFFF")
-                .setPrimaryFont("Inter")
-                .build();
-
-            // Direct UPI Intent
-            bool upiLaunched = false;
-            try {
-              final upi = CFUPIBuilder()
-                  .setChannel(CFUPIChannel.INTENT_WITH_UI)
-                  .build();
-
-              final cfUpiPayment = CFUPIPaymentBuilder()
-                  .setSession(session)
-                  .setUPI(upi)
-                  .build();
-
-              _cfService.doPayment(cfUpiPayment);
-              upiLaunched = true;
-              cashfreeLaunched = true;
-              return;
-            } catch (upiErr) {
-              debugPrint('Cashfree UPI Intent error, using WebCheckout fallback: $upiErr');
-            }
-
-            if (!upiLaunched) {
-              final cfPayment = CFWebCheckoutPaymentBuilder()
-                  .setSession(session)
-                  .setTheme(theme)
-                  .build();
-
-              _cfService.doPayment(cfPayment);
-              cashfreeLaunched = true;
-              return;
-            }
-          }
-        } catch (cfErr) {
-          debugPrint('Cashfree launch error: $cfErr');
+        if (cfOrderId != null) {
+          state = state.copyWith(pendingCashfreeOrderId: cfOrderId);
+          return;
         }
 
-        if (!cashfreeLaunched) {
-          state = state.copyWith(isPlacingOrder: false);
+        state = state.copyWith(isPlacingOrder: false);
           if (context.mounted && grandTotal > 0) {
             await PaymentFailedCodSheet.show(
               context: context,
@@ -625,7 +529,6 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             return;
           }
         }
-      }
 
       if (context.mounted) {
         state = state.copyWith(isPlacingOrder: false);

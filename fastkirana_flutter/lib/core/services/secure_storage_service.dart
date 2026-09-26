@@ -2,6 +2,7 @@ import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/models/user_session.dart';
 
 /// Secure storage wrapper for sensitive data (auth tokens, user credentials).
 ///
@@ -110,6 +111,42 @@ class SecureStorage {
   static String? get cachedUserName => _cachedUserName;
   static String? get cachedUserRole => _cachedUserRole;
   static Map<String, String>? get cachedUserData => _cachedUserData;
+
+  /// Returns strongly-typed user session from in-memory cache
+  static UserSession? get cachedUserSession {
+    final id = _cachedUserId;
+    if (id == null || id.isEmpty) return null;
+    return UserSession(
+      id: id,
+      name: _cachedUserName,
+      email: _cachedUserEmail,
+      phone: _cachedUserPhone,
+      role: _cachedUserRole ?? 'USER',
+    );
+  }
+
+  /// Save or update user session synchronously in memory & persisted storage
+  static Future<void> saveUserSession(UserSession session) async {
+    _cachedUserId = session.id;
+    _cachedUserName = session.name;
+    _cachedUserEmail = session.email;
+    _cachedUserPhone = session.phone;
+    _cachedUserRole = session.role;
+    _cachedUserData = {
+      'id': session.id,
+      if (session.name != null) 'name': session.name!,
+      if (session.email != null) 'email': session.email!,
+      if (session.phone != null) 'phone': session.phone!,
+      'role': session.role,
+    };
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_id', session.id);
+    if (session.name != null) await prefs.setString('user_name', session.name!);
+    if (session.email != null) await prefs.setString('user_email', session.email!);
+    if (session.phone != null) await prefs.setString('user_phone', session.phone!);
+    await prefs.setString('user_role', session.role);
+    await prefs.setString('user_data', jsonEncode(_cachedUserData));
+  }
 
   /// Parse user_data JSON once from cache and extract fields.
   /// Returns a map with keys: id, email, name, role, phone
