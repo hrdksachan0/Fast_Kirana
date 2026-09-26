@@ -196,21 +196,13 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
               fcmMessaging.send({ token: rToken.token, ...riderPayload }).catch(() => {})
             }
 
-            // Broadcast to Picker Topics
-            if (order.storeId) {
-              sendTopicWithRetry(fcmMessaging, { topic: `picker_orders_${order.storeId}`, ...pickerPayload }).catch(() => {})
-            }
-            sendTopicWithRetry(fcmMessaging, { topic: 'picker_orders', ...pickerPayload }).catch(() => {})
+            // Broadcast to Single Canonical Picker Topic
+            const pickerTopic = order.storeId ? `picker_orders_${order.storeId}` : 'picker_orders'
+            sendTopicWithRetry(fcmMessaging, { topic: pickerTopic, ...pickerPayload }).catch(() => {})
           }
 
-          // Restaurant owner direct push
+          // Restaurant owner notification (Single canonical topic)
           if (isRestaurant && order.restaurantId && order.status !== OrderStatus.CANCELLED) {
-            const restInfo = await prisma.restaurant.findUnique({
-              where: { id: order.restaurantId },
-              select: { ownerPhone: true },
-            })
-            const cleanRestPhone = restInfo?.ownerPhone ? getLast10Digits(restInfo.ownerPhone) : ''
-
             const restaurantPayload = buildOrderFcmPayload(
               `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
               `Order #${displayId} received! Open kitchen console to prepare dishes.`,
@@ -226,29 +218,8 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
               }
             )
 
-            const restTokens = await prisma.fcmToken.findMany({
-              where: {
-                user: {
-                  OR: [
-                    { assignedRestaurantId: order.restaurantId },
-                    { role: { in: [Role.RESTAURANT_OWNER, Role.CHEF] } },
-                    ...(cleanRestPhone ? [{ phone: { contains: cleanRestPhone } }] : []),
-                  ],
-                },
-              },
-              select: { token: true },
-            })
-
-            const uniqueRestTokens = Array.from(new Set(restTokens.map((t) => t.token)))
-            for (const rToken of uniqueRestTokens) {
-              fcmMessaging.send({ token: rToken, ...restaurantPayload }).catch((err) =>
-                console.error(`Error sending direct restaurant FCM to token ${rToken}:`, err)
-              )
-            }
-
-            sendTopicWithRetry(fcmMessaging, { topic: `restaurant_orders_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
+            // Broadcast to single canonical restaurant topic
             sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
-            sendTopicWithRetry(fcmMessaging, { topic: `kitchen_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
           }
         }
       }
@@ -488,34 +459,8 @@ export async function dispatchAdminApprovedNotifications(orderId: string, origin
             }
           )
 
-          // Topic broadcasts
-          sendTopicWithRetry(fcmMessaging, { topic: `restaurant_orders_${order.restaurantId}`, ...restPayload }).catch(() => {})
+          // Topic broadcast to single canonical restaurant topic
           sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restPayload }).catch(() => {})
-          sendTopicWithRetry(fcmMessaging, { topic: `kitchen_${order.restaurantId}`, ...restPayload }).catch(() => {})
-
-          // Direct FCM tokens to chefs & owners
-          prisma.restaurant.findUnique({
-            where: { id: order.restaurantId },
-            select: { ownerPhone: true },
-          }).then(async (restInfo) => {
-            const cleanRestPhone = restInfo?.ownerPhone ? getLast10Digits(restInfo.ownerPhone) : ''
-            const restTokens = await prisma.fcmToken.findMany({
-              where: {
-                user: {
-                  OR: [
-                    { assignedRestaurantId: order.restaurantId },
-                    { role: { in: [Role.RESTAURANT_OWNER, Role.CHEF] } },
-                    ...(cleanRestPhone ? [{ phone: { contains: cleanRestPhone } }] : []),
-                  ],
-                },
-              },
-              select: { token: true },
-            })
-            const uniqueTokens = Array.from(new Set(restTokens.map((t) => t.token)))
-            for (const token of uniqueTokens) {
-              fcmMessaging.send({ token, ...restPayload }).catch(() => {})
-            }
-          }).catch(() => {})
         }
       } else {
         // Pure Grocery Order -> Pickers & Riders

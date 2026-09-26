@@ -131,6 +131,9 @@ async def register_fcm_token(
             existing_token.userId = user_id
             if device_type:
                 existing_token.deviceType = device_type
+            # Clean up old stale tokens for this user so only 1 active token remains
+            if user_id:
+                await db.execute(delete(FcmToken).where(FcmToken.userId == user_id, FcmToken.token != token))
             await db.commit()
             return {
                 "success": True,
@@ -147,6 +150,9 @@ async def register_fcm_token(
                 deviceType=device_type
             )
             db.add(new_fcm)
+            # Clean up old stale tokens for this user
+            if user_id:
+                await db.execute(delete(FcmToken).where(FcmToken.userId == user_id, FcmToken.token != token))
             await db.commit()
             return {
                 "success": True,

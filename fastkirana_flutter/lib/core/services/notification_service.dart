@@ -407,14 +407,15 @@ class NotificationService {
       try {
         await _fcm?.subscribeToTopic('all_users');
         await _fcm?.subscribeToTopic('ghatampur_alerts');
-        final savedPhone = prefs.getString('user_phone') ?? '';
-        final clean = savedPhone.replaceAll('+91', '').replaceAll(' ', '').trim();
-        if (clean.length == 10) {
-          await _fcm?.subscribeToTopic('phone_$clean');
-        }
         final savedUserId = prefs.getString('user_id');
         if (savedUserId != null && savedUserId.isNotEmpty) {
           await _fcm?.subscribeToTopic('user_$savedUserId');
+        }
+        // Purge legacy phone topic to prevent duplicate pushes
+        final savedPhone = prefs.getString('user_phone') ?? '';
+        final clean = savedPhone.replaceAll('+91', '').replaceAll(' ', '').trim();
+        if (clean.length == 10) {
+          try { await _fcm?.unsubscribeFromTopic('phone_$clean'); } catch (_) {}
         }
       } catch (e) {
         logger.e("Topic subscription error: $e");
@@ -805,17 +806,33 @@ class NotificationService {
           }
         } else if (isRestaurant) {
           if (rId != null && rId.isNotEmpty) {
+            // Subscribe to single canonical restaurant topic
             await _fcm?.subscribeToTopic('restaurant_$rId');
-            await _fcm?.subscribeToTopic('kitchen_$rId');
-            await _fcm?.subscribeToTopic('restaurant_orders_$rId');
+            // Purge duplicate legacy topics
+            try { await _fcm?.unsubscribeFromTopic('kitchen_$rId'); } catch (_) {}
+            try { await _fcm?.unsubscribeFromTopic('restaurant_orders_$rId'); } catch (_) {}
           }
         } else if (isDeliveryOrPicker) {
-          if (storeId != null && storeId.isNotEmpty) {
-            await _fcm?.subscribeToTopic('staff_orders_$storeId');
-            await _fcm?.subscribeToTopic('picker_orders_$storeId');
-            await _fcm?.subscribeToTopic('delivery_orders_$storeId');
+          final isPicker = effectiveRole == 'PICKER';
+          if (isPicker) {
+            final topic = (storeId != null && storeId.isNotEmpty) ? 'picker_orders_$storeId' : 'picker_orders';
+            await _fcm?.subscribeToTopic(topic);
+            try { await _fcm?.unsubscribeFromTopic('staff_orders'); } catch (_) {}
+            try { await _fcm?.unsubscribeFromTopic('delivery_orders'); } catch (_) {}
+            if (storeId != null && storeId.isNotEmpty) {
+              try { await _fcm?.unsubscribeFromTopic('staff_orders_$storeId'); } catch (_) {}
+              try { await _fcm?.unsubscribeFromTopic('delivery_orders_$storeId'); } catch (_) {}
+            }
           } else {
-            await _fcm?.subscribeToTopic('staff_orders');
+            // Delivery / Rider
+            final topic = (storeId != null && storeId.isNotEmpty) ? 'delivery_orders_$storeId' : 'delivery_orders';
+            await _fcm?.subscribeToTopic(topic);
+            try { await _fcm?.unsubscribeFromTopic('staff_orders'); } catch (_) {}
+            try { await _fcm?.unsubscribeFromTopic('picker_orders'); } catch (_) {}
+            if (storeId != null && storeId.isNotEmpty) {
+              try { await _fcm?.unsubscribeFromTopic('staff_orders_$storeId'); } catch (_) {}
+              try { await _fcm?.unsubscribeFromTopic('picker_orders_$storeId'); } catch (_) {}
+            }
           }
         } else if (effectiveRole == 'CUSTOMER' || effectiveRole == 'USER') {
           // Normal CUSTOMER / USER: Actively purge ANY leftover admin/staff/kitchen subscriptions on this device!
@@ -839,7 +856,7 @@ class NotificationService {
         if (phone.isNotEmpty) {
           final cleanPhone = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
           if (cleanPhone.length == 10) {
-            await _fcm?.subscribeToTopic('phone_$cleanPhone');
+            try { await _fcm?.unsubscribeFromTopic('phone_$cleanPhone'); } catch (_) {}
           }
         }
       } catch (e) {

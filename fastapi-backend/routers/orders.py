@@ -435,34 +435,25 @@ async def send_pwa_notification_to_roles(roles: list, title: str, body: str, dat
 
 async def send_pwa_notification_to_user(user_id: str, title: str, body: str, data: dict, db: AsyncSession = None, phone: str = None):
     try:
-        # 1. Send direct to user topic
-        if user_id:
-            await send_fcm_topic_notification(f"user_{user_id}", title, body, data)
-
-        # 2. Look up user phone if not provided
-        target_phone = phone
-        if not target_phone and user_id:
-            async with AsyncSessionLocal() as session:
-                user_stmt = select(User).where(User.id == user_id)
-                user_res = await session.execute(user_stmt)
-                user = user_res.scalars().first()
-                if user and user.phone:
-                    target_phone = user.phone
-
-        # 3. Send to phone topic (e.g. phone_8112849854)
-        if target_phone:
-            clean_phone = str(target_phone).replace("+91", "").replace(" ", "").replace("-", "").strip()
-            if clean_phone:
-                await send_fcm_topic_notification(f"phone_{clean_phone}", title, body, data)
-
-        # 4. Also send to registered device tokens if any
+        # Check if user has registered device tokens
+        tokens = []
         if user_id:
             async with AsyncSessionLocal() as session:
                 stmt = select(FcmToken.token).where(FcmToken.userId == user_id)
                 res = await session.execute(stmt)
-                tokens = list(res.scalars().all())
-                if tokens:
-                    await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
+                tokens = list(set(t for t in res.scalars().all() if t and len(t) > 10))
+
+        if tokens:
+            # DIRECT DISPATCH: Send directly to the user's active device tokens (EXACTLY ONCE)
+            await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
+        else:
+            # FALLBACK ONLY: If no device tokens are registered in DB, send to user topic
+            if user_id:
+                await send_fcm_topic_notification(f"user_{user_id}", title, body, data)
+            elif phone:
+                clean_phone = str(phone).replace("+91", "").replace(" ", "").replace("-", "").strip()
+                if clean_phone and len(clean_phone) == 10:
+                    await send_fcm_topic_notification(f"phone_{clean_phone}", title, body, data)
     except Exception as e:
         logger.error(f"Failed to dispatch FCM push notification to user: {str(e)}")
 
@@ -478,13 +469,14 @@ async def dispatch_isolated_order_fcm_notifications(
 ):
     """
     Dispatches order notifications with absolute isolation:
-    - Restaurant orders ONLY alert restaurant-specific topics & assigned staff. Never grocery pickers.
-    - Grocery orders ONLY alert darkstore pickers. Never restaurant consoles or chefs.
+    - Restaurant orders ONLY alert restaurant-specific canonical topic. Never grocery pickers.
+    - Grocery orders ONLY alert darkstore pickers and riders. Never restaurant consoles or chefs.
+    - Admins receive EXACTLY 1 alert via canonical admin_orders topic.
     """
     try:
         now_ts = str(int(datetime.utcnow().timestamp() * 1000))
         if restaurant_id:
-            # 1. RESTAURANT / KITCHEN ISOLATED NOTIFICATION
+            # 1. RESTAURANT / KITCHEN ISOLATED NOTIFICATION (Single canonical topic)
             rest_title = f"👨‍🍳 New Order for {shop_name or 'Kitchen'}!"
             rest_body = f"Order #{readable_id} received (₹{total:.2f})! Open kitchen console to prepare dishes."
             rest_data = {
@@ -497,31 +489,8 @@ async def dispatch_isolated_order_fcm_notifications(
                 "timestamp": now_ts,
             }
 
-            # Broadcast to restaurant-specific topics ONLY
+            # Broadcast ONCE to the canonical restaurant topic
             await send_fcm_topic_notification(f"restaurant_{restaurant_id}", rest_title, rest_body, rest_data)
-            await send_fcm_topic_notification(f"kitchen_{restaurant_id}", rest_title, rest_body, rest_data)
-            await send_fcm_topic_notification(f"restaurant_orders_{restaurant_id}", rest_title, rest_body, rest_data)
-
-            # Direct FCM push to chefs & owners assigned ONLY to this specific restaurant
-            async with AsyncSessionLocal() as session:
-                rest_res = await session.execute(select(Restaurant).where(Restaurant.id == restaurant_id))
-                rest_obj = rest_res.scalars().first()
-                clean_owner_phone = ""
-                if rest_obj and rest_obj.ownerPhone:
-                    clean_owner_phone = re.sub(r'\D', '', str(rest_obj.ownerPhone))[-10:]
-
-                user_filter = [User.assignedRestaurantId == restaurant_id]
-                if clean_owner_phone:
-                    user_filter.append(User.phone.contains(clean_owner_phone))
-
-                stmt = select(FcmToken.token).join(User).where(or_(*user_filter))
-                res = await session.execute(stmt)
-                tokens = list(set(res.scalars().all()))
-                if tokens:
-                    await send_fcm_notification(tokens=tokens, title=rest_title, body=rest_body, data=rest_data)
-
-                if clean_owner_phone:
-                    await send_fcm_topic_notification(f"phone_{clean_owner_phone}", rest_title, rest_body, rest_data)
 
             # Notify Delivery Riders for food orders
             rider_food_title = f"🛵 New Food Order #{readable_id} to Deliver!"
@@ -536,13 +505,8 @@ async def dispatch_isolated_order_fcm_notifications(
                 "role": "DELIVERY",
                 "timestamp": now_ts,
             }
-            await send_fcm_topic_notification("delivery_orders", rider_food_title, rider_food_body, rider_food_data)
-            async with AsyncSessionLocal() as session:
-                rider_stmt = select(FcmToken.token).join(User).where(User.role.in_([Role.DELIVERY, Role.RIDER]))
-                rider_res = await session.execute(rider_stmt)
-                rider_tokens = list(set(rider_res.scalars().all()))
-                if rider_tokens:
-                    await send_fcm_notification(tokens=rider_tokens, title=rider_food_title, body=rider_food_body, data=rider_food_data)
+            rider_topic = f"delivery_orders_{store_id}" if store_id else "delivery_orders"
+            await send_fcm_topic_notification(rider_topic, rider_food_title, rider_food_body, rider_food_data)
 
         else:
             # 2. GROCERY DARK STORE ISOLATED NOTIFICATION
@@ -573,35 +537,11 @@ async def dispatch_isolated_order_fcm_notifications(
                 "timestamp": now_ts,
             }
 
-            # STRICT HUB ISOLATION (Ghatampur vs Akbarpur):
-            if store_id:
-                # 1. Alert ONLY this specific hub's pickers & riders
-                await send_fcm_topic_notification(f"picker_orders_{store_id}", grocery_title, grocery_body, grocery_data)
-                await send_fcm_topic_notification(f"delivery_orders_{store_id}", admin_rider_title, admin_rider_body, admin_rider_data)
-                await send_fcm_topic_notification(f"staff_orders_{store_id}", grocery_title, grocery_body, grocery_data)
-
-                # 2. Direct FCM tokens to staff assigned STRICTLY to this hub
-                async with AsyncSessionLocal() as session:
-                    picker_stmt = select(FcmToken.token).join(User).where(
-                        and_(User.role == Role.PICKER, or_(User.assignedStoreId == store_id, User.assignedStoreId.is_(None)))
-                    )
-                    picker_res = await session.execute(picker_stmt)
-                    picker_tokens = list(set(picker_res.scalars().all()))
-                    if picker_tokens:
-                        await send_fcm_notification(tokens=picker_tokens, title=grocery_title, body=grocery_body, data=grocery_data)
-
-                    rider_stmt = select(FcmToken.token).join(User).where(
-                        and_(User.role.in_([Role.DELIVERY, Role.RIDER]), or_(User.assignedStoreId == store_id, User.assignedStoreId.is_(None)))
-                    )
-                    rider_res = await session.execute(rider_stmt)
-                    rider_tokens = list(set(rider_res.scalars().all()))
-                    if rider_tokens:
-                        await send_fcm_notification(tokens=rider_tokens, title=admin_rider_title, body=admin_rider_body, data=admin_rider_data)
-            else:
-                # Fallback only if no hub is assigned
-                await send_fcm_topic_notification("picker_orders", grocery_title, grocery_body, grocery_data)
-                await send_fcm_topic_notification("delivery_orders", admin_rider_title, admin_rider_body, admin_rider_data)
-                await send_fcm_topic_notification("staff_orders", grocery_title, grocery_body, grocery_data)
+            # Broadcast ONCE to store-specific picker and delivery topics
+            picker_topic = f"picker_orders_{store_id}" if store_id else "picker_orders"
+            rider_topic = f"delivery_orders_{store_id}" if store_id else "delivery_orders"
+            await send_fcm_topic_notification(picker_topic, grocery_title, grocery_body, grocery_data)
+            await send_fcm_topic_notification(rider_topic, admin_rider_title, admin_rider_body, admin_rider_data)
 
         # ── 3. BROADCAST TO ALL ADMINS & MANAGERS (Single Canonical Topic) ──
         is_admin_pending = (status_val == "ADMIN_PENDING")
@@ -624,7 +564,6 @@ async def dispatch_isolated_order_fcm_notifications(
         }
 
         # Broadcast ONCE to the canonical 'admin_orders' topic
-        # (Prevents 3-4 duplicate alerts from admin_orders + admin_orders_all + direct token pushes)
         await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
     except Exception as e:
         logger.error(f"Failed to dispatch isolated FCM push notification: {str(e)}")
@@ -640,15 +579,15 @@ async def dispatch_isolated_status_update_notifications(
 ):
     """
     Dispatches order status update notifications with strict outlet isolation:
-    - Restaurant orders ONLY alert restaurant-specific topics & assigned chefs. Never grocery pickers or other restaurants.
-    - Grocery orders ONLY alert darkstore pickers. Never restaurant consoles or chefs.
+    - Restaurant orders ONLY alert canonical restaurant topic.
+    - Grocery orders ONLY alert darkstore pickers.
     """
     try:
         now_ts = str(int(datetime.utcnow().timestamp() * 1000))
         base_order_no = re.sub(r'-[GR\d]+$', '', readable_id or "")
 
         if restaurant_id:
-            # 1. RESTAURANT / KITCHEN ISOLATED STATUS UPDATE
+            # 1. RESTAURANT / KITCHEN ISOLATED STATUS UPDATE (Single canonical topic)
             rest_title = f"👨‍🍳 Order #{base_order_no} Status: {status_val}"
             rest_body = f"Order #{base_order_no} for {shop_name or 'Kitchen'} updated to {status_val}."
             rest_data = {
@@ -661,34 +600,11 @@ async def dispatch_isolated_status_update_notifications(
                 "timestamp": now_ts,
             }
 
-            # Broadcast to this restaurant's specific topics ONLY
+            # Broadcast ONCE to this restaurant's canonical topic
             await send_fcm_topic_notification(f"restaurant_{restaurant_id}", rest_title, rest_body, rest_data)
-            await send_fcm_topic_notification(f"kitchen_{restaurant_id}", rest_title, rest_body, rest_data)
-            await send_fcm_topic_notification(f"restaurant_orders_{restaurant_id}", rest_title, rest_body, rest_data)
-
-            # Direct FCM push to chefs & owners assigned ONLY to this specific restaurant
-            async with AsyncSessionLocal() as session:
-                rest_res = await session.execute(select(Restaurant).where(Restaurant.id == restaurant_id))
-                rest_obj = rest_res.scalars().first()
-                clean_owner_phone = ""
-                if rest_obj and rest_obj.ownerPhone:
-                    clean_owner_phone = re.sub(r'\D', '', str(rest_obj.ownerPhone))[-10:]
-
-                user_filter = [User.assignedRestaurantId == restaurant_id]
-                if clean_owner_phone:
-                    user_filter.append(User.phone.contains(clean_owner_phone))
-
-                stmt = select(FcmToken.token).join(User).where(or_(*user_filter))
-                res = await session.execute(stmt)
-                tokens = list(set(res.scalars().all()))
-                if tokens:
-                    await send_fcm_notification(tokens=tokens, title=rest_title, body=rest_body, data=rest_data)
-
-            # Notify Delivery Riders for order fulfillment progress (Admins only receive new order alerts)
-            await send_fcm_topic_notification("delivery_orders", admin_rider_title, admin_rider_body, admin_rider_data)
 
         else:
-            # 2. GROCERY DARK STORE ISOLATED STATUS UPDATE
+            # 2. GROCERY DARK STORE ISOLATED STATUS UPDATE (Single canonical topic)
             store_label = f" [{store_id.replace('hub-', '').upper()}]" if store_id else ""
             grocery_title = f"📦 Grocery Order #{base_order_no} -> {status_val}{store_label}"
             grocery_body = f"Order #{base_order_no} status changed to {status_val}."
@@ -703,14 +619,8 @@ async def dispatch_isolated_status_update_notifications(
                 "timestamp": now_ts,
             }
 
-            if store_id:
-                await send_fcm_topic_notification(f"picker_orders_{store_id}", grocery_title, grocery_body, grocery_data)
-                await send_fcm_topic_notification(f"staff_orders_{store_id}", grocery_title, grocery_body, grocery_data)
-                await send_fcm_topic_notification(f"delivery_orders_{store_id}", grocery_title, grocery_body, grocery_data)
-            else:
-                await send_fcm_topic_notification("picker_orders", grocery_title, grocery_body, grocery_data)
-                await send_fcm_topic_notification("staff_orders", grocery_title, grocery_body, grocery_data)
-                await send_fcm_topic_notification("delivery_orders", grocery_title, grocery_body, grocery_data)
+            picker_topic = f"picker_orders_{store_id}" if store_id else "picker_orders"
+            await send_fcm_topic_notification(picker_topic, grocery_title, grocery_body, grocery_data)
     except Exception as e:
         logger.error(f"Failed to dispatch isolated status FCM push notification: {str(e)}")
 
