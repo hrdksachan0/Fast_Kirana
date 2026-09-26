@@ -1798,7 +1798,7 @@ async def get_daily_finance_reconciliation(
             "counterCashCount": counter_cash_count,
             "riderCashTotal": round(rider_cash_total, 2),
             "riderCashCount": rider_cash_count,
-            "pendingCodTotal": round(pendingCod_total, 2),
+            "pendingCodTotal": round(pending_cod_total, 2),
             "pendingCodCount": pending_cod_count,
             "pendingOnlineTotal": round(pending_online_total, 2),
             "pendingOnlineCount": pending_online_count,

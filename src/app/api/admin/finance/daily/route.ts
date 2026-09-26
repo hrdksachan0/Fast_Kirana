@@ -1,25 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/auth'
 import { Role } from '@prisma/client'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth()
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const role = (session.user.role || '').toUpperCase()
-    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    const adminResult = await requireAdmin(req)
+    if (adminResult.error) return adminResult.error
+    const session = adminResult.session
 
     const { searchParams } = new URL(req.url)
     const dateStr = searchParams.get('date') // YYYY-MM-DD
-    const storeId = searchParams.get('storeId')
+    const rawStoreId = searchParams.get('storeId')
+    const storeId = getEffectiveStoreId(session, rawStoreId)
 
     // Time calculation for IST (UTC + 5:30)
     const now = new Date()

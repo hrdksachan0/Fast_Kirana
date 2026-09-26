@@ -23,6 +23,7 @@ class AppDesignSystem {
   static const Color primaryBg = Color(0xFFFFF5F6);
   static const Color cafeAccent = Color(0xFFF97316); // Tailwind Orange 500
   static const Color accent = Color(0xFF00B140); // Leaf Green
+  static const Color primaryGreen = Color(0xFF00B140); // Alias for leaf green
   static const Color accentLight = Color(0xFF3CC070);
   static const Color accentDark = Color(0xFF008736);
   static const Color discount = Color(0xFFFF6B35);

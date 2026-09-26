@@ -512,7 +512,7 @@ class ProductRepository {
         return existing;
       }
       final diskCatalog = await _loadProductsFromDisk(targetHub);
-      if (diskCatalog.isNotEmpty) {
+      if (diskCatalog != null && diskCatalog.isNotEmpty) {
         _hubCachedProducts[targetHub] = diskCatalog;
         debugPrint('[ProductRepo] 304 Not Modified: Restored ${diskCatalog.length} items from disk cache');
         return diskCatalog;
