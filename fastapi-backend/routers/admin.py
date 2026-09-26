@@ -1650,8 +1650,11 @@ async def get_daily_finance_reconciliation(
     all_orders = order_res.scalars().all()
 
     # 3. Categorize transactions and compute metrics
-    online_bank_total = 0.0
-    online_order_count = 0
+    cashfree_online_total = 0.0
+    cashfree_online_count = 0
+
+    rider_qr_total = 0.0
+    rider_qr_count = 0
 
     counter_cash_total = 0.0
     counter_cash_count = 0
@@ -1672,22 +1675,25 @@ async def get_daily_finance_reconciliation(
         p_status = str(o.paymentStatus.value if hasattr(o.paymentStatus, "value") else o.paymentStatus).upper()
         p_method = str(o.paymentMethod.value if hasattr(o.paymentMethod, "value") else o.paymentMethod).upper()
         o_status = str(o.status.value if hasattr(o.status, "value") else o.status).upper()
+        notes = str(o.notes or "")
+        is_doorstep_qr = "Doorstep UPI" in notes or "QR Scan" in notes or "Rider QR" in notes
 
         if o_status == "CANCELLED":
             verified_by = "Order Cancelled"
             category = "CANCELLED"
         elif p_status == "PAID":
-            if p_method in ["UPI", "CARD", "WALLET", "ONLINE", "RAZORPAY"]:
-                online_bank_total += tot
-                online_order_count += 1
-                category = "ONLINE_BANK"
-                # Check if it was rider QR or gateway auto
-                if o.deliveryUserId and o_status == "DELIVERED":
-                    verified_by = f"Rider QR ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
-                else:
-                    verified_by = "Cashfree Gateway (Auto)"
+            if is_doorstep_qr:
+                rider_qr_total += tot
+                rider_qr_count += 1
+                category = "RIDER_QR"
+                verified_by = f"Rider QR ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
+            elif p_method in ["UPI", "CARD", "WALLET", "ONLINE", "RAZORPAY", "CASHFREE"]:
+                cashfree_online_total += tot
+                cashfree_online_count += 1
+                category = "CASHFREE_ONLINE"
+                verified_by = "Cashfree Gateway (Auto)"
             else:
-                # COD marked as PAID
+                # COD marked as PAID in cash
                 if o.cashSettledToAdmin:
                     counter_cash_total += tot
                     counter_cash_count += 1
@@ -1697,7 +1703,7 @@ async def get_daily_finance_reconciliation(
                     rider_cash_total += tot
                     rider_cash_count += 1
                     category = "RIDER_CASH"
-                    verified_by = f"Rider In-Hand ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
+                    verified_by = f"Rider Cash ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
                 else:
                     counter_cash_total += tot
                     counter_cash_count += 1
@@ -1711,7 +1717,7 @@ async def get_daily_finance_reconciliation(
                     rider_cash_total += tot
                     rider_cash_count += 1
                     category = "RIDER_CASH"
-                    verified_by = f"Rider In-Hand ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
+                    verified_by = f"Rider Cash ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
                 else:
                     pending_cod_total += tot
                     pending_cod_count += 1
@@ -1774,19 +1780,25 @@ async def get_daily_finance_reconciliation(
                 "todayDeliveredTotal": sum(t["total"] for t in r_del_orders),
             })
 
+    online_bank_total = cashfree_online_total + rider_qr_total
+    online_order_count = cashfree_online_count + rider_qr_count
     total_reconciled = online_bank_total + counter_cash_total + rider_cash_total
 
     return {
         "date": target_date.strftime("%Y-%m-%d"),
-        "isToday": target_date == now_ist.date(),
+        "isToday": (target_date == now_ist.date()),
         "summary": {
+            "cashfreeOnlineTotal": round(cashfree_online_total, 2),
+            "cashfreeOnlineCount": cashfree_online_count,
+            "riderQrTotal": round(rider_qr_total, 2),
+            "riderQrCount": rider_qr_count,
             "onlineBankTotal": round(online_bank_total, 2),
             "onlineOrderCount": online_order_count,
             "counterCashTotal": round(counter_cash_total, 2),
             "counterCashCount": counter_cash_count,
             "riderCashTotal": round(rider_cash_total, 2),
             "riderCashCount": rider_cash_count,
-            "pendingCodTotal": round(pending_cod_total, 2),
+            "pendingCodTotal": round(pendingCod_total, 2),
             "pendingCodCount": pending_cod_count,
             "pendingOnlineTotal": round(pending_online_total, 2),
             "pendingOnlineCount": pending_online_count,

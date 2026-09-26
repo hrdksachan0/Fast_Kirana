@@ -27,6 +27,10 @@ import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 
 interface FinanceSummary {
+  cashfreeOnlineTotal?: number
+  cashfreeOnlineCount?: number
+  riderQrTotal?: number
+  riderQrCount?: number
   onlineBankTotal: number
   onlineOrderCount: number
   counterCashTotal: number
@@ -86,7 +90,7 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'ONLINE' | 'RIDER_CASH' | 'COUNTER_CASH' | 'PENDING'>('ALL')
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'CASHFREE' | 'RIDER_QR' | 'RIDER_CASH' | 'COUNTER_CASH' | 'PENDING'>('ALL')
   const [settlingRiderId, setSettlingRiderId] = useState<string | null>(null)
 
   // Fetch Finance Data
@@ -179,7 +183,8 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
 
     return data.transactions.filter((tx) => {
       // Category Filter
-      if (activeFilter === 'ONLINE' && tx.category !== 'ONLINE_BANK') return false
+      if (activeFilter === 'CASHFREE' && tx.category !== 'CASHFREE_ONLINE' && tx.category !== 'ONLINE_BANK') return false
+      if (activeFilter === 'RIDER_QR' && tx.category !== 'RIDER_QR') return false
       if (activeFilter === 'RIDER_CASH' && tx.category !== 'RIDER_CASH') return false
       if (activeFilter === 'COUNTER_CASH' && tx.category !== 'COUNTER_CASH') return false
       if (activeFilter === 'PENDING' && !tx.category.startsWith('PENDING')) return false
@@ -340,73 +345,96 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
         </div>
       </div>
 
-      {/* ── 3-PILLAR SUMMARY STAT CARDS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* PILLAR 1: Online in Bank / Cashfree */}
+      {/* ── 4-PILLAR RECONCILIATION STAT CARDS ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* PILLAR 1: Cashfree PG Online */}
         <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/25 rounded-3xl p-5 shadow-xs">
           <div className="flex items-start justify-between">
             <div className="p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-              <CreditCard className="w-6 h-6" />
+              <CreditCard className="w-5 h-5" />
             </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-500/30">
-              <Check className="w-3 h-3" /> Bank / PG Direct
+            <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-500/30">
+              <Check className="w-3 h-3" /> Bank / Cashfree
             </span>
           </div>
-          <div className="mt-4">
-            <p className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-              1. Online in Bank (Cashfree & UPI)
+          <div className="mt-3">
+            <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+              1. Cashfree PG Online
             </p>
-            <h3 className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-              {formatPrice(summary.onlineBankTotal)}
+            <h3 className="text-2xl lg:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+              {formatPrice(summary.cashfreeOnlineTotal || 0)}
             </h3>
-            <p className="text-xs font-semibold text-text-secondary mt-1">
-              {summary.onlineOrderCount} orders paid digitally & verified
+            <p className="text-[11px] font-semibold text-text-secondary mt-1">
+              {summary.cashfreeOnlineCount || 0} prepaid gateway orders
             </p>
           </div>
         </div>
 
-        {/* PILLAR 2: Counter Cash (Galla) */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border border-blue-500/25 rounded-3xl p-5 shadow-xs">
+        {/* PILLAR 2: Rider Doorstep QR */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/25 rounded-3xl p-5 shadow-xs">
           <div className="flex items-start justify-between">
-            <div className="p-3 rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-400">
-              <Banknote className="w-6 h-6" />
+            <div className="p-3 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-600 dark:text-purple-400">
+              <QrCode className="w-5 h-5" />
             </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full border border-blue-500/30">
-              <Building2 className="w-3 h-3" /> In Safe / Register
+            <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2.5 py-1 rounded-full border border-purple-500/30">
+              <Check className="w-3 h-3" /> Bank / Rider QR
             </span>
           </div>
-          <div className="mt-4">
-            <p className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-              2. Counter Cash (Galla)
+          <div className="mt-3">
+            <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+              2. Rider Doorstep QR
             </p>
-            <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400 mt-1">
-              {formatPrice(summary.counterCashTotal)}
+            <h3 className="text-2xl lg:text-3xl font-black text-purple-600 dark:text-purple-400 mt-1">
+              {formatPrice(summary.riderQrTotal || 0)}
             </h3>
-            <p className="text-xs font-semibold text-text-secondary mt-1">
-              {summary.counterCashCount} orders cash settled at counter
+            <p className="text-[11px] font-semibold text-text-secondary mt-1">
+              {summary.riderQrCount || 0} scanned UPI at delivery
             </p>
           </div>
         </div>
 
-        {/* PILLAR 3: Cash with Riders */}
+        {/* PILLAR 3: Rider Cash In-Hand */}
         <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 rounded-3xl p-5 shadow-xs">
           <div className="flex items-start justify-between">
             <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400">
-              <Truck className="w-6 h-6" />
+              <Truck className="w-5 h-5" />
             </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-full border border-amber-500/30">
-              <Clock className="w-3 h-3" /> With Delivery Fleet
+            <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-full border border-amber-500/30">
+              <Clock className="w-3 h-3" /> In Fleet Hands
             </span>
           </div>
-          <div className="mt-4">
-            <p className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-              3. Cash with Riders (Unsettled)
+          <div className="mt-3">
+            <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+              3. Rider Cash (Unsettled)
             </p>
-            <h3 className="text-3xl font-black text-amber-600 dark:text-amber-400 mt-1">
+            <h3 className="text-2xl lg:text-3xl font-black text-amber-600 dark:text-amber-400 mt-1">
               {formatPrice(summary.riderCashTotal)}
             </h3>
-            <p className="text-xs font-semibold text-text-secondary mt-1">
-              {summary.riderCashCount} delivered COD orders in rider hands
+            <p className="text-[11px] font-semibold text-text-secondary mt-1">
+              {summary.riderCashCount} delivered COD orders
+            </p>
+          </div>
+        </div>
+
+        {/* PILLAR 4: Counter Cash (Galla) */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border border-blue-500/25 rounded-3xl p-5 shadow-xs">
+          <div className="flex items-start justify-between">
+            <div className="p-3 rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-400">
+              <Banknote className="w-5 h-5" />
+            </div>
+            <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full border border-blue-500/30">
+              <Building2 className="w-3 h-3" /> In Safe / Register
+            </span>
+          </div>
+          <div className="mt-3">
+            <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+              4. Counter Cash (Galla)
+            </p>
+            <h3 className="text-2xl lg:text-3xl font-black text-blue-600 dark:text-blue-400 mt-1">
+              {formatPrice(summary.counterCashTotal)}
+            </h3>
+            <p className="text-[11px] font-semibold text-text-secondary mt-1">
+              {summary.counterCashCount} orders settled at counter
             </p>
           </div>
         </div>
@@ -534,14 +562,25 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
           </button>
           <button
             type="button"
-            onClick={() => setActiveFilter('ONLINE')}
+            onClick={() => setActiveFilter('CASHFREE')}
             className={`px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all ${
-              activeFilter === 'ONLINE'
+              activeFilter === 'CASHFREE'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
             }`}
           >
-            📱 Online Bank ({summary.onlineOrderCount})
+            💳 Cashfree Online ({summary.cashfreeOnlineCount || 0})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveFilter('RIDER_QR')}
+            className={`px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all ${
+              activeFilter === 'RIDER_QR'
+                ? 'bg-purple-600 text-white shadow-xs'
+                : 'bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20'
+            }`}
+          >
+            📱 Rider QR ({summary.riderQrCount || 0})
           </button>
           <button
             type="button"
@@ -571,8 +610,8 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
               onClick={() => setActiveFilter('PENDING')}
               className={`px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all ${
                 activeFilter === 'PENDING'
-                  ? 'bg-purple-600 text-white shadow-xs'
-                  : 'bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20'
               }`}
             >
               ⏳ On The Way ({summary.pendingCodCount})
@@ -625,7 +664,7 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                       {tx.paymentStatus === 'PAID' ? (
                         <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md">
                           <CheckCircle2 className="w-2.5 h-2.5" />
-                          {tx.paymentMethod} (PAID)
+                          {tx.category === 'CASHFREE_ONLINE' ? 'UPI (Cashfree)' : tx.category === 'RIDER_QR' ? 'UPI (Rider QR)' : `${tx.paymentMethod} (PAID)`}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md">
@@ -637,8 +676,10 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg border ${
-                          tx.category === 'ONLINE_BANK'
+                          tx.category === 'CASHFREE_ONLINE' || tx.category === 'ONLINE_BANK'
                             ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                            : tx.category === 'RIDER_QR'
+                            ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30'
                             : tx.category === 'RIDER_CASH'
                             ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
                             : tx.category === 'COUNTER_CASH'
@@ -650,9 +691,13 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center whitespace-nowrap">
-                      {tx.category === 'ONLINE_BANK' ? (
+                      {tx.category === 'CASHFREE_ONLINE' || tx.category === 'ONLINE_BANK' ? (
                         <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-center gap-1">
-                          <Check className="w-3 h-3" /> In Bank
+                          <Check className="w-3 h-3" /> In Bank (Cashfree)
+                        </span>
+                      ) : tx.category === 'RIDER_QR' ? (
+                        <span className="text-[10px] font-bold text-purple-600 flex items-center justify-center gap-1">
+                          <Check className="w-3 h-3" /> In Bank (Rider QR)
                         </span>
                       ) : tx.cashSettled ? (
                         <span className="text-[10px] font-bold text-blue-600 flex items-center justify-center gap-1">
@@ -660,7 +705,7 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                         </span>
                       ) : tx.category === 'RIDER_CASH' ? (
                         <span className="text-[10px] font-bold text-amber-600 flex items-center justify-center gap-1">
-                          <Clock className="w-3 h-3" /> In Rider Hand
+                          <Clock className="w-3 h-3" /> With Rider (Cash)
                         </span>
                       ) : (
                         <span className="text-[10px] font-medium text-text-secondary">

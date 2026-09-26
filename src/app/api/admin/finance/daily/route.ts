@@ -54,8 +54,10 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
-    let onlineBankTotal = 0
-    let onlineOrderCount = 0
+    let cashfreeOnlineTotal = 0
+    let cashfreeOnlineCount = 0
+    let riderQrTotal = 0
+    let riderQrCount = 0
     let counterCashTotal = 0
     let counterCashCount = 0
     let riderCashTotal = 0
@@ -70,6 +72,8 @@ export async function GET(req: NextRequest) {
       const pStatus = String(o.paymentStatus || 'PENDING').toUpperCase()
       const pMethod = String(o.paymentMethod || 'COD').toUpperCase()
       const oStatus = String(o.status || 'PENDING').toUpperCase()
+      const notes = String(o.notes || '')
+      const isDoorstepQr = notes.includes('Doorstep UPI') || notes.includes('QR Scan') || notes.includes('Rider QR')
 
       let category = 'PENDING_DELIVERY'
       let verifiedBy = 'Pending'
@@ -78,17 +82,20 @@ export async function GET(req: NextRequest) {
         category = 'CANCELLED'
         verifiedBy = 'Order Cancelled'
       } else if (pStatus === 'PAID') {
-        if (['UPI', 'CARD', 'WALLET', 'ONLINE', 'RAZORPAY'].includes(pMethod)) {
-          onlineBankTotal += tot
-          onlineOrderCount += 1
-          category = 'ONLINE_BANK'
-          if (o.deliveryUserId && oStatus === 'DELIVERED') {
-            verifiedBy = `Rider QR (${o.deliveryUser?.name || 'Rider'})`
-          } else {
-            verifiedBy = 'Cashfree Gateway (Auto)'
-          }
+        if (isDoorstepQr) {
+          // Rider collected UPI at doorstep
+          riderQrTotal += tot
+          riderQrCount += 1
+          category = 'RIDER_QR'
+          verifiedBy = `Rider QR (${o.deliveryUser?.name || 'Rider'})`
+        } else if (['UPI', 'CARD', 'WALLET', 'ONLINE', 'RAZORPAY', 'CASHFREE'].includes(pMethod)) {
+          // Paid directly via Cashfree / Online Gateway
+          cashfreeOnlineTotal += tot
+          cashfreeOnlineCount += 1
+          category = 'CASHFREE_ONLINE'
+          verifiedBy = 'Cashfree Gateway (Auto)'
         } else {
-          // COD Paid
+          // COD Paid in Cash
           if (o.cashSettledToAdmin) {
             counterCashTotal += tot
             counterCashCount += 1
@@ -98,7 +105,7 @@ export async function GET(req: NextRequest) {
             riderCashTotal += tot
             riderCashCount += 1
             category = 'RIDER_CASH'
-            verifiedBy = `Rider In-Hand (${o.deliveryUser?.name || 'Rider'})`
+            verifiedBy = `Rider Cash (${o.deliveryUser?.name || 'Rider'})`
           } else {
             counterCashTotal += tot
             counterCashCount += 1
@@ -107,12 +114,13 @@ export async function GET(req: NextRequest) {
           }
         }
       } else {
+        // Pending
         if (pMethod === 'COD') {
           if (oStatus === 'DELIVERED') {
             riderCashTotal += tot
             riderCashCount += 1
             category = 'RIDER_CASH'
-            verifiedBy = `Rider In-Hand (${o.deliveryUser?.name || 'Rider'})`
+            verifiedBy = `Rider Cash (${o.deliveryUser?.name || 'Rider'})`
           } else {
             pendingCodTotal += tot
             pendingCodCount += 1
@@ -183,12 +191,18 @@ export async function GET(req: NextRequest) {
       })
       .filter((r: any) => r.cashInHand > 0 || r.todayDeliveredCount > 0)
 
+    const onlineBankTotal = cashfreeOnlineTotal + riderQrTotal
+    const onlineOrderCount = cashfreeOnlineCount + riderQrCount
     const totalReconciled = onlineBankTotal + counterCashTotal + riderCashTotal
 
     return NextResponse.json({
       date: targetDateStr,
       isToday: targetDateStr === currentIst.toISOString().slice(0, 10),
       summary: {
+        cashfreeOnlineTotal: Math.round(cashfreeOnlineTotal * 100) / 100,
+        cashfreeOnlineCount,
+        riderQrTotal: Math.round(riderQrTotal * 100) / 100,
+        riderQrCount,
         onlineBankTotal: Math.round(onlineBankTotal * 100) / 100,
         onlineOrderCount,
         counterCashTotal: Math.round(counterCashTotal * 100) / 100,
