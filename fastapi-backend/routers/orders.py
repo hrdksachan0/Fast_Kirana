@@ -266,34 +266,73 @@ async def geocode_address(address_str: str) -> Optional[dict]:
 
 
 async def send_whatsapp_alert(phone: str, text: str) -> bool:
-    token = os.getenv("WHATSAPP_TOKEN")
-    phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+    token = os.getenv("WHATSAPP_TOKEN", "").strip().strip('"').strip("'")
+    phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip().strip('"').strip("'")
+    template_name = os.getenv("WHATSAPP_ORDER_TEMPLATE_NAME", "fastkirana_order").strip().strip('"').strip("'")
+    template_lang = os.getenv("WHATSAPP_TEMPLATE_LANG", "en").strip().strip('"').strip("'")
 
     if not token or not phone_id:
         logger.info(f"[WHATSAPP MOCK] To {phone}: {text}")
         return True
 
-    clean_phone = f"91{phone}" if len(phone) == 10 else phone
+    digits = "".join(c for c in str(phone) if c.isdigit())
+    clean_phone = digits if len(digits) > 10 else f"91{digits[-10:]}"
     url = f"https://graph.facebook.com/v20.0/{phone_id}/messages"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
-    body = {
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": clean_phone,
-        "type": "text",
-        "text": {
-            "body": text,
-        },
-    }
+    # Meta WhatsApp Cloud API requires pre-approved template for proactive business-initiated notifications
+    body = None
+    if template_name:
+        body = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": clean_phone,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": template_lang},
+                "components": [
+                    {
+                        "type": "body",
+                        "parameters": [
+                            {
+                                "type": "text",
+                                "text": text,
+                            }
+                        ],
+                    }
+                ],
+            },
+        }
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(url, json=body, headers=headers)
-            return resp.status_code in [200, 201]
+            if body:
+                resp = await client.post(url, json=body, headers=headers)
+                if resp.status_code in [200, 201]:
+                    logger.info(f"[WhatsApp Alert] Sent template {template_name} to {clean_phone} successfully")
+                    return True
+                logger.warning(f"[WhatsApp Alert] Template send failed ({resp.status_code}): {resp.text}. Trying text fallback...")
+
+            # Fallback to direct text message
+            text_body = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": clean_phone,
+                "type": "text",
+                "text": {
+                    "body": text,
+                },
+            }
+            resp = await client.post(url, json=text_body, headers=headers)
+            if resp.status_code in [200, 201]:
+                logger.info(f"[WhatsApp Alert] Sent text message to {clean_phone} successfully")
+                return True
+            logger.error(f"[WhatsApp Alert] Failed to send WhatsApp message to {clean_phone}: {resp.status_code} - {resp.text}")
+            return False
     except Exception as e:
         logger.error(f"WhatsApp alert API exception: {str(e)}")
         return False
