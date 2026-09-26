@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request, Response
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Response, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from pydantic import BaseModel, Field
@@ -206,6 +206,7 @@ async def create_cashfree_order(
 @router.post("/payments/cashfree/verify")
 async def verify_cashfree_payment(
     req: CashfreeVerifyRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     if not req.orderId and not req.cfOrderId:
@@ -295,16 +296,25 @@ async def verify_cashfree_payment(
 
         await db.commit()
 
-        # Push Notification
+        # Push & WhatsApp Notification
         try:
+            from utils.firebase import send_fcm_topic_notification
             send_fcm_topic_notification(
                 topic="admin_alerts",
                 title="💳 Cashfree Payment Confirmed",
                 body=f"Order #{order.readableId or order.id[:8]} paid successfully (₹{float(order.total):.2f})",
                 data={"orderId": order.id, "type": "payment_confirmed"}
             )
+            from routers.orders import send_whatsapp_alert
+            admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total):.0f}. Payment: PAID ✅"
+            for admin_phone in ["7054470303", "8112849854"]:
+                if background_tasks:
+                    background_tasks.add_task(send_whatsapp_alert, admin_phone, admin_text)
+                else:
+                    import asyncio
+                    asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text))
         except Exception as fcm_err:
-            logger.warning(f"FCM notification error: {fcm_err}")
+            logger.warning(f"Cashfree payment notification error: {fcm_err}")
 
         return {
             "success": True,
@@ -397,5 +407,14 @@ async def cashfree_webhook(
                         co.status = OrderStatus.PENDING
 
             await db.commit()
+
+            try:
+                from routers.orders import send_whatsapp_alert
+                admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total):.0f}. Payment: PAID ✅"
+                import asyncio
+                for admin_phone in ["7054470303", "8112849854"]:
+                    asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text))
+            except Exception as wa_err:
+                logger.warning(f"Cashfree webhook WhatsApp notification error: {wa_err}")
 
     return Response(status_code=200, content="OK")
