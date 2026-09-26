@@ -597,18 +597,17 @@ async function drainPendingQueue() {
           console.log(`[Queue Worker] 🚀 Printing queued order #${readableId} (Enqueued at: ${job.created_at})...`);
           const success = await handlePrintRequest(orderId, false, job.payload || {});
 
-          if (success) {
-            // Mark ALL pending rows matching order_id or readable_id as PRINTED
-            try {
+            // Mark job row and any sibling rows matching orderId as PRINTED
+            await supabase
+              .from('kitchen_kot_queue')
+              .update({ status: 'PRINTED', printed_at: new Date().toISOString() })
+              .eq('id', job.id);
+
+            if (orderId) {
               await supabase
                 .from('kitchen_kot_queue')
                 .update({ status: 'PRINTED', printed_at: new Date().toISOString() })
-                .or(`order_id.eq.${orderId},readable_id.eq.${readableId}`);
-            } catch (_) {
-              await supabase
-                .from('kitchen_kot_queue')
-                .update({ status: 'PRINTED', printed_at: new Date().toISOString() })
-                .eq('id', job.id);
+                .eq('order_id', orderId);
             }
 
             console.log(`[Queue Worker] ✅ Queued order #${readableId} marked PRINTED in database.`);
