@@ -597,6 +597,7 @@ async function drainPendingQueue() {
           console.log(`[Queue Worker] 🚀 Printing queued order #${readableId} (Enqueued at: ${job.created_at})...`);
           const success = await handlePrintRequest(orderId, false, job.payload || {});
 
+          if (success) {
             // Mark job row and any sibling rows matching orderId as PRINTED
             await supabase
               .from('kitchen_kot_queue')
