@@ -284,38 +284,40 @@ async def send_whatsapp_alert(phone: str, text: str) -> bool:
     }
 
     # Meta WhatsApp Cloud API requires pre-approved template for proactive business-initiated notifications
-    body = None
-    if template_name:
-        body = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": clean_phone,
-            "type": "template",
-            "template": {
-                "name": template_name,
-                "language": {"code": template_lang},
-                "components": [
-                    {
-                        "type": "body",
-                        "parameters": [
-                            {
-                                "type": "text",
-                                "text": text,
-                            }
-                        ],
-                    }
-                ],
-            },
-        }
+    templates_to_try = [template_name]
+    for alt in ["fastkirana_otp", "fastkirana_order"]:
+        if alt not in templates_to_try:
+            templates_to_try.append(alt)
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            if body:
+            for t_name in templates_to_try:
+                body = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": clean_phone,
+                    "type": "template",
+                    "template": {
+                        "name": t_name,
+                        "language": {"code": template_lang},
+                        "components": [
+                            {
+                                "type": "body",
+                                "parameters": [
+                                    {
+                                        "type": "text",
+                                        "text": text,
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                }
                 resp = await client.post(url, json=body, headers=headers)
                 if resp.status_code in [200, 201]:
-                    logger.info(f"[WhatsApp Alert] Sent template {template_name} to {clean_phone} successfully")
+                    logger.info(f"[WhatsApp Alert] Sent template {t_name} to {clean_phone} successfully")
                     return True
-                logger.warning(f"[WhatsApp Alert] Template send failed ({resp.status_code}): {resp.text}. Trying text fallback...")
+                logger.warning(f"[WhatsApp Alert] Template {t_name} failed ({resp.status_code}): {resp.text}")
 
             # Fallback to direct text message
             text_body = {

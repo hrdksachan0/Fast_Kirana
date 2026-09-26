@@ -16,6 +16,7 @@ import {
   HelpCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { fastApi } from '@/lib/fastapi'
 
 export interface StoreStatusPillProps {
   storeId?: string
@@ -80,28 +81,49 @@ export function StoreStatusPill({
   const handleToggle = async (action: 'RESUME' | 'PAUSE' | 'CLOSE_TODAY') => {
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/serviceability/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetType: 'HUB',
-          targetId: storeId,
-          action,
-          pauseMinutes: action === 'PAUSE' ? selectedDuration : undefined,
-          reason: selectedReason,
-          customReasonText: selectedReason === 'OTHER' ? customReason : undefined,
-        }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to update store status')
+      const payload = {
+        targetType: 'HUB',
+        targetId: storeId,
+        action,
+        pauseMinutes: action === 'PAUSE' ? selectedDuration : undefined,
+        reason: selectedReason,
+        customReasonText: selectedReason === 'OTHER' ? customReason : undefined,
       }
+
+      // Call FastAPI backend via the fastApi client (handles auth tokens)
+      const data = await fastApi.post<{
+        success: boolean
+        message?: string
+        error?: string
+        detail?: string
+      }>('/api/settings/serviceability/toggle', payload)
 
       toast.success(data.message || 'Store status updated successfully!')
       setModalOpen(false)
       onStatusUpdated?.()
     } catch (err: any) {
+      // Fallback: try Next.js API route if FastAPI fails
+      try {
+        const res = await fetch('/api/admin/serviceability/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetType: 'HUB',
+            targetId: storeId,
+            action,
+            pauseMinutes: action === 'PAUSE' ? selectedDuration : undefined,
+            reason: selectedReason,
+            customReasonText: selectedReason === 'OTHER' ? customReason : undefined,
+          }),
+        })
+        const fallbackData = await res.json()
+        if (res.ok) {
+          toast.success(fallbackData.message || 'Store status updated!')
+          setModalOpen(false)
+          onStatusUpdated?.()
+          return
+        }
+      } catch (_) {}
       toast.error(err.message || 'Failed to update store status')
     } finally {
       setLoading(false)

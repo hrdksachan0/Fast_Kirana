@@ -302,6 +302,167 @@ async def update_settings(
 
 
 # ============================================================
+# SERVICEABILITY TOGGLE (PAUSE / RESUME / CLOSE_TODAY)
+# ============================================================
+
+from pydantic import BaseModel
+from typing import Literal
+
+
+class ServiceabilityToggleRequest(BaseModel):
+    targetType: Literal["HUB", "RESTAURANT", "GLOBAL"] = "HUB"
+    targetId: Optional[str] = None
+    action: Literal["RESUME", "PAUSE", "CLOSE_TODAY"]
+    pauseMinutes: Optional[int] = None
+    reason: Optional[str] = "OPERATIONAL_ADJUSTMENT"
+    customReasonText: Optional[str] = None
+
+
+@router.post("/serviceability/toggle")
+async def toggle_serviceability(
+    body: ServiceabilityToggleRequest,
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Pause, resume, or close-for-day a hub, restaurant, or the global platform.
+    Zepto/Swiggy-style busy-mode toggling with mandatory reason for audit trail.
+    """
+    final_reason = (body.customReasonText or "").strip() or body.reason or "OPERATIONAL_ADJUSTMENT"
+    now = datetime.utcnow()
+
+    pause_until: Optional[datetime] = None
+    is_open = True
+
+    if body.action == "PAUSE":
+        minutes = body.pauseMinutes or 30
+        pause_until = now + timedelta(minutes=minutes)
+        is_open = False
+    elif body.action == "CLOSE_TODAY":
+        pause_until = None
+        is_open = False
+    elif body.action == "RESUME":
+        pause_until = None
+        is_open = True
+
+    # ── 1. HUB / DARKSTORE ──
+    if body.targetType == "HUB":
+        store_id = body.targetId or "hub-209206"
+
+        hub_res = await db.execute(select(DarkStore).where(DarkStore.id == store_id))
+        hub = hub_res.scalars().first()
+        if not hub:
+            raise HTTPException(status_code=404, detail=f"Hub '{store_id}' not found")
+
+        hub.groceryOpen = is_open
+        hub.pauseUntil = pause_until
+        hub.closeReason = None if is_open else final_reason
+        hub.closedByUserId = current_admin.get("id")
+
+        # Sync StoreSetting for backward compatibility
+        store_prefix = f"store:{store_id}:"
+        scoped_key = f"{store_prefix}grocery_mart_open"
+        scoped_res = await db.execute(select(StoreSetting).where(StoreSetting.key == scoped_key))
+        scoped_setting = scoped_res.scalars().first()
+        if scoped_setting:
+            scoped_setting.value = str(is_open).lower()
+        else:
+            db.add(StoreSetting(key=scoped_key, value=str(is_open).lower()))
+
+        # If it's the central hub, also sync the global legacy key
+        if store_id == "hub-209206":
+            base_res = await db.execute(select(StoreSetting).where(StoreSetting.key == "grocery_mart_open"))
+            base_setting = base_res.scalars().first()
+            if base_setting:
+                base_setting.value = str(is_open).lower()
+            else:
+                db.add(StoreSetting(key="grocery_mart_open", value=str(is_open).lower()))
+
+        await db.commit()
+        clear_stores_cache()
+        clear_settings_cache()
+
+        status_str = "ONLINE" if is_open else ("PAUSED" if pause_until else "CLOSED")
+        if is_open:
+            msg = f"{hub.name} is now ONLINE and accepting orders."
+        elif pause_until:
+            msg = f"{hub.name} paused until {pause_until.strftime('%I:%M %p')}."
+        else:
+            msg = f"{hub.name} is CLOSED for the day."
+
+        return {
+            "success": True,
+            "targetType": "HUB",
+            "targetId": store_id,
+            "storeName": hub.name,
+            "status": status_str,
+            "pauseUntil": pause_until.isoformat() if pause_until else None,
+            "closeReason": hub.closeReason,
+            "message": msg,
+        }
+
+    # ── 2. RESTAURANT / KITCHEN ──
+    if body.targetType == "RESTAURANT":
+        if not body.targetId:
+            raise HTTPException(status_code=400, detail="targetId (restaurantId) is required for RESTAURANT toggle")
+
+        rest_res = await db.execute(select(Restaurant).where(Restaurant.id == body.targetId))
+        rest = rest_res.scalars().first()
+        if not rest:
+            raise HTTPException(status_code=404, detail=f"Restaurant '{body.targetId}' not found")
+
+        rest.isOpen = is_open
+        rest.pauseUntil = pause_until
+        rest.closeReason = None if is_open else final_reason
+
+        await db.commit()
+        clear_stores_cache()
+        clear_settings_cache()
+
+        status_str = "ONLINE" if is_open else ("PAUSED" if pause_until else "CLOSED")
+        if is_open:
+            msg = f"{rest.name} kitchen is now OPEN."
+        elif pause_until:
+            msg = f"{rest.name} paused until {pause_until.strftime('%I:%M %p')}."
+        else:
+            msg = f"{rest.name} kitchen is CLOSED."
+
+        return {
+            "success": True,
+            "targetType": "RESTAURANT",
+            "targetId": body.targetId,
+            "restaurantName": rest.name,
+            "status": status_str,
+            "pauseUntil": rest.pauseUntil.isoformat() if rest.pauseUntil else None,
+            "closeReason": rest.closeReason,
+            "message": msg,
+        }
+
+    # ── 3. GLOBAL PLATFORM ──
+    if body.targetType == "GLOBAL":
+        for key_name in ["global_store_open", "grocery_mart_open"]:
+            key_res = await db.execute(select(StoreSetting).where(StoreSetting.key == key_name))
+            existing = key_res.scalars().first()
+            if existing:
+                existing.value = str(is_open).lower()
+            else:
+                db.add(StoreSetting(key=key_name, value=str(is_open).lower()))
+
+        await db.commit()
+        clear_stores_cache()
+        clear_settings_cache()
+
+        return {
+            "success": True,
+            "targetType": "GLOBAL",
+            "status": "ONLINE" if is_open else "CLOSED",
+            "message": "Global platform is ONLINE." if is_open else "Global platform is set to EMERGENCY OFFLINE.",
+        }
+
+    raise HTTPException(status_code=400, detail="Invalid targetType")
+
+
+# ============================================================
 # LOCATION CHECKS & WAITLIST
 # ============================================================
 
