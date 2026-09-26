@@ -9,6 +9,7 @@ import uuid
 import re
 import math
 import hashlib
+import time
 
 from database import get_db
 from models import Product, Category, Review, Order, OrderItem, StoreInventory, Restaurant, User, StoreSetting, DarkStore
@@ -792,7 +793,7 @@ async def get_products(
             if p.restaurantId:
                 local_stk = p.stock or 99999
             else:
-                local_stk = inv_map.get(p.id, 0)
+                local_stk = inv_map.get(p.id, p.stock or 0)
         else:
             local_stk = None
         serialized_products.append(serialize_product(p, local_stock=local_stk))
@@ -817,14 +818,11 @@ async def get_products(
         search_cache[cache_key] = response_data
         search_cache_time[cache_key] = now
 
-    # ETag generation and 304 Not Modified support
+    # Provide ETag header for client validation but always deliver full JSON payload to prevent empty cold-start state
     if is_cacheable and serialized_products:
         etag_seed = f"{len(serialized_products)}:{serialized_products[0]['id']}:{serialized_products[-1]['id']}:{serialized_products[0].get('stock', 0)}:{serialized_products[-1].get('stock', 0)}"
         etag = f'"{hashlib.md5(etag_seed.encode()).hexdigest()[:16]}"'
         response.headers["ETag"] = etag
-        client_etag = request.headers.get("if-none-match")
-        if client_etag and client_etag.strip() == etag:
-            return Response(status_code=304, headers={"ETag": etag, "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60"})
 
     response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60" if is_cacheable else "no-store, max-age=0, must-revalidate"
     if is_cacheable:

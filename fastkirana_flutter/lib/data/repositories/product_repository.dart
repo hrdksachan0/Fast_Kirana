@@ -511,6 +511,23 @@ class ProductRepository {
         debugPrint('[ProductRepo] 304 Not Modified: Using in-memory cached catalog (${existing.length} items)');
         return existing;
       }
+      final diskCatalog = await _loadProductsFromDisk(targetHub);
+      if (diskCatalog.isNotEmpty) {
+        _hubCachedProducts[targetHub] = diskCatalog;
+        debugPrint('[ProductRepo] 304 Not Modified: Restored ${diskCatalog.length} items from disk cache');
+        return diskCatalog;
+      }
+      // If memory and disk caches are empty, invalidate cached ETag and fetch fresh
+      _eTags.remove(etagKey);
+      return getProducts(
+        limit: limit,
+        search: search,
+        restaurantId: restaurantId,
+        category: category,
+        categoryId: categoryId,
+        storeId: storeId,
+        includeRestaurants: includeRestaurants,
+      );
     }
 
     final newETag = response.headers.value('etag');
