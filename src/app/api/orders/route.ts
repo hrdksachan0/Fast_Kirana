@@ -1577,7 +1577,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!userId && !sessionPhone) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json([])
   }
 
   try {

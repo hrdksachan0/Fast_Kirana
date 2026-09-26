@@ -140,6 +140,24 @@ def to_iso_utc(dt: Optional[datetime]) -> Optional[str]:
     return dt.isoformat()
 
 
+def safe_enum_str(val: Any, fallback: str = "") -> str:
+    if val is None:
+        return fallback
+    if hasattr(val, "value"):
+        return str(val.value)
+    return str(val)
+
+
+def safe_float(val: Any, default: float = 0.0) -> float:
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
+
 async def geocode_address(address_str: str) -> Optional[dict]:
     api_key = os.getenv("GOOGLE_MAPS_API_KEY") or os.getenv("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY")
     if not api_key:
@@ -1801,206 +1819,225 @@ async def list_orders(
     """
     List user orders (normal user gets combined view; staff gets dashboard flat view).
     """
-    user_id = current_user.get("id") or current_user.get("sub") if current_user else userId
-    role = current_user.get("role") if current_user else None
-    is_staff = role in ["ADMIN", "CHEF", "PICKER", "DELIVERY"]
+    try:
+        user_id = (current_user.get("id") or current_user.get("sub")) if current_user else userId
+        role = (current_user.get("role") or "").upper() if current_user else None
+        is_staff = role in ["ADMIN", "CHEF", "PICKER", "DELIVERY"]
 
-    if not user_id and not is_staff:
-        return []
+        if not user_id and not is_staff:
+            return []
 
-    if is_staff and all:
-        # Fetch all orders in the system with user details
-        stmt = select(Order, User).join(User, Order.userId == User.id).options(
+        if is_staff and all:
+            # Fetch all orders in the system with user details
+            stmt = select(Order, User).outerjoin(User, Order.userId == User.id).options(
+                selectinload(Order.items),
+                selectinload(Order.address)
+            ).order_by(Order.createdAt.desc()).limit(1000)
+            
+            res = await db.execute(stmt)
+            rows = res.all()
+
+            orders_list = []
+            for order, user in rows:
+                orders_list.append({
+                    "id": order.id,
+                    "readableId": order.readableId,
+                    "userId": order.userId,
+                    "addressId": order.addressId,
+                    "status": safe_enum_str(order.status, "PENDING"),
+                    "subtotal": safe_float(order.subtotal),
+                    "discount": safe_float(order.discount),
+                    "deliveryFee": safe_float(order.deliveryFee),
+                    "taxes": safe_float(order.taxes),
+                    "miscFee": safe_float(order.miscFee),
+                    "total": safe_float(order.total),
+                    "paymentMethod": safe_enum_str(order.paymentMethod, "COD"),
+                    "paymentStatus": safe_enum_str(order.paymentStatus, "PENDING"),
+                    "estimatedDelivery": to_iso_utc(order.estimatedDelivery),
+                    "createdAt": to_iso_utc(order.createdAt),
+                    "updatedAt": to_iso_utc(order.updatedAt),
+                    "deliveryMethod": order.deliveryMethod or "DELIVERY",
+                    "isB2B": bool(order.isB2B),
+                    "shopName": order.shopName,
+                    "shopPhone": order.shopPhone,
+                    "restaurantId": order.restaurantId,
+                    "userName": user.name if user else None,
+                    "userEmail": user.email if user else None,
+                    "userPhone": order.shopPhone or (order.address.phone if order.address else (user.phone if user else None)),
+                    "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": safe_float(i.price), "imageUrl": i.imageUrl} for i in order.items],
+                    "address": {
+                        "id": order.address.id,
+                        "label": order.address.label,
+                        "houseNo": order.address.houseNo,
+                        "street": order.address.street,
+                        "area": order.address.area,
+                        "city": order.address.city,
+                        "pincode": order.address.pincode,
+                        "phone": order.address.phone
+                    } if order.address else None
+                })
+            return orders_list
+
+        # Normal user fetches their orders
+        email = (current_user.get("email") or "").lower().strip() if current_user else ""
+        raw_phone = current_user.get("phone") if current_user else None
+        phone = get_last_10_digits(raw_phone) if raw_phone else ""
+
+        # If user_id is provided but email/phone missing from session, fetch user profile from DB
+        if user_id and not email and not phone:
+            try:
+                u_stmt = select(User).where(User.id == user_id)
+                u_res = await db.execute(u_stmt)
+                db_u = u_res.scalars().first()
+                if db_u:
+                    if db_u.email:
+                        email = db_u.email.lower().strip()
+                    if db_u.phone:
+                        phone = get_last_10_digits(db_u.phone)
+            except Exception as e:
+                logger.warning(f"Could not load user profile for user_id={user_id}: {e}")
+
+        # Find matching user IDs
+        user_ids = {user_id}
+        if email or phone:
+            u_filters = []
+            if email:
+                u_filters.append(func.lower(User.email) == email)
+            if phone:
+                u_filters.append(User.phone.like(f"%{phone}"))
+            
+            users_stmt = select(User.id).where(or_(*u_filters))
+            users_res = await db.execute(users_stmt)
+            user_ids.update(users_res.scalars().all())
+
+        # Query matching orders
+        orders_stmt = select(Order).options(
             selectinload(Order.items),
             selectinload(Order.address)
-        ).order_by(Order.createdAt.desc()).limit(1000)
+        ).where(Order.userId.in_(user_ids)).order_by(Order.createdAt.desc())
         
-        res = await db.execute(stmt)
-        rows = res.all()
+        orders_res = await db.execute(orders_stmt)
+        raw_orders = orders_res.scalars().all()
 
-        orders_list = []
-        for order, user in rows:
-            orders_list.append({
-                "id": order.id,
-                "readableId": order.readableId,
-                "userId": order.userId,
-                "addressId": order.addressId,
-                "status": order.status.value,
-                "subtotal": float(order.subtotal),
-                "discount": float(order.discount),
-                "deliveryFee": float(order.deliveryFee),
-                "taxes": float(order.taxes),
-                "miscFee": float(order.miscFee),
-                "total": float(order.total),
-                "paymentMethod": order.paymentMethod.value,
-                "paymentStatus": order.paymentStatus.value,
-                "estimatedDelivery": to_iso_utc(order.estimatedDelivery),
-                "createdAt": to_iso_utc(order.createdAt),
-                "updatedAt": to_iso_utc(order.updatedAt),
-                "deliveryMethod": order.deliveryMethod,
-                "isB2B": order.isB2B,
-                "shopName": order.shopName,
-                "shopPhone": order.shopPhone,
-                "restaurantId": order.restaurantId,
-                "userName": user.name,
-                "userEmail": user.email,
-                "userPhone": order.shopPhone or (order.address.phone if order.address else user.phone),
-                "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": float(i.price), "imageUrl": i.imageUrl} for i in order.items],
-                "address": {
-                    "id": order.address.id,
-                    "label": order.address.label,
-                    "houseNo": order.address.houseNo,
-                    "street": order.address.street,
-                    "area": order.address.area,
-                    "city": order.address.city,
-                    "pincode": order.address.pincode,
-                    "phone": order.address.phone
-                } if order.address else None
-            })
-        return orders_list
+        # Customer grouping
+        def get_combined_status(statuses: List[str]) -> str:
+            active = [s for s in statuses if s != "CANCELLED"]
+            if not active:
+                return "CANCELLED"
+            if "PENDING" in active:
+                return "PENDING"
+            if "CONFIRMED" in active:
+                return "CONFIRMED"
+            if "PACKED" in active:
+                return "PACKED"
+            if "SHIPPED" in active:
+                return "SHIPPED"
+            return "DELIVERED"
 
-    # Normal user fetches their orders
-    email = current_user.get("email", "").lower().strip()
-    phone = get_last_10_digits(current_user.get("phone", ""))
+        grouped_orders = []
+        processed_ids = set()
 
-    # Find matching user IDs
-    user_ids = {user_id}
-    if email or phone:
-        u_filters = []
-        if email:
-            u_filters.append(func.lower(User.email) == email)
-        if phone:
-            u_filters.append(User.phone.like(f"%{phone}"))
-        
-        users_stmt = select(User.id).where(or_(*u_filters))
-        users_res = await db.execute(users_stmt)
-        user_ids.update(users_res.scalars().all())
-
-    # Query matching orders
-    orders_stmt = select(Order).options(
-        selectinload(Order.items),
-        selectinload(Order.address)
-    ).where(Order.userId.in_(user_ids)).order_by(Order.createdAt.desc())
-    
-    orders_res = await db.execute(orders_stmt)
-    raw_orders = orders_res.scalars().all()
-
-    # Customer grouping
-    def get_combined_status(statuses: List[str]) -> str:
-        active = [s for s in statuses if s != "CANCELLED"]
-        if not active:
-            return "CANCELLED"
-        if "PENDING" in active:
-            return "PENDING"
-        if "CONFIRMED" in active:
-            return "CONFIRMED"
-        if "PACKED" in active:
-            return "PACKED"
-        if "SHIPPED" in active:
-            return "SHIPPED"
-        return "DELIVERED"
-
-    grouped_orders = []
-    processed_ids = set()
-
-    for ord in raw_orders:
-        if ord.id in processed_ids:
-            continue
-
-        related = []
-        for o in raw_orders:
-            if o.id in processed_ids:
+        for ord in raw_orders:
+            if ord.id in processed_ids:
                 continue
-            if o.id == ord.id:
-                related.append(o)
-            elif ord.combinedId and o.combinedId == ord.combinedId:
-                related.append(o)
-            else:
-                time_diff = abs((o.createdAt - ord.createdAt).total_seconds()) if o.createdAt and ord.createdAt else 999
-                if o.userId == ord.userId and time_diff <= 10:
+
+            related = []
+            for o in raw_orders:
+                if o.id in processed_ids:
+                    continue
+                if o.id == ord.id:
                     related.append(o)
+                elif ord.combinedId and o.combinedId == ord.combinedId:
+                    related.append(o)
+                else:
+                    time_diff = abs((o.createdAt - ord.createdAt).total_seconds()) if o.createdAt and ord.createdAt else 999
+                    if o.userId == ord.userId and time_diff <= 10:
+                        related.append(o)
 
-        for r in related:
-            processed_ids.add(r.id)
-
-        if len(related) == 1:
-            o = related[0]
-            grouped_orders.append({
-                "id": o.id,
-                "readableId": o.readableId,
-                "status": o.status.value,
-                "subtotal": float(o.subtotal or 0.0),
-                "discount": float(o.discount or 0.0),
-                "deliveryFee": float(o.deliveryFee or 0.0),
-                "taxes": float(o.taxes or 0.0),
-                "miscFee": float(o.miscFee or 0.0),
-                "total": float(o.total or 0.0),
-                "paymentMethod": o.paymentMethod.value,
-                "paymentStatus": o.paymentStatus.value,
-                "deliveryMethod": o.deliveryMethod or "DELIVERY",
-                "createdAt": to_iso_utc(o.createdAt),
-                "shopName": o.shopName or ("FastKirana DarkStore" if not o.restaurantId else "Restaurant"),
-                "restaurantId": o.restaurantId,
-                "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": float(i.price), "imageUrl": i.imageUrl} for i in o.items],
-                "address": {
-                    "id": o.address.id,
-                    "label": o.address.label,
-                    "houseNo": o.address.houseNo,
-                    "street": o.address.street,
-                    "area": o.address.area,
-                    "city": o.address.city,
-                    "pincode": o.address.pincode,
-                    "phone": o.address.phone
-                } if o.address else None,
-                "isCombined": False
-            })
-        else:
-            main_order = next((r for r in related if r.orderType != OrderType.RESTAURANT), related[0])
-            statuses = [r.status.value for r in related]
-            combined_status = get_combined_status(statuses)
-
-            all_items = []
-            seen_item_ids = set()
             for r in related:
-                for i in r.items:
-                    if i.id not in seen_item_ids:
-                        seen_item_ids.add(i.id)
-                        all_items.append({"id": i.id, "name": i.name, "quantity": i.quantity, "price": float(i.price), "imageUrl": i.imageUrl})
+                processed_ids.add(r.id)
 
-            base_readable_id = re.sub(r'-[GR\d]+$', '', main_order.readableId or "")
+            if len(related) == 1:
+                o = related[0]
+                grouped_orders.append({
+                    "id": o.id,
+                    "readableId": o.readableId,
+                    "status": safe_enum_str(o.status, "PENDING"),
+                    "subtotal": safe_float(o.subtotal),
+                    "discount": safe_float(o.discount),
+                    "deliveryFee": safe_float(o.deliveryFee),
+                    "taxes": safe_float(o.taxes),
+                    "miscFee": safe_float(o.miscFee),
+                    "total": safe_float(o.total),
+                    "paymentMethod": safe_enum_str(o.paymentMethod, "COD"),
+                    "paymentStatus": safe_enum_str(o.paymentStatus, "PENDING"),
+                    "deliveryMethod": o.deliveryMethod or "DELIVERY",
+                    "createdAt": to_iso_utc(o.createdAt),
+                    "shopName": o.shopName or ("FastKirana DarkStore" if not o.restaurantId else "Restaurant"),
+                    "restaurantId": o.restaurantId,
+                    "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": safe_float(i.price), "imageUrl": i.imageUrl} for i in o.items],
+                    "address": {
+                        "id": o.address.id,
+                        "label": o.address.label,
+                        "houseNo": o.address.houseNo,
+                        "street": o.address.street,
+                        "area": o.address.area,
+                        "city": o.address.city,
+                        "pincode": o.address.pincode,
+                        "phone": o.address.phone
+                    } if o.address else None,
+                    "isCombined": False
+                })
+            else:
+                main_order = next((r for r in related if safe_enum_str(r.orderType) != "RESTAURANT"), related[0])
+                statuses = [safe_enum_str(r.status, "PENDING") for r in related]
+                combined_status = get_combined_status(statuses)
 
-            grouped_orders.append({
-                "id": main_order.id,
-                "readableId": base_readable_id,
-                "status": combined_status,
-                "subtotal": sum(float(r.subtotal or 0.0) for r in related),
-                "discount": sum(float(r.discount or 0.0) for r in related),
-                "deliveryFee": sum(float(r.deliveryFee or 0.0) for r in related),
-                "taxes": sum(float(r.taxes or 0.0) for r in related),
-                "miscFee": sum(float(r.miscFee or 0.0) for r in related),
-                "total": sum(float(r.total or 0.0) for r in related),
-                "paymentMethod": main_order.paymentMethod.value,
-                "paymentStatus": main_order.paymentStatus.value,
-                "deliveryMethod": main_order.deliveryMethod or "DELIVERY",
-                "createdAt": to_iso_utc(main_order.createdAt),
-                "shopName": main_order.shopName or ("FastKirana DarkStore" if not main_order.restaurantId else "Restaurant"),
-                "restaurantId": main_order.restaurantId,
-                "items": all_items,
-                "address": {
-                    "id": main_order.address.id,
-                    "label": main_order.address.label,
-                    "houseNo": main_order.address.houseNo,
-                    "street": main_order.address.street,
-                    "area": main_order.address.area,
-                    "city": main_order.address.city,
-                    "pincode": main_order.address.pincode,
-                    "phone": main_order.address.phone
-                } if main_order.address else None,
-                "isCombined": True
-            })
+                all_items = []
+                seen_item_ids = set()
+                for r in related:
+                    for i in r.items:
+                        if i.id not in seen_item_ids:
+                            seen_item_ids.add(i.id)
+                            all_items.append({"id": i.id, "name": i.name, "quantity": i.quantity, "price": safe_float(i.price), "imageUrl": i.imageUrl})
 
-    grouped_orders.sort(key=lambda x: x["createdAt"] or "", reverse=True)
-    return grouped_orders
+                base_readable_id = re.sub(r'-[GR\d]+$', '', main_order.readableId or "")
+
+                grouped_orders.append({
+                    "id": main_order.id,
+                    "readableId": base_readable_id,
+                    "status": combined_status,
+                    "subtotal": sum(safe_float(r.subtotal) for r in related),
+                    "discount": sum(safe_float(r.discount) for r in related),
+                    "deliveryFee": sum(safe_float(r.deliveryFee) for r in related),
+                    "taxes": sum(safe_float(r.taxes) for r in related),
+                    "miscFee": sum(safe_float(r.miscFee) for r in related),
+                    "total": sum(safe_float(r.total) for r in related),
+                    "paymentMethod": safe_enum_str(main_order.paymentMethod, "COD"),
+                    "paymentStatus": safe_enum_str(main_order.paymentStatus, "PENDING"),
+                    "deliveryMethod": main_order.deliveryMethod or "DELIVERY",
+                    "createdAt": to_iso_utc(main_order.createdAt),
+                    "shopName": main_order.shopName or ("FastKirana DarkStore" if not main_order.restaurantId else "Restaurant"),
+                    "restaurantId": main_order.restaurantId,
+                    "items": all_items,
+                    "address": {
+                        "id": main_order.address.id,
+                        "label": main_order.address.label,
+                        "houseNo": main_order.address.houseNo,
+                        "street": main_order.address.street,
+                        "area": main_order.address.area,
+                        "city": main_order.address.city,
+                        "pincode": main_order.address.pincode,
+                        "phone": main_order.address.phone
+                    } if main_order.address else None,
+                    "isCombined": True
+                })
+
+        grouped_orders.sort(key=lambda x: x["createdAt"] or "", reverse=True)
+        return grouped_orders
+    except Exception as e:
+        logger.exception(f"Unhandled error in list_orders: {e}")
+        return []
 
 
 @router.get("/{id}")
@@ -2077,24 +2114,24 @@ async def get_order_details(
                     return "SHIPPED"
                 return "DELIVERED"
 
-            statuses = [o.status.value for o in combined_orders]
+            statuses = [safe_enum_str(o.status, "PENDING") for o in combined_orders]
             combined_status = get_combined_status(statuses)
 
             base_readable_id = re.sub(r'-[GR\d]+$', '', order.readableId or "")
 
             sub_orders = []
             for co in combined_orders:
-                is_rest = co.orderType == OrderType.RESTAURANT or bool(co.restaurantId)
+                is_rest = safe_enum_str(co.orderType) == "RESTAURANT" or bool(co.restaurantId)
                 sub_orders.append({
                     "id": co.id,
                     "readableId": co.readableId,
                     "type": "RESTAURANT" if is_rest else "GROCERY",
                     "shopName": co.shopName or ("Restaurant" if is_rest else "FastKirana Grocery"),
-                    "status": co.status.value,
-                    "subtotal": float(co.subtotal),
-                    "total": float(co.total),
+                    "status": safe_enum_str(co.status, "PENDING"),
+                    "subtotal": safe_float(co.subtotal),
+                    "total": safe_float(co.total),
                     "itemsCount": len(co.items),
-                    "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": float(i.price), "imageUrl": i.imageUrl} for i in co.items],
+                    "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": safe_float(i.price), "imageUrl": i.imageUrl} for i in co.items],
                 })
 
             grocery_sub = next((s for s in sub_orders if s["type"] == "GROCERY"), None)
@@ -2111,19 +2148,19 @@ async def get_order_details(
                 "readableId": base_readable_id,
                 "baseReadableId": base_readable_id,
                 "status": combined_status,
-                "subtotal": sum(float(co.subtotal) for co in combined_orders),
-                "discount": sum(float(co.discount) for co in combined_orders),
-                "deliveryFee": sum(float(co.deliveryFee) for co in combined_orders),
-                "taxes": sum(float(co.taxes) for co in combined_orders),
-                "miscFee": sum(float(co.miscFee) for co in combined_orders),
-                "total": sum(float(co.total) for co in combined_orders),
-                "paymentMethod": order.paymentMethod.value,
-                "paymentStatus": order.paymentStatus.value,
+                "subtotal": sum(safe_float(co.subtotal) for co in combined_orders),
+                "discount": sum(safe_float(co.discount) for co in combined_orders),
+                "deliveryFee": sum(safe_float(co.deliveryFee) for co in combined_orders),
+                "taxes": sum(safe_float(co.taxes) for co in combined_orders),
+                "miscFee": sum(safe_float(co.miscFee) for co in combined_orders),
+                "total": sum(safe_float(co.total) for co in combined_orders),
+                "paymentMethod": safe_enum_str(order.paymentMethod, "COD"),
+                "paymentStatus": safe_enum_str(order.paymentStatus, "PENDING"),
                 "estimatedDelivery": to_iso_utc(order.estimatedDelivery),
                 "createdAt": to_iso_utc(order.createdAt),
                 "updatedAt": to_iso_utc(order.updatedAt),
-                "deliveryMethod": order.deliveryMethod,
-                "isB2B": order.isB2B,
+                "deliveryMethod": order.deliveryMethod or "DELIVERY",
+                "isB2B": bool(order.isB2B),
                 "shopName": order.shopName,
                 "shopPhone": order.shopPhone,
                 "deliveryLat": order.deliveryLat,
@@ -2139,7 +2176,7 @@ async def get_order_details(
                     "email": user_email,
                     "phone": order.user.phone if order.user else None,
                 } if order.user else None,
-                "items": [{"id": i.id, "productId": i.productId, "name": i.name, "price": float(i.price), "quantity": i.quantity, "imageUrl": i.imageUrl} for i in all_items],
+                "items": [{"id": i.id, "productId": i.productId, "name": i.name, "price": safe_float(i.price), "quantity": i.quantity, "imageUrl": i.imageUrl} for i in all_items],
                 "address": {
                     "id": order.address.id,
                     "label": order.address.label,
@@ -2170,20 +2207,20 @@ async def get_order_details(
         "readableId": order.readableId,
         "userId": order.userId,
         "addressId": order.addressId,
-        "status": order.status.value,
-        "subtotal": float(order.subtotal),
-        "discount": float(order.discount),
-        "deliveryFee": float(order.deliveryFee),
-        "taxes": float(order.taxes),
-        "miscFee": float(order.miscFee),
-        "total": float(order.total),
-        "paymentMethod": order.paymentMethod.value,
-        "paymentStatus": order.paymentStatus.value,
+        "status": safe_enum_str(order.status, "PENDING"),
+        "subtotal": safe_float(order.subtotal),
+        "discount": safe_float(order.discount),
+        "deliveryFee": safe_float(order.deliveryFee),
+        "taxes": safe_float(order.taxes),
+        "miscFee": safe_float(order.miscFee),
+        "total": safe_float(order.total),
+        "paymentMethod": safe_enum_str(order.paymentMethod, "COD"),
+        "paymentStatus": safe_enum_str(order.paymentStatus, "PENDING"),
         "estimatedDelivery": to_iso_utc(order.estimatedDelivery),
         "createdAt": to_iso_utc(order.createdAt),
         "updatedAt": to_iso_utc(order.updatedAt),
-        "deliveryMethod": order.deliveryMethod,
-        "isB2B": order.isB2B,
+        "deliveryMethod": order.deliveryMethod or "DELIVERY",
+        "isB2B": bool(order.isB2B),
         "shopName": order.shopName,
         "shopPhone": order.shopPhone,
         "deliveryLat": order.deliveryLat,
@@ -2199,7 +2236,7 @@ async def get_order_details(
             "email": user_email,
             "phone": order.user.phone if order.user else None,
         } if order.user else None,
-        "items": [{"id": i.id, "productId": i.productId, "name": i.name, "price": float(i.price), "quantity": i.quantity, "imageUrl": i.imageUrl} for i in order.items],
+        "items": [{"id": i.id, "productId": i.productId, "name": i.name, "price": safe_float(i.price), "quantity": i.quantity, "imageUrl": i.imageUrl} for i in order.items],
         "address": {
             "id": order.address.id,
             "label": order.address.label,
