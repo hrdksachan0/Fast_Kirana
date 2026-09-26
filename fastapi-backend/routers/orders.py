@@ -338,6 +338,70 @@ async def send_whatsapp_alert(phone: str, text: str) -> bool:
         return False
 
 
+@router.get("/test-whatsapp-alert")
+async def test_whatsapp_alert_endpoint(phone: str = "7054470303"):
+    """Live diagnostic endpoint to test WhatsApp alert delivery and inspect Meta response."""
+    token = os.getenv("WHATSAPP_TOKEN", "").strip().strip('"').strip("'")
+    phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip().strip('"').strip("'")
+    template_name = os.getenv("WHATSAPP_ORDER_TEMPLATE_NAME", "fastkirana_order").strip().strip('"').strip("'")
+    template_lang = os.getenv("WHATSAPP_TEMPLATE_LANG", "en").strip().strip('"').strip("'")
+
+    digits = "".join(c for c in str(phone) if c.isdigit())
+    clean_phone = digits if len(digits) > 10 else f"91{digits[-10:]}"
+    url = f"https://graph.facebook.com/v20.0/{phone_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    template_body = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": clean_phone,
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": template_lang},
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [{"type": "text", "text": "Test Order #1993 for FastKirana of Rs.320"}],
+                }
+            ],
+        },
+    }
+
+    results = {}
+    async with httpx.AsyncClient(timeout=10) as client:
+        try:
+            r = await client.post(url, json=template_body, headers=headers)
+            results["template_attempt"] = {
+                "status": r.status_code,
+                "body": r.json() if "application/json" in r.headers.get("content-type", "") else r.text,
+            }
+        except Exception as e:
+            results["template_attempt"] = {"error": str(e)}
+
+        try:
+            waba_r = await client.get(f"https://graph.facebook.com/v20.0/{phone_id}?fields=whatsapp_business_account", headers=headers)
+            waba_id = waba_r.json().get("whatsapp_business_account", {}).get("id")
+            if waba_id:
+                t_r = await client.get(f"https://graph.facebook.com/v20.0/{waba_id}/message_templates?name={template_name}", headers=headers)
+                results["template_schema"] = t_r.json()
+        except Exception as e:
+            results["template_schema_error"] = str(e)
+
+    return {
+        "phone": clean_phone,
+        "phone_id": phone_id,
+        "token_prefix": token[:10] + "..." if token else None,
+        "template_name": template_name,
+        "template_lang": template_lang,
+        "results": results,
+    }
+
+
+
 async def upload_to_cloudinary(base64_data: str, cloud_name: str, upload_preset: str) -> str:
     file_data = base64_data
     if not file_data.startswith("data:"):
@@ -1828,7 +1892,6 @@ async def create_order(
                     if clean and clean not in hub_phones:
                         hub_phones.append(clean)
 
-            app_url = "fastkirana.in"
             cust_name = user_obj.name or "Customer"
             cust_phone = address.phone if address else (user_obj.phone or "N/A")
 
@@ -1836,11 +1899,11 @@ async def create_order(
                 combined_total = sum(safe_float(o.total) for o in created_orders)
                 base_id = str(main_order.readableId or "").split("-")[0]
                 outlets = " + ".join(dict.fromkeys(o.shopName for o in created_orders if o.shopName)) or "Store & Restaurant"
-                admin_text = f"New 🛒 Combined Order #{base_id} [{outlets}] of ₹{combined_total:.0f} from {cust_name} ({cust_phone}). Manage: {app_url}/admin"
+                admin_text = f"#{base_id} [{outlets}, Rs.{combined_total:.0f}, {cust_name}: {cust_phone}]"
             else:
                 o = created_orders[0]
-                order_type_str = "🍽️ Restaurant Order" if o.restaurantId else "📦 Order"
-                admin_text = f"New {order_type_str} #{o.readableId} for [{o.shopName}] of ₹{safe_float(o.total):.0f} from {cust_name} ({cust_phone}). Manage: {app_url}/admin"
+                outlet = o.shopName or ("Restaurant" if o.restaurantId else "Dark Store")
+                admin_text = f"#{o.readableId} [{outlet}, Rs.{safe_float(o.total):.0f}, {cust_name}: {cust_phone}]"
 
             for phone in hub_phones:
                 background_tasks.add_task(send_whatsapp_alert, phone, admin_text)

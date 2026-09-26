@@ -323,13 +323,12 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         const baseDisplayId = (primaryOrder.readableId || primaryOrder.id).replace(/-[GR]\d*$/i, '')
         const combinedTotal = createdOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
         const outlets = Array.from(new Set(createdOrders.map((o) => o.shopName || (o.restaurantId ? 'Restaurant' : 'FastKirana Dark Store')))).join(' + ')
-        adminText = `New 🛒 Combined Order #${baseDisplayId} [${outlets}] of ₹${combinedTotal.toFixed(0)} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
+        adminText = `#${baseDisplayId} [${outlets}, Rs.${combinedTotal.toFixed(0)}, ${customerName}: ${customerPhone}]`
       } else {
         const order = createdOrders[0]
         const displayId = order.readableId ? String(order.readableId) : order.id.slice(-6).toUpperCase()
-        const outletName = order.shopName || (order.restaurantId ? 'Restaurant' : 'FastKirana Dark Store')
-        const orderTypeStr = order.restaurantId ? '🍽️ Restaurant Order' : '📦 Order'
-        adminText = `New ${orderTypeStr} #${displayId} for [${outletName}] of ₹${Number(order.total).toFixed(0)} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
+        const outletName = order.shopName || (order.restaurantId ? 'Restaurant' : 'Dark Store')
+        adminText = `#${displayId} [${outletName}, Rs.${Number(order.total).toFixed(0)}, ${customerName}: ${customerPhone}]`
       }
 
       const whatsappPromises = Array.from(orderAlertPhones).map((phone) =>
