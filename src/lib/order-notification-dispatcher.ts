@@ -135,31 +135,8 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
           }
         )
 
-        // Broadcast to Admin Topics
-        if (order.storeId) {
-          sendTopicWithRetry(fcmMessaging, { topic: `admin_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
-          if (!isAdminPending && !isRestaurant) {
-            sendTopicWithRetry(fcmMessaging, { topic: `staff_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
-          }
-        } else {
-          sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
-          if (!isAdminPending && !isRestaurant) {
-            sendTopicWithRetry(fcmMessaging, { topic: 'staff_orders', ...staffPayload }).catch(() => {})
-          }
-        }
-        // Super admin / HQ global listener
-        sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_all', ...staffPayload }).catch(() => {})
-
-        // Direct FCM push to all registered Admin device tokens
-        const adminTokens = await prisma.fcmToken.findMany({
-          where: {
-            user: { role: Role.ADMIN },
-          },
-          select: { token: true },
-        })
-        for (const aToken of adminTokens) {
-          fcmMessaging.send({ token: aToken.token, ...staffPayload }).catch(() => {})
-        }
+        // Broadcast ONCE to canonical Admin Topic (prevents duplicate pushes)
+        sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
 
         // Only notify Pickers/Riders and Kitchens if NOT awaiting admin approval
         if (!isAdminPending) {

@@ -97,6 +97,45 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       debugPrint('NotificationService: Suppressing non-vendor alert for vendor in background.');
       return;
     }
+
+    // 5. STRICT ADMIN ISOLATION:
+    // Admin only receives notification when a NEW ORDER arrives ("admin ko sirf jab order aaye uski notification aaye").
+    // All sub-console duplicate alerts (picker, delivery, kitchen) and order status updates are strictly suppressed!
+    final isAdmin = userRole == 'ADMIN' || userRole == 'SUPER_ADMIN';
+    if (isAdmin) {
+      final msgType = (data['type'] ?? '').toString().toUpperCase();
+      final msgScreen = (data['screen'] ?? '').toString();
+      final msgRole = (data['role'] ?? '').toString().toUpperCase();
+
+      // Suppress status updates for Admin (Admin only receives NEW order alerts)
+      if (msgType == 'ORDER_STATUS_UPDATE' ||
+          msgType == 'STATUS_UPDATE' ||
+          msgType == 'ORDER_STATUS' ||
+          data['status'] == 'CONFIRMED' ||
+          data['status'] == 'PREPARING' ||
+          data['status'] == 'COOKING' ||
+          data['status'] == 'PACKED' ||
+          data['status'] == 'SHIPPED' ||
+          data['status'] == 'OUT_FOR_DELIVERY' ||
+          data['status'] == 'DELIVERED') {
+        debugPrint('NotificationService: Suppressed status update for Admin in background.');
+        return;
+      }
+
+      // Suppress sub-console alerts (picker, delivery, kitchen) so Admin receives EXACTLY ONE Master Admin alert!
+      if (msgScreen == 'picker' ||
+          msgRole == 'PICKER' ||
+          msgScreen == 'delivery' ||
+          msgRole == 'DELIVERY' ||
+          msgScreen == 'restaurant-console' ||
+          title.toString().contains('👨‍🍳') ||
+          title.toString().contains('📦 New Order') ||
+          title.toString().contains('🛵 New Delivery') ||
+          title.toString().contains('🛵 New Food')) {
+        debugPrint('NotificationService: Suppressed sub-console duplicate ($msgScreen/$msgRole) for Admin in background.');
+        return;
+      }
+    }
   } catch (_) {}
 
   // Detect cancel/reject notifications — those should be quiet and not trigger loud alarm
@@ -141,12 +180,14 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       (body ?? '').toString().toLowerCase().contains('on the way') ||
       (body ?? '').toString().toLowerCase().contains('arriving'));
 
-  if (notification != null && !isOrderAlert && !isOrderStatusUpdate) {
-    // Android OS has already displayed the standard notification. Do NOT show a 2nd notification!
+  if (notification != null) {
+    // Android OS FCM client displays notification directly in system tray.
+    // Suppress localNotifications.show here to avoid showing 2 notifications for the same message.
+    debugPrint('NotificationService: Android OS already displayed FCM notification in background.');
     return;
   }
 
-  // Trigger system notification for data-only messages or loud order alarm
+  // Trigger system notification for data-only messages
   if (body != null && body.toString().trim().isNotEmpty) {
     try {
       final rawOrderId = data['orderId'] ?? data['readableId'] ?? data['id'];
@@ -154,9 +195,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           ? rawOrderId.toString().trim().replaceAll('#', '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
           : null;
 
-      // Background Deduplication within 30 seconds
+      // Background Deduplication within 30 seconds: exactly ONE notification per order
       final dedupKey = (cleanOrderId != null && cleanOrderId.isNotEmpty)
-          ? 'order_${cleanOrderId}_$orderStatus'
+          ? 'order_${cleanOrderId}'
           : (message.messageId ?? '${title}_${body.hashCode}');
 
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -463,6 +504,46 @@ class NotificationService {
         debugPrint('NotificationService: Suppressing non-vendor alert for vendor in foreground.');
         return;
       }
+
+      // 5. STRICT ADMIN ISOLATION:
+      // Admin only receives notification when a NEW ORDER arrives ("admin ko sirf jab order aaye uski notification aaye").
+      // All sub-console duplicate alerts (picker, delivery, kitchen) and order status updates are strictly suppressed!
+      final isAdmin = userRole == 'ADMIN' || userRole == 'SUPER_ADMIN';
+      if (isAdmin) {
+        final msgType = (data['type'] ?? '').toString().toUpperCase();
+        final msgScreen = (data['screen'] ?? '').toString();
+        final msgRole = (data['role'] ?? '').toString().toUpperCase();
+        final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
+
+        // Suppress status updates for Admin (Admin only receives NEW order alerts)
+        if (msgType == 'ORDER_STATUS_UPDATE' ||
+            msgType == 'STATUS_UPDATE' ||
+            msgType == 'ORDER_STATUS' ||
+            orderStatus == 'CONFIRMED' ||
+            orderStatus == 'PREPARING' ||
+            orderStatus == 'COOKING' ||
+            orderStatus == 'PACKED' ||
+            orderStatus == 'SHIPPED' ||
+            orderStatus == 'OUT_FOR_DELIVERY' ||
+            orderStatus == 'DELIVERED') {
+          debugPrint('NotificationService: Suppressed status update for Admin in foreground.');
+          return;
+        }
+
+        // Suppress sub-console alerts (picker, delivery, kitchen) so Admin receives EXACTLY ONE Master Admin alert!
+        if (msgScreen == 'picker' ||
+            msgRole == 'PICKER' ||
+            msgScreen == 'delivery' ||
+            msgRole == 'DELIVERY' ||
+            msgScreen == 'restaurant-console' ||
+            title.toString().contains('👨‍🍳') ||
+            title.toString().contains('📦 New Order') ||
+            title.toString().contains('🛵 New Delivery') ||
+            title.toString().contains('🛵 New Food')) {
+          debugPrint('NotificationService: Suppressed sub-console duplicate ($msgScreen/$msgRole) for Admin in foreground.');
+          return;
+        }
+      }
     } catch (_) {}
 
     final rawOrderId = data['orderId'] ?? data['readableId'] ?? data['id'];
@@ -472,8 +553,9 @@ class NotificationService {
 
     final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
+    // Foreground Deduplication within 30 seconds: exactly ONE notification per order
     final dedupKey = (cleanOrderId != null && cleanOrderId.isNotEmpty)
-        ? 'order_${cleanOrderId}_$orderStatus'
+        ? 'order_${cleanOrderId}'
         : (message.messageId ?? '${title}_${body.hashCode}');
 
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -674,32 +756,53 @@ class NotificationService {
       final storeId = assignedStoreId ?? prefs.getString('assigned_store_id') ?? (await SecureStorage.read('assigned_store_id'));
       final rId = assignedRestaurantId ?? prefs.getString('assigned_restaurant_id') ?? (await SecureStorage.read('assigned_restaurant_id'));
 
-      final isAdmin = resolvedRole == 'ADMIN' ||
-          resolvedRole == 'SUPER_ADMIN' ||
-          resolvedRole == 'STORE_MANAGER' ||
-          resolvedRole == 'STAFF';
+      final savedUserRole = (prefs.getString('user_role') ?? (await SecureStorage.read('user_role')) ?? '').toUpperCase().trim();
+      final isMasterAdmin = savedUserRole == 'ADMIN' || savedUserRole == 'SUPER_ADMIN';
 
-      final isRestaurant = resolvedRole == 'RESTAURANT' ||
-          resolvedRole == 'RESTAURANT_OWNER' ||
-          resolvedRole == 'CHEF' ||
-          resolvedRole == 'VENDOR' ||
-          resolvedRole == 'STORE_OWNER' ||
-          (rId != null && rId.isNotEmpty);
+      // If user is logged in as Admin, never downgrade their device registration or topics to Picker/Delivery/Restaurant
+      final effectiveRole = isMasterAdmin ? 'ADMIN' : resolvedRole;
 
-      final isDeliveryOrPicker = resolvedRole == 'DELIVERY' ||
-          resolvedRole == 'PICKER' ||
-          resolvedRole == 'RIDER' ||
-          resolvedRole == 'DELIVERY_PARTNER' ||
-          resolvedRole == 'DRIVER';
+      final isAdmin = effectiveRole == 'ADMIN' ||
+          effectiveRole == 'SUPER_ADMIN' ||
+          effectiveRole == 'STORE_MANAGER' ||
+          effectiveRole == 'STAFF';
+
+      final isRestaurant = !isAdmin && (effectiveRole == 'RESTAURANT' ||
+          effectiveRole == 'RESTAURANT_OWNER' ||
+          effectiveRole == 'CHEF' ||
+          effectiveRole == 'VENDOR' ||
+          effectiveRole == 'STORE_OWNER' ||
+          (rId != null && rId.isNotEmpty));
+
+      final isDeliveryOrPicker = !isAdmin && !isRestaurant && (effectiveRole == 'DELIVERY' ||
+          effectiveRole == 'PICKER' ||
+          effectiveRole == 'RIDER' ||
+          effectiveRole == 'DELIVERY_PARTNER' ||
+          effectiveRole == 'DRIVER');
 
       // Subscribe to role-based and user-specific topics
       try {
         if (isAdmin) {
+          // Admin subscribes ONLY to canonical admin_orders topic
+          await _fcm?.subscribeToTopic('admin_orders');
           if (storeId != null && storeId.isNotEmpty) {
             await _fcm?.subscribeToTopic('admin_orders_$storeId');
           }
-          await _fcm?.subscribeToTopic('admin_orders');
-          await _fcm?.subscribeToTopic('admin_orders_all');
+          // Actively purge duplicate and sub-console topics so Admin NEVER receives 3x notifications
+          final duplicateTopicsToPurge = [
+            'admin_orders_all',
+            'staff_orders',
+            'picker_orders',
+            'delivery_orders',
+            if (storeId != null && storeId.isNotEmpty) ...[
+              'staff_orders_$storeId',
+              'picker_orders_$storeId',
+              'delivery_orders_$storeId',
+            ],
+          ];
+          for (final t in duplicateTopicsToPurge) {
+            try { await _fcm?.unsubscribeFromTopic(t); } catch (_) {}
+          }
         } else if (isRestaurant) {
           if (rId != null && rId.isNotEmpty) {
             await _fcm?.subscribeToTopic('restaurant_$rId');
@@ -714,7 +817,7 @@ class NotificationService {
           } else {
             await _fcm?.subscribeToTopic('staff_orders');
           }
-        } else if (resolvedRole == 'CUSTOMER' || resolvedRole == 'USER') {
+        } else if (effectiveRole == 'CUSTOMER' || effectiveRole == 'USER') {
           // Normal CUSTOMER / USER: Actively purge ANY leftover admin/staff/kitchen subscriptions on this device!
           final staffTopicsToPurge = [
             'admin_orders',
@@ -750,7 +853,7 @@ class NotificationService {
           'deviceType': deviceType,
           if (userId != null) 'userId': userId,
           'phone': phone,
-          'role': resolvedRole,
+          'role': effectiveRole,
           if (assignedRestaurantId != null) 'assignedRestaurantId': assignedRestaurantId,
           if (assignedStoreId != null) 'assignedStoreId': assignedStoreId,
         },

@@ -483,6 +483,14 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
 
   Future<void> _initNotificationSubscriptions() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final userRole = (prefs.getString('user_role') ?? '').toUpperCase().trim();
+      if (userRole == 'ADMIN' || userRole == 'SUPER_ADMIN') {
+        // Admin already receives canonical admin_orders notifications.
+        // Skip kitchen topic subscriptions to avoid duplicate alerts when opening consoles.
+        return;
+      }
+
       final notif = NotificationService();
       await notif.init();
       await notif.requestPermissions();

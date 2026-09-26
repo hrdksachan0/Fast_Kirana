@@ -133,7 +133,12 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
     _loadDiskPickerOrders();
     _fetchPickerOrders();
     _initSupabaseRealtime();
-    NotificationService().registerDeviceToken(ref.read(dioProvider), role: 'PICKER');
+    SharedPreferences.getInstance().then((prefs) {
+      final userRole = (prefs.getString('user_role') ?? '').toUpperCase().trim();
+      if (userRole != 'ADMIN' && userRole != 'SUPER_ADMIN') {
+        NotificationService().registerDeviceToken(ref.read(dioProvider), role: 'PICKER');
+      }
+    });
 
     // 30-second calm background refresh (without 1-second full-screen rebuilds)
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {

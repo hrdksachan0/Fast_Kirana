@@ -93,8 +93,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     _hydrateRestaurants();
     _fetchOrders();
     _fetchWallet();
-
-    NotificationService().registerDeviceToken(ref.read(dioProvider), role: 'DELIVERY');
+    SharedPreferences.getInstance().then((prefs) {
+      final userRole = (prefs.getString('user_role') ?? '').toUpperCase().trim();
+      if (userRole != 'ADMIN' && userRole != 'SUPER_ADMIN') {
+        NotificationService().registerDeviceToken(ref.read(dioProvider), role: 'DELIVERY');
+      }
+    });
 
     // Immediately request GPS / Location permission as soon as Rider opens dashboard
     WidgetsBinding.instance.addPostFrameCallback((_) {
