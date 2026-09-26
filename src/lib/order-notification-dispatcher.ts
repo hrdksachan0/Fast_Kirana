@@ -279,12 +279,16 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       console.error('Customer order placement FCM error:', fcmErr)
     }
 
-    // 4. WhatsApp Order Alerts: Strictly route ONLY to Hub Admin — NO restaurant owner
+
+  }
+
+  // 4. Exactly 1 Consolidated WhatsApp Alert to Hub Admin (Single alert even for multi-outlet combined orders)
+  try {
+    const primaryOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
     const orderAlertPhones = new Set<string>()
 
-    if (order.storeId && ctx.settingsMap) {
-      // Location-wise to this store's staff/phones
-      const storePrefix = `store:${order.storeId}:`
+    if (primaryOrder.storeId && ctx.settingsMap) {
+      const storePrefix = `store:${primaryOrder.storeId}:`
       const storeContact = ctx.settingsMap[`${storePrefix}contact_phone`] || ctx.settingsMap[`${storePrefix}store_phone`]
       const notifyStore = ctx.settingsMap[`${storePrefix}whatsapp_notify_store_phone`] !== 'false'
       if (notifyStore && storeContact) {
@@ -296,7 +300,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         const matches = addl.match(/\b\d{10}\b/g)
         if (matches) matches.forEach((m: string) => orderAlertPhones.add(m))
       }
-      if (ctx.settingsMap[`${storePrefix}whatsapp_notify_7054470303`] === 'true') {
+      if (ctx.settingsMap[`${storePrefix}whatsapp_notify_7054470303`] !== 'false') {
         orderAlertPhones.add('7054470303')
       }
       if (ctx.settingsMap[`${storePrefix}whatsapp_notify_8112849854`] !== 'false') {
@@ -304,22 +308,29 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       }
     }
 
-    // Fallback if no hub-specific phones configured
     if (orderAlertPhones.size === 0) {
       adminPhones.forEach((p) => orderAlertPhones.add(p))
     }
 
     if (orderAlertPhones.size > 0) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fast-kirana-gtm.vercel.app'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'
       const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-      const outletName = order.shopName || (isRestaurant ? 'Restaurant' : 'FastKirana Dark Store')
-      const customerName = order.user?.name || 'Customer'
-      const customerPhone = order.address?.phone || order.user?.phone || 'N/A'
-      const adminText = isAdminPending
-        ? `🚨 *ACTION REQUIRED: New Order Awaiting Approval* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Status: ADMIN_PENDING. Please verify and approve in Admin: ${cleanAppUrl}/admin`
-        : isOnlinePaid
-        ? `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Payment: Online PAID ✅. Manage: ${cleanAppUrl}/admin`
-        : `🛎️ *COD Order* #${displayId} for [${outletName}] of ₹${order.total} from ${customerName} (${customerPhone}). Payment: Cash On Delivery. Manage: ${cleanAppUrl}/admin`
+      const customerName = primaryOrder.user?.name || 'Customer'
+      const customerPhone = primaryOrder.address?.phone || primaryOrder.user?.phone || userPhone || 'N/A'
+
+      let adminText: string
+      if (createdOrders.length > 1) {
+        const baseDisplayId = (primaryOrder.readableId || primaryOrder.id).replace(/-[GR]\d*$/i, '')
+        const combinedTotal = createdOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
+        const outlets = Array.from(new Set(createdOrders.map((o) => o.shopName || (o.restaurantId ? 'Restaurant' : 'FastKirana Dark Store')))).join(' + ')
+        adminText = `New 🛒 Combined Order #${baseDisplayId} [${outlets}] of ₹${combinedTotal.toFixed(0)} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
+      } else {
+        const order = createdOrders[0]
+        const displayId = order.readableId ? String(order.readableId) : order.id.slice(-6).toUpperCase()
+        const outletName = order.shopName || (order.restaurantId ? 'Restaurant' : 'FastKirana Dark Store')
+        const orderTypeStr = order.restaurantId ? '🍽️ Restaurant Order' : '📦 Order'
+        adminText = `New ${orderTypeStr} #${displayId} for [${outletName}] of ₹${Number(order.total).toFixed(0)} from ${customerName} (${customerPhone}). Manage: ${cleanAppUrl}/admin`
+      }
 
       const whatsappPromises = Array.from(orderAlertPhones).map((phone) =>
         sendWhatsAppOrderAlert(phone, adminText).catch((err: any) =>
@@ -328,6 +339,8 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       )
       await Promise.allSettled(whatsappPromises)
     }
+  } catch (waErr) {
+    console.error('Consolidated WhatsApp admin alert error:', waErr)
   }
 
   // 5. Exactly 1 Consolidated Customer Notification for Entire Checkout

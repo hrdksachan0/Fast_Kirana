@@ -1690,52 +1690,6 @@ async def create_order(
                 order.storeId
             )
 
-            # WhatsApp alerts: Strictly route ONLY to Hub Admin (location-wise store hub) — NO restaurant owner
-            target_hub_id = order.storeId or store_id
-            hub_phones = []
-
-            if target_hub_id:
-                store_prefix = f"store:{target_hub_id}:"
-
-                # Store contact phone for this specific hub location
-                store_contact = settings_map.get(f"{store_prefix}contact_phone") or settings_map.get(f"{store_prefix}store_phone")
-                notify_store_phone = settings_map.get(f"{store_prefix}whatsapp_notify_store_phone", "true") != "false"
-                if notify_store_phone and store_contact:
-                    clean_sc = re.sub(r'\D', '', str(store_contact))[-10:]
-                    if len(clean_sc) == 10 and clean_sc not in hub_phones:
-                        hub_phones.append(clean_sc)
-
-                # Additional store alert phones for this specific hub
-                addl_phones = settings_map.get(f"{store_prefix}store_alert_phones") or settings_map.get(f"{store_prefix}order_alert_phone")
-                if addl_phones:
-                    for p in re.findall(r'\b\d{10}\b', str(addl_phones)):
-                        if p not in hub_phones:
-                            hub_phones.append(p)
-
-                # Store-specific central admin alerts
-                store_admin1 = settings_map.get(f"{store_prefix}whatsapp_notify_7054470303", "false")
-                store_admin2 = settings_map.get(f"{store_prefix}whatsapp_notify_8112849854", "true")
-                if store_admin1 != "false" and "7054470303" not in hub_phones:
-                    hub_phones.append("7054470303")
-                if store_admin2 != "false" and "8112849854" not in hub_phones:
-                    hub_phones.append("8112849854")
-
-            # Fallback to global admin if no store-specific phones found
-            if not hub_phones:
-                if settings_map.get("whatsapp_notify_7054470303") != "false":
-                    hub_phones.append("7054470303")
-                if settings_map.get("whatsapp_notify_8112849854") != "false":
-                    hub_phones.append("8112849854")
-                if settings_map.get("contact_phone") and settings_map.get("whatsapp_notify_store_phone", "true") != "false":
-                    clean = re.sub(r'\D', '', str(settings_map["contact_phone"]))[-10:]
-                    if clean and clean not in hub_phones:
-                        hub_phones.append(clean)
-
-            app_url = "fastkirana.com"
-            order_type_str = "🍽️ Restaurant Order" if order.restaurantId else "📦 Order"
-            admin_text = f"New {order_type_str} #{order.readableId} for [{order.shopName}] of ₹{order.total} from {user_obj.name or 'Customer'} ({address.phone or 'N/A'}). Manage: {app_url}/admin"
-            for phone in hub_phones:
-                background_tasks.add_task(send_whatsapp_alert, phone, admin_text)
 
             # 3. Dedicated Vendor Dispatch: Notify suppliers of their attached products!
             try:
@@ -1838,6 +1792,60 @@ async def create_order(
 
         # Return full order object matching Flutter Order.fromJson expectations
         main_order = next((o for o in created_orders if not o.restaurantId), created_orders[0]) if created_orders else new_order
+
+        # Consolidated WhatsApp alert to Hub Admin (Single alert even for multi-outlet combined orders)
+        try:
+            target_hub_id = main_order.storeId or store_id
+            hub_phones = []
+
+            if target_hub_id:
+                store_prefix = f"store:{target_hub_id}:"
+                store_contact = settings_map.get(f"{store_prefix}contact_phone") or settings_map.get(f"{store_prefix}store_phone")
+                if settings_map.get(f"{store_prefix}whatsapp_notify_store_phone", "true") != "false" and store_contact:
+                    clean_sc = re.sub(r'\D', '', str(store_contact))[-10:]
+                    if len(clean_sc) == 10 and clean_sc not in hub_phones:
+                        hub_phones.append(clean_sc)
+
+                addl_phones = settings_map.get(f"{store_prefix}store_alert_phones") or settings_map.get(f"{store_prefix}order_alert_phone")
+                if addl_phones:
+                    for p in re.findall(r'\b\d{10}\b', str(addl_phones)):
+                        if p not in hub_phones:
+                            hub_phones.append(p)
+
+                if settings_map.get(f"{store_prefix}whatsapp_notify_7054470303", "false") != "false" and "7054470303" not in hub_phones:
+                    hub_phones.append("7054470303")
+                if settings_map.get(f"{store_prefix}whatsapp_notify_8112849854", "true") != "false" and "8112849854" not in hub_phones:
+                    hub_phones.append("8112849854")
+
+            # Fallback to global admin if no store-specific phones found
+            if not hub_phones:
+                if settings_map.get("whatsapp_notify_7054470303") != "false":
+                    hub_phones.append("7054470303")
+                if settings_map.get("whatsapp_notify_8112849854") != "false":
+                    hub_phones.append("8112849854")
+                if settings_map.get("contact_phone") and settings_map.get("whatsapp_notify_store_phone", "true") != "false":
+                    clean = re.sub(r'\D', '', str(settings_map["contact_phone"]))[-10:]
+                    if clean and clean not in hub_phones:
+                        hub_phones.append(clean)
+
+            app_url = "fastkirana.in"
+            cust_name = user_obj.name or "Customer"
+            cust_phone = address.phone if address else (user_obj.phone or "N/A")
+
+            if len(created_orders) > 1:
+                combined_total = sum(safe_float(o.total) for o in created_orders)
+                base_id = str(main_order.readableId or "").split("-")[0]
+                outlets = " + ".join(dict.fromkeys(o.shopName for o in created_orders if o.shopName)) or "Store & Restaurant"
+                admin_text = f"New 🛒 Combined Order #{base_id} [{outlets}] of ₹{combined_total:.0f} from {cust_name} ({cust_phone}). Manage: {app_url}/admin"
+            else:
+                o = created_orders[0]
+                order_type_str = "🍽️ Restaurant Order" if o.restaurantId else "📦 Order"
+                admin_text = f"New {order_type_str} #{o.readableId} for [{o.shopName}] of ₹{safe_float(o.total):.0f} from {cust_name} ({cust_phone}). Manage: {app_url}/admin"
+
+            for phone in hub_phones:
+                background_tasks.add_task(send_whatsapp_alert, phone, admin_text)
+        except Exception as wa_err:
+            logger.warning(f"Error scheduling consolidated WhatsApp admin alert: {wa_err}")
 
         # Build in-memory items payload safely without triggering async lazy-loading DetachedInstanceError
         order_items_payload = []
