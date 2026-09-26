@@ -88,34 +88,39 @@ export async function GET(request: NextRequest) {
         variants: any
         selectedVariant: string | null
         shopName: string | null
-        restaurantId: string | null
+        prodRestaurantId?: string | null
+        orderRestaurantId?: string | null
+        restaurantId?: string | null
         restaurantName: string | null
         restaurantCommissionRate: number | null
         orderType: string | null
         refundAmount: number
         isRefunded: boolean
+        isGroceryProduct?: boolean
       }>
     >`
       SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
              COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
              COALESCE(p.vendor, 'Direct / FastKirana') as "vendor",
-             COALESCE(c.name, r.name, o."shopName", 'General') as "categoryName",
-             COALESCE(c.slug, r.slug, 'general') as "categorySlug",
+             COALESCE(c.name, CASE WHEN p."restaurantId" IS NOT NULL THEN r.name ELSE 'General Grocery' END) as "categoryName",
+             COALESCE(c.slug, CASE WHEN p."restaurantId" IS NOT NULL THEN r.slug ELSE 'general-grocery' END) as "categorySlug",
              p.tags as "productTags",
              COALESCE(oi.variants, p.variants) as "variants", 
              oi."selectedVariant",
              o."shopName" as "shopName",
-             COALESCE(p."restaurantId", o."restaurantId") as "restaurantId",
+             p."restaurantId" as "prodRestaurantId",
+             o."restaurantId" as "orderRestaurantId",
              r.name as "restaurantName",
              r."commissionRate" as "restaurantCommissionRate",
              o."orderType"::text as "orderType",
              COALESCE(oi."refundAmount", 0)::float as "refundAmount",
-             COALESCE(oi."isRefunded", false) as "isRefunded"
+             COALESCE(oi."isRefunded", false) as "isRefunded",
+             CASE WHEN p.id IS NOT NULL AND p."restaurantId" IS NULL THEN true ELSE false END as "isGroceryProduct"
       FROM order_items oi
       JOIN orders o ON oi."orderId" = o.id
       LEFT JOIN products p ON oi."productId" = p.id
       LEFT JOIN categories c ON p."categoryId" = c.id
-      LEFT JOIN restaurants r ON COALESCE(p."restaurantId", o."restaurantId") = r.id
+      LEFT JOIN restaurants r ON p."restaurantId" = r.id
       WHERE o.status::text = 'DELIVERED'
         AND o."createdAt" >= ${start}
         AND o."createdAt" <= ${end}
@@ -149,48 +154,21 @@ export async function GET(request: NextRequest) {
     const settingsMap = new Map(settingsList.map(s => [s.key, s.value]))
     const dynamicCommissionRate = parseFloat(settingsMap.get('restaurant_commission') || '10') / 100
 
-    // Helper: calculate cost and profit for an item
-    const isPureGroceryItem = (item: typeof orderItems[0]) => {
-      const catNameLower = (item.categoryName || '').toLowerCase().trim()
-      const catSlugLower = (item.categorySlug || '').toLowerCase().trim()
-      return (
-        catNameLower.includes('ice cream') || catSlugLower.includes('ice-cream') ||
-        catNameLower.includes('beverage') || catNameLower.includes('drink') || catSlugLower.includes('beverage') ||
-        catNameLower.includes('fruit') || catNameLower.includes('vegetable') || catSlugLower.includes('fruits-vegetables') ||
-        catNameLower.includes('dairy') || catNameLower.includes('milk') || catSlugLower.includes('dairy-breakfast') ||
-        catNameLower.includes('snack') || catNameLower.includes('munch') || catSlugLower.includes('snacks-munchies') ||
-        catNameLower.includes('bakery') || catNameLower.includes('biscuit') || catSlugLower.includes('bakery-biscuits') ||
-        catNameLower.includes('atta') || catNameLower.includes('rice') || catSlugLower.includes('dal') || catSlugLower.includes('atta-rice-dal') ||
-        catNameLower.includes('personal') || catSlugLower.includes('personal-care') ||
-        catNameLower.includes('house') || catSlugLower.includes('household') ||
-        catNameLower.includes('essential') || catSlugLower.includes('grocery-essential')
-      )
-    }
-
     const resolveRestaurantForItem = (item: typeof orderItems[0]) => {
-      if (item.restaurantId && restaurantById.has(item.restaurantId)) {
-        return restaurantById.get(item.restaurantId)
+      // If it's a catalog grocery product with no restaurantId on the product, it is NEVER a restaurant item
+      if (item.isGroceryProduct) return null
+
+      if (item.prodRestaurantId && restaurantById.has(item.prodRestaurantId)) {
+        return restaurantById.get(item.prodRestaurantId)
       }
-      if (item.restaurantName && restaurantByName.has(item.restaurantName.toLowerCase().trim())) {
-        return restaurantByName.get(item.restaurantName.toLowerCase().trim())
-      }
-      if (item.shopName && restaurantByName.has(item.shopName.toLowerCase().trim())) {
-        return restaurantByName.get(item.shopName.toLowerCase().trim())
+      if (!item.productId && item.orderRestaurantId && restaurantById.has(item.orderRestaurantId)) {
+        return restaurantById.get(item.orderRestaurantId)
       }
       const catLower = (item.categoryName || '').toLowerCase().trim()
-      if (catLower.includes('wedson')) {
-        return allRestaurants.find(r => r.slug.includes('wedson') || r.name.toLowerCase().includes('wedson'))
-      }
-      if (catLower.includes('as') || catLower.includes('a.s')) {
-        return allRestaurants.find(r => r.slug.includes('as') || r.name.toLowerCase().includes('a.s') || r.name.toLowerCase().includes('as'))
-      }
-      if (catLower.includes('bal udyan') || catLower.includes('baludyan')) {
-        return allRestaurants.find(r => r.slug.includes('bal') || r.name.toLowerCase().includes('bal udyan'))
-      }
-      if (Array.isArray(item.productTags)) {
-        for (const t of item.productTags) {
-          const tLower = (t || '').toLowerCase()
-          if (restaurantBySlug.has(tLower)) return restaurantBySlug.get(tLower)
+      const catSlug = (item.categorySlug || '').toLowerCase().trim()
+      for (const r of allRestaurants) {
+        if (r.name.toLowerCase() === catLower || r.slug.toLowerCase() === catSlug) {
+          return r
         }
       }
       return null
@@ -202,16 +180,9 @@ export async function GET(request: NextRequest) {
       if (item.isRefunded && itemRevenue === 0) {
         return { cost: 0, revenue: 0, profit: 0, matchedRest: null }
       }
-      const isGrocery = isPureGroceryItem(item)
+      const isGrocery = Boolean(item.isGroceryProduct)
       const matchedRest = !isGrocery ? resolveRestaurantForItem(item) : null
-      const catNameLower = (item.categoryName || '').toLowerCase().trim()
-      const isRestaurant = !isGrocery && (
-        !!matchedRest ||
-        !!item.restaurantId || 
-        item.orderType === 'RESTAURANT' || 
-        catNameLower.includes('restaurant') || 
-        catNameLower.includes('cafe')
-      )
+      const isRestaurant = !isGrocery && (!!matchedRest || !!item.prodRestaurantId)
 
       // Real Restaurant Commission Logic synced from Outlet Setup:
       if (isRestaurant) {
@@ -367,10 +338,9 @@ export async function GET(request: NextRequest) {
         if (isRetail) continue // Skip adding retail items to category and product breakdown
 
         // Strict Category Resolution
-        const isGrocery = isPureGroceryItem(item)
-        const catNameLower = (item.categoryName || '').toLowerCase().trim()
+        const isGrocery = Boolean(item.isGroceryProduct)
 
-        let targetCategoryName = item.categoryName || 'General'
+        let targetCategoryName = item.categoryName || 'General Store'
         let targetType: 'restaurant' | 'grocery' = 'grocery'
 
         if (isGrocery) {
@@ -379,17 +349,10 @@ export async function GET(request: NextRequest) {
         } else if (matchedRest) {
           targetCategoryName = matchedRest.name || 'Restaurant'
           targetType = 'restaurant'
-        } else if (item.restaurantId || item.orderType === 'RESTAURANT' || catNameLower.includes('restaurant') || catNameLower.includes('cafe')) {
+        } else if (item.prodRestaurantId) {
+          const rObj = restaurantById.get(item.prodRestaurantId)
+          targetCategoryName = rObj?.name || item.restaurantName || 'Restaurant Food'
           targetType = 'restaurant'
-          if (item.restaurantName) {
-            targetCategoryName = item.restaurantName
-          } else if (item.shopName) {
-            targetCategoryName = item.shopName
-          } else if (catNameLower.includes('fastkirana restaurant') || catNameLower.includes('restaurant')) {
-            targetCategoryName = 'Wedson Restaurant'
-          } else {
-            targetCategoryName = item.categoryName || 'Restaurant Food'
-          }
         } else {
           targetCategoryName = item.categoryName || 'General Store'
           targetType = 'grocery'

@@ -421,23 +421,25 @@ async def get_sales_reports(
             SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
                    COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
                    COALESCE(p.vendor, 'Direct / FastKirana') as "vendor",
-                   COALESCE(c.name, r.name, o."shopName", 'General') as "categoryName",
-                   COALESCE(c.slug, r.slug, 'general') as "categorySlug",
+                   COALESCE(c.name, CASE WHEN p."restaurantId" IS NOT NULL THEN r.name ELSE 'General Grocery' END) as "categoryName",
+                   COALESCE(c.slug, CASE WHEN p."restaurantId" IS NOT NULL THEN r.slug ELSE 'general-grocery' END) as "categorySlug",
                    p.tags as "productTags",
                    COALESCE(oi.variants, p.variants) as "variants", 
                    oi."selectedVariant",
                    o."shopName" as "shopName",
-                   COALESCE(p."restaurantId", o."restaurantId") as "restaurantId",
+                   p."restaurantId" as "prodRestaurantId",
+                   o."restaurantId" as "orderRestaurantId",
                    r.name as "restaurantName",
                    r."commissionRate" as "restaurantCommissionRate",
                    o."orderType"::text as "orderType",
                    COALESCE(oi."refundAmount", 0)::float as "refundAmount",
-                   COALESCE(oi."isRefunded", false) as "isRefunded"
+                   COALESCE(oi."isRefunded", false) as "isRefunded",
+                   CASE WHEN p.id IS NOT NULL AND p."restaurantId" IS NULL THEN true ELSE false END as "isGroceryProduct"
             FROM order_items oi
             JOIN orders o ON oi."orderId" = o.id
             LEFT JOIN products p ON oi."productId" = p.id
             LEFT JOIN categories c ON p."categoryId" = c.id
-            LEFT JOIN restaurants r ON COALESCE(p."restaurantId", o."restaurantId") = r.id
+            LEFT JOIN restaurants r ON p."restaurantId" = r.id
             WHERE o.status::text = 'DELIVERED'
               AND o."createdAt" >= :start
               AND o."createdAt" <= :end
@@ -471,48 +473,27 @@ async def get_sales_reports(
         settings_map = {s.key: s.value for s in settings_res.scalars().all()}
         dynamic_commission_rate = float(settings_map.get("restaurant_commission", "10.0")) / 100.0
 
-        def is_pure_grocery_item(item) -> bool:
-            c_name = (item.get("categoryName") or "").lower().strip()
-            c_slug = (item.get("categorySlug") or "").lower().strip()
-            return (
-                "ice cream" in c_name or "ice-cream" in c_slug or
-                "beverage" in c_name or "drink" in c_name or "beverage" in c_slug or
-                "fruit" in c_name or "vegetable" in c_name or "fruits-vegetables" in c_slug or
-                "dairy" in c_name or "milk" in c_name or "dairy-breakfast" in c_slug or
-                "snack" in c_name or "munch" in c_name or "snacks-munchies" in c_slug or
-                "bakery" in c_name or "biscuit" in c_name or "bakery-biscuits" in c_slug or
-                "atta" in c_name or "rice" in c_name or "dal" in c_slug or "atta-rice-dal" in c_slug or
-                "personal" in c_name or "personal-care" in c_slug or
-                "house" in c_name or "household" in c_slug or
-                "essential" in c_name or "grocery-essential" in c_slug
-            )
-
         def resolve_restaurant_for_item(item):
-            r_id = item.get("restaurantId")
+            # If it's a catalog grocery product with no restaurantId on the product, it is NEVER a restaurant item
+            if item.get("isGroceryProduct"):
+                return None
+
+            r_id = item.get("prodRestaurantId")
             if r_id and r_id in restaurant_by_id:
                 return restaurant_by_id[r_id]
 
-            r_name = (item.get("restaurantName") or "").lower().strip()
-            if r_name and r_name in restaurant_by_name:
-                return restaurant_by_name[r_name]
+            # Only for custom items where productId is NULL (e.g. restaurant manual chef item)
+            if not item.get("productId"):
+                o_rid = item.get("orderRestaurantId")
+                if o_rid and o_rid in restaurant_by_id:
+                    return restaurant_by_id[o_rid]
 
-            s_name = (item.get("shopName") or "").lower().strip()
-            if s_name and s_name in restaurant_by_name:
-                return restaurant_by_name[s_name]
-
-            cat_lower = (item.get("categoryName") or "").lower().strip()
-            if "wedson" in cat_lower:
-                return next((r for r in all_restaurants if "wedson" in r.slug or "wedson" in r.name.lower()), None)
-            if "as" in cat_lower or "a.s" in cat_lower:
-                return next((r for r in all_restaurants if "as" in r.slug or "a.s" in r.name.lower() or "as" in r.name.lower()), None)
-            if "bal udyan" in cat_lower or "baludyan" in cat_lower:
-                return next((r for r in all_restaurants if "bal" in r.slug or "bal udyan" in r.name.lower()), None)
-
-            tags = item.get("productTags") or []
-            for t in tags:
-                t_lower = str(t).lower().strip()
-                if t_lower in restaurant_by_slug:
-                    return restaurant_by_slug[t_lower]
+            # Exact category name or slug match only
+            cat_name = (item.get("categoryName") or "").strip().lower()
+            cat_slug = (item.get("categorySlug") or "").strip().lower()
+            for r in all_restaurants:
+                if r.name.lower() == cat_name or r.slug.lower() == cat_slug:
+                    return r
 
             return None
 
@@ -526,16 +507,13 @@ async def get_sales_reports(
             if item.get("isRefunded") and item_rev == 0:
                 return 0.0, 0.0, 0.0, None
 
-            is_g = is_pure_grocery_item(item)
-            matched_rest = resolve_restaurant_for_item(item) if not is_g else None
-            cat_name_lower = (item.get("categoryName") or "").lower().strip()
-            is_r = not is_g and (
-                bool(matched_rest) or
-                bool(item.get("restaurantId")) or
-                item.get("orderType") == "RESTAURANT" or
-                "restaurant" in cat_name_lower or
-                "cafe" in cat_name_lower
-            )
+            # Catalog grocery products (p.restaurantId IS NULL) are NEVER restaurant items
+            if item.get("isGroceryProduct"):
+                matched_rest = None
+                is_r = False
+            else:
+                matched_rest = resolve_restaurant_for_item(item)
+                is_r = bool(matched_rest) or bool(item.get("prodRestaurantId"))
 
             if is_r:
                 comm_rate = dynamic_commission_rate
@@ -656,27 +634,18 @@ async def get_sales_reports(
                 if is_retail:
                     continue
 
-                is_g = is_pure_grocery_item(item)
-                cat_lower = (item.get("categoryName") or "").lower().strip()
-                target_category_name = item.get("categoryName") or "General"
-                target_type = "grocery"
-
-                if is_g:
+                is_grocery_prod = bool(item.get("isGroceryProduct"))
+                
+                if is_grocery_prod:
                     target_category_name = item.get("categoryName") or "Grocery Essentials"
                     target_type = "grocery"
                 elif matched_rest:
-                    target_category_name = matched_rest.name or "Restaurant"
+                    target_category_name = matched_rest.name
                     target_type = "restaurant"
-                elif item.get("restaurantId") or item.get("orderType") == "RESTAURANT" or "restaurant" in cat_lower or "cafe" in cat_lower:
+                elif item.get("prodRestaurantId"):
+                    r_obj = restaurant_by_id.get(item["prodRestaurantId"])
+                    target_category_name = r_obj.name if r_obj else (item.get("restaurantName") or "Restaurant Food")
                     target_type = "restaurant"
-                    if item.get("restaurantName"):
-                        target_category_name = item["restaurantName"]
-                    elif item.get("shopName"):
-                        target_category_name = item["shopName"]
-                    elif "restaurant" in cat_lower:
-                        target_category_name = "Wedson Restaurant"
-                    else:
-                        target_category_name = item.get("categoryName") or "Restaurant Food"
                 else:
                     target_category_name = item.get("categoryName") or "General Store"
                     target_type = "grocery"

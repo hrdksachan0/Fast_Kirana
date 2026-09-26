@@ -501,8 +501,8 @@ export function AdminBanners({
   const [presetCategoryFilter, setPresetCategoryFilter] = useState<'all' | 'food' | 'grocery'>('all')
   const [isGeneratingGemini, setIsGeneratingGemini] = useState(false)
 
-  // Placement & Target Platform States (Defaults to Brand Card for Curated Carousel)
-  const [placement, setPlacement] = useState<'hero' | 'brand_card'>('brand_card')
+  // Placement & Target Platform States (Defaults to Hero Slider for main storefront)
+  const [placement, setPlacement] = useState<'hero' | 'brand_card'>('hero')
   const [platform, setPlatform] = useState<'all' | 'mobile' | 'web'>('all')
   const [storeId, setStoreId] = useState<string>(() => propStoreId || stores[0]?.id || 'hub-209206')
 
@@ -515,7 +515,7 @@ export function AdminBanners({
   }, [propStoreId, stores])
 
   // Registered List Filtering Tabs
-  const [activeListTab, setActiveListTab] = useState<'hero' | 'brand_card'>('brand_card')
+  const [activeListTab, setActiveListTab] = useState<'hero' | 'brand_card'>('hero')
   const [activePlatformFilter, setActivePlatformFilter] = useState<'all' | 'mobile' | 'web'>('all')
 
   // Form States
@@ -1360,6 +1360,7 @@ export function AdminBanners({
                     onChange={(e) => setStoreId(e.target.value)}
                     className="w-full py-2.5 px-3 text-[11px] font-bold rounded-xl bg-card border border-border text-text-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs cursor-pointer"
                   >
+                    <option value="all">🌐 All Hubs / Global Storefront</option>
                     {stores && stores.length > 0 ? (
                       stores.map((s) => (
                         <option key={s.id} value={s.id}>

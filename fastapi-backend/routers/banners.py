@@ -21,6 +21,11 @@ def clear_banners_cache():
     _banners_cache.clear()
     _banners_cache_time = 0
 
+@router.post("/clear-cache")
+async def clear_cache():
+    clear_banners_cache()
+    return {"success": True, "message": "Banners cache cleared"}
+
 
 @router.get("")
 async def get_banners(

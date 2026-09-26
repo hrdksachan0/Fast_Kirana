@@ -15,8 +15,11 @@ export async function GET(request: NextRequest) {
     const effectiveStoreId = getEffectiveStoreId(session, searchParams.get('storeId'))
 
     const where: any = {}
-    if (effectiveStoreId && effectiveStoreId !== 'all') {
-      where.storeId = effectiveStoreId
+    if (effectiveStoreId && effectiveStoreId !== 'all' && effectiveStoreId !== 'ALL') {
+      where.OR = [
+        { storeId: effectiveStoreId },
+        { storeId: null },
+      ]
     }
 
     const banners = await prisma.promoBanner.findMany({
@@ -70,7 +73,7 @@ export async function GET(request: NextRequest) {
 // POST: Create a new promo banner / curated card
 export async function POST(request: NextRequest) {
   try {
-    const adminResult = await requireAdmin()
+    const adminResult = await requireAdmin(request)
     if (adminResult.error) return adminResult.error
     const session = adminResult.session
 
@@ -80,13 +83,28 @@ export async function POST(request: NextRequest) {
     const finalTitle = (title && String(title).trim()) || 'Promo Banner'
     const finalDescription = (description && String(description).trim()) || 'Media Banner'
 
-    const isCardType = true
+    const effectiveStoreId = getEffectiveStoreId(session, body.storeId)
+
+    // Verify foreign key integrity with dark_stores
+    let validStoreId: string | null = null
+    if (effectiveStoreId && effectiveStoreId !== 'all' && effectiveStoreId !== 'ALL') {
+      try {
+        const storeExists = await prisma.darkStore.findUnique({
+          where: { id: effectiveStoreId },
+          select: { id: true },
+        })
+        if (storeExists) {
+          validStoreId = storeExists.id
+        }
+      } catch (_) {}
+    }
+
     let serializedCode = code || ''
     const cardMeta = {
       cardType: body.cardType || type || 'standard',
       placement: body.placement || (['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(type) ? 'brand_card' : 'hero'),
       platform: body.platform || 'all',
-      storeId: body.storeId || null,
+      storeId: validStoreId,
       eyebrowTag: body.eyebrowTag || null,
       primaryBrand: body.primaryBrand || null,
       secondaryBrand: body.secondaryBrand || null,
@@ -102,8 +120,6 @@ export async function POST(request: NextRequest) {
       videoUrl: body.videoUrl || null,
       couponCode: code || null,
     }
-    const effectiveStoreId = getEffectiveStoreId(session, body.storeId)
-    cardMeta.storeId = effectiveStoreId || null
     serializedCode = JSON.stringify(cardMeta)
 
     const banner = await prisma.promoBanner.create({
@@ -115,15 +131,25 @@ export async function POST(request: NextRequest) {
         type: type || 'custom',
         imageUrl: imageUrl || null,
         linkUrl: linkUrl || null,
-        storeId: effectiveStoreId || null,
+        storeId: validStoreId,
         isActive: isActive !== undefined ? isActive : true,
         sortOrder: sortOrder !== undefined ? parseInt(String(sortOrder), 10) : 0,
       }
     })
 
-    // Purge caches immediately
-    revalidateTag('banners', 'max')
-    revalidateStorefront()
+    // Safe cache purge
+    try {
+      revalidateTag('banners', 'max')
+      revalidateStorefront()
+    } catch (revalErr) {
+      console.warn('[CacheRevalidation] non-fatal revalidate error:', revalErr)
+    }
+
+    // Ping FastAPI to invalidate its in-memory banner cache
+    try {
+      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+      fetch(`${fastApiUrl}/api/banners/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {})
+    } catch (_) {}
 
     return NextResponse.json({ success: true, banner })
   } catch (error: any) {
@@ -135,7 +161,7 @@ export async function POST(request: NextRequest) {
 // PUT: Update an existing promo banner / curated card
 export async function PUT(request: NextRequest) {
   try {
-    const adminResult = await requireAdmin()
+    const adminResult = await requireAdmin(request)
     if (adminResult.error) return adminResult.error
     const session = adminResult.session
 
@@ -160,11 +186,25 @@ export async function PUT(request: NextRequest) {
       try { existingMeta = JSON.parse(existing.code) } catch (_) {}
     }
 
+    const targetStoreId = body.storeId !== undefined ? body.storeId : existing.storeId
+    let validStoreId: string | null = null
+    if (targetStoreId && targetStoreId !== 'all' && targetStoreId !== 'ALL') {
+      try {
+        const storeExists = await prisma.darkStore.findUnique({
+          where: { id: targetStoreId },
+          select: { id: true },
+        })
+        if (storeExists) {
+          validStoreId = storeExists.id
+        }
+      } catch (_) {}
+    }
+
     const cardMeta = {
       cardType: body.cardType || type || existing.type || 'standard',
       placement: body.placement !== undefined ? body.placement : (existingMeta.placement || 'hero'),
       platform: body.platform !== undefined ? body.platform : (existingMeta.platform || 'all'),
-      storeId: body.storeId !== undefined ? body.storeId : (existingMeta.storeId || null),
+      storeId: validStoreId,
       eyebrowTag: body.eyebrowTag !== undefined ? body.eyebrowTag : null,
       primaryBrand: body.primaryBrand !== undefined ? body.primaryBrand : null,
       secondaryBrand: body.secondaryBrand !== undefined ? body.secondaryBrand : null,
@@ -192,15 +232,25 @@ export async function PUT(request: NextRequest) {
         type: type !== undefined ? type : existing.type,
         imageUrl: imageUrl !== undefined ? imageUrl : existing.imageUrl,
         linkUrl: linkUrl !== undefined ? linkUrl : existing.linkUrl,
-        storeId: body.storeId !== undefined ? body.storeId : existing.storeId,
+        storeId: validStoreId,
         isActive: isActive !== undefined ? isActive : existing.isActive,
         sortOrder: sortOrder !== undefined ? parseInt(String(sortOrder), 10) : existing.sortOrder,
       }
     })
 
-    // Purge caches immediately
-    revalidateTag('banners', 'max')
-    revalidateStorefront()
+    // Safe cache purge
+    try {
+      revalidateTag('banners', 'max')
+      revalidateStorefront()
+    } catch (revalErr) {
+      console.warn('[CacheRevalidation] non-fatal revalidate error:', revalErr)
+    }
+
+    // Ping FastAPI to invalidate its in-memory banner cache
+    try {
+      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+      fetch(`${fastApiUrl}/api/banners/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {})
+    } catch (_) {}
 
     return NextResponse.json({ success: true, banner: updated })
   } catch (error: any) {
@@ -212,7 +262,7 @@ export async function PUT(request: NextRequest) {
 // DELETE: Delete a promo banner
 export async function DELETE(request: NextRequest) {
   try {
-    const adminResult = await requireAdmin()
+    const adminResult = await requireAdmin(request)
     if (adminResult.error) return adminResult.error
     const session = adminResult.session
 
@@ -236,9 +286,19 @@ export async function DELETE(request: NextRequest) {
       where: { id }
     })
 
-    // Purge caches immediately
-    revalidateTag('banners', 'max')
-    revalidateStorefront()
+    // Safe cache purge
+    try {
+      revalidateTag('banners', 'max')
+      revalidateStorefront()
+    } catch (revalErr) {
+      console.warn('[CacheRevalidation] non-fatal revalidate error:', revalErr)
+    }
+
+    // Ping FastAPI to invalidate its in-memory banner cache
+    try {
+      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+      fetch(`${fastApiUrl}/api/banners/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {})
+    } catch (_) {}
 
     return NextResponse.json({ success: true, message: 'Banner deleted successfully' })
   } catch (error: any) {
