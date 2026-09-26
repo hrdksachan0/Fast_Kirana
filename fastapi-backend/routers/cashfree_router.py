@@ -279,7 +279,7 @@ async def verify_cashfree_payment(
     if is_paid:
         payment_id_str = str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}"
         order.paymentStatus = PaymentStatus.PAID
-        order.paymentMethod = PaymentMethod.ONLINE
+        order.paymentMethod = PaymentMethod.UPI
         if order.status == OrderStatus.ADMIN_PENDING:
             order.status = OrderStatus.PENDING
 
@@ -289,7 +289,7 @@ async def verify_cashfree_payment(
             comb_res = await db.execute(comb_stmt)
             for co in comb_res.scalars().all():
                 co.paymentStatus = PaymentStatus.PAID
-                co.paymentMethod = PaymentMethod.ONLINE
+                co.paymentMethod = PaymentMethod.UPI
                 if co.status == OrderStatus.ADMIN_PENDING:
                     co.status = OrderStatus.PENDING
 
@@ -383,7 +383,7 @@ async def cashfree_webhook(
 
         if order and order.paymentStatus != PaymentStatus.PAID:
             order.paymentStatus = PaymentStatus.PAID
-            order.paymentMethod = PaymentMethod.ONLINE
+            order.paymentMethod = PaymentMethod.UPI
             if order.status == OrderStatus.ADMIN_PENDING:
                 order.status = OrderStatus.PENDING
 
@@ -392,7 +392,7 @@ async def cashfree_webhook(
                 comb_res = await db.execute(comb_stmt)
                 for co in comb_res.scalars().all():
                     co.paymentStatus = PaymentStatus.PAID
-                    co.paymentMethod = PaymentMethod.ONLINE
+                    co.paymentMethod = PaymentMethod.UPI
                     if co.status == OrderStatus.ADMIN_PENDING:
                         co.status = OrderStatus.PENDING
 

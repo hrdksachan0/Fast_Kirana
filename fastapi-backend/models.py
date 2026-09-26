@@ -43,6 +43,7 @@ class PaymentMethod(str, enum.Enum):
     UPI = "UPI"
     CARD = "CARD"
     WALLET = "WALLET"
+    ONLINE = "UPI"
 
 
 class OrderType(str, enum.Enum):
