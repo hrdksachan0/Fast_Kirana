@@ -1596,3 +1596,204 @@ async def get_superadmin_stats(
         "staff": formatted_staff,
     }
 
+
+# ============================================================
+# 3-PILLAR DAILY FINANCE & CASH RECONCILIATION API
+# ============================================================
+@router.get("/finance/daily")
+async def get_daily_finance_reconciliation(
+    date_str: Optional[str] = Query(None, alias="date"),
+    storeId: Optional[str] = Query(None),
+    current_admin: Any = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    3-Pillar Daily Finance & Reconciliation:
+    1. Bank / Cashfree Online Total
+    2. Counter Cash (Galla) Total
+    3. Rider Cash In-Hand (Pending Settlement)
+    Plus detailed audit ledger of every transaction and who verified it.
+    """
+    # 1. Parse target date in IST (UTC + 5:30)
+    now_utc = datetime.utcnow()
+    now_ist = now_utc + timedelta(hours=5, minutes=30)
+
+    if date_str:
+        try:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            target_date = now_ist.date()
+    else:
+        target_date = now_ist.date()
+
+    # Convert IST day range back to UTC for database queries
+    ist_start = datetime.combine(target_date, time.min)
+    ist_end = datetime.combine(target_date, time.max)
+    utc_start = ist_start - timedelta(hours=5, minutes=30)
+    utc_end = ist_end - timedelta(hours=5, minutes=30)
+
+    # 2. Build base query for orders
+    order_stmt = select(Order).options(
+        selectinload(Order.user),
+        selectinload(Order.deliveryUser)
+    ).where(
+        Order.createdAt >= utc_start,
+        Order.createdAt <= utc_end
+    )
+
+    effective_store = storeId or _get_admin_attr(current_admin, "assignedStoreId")
+    if effective_store and effective_store.lower() != "all":
+        order_stmt = order_stmt.where(Order.storeId == effective_store)
+
+    order_stmt = order_stmt.order_by(desc(Order.createdAt))
+    order_res = await db.execute(order_stmt)
+    all_orders = order_res.scalars().all()
+
+    # 3. Categorize transactions and compute metrics
+    online_bank_total = 0.0
+    online_order_count = 0
+
+    counter_cash_total = 0.0
+    counter_cash_count = 0
+
+    rider_cash_total = 0.0
+    rider_cash_count = 0
+
+    pending_cod_total = 0.0
+    pending_cod_count = 0
+
+    pending_online_total = 0.0
+    pending_online_count = 0
+
+    transactions = []
+
+    for o in all_orders:
+        tot = float(o.total or 0.0)
+        p_status = str(o.paymentStatus.value if hasattr(o.paymentStatus, "value") else o.paymentStatus).upper()
+        p_method = str(o.paymentMethod.value if hasattr(o.paymentMethod, "value") else o.paymentMethod).upper()
+        o_status = str(o.status.value if hasattr(o.status, "value") else o.status).upper()
+
+        if o_status == "CANCELLED":
+            verified_by = "Order Cancelled"
+            category = "CANCELLED"
+        elif p_status == "PAID":
+            if p_method in ["UPI", "CARD", "WALLET", "ONLINE", "RAZORPAY"]:
+                online_bank_total += tot
+                online_order_count += 1
+                category = "ONLINE_BANK"
+                # Check if it was rider QR or gateway auto
+                if o.deliveryUserId and o_status == "DELIVERED":
+                    verified_by = f"Rider QR ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
+                else:
+                    verified_by = "Cashfree Gateway (Auto)"
+            else:
+                # COD marked as PAID
+                if o.cashSettledToAdmin:
+                    counter_cash_total += tot
+                    counter_cash_count += 1
+                    category = "COUNTER_CASH"
+                    verified_by = "Settled to Counter"
+                elif o_status == "DELIVERED":
+                    rider_cash_total += tot
+                    rider_cash_count += 1
+                    category = "RIDER_CASH"
+                    verified_by = f"Rider In-Hand ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
+                else:
+                    counter_cash_total += tot
+                    counter_cash_count += 1
+                    category = "COUNTER_CASH"
+                    verified_by = "Cash Paid"
+        else:
+            # Payment status PENDING / FAILED
+            if p_method == "COD":
+                if o_status == "DELIVERED":
+                    # Delivered but cash settlement pending
+                    rider_cash_total += tot
+                    rider_cash_count += 1
+                    category = "RIDER_CASH"
+                    verified_by = f"Rider In-Hand ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
+                else:
+                    pending_cod_total += tot
+                    pending_cod_count += 1
+                    category = "PENDING_DELIVERY"
+                    verified_by = "COD at Doorstep"
+            else:
+                pending_online_total += tot
+                pending_online_count += 1
+                category = "PENDING_ONLINE"
+                verified_by = "Awaiting Online Payment"
+
+        # Format readable created time in IST
+        order_ist = o.createdAt + timedelta(hours=5, minutes=30) if o.createdAt else None
+        time_ist_str = order_ist.strftime("%I:%M %p") if order_ist else ""
+
+        transactions.append({
+            "id": o.id,
+            "readableId": str(o.readableId or o.id[-6:]).upper(),
+            "createdAt": to_iso_utc(o.createdAt),
+            "timeStr": time_ist_str,
+            "total": tot,
+            "customerName": o.user.name if o.user else "Customer",
+            "customerPhone": o.user.phone if o.user else "",
+            "shopName": o.shopName or ("FastKirana Grocery" if not o.restaurantId else "Restaurant"),
+            "paymentMethod": p_method,
+            "paymentStatus": p_status,
+            "orderStatus": o_status,
+            "category": category,
+            "verifiedBy": verified_by,
+            "riderName": o.deliveryUser.name if o.deliveryUser else None,
+            "cashSettled": bool(o.cashSettledToAdmin),
+            "cashSettledAt": to_iso_utc(o.cashSettledAt) if o.cashSettledAt else None,
+        })
+
+    # 4. Fetch Active Riders & their In-Hand Cash
+    rider_query = select(User).options(selectinload(User.riderWallet)).where(
+        User.role == Role.DELIVERY
+    )
+    if effective_store and effective_store.lower() != "all":
+        rider_query = rider_query.where(User.assignedStoreId == effective_store)
+
+    rider_res = await db.execute(rider_query)
+    riders = rider_res.scalars().all()
+
+    rider_summary = []
+    for r in riders:
+        wallet = r.riderWallet
+        cash_in_hand = float(wallet.cashInHand) if wallet else 0.0
+
+        # Today's delivered orders for this rider
+        r_del_orders = [t for t in transactions if t.get("riderName") == r.name and t.get("orderStatus") == "DELIVERED"]
+
+        if cash_in_hand > 0 or len(r_del_orders) > 0:
+            rider_summary.append({
+                "id": r.id,
+                "name": r.name or "Rider",
+                "phone": r.phone or "",
+                "cashInHand": cash_in_hand,
+                "todayDeliveredCount": len(r_del_orders),
+                "todayDeliveredTotal": sum(t["total"] for t in r_del_orders),
+            })
+
+    total_reconciled = online_bank_total + counter_cash_total + rider_cash_total
+
+    return {
+        "date": target_date.strftime("%Y-%m-%d"),
+        "isToday": target_date == now_ist.date(),
+        "summary": {
+            "onlineBankTotal": round(online_bank_total, 2),
+            "onlineOrderCount": online_order_count,
+            "counterCashTotal": round(counter_cash_total, 2),
+            "counterCashCount": counter_cash_count,
+            "riderCashTotal": round(rider_cash_total, 2),
+            "riderCashCount": rider_cash_count,
+            "pendingCodTotal": round(pending_cod_total, 2),
+            "pendingCodCount": pending_cod_count,
+            "pendingOnlineTotal": round(pending_online_total, 2),
+            "pendingOnlineCount": pending_online_count,
+            "totalReconciled": round(total_reconciled, 2),
+            "totalOrdersCount": len(all_orders),
+        },
+        "riders": rider_summary,
+        "transactions": transactions,
+    }
+

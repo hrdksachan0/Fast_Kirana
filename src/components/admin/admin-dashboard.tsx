@@ -25,6 +25,7 @@ import { PushNotificationsTab } from '@/components/admin/push-notifications-tab'
 import { FlashDealsTab } from '@/components/admin/flash-deals-tab'
 import { RestaurantConsoleTab } from '@/components/admin/restaurant-console-tab'
 import { VendorConsoleTab } from '@/components/admin/vendor-console-tab'
+import { AdminFinanceTab } from '@/components/admin/finance/admin-finance-tab'
 import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-modal'
 import { toast } from 'sonner'
 import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
@@ -50,6 +51,7 @@ import {
   Wallet,
   Truck,
   Download,
+  IndianRupee,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
@@ -87,6 +89,7 @@ import { AdminSortManager } from './admin-sort-manager'
 
 export type TabType =
   | 'orders'
+  | 'finance'
   | 'products'
   | 'categories'
   | 'users'
@@ -818,6 +821,7 @@ export function AdminDashboard({
   const tabConfig = useMemo(() => {
     return [
       { key: 'orders' as TabType, label: 'Orders', icon: ShoppingBag, count: orderHook.orderTotal },
+      { key: 'finance' as TabType, label: '💰 Daily Finance', icon: IndianRupee },
       { key: 'liveops' as TabType, label: 'Live Ops Tracker', icon: Zap, count: activeCartsCount },
       { key: 'products' as TabType, label: 'Products', icon: Package, count: productHook.productTotal },
       { key: 'categories' as TabType, label: 'Categories', icon: Layers, count: storeCategoryCount },
@@ -1247,6 +1251,8 @@ export function AdminDashboard({
           {activeTab === 'push-notifications' && <PushNotificationsTab />}
 
           {activeTab === 'flash-deals' && <FlashDealsTab storeId={selectedHubId} />}
+
+          {activeTab === 'finance' && <AdminFinanceTab storeId={selectedHubId} />}
 
           {activeTab === 'rider-cash' && <AdminRidersFleetTab storeId={selectedHubId} />}
 

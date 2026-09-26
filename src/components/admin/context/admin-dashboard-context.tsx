@@ -7,6 +7,7 @@ import { HUB_CONFIG } from '@/lib/constants'
 
 export type TabType =
   | 'orders'
+  | 'finance'
   | 'products'
   | 'categories'
   | 'users'
