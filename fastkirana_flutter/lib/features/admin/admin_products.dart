@@ -311,7 +311,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     ref.refresh(productsProvider(null));
                   },
                   child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
                       final p = filtered[index];
@@ -785,76 +785,61 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       ),
                       const SizedBox(height: 3),
 
-                      // Category or Restaurant Tag
-                      Row(
+                      // Category or Restaurant Tag & Variants/Unit
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 3,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           if (isRestaurant && outletName != null) ...[
-                            Flexible(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.statusPending,
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                                child: Text(
-                                  outletName,
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10),
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.amber600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppDesignSystem.statusPending,
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Text(
+                                outletName,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w800,
+                                  color: AppDesignSystem.amber600,
                                 ),
                               ),
                             ),
                           ] else if (p.category != null) ...[
-                            Flexible(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.slate100,
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                                child: Text(
-                                  p.category!.name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10),
-                                    fontWeight: FontWeight.w700,
-                                    color: AppDesignSystem.slate600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppDesignSystem.slate100,
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Text(
+                                p.category!.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w700,
+                                  color: AppDesignSystem.slate600,
                                 ),
                               ),
                             ),
                           ],
                           if (variants.isNotEmpty) ...[
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                '(${variants.length} options, from ₹${variants.first.price.toInt()})',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11),
-                                  fontWeight: FontWeight.w600,
-                                  color: AppDesignSystem.primary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            Text(
+                              '(${variants.length} options, from ₹${variants.first.price.toInt()})',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                fontWeight: FontWeight.w700,
+                                color: AppDesignSystem.primary,
                               ),
                             ),
                           ] else if (p.unit.isNotEmpty) ...[
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                '(${p.unit})',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11),
-                                  fontWeight: FontWeight.w500,
-                                  color: AppDesignSystem.slate500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            Text(
+                              '(${p.unit})',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                fontWeight: FontWeight.w500,
+                                color: AppDesignSystem.slate500,
                               ),
                             ),
                           ],

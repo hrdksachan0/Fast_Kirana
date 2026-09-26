@@ -345,13 +345,7 @@ export function OrdersTab({
     markOrderKotPrinted(targetOrder.id)
     if (o.id !== targetOrder.id) markOrderKotPrinted(o.id)
 
-    // Trigger local printing immediately if executed on this counter/admin machine
-    try {
-      printKOTReceipt(targetOrder, targetOrder.shopName || targetOrder.restaurantName || 'RESTAURANT')
-    } catch (localPrintErr) {
-      console.warn('[KOT] Local print note:', localPrintErr)
-    }
-
+    // Send KOT remotely to restaurant kitchen POS printer only (no local popup)
     const toastId = toast.loading(`Sending KOT to Kitchen (Order #${targetOrder.readableId || targetOrder.id.slice(0, 8)})...`)
 
     // Strategy: Call server-side /api/kot-broadcast first as the single authoritative gateway.

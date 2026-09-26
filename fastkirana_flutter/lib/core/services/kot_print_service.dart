@@ -64,6 +64,8 @@ class KotPrintService {
       'deliveryMethod': deliveryMethod ?? 'DELIVERY',
       'notes': notes,
       'printedAt': DateTime.now().toIso8601String(),
+      'manual': true,
+      'source': 'flutter_app',
     };
 
     // Path 1: Server-side HTTP API (Primary reliable gateway to web kitchen)

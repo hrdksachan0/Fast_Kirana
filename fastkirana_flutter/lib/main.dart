@@ -27,7 +27,12 @@ void main() async {
   if (!kIsWeb && !kDebugMode) {
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
-      if (details.silent) {
+      final isAssetOrNetwork = details.exceptionAsString().contains('Unable to load asset') ||
+          details.exceptionAsString().contains('SocketException') ||
+          details.exceptionAsString().contains('HttpException') ||
+          details.exceptionAsString().contains('HandshakeException');
+
+      if (details.silent || isAssetOrNetwork) {
         FirebaseCrashlytics.instance.recordFlutterError(details);
       } else {
         FirebaseCrashlytics.instance.recordFlutterFatalError(details);
@@ -36,7 +41,15 @@ void main() async {
 
     // Asynchronous / isolate error handling
     PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      final errStr = error.toString().toLowerCase();
+      final isNonFatal = errStr.contains('platformexception') ||
+          errStr.contains('socketexception') ||
+          errStr.contains('timeout') ||
+          errStr.contains('unable to load asset') ||
+          errStr.contains('connection closed') ||
+          errStr.contains('network is unreachable');
+
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: !isNonFatal);
       return true;
     };
   } else {

@@ -1831,10 +1831,10 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
           final checkDt = DateTime(dt.year, dt.month, dt.day);
           if (checkDt == today) {
             dayBadge = 'TODAY';
-            formattedDate = DateFormat('dd MMMM yyyy').format(dt);
+            formattedDate = DateFormat('dd MMM yyyy').format(dt);
           } else if (checkDt == today.subtract(const Duration(days: 1))) {
             dayBadge = 'YESTERDAY';
-            formattedDate = DateFormat('dd MMMM yyyy').format(dt);
+            formattedDate = DateFormat('dd MMM yyyy').format(dt);
           } else {
             formattedDate = DateFormat('EEE, dd MMM yyyy').format(dt);
           }
@@ -1878,16 +1878,12 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
               ),
               title: Row(
                 children: [
-                  Flexible(
-                    child: Text(
-                      formattedDate,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: slateDark,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    formattedDate,
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: slateDark,
                     ),
                   ),
                   if (dayBadge.isNotEmpty) ...[
@@ -2236,7 +2232,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                       Text(
                         name,
                         style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: slateDark),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 3),
@@ -2251,19 +2247,31 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 3,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text('Cost: ₹${cost.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.blue.shade700)),
-                          const SizedBox(width: 8),
                           Text('Sell: ₹${price.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: slateDark)),
-                          if (mrp > price) ...[
-                            const SizedBox(width: 6),
+                          if (mrp > price)
                             Text('₹${mrp.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 9.5, color: slateMuted, decoration: TextDecoration.lineThrough)),
-                          ],
-                          if (margin != null) ...[
-                            const SizedBox(width: 8),
-                            Text('$margin% margin', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: margin >= 15 ? brandGreen : brandOrange)),
-                          ],
+                          if (margin != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: margin >= 15 ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '$margin% margin',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: margin >= 15 ? const Color(0xFF15803D) : brandOrange,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ],

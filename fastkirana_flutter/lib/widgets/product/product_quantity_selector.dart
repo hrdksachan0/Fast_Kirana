@@ -142,6 +142,9 @@ class AddToCartButton extends ConsumerWidget {
   }
 
   Widget _stepper(BuildContext context, WidgetRef ref) {
+    final cart = ref.watch(cartProvider).value;
+    final matchingItems = cart?.items.where((i) => i.productId == product.id || i.productId.startsWith('${product.id}_')).toList() ?? [];
+
     return Container(
       height: s(31),
       decoration: BoxDecoration(
@@ -162,12 +165,18 @@ class AddToCartButton extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Decrement Button
           InkWell(
             borderRadius: BorderRadius.horizontal(left: Radius.circular(s(8))),
             onTap: () {
               HapticFeedback.lightImpact();
               if (hasVariants) {
-                VariantSelectorSheet.show(context, product);
+                // If only 1 variant item is in the cart, decrement it directly
+                if (matchingItems.length == 1) {
+                  ref.read(cartProvider.notifier).decrement(matchingItems.first.productId);
+                } else {
+                  VariantSelectorSheet.show(context, product);
+                }
               } else {
                 ref.read(cartProvider.notifier).decrement(product.id);
               }
@@ -180,24 +189,43 @@ class AddToCartButton extends ConsumerWidget {
               ),
             ),
           ),
-          Container(
-            constraints: BoxConstraints(minWidth: s(18)),
-            alignment: Alignment.center,
-            child: Text(
-              '$inCartQty',
-              style: GoogleFonts.plusJakartaSans(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: s(12.5),
-                letterSpacing: -0.2,
+
+          // Count - tapping opens variant sheet if product has variants
+          GestureDetector(
+            onTap: hasVariants ? () => VariantSelectorSheet.show(context, product) : null,
+            child: Container(
+              constraints: BoxConstraints(minWidth: s(18)),
+              alignment: Alignment.center,
+              child: Text(
+                '$inCartQty',
+                style: GoogleFonts.plusJakartaSans(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: s(12.5),
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
           ),
+
+          // Increment Button
           InkWell(
             borderRadius: BorderRadius.horizontal(right: Radius.circular(s(8))),
             onTap: () {
               if (hasVariants) {
-                VariantSelectorSheet.show(context, product);
+                // If only 1 variant item is in the cart, increment it directly
+                if (matchingItems.length == 1) {
+                  final singleItem = matchingItems.first;
+                  if (singleItem.product.stock > 0 && inCartQty >= singleItem.product.stock) {
+                    HapticFeedback.heavyImpact();
+                    _showStockLimitSnackbar();
+                    return;
+                  }
+                  HapticFeedback.lightImpact();
+                  ref.read(cartProvider.notifier).addProduct(singleItem.product, 1, singleItem.selectedVariant);
+                } else {
+                  VariantSelectorSheet.show(context, product);
+                }
               } else {
                 if (product.stock > 0 && inCartQty >= product.stock) {
                   HapticFeedback.heavyImpact();

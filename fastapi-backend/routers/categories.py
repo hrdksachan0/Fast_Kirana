@@ -78,6 +78,7 @@ async def get_categories(
     Uses ultra-fast Redis / memory cache (<5ms response).
     """
     import time
+    now = time.time()
     include_all = (admin == "true") or (all == "true")
     cache_key = f"categories:{include_all}:{storeId or 'all'}"
     

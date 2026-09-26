@@ -82,6 +82,20 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
       'lat': 26.4310,
       'lng': 82.5360,
     },
+    {
+      'name': 'Pakur Railway Station',
+      'city': 'Pakur',
+      'pincode': '816107',
+      'lat': 24.6380,
+      'lng': 87.8558,
+    },
+    {
+      'name': 'Pakur Bus Stand / Market',
+      'city': 'Pakur',
+      'pincode': '816107',
+      'lat': 24.6340,
+      'lng': 87.8510,
+    },
   ];
 
   @override

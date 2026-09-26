@@ -143,7 +143,7 @@ class DeliveryModeHeader extends StatelessWidget {
                             Text(
                               activeLocationTitle.isNotEmpty
                                   ? activeLocationTitle
-                                  : 'Deliver to Ghatampur...',
+                                  : 'Select delivery location...',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppDesignSystem.bodyMedium.copyWith(

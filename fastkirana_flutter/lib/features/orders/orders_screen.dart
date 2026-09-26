@@ -71,15 +71,21 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final cartNotifier = ref.read(cartProvider.notifier);
     for (final item in items) {
       final pid = item.productId ?? item.id;
+      final variantSuffix = (item.selectedVariant != null &&
+              item.selectedVariant!.isNotEmpty &&
+              !pid.contains('_'))
+          ? '_${item.selectedVariant}'
+          : '';
+      final effectivePid = '$pid$variantSuffix';
       final product = Product.fromJson({
-        'id': pid,
+        'id': effectivePid,
         'name': item.name,
         'slug': pid,
         'price': item.price,
         'mrp': item.price,
         'imageUrl': item.imageUrl,
         'categoryId': 'grocery',
-        'unit': '1 unit',
+        'unit': item.selectedVariant ?? '1 unit',
         'stock': 50,
       });
       cartNotifier.addProduct(product, item.quantity, item.selectedVariant);
@@ -472,7 +478,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final isCancelled = order.status == OrderStatus.cancelled;
     final isActive = !isDelivered && !isCancelled;
     final items = order.items ?? [];
-    final shopName = order.shopName?.isNotEmpty == true ? order.shopName! : 'FastKirana Darkstore';
+    final rawShopName = order.shopName?.isNotEmpty == true ? order.shopName! : 'FastKirana Mart';
+    final isDarkstoreOrGrocery = rawShopName.toLowerCase().contains('dark') ||
+        rawShopName.toLowerCase().contains('grocery') ||
+        rawShopName.toLowerCase().contains('kirana store');
+    final shopName = isDarkstoreOrGrocery ? 'FastKirana Mart' : rawShopName;
 
     Color statusColor = AppDesignSystem.blue600;
     Color statusBg = AppDesignSystem.blue50;
@@ -587,14 +597,14 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
+                    Flexible(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
                           color: shopName.contains('Restaurant') || shopName.contains('Cafe')
                               ? AppDesignSystem.orange50
                               : AppDesignSystem.statusPending,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(7),
                           border: Border.all(
                             color: shopName.contains('Restaurant') || shopName.contains('Cafe')
                                 ? AppDesignSystem.orange200
@@ -613,7 +623,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                               child: Text(
                                 shopName,
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
                                   fontWeight: FontWeight.w800,
                                   color: shopName.contains('Restaurant') || shopName.contains('Cafe')
                                       ? AppDesignSystem.orange700
@@ -628,16 +638,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        DateFormat('dd MMM, hh:mm a').format(order.createdAt),
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
-                          fontWeight: FontWeight.w600,
-                          color: slateMuted,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      DateFormat('dd MMM, hh:mm a').format(order.createdAt),
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                        fontWeight: FontWeight.w600,
+                        color: slateMuted,
                       ),
                     ),
                   ],

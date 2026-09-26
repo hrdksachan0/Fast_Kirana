@@ -67,3 +67,6 @@ fastapi-backend/firebase-credentials.json
 fastkirana_fastapi/**/__pycache__/
 *.pyc
 
+
+.vercel
+.env*

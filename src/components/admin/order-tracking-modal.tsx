@@ -115,7 +115,52 @@ export default function OrderTrackingModal({
 }: OrderTrackingModalProps) {
   const [copied, setCopied] = useState(false)
   const [showRefundModal, setShowRefundModal] = useState(false)
+  const [isSendingKot, setIsSendingKot] = useState(false)
   const order = selectedOrderForTracking
+
+  const handleSendRemoteKOT = async () => {
+    if (!order || isSendingKot) return
+    setIsSendingKot(true)
+    const targetOrder = order.subOrders?.find((s: any) => s.type === 'RESTAURANT') || order
+    const toastId = toast.loading(`Sending KOT to Kitchen (#${targetOrder.readableId || targetOrder.id?.slice(0, 8)})...`)
+    try {
+      const targetItems = (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
+        ? targetOrder.restaurantItems
+        : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || []
+      const customerName = targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer'
+
+      const res = await fetch('/api/kot-broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: targetOrder.id,
+          readableId: targetOrder.readableId,
+          restaurantId: targetOrder.restaurantId || null,
+          customerName,
+          items: targetItems,
+          deliveryMethod: targetOrder.deliveryMethod || 'DELIVERY',
+          notes: targetOrder.notes || null,
+          shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
+          printedAt: new Date().toISOString(),
+          kotText: 'FASTKIRANA KOT',
+          manual: true,
+          source: 'order_modal',
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && !data.ignored) {
+        toast.dismiss(toastId)
+        toast.success(`KOT Sent to Kitchen POS ✓ 📲`)
+      } else {
+        throw new Error(data.reason || 'Server broadcast failed')
+      }
+    } catch (err: any) {
+      toast.dismiss(toastId)
+      toast.error(`Failed to send KOT: ${err.message}`)
+    } finally {
+      setIsSendingKot(false)
+    }
+  }
 
   const isPickup = (
     (order?.deliveryMethod || '').toUpperCase() === 'SELF_PICKUP' || 
@@ -719,20 +764,21 @@ export default function OrderTrackingModal({
             Kitchen Slip
           </button>
 
-          {/* Direct Thermal KOT Print */}
+          {/* Send KOT to Restaurant POS Printer (No local print) */}
           {(order.restaurantId || order.restaurantName || order.subOrders?.some((s: any) => s.type === 'RESTAURANT')) && (
             <button
               type="button"
-              onClick={() => {
-                const targetOrder = order.subOrders?.find((s: any) => s.type === 'RESTAURANT') || order
-                printKOTReceipt(targetOrder, targetOrder.restaurantName || targetOrder.shopName || 'RESTAURANT')
-                toast.success(`KOT printed for #${targetOrder.readableId || targetOrder.id?.slice(0, 8)} 🖨️`)
-              }}
-              className="h-10 px-3 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.97] shrink-0"
-              title="Print Kitchen Order Ticket (KOT)"
+              disabled={isSendingKot}
+              onClick={handleSendRemoteKOT}
+              className={`h-10 px-3 text-white text-xs font-black rounded-xl transition-all shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.97] shrink-0 ${
+                isSendingKot
+                  ? 'bg-amber-600/80 animate-pulse cursor-not-allowed'
+                  : 'bg-emerald-600 hover:bg-emerald-700'
+              }`}
+              title="Send KOT to Kitchen POS Thermal Printer"
             >
               <Printer className="h-4 w-4" strokeWidth={2.2} />
-              <span>KOT</span>
+              <span>{isSendingKot ? 'Sending...' : 'Send KOT'}</span>
             </button>
           )}
 

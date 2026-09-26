@@ -468,15 +468,40 @@ async def dispatch_isolated_order_fcm_notifications(
     store_id: Optional[str] = None
 ):
     """
-    Dispatches order notifications with absolute isolation:
-    - Restaurant orders ONLY alert restaurant-specific canonical topic. Never grocery pickers.
-    - Grocery orders ONLY alert darkstore pickers and riders. Never restaurant consoles or chefs.
-    - Admins receive EXACTLY 1 alert via canonical admin_orders topic.
+    Dispatches order notifications with absolute isolation & strict order lifecycle:
+    1. If ADMIN_PENDING: ONLY notify Admin for manual approval. (Do NOT alert restaurant/picker/rider).
+    2. If APPROVED (PENDING / CONFIRMED):
+       - Restaurant Order: Alert Restaurant/Chef (restaurant_{id}). (Do NOT alert rider yet).
+       - Grocery Order: Alert Picker/Vendor (picker_orders_{store_id}). (Do NOT alert rider yet).
+       - Admin: Alert Admin (admin_orders).
     """
     try:
         now_ts = str(int(datetime.utcnow().timestamp() * 1000))
+        is_admin_pending = (status_val == "ADMIN_PENDING")
+
+        # ── CASE 1: MANUAL ADMIN APPROVAL REQUIRED ──
+        if is_admin_pending:
+            admin_title = "🚨 New Order Awaiting Approval!"
+            admin_body = f"Order #{readable_id} ({shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) needs admin approval. Tap to review."
+            admin_data = {
+                "orderId": order_id,
+                "readableId": str(readable_id),
+                "storeId": str(store_id or ""),
+                "restaurantId": str(restaurant_id or ""),
+                "status": status_val,
+                "screen": "admin-orders",
+                "type": "NEW_ORDER",
+                "role": "ADMIN",
+                "timestamp": now_ts,
+            }
+            if store_id:
+                await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_title, admin_body, admin_data)
+            await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
+            return  # Stop here! Do not notify restaurant/picker/rider until approved
+
+        # ── CASE 2: AUTO-APPROVED / CONFIRMED ──
         if restaurant_id:
-            # 1. RESTAURANT / KITCHEN ISOLATED NOTIFICATION (Single canonical topic)
+            # Alert Restaurant/Chef to start cooking (Rider is notified when food is packed/prepared)
             rest_title = f"👨‍🍳 New Order for {shop_name or 'Kitchen'}!"
             rest_body = f"Order #{readable_id} received (₹{total:.2f})! Open kitchen console to prepare dishes."
             rest_data = {
@@ -488,28 +513,10 @@ async def dispatch_isolated_order_fcm_notifications(
                 "type": "NEW_ORDER",
                 "timestamp": now_ts,
             }
-
-            # Broadcast ONCE to the canonical restaurant topic
             await send_fcm_topic_notification(f"restaurant_{restaurant_id}", rest_title, rest_body, rest_data)
 
-            # Notify Delivery Riders for food orders
-            rider_food_title = f"🛵 New Food Order #{readable_id} to Deliver!"
-            rider_food_body = f"Order #{readable_id} for {shop_name or 'Restaurant'} (₹{total:.2f}) placed. Tap to view."
-            rider_food_data = {
-                "orderId": order_id,
-                "readableId": str(readable_id),
-                "restaurantId": str(restaurant_id),
-                "status": status_val,
-                "screen": "delivery",
-                "type": "NEW_ORDER",
-                "role": "DELIVERY",
-                "timestamp": now_ts,
-            }
-            rider_topic = f"delivery_orders_{store_id}" if store_id else "delivery_orders"
-            await send_fcm_topic_notification(rider_topic, rider_food_title, rider_food_body, rider_food_data)
-
         else:
-            # 2. GROCERY DARK STORE ISOLATED NOTIFICATION
+            # Alert Grocery Picker / Vendor to pack items (Rider is notified when items are packed)
             store_label = f" [{store_id.replace('hub-', '').upper()}]" if store_id else ""
             grocery_title = f"📦 New Order #{readable_id} to Pick!{store_label}"
             grocery_body = f"New order #{readable_id} of ₹{total:.2f}. Tap to pack items."
@@ -523,34 +530,12 @@ async def dispatch_isolated_order_fcm_notifications(
                 "role": "PICKER",
                 "timestamp": now_ts,
             }
-
-            admin_rider_title = f"🛵 New Delivery Order #{readable_id}{store_label}"
-            admin_rider_body = f"New grocery order #{readable_id} of ₹{total:.2f} placed."
-            admin_rider_data = {
-                "orderId": order_id,
-                "readableId": str(readable_id),
-                "storeId": str(store_id or ""),
-                "status": status_val,
-                "screen": "delivery",
-                "type": "NEW_ORDER",
-                "role": "DELIVERY",
-                "timestamp": now_ts,
-            }
-
-            # Broadcast ONCE to store-specific picker and delivery topics
             picker_topic = f"picker_orders_{store_id}" if store_id else "picker_orders"
-            rider_topic = f"delivery_orders_{store_id}" if store_id else "delivery_orders"
             await send_fcm_topic_notification(picker_topic, grocery_title, grocery_body, grocery_data)
-            await send_fcm_topic_notification(rider_topic, admin_rider_title, admin_rider_body, admin_rider_data)
 
-        # ── 3. BROADCAST TO ALL ADMINS & MANAGERS (Single Canonical Topic) ──
-        is_admin_pending = (status_val == "ADMIN_PENDING")
-        admin_title = "🚨 New Order Awaiting Approval!" if is_admin_pending else f"🛎️ New Order Received #{readable_id}"
-        admin_body = (
-            f"Order #{readable_id} ({shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) needs admin approval. Tap to review."
-            if is_admin_pending
-            else f"New order #{readable_id} of ₹{total:.2f} has been placed. Tap to review."
-        )
+        # ── 3. BROADCAST TO HUB MANAGER & MASTER ADMIN ──
+        admin_title = f"🛎️ New Order Received #{readable_id}"
+        admin_body = f"New order #{readable_id} of ₹{total:.2f} has been placed. Tap to review."
         admin_data = {
             "orderId": order_id,
             "readableId": str(readable_id),
@@ -562,8 +547,8 @@ async def dispatch_isolated_order_fcm_notifications(
             "role": "ADMIN",
             "timestamp": now_ts,
         }
-
-        # Broadcast ONCE to the canonical 'admin_orders' topic
+        if store_id:
+            await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_title, admin_body, admin_data)
         await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
     except Exception as e:
         logger.error(f"Failed to dispatch isolated FCM push notification: {str(e)}")
@@ -579,15 +564,34 @@ async def dispatch_isolated_status_update_notifications(
 ):
     """
     Dispatches order status update notifications with strict outlet isolation:
-    - Restaurant orders ONLY alert canonical restaurant topic.
-    - Grocery orders ONLY alert darkstore pickers.
+    - When PACKED: Alert Delivery Rider to pick up and deliver.
+    - Restaurant orders alert canonical restaurant topic.
+    - Grocery orders alert darkstore pickers.
     """
     try:
         now_ts = str(int(datetime.utcnow().timestamp() * 1000))
         base_order_no = re.sub(r'-[GR\d]+$', '', readable_id or "")
 
+        # ── RIDER NOTIFICATION: Triggered ONLY when order is PACKED ──
+        if status_val == "PACKED" or (restaurant_id and status_val in ["COOKED", "PREPARED", "PACKED"]):
+            rider_title = f"🛵 Order #{base_order_no} is Packed & Ready!"
+            rider_body = f"Order #{base_order_no} ({shop_name or 'Store'}) is packed. Tap to pick up & deliver."
+            rider_data = {
+                "orderId": order_id,
+                "readableId": str(readable_id),
+                "storeId": str(store_id or ""),
+                "restaurantId": str(restaurant_id or ""),
+                "status": status_val,
+                "screen": "delivery",
+                "type": "ORDER_PACKED",
+                "role": "DELIVERY",
+                "timestamp": now_ts,
+            }
+            rider_topic = f"delivery_orders_{store_id}" if store_id else "delivery_orders"
+            await send_fcm_topic_notification(rider_topic, rider_title, rider_body, rider_data)
+
         if restaurant_id:
-            # 1. RESTAURANT / KITCHEN ISOLATED STATUS UPDATE (Single canonical topic)
+            # RESTAURANT / KITCHEN ISOLATED STATUS UPDATE
             rest_title = f"👨‍🍳 Order #{base_order_no} Status: {status_val}"
             rest_body = f"Order #{base_order_no} for {shop_name or 'Kitchen'} updated to {status_val}."
             rest_data = {
@@ -599,12 +603,10 @@ async def dispatch_isolated_status_update_notifications(
                 "type": "ORDER_STATUS_UPDATE",
                 "timestamp": now_ts,
             }
-
-            # Broadcast ONCE to this restaurant's canonical topic
             await send_fcm_topic_notification(f"restaurant_{restaurant_id}", rest_title, rest_body, rest_data)
 
         else:
-            # 2. GROCERY DARK STORE ISOLATED STATUS UPDATE (Single canonical topic)
+            # GROCERY DARK STORE ISOLATED STATUS UPDATE
             store_label = f" [{store_id.replace('hub-', '').upper()}]" if store_id else ""
             grocery_title = f"📦 Grocery Order #{base_order_no} -> {status_val}{store_label}"
             grocery_body = f"Order #{base_order_no} status changed to {status_val}."
@@ -618,7 +620,6 @@ async def dispatch_isolated_status_update_notifications(
                 "role": "PICKER",
                 "timestamp": now_ts,
             }
-
             picker_topic = f"picker_orders_{store_id}" if store_id else "picker_orders"
             await send_fcm_topic_notification(picker_topic, grocery_title, grocery_body, grocery_data)
     except Exception as e:

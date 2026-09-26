@@ -80,7 +80,12 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                   builder: (context, ref, _) {
                     final selectedAddress = ref.watch(selectedAddressProvider);
                     final currentHub = ref.watch(currentStoreHubProvider);
-                    final locationLabel = selectedAddress?.displayLabel ?? 'Home';
+                    String locationLabel = selectedAddress?.displayLabel ?? 'Home';
+                    if (locationLabel.toLowerCase().contains('family in')) {
+                      locationLabel = 'Family & Friends';
+                    } else if (locationLabel.toLowerCase() == 'active store hub') {
+                      locationLabel = 'Instant Delivery';
+                    }
                     final shortLocation = selectedAddress?.shortAddress ?? currentHub.city;
 
                     return GestureDetector(
@@ -108,41 +113,19 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  'Delivering to $locationLabel',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: Responsive.scaledFontSize(context, 10.5),
-                                    fontWeight: FontWeight.w700,
-                                    color: AppDesignSystem.textSecondary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.primaryGreen.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  currentHub.id.toUpperCase(),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: Responsive.scaledFontSize(context, 8.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.primaryGreen,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          // Line 1: Delivering to Home / Family & Friends / Work (Zero truncation)
+                          Text(
+                            'Delivering to $locationLabel',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w700,
+                              color: AppDesignSystem.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
-                          // Location title + dropdown arrow
+                          // Line 2: Location title + dropdown arrow + Hub indicator pill
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -162,6 +145,22 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                               ),
                               const SizedBox(width: 3),
                               const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppDesignSystem.textPrimary),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: AppDesignSystem.primaryGreen.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  currentHub.id.toUpperCase(),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.primaryGreen,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ],

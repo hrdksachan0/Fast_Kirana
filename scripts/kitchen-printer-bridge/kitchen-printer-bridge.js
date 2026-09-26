@@ -235,67 +235,51 @@ function printKOT(order, items, user) {
 
       let lines = [];
       lines.push(thickDivider);
-      lines.push(centerText('FASTKIRANA KOT'));
-      lines.push(thickDivider);
 
       const orderIdText = order.readableId ? `#${order.readableId}` : `#${order.id.slice(0, 8).toUpperCase()}`;
-      const customerName = (user?.name || order.userName || order.customerName || '').trim();
-      const tokenLine = customerName ? `TOKEN : ${orderIdText} | ${customerName}` : `TOKEN : ${orderIdText}`;
-      lines.push(tokenLine);
-      lines.push(`TYPE  : ${order.deliveryMethod || 'DELIVERY'}`);
-
-      const printDateStr = new Date().toLocaleString('en-IN', {
+      const modeText = (order.deliveryMethod || 'DELIVERY').toUpperCase();
+      const leftHeader = `${orderIdText} [${modeText}]`;
+      const dateStr = new Date().toLocaleString('en-IN', {
         timeZone: 'Asia/Kolkata',
         day: '2-digit',
         month: 'short',
+        year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
       }).replace(',', '');
-      lines.push(`Print : ${printDateStr}`);
 
-      if (order.notes && order.notes.trim()) {
-        const deliveryInstructions = [
-          'ring bell', "don't ring", 'dont ring', 'leave at door', 'leave at gate',
-          'call before', 'avoid calling', 'drop at door', 'keep at door', 'deliver to',
-          'call when reach', 'call upon arrival', 'gate pe', 'bell bajana', 'doorbell',
-        ];
-        const lowerNote = order.notes.toLowerCase().trim();
-        const isDeliveryNote = deliveryInstructions.some((d) => lowerNote.includes(d));
-        if (!isDeliveryNote) {
-          lines.push(`Note  : ${order.notes.trim()}`);
-        }
+      if ((leftHeader.length + dateStr.length + 1) <= lineLength) {
+        const headerSpacing = Math.max(1, lineLength - leftHeader.length - dateStr.length);
+        lines.push(`${leftHeader}${' '.repeat(headerSpacing)}${dateStr}`);
+      } else {
+        lines.push(leftHeader);
+        const pad = Math.max(0, lineLength - dateStr.length);
+        lines.push(`${' '.repeat(pad)}${dateStr}`);
       }
 
-      lines.push(thinDivider);
-      lines.push('QTY   ITEM');
-      lines.push(thinDivider);
+      const brandOrShop = (order.shopName || order.restaurantName || 'FastKirana').trim();
+      const customerName = (user?.name || order.userName || order.customerName || 'Customer').trim();
+      lines.push(`${brandOrShop}  • ${customerName}`);
+      lines.push(thickDivider);
 
+      let totalQty = 0;
       (items || []).forEach((item) => {
-        const qtyStr = `${item.quantity || 1}`.padEnd(2, ' ');
-        const prefix = `${qtyStr} x  `;
-        const availableWidth = lineLength - prefix.length;
-
+        const qty = parseInt(item.quantity || 1, 10);
+        totalQty += qty;
         let itemName = item.name || 'Item';
         if (item.selectedVariant) {
           itemName += ` (${item.selectedVariant})`;
         }
-
-        const wrappedName = wrapText(itemName, availableWidth);
-        if (wrappedName.length > 0) {
-          lines.push(`${prefix}${wrappedName[0]}`);
-          for (let i = 1; i < wrappedName.length; i++) {
-            lines.push(' '.repeat(prefix.length) + wrappedName[i]);
-          }
-        }
-
-        if (item.notes) {
-          lines.push('      * Note: ' + item.notes);
+        lines.push(`[ ]  ${qty} x ${itemName}`);
+        if (item.notes && item.notes.trim()) {
+          lines.push(`     -> Note: ${item.notes.trim()}`);
         }
       });
 
-      lines.push(thinDivider);
-      lines.push(centerText('*** FASTKIRANA KITCHEN ***'));
+      lines.push(thickDivider);
+      const cleanNote = (order.notes || '').replace(/✨/g, '').replace(/^Note:\s*/i, '').trim();
+      lines.push(`Note: ${cleanNote}`);
       lines.push(thickDivider);
       lines.push('\r\n\r\n\r\n');
 
@@ -500,6 +484,8 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
 
       if (idFiltered.length > 0) {
         targetItems = idFiltered;
+      } else if (order.restaurantId || broadcastPayload.restaurantId || order.shopName || broadcastPayload.shopName) {
+        targetItems = items || [];
       } else {
         const cookedFoodWhitelists = [
           'dosa', 'burger', 'pizza', 'sandwich', 'roll', 'frankie', 'chowmein', 'noodles',

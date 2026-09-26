@@ -34,3 +34,4 @@ firebase-admin>=6.5.0
 razorpay>=1.4.1
 Pillow>=10.0.0
 python-multipart>=0.0.9
+websockets>=12.0

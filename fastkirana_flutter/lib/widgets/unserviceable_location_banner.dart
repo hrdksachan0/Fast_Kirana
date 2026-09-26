@@ -17,15 +17,15 @@ class UnserviceableLocationBanner extends ConsumerWidget {
   static void resetToActiveHub(WidgetRef ref, BuildContext context, {bool isOrderForSomeone = false}) {
     HapticFeedback.mediumImpact();
     final currentHub = ref.read(currentStoreHubProvider);
-    final targetCity = currentHub.city.isNotEmpty ? currentHub.city : 'Ghatampur';
+    final targetCity = currentHub.city.isNotEmpty ? currentHub.city : '';
     final defaultHub = Address(
       id: 'hub_active_default',
       userId: 'current',
-      label: isOrderForSomeone ? 'Family in $targetCity' : 'Active Store Hub',
+      label: isOrderForSomeone ? 'Family & Friends' : 'Quick Delivery',
       houseNo: isOrderForSomeone ? 'Recipient Address' : '',
       street: currentHub.name,
-      area: targetCity,
-      city: targetCity,
+      area: targetCity.isNotEmpty ? targetCity : currentHub.name,
+      city: targetCity.isNotEmpty ? targetCity : 'FastKirana',
       pincode: currentHub.id.contains('224122') ? '224122' : '209206',
       latitude: currentHub.latitude,
       longitude: currentHub.longitude,
@@ -53,7 +53,9 @@ class UnserviceableLocationBanner extends ConsumerWidget {
                 children: [
                   Text(
                     isOrderForSomeone
-                        ? 'Ordering for Loved Ones in $targetCity 🎁'
+                        ? (targetCity.isNotEmpty
+                            ? 'Ordering for Loved Ones in $targetCity 🎁'
+                            : 'Ordering for Loved Ones & Family 🎁')
                         : 'Switched to Active Store Hub (Express Delivery)',
                     style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: 12.5, color: Colors.white),
                   ),

@@ -784,12 +784,16 @@ class NotificationService {
       // Subscribe to role-based and user-specific topics
       try {
         if (isAdmin) {
-          // Admin subscribes ONLY to canonical admin_orders topic
-          await _fcm?.subscribeToTopic('admin_orders');
-          if (storeId != null && storeId.isNotEmpty) {
+          final isHubManager = (storeId != null && storeId.isNotEmpty && resolvedRole != 'SUPER_ADMIN');
+          if (isHubManager) {
+            // Hub/Store Manager: Subscribe ONLY to this specific hub's orders (Strict Hub Isolation)
             await _fcm?.subscribeToTopic('admin_orders_$storeId');
+            try { await _fcm?.unsubscribeFromTopic('admin_orders'); } catch (_) {}
+          } else {
+            // Super Admin: Subscribes to global canonical admin_orders topic
+            await _fcm?.subscribeToTopic('admin_orders');
           }
-          // Actively purge duplicate and sub-console topics so Admin NEVER receives 3x notifications
+          // Actively purge duplicate and sub-console topics
           final duplicateTopicsToPurge = [
             'admin_orders_all',
             'staff_orders',

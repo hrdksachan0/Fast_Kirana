@@ -22,6 +22,7 @@ import {
   CreditCard,
   Banknote,
   RotateCcw,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'

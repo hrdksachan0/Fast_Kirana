@@ -22,8 +22,6 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cityName = nearestHub.city.isNotEmpty ? nearestHub.city : 'Ghatampur';
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -60,7 +58,7 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
         children: [
           // 1. Prominent Status Pill: UNSERVICEABLE AREA
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF1F2),
               borderRadius: BorderRadius.circular(20),
@@ -81,13 +79,17 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 7),
-                Text(
-                  'UNSERVICEABLE AREA • ${distanceKm.toStringAsFixed(1)} KM OUTSIDE ZONE',
-                  style: GoogleFonts.inter(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFFBE123C),
-                    letterSpacing: 0.6,
+                Flexible(
+                  child: Text(
+                    'OUTSIDE DELIVERY ZONE • ${distanceKm.toStringAsFixed(0)} KM AWAY',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFFBE123C),
+                      letterSpacing: 0.4,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -198,7 +200,7 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    'Lekin aap $cityName me apno ke liye order kar sakte hain!',
+                    'Lekin aap hamare delivery zones me apno ke liye order kar sakte hain!',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 12),
                       fontWeight: FontWeight.w800,
@@ -217,7 +219,7 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              'Aapki current location hamare delivery radius se bahar hai. Lekin agar aapka parivar, rishtedar ya dost $cityName me rehte hain, toh aap unke liye fresh kirana aur khana order kar sakte hain!',
+              'Aapki current location hamare delivery radius se bahar hai. Lekin agar aapke parivar, rishtedar ya dost hamare serviceable delivery area me rehte hain, toh aap unke liye fresh kirana aur khana order kar sakte hain!',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 12),
@@ -299,7 +301,7 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
                   ),
                   const SizedBox(width: 9),
                   Text(
-                    'Order for Someone in $cityName',
+                    'Order for Friends & Family',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 14),
                       fontWeight: FontWeight.w800,
@@ -361,7 +363,7 @@ class OutsideDeliveryZoneView extends ConsumerWidget {
               HapticFeedback.lightImpact();
               HubWaitlistSheet.show(
                 context,
-                hubName: '$cityName Outskirts (${distanceKm.toStringAsFixed(1)}km away)',
+                hubName: 'Delivery Zone (${distanceKm.toStringAsFixed(0)}km away)',
                 areaName: 'Outside Delivery Zone',
               );
             },

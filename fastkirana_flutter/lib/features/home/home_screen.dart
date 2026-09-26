@@ -175,6 +175,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   @override
   Widget build(BuildContext context) {
     final hubStatus = ref.watch(hubAvailabilityProvider);
+    final cart = ref.watch(cartProvider).valueOrNull;
+    final hasCartItems = (cart?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0) > 0;
 
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
@@ -433,7 +435,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       const SliverToBoxAdapter(child: HomeFooter()),
                     ],
                   ],
-                  const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                  SliverToBoxAdapter(child: SizedBox(height: hasCartItems ? 120 : 80)),
                 ],
               ),
             ),

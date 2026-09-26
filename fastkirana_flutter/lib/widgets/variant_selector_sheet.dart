@@ -950,11 +950,23 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
   ) {
     final cart = ref.watch(cartProvider).value;
     final variantProductId = '${widget.product.id}_${variant.name}';
-    final cartItem = cart?.items.cast<dynamic>().firstWhere(
-      (i) => i.productId == variantProductId || (i.productId == widget.product.id && i.selectedVariant == variant.name),
-      orElse: () => null,
-    );
-    final inCartQty = cartItem?.quantity ?? 0;
+    final isDefaultVariant = widget.product.parsedVariants.isNotEmpty &&
+        widget.product.parsedVariants.first.name == variant.name;
+
+    final matchingItems = cart?.items.where((i) {
+      if (i.productId == variantProductId) return true;
+      if (i.productId == widget.product.id) {
+        if (i.selectedVariant != null && i.selectedVariant!.isNotEmpty) {
+          final s1 = i.selectedVariant!.trim().toLowerCase().replaceAll(' ', '');
+          final s2 = variant.name.trim().toLowerCase().replaceAll(' ', '');
+          return s1 == s2;
+        }
+        return isDefaultVariant;
+      }
+      return false;
+    }).toList() ?? [];
+
+    final inCartQty = matchingItems.fold<int>(0, (sum, i) => sum + i.quantity);
 
     final discount = variant.mrp > variant.price && variant.mrp > 0
         ? ((variant.mrp - variant.price) / variant.mrp * 100).round()
@@ -1124,7 +1136,11 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                   InkWell(
                     onTap: () {
                       HapticFeedback.lightImpact();
-                      ref.read(cartProvider.notifier).decrement(variantProductId);
+                      if (matchingItems.isNotEmpty) {
+                        ref.read(cartProvider.notifier).decrement(matchingItems.last.productId);
+                      } else {
+                        ref.read(cartProvider.notifier).decrement(variantProductId);
+                      }
                     },
                     borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
                     child: const SizedBox(

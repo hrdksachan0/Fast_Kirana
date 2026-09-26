@@ -6,7 +6,15 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/restaurant_provider.dart';
 import '../../providers/store_settings_provider.dart';
+import '../../providers/store_hub_provider.dart';
+import '../../providers/address_provider.dart';
+import '../../providers/product_provider.dart';
+import '../../providers/hub_availability_provider.dart';
 import '../../data/models/restaurant.dart';
+import '../../data/models/store_hub.dart';
+import '../../data/models/address.dart';
+import '../../core/config/app_config.dart';
+import '../../data/repositories/product_repository.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
 import 'admin_orders_list.dart';
@@ -59,6 +67,167 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     );
   }
 
+  void _openStoreHubPickerModal(BuildContext context, List<StoreHub> hubs, StoreHub currentHub) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1E293B),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(top: BorderSide(color: Color(0xFF334155), width: 1)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF475569),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.store_mall_directory_rounded, color: Color(0xFF38BDF8), size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Switch Active Store Hub',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Select a store hub to view live catalog, inventory & orders',
+              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+            ),
+            const SizedBox(height: 16),
+            ...hubs.map((hub) {
+              final isSelected = hub.id == currentHub.id;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    Navigator.pop(ctx);
+                    ref.read(selectedAddressProvider.notifier).state = Address(
+                      id: 'admin_hub_${hub.id}',
+                      userId: 'admin',
+                      label: hub.name,
+                      houseNo: 'Store Hub',
+                      street: hub.name,
+                      area: hub.city,
+                      city: hub.city,
+                      pincode: hub.id.contains('224122') ? '224122' : (hub.id.contains('816107') ? '816107' : '209206'),
+                      latitude: hub.latitude,
+                      longitude: hub.longitude,
+                      isDefault: true,
+                    );
+                    AppConfig.updateDarkstore(
+                      lat: hub.latitude,
+                      lng: hub.longitude,
+                      address: '${hub.name}, ${hub.city}',
+                      id: hub.id,
+                    );
+                    ProductRepository.invalidateHubCache(hub.id);
+                    ref.invalidate(homeProductCatalogProvider);
+                    ref.invalidate(productsProvider(null));
+                    ref.invalidate(hubAvailabilityProvider);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: const Color(0xFF10B981),
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Switched to ${hub.name} (${hub.city})',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF334155).withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFF475569),
+                        width: isSelected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF0284C7).withValues(alpha: 0.2) : const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.storefront_rounded,
+                            size: 18,
+                            color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                hub.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${hub.city} · ${hub.id} · ${hub.deliveryRadiusKm.toInt()} km radius',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          const Icon(Icons.check_circle_rounded, color: Color(0xFF38BDF8), size: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _handleBackPress() {
     HapticFeedback.lightImpact();
     if (Navigator.canPop(context)) {
@@ -70,6 +239,10 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final hubsAsync = ref.watch(activeStoreHubsProvider);
+    final activeHubs = hubsAsync.valueOrNull ?? StoreHub.defaultHubs;
+    final currentHub = ref.watch(currentStoreHubProvider);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -144,30 +317,45 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 1.5),
-                        Row(
-                          children: [
-                            Container(
-                              width: 5,
-                              height: 5,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF10B981),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(color: Color(0xFF10B981), blurRadius: 3, spreadRadius: 0.5),
-                                ],
-                              ),
+                        const SizedBox(height: 2),
+                        // Interactive Store Hub Selector
+                        GestureDetector(
+                          onTap: () => _openStoreHubPickerModal(context, activeHubs, currentHub),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E293B),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF334155), width: 0.8),
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Ghatampur · Live',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 10),
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF94A3B8),
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 5.5,
+                                  height: 5.5,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF10B981),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(color: Color(0xFF10B981), blurRadius: 3, spreadRadius: 0.5),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  '${currentHub.city} · Live',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10),
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                const Icon(Icons.arrow_drop_down_rounded, size: 14, color: Color(0xFF94A3B8)),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
