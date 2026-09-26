@@ -268,7 +268,7 @@ async def geocode_address(address_str: str) -> Optional[dict]:
 async def send_whatsapp_alert(phone: str, text: str) -> bool:
     token = re.sub(r'\s+', '', os.getenv("WHATSAPP_TOKEN", "").strip().strip('"').strip("'"))
     phone_id = re.sub(r'\s+', '', os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip().strip('"').strip("'"))
-    template_name = os.getenv("WHATSAPP_ORDER_TEMPLATE_NAME", "fastkirana_order").strip().strip('"').strip("'")
+    template_name = os.getenv("WHATSAPP_ORDER_TEMPLATE_NAME", "fastkirana_otp").strip().strip('"').strip("'")
     template_lang = os.getenv("WHATSAPP_TEMPLATE_LANG", "en").strip().strip('"').strip("'")
 
     if not token or not phone_id:
@@ -343,7 +343,7 @@ async def test_whatsapp_alert_endpoint(phone: str = "7054470303"):
     """Live diagnostic endpoint to test WhatsApp alert delivery and inspect Meta response."""
     token = re.sub(r'\s+', '', os.getenv("WHATSAPP_TOKEN", "").strip().strip('"').strip("'"))
     phone_id = re.sub(r'\s+', '', os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip().strip('"').strip("'"))
-    template_name = os.getenv("WHATSAPP_ORDER_TEMPLATE_NAME", "fastkirana_order").strip().strip('"').strip("'")
+    template_name = os.getenv("WHATSAPP_ORDER_TEMPLATE_NAME", "fastkirana_otp").strip().strip('"').strip("'")
     template_lang = os.getenv("WHATSAPP_TEMPLATE_LANG", "en").strip().strip('"').strip("'")
 
     digits = "".join(c for c in str(phone) if c.isdigit())

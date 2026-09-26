@@ -152,7 +152,7 @@ export function CheckoutProcessingOverlay({
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                 </span>
                 <Zap className="h-3 w-3 fill-current" />
-                <span>FastKirana Express • 10-15 Mins</span>
+                <span>FastKirana Express Delivery</span>
               </motion.div>
 
               {/* Animated Scooter / Rider Radar Stage */}
@@ -444,12 +444,12 @@ export function CheckoutProcessingOverlay({
                 className="grid grid-cols-2 gap-2.5 w-full mt-5"
               >
                 <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                  <Clock className="h-4 w-4 flex-shrink-0" />
+                  <Bike className="h-4 w-4 flex-shrink-0" />
                   <div className="text-left">
                     <p className="text-[10px] font-medium text-emerald-600/80 dark:text-emerald-400/80">
-                      Estimated Arrival
+                      Delivery Mode
                     </p>
-                    <p className="text-xs font-black">10-15 Mins</p>
+                    <p className="text-xs font-black">Express Direct</p>
                   </div>
                 </div>
 

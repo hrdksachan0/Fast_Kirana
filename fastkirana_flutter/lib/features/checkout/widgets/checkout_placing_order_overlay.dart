@@ -133,7 +133,7 @@ class _CheckoutPlacingOrderOverlayState extends State<CheckoutPlacingOrderOverla
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '⚡ FASTKIRANA EXPRESS • 10-15 MINS',
+                      '⚡ FASTKIRANA EXPRESS DELIVERY',
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,

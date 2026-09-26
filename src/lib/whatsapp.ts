@@ -135,7 +135,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
 export async function sendWhatsAppOrderAlert(phone: string, textParam: string, dedupeKey?: string): Promise<boolean> {
   const token = getCleanEnv('WHATSAPP_TOKEN')
   const phoneId = getCleanEnv('WHATSAPP_PHONE_NUMBER_ID')
-  const templateName = getCleanEnv('WHATSAPP_ORDER_TEMPLATE_NAME') || 'fastkirana_order'
+  const templateName = getCleanEnv('WHATSAPP_ORDER_TEMPLATE_NAME') || 'fastkirana_otp'
 
   if (!token || !phoneId) {
     return false
