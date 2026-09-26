@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import re
 import firebase_admin
 from firebase_admin import credentials, messaging
 from typing import Optional, Dict, Any, List
@@ -54,28 +55,6 @@ def init_firebase() -> bool:
 
 # Try to initialize on load
 init_firebase()
-
-async def send_fcm_notification(
-    tokens: List[str],
-    title: str,
-    body: str,
-    data: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
-    """
-    Send push notification to multiple device tokens via FCM.
-    Uses modern firebase-admin send_each_for_multicast SDK.
-    """
-    if not init_firebase():
-        logger.error("Cannot send FCM notification: Firebase not initialized.")
-        return {"success": 0, "failure": len(tokens), "invalid_tokens": []}
-    
-    clean_tokens = [t for t in tokens if t and isinstance(t, str) and len(t) > 10]
-    if not clean_tokens:
-        return {"success": 0, "failure": 0, "invalid_tokens": []}
-    
-    try:
-        # Convert data keys and values to strings (FCM requirement)
-        data_str = {str(k): str(v) for k, v in (data or {}).items()}
 
 def is_order_buzzer_alert(title: str, body: str, data: Optional[Dict[str, Any]]) -> bool:
     d = data or {}
@@ -236,7 +215,7 @@ async def send_fcm_topic_notification(
         logger.error("Cannot send FCM topic notification: Firebase not initialized.")
         return False
     
-    clean_topic = str(topic).replace("+", "").replace(" ", "").replace("-", "_").strip()
+    clean_topic = re.sub(r'[^a-zA-Z0-9-_.~%]', '', str(topic)).strip()
     if not clean_topic:
         return False
     

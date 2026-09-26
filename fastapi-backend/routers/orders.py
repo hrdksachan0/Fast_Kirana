@@ -521,10 +521,10 @@ async def dispatch_isolated_order_fcm_notifications(
                 if clean_owner_phone:
                     await send_fcm_topic_notification(f"phone_{clean_owner_phone}", rest_title, rest_body, rest_data)
 
-            # Notify Delivery Riders & Admins
-            admin_rider_title = f"🍽️ Food Order Placed #{readable_id}"
-            admin_rider_body = f"Order #{readable_id} for {shop_name or 'Restaurant'} (₹{total:.2f})."
-            admin_rider_data = {
+            # Notify Delivery Riders for food orders
+            rider_food_title = f"🛵 New Food Order #{readable_id} to Deliver!"
+            rider_food_body = f"Order #{readable_id} for {shop_name or 'Restaurant'} (₹{total:.2f}) placed. Tap to view."
+            rider_food_data = {
                 "orderId": order_id,
                 "readableId": str(readable_id),
                 "restaurantId": str(restaurant_id),
@@ -534,8 +534,13 @@ async def dispatch_isolated_order_fcm_notifications(
                 "role": "DELIVERY",
                 "timestamp": now_ts,
             }
-            await send_fcm_topic_notification("admin_orders", admin_rider_title, admin_rider_body, admin_rider_data)
-            await send_fcm_topic_notification("delivery_orders", admin_rider_title, admin_rider_body, admin_rider_data)
+            await send_fcm_topic_notification("delivery_orders", rider_food_title, rider_food_body, rider_food_data)
+            async with AsyncSessionLocal() as session:
+                rider_stmt = select(FcmToken.token).join(User).where(User.role.in_([Role.DELIVERY, Role.RIDER]))
+                rider_res = await session.execute(rider_stmt)
+                rider_tokens = list(set(rider_res.scalars().all()))
+                if rider_tokens:
+                    await send_fcm_notification(tokens=rider_tokens, title=rider_food_title, body=rider_food_body, data=rider_food_data)
 
         else:
             # 2. GROCERY DARK STORE ISOLATED NOTIFICATION
@@ -572,7 +577,6 @@ async def dispatch_isolated_order_fcm_notifications(
                 await send_fcm_topic_notification(f"picker_orders_{store_id}", grocery_title, grocery_body, grocery_data)
                 await send_fcm_topic_notification(f"delivery_orders_{store_id}", admin_rider_title, admin_rider_body, admin_rider_data)
                 await send_fcm_topic_notification(f"staff_orders_{store_id}", grocery_title, grocery_body, grocery_data)
-                await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_rider_title, admin_rider_body, admin_rider_data)
 
                 # 2. Direct FCM tokens to staff assigned STRICTLY to this hub
                 async with AsyncSessionLocal() as session:
@@ -597,8 +601,39 @@ async def dispatch_isolated_order_fcm_notifications(
                 await send_fcm_topic_notification("delivery_orders", admin_rider_title, admin_rider_body, admin_rider_data)
                 await send_fcm_topic_notification("staff_orders", grocery_title, grocery_body, grocery_data)
 
-            # Global admin topic (headquarters)
-            await send_fcm_topic_notification("admin_orders", admin_rider_title, admin_rider_body, admin_rider_data)
+        # ── 3. BROADCAST TO ALL ADMINS & MANAGERS (1:1 Next.js Parity) ──
+        is_admin_pending = (status_val == "ADMIN_PENDING")
+        admin_title = "🚨 New Order Awaiting Approval!" if is_admin_pending else f"🛎️ New Order Received #{readable_id}"
+        admin_body = (
+            f"Order #{readable_id} ({shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) needs admin approval. Tap to review."
+            if is_admin_pending
+            else f"New order #{readable_id} of ₹{total:.2f} has been placed. Tap to review."
+        )
+        admin_data = {
+            "orderId": order_id,
+            "readableId": str(readable_id),
+            "storeId": str(store_id or ""),
+            "restaurantId": str(restaurant_id or ""),
+            "status": status_val,
+            "screen": "admin-orders",
+            "type": "NEW_ORDER",
+            "role": "ADMIN",
+            "timestamp": now_ts,
+        }
+
+        # Broadcast to Admin Topics (hub-specific + global listeners)
+        if store_id:
+            await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_title, admin_body, admin_data)
+        await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
+        await send_fcm_topic_notification("admin_orders_all", admin_title, admin_body, admin_data)
+
+        # Direct FCM push to all registered Admin device tokens
+        async with AsyncSessionLocal() as session:
+            admin_stmt = select(FcmToken.token).join(User).where(User.role == Role.ADMIN)
+            admin_res = await session.execute(admin_stmt)
+            admin_tokens = list(set(admin_res.scalars().all()))
+            if admin_tokens:
+                await send_fcm_notification(tokens=admin_tokens, title=admin_title, body=admin_body, data=admin_data)
     except Exception as e:
         logger.error(f"Failed to dispatch isolated FCM push notification: {str(e)}")
 
@@ -671,6 +706,7 @@ async def dispatch_isolated_status_update_notifications(
                 "timestamp": now_ts,
             }
             await send_fcm_topic_notification("admin_orders", admin_rider_title, admin_rider_body, admin_rider_data)
+            await send_fcm_topic_notification("admin_orders_all", admin_rider_title, admin_rider_body, admin_rider_data)
             await send_fcm_topic_notification("delivery_orders", admin_rider_title, admin_rider_body, admin_rider_data)
 
         else:
@@ -693,12 +729,14 @@ async def dispatch_isolated_status_update_notifications(
                 await send_fcm_topic_notification(f"picker_orders_{store_id}", grocery_title, grocery_body, grocery_data)
                 await send_fcm_topic_notification(f"staff_orders_{store_id}", grocery_title, grocery_body, grocery_data)
                 await send_fcm_topic_notification(f"delivery_orders_{store_id}", grocery_title, grocery_body, grocery_data)
+                await send_fcm_topic_notification(f"admin_orders_{store_id}", grocery_title, grocery_body, grocery_data)
             else:
                 await send_fcm_topic_notification("picker_orders", grocery_title, grocery_body, grocery_data)
                 await send_fcm_topic_notification("staff_orders", grocery_title, grocery_body, grocery_data)
                 await send_fcm_topic_notification("delivery_orders", grocery_title, grocery_body, grocery_data)
 
             await send_fcm_topic_notification("admin_orders", grocery_title, grocery_body, grocery_data)
+            await send_fcm_topic_notification("admin_orders_all", grocery_title, grocery_body, grocery_data)
     except Exception as e:
         logger.error(f"Failed to dispatch isolated status FCM push notification: {str(e)}")
 
