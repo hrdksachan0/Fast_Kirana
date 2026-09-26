@@ -16,6 +16,7 @@ import '../../core/network/api_client.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../core/services/location_service.dart';
+import '../../core/services/supabase_service.dart';
 import 'home_screen.dart';
 import '../search/search_screen.dart';
 import '../categories/categories_screen.dart';
@@ -59,6 +60,9 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
+      // Re-establish Supabase WebSocket if it dropped during sleep
+      SupabaseService.reconnectRealtime();
+
       // Re-register any pending FCM token when the app comes to foreground
       if (!kIsWeb) {
         _reRegisterPendingToken();

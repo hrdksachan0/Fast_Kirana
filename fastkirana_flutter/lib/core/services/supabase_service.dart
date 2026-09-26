@@ -219,6 +219,20 @@ class SupabaseService {
     }
   }
 
+  /// Reconnect Supabase Realtime WebSocket on app resume
+  static void reconnectRealtime() {
+    final sb = client;
+    if (sb == null) return;
+    try {
+      if (sb.realtime.isConnected != true) {
+        debugPrint('[SupabaseService] Realtime socket disconnected on resume. Reconnecting...');
+        sb.realtime.connect();
+      }
+    } catch (e) {
+      debugPrint('[SupabaseService] Error reconnecting Realtime: $e');
+    }
+  }
+
   /// Unsubscribe and remove channel
   static Future<void> unsubscribe(RealtimeChannel? channel) async {
     if (channel != null && client != null) {

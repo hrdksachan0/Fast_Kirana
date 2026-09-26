@@ -804,21 +804,48 @@ async def dispatch_nearest_rider_for_order(order_id: str, db: AsyncSession, max_
         pickup_lng = 80.1714024
         pickup_name = "FastKirana Darkstore Hub"
 
-    # Query active, unblocked delivery partners
+    # Query active, unblocked delivery partners with wallets
     from models import Role
-    riders_stmt = select(User).where(
+    riders_stmt = select(User).options(selectinload(User.riderWallet)).where(
         User.role == Role.DELIVERY,
         User.isBlocked == False
     )
+    if order.storeId:
+        # Prioritize riders assigned to the same store or unassigned riders
+        riders_stmt = riders_stmt.where(or_(User.assignedStoreId == order.storeId, User.assignedStoreId == None))
+
     riders_res = await db.execute(riders_stmt)
     candidate_riders = riders_res.scalars().all()
 
     if not candidate_riders:
+        # Fallback to all unblocked delivery partners if store-specific query is empty
+        fallback_stmt = select(User).options(selectinload(User.riderWallet)).where(
+            User.role == Role.DELIVERY,
+            User.isBlocked == False
+        )
+        fallback_res = await db.execute(fallback_stmt)
+        candidate_riders = fallback_res.scalars().all()
+
+    if not candidate_riders:
         return None
+
+    order_dest_lat = float(order.address.lat) if (order.address and order.address.lat is not None) else None
+    order_dest_lng = float(order.address.lng) if (order.address and order.address.lng is not None) else None
+    is_cod_order = (order.paymentMethod == PaymentMethod.COD)
+    order_total = float(order.total or 0.0)
 
     # Score each candidate rider
     scored_riders = []
     for r in candidate_riders:
+        # 1. Cash In-Hand Safety Check for COD Orders
+        wallet = r.riderWallet
+        if wallet and is_cod_order:
+            cash_in_hand = float(wallet.cashInHand or 0.0)
+            cash_limit = float(wallet.cashLimit or 2000.0)
+            if cash_in_hand + order_total > cash_limit:
+                # Exceeds cash safety limit — require settlement first
+                continue
+
         r_lat = r.liveLat if r.liveLat is not None else pickup_lat
         r_lng = r.liveLng if r.liveLng is not None else pickup_lng
 
@@ -826,31 +853,45 @@ async def dispatch_nearest_rider_for_order(order_id: str, db: AsyncSession, max_
         if dist_km > max_distance_km:
             continue
 
-        # Count rider's active in-flight orders
-        active_cnt_stmt = select(func.count(Order.id)).where(
+        # Fetch rider's active in-flight orders
+        active_orders_stmt = select(Order).options(selectinload(Order.address)).where(
             Order.deliveryUserId == r.id,
             Order.status.in_([OrderStatus.CONFIRMED, OrderStatus.PACKED, OrderStatus.SHIPPED])
         )
-        active_cnt_res = await db.execute(active_cnt_stmt)
-        active_count = active_cnt_res.scalar() or 0
+        active_orders_res = await db.execute(active_orders_stmt)
+        active_orders = active_orders_res.scalars().all()
+        active_count = len(active_orders)
 
-        # Maximum 3 concurrent deliveries per rider to prevent overload
+        # Maximum 2-3 concurrent deliveries per rider to prevent customer SLA delays
         if active_count >= 3:
             continue
 
-        # Composite score: distance + workload penalty (2.0 km equivalent per active order)
-        dispatch_score = dist_km + (active_count * 2.0)
+        # 2. Smart Route Batching Co-location Bonus
+        route_bonus = 0.0
+        if active_count > 0 and order_dest_lat is not None and order_dest_lng is not None:
+            for act_ord in active_orders:
+                if act_ord.address and act_ord.address.lat is not None and act_ord.address.lng is not None:
+                    dest_dist = haversine_km(order_dest_lat, order_dest_lng, float(act_ord.address.lat), float(act_ord.address.lng))
+                    # If second order destination is within 800m of an existing order on the same trip
+                    if dest_dist <= 0.8:
+                        route_bonus -= 3.0  # Big score discount to batch orders on the same route!
+                    elif dest_dist <= 1.5:
+                        route_bonus -= 1.5
+
+        # Composite score: distance + workload penalty (1.5 km per order) + route batch bonus
+        dispatch_score = dist_km + (active_count * 1.5) + route_bonus
         scored_riders.append({
             "rider": r,
             "distance_km": dist_km,
             "active_orders": active_count,
-            "score": dispatch_score
+            "score": dispatch_score,
+            "batched": route_bonus < 0
         })
 
     if not scored_riders:
         return None
 
-    # Pick lowest score (nearest + least burdened)
+    # Pick lowest score (nearest + least burdened + best route match)
     scored_riders.sort(key=lambda x: x["score"])
     best = scored_riders[0]
     best_rider = best["rider"]

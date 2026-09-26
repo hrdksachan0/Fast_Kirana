@@ -85,6 +85,19 @@ final dioProvider = Provider<Dio>((ref) {
             });
           }
         }
+
+        // ─── Idempotency Key for Mutating Endpoints (Orders / Payments / Checkout) ──
+        if (options.method == 'POST' || options.method == 'PATCH') {
+          final isMutatingOrderRoute = options.path.contains('/api/orders') ||
+              options.path.contains('/api/payment') ||
+              options.path.contains('/api/checkout') ||
+              options.path.contains('/api/cashfree');
+          if (isMutatingOrderRoute && !options.headers.containsKey('X-Idempotency-Key')) {
+            final customKey = options.extra['idempotency_key'];
+            final key = customKey ?? 'fk_${DateTime.now().millisecondsSinceEpoch}_${options.data.hashCode.abs()}';
+            options.headers['X-Idempotency-Key'] = key.toString();
+          }
+        }
       } catch (e, _) { LoggerService.error('ApiClient: request interceptor', e); }
 
       return handler.next(options);

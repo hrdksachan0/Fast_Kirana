@@ -173,10 +173,12 @@ OUTLET_WEDSON_ID = "cms2p1lyx0001n0idod904lfu"
 LEGACY_AS_RESTAURANT_ID = "as-restaurant-id"
 LEGACY_WEDSON_ID = "wedson-id"
 
+from utils.cache import get_cached, set_cached, invalidate_cache_pattern, invalidate_catalog_cache
+
 # In-memory product & search cache to prevent heavy re-ranking and repeated DB queries
 search_cache: Dict[str, Any] = {}
 search_cache_time: Dict[str, float] = {}
-PRODUCTS_CACHE_TTL: float = 30.0
+PRODUCTS_CACHE_TTL: float = 60.0
 
 def clear_products_cache():
     global search_cache, search_cache_time
@@ -186,6 +188,7 @@ def clear_products_cache():
 @router.post("/clear-cache")
 async def api_clear_products_cache():
     clear_products_cache()
+    await invalidate_catalog_cache()
     return {"success": True, "message": "Products cache cleared"}
 
 
@@ -438,13 +441,15 @@ async def get_products(
 
     # Check cache for public catalog and search requests (<5ms response)
     is_cacheable = not is_worker and not includeUnavailable and not admin
-    cache_key = f"prod:{target_store}:{normalized_search}:{category or ''}:{categoryId or ''}:{sort or ''}:{page}:{limit}:{restaurantId or ''}:{restaurantSlug or ''}:{excludeRestaurant}"
+    cache_key = f"products:{target_store}:{normalized_search}:{category or ''}:{categoryId or ''}:{sort or ''}:{page}:{limit}:{restaurantId or ''}:{restaurantSlug or ''}:{excludeRestaurant}"
     now = time.time()
 
-    if is_cacheable and cache_key in search_cache and (now - search_cache_time.get(cache_key, 0)) < PRODUCTS_CACHE_TTL:
-        response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
-        response.headers["X-FastKirana-Cache"] = "HIT"
-        return search_cache[cache_key]
+    if is_cacheable:
+        cached_result = await get_cached(cache_key)
+        if cached_result is not None:
+            response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
+            response.headers["X-FastKirana-Cache"] = "HIT"
+            return cached_result
 
     # Filters
     filters = []
@@ -814,6 +819,7 @@ async def get_products(
                 search_cache_time.pop(k, None)
         search_cache[cache_key] = response_data
         search_cache_time[cache_key] = now
+        await set_cached(cache_key, response_data, 60)
 
     # Provide ETag header for client validation but always deliver full JSON payload to prevent empty cold-start state
     if is_cacheable and serialized_products:
@@ -1419,6 +1425,7 @@ async def create_product(
 
         await db.commit()
         clear_products_cache()
+        await invalidate_catalog_cache()
         return product
     except Exception as e:
         await db.rollback()
@@ -1661,6 +1668,7 @@ async def update_product(
         await db.commit()
         await db.refresh(product)
         clear_products_cache()
+        await invalidate_catalog_cache()
 
         # Real-time WebSocket event dispatch with strict restaurant channel isolation
         try:
@@ -1729,6 +1737,7 @@ async def delete_product(
         await db.delete(product)
         await db.commit()
         clear_products_cache()
+        await invalidate_catalog_cache()
 
         return {"message": "Product permanently deleted"}
     except Exception as e:

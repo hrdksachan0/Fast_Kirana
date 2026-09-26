@@ -33,10 +33,20 @@ void main() async {
         FirebaseCrashlytics.instance.recordFlutterFatalError(details);
       }
     };
+
+    // Asynchronous / isolate error handling
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
   } else {
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
       debugPrint("Flutter Error: ${details.exceptionAsString()}");
+    };
+    PlatformDispatcher.instance.onError = (error, stack) {
+      debugPrint("Async Uncaught Error: $error\n$stack");
+      return true;
     };
   }
 

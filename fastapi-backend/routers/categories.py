@@ -27,9 +27,11 @@ def slugify(text: str) -> str:
     return text
 
 
+from utils.cache import get_cached, set_cached, invalidate_cache_pattern, invalidate_catalog_cache
+
 _categories_cache: Dict[str, Any] = {}
 _categories_cache_time: Dict[str, float] = {}
-CATEGORIES_CACHE_TTL: float = 60.0
+CATEGORIES_CACHE_TTL: int = 180
 
 def clear_categories_cache():
     global _categories_cache, _categories_cache_time
@@ -39,6 +41,7 @@ def clear_categories_cache():
 @router.post("/clear-cache")
 async def api_clear_categories_cache():
     clear_categories_cache()
+    await invalidate_cache_pattern("categories:*")
     return {"success": True, "message": "Categories cache cleared"}
 
 async def trigger_revalidation(category_slug: Optional[str] = None):
@@ -46,6 +49,7 @@ async def trigger_revalidation(category_slug: Optional[str] = None):
     Trigger Next.js frontend cache revalidation in the background.
     """
     clear_categories_cache()
+    await invalidate_catalog_cache()
     try:
         app_url = os.getenv("NEXT_PUBLIC_APP_URL", "http://localhost:3000")
         auth_secret = os.getenv("AUTH_SECRET", "")
@@ -71,17 +75,17 @@ async def get_categories(
     """
     Get all categories. If not admin/all, filters out 'cafe' and 'restaurant'.
     If storeId is provided, isolates product count and category availability by dark store hub.
-    Uses ultra-fast memory cache (<5ms response).
+    Uses ultra-fast Redis / memory cache (<5ms response).
     """
     import time
     include_all = (admin == "true") or (all == "true")
-    cache_key = f"{include_all}:{storeId or 'all'}"
-    now = time.time()
-
-    if cache_key in _categories_cache and (now - _categories_cache_time.get(cache_key, 0)) < CATEGORIES_CACHE_TTL:
-        response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=180"
+    cache_key = f"categories:{include_all}:{storeId or 'all'}"
+    
+    cached_val = await get_cached(cache_key)
+    if cached_val is not None:
+        response.headers["Cache-Control"] = "public, s-maxage=120, stale-while-revalidate=300"
         response.headers["X-FastKirana-Cache"] = "HIT"
-        return _categories_cache[cache_key]
+        return cached_val
 
     try:
         if storeId and storeId != "all":
@@ -138,8 +142,9 @@ async def get_categories(
 
         _categories_cache[cache_key] = categories_data
         _categories_cache_time[cache_key] = now
+        await set_cached(cache_key, categories_data, CATEGORIES_CACHE_TTL)
 
-        response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=180"
+        response.headers["Cache-Control"] = "public, s-maxage=120, stale-while-revalidate=300"
         response.headers["X-FastKirana-Cache"] = "MISS"
         return categories_data
     except Exception as e:
