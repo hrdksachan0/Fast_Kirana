@@ -197,7 +197,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
       // Background Deduplication within 30 seconds: exactly ONE notification per order
       final dedupKey = (cleanOrderId != null && cleanOrderId.isNotEmpty)
-          ? 'order_${cleanOrderId}'
+          ? 'order_$cleanOrderId'
           : (message.messageId ?? '${title}_${body.hashCode}');
 
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -555,7 +555,7 @@ class NotificationService {
 
     // Foreground Deduplication within 30 seconds: exactly ONE notification per order
     final dedupKey = (cleanOrderId != null && cleanOrderId.isNotEmpty)
-        ? 'order_${cleanOrderId}'
+        ? 'order_$cleanOrderId'
         : (message.messageId ?? '${title}_${body.hashCode}');
 
     final now = DateTime.now().millisecondsSinceEpoch;

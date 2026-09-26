@@ -526,7 +526,6 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
           await notif.subscribeToTopic('restaurant_orders_${restObj.slug}');
         }
       }
-      final prefs = await SharedPreferences.getInstance();
       final phone = prefs.getString('user_phone') ?? '';
       final clean = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
       if (clean.length == 10) {
