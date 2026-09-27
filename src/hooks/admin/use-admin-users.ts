@@ -130,9 +130,13 @@ export function useAdminUsers({
     setIsExportingUsers(true)
     try {
       const res = await fetch(`/api/admin/users?limit=10000&role=USER&t=${Date.now()}`, { headers: authHeaders })
-      if (!res.ok) throw new Error('Failed to fetch customers')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        const errMsg = errJson?.error || errJson?.detail || errJson?.message || `Failed to fetch customers (${res.status})`
+        throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg))
+      }
       const data = await res.json()
-      const customers = data.users || []
+      const customers = Array.isArray(data) ? data : (data.users || [])
 
       if (customers.length === 0) {
         toast.error('No customers found to export.')
@@ -156,7 +160,7 @@ export function useAdminUsers({
         `"${c.role || 'USER'}"`,
         `"${c.isBlocked ? 'BLOCKED' : 'ACTIVE'}"`,
         `"${(c.blockReason || '').replace(/"/g, '""')}"`,
-        c._count?.orders ?? 0,
+        c._count?.orders ?? c.ordersCount ?? 0,
         formatDate(c.createdAt, 'dd/MM/yyyy'),
       ])
 
@@ -172,9 +176,9 @@ export function useAdminUsers({
       link.click()
       document.body.removeChild(link)
       toast.success('Customers data exported successfully!')
-    } catch (err) {
-      console.error(err)
-      toast.error('Could not export customer records.')
+    } catch (err: any) {
+      console.error('Customer export error:', err)
+      toast.error(err.message || 'Could not export customer records.')
     } finally {
       setIsExportingUsers(false)
     }

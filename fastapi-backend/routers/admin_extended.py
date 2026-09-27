@@ -120,7 +120,7 @@ async def get_admin_dashboard(
 @router.get("/products")
 async def admin_get_products(
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=50000),
     categoryId: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     lowStock: bool = Query(False),
@@ -544,7 +544,7 @@ async def admin_bulk_sort_products(
 @router.get("/orders")
 async def admin_get_orders(
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=50000),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     current_admin: dict = Depends(require_admin),
@@ -788,14 +788,15 @@ async def admin_update_order_status(
 @router.get("/users")
 async def admin_get_users(
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=50000),
     search: Optional[str] = Query(None),
     role: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    storeId: Optional[str] = Query(None),
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Admin user listing with filters."""
+    """Admin user listing with filters, pagination, order counts, and export support."""
     skip = (page - 1) * limit
     and_clauses = [
         User.deletedAt.is_(None),
@@ -804,39 +805,70 @@ async def admin_get_users(
     ]
 
     if role and role != 'ALL':
-        and_clauses.append(User.role == Role(role))
+        try:
+            and_clauses.append(User.role == Role(role.upper()))
+        except (ValueError, KeyError):
+            pass
+
     if status == 'BLOCKED':
         and_clauses.append(User.isBlocked == True)
     elif status == 'ACTIVE':
         and_clauses.append(User.isBlocked == False)
 
+    if storeId and storeId != 'all':
+        if role and role.upper() in ['DELIVERY', 'PICKER', 'CHEF']:
+            and_clauses.append(User.assignedStoreId == storeId)
+
     if search:
+        search_pattern = f"%{search}%"
         and_clauses.append(
             or_(
-                User.name.ilike(f"%{search}%"),
-                User.email.ilike(f"%{search}%"),
-                User.phone.ilike(f"%{search}%"),
+                User.name.ilike(search_pattern),
+                User.email.ilike(search_pattern),
+                User.phone.ilike(search_pattern),
             )
         )
 
-    stmt = select(User).where(and_(*and_clauses))
     count_stmt = select(func.count()).select_from(User).where(and_(*and_clauses))
     total = (await db.execute(count_stmt)).scalar() or 0
 
-    stmt = stmt.order_by(desc(User.createdAt)).offset(skip).limit(limit)
+    # Subquery for user orders count
+    order_count_subq = (
+        select(Order.userId, func.count(Order.id).label("orders_count"))
+        .group_by(Order.userId)
+        .subquery()
+    )
+
+    stmt = (
+        select(User, func.coalesce(order_count_subq.c.orders_count, 0).label("orders_count"))
+        .outerjoin(order_count_subq, User.id == order_count_subq.c.userId)
+        .where(and_(*and_clauses))
+        .order_by(desc(User.createdAt))
+        .offset(skip)
+        .limit(limit)
+    )
     result = await db.execute(stmt)
-    users = result.scalars().all()
+    rows = result.all()
 
     user_list = [
         {
-            "id": u.id, "name": u.name, "email": u.email, "phone": u.phone,
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "phone": u.phone,
             "image": u.image,
             "role": u.role.value if hasattr(u.role, 'value') else str(u.role),
-            "isBlocked": u.isBlocked, "blockReason": u.blockReason,
-            "assignedStoreId": u.assignedStoreId, "assignedRestaurantId": u.assignedRestaurantId,
+            "isBlocked": u.isBlocked,
+            "blockReason": u.blockReason,
+            "assignedStoreId": u.assignedStoreId,
+            "assignedRestaurantId": u.assignedRestaurantId,
             "createdAt": u.createdAt.isoformat() if u.createdAt else None,
+            "ordersCount": int(orders_count or 0),
+            "_count": {
+                "orders": int(orders_count or 0)
+            }
         }
-        for u in users
+        for u, orders_count in rows
     ]
     return {"users": user_list, "total": total, "page": page, "limit": limit}
 
