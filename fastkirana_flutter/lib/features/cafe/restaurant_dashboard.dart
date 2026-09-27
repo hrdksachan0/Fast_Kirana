@@ -1848,6 +1848,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
             }).eq('id', _assignedRestaurantId!);
           } catch (_) {}
         }
+        // Invalidate providers so Home and Storefront reflect immediately
+        ref.invalidate(restaurantsProvider);
+        ref.invalidate(storeSettingsProvider);
       }
 
       if (mounted) {
@@ -1859,6 +1862,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       }
     } catch (e) {
       LoggerService.error('Restaurant timings update error: $e');
+      if (mounted) {
+        AppToast.showError(context, 'Failed to save timings to server: $e');
+      }
     }
   }
 

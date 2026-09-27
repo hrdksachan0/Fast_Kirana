@@ -12,7 +12,8 @@ from database import get_db
 from models import Restaurant, User, Product, Order, Category, RestaurantReview
 from routers.auth import get_current_user, require_admin, require_auth
 from routers.websockets import manager
-from routers.stores_service import check_restaurant_is_open
+from routers.stores_service import check_restaurant_is_open, clear_stores_cache
+from routers.settings import clear_settings_cache
 
 router = APIRouter(prefix="/restaurants", tags=["Restaurants"])
 
@@ -455,6 +456,11 @@ async def update_restaurant(
             await manager.broadcast_to_channel("general", evt_payload)
         except Exception:
             pass
+
+        # Immediately clear restaurants, stores, and settings caches
+        clear_restaurants_cache()
+        clear_stores_cache()
+        clear_settings_cache()
 
         return fresh_dict
     except Exception as e:

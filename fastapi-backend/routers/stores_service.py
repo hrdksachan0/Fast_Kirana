@@ -358,10 +358,14 @@ async def get_store_status(
         cafe_open = check_is_store_open(settings_map, "cafe")
         restaurant_open = check_is_store_open(settings_map, "restaurant")
 
+        # If any active restaurant is open, restaurant_open is True
+        any_rest_open = any(check_restaurant_is_open(r) for r in restaurants)
+        if any_rest_open:
+            restaurant_open = True
+
         # Specific outlet overrides for main brands if active
         wedson = next((r for r in restaurants if "wedson" in (r.slug or "").lower() or "wedson" in (r.name or "").lower()), None)
         if wedson:
-            restaurant_open = check_restaurant_is_open(wedson)
             if wedson.openTime:
                 settings_map["restaurant_open_time"] = wedson.openTime
             if wedson.closeTime:
@@ -369,7 +373,10 @@ async def get_store_status(
 
         cafe_outlet = next((r for r in restaurants if "cafe" in (r.slug or "").lower() or "cafe" in (r.name or "").lower() or "a.s." in (r.name or "").lower()), None)
         if cafe_outlet:
-            cafe_open = check_restaurant_is_open(cafe_outlet)
+            is_cafe_open = check_restaurant_is_open(cafe_outlet)
+            if is_cafe_open:
+                cafe_open = True
+                restaurant_open = True
             if cafe_outlet.openTime:
                 settings_map["cafe_open_time"] = cafe_outlet.openTime
             if cafe_outlet.closeTime:

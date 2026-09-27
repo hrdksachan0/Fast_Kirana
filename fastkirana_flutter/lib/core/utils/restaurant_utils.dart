@@ -313,24 +313,19 @@ class RestaurantScheduleHelper {
     String? restaurantId,
     StoreSettings? storeSettings,
   }) {
-    // 1. Check global master switch if storeSettings is provided
-    if (storeSettings != null && !storeSettings.restaurantOpen) {
-      return false;
-    }
-
-    // 2. Resolve canonical restaurant from registry if needed
+    // 1. Resolve canonical restaurant from registry if needed
     final reg = restaurant ??
         (restaurantId != null ? RestaurantRegistry.find(restaurantId) : null) ??
         (restaurantInfo != null ? RestaurantRegistry.find(restaurantInfo.id) : null);
 
-    // 3. Check manual isOpen toggle
+    // 2. Check manual isOpen toggle (kitchen explicitly paused or closed)
     if (restaurant?.isOpen == false ||
         restaurantInfo?.isOpen == false ||
         reg?.isOpen == false) {
       return false;
     }
 
-    // 4. Resolve open & close timings
+    // 3. Resolve open & close timings for this specific outlet
     final openStr = restaurant?.openTime ??
         restaurantInfo?.openTime ??
         reg?.openTime ??
@@ -341,9 +336,42 @@ class RestaurantScheduleHelper {
         restaurantInfo?.closeTime ??
         reg?.closeTime ??
         storeSettings?.raw['restaurant_close_time']?.toString() ??
-        '22:30';
+        '23:00';
 
-    return isWithinOperatingHours(openTime: openStr, closeTime: closeStr);
+    final withinHours = isWithinOperatingHours(openTime: openStr, closeTime: closeStr);
+    if (!withinHours) {
+      return false;
+    }
+
+    // 4. Global master switch check:
+    // Only force-close if admin explicitly shut down the entire category manually without auto-timing
+    if (storeSettings != null) {
+      final isCafe = (reg?.name.toLowerCase().contains('cafe') ?? false) ||
+          (reg?.slug.toLowerCase().contains('cafe') ?? false) ||
+          (reg?.name.toLowerCase().contains('a.s.') ?? false) ||
+          (reg?.slug.toLowerCase().contains('as-restaurant') ?? false);
+
+      final isGlobalClosed = isCafe
+          ? (!storeSettings.cafeOpen && !storeSettings.restaurantOpen)
+          : (!storeSettings.restaurantOpen);
+
+      final isManualOverrideOff = isGlobalClosed &&
+          (storeSettings.raw['restaurant_auto_timing'] == 'false' || storeSettings.raw['restaurant_auto_timing'] == false);
+
+      if (isManualOverrideOff) {
+        final outletOpenKey = 'outlet_open_${reg?.id}';
+        final outletSlugKey = 'outlet_open_${reg?.slug}';
+        final isOutletExplicitlyOpen = storeSettings.raw[outletOpenKey] == 'true' ||
+            storeSettings.raw[outletOpenKey] == true ||
+            storeSettings.raw[outletSlugKey] == 'true' ||
+            storeSettings.raw[outletSlugKey] == true;
+        if (!isOutletExplicitlyOpen) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   /// Evaluates product availability based on whether it is a restaurant food item or grocery item
