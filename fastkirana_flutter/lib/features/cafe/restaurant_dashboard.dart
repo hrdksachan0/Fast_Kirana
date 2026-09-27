@@ -27,6 +27,8 @@ import '../../data/models/order.dart';
 import '../../data/models/product.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/restaurant_provider.dart';
+import '../../providers/store_settings_provider.dart';
 import '../delivery/widgets/connectivity_banner.dart';
 import '../common/order_edit_modal.dart';
 import 'widgets/add_restaurant_product_modal.dart';
