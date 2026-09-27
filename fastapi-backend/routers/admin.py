@@ -8,6 +8,7 @@ import uuid
 import re
 import json
 import math
+import asyncio
 from typing import List, Dict, Any, Optional
 
 from database import get_db
@@ -1656,6 +1657,16 @@ async def get_daily_finance_reconciliation(
         headers = _get_cashfree_headers()
         import httpx
 
+        # Only check Cashfree for non-COD, non-cancelled orders
+        eligible_cf_orders = [
+            o for o in all_orders 
+            if str(getattr(o.paymentMethod, "value", o.paymentMethod)).upper() != "COD"
+            and str(getattr(o.status, "value", o.status)).upper() != "CANCELLED"
+            and "Doorstep UPI" not in str(o.notes or "")
+            and "QR Scan" not in str(o.notes or "")
+            and "Rider QR" not in str(o.notes or "")
+        ]
+
         async def _check_cf(client, o):
             for cid in [o.id, o.readableId]:
                 if not cid:
@@ -1670,8 +1681,8 @@ async def get_daily_finance_reconciliation(
                     pass
             return None
 
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            cf_tasks = [_check_cf(client, o) for o in all_orders]
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            cf_tasks = [_check_cf(client, o) for o in eligible_cf_orders]
             cf_results = await asyncio.gather(*cf_tasks)
             for cid in cf_results:
                 if cid:
@@ -1708,17 +1719,25 @@ async def get_daily_finance_reconciliation(
         notes = str(o.notes or "")
         is_doorstep_qr = "Doorstep UPI" in notes or "QR Scan" in notes or "Rider QR" in notes
         is_in_cashfree = o.id in cashfree_paid_ids or "Cashfree PG" in notes or "CF_" in notes
+        is_admin_verified = "Admin Verified" in notes
+        admin_match = re.search(r"Admin Verified by (.+?)(?:\s*\||$)", notes)
+        admin_verifier_name = admin_match.group(1).strip() if admin_match else "Admin"
 
         if o_status == "CANCELLED":
             verified_by = "Order Cancelled"
             category = "CANCELLED"
+        elif p_status == "PAID" and is_admin_verified:
+            cashfree_online_total += tot
+            cashfree_online_count += 1
+            category = "ONLINE_BANK"
+            verified_by = f"Admin ({admin_verifier_name})"
         elif is_in_cashfree:
             cashfree_online_total += tot
             cashfree_online_count += 1
             category = "CASHFREE_ONLINE"
             verified_by = "Cashfree Gateway (Auto)"
         elif p_status == "PAID":
-            if is_doorstep_qr or (p_method in ["UPI", "ONLINE"] and o.deliveryUserId is not None):
+            if is_doorstep_qr:
                 rider_qr_total += tot
                 rider_qr_count += 1
                 category = "RIDER_QR"

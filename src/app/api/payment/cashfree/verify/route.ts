@@ -122,11 +122,18 @@ export async function POST(req: NextRequest) {
 
     // Update ALL sub-orders in the combined group (or standalone order)
     // Only mark payment as PAID — do NOT auto-confirm order status
+    const cfNote = cfPaymentId ? `Cashfree PG Paid (Ref: ${cfPaymentId})` : 'Cashfree PG Paid'
+
     if (order.combinedId) {
       await prisma.$executeRaw`
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
+            notes = CASE 
+              WHEN notes IS NULL OR notes = '' THEN ${cfNote}
+              WHEN notes LIKE '%Cashfree PG%' THEN notes
+              ELSE notes || ' | ' || ${cfNote}
+            END,
             "updatedAt" = NOW()
         WHERE "combinedId" = ${order.combinedId}
       `
@@ -135,6 +142,11 @@ export async function POST(req: NextRequest) {
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
+            notes = CASE 
+              WHEN notes IS NULL OR notes = '' THEN ${cfNote}
+              WHEN notes LIKE '%Cashfree PG%' THEN notes
+              ELSE notes || ' | ' || ${cfNote}
+            END,
             "updatedAt" = NOW()
         WHERE id = ${order.id}
       `
