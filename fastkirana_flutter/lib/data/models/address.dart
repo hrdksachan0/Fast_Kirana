@@ -32,8 +32,8 @@ class Address with _$Address {
       houseNo: json['houseNo']?.toString() ?? '',
       street: json['street']?.toString() ?? '',
       area: json['area']?.toString() ?? '',
-      city: json['city']?.toString() ?? 'Ghatampur',
-      pincode: json['pincode']?.toString() ?? '209206',
+      city: json['city']?.toString() ?? '',
+      pincode: json['pincode']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
       latitude: rawLat != null ? double.tryParse(rawLat.toString()) : null,
       longitude: rawLng != null ? double.tryParse(rawLng.toString()) : null,
@@ -68,7 +68,7 @@ class Address with _$Address {
     if (cleanPin.isNotEmpty && cleanPin != '.') {
       return main.isNotEmpty ? '$main - $cleanPin' : cleanPin;
     }
-    return main.isNotEmpty ? main : 'Ghatampur Zone';
+    return main.isNotEmpty ? main : 'Delivery Location';
   }
 
   String get displayArea {
@@ -78,7 +78,7 @@ class Address with _$Address {
     if (s.isNotEmpty && s != '.' && s.toLowerCase() != 'n/a') return s;
     final c = city.trim();
     if (c.isNotEmpty && c != '.' && c.toLowerCase() != 'n/a') return c;
-    return 'Ghatampur Zone';
+    return 'Delivery Location';
   }
 
   String get displayLabel {
@@ -98,7 +98,7 @@ class Address with _$Address {
                 ? houseNo.trim()
                 : city.trim()));
     if (candidate.isEmpty || candidate == '.' || candidate.toLowerCase() == 'n/a') {
-      return 'Ghatampur';
+      return 'Select Location';
     }
     final clean = candidate.replaceAll(RegExp(r'^[,\s.-]+|[,\s.-]+$'), '');
     final commaSplit = clean.split(',');

@@ -209,24 +209,35 @@ class KotPrintService {
         return explicitRestItems;
       }
 
-      // Check if order is marked as combined
+      // Check if order is marked as combined or mixed
       final bool isCombined = order['isCombined'] == true ||
+          order['combinedId'] != null ||
           order['shopName']?.toString().contains('Combined') == true ||
           order['shopName']?.toString().contains('+') == true;
 
-      if (isCombined) {
-        final filteredRestItems = allItems.where((it) {
-          if (it is! Map) return false;
-          final name = (it['name'] ?? (it['product'] is Map ? it['product']['name'] : '')).toString();
-          return RestaurantRegistry.isFoodDishName(name);
-        }).toList();
+      const pureGrocery = [
+        'campa', 'pepsi', 'coca cola', 'sprite', 'thums up', 'frooti', 'maaza', 'limca', 'sting', 'cold drink',
+        'atta', 'raw rice', 'dal', 'mustard oil', 'refined oil', 'ghee', 'washing powder', 'soap', 'shampoo',
+        'surf excel', 'harpic', 'rin', 'tide', 'biscuit', 'sugar', 'salt', 'spices'
+      ];
 
-        if (filteredRestItems.isNotEmpty) {
-          return filteredRestItems;
+      final filteredRestItems = allItems.where((it) {
+        if (it is! Map) return false;
+        final name = (it['name'] ?? (it['product'] is Map ? it['product']['name'] : '')).toString().toLowerCase().trim();
+        final isGrocery = pureGrocery.any((k) => name.contains(k));
+        if (isGrocery) return false;
+        if (isCombined) {
+          return RestaurantRegistry.isFoodDishName(name);
         }
+        return true;
+      }).toList();
+
+      if (filteredRestItems.isNotEmpty) {
+        return filteredRestItems;
       }
 
       return allItems;
+
     }
 
     return [];

@@ -1412,13 +1412,18 @@ async def create_order(
     misc_fee_charge = resolved_packaging_fee if is_premium_packaging else (server_misc_fee if delivery_method != "PICKUP" else 0.0)
     final_total = max(0.0, subtotal - discount + delivery_fee_charge + misc_fee_charge)
 
-    # 6. Create 1 Single Unified Order
+    # 6. Create Orders (ID-wise splitting for Combined Orders)
     created_orders = []
     try:
         seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')::int as nextval"))
         readable_id = str(seq_res.scalar())
 
-        est_mins = 30 if restaurant_id else 10
+        has_grocery_items = len(grocery_items) > 0
+        has_restaurant_items = len(restaurant_data) > 0
+        is_combined = has_grocery_items and has_restaurant_items
+        combined_id = f"combined_{uuid.uuid4().hex[:9]}_{int(datetime.utcnow().timestamp())}" if is_combined else None
+
+        est_mins = 30 if has_restaurant_items else 10
         estimated_delivery = datetime.utcnow() + timedelta(minutes=est_mins)
 
         order_address_id = final_address_id
@@ -1448,18 +1453,14 @@ async def create_order(
                 await db.flush()
             order_address_id = pickup_address.id
 
-        # C1 FIX: Never trust client-claimed payment status.
-        # Payment is only verified server-side via Razorpay/Cashfree verify endpoints.
-        # Orders start as unpaid; payment verification happens in verify-signature/webhook.
         is_online_paid = False
         if payment_method != "COD":
-            # For online payments, order starts unpaid. Client must call verify-signature after.
             pass
         auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
         is_auto_approve = auto_approve_setting.lower() == "true"
         initial_order_status = OrderStatus.PENDING if (is_online_paid or is_auto_approve) else OrderStatus.ADMIN_PENDING
 
-        # Construct notes preserving customer instructions, Order for someone else (gifting), and packaging
+        # Construct notes
         incoming_notes = (payload.get("notes") or "").strip()
         is_order_for_someone = bool(payload.get("isOrderForSomeone"))
         receiver_name = (payload.get("receiverName") or "").strip()
@@ -1484,128 +1485,201 @@ async def create_order(
 
         final_order_notes = " | ".join(notes_parts) if notes_parts else None
 
-        new_order = Order(
-            id=generate_id("ord_"),
-            readableId=readable_id,
-            userId=user_id,
-            addressId=order_address_id,
-            orderType=OrderType.RESTAURANT if restaurant_id else OrderType.GROCERY,
-            status=initial_order_status,
-            subtotal=round(subtotal, 2),
-            discount=round(discount, 2),
-            deliveryFee=round(delivery_fee_charge, 2),
-            taxes=0.0,
-            miscFee=round(misc_fee_charge, 2),
-            total=round(final_total, 2),
-            paymentMethod=PaymentMethod(payment_method),
-            paymentStatus=PaymentStatus.PAID if is_online_paid else PaymentStatus.PENDING,
-            estimatedDelivery=estimated_delivery,
-            deliveryMethod=delivery_method,
-            isB2B=is_b2b,
-            storeId=store_id,
-            couponCode=coupon_code.strip().upper() if coupon_code else None,
-            shopName=final_shop_name,
-            shopPhone=final_shop_phone,
-            restaurantId=restaurant_id,
-            notes=final_order_notes
-        )
+        # Calculate discount apportionment
+        grocery_disc = 0.0
+        restaurant_disc = 0.0
+        if combined_discount > 0 and combined_subtotal > 0:
+            if is_combined:
+                ratio = grocery_subtotal / combined_subtotal
+                grocery_disc = round(combined_discount * ratio, 2)
+                restaurant_disc = round(combined_discount - grocery_disc, 2)
+            elif has_grocery_items:
+                grocery_disc = combined_discount
+            else:
+                restaurant_disc = combined_discount
 
-        db.add(new_order)
-        # Order and items will be committed atomically at line 1021
+        # Plan sub-order specifications
+        order_specs = []
+        if is_combined:
+            # 1. Grocery Companion Order
+            grocery_misc = server_misc_fee if delivery_method != "PICKUP" else 0.0
+            order_specs.append({
+                "type": OrderType.GROCERY,
+                "readableId": f"{readable_id}-G",
+                "restaurantId": None,
+                "shopName": "FastKirana Grocery",
+                "shopPhone": default_support_phone,
+                "subtotal": round(grocery_subtotal, 2),
+                "discount": round(grocery_disc, 2),
+                "deliveryFee": round(delivery_fee_charge, 2),
+                "miscFee": round(grocery_misc, 2),
+                "total": max(0.0, round(grocery_subtotal - grocery_disc + delivery_fee_charge + grocery_misc, 2)),
+                "items": grocery_items
+            })
+            # 2. Restaurant Companion Order
+            order_specs.append({
+                "type": OrderType.RESTAURANT,
+                "readableId": f"{readable_id}-R",
+                "restaurantId": restaurant_id,
+                "shopName": final_shop_name,
+                "shopPhone": final_shop_phone,
+                "subtotal": round(restaurant_data[0]["subtotal"], 2),
+                "discount": round(restaurant_disc, 2),
+                "deliveryFee": 0.0,
+                "miscFee": round(resolved_packaging_fee, 2),
+                "total": max(0.0, round(restaurant_data[0]["subtotal"] - restaurant_disc + resolved_packaging_fee, 2)),
+                "items": restaurant_data[0]["items"]
+            })
+        elif has_restaurant_items:
+            order_specs.append({
+                "type": OrderType.RESTAURANT,
+                "readableId": f"{readable_id}-R",
+                "restaurantId": restaurant_id,
+                "shopName": final_shop_name,
+                "shopPhone": final_shop_phone,
+                "subtotal": round(combined_subtotal, 2),
+                "discount": round(combined_discount, 2),
+                "deliveryFee": round(delivery_fee_charge, 2),
+                "miscFee": round(resolved_packaging_fee, 2),
+                "total": max(0.0, round(combined_subtotal - combined_discount + delivery_fee_charge + resolved_packaging_fee, 2)),
+                "items": restaurant_data[0]["items"]
+            })
+        else:
+            grocery_misc = server_misc_fee if delivery_method != "PICKUP" else 0.0
+            order_specs.append({
+                "type": OrderType.GROCERY,
+                "readableId": f"{readable_id}-G",
+                "restaurantId": None,
+                "shopName": "FastKirana Grocery",
+                "shopPhone": default_support_phone,
+                "subtotal": round(combined_subtotal, 2),
+                "discount": round(combined_discount, 2),
+                "deliveryFee": round(delivery_fee_charge, 2),
+                "miscFee": round(grocery_misc, 2),
+                "total": max(0.0, round(combined_subtotal - combined_discount + delivery_fee_charge + grocery_misc, 2)),
+                "items": grocery_items
+            })
 
-        # Attach all items & decrement stock for grocery
-        for item in items:
-            prod = item["dbProduct"]
-            raw_id = str(item["product"].get("id", ""))
-            is_var = "_" in raw_id
-            var_name = item.get("selectedVariant") or (raw_id.split("_")[1] if is_var else None)
-
-            cost_price = prod.costPrice or 0.0
-            item_price = prod.price
-            if var_name and prod.variants and isinstance(prod.variants, list):
-                variant = next((v for v in prod.variants if v.get("name") == var_name), None)
-                if variant:
-                    item_price = float(variant.get("price", item_price))
-                    if variant.get("costPrice") is not None:
-                        cost_price = float(variant.get("costPrice"))
-
-            # Food Addons Calculation & Storage
-            selected_addons = item.get("selectedAddons") or []
-            addon_total = sum(float(a.get("price", 0)) for a in selected_addons if isinstance(a, dict))
-            final_item_price = item_price + addon_total
-
-            order_item_variants = {
-                "productVariants": prod.variants,
-                "selectedAddons": selected_addons
-            } if selected_addons else prod.variants
-
-            order_item = OrderItem(
-                id=generate_id("oi_"),
-                orderId=new_order.id,
-                productId=prod.id,
-                name=prod.name,
-                price=final_item_price,
-                quantity=int(item["quantity"]),
-                imageUrl=prod.imageUrl,
-                selectedVariant=var_name,
-                costPrice=cost_price,
-                variants=order_item_variants,
-                notes=item.get("notes")
+        for spec in order_specs:
+            ord_obj = Order(
+                id=generate_id("ord_"),
+                readableId=spec["readableId"],
+                userId=user_id,
+                addressId=order_address_id,
+                combinedId=combined_id,
+                orderType=spec["type"],
+                status=initial_order_status,
+                subtotal=spec["subtotal"],
+                discount=spec["discount"],
+                deliveryFee=spec["deliveryFee"],
+                taxes=0.0,
+                miscFee=spec["miscFee"],
+                total=spec["total"],
+                paymentMethod=PaymentMethod(payment_method),
+                paymentStatus=PaymentStatus.PAID if is_online_paid else PaymentStatus.PENDING,
+                estimatedDelivery=estimated_delivery,
+                deliveryMethod=delivery_method,
+                isB2B=is_b2b,
+                storeId=store_id,
+                couponCode=coupon_code.strip().upper() if coupon_code else None,
+                shopName=spec["shopName"],
+                shopPhone=spec["shopPhone"],
+                restaurantId=spec["restaurantId"],
+                notes=final_order_notes
             )
-            db.add(order_item)
+            db.add(ord_obj)
+            await db.flush()
 
-            # Stock deduction for grocery items
-            if not prod.restaurantId:
-                qty = int(item["quantity"])
-                prev_stock = prod.stock
-                new_stock = max(0, prev_stock - qty)
+            for item in spec["items"]:
+                prod = item["dbProduct"]
+                raw_id = str(item["product"].get("id", ""))
+                is_var = "_" in raw_id
+                var_name = item.get("selectedVariant") or (raw_id.split("_")[1] if is_var else None)
 
-                # If item has variant, update variant stock in prod.variants JSON
+                cost_price = prod.costPrice or 0.0
+                item_price = prod.price
                 if var_name and prod.variants and isinstance(prod.variants, list):
-                    updated_variants = []
-                    for v in prod.variants:
-                        v_copy = dict(v)
-                        if v_copy.get("name") == var_name:
-                            v_copy["stock"] = max(0, int(v_copy.get("stock", 0)) - qty)
-                        updated_variants.append(v_copy)
-                    prod.variants = updated_variants
-                    prod.stock = sum(int(v.get("stock", 0)) for v in updated_variants)
-                else:
-                    prod.stock = new_stock
+                    variant = next((v for v in prod.variants if v.get("name") == var_name), None)
+                    if variant:
+                        item_price = float(variant.get("price", item_price))
+                        if variant.get("costPrice") is not None:
+                            cost_price = float(variant.get("costPrice"))
 
-                # Localized Store Inventory deduction (if store_id is provided)
-                if store_id:
-                    try:
-                        from models import StoreInventory
-                        inv_stmt = select(StoreInventory).where(
-                            StoreInventory.productId == prod.id,
-                            StoreInventory.storeId == store_id
-                        ).with_for_update()
-                        inv_res = await db.execute(inv_stmt)
-                        existing_inv = inv_res.scalars().first()
-                        if existing_inv:
-                            if existing_inv.stock < qty:
-                                raise HTTPException(
-                                    status_code=400,
-                                    detail=f"Insufficient hub stock for \"{prod.name}\". Only {existing_inv.stock} available."
-                                )
-                            existing_inv.stock = max(0, existing_inv.stock - qty)
-                    except HTTPException:
-                        raise
-                    except Exception as inv_err:
-                        logger.warning(f"Could not decrement StoreInventory for product {prod.id} at store {store_id}: {inv_err}")
+                # Food Addons Calculation & Storage
+                selected_addons = item.get("selectedAddons") or []
+                addon_total = sum(float(a.get("price", 0)) for a in selected_addons if isinstance(a, dict))
+                final_item_price = item_price + addon_total
 
-                log = StockLog(
-                    id=generate_id("sl_"),
+                order_item_variants = {
+                    "productVariants": prod.variants,
+                    "selectedAddons": selected_addons
+                } if selected_addons else prod.variants
+
+                order_item = OrderItem(
+                    id=generate_id("oi_"),
+                    orderId=ord_obj.id,
                     productId=prod.id,
-                    quantity=-qty,
-                    type="ONLINE_ORDER",
-                    prevStock=prev_stock,
-                    newStock=prod.stock
+                    name=prod.name,
+                    price=final_item_price,
+                    quantity=int(item["quantity"]),
+                    imageUrl=prod.imageUrl,
+                    selectedVariant=var_name,
+                    costPrice=cost_price,
+                    variants=order_item_variants,
+                    notes=item.get("notes")
                 )
-                db.add(log)
+                db.add(order_item)
 
-        created_orders.append(new_order)
+                # Stock deduction for grocery items
+                if not prod.restaurantId and spec["type"] == OrderType.GROCERY:
+                    qty = int(item["quantity"])
+                    prev_stock = prod.stock
+                    new_stock = max(0, prev_stock - qty)
+
+                    if var_name and prod.variants and isinstance(prod.variants, list):
+                        updated_variants = []
+                        for v in prod.variants:
+                            v_copy = dict(v)
+                            if v_copy.get("name") == var_name:
+                                v_copy["stock"] = max(0, int(v_copy.get("stock", 0)) - qty)
+                            updated_variants.append(v_copy)
+                        prod.variants = updated_variants
+                        prod.stock = sum(int(v.get("stock", 0)) for v in updated_variants)
+                    else:
+                        prod.stock = new_stock
+
+                    if store_id:
+                        try:
+                            from models import StoreInventory
+                            inv_stmt = select(StoreInventory).where(
+                                StoreInventory.productId == prod.id,
+                                StoreInventory.storeId == store_id
+                            ).with_for_update()
+                            inv_res = await db.execute(inv_stmt)
+                            existing_inv = inv_res.scalars().first()
+                            if existing_inv:
+                                if existing_inv.stock < qty:
+                                    raise HTTPException(
+                                        status_code=400,
+                                        detail=f"Insufficient hub stock for \"{prod.name}\". Only {existing_inv.stock} available."
+                                    )
+                                existing_inv.stock = max(0, existing_inv.stock - qty)
+                        except HTTPException:
+                            raise
+                        except Exception as inv_err:
+                            logger.warning(f"Could not decrement StoreInventory for product {prod.id} at store {store_id}: {inv_err}")
+
+                    log = StockLog(
+                        id=generate_id("sl_"),
+                        productId=prod.id,
+                        quantity=-qty,
+                        type="ONLINE_ORDER",
+                        prevStock=prev_stock,
+                        newStock=prod.stock
+                    )
+                    db.add(log)
+
+            created_orders.append(ord_obj)
 
         # Update coupon usage
         if coupon_id:
@@ -1778,7 +1852,7 @@ async def create_order(
                 logger.warning(f"Could not dispatch vendor notifications for order #{order.readableId}: {vendor_notify_err}")
 
         # Return full order object matching Flutter Order.fromJson expectations
-        main_order = next((o for o in created_orders if not o.restaurantId), created_orders[0]) if created_orders else new_order
+        main_order = next((o for o in created_orders if not o.restaurantId), created_orders[0])
 
         # Consolidated WhatsApp alert to Hub Admin (Single alert even for multi-outlet combined orders)
         try:
@@ -3197,12 +3271,20 @@ async def edit_order(
                 raise HTTPException(status_code=403, detail="You can only edit orders for your assigned restaurant")
 
     order_status_val = order.status.value if hasattr(order.status, "value") else str(order.status)
+    if order_status_val in ["DELIVERED", "CANCELLED"]:
+        raise HTTPException(status_code=400, detail=f"Order is already {order_status_val} and cannot be edited")
     if effective_role not in ["ADMIN", "SUPER_ADMIN"]:
-        if order_status_val in ["PACKED", "SHIPPED", "DELIVERED", "CANCELLED"]:
+        if order_status_val in ["PACKED", "SHIPPED"]:
             raise HTTPException(status_code=400, detail=f"Order is already {order_status_val} and cannot be edited")
-    else:
-        if order_status_val == "DELIVERED":
-            raise HTTPException(status_code=400, detail="Delivered order cannot be edited")
+
+    # 1B. Fetch existing companion orders early for stock restoration and discount synchronization
+    existing_companions = []
+    if order.combinedId:
+        c_stmt = select(Order).options(selectinload(Order.items)).where(
+            and_(Order.combinedId == order.combinedId, Order.id != order.id)
+        )
+        c_res = await db.execute(c_stmt)
+        existing_companions = c_res.scalars().all()
 
     # 2. Adjust out of stock products if provided
     if out_of_stock_product_ids and isinstance(out_of_stock_product_ids, list):
@@ -3214,8 +3296,12 @@ async def edit_order(
                 p_obj.isAvailable = False
                 p_obj.stock = 0
 
-    # 3. Revert stock of existing order items
-    for item in order.items:
+    # 3. Revert stock of existing order items across both this order and its companions
+    all_old_items_to_revert = list(order.items or [])
+    for comp in existing_companions:
+        all_old_items_to_revert.extend(comp.items or [])
+
+    for item in all_old_items_to_revert:
         if not item.productId:
             continue
         p_stmt = select(Product).where(Product.id == item.productId)
@@ -3229,7 +3315,7 @@ async def edit_order(
             for v in p_obj.variants:
                 if isinstance(v, dict) and v.get("name") == item.selectedVariant:
                     v_copy = dict(v)
-                    v_copy["stock"] = int(v_copy.get("stock", 0)) + item.quantity
+                    v_copy["stock"] = int(v_copy.get("stock", 0)) + (item.quantity or 1)
                     updated_variants.append(v_copy)
                 else:
                     updated_variants.append(v)
@@ -3237,7 +3323,7 @@ async def edit_order(
             p_obj.variants = updated_variants
             p_obj.stock = new_total
         else:
-            p_obj.stock = (p_obj.stock or 0) + item.quantity
+            p_obj.stock = (p_obj.stock or 0) + (item.quantity or 1)
 
     # 4. Classify new updated items into grocery vs restaurant
     grocery_group = []
@@ -3333,7 +3419,7 @@ async def edit_order(
     has_grocery_items = len(grocery_group) > 0
     restaurant_keys = list(restaurant_groups.keys())
     has_restaurant_items = len(restaurant_keys) > 0
-    is_mixed = (has_grocery_items and has_restaurant_items) or len(restaurant_keys) > 1
+    is_mixed = (has_grocery_items and has_restaurant_items) or len(restaurant_keys) > 1 or bool(order.combinedId and (has_grocery_items or has_restaurant_items))
 
     # Fetch fee settings
     settings_stmt = select(StoreSetting)
@@ -3414,6 +3500,12 @@ async def edit_order(
             dynamic_shop_name = "FastKirana Grocery"
             dynamic_shop_phone = None
 
+        # Clean up any orphaned companion orders since this is now single-domain
+        for ec in existing_companions:
+            await db.execute(delete(OrderItem).where(OrderItem.orderId == ec.id))
+            await db.execute(delete(Order).where(Order.id == ec.id))
+        order.combinedId = None
+
         # Delivery fee calculation
         threshold = float(settings_map.get("grocery_free_delivery_threshold") or 200.0)
         if str(dynamic_order_type) == "RESTAURANT":
@@ -3423,12 +3515,30 @@ async def edit_order(
         calc_misc_fee = 0.0
         if str(order.deliveryMethod) == "DELIVERY":
             calc_delivery_fee = 0.0 if subtotal_val >= threshold else delivery_fee_setting
-            calc_misc_fee = miscFee_setting = float(settings_map.get("misc_fee") or 5.0)
+            calc_misc_fee = float(settings_map.get("misc_fee") or 5.0)
 
+        total_discount = float(order.discount or 0.0) + sum(float(ec.discount or 0.0) for ec in existing_companions)
+        clean_discount = min(total_discount, subtotal_val)
         taxes_val = 0.0
-        total_val = subtotal_val + calc_delivery_fee + taxes_val + calc_misc_fee - float(order.discount or 0.0)
+        total_val = max(0.0, round(subtotal_val + calc_delivery_fee + taxes_val + calc_misc_fee - clean_discount, 2))
+
+        # Check online payment difference for single-domain
+        orig_paid = float(order.total or 0.0) if str(getattr(order.paymentStatus, "value", order.paymentStatus)).upper() == "PAID" else 0.0
+        if orig_paid > 0:
+            diff = round(orig_paid - total_val, 2)
+            if diff > 0:
+                order.refundAmount = round(float(order.refundAmount or 0.0) + diff, 2)
+                notes_str = str(order.notes or "")
+                if f"Refund due: Rs.{diff}" not in notes_str:
+                    order.notes = (notes_str + f" | [Item swap: Rs.{diff:.2f} refund/credit due]").strip(" |")
+            elif diff < 0:
+                extra = abs(diff)
+                notes_str = str(order.notes or "")
+                if f"Extra payable: Rs.{extra}" not in notes_str:
+                    order.notes = (notes_str + f" | [Item swap: Rs.{extra:.2f} extra payable on delivery]").strip(" |")
 
         order.subtotal = subtotal_val
+        order.discount = clean_discount
         order.deliveryFee = calc_delivery_fee
         order.miscFee = calc_misc_fee
         order.taxes = taxes_val
@@ -3437,6 +3547,9 @@ async def edit_order(
         order.restaurantId = dynamic_restaurant_id
         order.shopName = dynamic_shop_name
         order.shopPhone = dynamic_shop_phone
+
+        base_clean = re.sub(r"-(G|R\d*)$", "", order.readableId or "", flags=re.IGNORECASE)
+        order.readableId = f"{base_clean}-R" if dynamic_order_type == OrderType.RESTAURANT else base_clean
 
         if str(dynamic_order_type) == "GROCERY":
             order.assignedChefId = None
@@ -3451,8 +3564,10 @@ async def edit_order(
             await manager.broadcast_to_channel("general", {
                 "type": "order-edited",
                 "orderId": order.id,
+                "readableId": order.readableId,
                 "shopName": dynamic_shop_name,
                 "restaurantId": dynamic_restaurant_id,
+                "total": total_val,
                 "orderType": str(dynamic_order_type.value if hasattr(dynamic_order_type, "value") else dynamic_order_type)
             })
         except Exception:
@@ -3467,20 +3582,11 @@ async def edit_order(
         }
 
     # =====================================================================
-    # MIXED-DOMAIN PATH (Order Splitting)
+    # MIXED-DOMAIN PATH (Order Splitting & Multi-Domain Swap)
     # =====================================================================
     base_readable_id = re.sub(r"-(G|R\d*)$", "", order.readableId or "", flags=re.IGNORECASE)
     combined_id = order.combinedId or f"combined_{uuid.uuid4().hex[:9]}_{int(datetime.utcnow().timestamp())}"
     current_is_grocery = (str(order.orderType.value if hasattr(order.orderType, "value") else order.orderType) == "GROCERY") or not order.restaurantId
-
-    # Find existing companions
-    existing_companions = []
-    if order.combinedId:
-        c_stmt = select(Order).options(selectinload(Order.items)).where(
-            and_(Order.combinedId == order.combinedId, Order.id != order.id)
-        )
-        c_res = await db.execute(c_stmt)
-        existing_companions = c_res.scalars().all()
 
     sub_orders = []
     if has_grocery_items:
@@ -3517,7 +3623,7 @@ async def edit_order(
             "isNew": existing_rest is None
         })
 
-    # Ensure original order is claimed
+    # Ensure original order is claimed by one of the sub-orders
     if not any(s["orderId"] == order.id for s in sub_orders) and sub_orders:
         cand = next((s for s in sub_orders if s["type"] == order.orderType and s["orderId"] is None), None) or \
                next((s for s in sub_orders if s["orderId"] is None), None) or sub_orders[0]
@@ -3555,6 +3661,8 @@ async def edit_order(
                 restaurantId=spec["restaurantId"],
                 deliveryLat=order.deliveryLat,
                 deliveryLng=order.deliveryLng,
+                deliveryUserId=order.deliveryUserId,
+                estimatedDelivery=order.estimatedDelivery,
                 notes=order.notes,
                 assignedPickerId=order.assignedPickerId if spec["type"] == OrderType.GROCERY else None,
                 assignedChefId=order.assignedChefId if spec["type"] == OrderType.RESTAURANT else None,
@@ -3577,35 +3685,57 @@ async def edit_order(
     combined_threshold = float(settings_map.get("delivery_threshold_tier1", settings_map.get("grocery_free_delivery_threshold", 149.0)))
     is_combined_free = (str(order.deliveryMethod) != "DELIVERY") or (total_combined_subtotal >= combined_threshold)
 
-    single_delivery_assigned = is_combined_free
-    single_misc_assigned = (str(order.deliveryMethod) != "DELIVERY")
+    grocery_in_prepared = any(p["spec"]["type"] == OrderType.GROCERY for p in prepared)
+    delivery_fee_charged = is_combined_free
+
+    # Discount preservation and proportional apportionment
+    total_combined_discount = float(order.discount or 0.0) + sum(float(ec.discount or 0.0) for ec in existing_companions)
+    remaining_discount = total_combined_discount
 
     primary_total = 0.0
     primary_order_type = ""
     primary_restaurant_id = None
     primary_shop_name = ""
 
-    for p in prepared:
+    final_combined_id = combined_id if len(prepared) > 1 else None
+
+    for idx, p in enumerate(prepared):
         calc_del = 0.0
-        if not single_delivery_assigned and p["subtotalVal"] > 0:
-            calc_del = delivery_fee_setting
-            single_delivery_assigned = True
-
         calc_misc = 0.0
-        if not single_misc_assigned and p["subtotalVal"] > 0:
-            calc_misc = misc_fee_setting
-            single_misc_assigned = True
+        p_type = p["spec"]["type"]
 
-        disc = 0.0 if p["spec"]["isNew"] else float(order.discount or 0.0)
-        tot = p["subtotalVal"] + calc_del + calc_misc - disc
+        if p_type == OrderType.GROCERY:
+            if not delivery_fee_charged and p["subtotalVal"] > 0:
+                calc_del = delivery_fee_setting
+                delivery_fee_charged = True
+            if str(order.deliveryMethod) == "DELIVERY":
+                calc_misc = misc_fee_setting
+        elif p_type == OrderType.RESTAURANT:
+            calc_misc = float(settings_map.get("packaging_fee") or 5.0)
+            if not grocery_in_prepared and not delivery_fee_charged and p["subtotalVal"] > 0:
+                calc_del = delivery_fee_setting
+                delivery_fee_charged = True
+
+        disc = 0.0
+        if total_combined_subtotal > 0 and remaining_discount > 0:
+            if idx == len(prepared) - 1:
+                disc = min(remaining_discount, p["subtotalVal"])
+            else:
+                ratio = p["subtotalVal"] / total_combined_subtotal
+                disc = min(round(total_combined_discount * ratio, 2), p["subtotalVal"])
+                remaining_discount = max(0.0, round(remaining_discount - disc, 2))
+
+        tot = max(0.0, round(p["subtotalVal"] + calc_del + calc_misc - disc, 2))
+        p["totalVal"] = tot
 
         u_ord_stmt = select(Order).where(Order.id == p["targetOrderId"])
         u_ord_res = await db.execute(u_ord_stmt)
         target_ord = u_ord_res.scalars().first()
 
-        target_ord.combinedId = combined_id
+        target_ord.combinedId = final_combined_id
         target_ord.readableId = p["spec"]["readableId"]
         target_ord.subtotal = p["subtotalVal"]
+        target_ord.discount = disc
         target_ord.deliveryFee = calc_del
         target_ord.miscFee = calc_misc
         target_ord.total = tot
@@ -3619,7 +3749,24 @@ async def edit_order(
             primary_restaurant_id = p["spec"]["restaurantId"]
             primary_shop_name = p["spec"]["shopName"]
 
-    order.combinedId = combined_id
+    order.combinedId = final_combined_id
+
+    # Track online payment difference (refund or extra payable)
+    total_original_paid = (float(order.total or 0.0) if str(getattr(order.paymentStatus, "value", order.paymentStatus)).upper() == "PAID" else 0.0) + \
+                          sum(float(ec.total or 0.0) for ec in existing_companions if str(getattr(ec.paymentStatus, "value", ec.paymentStatus)).upper() == "PAID")
+    new_combined_total = sum(p["totalVal"] for p in prepared)
+    if total_original_paid > 0:
+        diff = round(total_original_paid - new_combined_total, 2)
+        if diff > 0:
+            order.refundAmount = round(float(order.refundAmount or 0.0) + diff, 2)
+            existing_notes = str(order.notes or "")
+            if f"Refund due: Rs.{diff}" not in existing_notes:
+                order.notes = (existing_notes + f" | [Item swap: Rs.{diff:.2f} refund/credit due]").strip(" |")
+        elif diff < 0:
+            extra = abs(diff)
+            existing_notes = str(order.notes or "")
+            if f"Extra payable: Rs.{extra}" not in existing_notes:
+                order.notes = (existing_notes + f" | [Item swap: Rs.{extra:.2f} extra payable on delivery]").strip(" |")
 
     # Clean up orphaned companion orders
     for ec in existing_companions:
@@ -3629,19 +3776,40 @@ async def edit_order(
 
     await db.commit()
 
+    # Broadcast SSE / WebSocket to real-time consoles
+    try:
+        await manager.broadcast_to_channel("general", {
+            "type": "order-edited",
+            "orderId": order.id,
+            "readableId": order.readableId,
+            "combinedId": final_combined_id,
+            "total": primary_total,
+            "subOrders": [p["spec"]["readableId"] for p in prepared]
+        })
+        for p in prepared:
+            if p["spec"]["restaurantId"]:
+                await manager.broadcast_to_channel(f"restaurant_{p['spec']['restaurantId']}", {
+                    "type": "order-edited",
+                    "orderId": p["targetOrderId"],
+                    "readableId": p["spec"]["readableId"],
+                })
+    except Exception:
+        pass
+
     return {
         "success": True,
         "total": primary_total,
         "orderType": primary_order_type,
         "restaurantId": primary_restaurant_id,
         "shopName": primary_shop_name,
-        "split": True,
+        "split": len(prepared) > 1,
         "subOrders": [
             {
                 "orderId": p["targetOrderId"],
                 "type": str(p["spec"]["type"].value if hasattr(p["spec"]["type"], "value") else p["spec"]["type"]),
                 "readableId": p["spec"]["readableId"],
-                "shopName": p["spec"]["shopName"]
+                "shopName": p["spec"]["shopName"],
+                "total": p["totalVal"]
             }
             for p in prepared
         ]

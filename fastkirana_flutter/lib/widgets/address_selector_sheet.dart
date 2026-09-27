@@ -9,9 +9,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/config/app_config.dart';
 import '../core/services/location_service.dart';
 import '../data/models/address.dart';
+import '../data/models/store_hub.dart';
+import '../data/repositories/product_repository.dart';
 import '../providers/address_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/store_hub_provider.dart';
+import '../providers/product_provider.dart';
+import '../providers/hub_availability_provider.dart';
 import '../features/location/map_picker_screen.dart';
 import '../core/routes/page_transitions.dart';
 import 'unserviceable_location_banner.dart';
@@ -119,10 +123,73 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
     }
   }
 
+  void _selectStoreHub(StoreHub hub) async {
+    HapticFeedback.selectionClick();
+    final hubPin = RegExp(r'\b\d{6}\b').firstMatch(hub.id)?.group(0) ??
+        (hub.city.toLowerCase().contains('akbarpur')
+            ? '224122'
+            : (hub.city.toLowerCase().contains('pakur') ? '816107' : '209206'));
+    final hubAddress = Address(
+      id: 'hub_${hub.id}',
+      userId: ref.read(currentUserIdProvider) ?? 'user',
+      label: hub.name,
+      houseNo: 'Store Hub',
+      street: hub.name,
+      area: hub.city,
+      city: hub.city,
+      pincode: hubPin,
+      latitude: hub.latitude,
+      longitude: hub.longitude,
+      isDefault: true,
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_chosen_location', true);
+
+    ref.read(selectedAddressProvider.notifier).state = hubAddress;
+    widget.onAddressSelected(hubAddress);
+
+    AppConfig.updateDarkstore(
+      lat: hub.latitude,
+      lng: hub.longitude,
+      address: '${hub.name}, ${hub.city}',
+      id: hub.id,
+    );
+
+    ProductRepository.invalidateHubCache(hub.id);
+    ref.invalidate(homeProductCatalogProvider);
+    ref.invalidate(productsProvider(null));
+    ref.invalidate(hubAvailabilityProvider);
+
+    if (mounted) {
+      Navigator.pop(context, hubAddress);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Switched to ${hub.name} (${hub.city})',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final addressesAsync = ref.watch(addressesProvider);
     final currentHub = ref.watch(currentStoreHubProvider);
+    final hubsAsync = ref.watch(activeStoreHubsProvider);
 
     return Container(
       constraints: BoxConstraints(
@@ -386,6 +453,137 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                 ),
               ],
             ),
+          ),
+
+          // Operational Store Hubs / Cities (Dynamic Multi-Store Switcher like Swiggy/Blinkit)
+          hubsAsync.when(
+            data: (hubs) {
+              if (hubs.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'OPERATIONAL STORE HUBS',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w900,
+                            color: AppDesignSystem.slate400,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${hubs.length} Active Stores',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF15803D),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 64,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: hubs.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      itemBuilder: (context, idx) {
+                        final hub = hubs[idx];
+                        final isCurrent = currentHub.id == hub.id;
+                        return Bounceable(
+                          onTap: () => _selectStoreHub(hub),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isCurrent ? const Color(0xFFF0FDF4) : Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: isCurrent ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                                width: isCurrent ? 1.6 : 1.1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: isCurrent ? 0.05 : 0.02),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: isCurrent ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.storefront_rounded,
+                                    size: 16,
+                                    color: isCurrent ? const Color(0xFF16A34A) : AppDesignSystem.slate600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          hub.city,
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 12),
+                                            fontWeight: FontWeight.w800,
+                                            color: isCurrent ? const Color(0xFF15803D) : AppDesignSystem.slate900,
+                                          ),
+                                        ),
+                                        if (isCurrent) ...[
+                                          const SizedBox(width: 4),
+                                          const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF16A34A)),
+                                        ],
+                                      ],
+                                    ),
+                                    Text(
+                                      hub.name,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 10),
+                                        fontWeight: FontWeight.w500,
+                                        color: AppDesignSystem.slate500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ],
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
           ),
 
           Padding(

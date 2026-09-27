@@ -8,6 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/address.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/address_provider.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../data/models/store_hub.dart';
+import '../../providers/store_hub_provider.dart';
 
 class DoorstepDetailsScreen extends ConsumerStatefulWidget {
   final double lat;
@@ -97,6 +100,25 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     setState(() => _isSaving = true);
     HapticFeedback.mediumImpact();
 
+    final hubs = ref.read(activeStoreHubsProvider).valueOrNull ?? StoreHub.defaultHubs;
+    StoreHub matchedHub = ref.read(currentStoreHubProvider);
+    double minDist = double.infinity;
+    for (final h in hubs) {
+      final d = Geolocator.distanceBetween(h.latitude, h.longitude, widget.lat, widget.lng);
+      if (d < minDist) {
+        minDist = d;
+        matchedHub = h;
+      }
+    }
+    final addressPincodeMatch = RegExp(r'\b[1-9][0-9]{5}\b').firstMatch(widget.fullAddress)?.group(0);
+    final hubIdPin = RegExp(r'\b\d{6}\b').firstMatch(matchedHub.id)?.group(0);
+    final resolvedCity = matchedHub.city;
+    final resolvedPincode = addressPincodeMatch ??
+        hubIdPin ??
+        (matchedHub.id.contains('224122')
+            ? '224122'
+            : (matchedHub.id.contains('816107') ? '816107' : '209206'));
+
     try {
       final user = ref.read(authProvider).value;
       final receiverPhone = _useAccountDetails
@@ -114,8 +136,8 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
         'houseNo': houseNo,
         'street': street.isNotEmpty ? street : widget.areaName,
         'area': widget.areaName,
-        'city': 'Ghatampur',
-        'pincode': '209206',
+        'city': resolvedCity,
+        'pincode': resolvedPincode,
         'phone': receiverPhone,
         'lat': widget.lat,
         'lng': widget.lng,
@@ -145,8 +167,8 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
           houseNo: _houseNoController.text.trim(),
           street: _streetController.text.trim().isNotEmpty ? _streetController.text.trim() : widget.areaName,
           area: widget.areaName,
-          city: 'Ghatampur',
-          pincode: '209206',
+          city: resolvedCity,
+          pincode: resolvedPincode,
           phone: _receiverPhoneController.text.trim(),
           latitude: widget.lat,
           longitude: widget.lng,

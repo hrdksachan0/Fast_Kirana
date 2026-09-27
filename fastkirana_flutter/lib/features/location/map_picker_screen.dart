@@ -17,6 +17,7 @@ import 'package:geocoding/geocoding.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/address.dart';
 import '../../data/models/store_hub.dart';
+import '../../providers/address_provider.dart';
 import '../../providers/store_hub_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/hub_conflict_dialog.dart';
@@ -65,11 +66,14 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
   void initState() {
     super.initState();
     _mapController = MapController();
-    const defaultHub = StoreHub.defaultGhatampur;
-    _currentLat = widget.initialLat ?? defaultHub.latitude;
-    _currentLng = widget.initialLng ?? defaultHub.longitude;
-    _matchedHub = defaultHub;
-    _activeHubs = StoreHub.defaultHubs;
+    final currentHub = ref.read(currentStoreHubProvider);
+    final selectedAddr = ref.read(selectedAddressProvider);
+    final initLat = widget.initialLat ?? selectedAddr?.latitude ?? currentHub.latitude;
+    final initLng = widget.initialLng ?? selectedAddr?.longitude ?? currentHub.longitude;
+    _currentLat = initLat;
+    _currentLng = initLng;
+    _matchedHub = currentHub;
+    _activeHubs = ref.read(activeStoreHubsProvider).valueOrNull ?? StoreHub.defaultHubs;
 
     _pulseController = AnimationController(
       vsync: this,
@@ -206,6 +210,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
       backgroundColor: Colors.transparent,
       builder: (ctx) => _AreaSearchModal(
         currentArea: _areaName,
+        activeHubs: _activeHubs,
         onLocationSelected: (lat, lng, name, address) {
           final target = LatLng(lat, lng);
           _mapController.move(target, 16.8);
@@ -379,87 +384,153 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
             ),
           ),
 
-          // 3. TOP APP BAR & SEARCH BAR
+          // 3. TOP APP BAR & SEARCH BAR + STORE HUB CHIPS
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Row(
-                children: [
-                  // Back Button
-                  Bounceable(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: Row(
+                    children: [
+                      // Back Button
+                      Bounceable(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
+                          child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 20),
+                        ),
                       ),
-                      child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
+                      const SizedBox(width: 10),
 
-                  // Search Pill (Interactive Area Search)
-                  Expanded(
-                    child: Bounceable(
-                      onTap: _openAreaSearchSheet,
-                      child: Container(
-                        height: 46,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.orange600),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                _areaName.isNotEmpty ? _areaName : 'Search area, colony or landmark...',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13.5),
-                                  fontWeight: FontWeight.w700,
-                                  color: slateDark,
+                      // Search Pill (Interactive Area Search)
+                      Expanded(
+                        child: Bounceable(
+                          onTap: _openAreaSearchSheet,
+                          child: Container(
+                            height: 46,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 3),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              ],
                             ),
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFFFF7ED),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.tune_rounded,
-                                size: 14,
-                                color: AppDesignSystem.orange600,
-                              ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.orange600),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    _areaName.isNotEmpty ? _areaName : 'Search area, colony or landmark...',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 13.5),
+                                      fontWeight: FontWeight.w700,
+                                      color: slateDark,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFFF7ED),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.tune_rounded,
+                                    size: 14,
+                                    color: AppDesignSystem.orange600,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                if (_activeHubs.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 34,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _activeHubs.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, i) {
+                        final hub = _activeHubs[i];
+                        final isSelected = _matchedHub?.id == hub.id;
+                        return Bounceable(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            _mapController.move(LatLng(hub.latitude, hub.longitude), 16.0);
+                            _updateLocationDetails(hub.latitude, hub.longitude);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFF16A34A) : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                                width: 1.1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: isSelected ? 0.15 : 0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.storefront_rounded,
+                                  size: 14,
+                                  color: isSelected ? Colors.white : const Color(0xFF16A34A),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${hub.city} Hub',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: isSelected ? Colors.white : slateDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
           ),
 
@@ -785,10 +856,12 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
 // ---------------------------------------------------------------------------
 class _AreaSearchModal extends StatefulWidget {
   final String currentArea;
+  final List<StoreHub> activeHubs;
   final void Function(double lat, double lng, String name, String address) onLocationSelected;
 
   const _AreaSearchModal({
     required this.currentArea,
+    this.activeHubs = const [],
     required this.onLocationSelected,
   });
 
@@ -976,7 +1049,23 @@ class _AreaSearchModalState extends State<_AreaSearchModal> {
       final List<Map<String, dynamic>> results = [];
       final lower = query.toLowerCase();
 
-      // 1. Immediate Match with Local Shops & Landmarks (Instant response for local businesses)
+      // 1. Immediate Match with Active Store Hubs (Instant response for any operational city)
+      for (final hub in widget.activeHubs) {
+        final hName = hub.name.toLowerCase();
+        final hCity = hub.city.toLowerCase();
+        final hId = hub.id.toLowerCase();
+        if (hName.contains(lower) || hCity.contains(lower) || hId.contains(lower) || lower.contains(hCity)) {
+          results.add({
+            'title': '🏪 ${hub.name}',
+            'subtitle': '${hub.city} Store Hub (${hub.id.toUpperCase()}) • Serviceable Zone',
+            'lat': hub.latitude,
+            'lng': hub.longitude,
+            'tag': 'Store Hub',
+          });
+        }
+      }
+
+      // 2. Match with Local Shops & Landmarks
       final localMatches = popularAreas.where((p) {
         final t = (p['title'] as String).toLowerCase();
         final s = (p['subtitle'] as String).toLowerCase();
@@ -985,19 +1074,16 @@ class _AreaSearchModalState extends State<_AreaSearchModal> {
       }).toList();
       results.addAll(localMatches);
 
-      // 2. OpenStreetMap / Nominatim with Bounding Box around Ghatampur
-      // viewbox: minLon, maxLat, maxLon, minLat (covers Ghatampur, Sihari, surrounding areas)
+      // 3. OpenStreetMap / Nominatim (India-wide free search)
       try {
         final response = await dio.get(
           'https://nominatim.openstreetmap.org/search',
           queryParameters: {
-            'q': query.contains('ghatampur') ? query : '$query, Ghatampur',
+            'q': query.trim(),
             'format': 'json',
             'addressdetails': 1,
-            'limit': 8,
+            'limit': 10,
             'countrycodes': 'in',
-            'viewbox': '80.05,26.25,80.30,26.05',
-            'bounded': 0, // Prefer nearby within 15km
           },
           options: Options(
             headers: {'User-Agent': 'FastKirana-Mobile/1.0 (support@fastkirana.in)'},
@@ -1037,45 +1123,6 @@ class _AreaSearchModalState extends State<_AreaSearchModal> {
           }
         }
       } catch (_) {}
-
-      // 3. If still empty, try broader query on Nominatim
-      if (results.isEmpty) {
-        try {
-          final broadResp = await dio.get(
-            'https://nominatim.openstreetmap.org/search',
-            queryParameters: {
-              'q': query,
-              'format': 'json',
-              'addressdetails': 1,
-              'limit': 5,
-              'countrycodes': 'in',
-            },
-            options: Options(
-              headers: {'User-Agent': 'FastKirana-Mobile/1.0 (support@fastkirana.in)'},
-              sendTimeout: const Duration(seconds: 3),
-              receiveTimeout: const Duration(seconds: 3),
-            ),
-          );
-
-          if (broadResp.statusCode == 200 && broadResp.data is List) {
-            for (final item in (broadResp.data as List)) {
-              final lat = double.tryParse(item['lat']?.toString() ?? '') ?? 0.0;
-              final lon = double.tryParse(item['lon']?.toString() ?? '') ?? 0.0;
-              final displayName = (item['display_name'] ?? '').toString();
-              final title = displayName.split(',').first;
-
-              if (lat != 0.0 && lon != 0.0) {
-                results.add({
-                  'title': title.trim(),
-                  'subtitle': displayName,
-                  'lat': lat,
-                  'lng': lon,
-                });
-              }
-            }
-          }
-        } catch (_) {}
-      }
 
       // 4. Fallback to native geocoding if still empty
       if (results.isEmpty && !kIsWeb) {
@@ -1271,6 +1318,100 @@ class _AreaSearchModalState extends State<_AreaSearchModal> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               children: [
                 if (_searchResults.isEmpty && _searchController.text.isEmpty) ...[
+                  // Show Active Store Hubs first
+                  if (widget.activeHubs.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        '🏪 OPERATIONAL STORE HUBS',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF15803D),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    ...widget.activeHubs.map((hub) {
+                      return Bounceable(
+                        onTap: () => _selectLocation(hub.latitude, hub.longitude, hub.name, '${hub.name}, ${hub.city}'),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFF86EFAC), width: 1.2),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.storefront_rounded, size: 18, color: Color(0xFF16A34A)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      hub.name,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 13.5),
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${hub.city} Store Hub (${hub.id.toUpperCase()}) • Serviceable Zone',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 11),
+                                        color: const Color(0xFF15803D),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'ACTIVE',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF15803D),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        'POPULAR LOCALITIES',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF94A3B8),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+
                   // Show Popular Localities
                   ...popularAreas.map((area) {
                     final lat = (area['lat'] as num).toDouble();

@@ -256,7 +256,9 @@ async def broadcast_kot(
         'atta', 'raw rice', 'dal', 'mustard oil', 'refined oil', 'ghee', 'washing powder',
         'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner',
         'harpic', 'vim bar', 'rin', 'tide', 'surf', 'namkeen packet', 'chips packet',
-        'biscuit', 'sugar', 'salt', 'masala packet', 'spices', 'refill', 'packet', 'pouch'
+        'biscuit', 'sugar', 'salt', 'masala packet', 'spices', 'refill', 'packet', 'pouch',
+        'campa', 'pepsi', 'coca cola', 'sprite', 'frooti', 'thums up', 'maaza', 'limca', 'sting',
+        'cold drink'
     ]
 
     enriched_items = []
@@ -291,6 +293,9 @@ async def broadcast_kot(
                 enriched_items.append(it_copy)
 
     final_readable = target_readable or clean_readable or clean_id
+    if target_restaurant_id and not final_readable.upper().endswith("-R") and not final_readable.upper().endswith("-G"):
+        final_readable = f"{final_readable}-R"
+
     kot_text = req.kotText
     if not kot_text or kot_text.strip() == "FASTKIRANA KOT" or len(kot_text.strip()) < 20:
         kot_text = generate_standard_kot_text(

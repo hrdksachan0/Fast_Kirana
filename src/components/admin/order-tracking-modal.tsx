@@ -178,7 +178,10 @@ export default function OrderTrackingModal({
     
     // For combined orders, prefer restaurant sub-order token e.g. 600981-R
     const restSub = o.subOrders?.find(s => s.type === 'RESTAURANT')
-    const orderId = restSub?.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
+    let orderId = restSub?.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
+    if (orderId && !orderId.endsWith('-R') && !orderId.endsWith('-G') && (o.restaurantId || restSub)) {
+      orderId = `${orderId}-R`
+    }
     const outletName = restSub?.shopName || (o.restaurantId ? (o.restaurantName || o.shopName) : null) || 'Restaurant'
     const orderTime = formatOrderTime(o.createdAt)
     
@@ -206,11 +209,22 @@ export default function OrderTrackingModal({
     text += `📋 *ITEMS TO PREPARE:*\n\n`
     
     // If combined order, only include food dishes for the restaurant kitchen slip
-    const targetItems = (o.restaurantItems && o.restaurantItems.length > 0)
+    const rawTargetItems = (o.restaurantItems && o.restaurantItems.length > 0)
       ? o.restaurantItems
       : (restSub?.items && restSub.items.length > 0)
       ? restSub.items
       : (o.items || [])
+
+    const pureGrocery = [
+      'campa', 'pepsi', 'coca cola', 'sprite', 'thums up', 'frooti', 'maaza', 'limca', 'sting', 'cold drink',
+      'atta', 'raw rice', 'dal', 'mustard oil', 'refined oil', 'ghee', 'washing powder', 'soap', 'shampoo',
+      'surf excel', 'harpic', 'rin', 'tide', 'biscuit', 'sugar', 'salt', 'spices'
+    ]
+    const targetItems = rawTargetItems.filter((item: OrderItem) => {
+      const nameL = (item.name || '').toLowerCase()
+      const isGrocery = pureGrocery.some(g => nameL.includes(g))
+      return !isGrocery || Boolean(item.restaurantId && item.restaurantId === o.restaurantId)
+    })
 
     if (targetItems && targetItems.length > 0) {
       targetItems.forEach((item: OrderItem, index: number) => {

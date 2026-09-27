@@ -11,6 +11,7 @@ import '../../core/routes/page_transitions.dart';
 import '../../core/services/location_service.dart';
 import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
+import '../../providers/store_hub_provider.dart';
 import 'map_picker_screen.dart';
 import '../home/main_shell.dart';
 import '../../widgets/unserviceable_location_banner.dart';
@@ -208,6 +209,8 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
   Widget build(BuildContext context) {
     final addressesAsync = ref.watch(addressesProvider);
     final activeAddress = ref.watch(selectedAddressProvider);
+    final hubsAsync = ref.watch(activeStoreHubsProvider);
+    final currentHub = ref.watch(currentStoreHubProvider);
 
     return PopScope(
       canPop: false,
@@ -570,6 +573,148 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                 ),
 
                 const SizedBox(height: 18),
+
+                // 2.3 OPERATIONAL STORE HUBS (DYNAMIC MULTI-STORE SWITCHER)
+                hubsAsync.when(
+                  data: (hubs) {
+                    if (hubs.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '🏪 OPERATIONAL STORE HUBS',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: FontWeight.w800,
+                                color: slateMuted,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${hubs.length} Active Stores',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 9.5),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF15803D),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Row(
+                            children: hubs.map((hub) {
+                              final isSelected = currentHub.id == hub.id;
+                              final hubPin = RegExp(r'\b\d{6}\b').firstMatch(hub.id)?.group(0) ??
+                                  (hub.city.toLowerCase().contains('akbarpur')
+                                      ? '224122'
+                                      : (hub.city.toLowerCase().contains('pakur') ? '816107' : '209206'));
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: InkWell(
+                                  onTap: () async {
+                                    HapticFeedback.lightImpact();
+                                    final addr = Address(
+                                      id: 'hub_${hub.id}',
+                                      userId: 'current',
+                                      label: hub.name,
+                                      houseNo: 'Store Hub',
+                                      street: hub.name,
+                                      area: hub.city,
+                                      city: hub.city,
+                                      pincode: hubPin,
+                                      latitude: hub.latitude,
+                                      longitude: hub.longitude,
+                                      isDefault: true,
+                                    );
+                                    ref.read(selectedAddressProvider.notifier).state = addr;
+                                    final prefs = await SharedPreferences.getInstance();
+                                    await prefs.setBool('has_chosen_location', true);
+
+                                    if (!context.mounted) return;
+                                    if (Navigator.of(context).canPop()) {
+                                      Navigator.of(context).pop();
+                                    } else {
+                                      Navigator.pushAndRemoveUntil(
+                                        context,
+                                        FadeSlideRoute(page: const MainShell()),
+                                        (route) => false,
+                                      );
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? const Color(0xFFF0FDF4) : Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: isSelected ? const Color(0xFF16A34A) : slateBorder,
+                                        width: isSelected ? 1.6 : 1.1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.storefront_rounded,
+                                          size: 16,
+                                          color: isSelected ? const Color(0xFF16A34A) : primaryOrange,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              hub.city,
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 12.5),
+                                                fontWeight: FontWeight.w800,
+                                                color: isSelected ? const Color(0xFF15803D) : slateDark,
+                                              ),
+                                            ),
+                                            Text(
+                                              hub.name,
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 10),
+                                                color: slateMuted,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (isSelected) ...[
+                                          const SizedBox(width: 6),
+                                          const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF16A34A)),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
 
                 // 2.5 POPULAR LANDMARKS (1-TAP SELECT)
                 Row(

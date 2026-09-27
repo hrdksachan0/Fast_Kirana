@@ -13,9 +13,12 @@ class RestaurantKotModal {
   static String formatKitchenWhatsAppMessage(Map<String, dynamic> order, String defaultOutletName) {
     final String orderId = (order['id'] ?? '').toString();
     final dynamic rawReadable = order['readableId'];
-    final String readableId = (rawReadable != null && rawReadable.toString().isNotEmpty)
+    String readableId = (rawReadable != null && rawReadable.toString().isNotEmpty)
         ? rawReadable.toString()
         : (orderId.length > 4 ? orderId.substring(orderId.length - 4) : orderId);
+    if (!readableId.toUpperCase().endsWith('-R') && !readableId.toUpperCase().endsWith('-G')) {
+      readableId = '$readableId-R';
+    }
 
     final List items = KotPrintService.extractRestaurantItems(order);
 
@@ -85,9 +88,12 @@ class RestaurantKotModal {
   static String generateKOTText(Map<String, dynamic> order) {
     final String orderId = (order['id'] ?? '').toString();
     final dynamic rawReadable = order['readableId'];
-    final String readableId = (rawReadable != null && rawReadable.toString().isNotEmpty)
+    String readableId = (rawReadable != null && rawReadable.toString().isNotEmpty)
         ? rawReadable.toString()
         : (orderId.length > 4 ? orderId.substring(orderId.length - 4) : orderId);
+    if (!readableId.toUpperCase().endsWith('-R') && !readableId.toUpperCase().endsWith('-G')) {
+      readableId = '$readableId-R';
+    }
 
     final List items = KotPrintService.extractRestaurantItems(order);
 
