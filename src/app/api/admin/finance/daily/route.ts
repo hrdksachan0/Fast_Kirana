@@ -58,7 +58,27 @@ export async function GET(req: NextRequest) {
 
     if (cfAppId && cfSecret && orders.length > 0) {
       try {
-        const cfChecks = orders.map(async (o: any) => {
+        // Only check Cashfree for orders that could be prepaid gateway payments
+        // Skip: COD orders, Rider QR / doorstep UPI, cancelled orders
+        const eligibleForCfCheck = orders.filter((o: any) => {
+          const pMethod = String(o.paymentMethod || 'COD').toUpperCase()
+          const oStatus = String(o.status || 'PENDING').toUpperCase()
+          const notes = String(o.notes || '')
+          const isDoorstepQr = notes.includes('Doorstep UPI') || notes.includes('QR Scan') || notes.includes('Rider QR')
+
+          // Skip COD orders — they never go through Cashfree
+          if (pMethod === 'COD') return false
+          // Skip doorstep QR orders — rider collected UPI, not Cashfree PG
+          if (isDoorstepQr) return false
+          // Skip if a delivery rider collected the payment (rider QR flow)
+          if (o.deliveryUserId && pMethod === 'UPI') return false
+          // Skip cancelled orders
+          if (oStatus === 'CANCELLED') return false
+
+          return true
+        })
+
+        const cfChecks = eligibleForCfCheck.map(async (o: any) => {
           for (const cid of [o.id, o.readableId]) {
             if (!cid) continue
             try {
@@ -108,6 +128,10 @@ export async function GET(req: NextRequest) {
       const notes = String(o.notes || '')
       const isDoorstepQr = notes.includes('Doorstep UPI') || notes.includes('QR Scan') || notes.includes('Rider QR')
       const isInCashfree = cashfreePaidIds.has(o.id) || notes.includes('Cashfree PG') || notes.includes('CF_')
+      const isAdminVerified = notes.includes('Admin Verified')
+      // Extract admin name from notes (e.g. "Admin Verified by Sooraj")
+      const adminNameMatch = notes.match(/Admin Verified by (.+?)(?:\s*\||$)/)
+      const adminVerifierName = adminNameMatch ? adminNameMatch[1].trim() : 'Admin'
 
       let category = 'PENDING_DELIVERY'
       let verifiedBy = 'Pending'
@@ -115,19 +139,25 @@ export async function GET(req: NextRequest) {
       if (oStatus === 'CANCELLED') {
         category = 'CANCELLED'
         verifiedBy = 'Order Cancelled'
+      } else if (pStatus === 'PAID' && isAdminVerified) {
+        // Admin manually marked as PAID — goes to Online/Bank bucket, NOT rider
+        cashfreeOnlineTotal += tot
+        cashfreeOnlineCount += 1
+        category = 'ONLINE_BANK'
+        verifiedBy = `Admin (${adminVerifierName})`
+      } else if (pStatus === 'PAID' && (isDoorstepQr || (['UPI', 'ONLINE'].includes(pMethod) && o.deliveryUserId))) {
+        // Rider collected UPI at doorstep — check this BEFORE Cashfree
+        riderQrTotal += tot
+        riderQrCount += 1
+        category = 'RIDER_QR'
+        verifiedBy = `Rider QR (${o.deliveryUser?.name || 'Rider'})`
       } else if (isInCashfree) {
         cashfreeOnlineTotal += tot
         cashfreeOnlineCount += 1
         category = 'CASHFREE_ONLINE'
         verifiedBy = 'Cashfree Gateway (Auto)'
       } else if (pStatus === 'PAID') {
-        if (isDoorstepQr || (['UPI', 'ONLINE'].includes(pMethod) && o.deliveryUserId)) {
-          // Rider collected UPI at doorstep
-          riderQrTotal += tot
-          riderQrCount += 1
-          category = 'RIDER_QR'
-          verifiedBy = `Rider QR (${o.deliveryUser?.name || 'Rider'})`
-        } else if (o.cashSettledToAdmin) {
+        if (o.cashSettledToAdmin) {
           counterCashTotal += tot
           counterCashCount += 1
           category = 'COUNTER_CASH'

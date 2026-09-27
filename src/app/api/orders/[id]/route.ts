@@ -362,7 +362,7 @@ export async function PATCH(
 
     // Check order exists and ownership
     const existingOrders: any[] = await prisma.$queryRaw`
-      SELECT id, "userId", "readableId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId", "combinedId", "paymentMethod"::text as "paymentMethod", "paymentStatus"::text as "paymentStatus", total FROM orders WHERE id = ${id} OR "readableId" = ${id} OR "readableId" ILIKE ${id + '%'} OR "combinedId" = ${id} LIMIT 1
+      SELECT id, "userId", "readableId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId", "combinedId", "paymentMethod"::text as "paymentMethod", "paymentStatus"::text as "paymentStatus", total, notes FROM orders WHERE id = ${id} OR "readableId" = ${id} OR "readableId" ILIKE ${id + '%'} OR "combinedId" = ${id} LIMIT 1
     `
 
     if (existingOrders.length === 0) {
@@ -407,11 +407,23 @@ export async function PATCH(
       const pm = (paymentMethod || (paymentStatus === 'PAID' ? 'UPI' : existingOrder.paymentMethod) || 'COD').toUpperCase()
       const validPm = ['COD', 'UPI', 'CARD', 'WALLET'].includes(pm) ? pm : 'UPI'
 
+      // Build notes with admin verification marker
+      const adminName = session?.user?.name || 'Admin'
+      const existingNotes = existingOrder.notes || ''
+      // Strip any old admin marker before re-adding
+      const cleanedNotes = existingNotes.replace(/\s*\|\s*Admin Verified by .+?(?=\s*\||$)/g, '').trim()
+      let newNotes = cleanedNotes
+      if (paymentStatus === 'PAID') {
+        const marker = `Admin Verified by ${adminName}`
+        newNotes = cleanedNotes ? `${cleanedNotes} | ${marker}` : marker
+      }
+
       if (existingOrder.combinedId) {
         await prisma.$executeRaw`
           UPDATE orders 
           SET "paymentStatus" = ${paymentStatus}::"PaymentStatus",
               "paymentMethod" = ${validPm}::"PaymentMethod",
+              notes = ${newNotes || null},
               "updatedAt" = NOW()
           WHERE "combinedId" = ${existingOrder.combinedId}
         `
@@ -420,6 +432,7 @@ export async function PATCH(
           UPDATE orders 
           SET "paymentStatus" = ${paymentStatus}::"PaymentStatus",
               "paymentMethod" = ${validPm}::"PaymentMethod",
+              notes = ${newNotes || null},
               "updatedAt" = NOW()
           WHERE id = ${existingOrder.id}
         `
