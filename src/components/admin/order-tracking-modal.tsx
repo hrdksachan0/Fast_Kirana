@@ -40,6 +40,8 @@ interface OrderItem {
   notes?: string
   refundAmount?: number
   isRefunded?: boolean
+  restaurantId?: string
+  [key: string]: any
 }
 
 interface Order {
