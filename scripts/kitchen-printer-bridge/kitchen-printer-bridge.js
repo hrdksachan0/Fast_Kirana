@@ -345,7 +345,6 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
   }
 
   activePrintLocks.add(cleanId);
-  recentPrintTimestamps.set(cleanId, now);
 
   try {
     // 4. Sequential Printer Mutex (Prints tickets one-by-one to prevent printer paper jam/overlap)
@@ -417,10 +416,6 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
         return true;
       }
 
-      recentPrintTimestamps.set(idKey, now);
-      if (readable) recentPrintTimestamps.set(readable, now);
-      if (baseReadable) recentPrintTimestamps.set(baseReadable, now);
-
       if (RESTAURANT_ID && order.restaurantId && order.restaurantId !== RESTAURANT_ID) {
         return false;
       }
@@ -489,6 +484,12 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
       const printSuccess = await printKOT(order, targetItems, user);
 
       if (printSuccess) {
+        const finishTime = Date.now();
+        recentPrintTimestamps.set(cleanId, finishTime);
+        if (idKey) recentPrintTimestamps.set(idKey, finishTime);
+        if (readable) recentPrintTimestamps.set(readable, finishTime);
+        if (baseReadable) recentPrintTimestamps.set(baseReadable, finishTime);
+
         printedOrderIds.add(cleanId);
         if (order.id) printedOrderIds.add(order.id.toString().trim().toUpperCase());
         if (order.readableId) printedOrderIds.add(order.readableId.toString().trim().toUpperCase());
