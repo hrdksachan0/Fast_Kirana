@@ -70,8 +70,6 @@ export async function GET(req: NextRequest) {
           if (pMethod === 'COD') return false
           // Skip doorstep QR orders — rider collected UPI, not Cashfree PG
           if (isDoorstepQr) return false
-          // Skip if a delivery rider collected the payment (rider QR flow)
-          if (o.deliveryUserId && pMethod === 'UPI') return false
           // Skip cancelled orders
           if (oStatus === 'CANCELLED') return false
 
@@ -145,17 +143,18 @@ export async function GET(req: NextRequest) {
         cashfreeOnlineCount += 1
         category = 'ONLINE_BANK'
         verifiedBy = `Admin (${adminVerifierName})`
-      } else if (pStatus === 'PAID' && (isDoorstepQr || (['UPI', 'ONLINE'].includes(pMethod) && o.deliveryUserId))) {
-        // Rider collected UPI at doorstep — check this BEFORE Cashfree
-        riderQrTotal += tot
-        riderQrCount += 1
-        category = 'RIDER_QR'
-        verifiedBy = `Rider QR (${o.deliveryUser?.name || 'Rider'})`
       } else if (isInCashfree) {
+        // Cashfree API confirmed PAID — authoritative, check BEFORE rider QR
         cashfreeOnlineTotal += tot
         cashfreeOnlineCount += 1
         category = 'CASHFREE_ONLINE'
         verifiedBy = 'Cashfree Gateway (Auto)'
+      } else if (pStatus === 'PAID' && isDoorstepQr) {
+        // Rider collected UPI at doorstep (notes have Doorstep UPI / QR Scan / Rider QR markers)
+        riderQrTotal += tot
+        riderQrCount += 1
+        category = 'RIDER_QR'
+        verifiedBy = `Rider QR (${o.deliveryUser?.name || 'Rider'})`
       } else if (pStatus === 'PAID') {
         if (o.cashSettledToAdmin) {
           counterCashTotal += tot
