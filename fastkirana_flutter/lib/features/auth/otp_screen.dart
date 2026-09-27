@@ -17,6 +17,7 @@ import '../../core/services/secure_storage_service.dart';
 import '../../core/routes/page_transitions.dart';
 import '../delivery/delivery_dashboard.dart';
 import '../admin/admin_dashboard.dart';
+import '../admin/vendor_console_screen.dart';
 import '../cafe/restaurant_dashboard.dart';
 import '../delivery/picker_dashboard.dart';
 
@@ -208,7 +209,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
             roleUpper == 'RESTAURANT_OWNER' ||
             roleUpper == 'CHEF' ||
             roleUpper == 'RESTAURANT' ||
-            roleUpper == 'PICKER';
+            roleUpper == 'PICKER' ||
+            roleUpper == 'VENDOR';
 
         final rawName = (user.name ?? '').trim();
         final isExistingUser = rawName.isNotEmpty &&
@@ -251,55 +253,46 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         if (!mounted) return;
 
         // Role-Based Smart Navigation after OTP Verification (100% Dynamic DB Role)
-        if (roleUpper == 'DELIVERY' || roleUpper == 'RIDER' || roleUpper == 'DELIVERY_PARTNER') {
-          await prefs.setString('user_role', 'DELIVERY');
-          await SecureStorage.write('user_role', 'DELIVERY');
-          await SecureStorage.loadCache();  // Refresh interceptor cache with updated role
-          if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              FadeSlideRoute(page: const DeliveryDashboard()),
-              (route) => false,
-            );
-          }
-          return;
-        }
+        if (isStaffRole) {
+          String normalizedRole = 'USER';
+          Widget consolePage;
+          String consoleTitle;
 
-        if (roleUpper == 'ADMIN') {
-          await prefs.setString('user_role', 'ADMIN');
-          await SecureStorage.write('user_role', 'ADMIN');
-          await SecureStorage.loadCache();  // Refresh interceptor cache with updated role
-          if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              FadeSlideRoute(page: const AdminDashboard()),
-              (route) => false,
+          if (roleUpper == 'ADMIN') {
+            normalizedRole = 'ADMIN';
+            consolePage = const AdminDashboard();
+            consoleTitle = 'Admin Console';
+          } else if (roleUpper == 'DELIVERY' || roleUpper == 'RIDER' || roleUpper == 'DELIVERY_PARTNER') {
+            normalizedRole = 'DELIVERY';
+            consolePage = const DeliveryDashboard();
+            consoleTitle = 'Rider Console';
+          } else if (roleUpper == 'RESTAURANT_OWNER' || roleUpper == 'CHEF' || roleUpper == 'RESTAURANT') {
+            normalizedRole = 'RESTAURANT_OWNER';
+            consolePage = RestaurantDashboard(
+              initialRestaurantId: user.assignedRestaurantId,
             );
+            consoleTitle = 'Kitchen KOT Console';
+          } else if (roleUpper == 'PICKER') {
+            normalizedRole = 'PICKER';
+            consolePage = const PickerDashboard();
+            consoleTitle = 'Picker Hub';
+          } else {
+            normalizedRole = 'VENDOR';
+            consolePage = const VendorConsoleScreen(isVendorSelf: true);
+            consoleTitle = 'Partner Hub';
           }
-          return;
-        }
 
-        if (roleUpper == 'RESTAURANT_OWNER' || roleUpper == 'CHEF' || roleUpper == 'RESTAURANT') {
-          await prefs.setString('user_role', 'RESTAURANT_OWNER');
-          await SecureStorage.write('user_role', 'RESTAURANT_OWNER');
-          await SecureStorage.loadCache();  // Refresh interceptor cache
-          if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              FadeSlideRoute(page: RestaurantDashboard(
-                initialRestaurantId: user.assignedRestaurantId,
-              )),
-              (route) => false,
-            );
-          }
-          return;
-        }
+          await prefs.setString('user_role', normalizedRole);
+          await SecureStorage.write('user_role', normalizedRole);
+          await SecureStorage.loadCache(); // Refresh interceptor cache with updated role
 
-        if (roleUpper == 'PICKER') {
-          await prefs.setString('user_role', 'PICKER');
-          await SecureStorage.write('user_role', 'PICKER');
-          await SecureStorage.loadCache();  // Refresh interceptor cache
           if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              FadeSlideRoute(page: const PickerDashboard()),
-              (route) => false,
+            await _showStaffNavigationBottomSheet(
+              context: context,
+              roleDisplay: normalizedRole,
+              userName: user.name ?? '',
+              consolePage: consolePage,
+              consoleTitle: consoleTitle,
             );
           }
           return;
@@ -497,6 +490,194 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         );
       },
     );
+  }
+
+  Future<void> _showStaffNavigationBottomSheet({
+    required BuildContext context,
+    required String roleDisplay,
+    required String userName,
+    required Widget consolePage,
+    required String consoleTitle,
+  }) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.verified_user_rounded, color: Color(0xFF2563EB), size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome, ${userName.isNotEmpty ? userName : "Staff Partner"}!',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Logged in with $roleDisplay access',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF2563EB),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Where would you like to start?',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Option 1: Shop as Customer
+              InkWell(
+                onTap: () => Navigator.pop(ctx, 'customer'),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('🛍️', style: TextStyle(fontSize: 24)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Shop as Customer',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Browse items & order (Access $consoleTitle anytime in Profile)',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Option 2: Open Console
+              InkWell(
+                onTap: () => Navigator.pop(ctx, 'console'),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('⚡', style: TextStyle(fontSize: 24)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Open $consoleTitle',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF166534),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Manage live orders, operations & deliveries',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: const Color(0xFF15803D),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF16A34A)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!context.mounted) return;
+    if (choice == 'console') {
+      Navigator.of(context).pushAndRemoveUntil(
+        FadeSlideRoute(page: consolePage),
+        (route) => false,
+      );
+    } else {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/location',
+        (route) => false,
+        arguments: true,
+      );
+    }
   }
 
   Future<void> _handleResend() async {

@@ -120,6 +120,63 @@ export function RestaurantTimingSchedule({
               </div>
             </div>
           )}
+
+          {/* Delivery / Prep Time (Dynamic timing shown on customer cards) */}
+          <div className="mt-5 pt-4 border-t border-border/40 space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <label htmlFor="deliveryTime" className="text-[11px] font-bold uppercase tracking-wider text-text-secondary block">
+                Estimated Delivery / Prep Time (Optional)
+              </label>
+              <span className="text-[10px] text-text-secondary font-semibold">
+                Leave empty to hide timing and show only distance
+              </span>
+            </div>
+            <div className="relative">
+              <input
+                id="deliveryTime"
+                name="deliveryTime"
+                type="text"
+                value={formData.deliveryTime || ''}
+                onChange={handleChange}
+                placeholder="e.g. 20-30 mins (Leave blank to show only distance)"
+                className={inputClass}
+              />
+            </div>
+            {/* Quick timing presets */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] font-bold text-text-secondary">Presets:</span>
+              <button
+                type="button"
+                onClick={() => setFormData((prev: any) => ({ ...prev, deliveryTime: '' }))}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border cursor-pointer transition-all active:scale-95 ${
+                  !formData.deliveryTime ? 'bg-rose-500/10 text-rose-600 border-rose-500/30' : 'bg-muted hover:bg-muted/80 border-border'
+                }`}
+              >
+                🚫 Remove Timing (Distance Only)
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData((prev: any) => ({ ...prev, deliveryTime: '15-25 mins' }))}
+                className="px-2.5 py-1 bg-muted hover:bg-muted/80 rounded-lg text-[10px] font-bold border border-border cursor-pointer transition-all active:scale-95"
+              >
+                ⚡ 15-25 mins
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData((prev: any) => ({ ...prev, deliveryTime: '20-30 mins' }))}
+                className="px-2.5 py-1 bg-muted hover:bg-muted/80 rounded-lg text-[10px] font-bold border border-border cursor-pointer transition-all active:scale-95"
+              >
+                ⏱️ 20-30 mins
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData((prev: any) => ({ ...prev, deliveryTime: '30-45 mins' }))}
+                className="px-2.5 py-1 bg-muted hover:bg-muted/80 rounded-lg text-[10px] font-bold border border-border cursor-pointer transition-all active:scale-95"
+              >
+                🍳 30-45 mins
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

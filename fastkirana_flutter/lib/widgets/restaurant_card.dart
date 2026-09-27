@@ -165,15 +165,17 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
     return cleaned.isNotEmpty ? cleaned : 'Ghatampur Market';
   }
 
-  String _getDeliveryEta(double distanceKm, String rawDeliveryTime) {
-    if (rawDeliveryTime.isNotEmpty &&
-        rawDeliveryTime != 'Hot & Fresh' &&
-        !rawDeliveryTime.toLowerCase().contains('fresh')) {
-      return rawDeliveryTime;
+  String? _getDeliveryEta(double distanceKm, String? rawDeliveryTime) {
+    if (rawDeliveryTime != null) {
+      final clean = rawDeliveryTime.trim();
+      if (clean.isNotEmpty &&
+          clean.toLowerCase() != 'hot & fresh' &&
+          !clean.toLowerCase().contains('fresh')) {
+        return clean;
+      }
     }
-    if (distanceKm <= 1.5) return '20-25 mins';
-    if (distanceKm <= 3.5) return '25-30 mins';
-    return '30-40 mins';
+    // Return null if timing is not configured in restaurant form
+    return null;
   }
 
   @override
@@ -496,7 +498,9 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                             const Text('⚡', style: TextStyle(fontSize: 10)),
                             const SizedBox(width: 3.5),
                             Text(
-                              '${etaText.toUpperCase()} • ${distanceKm.toStringAsFixed(1)} KM',
+                              (etaText != null && etaText.isNotEmpty)
+                                  ? '${etaText.toUpperCase()} • ${distanceKm.toStringAsFixed(1)} KM'
+                                  : '${distanceKm.toStringAsFixed(1)} KM',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: Responsive.scaledFontSize(context, 9.5),
                                 fontWeight: FontWeight.w800,

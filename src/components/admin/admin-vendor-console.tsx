@@ -28,9 +28,12 @@ import {
   Loader2,
   ChevronRight,
   Trash2,
+  ShieldCheck,
+  Smartphone,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, cn } from '@/lib/utils'
+import { getLast10Digits } from '@/lib/phone'
 import * as XLSX from 'xlsx'
 
 interface Vendor {
@@ -202,6 +205,86 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
   })
   const [storesList, setStoresList] = useState<{ id: string; name: string }[]>([])
 
+  // Vendor Phone OTP verification state
+  const [vendorVerifiedPhones, setVendorVerifiedPhones] = useState<Set<string>>(new Set())
+  const [initialVendorEditPhone, setInitialVendorEditPhone] = useState<string>('')
+  const [isSendingVendorOtp, setIsSendingVendorOtp] = useState(false)
+  const [isVerifyingVendorOtp, setIsVerifyingVendorOtp] = useState(false)
+  const [vendorOtpSent, setVendorOtpSent] = useState(false)
+  const [vendorOtpCode, setVendorOtpCode] = useState('')
+  const [vendorOtpCountdown, setVendorOtpCountdown] = useState(0)
+
+  // Countdown timer for vendor OTP
+  useEffect(() => {
+    if (vendorOtpCountdown <= 0) return
+    const timer = setInterval(() => {
+      setVendorOtpCountdown((prev) => prev - 1)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [vendorOtpCountdown])
+
+  const cleanVendorPhone = getLast10Digits(vendorFormData.phone || '')
+  const isVendorPhoneVerified =
+    !cleanVendorPhone ||
+    vendorVerifiedPhones.has(cleanVendorPhone) ||
+    (vendorModalMode === 'edit' && cleanVendorPhone === initialVendorEditPhone && cleanVendorPhone.length === 10)
+
+  const handleSendVendorOtp = async (phoneToVerify = cleanVendorPhone) => {
+    if (phoneToVerify.length !== 10) {
+      toast.error('Please enter a valid 10-digit mobile number for the vendor.')
+      return
+    }
+
+    setIsSendingVendorOtp(true)
+    try {
+      const res = await fetch('/api/auth/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneToVerify }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send OTP')
+      }
+      setVendorOtpSent(true)
+      setVendorOtpCountdown(30)
+      toast.success(`OTP sent to vendor at +91 ${phoneToVerify} via WhatsApp / SMS! 📲`)
+    } catch (err: any) {
+      toast.error(err.message || 'Unable to send OTP. Please try again.')
+    } finally {
+      setIsSendingVendorOtp(false)
+    }
+  }
+
+  const handleVerifyVendorOtp = async () => {
+    const cleanCode = vendorOtpCode.trim().replace(/\D/g, '')
+    if (cleanCode.length !== 6) {
+      toast.error('Please enter the 6-digit OTP code.')
+      return
+    }
+
+    setIsVerifyingVendorOtp(true)
+    try {
+      const res = await fetch('/api/auth/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanVendorPhone, otp: cleanCode }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Invalid or expired OTP')
+      }
+      setVendorVerifiedPhones((prev) => new Set(prev).add(cleanVendorPhone))
+      setVendorOtpSent(false)
+      setVendorOtpCode('')
+      toast.success('Vendor phone verified successfully! ✅')
+    } catch (err: any) {
+      toast.error(err.message || 'OTP verification failed. Please try again.')
+    } finally {
+      setIsVerifyingVendorOtp(false)
+    }
+  }
+
   useEffect(() => {
     fetch('/api/admin/stores', { headers: authHeaders })
       .then((res) => res.json())
@@ -336,6 +419,9 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
   // Open Create Modal
   const handleOpenCreateModal = () => {
     setVendorModalMode('create')
+    setInitialVendorEditPhone('')
+    setVendorOtpSent(false)
+    setVendorOtpCode('')
     setVendorFormData({
       id: '',
       name: '',
@@ -358,6 +444,10 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
   const handleOpenEditModal = () => {
     if (!vendorDetails) return
     setVendorModalMode('edit')
+    const initialPhone = vendorDetails.phone ? getLast10Digits(vendorDetails.phone) : ''
+    setInitialVendorEditPhone(initialPhone)
+    setVendorOtpSent(false)
+    setVendorOtpCode('')
     setVendorFormData({
       id: vendorDetails.id,
       name: vendorDetails.name,
@@ -383,6 +473,25 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
       toast.error('Vendor name is required')
       return
     }
+
+    // Enforce OTP verification on vendor phone number if provided
+    if (cleanVendorPhone) {
+      if (cleanVendorPhone.length !== 10) {
+        toast.error('Please enter a valid 10-digit mobile number')
+        return
+      }
+
+      if (!isVendorPhoneVerified) {
+        if (!vendorOtpSent) {
+          toast.info("Please verify the vendor's phone number with OTP.")
+          await handleSendVendorOtp(cleanVendorPhone)
+        } else {
+          toast.error("Please enter the 6-digit OTP code to verify the vendor's phone number.")
+        }
+        return
+      }
+    }
+
     setSavingVendor(true)
     try {
       const res = await fetch('/api/admin/vendors', {
@@ -1651,14 +1760,99 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-text-secondary">Phone / WhatsApp *</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-text-secondary">Phone / WhatsApp *</label>
+                    {cleanVendorPhone && isVendorPhoneVerified ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Verified
+                      </span>
+                    ) : cleanVendorPhone.length === 10 ? (
+                      <button
+                        type="button"
+                        onClick={() => handleSendVendorOtp(cleanVendorPhone)}
+                        disabled={isSendingVendorOtp}
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                      >
+                        {isSendingVendorOtp ? (
+                          <>
+                            <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                            <span>Sending...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Smartphone className="w-2.5 h-2.5" />
+                            <span>Verify via OTP</span>
+                          </>
+                        )}
+                      </button>
+                    ) : null}
+                  </div>
                   <input
                     type="tel"
                     placeholder="e.g. 9876543210"
+                    maxLength={10}
                     value={vendorFormData.phone}
-                    onChange={(e) => setVendorFormData({ ...vendorFormData, phone: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-background focus:outline-none focus:border-primary font-medium"
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setVendorFormData({ ...vendorFormData, phone: val })
+                      const cl = getLast10Digits(val)
+                      if (!vendorVerifiedPhones.has(cl)) {
+                        setVendorOtpSent(false)
+                        setVendorOtpCode('')
+                      }
+                    }}
+                    className={cn(
+                      "w-full px-3 py-2 text-xs rounded-xl border border-border bg-background focus:outline-none focus:border-primary font-medium transition-colors",
+                      cleanVendorPhone && isVendorPhoneVerified && "border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/10"
+                    )}
                   />
+
+                  {/* Inline Vendor OTP Verification Box */}
+                  {vendorOtpSent && !isVendorPhoneVerified && (
+                    <div className="mt-2 p-2.5 rounded-xl border border-primary/30 bg-primary/5 space-y-2 animate-slide-down">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-text-primary flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                          OTP sent to +91 {cleanVendorPhone}
+                        </span>
+                        {vendorOtpCountdown > 0 ? (
+                          <span className="text-[10px] font-semibold text-text-muted">
+                            Resend in {vendorOtpCountdown}s
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSendVendorOtp(cleanVendorPhone)}
+                            disabled={isSendingVendorOtp}
+                            className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                          >
+                            Resend OTP
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          placeholder="6-digit OTP code"
+                          value={vendorOtpCode}
+                          onChange={(e) => setVendorOtpCode(e.target.value.replace(/\D/g, ''))}
+                          className="h-8 flex-1 px-3 text-xs font-mono font-bold tracking-widest rounded-lg border border-border bg-background focus:outline-none focus:border-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyVendorOtp}
+                          disabled={isVerifyingVendorOtp || vendorOtpCode.trim().length !== 6}
+                          className="h-8 px-3 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary/90 disabled:opacity-50 shrink-0 cursor-pointer flex items-center gap-1"
+                        >
+                          {isVerifyingVendorOtp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Verify'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1">

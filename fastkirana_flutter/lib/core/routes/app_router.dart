@@ -70,6 +70,8 @@ class AppRouter {
         return FadeThroughRoute(page: const RestaurantDashboard());
       case '/vendor':
       case '/vendor/login':
+      case '/staff':
+      case '/staff/login':
         return ZeptoSlideRoute(page: const VendorLoginScreen());
       case '/vendor/console':
       case '/vendor/dashboard':

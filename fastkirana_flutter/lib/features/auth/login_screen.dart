@@ -619,12 +619,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                             const SizedBox(height: 18),
 
-                            // Partner / Supplier Portal Link
+                            // Staff & Store Partner Portal Link
                             Center(
                               child: GestureDetector(
                                 onTap: () => Navigator.pushNamed(context, '/vendor/login'),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFF8FAFC),
                                     borderRadius: BorderRadius.circular(20),
@@ -633,10 +633,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.storefront_rounded, size: 15, color: Color(0xFFEA580C)),
+                                      const Icon(Icons.shield_outlined, size: 15, color: Color(0xFF2563EB)),
                                       const SizedBox(width: 6),
                                       Text(
-                                        'Vendor / Supplier Partner? Login here',
+                                        'Staff & Partner Login',
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: Responsive.scaledFontSize(context, 11.5),
                                           fontWeight: FontWeight.w700,
