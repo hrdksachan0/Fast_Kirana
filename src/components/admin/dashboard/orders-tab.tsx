@@ -472,7 +472,7 @@ export function OrdersTab({
       toast.dismiss(toastId)
       toast.success(`KOT Sent to Kitchen ✓ 📲`)
     } finally {
-      // Cooldown of 4 seconds before re-enabling click
+      // Cooldown of 10 seconds before re-enabling click to prevent multi-tap
       setTimeout(() => {
         setSendingKotIds((prev) => {
           const next = new Set(prev)
@@ -480,7 +480,7 @@ export function OrdersTab({
           next.delete(o.id)
           return next
         })
-      }, 4000)
+      }, 10000)
     }
   }
 

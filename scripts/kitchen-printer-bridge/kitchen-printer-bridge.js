@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+const dns = require('dns');
 
 // ============================================================================
 // 1. CONFIGURATION & STATE
@@ -132,37 +133,12 @@ let channel = null;
 
 function checkInternetConnectivity() {
   return new Promise((resolve) => {
-    try {
-      const urlObj = new URL(SUPABASE_URL);
-      const client = urlObj.protocol === 'https:' ? https : http;
-      
-      const req = client.request(
-        {
-          hostname: urlObj.hostname,
-          port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
-          path: '/rest/v1/',
-          method: 'HEAD',
-          headers: { apikey: SUPABASE_ANON_KEY },
-          timeout: 3500,
-        },
-        (res) => {
-          resolve(res.statusCode < 500);
-        }
-      );
-
-      req.on('timeout', () => {
-        req.destroy();
-        resolve(false);
+    dns.lookup('8.8.8.8', (err) => {
+      if (!err) return resolve(true);
+      dns.lookup('google.com', (err2) => {
+        resolve(!err2);
       });
-
-      req.on('error', () => {
-        resolve(false);
-      });
-
-      req.end();
-    } catch (_) {
-      resolve(false);
-    }
+    });
   });
 }
 
@@ -175,28 +151,27 @@ async function networkHealthWatchdog() {
       consecutiveFailures = 0;
       console.log('\n===============================================================');
       console.log('📶 [NETWORK RESTORED] Internet connection is BACK ONLINE!');
-      console.log('🔄 Reconnecting Realtime channel and checking missed orders...');
+      console.log('🔄 Checking missed offline orders...');
       console.log('===============================================================\n');
       playSound('online');
-      setupSubscription();
       drainPendingQueue();
     } else {
       consecutiveFailures = 0;
     }
   } else {
     consecutiveFailures++;
-    if (isOnline && consecutiveFailures >= 2) {
+    if (isOnline && consecutiveFailures >= 3) {
       isOnline = false;
       console.log('\n===============================================================');
       console.log('⚠️ [NETWORK ALERT] Kitchen Internet is DISCONNECTED / DOWN!');
-      console.log('Bridge will automatically reconnect when internet recovers.');
+      console.log('Bridge will automatically print pending tickets when internet recovers.');
       console.log('===============================================================\n');
       playSound('offline');
     }
   }
 }
 
-setInterval(networkHealthWatchdog, 4000);
+setInterval(networkHealthWatchdog, 10000);
 
 // ============================================================================
 // 5. RECEIPT FORMATTING & POWERSHELL PRINTING
@@ -361,10 +336,10 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
     return true;
   }
 
-  // 3. Multi-tap Cooldown Window (25 seconds)
+  // 3. Multi-tap Cooldown Window (25 seconds) - Blocks rapid clicks even during network lags
   const now = Date.now();
   const lastPrintTime = recentPrintTimestamps.get(cleanId);
-  if (!isForceReprint && lastPrintTime && (now - lastPrintTime) < 25000) {
+  if (lastPrintTime && (now - lastPrintTime) < 25000) {
     console.log(`[Bridge] 🛡️ Ignored duplicate multi-tap for #${cleanId} (${Math.round((25000 - (now - lastPrintTime)) / 1000)}s cooldown active)`);
     return true;
   }
@@ -436,8 +411,9 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
       const lastPrintById = idKey ? recentPrintTimestamps.get(idKey) : null;
       const effectiveLastPrint = Math.max(lastPrintByReadable || 0, lastPrintByBase || 0, lastPrintById || 0);
 
-      if (!isForceReprint && effectiveLastPrint > 0 && (now - effectiveLastPrint) < 25000) {
-        console.log(`[Bridge] 🛡️ Cooldown active for #${readable || idKey}, skipping duplicate ticket.`);
+      // Multi-tap Cooldown Window (25s): If user clicked 4 times on slow internet, print ONLY the first one!
+      if (effectiveLastPrint > 0 && (now - effectiveLastPrint) < 25000) {
+        console.log(`[Bridge] 🛡️ Cooldown active for #${readable || idKey} (${Math.round((25000 - (now - effectiveLastPrint)) / 1000)}s cooldown). Skipping multi-tap duplicate ticket.`);
         return true;
       }
 
@@ -661,21 +637,21 @@ setInterval(drainPendingQueue, pollIntervalMs);
 // ============================================================================
 // 8. SUPABASE REALTIME SUBSCRIPTION (0-SECOND INSTANT PRINTING)
 // ============================================================================
+let isInitialStart = true;
+let reconnectTimer = null;
+
 function setupSubscription() {
-  if (channel) {
-    try { supabase.removeChannel(channel); } catch (_) {}
-    channel = null;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
   }
 
-  try {
-    if (supabase && supabase.realtime) {
-      supabase.realtime.disconnect();
-    }
-  } catch (_) {}
-
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false },
-  });
+  if (channel) {
+    try {
+      supabase.removeChannel(channel);
+    } catch (_) {}
+    channel = null;
+  }
 
   channel = supabase.channel('restaurant-orders-live');
 
@@ -705,21 +681,29 @@ function setupSubscription() {
 
   channel.subscribe((status, err) => {
     if (status === 'SUBSCRIBED') {
-      console.log('===============================================================');
-      console.log('🚀 FastKirana Kitchen Thermal Printer Bridge is RUNNING & READY!');
-      console.log(`Target Printer  : ${PRINTER_NAME}`);
-      console.log(`Queue Polling   : Every ${POLL_INTERVAL_SECONDS || 6}s (Offline Recovery Active)`);
-      console.log(`Power Mode      : Windows Sleep Prevention ACTIVE 24/7`);
-      console.log(`Mode            : ${AUTO_PRINT_ON_CONFIRM ? 'Auto-Print on Confirm' : 'Manual "Send KOT" Only'}`);
-      console.log('Listening for orders... Keep this window open.');
-      console.log('===============================================================');
+      if (isInitialStart) {
+        isInitialStart = false;
+        console.log('===============================================================');
+        console.log('🚀 FastKirana Kitchen Thermal Printer Bridge is RUNNING & READY!');
+        console.log(`Target Printer  : ${PRINTER_NAME}`);
+        console.log(`Queue Polling   : Every ${POLL_INTERVAL_SECONDS || 6}s (Offline Recovery Active)`);
+        console.log(`Power Mode      : Windows Sleep Prevention ACTIVE 24/7`);
+        console.log(`Mode            : ${AUTO_PRINT_ON_CONFIRM ? 'Auto-Print on Confirm' : 'Manual "Send KOT" Only'}`);
+        console.log('Listening for orders... Keep this window open.');
+        console.log('===============================================================');
+      } else {
+        console.log('[Realtime] ⚡ Kitchen channel connected & ready!');
+      }
       drainPendingQueue();
-    } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
       const errMsg = err ? `: ${err.message}` : '';
-      console.warn(`[Realtime] Subscription state: ${status}${errMsg}. Retrying in 5s...`);
-      setTimeout(() => {
-        if (isOnline) setupSubscription();
-      }, 5000);
+      console.warn(`[Realtime] Subscription state: ${status}${errMsg}. Retrying in 10s...`);
+      if (!reconnectTimer) {
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          if (isOnline) setupSubscription();
+        }, 10000);
+      }
     }
   });
 }

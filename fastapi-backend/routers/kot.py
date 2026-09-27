@@ -175,8 +175,8 @@ async def broadcast_kot(
         logger.info(f"[KOT Broadcast API] 🛡️ Ignored checkout auto-KOT for Order #{clean_readable or clean_id}")
         return {"success": True, "ignored": True, "reason": "Auto-KOT on checkout disabled"}
 
-    # Dynamic debounce window: 2s for manual admin dispatches, 10s for others
-    cooldown_window = 2.0 if is_manual_admin_dispatch else 10.0
+    # Dynamic debounce window: 15 seconds to prevent multiple slips on multi-tap / slow internet
+    cooldown_window = 15.0
     last_broadcast = max(
         recent_broadcast_timestamps.get(clean_id, 0),
         recent_broadcast_timestamps.get(clean_readable, 0) if clean_readable else 0,
