@@ -2811,7 +2811,7 @@ async def update_order(
         if not order.deliveryUserId:
             try:
                 from routers.delivery import dispatch_nearest_rider_for_order
-                background_tasks.add_task(dispatch_nearest_rider_for_order, order.id, db)
+                background_tasks.add_task(dispatch_nearest_rider_for_order, order.id, None)
             except Exception as disp_err:
                 logger.warning(f"Could not queue auto dispatch on PACKED: {disp_err}")
 

@@ -592,6 +592,9 @@ async def get_me(
 
 
 _otp_cache: Dict[str, tuple[str, float]] = {}
+_otp_rate_limit: Dict[str, list[float]] = {}
+OTP_COOLDOWN_SECONDS = 30
+OTP_MAX_PER_10_MIN = 5
 
 
 @router.post("/otp/send", response_model=MessageResponse)
@@ -602,12 +605,37 @@ async def send_otp(
     """
     Send real OTP to phone number via WhatsApp Cloud API or Fast2SMS.
     Also syncs to Supabase PostgreSQL otp_tokens table.
+    Enforces a 30s cooldown and max 5 requests per 10 minutes to prevent SMS abuse.
     """
     raw_ident = body.phone or body.email or ""
     phone = normalize_phone(raw_ident)
 
     if not phone or len(phone) != 10 or phone[0] < '6':
         raise HTTPException(status_code=400, detail="Invalid Indian phone number")
+
+    # Rate limiting guard
+    now_ts = datetime.now(timezone.utc).timestamp()
+    history = [ts for ts in _otp_rate_limit.get(phone, []) if now_ts - ts < 600]
+
+    # Bypass rate limits for designated internal test phones
+    is_test_phone = phone in ["7054470303", "9696503759", "9999999999"]
+    if not is_test_phone and history:
+        last_req = history[-1]
+        elapsed = now_ts - last_req
+        if elapsed < OTP_COOLDOWN_SECONDS:
+            remaining = int(OTP_COOLDOWN_SECONDS - elapsed)
+            raise HTTPException(
+                status_code=429,
+                detail=f"Please wait {remaining} seconds before requesting another OTP."
+            )
+        if len(history) >= OTP_MAX_PER_10_MIN:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many OTP requests. Please try again after 10 minutes."
+            )
+
+    history.append(now_ts)
+    _otp_rate_limit[phone] = history
 
     otp = generate_otp()
     _otp_cache[phone] = (otp, datetime.now(timezone.utc).timestamp() + 300)

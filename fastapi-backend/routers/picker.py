@@ -583,14 +583,20 @@ async def get_picker_orders(
         for r in r_res.scalars().all():
             restaurants[r.id] = r
 
+    # Batch fetch all products in a single high-performance query (Zero N+1)
+    all_pids = list({i.productId for o in orders for i in o.items if i.productId})
+    products_map = {}
+    if all_pids:
+        p_stmt = select(Product).options(selectinload(Product.category)).where(Product.id.in_(all_pids))
+        p_res = await db.execute(p_stmt)
+        for p in p_res.scalars().all():
+            products_map[p.id] = p
+
     result = []
     for o in orders:
         order_items = []
         for i in o.items:
-            # Query product details to populate relations
-            p_stmt = select(Product).options(selectinload(Product.category)).where(Product.id == i.productId)
-            p_res = await db.execute(p_stmt)
-            p_obj = p_res.scalars().first()
+            p_obj = products_map.get(i.productId)
             
             p_unit = (p_obj.unit or "").strip() if p_obj and p_obj.unit else None
             effective_variant = i.selectedVariant or p_unit

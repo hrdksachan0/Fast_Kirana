@@ -8,7 +8,7 @@ from datetime import datetime, time
 import urllib.parse
 import math
 
-from database import get_db
+from database import get_db, AsyncSessionLocal
 from models import Order, OrderItem, RiderWallet, CashDepositTransaction, User, Address, OrderStatus, PaymentMethod, PaymentStatus, StoreSetting
 from routers.auth import require_auth
 from routers.websockets import manager
@@ -762,17 +762,19 @@ async def accept_batch_orders(
 
 # ─── AUTOMATED RIDER DISPATCH & DISTANCE MATRIX ───────────────────────────────────
 
-async def dispatch_nearest_rider_for_order(order_id: str, db: AsyncSession, max_distance_km: float = 12.0) -> Optional[dict]:
+async def dispatch_nearest_rider_for_order(order_id: str, db: Optional[AsyncSession] = None, max_distance_km: float = 12.0) -> Optional[dict]:
     """
-    Automated Rider Dispatch & Distance Matrix:
-    1. Resolves pickup location (Darkstore hub or restaurant).
-    2. Finds active, online delivery riders (Role.DELIVERY, not blocked).
-    3. Calculates real-time Haversine distance from rider's live coordinates to pickup point.
-    4. Evaluates active workload: prioritizes free riders or riders with <= 2 active tasks.
-    5. Assigns nearest eligible rider, updates order.deliveryUserId, commits, and broadcasts:
-       - WebSocket alert to rider's personal channel (f"rider_{rider.id}")
-       - WebSocket status update to customer tracking room (f"order_{order.id}")
+    Automated Rider Dispatch entrypoint.
+    If db session is omitted or closed (e.g. called from a background task),
+    creates an isolated AsyncSessionLocal to safely perform the dispatch and commit.
     """
+    if db is None:
+        async with AsyncSessionLocal() as session:
+            return await _dispatch_nearest_rider_internal(order_id, session, max_distance_km)
+    return await _dispatch_nearest_rider_internal(order_id, db, max_distance_km)
+
+
+async def _dispatch_nearest_rider_internal(order_id: str, db: AsyncSession, max_distance_km: float = 12.0) -> Optional[dict]:
     clean_id = str(order_id).strip().lstrip("#")
     stmt = select(Order).options(
         selectinload(Order.restaurant),

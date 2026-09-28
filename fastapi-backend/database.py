@@ -46,7 +46,8 @@ def _get_unique_prep_stmt_name(*args):
 connect_args = {
     "statement_cache_size": 0,
     "prepared_statement_cache_size": 0,
-    "prepared_statement_name_func": _get_unique_prep_stmt_name
+    "prepared_statement_name_func": _get_unique_prep_stmt_name,
+    "server_settings": {"application_name": "fastkirana_api"}
 }
 if use_ssl:
     connect_args["ssl"] = "require"
@@ -57,8 +58,8 @@ engine = create_async_engine(
     future=True,
     pool_size=20,
     max_overflow=20,
-    pool_timeout=30,
-    pool_recycle=300,
+    pool_timeout=20,
+    pool_recycle=180,
     pool_pre_ping=True,
     connect_args=connect_args
 )
