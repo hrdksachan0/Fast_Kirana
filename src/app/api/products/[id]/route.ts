@@ -276,6 +276,26 @@ export async function PATCH(
       },
     })
 
+    // Record price change history if price or MRP was modified
+    if (updatedProduct.price !== product.price || updatedProduct.mrp !== product.mrp) {
+      try {
+        const changer = userPhone || userEmail || session?.user?.name || (role === 'ADMIN' ? 'Admin' : 'Vendor')
+        await prisma.priceHistory.create({
+          data: {
+            productId: product.id,
+            oldPrice: product.price,
+            newPrice: updatedProduct.price,
+            oldMrp: product.mrp,
+            newMrp: updatedProduct.mrp,
+            changeType: role === 'ADMIN' ? 'ADMIN_UPDATE' : 'VENDOR_UPDATE',
+            changedBy: `${changer}${updatedProduct.restaurant?.name ? ` (${updatedProduct.restaurant.name})` : ''}`,
+          },
+        })
+      } catch (histErr) {
+        logger.warn('price-history', 'Failed to log price change history in products/[id]', histErr)
+      }
+    }
+
     // If storeId is provided, update localized stock in store_inventories
     if (targetStoreId && targetStoreId !== 'all' && stock !== undefined) {
       const parsedLocalStock = parseInt(stock)

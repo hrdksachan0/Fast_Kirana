@@ -13,6 +13,7 @@ import '../../core/network/api_client.dart';
 import '../../core/utils/order_item_helper.dart';
 import '../../core/services/secure_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../widgets/store_serviceability_sheet.dart';
 
 class VendorConsoleScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -946,6 +947,26 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                 ],
               ),
               actions: [
+                if (_selectedVendorId != null)
+                  IconButton(
+                    icon: const Icon(Icons.shield_outlined, color: Color(0xFFFBBF24)),
+                    tooltip: 'Pause / Manage Serviceability',
+                    onPressed: () {
+                      final vendorName = _vendorProfile?['name'] ?? 'Vendor Outlet';
+                      StoreServiceabilitySheet.show(
+                        context,
+                        targetType: 'RESTAURANT',
+                        targetId: _selectedVendorId!,
+                        storeName: vendorName,
+                        currentIsOpen: true,
+                        dio: ref.read(dioProvider),
+                        onStatusChanged: (newOpen, pauseUntil) {
+                          _fetchVendorDetails(_selectedVendorId!);
+                          _fetchLiveOrders(_selectedVendorId!);
+                        },
+                      );
+                    },
+                  ),
                 IconButton(
                   icon: const Icon(Icons.refresh_rounded, color: Colors.white),
                   tooltip: 'Refresh',
@@ -1207,6 +1228,50 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                       ],
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Bounceable(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  final vendorName = _vendorProfile?['name'] ?? 'Supplier Partner';
+                  StoreServiceabilitySheet.show(
+                    context,
+                    targetType: 'RESTAURANT',
+                    targetId: _selectedVendorId ?? widget.initialVendorId ?? '',
+                    storeName: vendorName,
+                    currentIsOpen: true,
+                    dio: ref.read(dioProvider),
+                    onStatusChanged: (newOpen, pauseUntil) {
+                      if (_selectedVendorId != null) {
+                        _fetchVendorDetails(_selectedVendorId!);
+                        _fetchLiveOrders(_selectedVendorId!);
+                      }
+                    },
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.shield_outlined, size: 14, color: Color(0xFFFBBF24)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Pause',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFFBBF24),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

@@ -324,10 +324,10 @@ export const HUB_CONFIG = [
   {
     key: 'food',
     label: 'Food & Restaurants',
-    description: 'Restaurant payouts, settlements & financial ledger reports',
+    description: 'Restaurant payouts, settlements & vendor rate change history',
     color: 'from-orange-500/10 to-red-500/10',
     activeBorder: 'border-orange-500/60 ring-2 ring-orange-500/20',
-    tabs: ['restaurant-report', 'reports'] as const
+    tabs: ['restaurant-report', 'reports', 'price-history'] as const
   },
   {
     key: 'insights',

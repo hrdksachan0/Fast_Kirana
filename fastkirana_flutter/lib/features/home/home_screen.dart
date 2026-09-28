@@ -29,6 +29,9 @@ import '../../widgets/dynamic_hero_banner_carousel.dart';
 import '../../providers/banner_provider.dart';
 import '../../providers/hub_availability_provider.dart';
 import '../../providers/store_hub_provider.dart';
+import '../../providers/store_settings_provider.dart';
+import '../../providers/restaurant_provider.dart';
+import '../../data/models/store_settings.dart';
 import 'widgets/hub_coming_soon_view.dart';
 import 'widgets/outside_delivery_zone_view.dart';
 
@@ -43,6 +46,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   bool _isGrocerySelected = false; // Food mode default (Food first, then Grocery)
   final int _selectedFilterIndex = 0;
   Timer? _orderSyncTimer;
+  Timer? _storeStatusTimer;
 
   // Infinite Product Feed Scroll & Pagination State (Zepto/Blinkit architecture)
   final ScrollController _homeScrollController = ScrollController();
@@ -66,6 +70,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     _orderSyncTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (mounted) {
         ref.invalidate(ordersProvider(''));
+      }
+    });
+
+    // Store Status & Serviceability Live Polling (every 20s)
+    _storeStatusTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (mounted) {
+        ref.invalidate(storeSettingsProvider);
       }
     });
     // Infinite scroll listener for seamless product pagination (Blinkit / Zepto)
@@ -115,6 +126,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     _homeScrollController.removeListener(_onHomeScroll);
     _homeScrollController.dispose();
     _orderSyncTimer?.cancel();
+    _storeStatusTimer?.cancel();
     super.dispose();
   }
 
@@ -177,6 +189,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     final hubStatus = ref.watch(hubAvailabilityProvider);
     final cart = ref.watch(cartProvider).valueOrNull;
     final hasCartItems = (cart?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0) > 0;
+
+    // React smoothly when store transitions from Closed/Paused to ONLINE
+    ref.listen<AsyncValue<StoreSettings>>(storeSettingsProvider, (prev, next) {
+      final prevSettings = prev?.valueOrNull;
+      final nextSettings = next.valueOrNull;
+      if (prevSettings != null && nextSettings != null) {
+        final wasOpen = prevSettings.groceryMartOpen || prevSettings.restaurantOpen;
+        final isNowOpen = nextSettings.groceryMartOpen || nextSettings.restaurantOpen;
+        if (!wasOpen && isNowOpen && mounted) {
+          HapticFeedback.mediumImpact();
+          refreshAllCatalogProviders(ref);
+          ref.invalidate(restaurantsProvider);
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF15803D),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              content: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Colors.white24,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Store is now ONLINE! ⚡',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 13),
+                        ),
+                        Text(
+                          'Accepting fresh orders in Ghatampur.',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.9), fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppDesignSystem.background,

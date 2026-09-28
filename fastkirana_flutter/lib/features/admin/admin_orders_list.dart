@@ -1090,17 +1090,45 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
 
   Future<void> _callCustomer(String phone) async {
-    final uri = Uri.parse('tel:$phone');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleanPhone.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No valid phone number found for this customer'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+    final uri = Uri.parse('tel:$cleanPhone');
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Could not launch phone dialer: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open dialer for $cleanPhone'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _whatsappCustomer(String phone, String orderId) async {
-    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
-    final uri = Uri.parse('https://wa.me/91$cleanPhone?text=Hi%20from%20FastKirana%20re:%20Order%20%23$orderId');
-    if (await canLaunchUrl(uri)) {
+    var cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (!cleanPhone.startsWith('91') && cleanPhone.length == 10) {
+      cleanPhone = '91$cleanPhone';
+    }
+    if (cleanPhone.isEmpty) return;
+    final uri = Uri.parse('https://wa.me/$cleanPhone?text=Hi%20from%20FastKirana%20re:%20Order%20%23$orderId');
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Could not launch WhatsApp: $e');
     }
   }
 

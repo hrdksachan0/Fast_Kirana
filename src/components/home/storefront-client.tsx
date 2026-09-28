@@ -110,7 +110,51 @@ export function StorefrontClient({
   const [currentPromoBanners, setCurrentPromoBanners] = useState<any[]>(promoBanners)
   const [currentRestaurants, setCurrentRestaurants] = useState<any[]>(restaurants)
   const [isLoadingStoreData, setIsLoadingStoreData] = useState(false)
+  const [onlineAlert, setOnlineAlert] = useState<string | null>(null)
   const lastFetchedStoreIdRef = useRef<string | null>(null)
+  const prevStoreOpenRef = useRef<boolean | null>(null)
+
+  // Real-time polling for store status transitions (every 25s)
+  useEffect(() => {
+    let mounted = true
+
+    const checkStoreStatus = async () => {
+      if (document.visibilityState !== 'visible') return
+      try {
+        const res = await fetch('/api/public/settings')
+        if (!res.ok) return
+        const data = await res.json()
+        const isOpen = data.grocery_mart_open !== false && data.grocery_mart_open !== 'false'
+
+        if (prevStoreOpenRef.current === false && isOpen && mounted) {
+          triggerHaptic('medium')
+          setOnlineAlert('FastKirana Store is now ONLINE! Fresh delivery active.')
+
+          // Smoothly refresh current products & banners
+          fetch('/api/products?limit=500')
+            .then((r) => r.json())
+            .then((d) => {
+              if (mounted && Array.isArray(d?.products)) {
+                setCurrentGroceryProducts(d.products)
+              }
+            })
+            .catch(() => {})
+
+          setTimeout(() => {
+            if (mounted) setOnlineAlert(null)
+          }, 5000)
+        }
+
+        prevStoreOpenRef.current = isOpen
+      } catch (_) {}
+    }
+
+    const interval = setInterval(checkStoreStatus, 25000)
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
+  }, [])
 
   // Reactively fetch products, banners, and restaurants when active dark store hub changes
   useEffect(() => {
@@ -230,6 +274,30 @@ export function StorefrontClient({
 
   return (
     <div className="flex flex-col gap-3 md:gap-5 relative pb-12">
+      {/* Floating Online Transition Alert */}
+      <AnimatePresence>
+        {onlineAlert && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-5 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-400/30 text-xs font-black backdrop-blur-md"
+          >
+            <span className="flex h-2.5 w-2.5 relative shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+            </span>
+            <span>{onlineAlert}</span>
+            <button
+              onClick={() => setOnlineAlert(null)}
+              className="ml-2 text-white/80 hover:text-white font-bold text-xs"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Dynamic Celebration Floating Emojis */}
       <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 

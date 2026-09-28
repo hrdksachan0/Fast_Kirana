@@ -59,6 +59,20 @@ final homeProductCatalogProvider = FutureProvider<List<Product>>((ref) async {
   return repo.getProducts(limit: 1000, storeId: hub.id, includeRestaurants: false, forceRefresh: true);
 });
 
+// Dedicated admin products provider that fetches 100% of products (including 0 stock and unavailable)
+// for the given store hub directly from backend without customer cache filtering.
+final adminProductsProvider = FutureProvider.family<List<Product>, String>((ref, hubId) async {
+  final repo = ref.watch(productRepositoryProvider);
+  return repo.getProducts(
+    limit: 1000,
+    storeId: hubId,
+    includeRestaurants: true,
+    admin: true,
+    includeUnavailable: true,
+    forceRefresh: true,
+  );
+});
+
 final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<String>>((ref, productIds) async {
   if (productIds.isEmpty) return [];
   final repo = ref.watch(productRepositoryProvider);

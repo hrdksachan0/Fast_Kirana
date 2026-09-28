@@ -54,6 +54,48 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
 
   Order? _liveOrder;
   Timer? _syncTimer;
+  int _autoNavigateSeconds = 4;
+  Timer? _autoNavigateTimer;
+  bool _userStayedOnPage = false;
+
+  void _startAutoNavigateTimer() {
+    _autoNavigateTimer?.cancel();
+    _autoNavigateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_userStayedOnPage) {
+        timer.cancel();
+        return;
+      }
+      if (_autoNavigateSeconds > 1) {
+        setState(() {
+          _autoNavigateSeconds--;
+        });
+      } else {
+        timer.cancel();
+        _navigateToTracking();
+      }
+    });
+  }
+
+  void _navigateToTracking() {
+    _autoNavigateTimer?.cancel();
+    if (!mounted) return;
+    HapticFeedback.mediumImpact();
+    final effectiveOrder = _liveOrder ?? widget.order;
+    final trackingId = effectiveOrder?.id ?? effectiveOrder?.readableId ?? widget.orderId ?? '';
+    Navigator.pushReplacement(
+      context,
+      FadeSlideRoute(
+        page: OrderTrackingScreen(
+          orderId: trackingId,
+          initialOrder: effectiveOrder,
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -129,6 +171,9 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
     // Swiggy-like pleasant confirmation chime & coin sound
     CustomerSoundService.instance.playOrderSuccessSound();
 
+    // Start auto navigation to live tracking
+    _startAutoNavigateTimer();
+
     // Start live syncing with admin/backend order updates
     _fetchLiveOrderStatus();
     _syncTimer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchLiveOrderStatus());
@@ -143,6 +188,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
 
   @override
   void dispose() {
+    _autoNavigateTimer?.cancel();
     _syncTimer?.cancel();
     _confettiController.dispose();
     _animController.dispose();
@@ -397,6 +443,94 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                       ),
                     ),
                   ),
+                  if (!isCancelled && !_userStayedOnPage) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF334155)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              value: (4 - _autoNavigateSeconds) / 4,
+                              strokeWidth: 2.5,
+                              color: AppDesignSystem.primary,
+                              backgroundColor: Colors.white24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Moving to live tracking in ${_autoNavigateSeconds}s...',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12),
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  'Follow real-time preparation & rider',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10),
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _navigateToTracking,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppDesignSystem.primary,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                'Track Now ⚡',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _userStayedOnPage = true;
+                                _autoNavigateTimer?.cancel();
+                              });
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.all(4.0),
+                              child: Icon(Icons.close_rounded, size: 16, color: Color(0xFF94A3B8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 22),
 
                   // 3. LIVE 5-STAGE PROGRESS TRACKER OR CANCELLED NOTICE CARD

@@ -172,7 +172,7 @@ export function useAdminProducts({
           selectedHubId && selectedHubId !== 'all'
             ? `&storeId=${encodeURIComponent(selectedHubId)}`
             : ''
-        const res = await fetch(`/api/products?limit=1000${storeQuery}&t=${Date.now()}`, { headers: authHeaders })
+        const res = await fetch(`/api/products?limit=1000${storeQuery}&admin=true&includeUnavailable=true&t=${Date.now()}`, { headers: authHeaders })
         if (res.ok && active) {
           const data = await res.json()
           if (Array.isArray(data?.products)) {

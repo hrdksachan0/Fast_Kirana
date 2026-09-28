@@ -29,6 +29,7 @@ export type TabType =
   | 'restaurant-console'
   | 'vendors'
   | 'csv-import'
+  | 'price-history'
 
 export type HubCategory =
   | 'orders_hub'

@@ -585,6 +585,9 @@ class Order {
     'deliveredAt': deliveredAt?.toUtc().toIso8601String(),
     'items': items?.map((i) => i.toJson()).toList(),
     'kot_printed': kotPrinted,
+    'isCombined': isCombined,
+    'combinedId': combinedId,
+    'subOrders': subOrders?.map((s) => s.toJson()).toList(),
   };
 }
 

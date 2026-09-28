@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -16,8 +17,30 @@ export function OrderConfirmationStatus({
   initialStatus,
   deliveryMethod,
 }: OrderConfirmationStatusProps) {
+  const router = useRouter()
   const [status, setStatus] = useState<string>(initialStatus)
+  const [countdown, setCountdown] = useState<number>(4)
+  const [stayOnPage, setStayOnPage] = useState<boolean>(false)
 
+  // Auto-redirect countdown to live order tracking
+  useEffect(() => {
+    if (stayOnPage) return
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          router.push(`/order/${orderId}/track`)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [orderId, router, stayOnPage])
+
+  // Fast live polling for status changes (4 seconds instead of 45s)
   useEffect(() => {
     if (status === 'DELIVERED' || status === 'CANCELLED') return
 
@@ -34,8 +57,7 @@ export function OrderConfirmationStatus({
       } catch (err) {
         console.error('Error polling order confirmation status:', err)
       }
-    }, 45000)
-
+    }, 4000)
 
     return () => {
       clearInterval(pollInterval)
@@ -113,6 +135,43 @@ export function OrderConfirmationStatus({
         )}
         <span>{getStatusText()}</span>
       </p>
+
+      {/* Auto-Navigation Countdown Card to Live Tracking */}
+      {!stayOnPage && status !== 'CANCELLED' && (
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-3 p-3 bg-zinc-900/95 dark:bg-zinc-800 text-white rounded-2xl flex items-center justify-between gap-3 text-left shadow-xl border border-white/10"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="flex h-2.5 w-2.5 relative shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-black leading-tight truncate">
+                Opening live tracking in {countdown}s...
+              </p>
+              <p className="text-[9.5px] text-zinc-400 font-medium">Follow live kitchen &amp; rider status</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => router.push(`/order/${orderId}/track`)}
+              className="px-2.5 py-1 bg-primary text-white text-[10.5px] font-black rounded-xl hover:bg-primary/90 transition-all shadow-sm"
+            >
+              Track Now ⚡
+            </button>
+            <button
+              onClick={() => setStayOnPage(true)}
+              className="p-1 text-zinc-400 hover:text-white text-[10px] font-bold rounded-lg transition-colors"
+              title="Stay on this summary"
+            >
+              ✕
+            </button>
+          </div>
+        </motion.div>
+      )}
     </div>
   )
 }

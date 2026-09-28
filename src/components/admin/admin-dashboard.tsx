@@ -25,12 +25,14 @@ import { PushNotificationsTab } from '@/components/admin/push-notifications-tab'
 import { FlashDealsTab } from '@/components/admin/flash-deals-tab'
 import { RestaurantConsoleTab } from '@/components/admin/restaurant-console-tab'
 import { VendorConsoleTab } from '@/components/admin/vendor-console-tab'
+import { PriceHistoryTab } from '@/components/admin/price-history-tab'
 import { AdminFinanceTab } from '@/components/admin/finance/admin-finance-tab'
 import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-modal'
 import { toast } from 'sonner'
 import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
 import { compressImageClient } from '@/lib/image-compression'
 import {
+  History,
   ShoppingBag,
   Package,
   Layers,
@@ -111,6 +113,7 @@ export type TabType =
   | 'restaurant-console'
   | 'vendors'
   | 'csv-import'
+  | 'price-history'
 
 interface AdminDashboardProps {
   initialStoreId?: string | null
@@ -832,6 +835,7 @@ export function AdminDashboard({
       { key: 'csv-import' as TabType, label: 'CSV Import', icon: Download },
       { key: 'restaurant-report' as TabType, label: 'Restaurant Payout', icon: Utensils },
       { key: 'reports' as TabType, label: 'Ledger Report', icon: FileText },
+      { key: 'price-history' as TabType, label: 'Rate History', icon: History },
       { key: 'users' as TabType, label: 'Staff & Customers', icon: Users, count: userHook.userTotal },
       { key: 'rider-cash' as TabType, label: 'Rider Cash & Settlement', icon: Wallet },
       { key: 'reviews' as TabType, label: 'Reviews', icon: Star, count: reviewCouponHook.reviews.length },
@@ -1261,6 +1265,7 @@ export function AdminDashboard({
           )}
 
           {activeTab === 'vendors' && <VendorConsoleTab storeId={selectedHubId} />}
+          {activeTab === 'price-history' && <PriceHistoryTab storeId={selectedHubId} />}
         </motion.div>
       </AnimatePresence>
 

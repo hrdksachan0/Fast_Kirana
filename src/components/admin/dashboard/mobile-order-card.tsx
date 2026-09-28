@@ -315,12 +315,12 @@ export function MobileOrderCard({
           </button>
         )}
 
-        {/* Share Slip (WhatsApp to Kitchen) */}
+        {/* Share Slip (WhatsApp) */}
         <button
           type="button"
           onClick={() => onShareKitchen(o)}
           className="py-1.5 px-2 text-[9.5px] font-black rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 active:scale-95 cursor-pointer inline-flex items-center gap-1"
-          title="Share slip on WhatsApp"
+          title="Share order slip on WhatsApp"
         >
           <Share2 className="h-3 w-3" />
           <span>Share</span>

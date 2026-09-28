@@ -58,6 +58,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       updateData.stock = isNaN(parsedStock) ? existing.stock : parsedStock
     }
 
+    if (body.costPrice !== undefined) {
+      const parsedCostPrice = parseFloat(body.costPrice)
+      if (!isNaN(parsedCostPrice)) updateData.costPrice = parsedCostPrice
+    }
+
     let parsedPrice = body.price !== undefined ? parseFloat(body.price) : NaN
     let parsedMrp = body.mrp !== undefined ? parseFloat(body.mrp) : NaN
 
@@ -84,6 +89,26 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       data: updateData,
       include: { category: true, restaurant: true },
     })
+
+    // Record price change history if price or MRP was modified
+    if (product.price !== existing.price || product.mrp !== existing.mrp) {
+      try {
+        const changer = userPhone || userEmail || session?.user?.name || product.restaurant?.name || 'Vendor'
+        await prisma.priceHistory.create({
+          data: {
+            productId: existing.id,
+            oldPrice: existing.price,
+            newPrice: product.price,
+            oldMrp: existing.mrp,
+            newMrp: product.mrp,
+            changeType: role === 'ADMIN' ? 'ADMIN_UPDATE' : 'VENDOR_UPDATE',
+            changedBy: `${changer}${product.restaurant?.name ? ` (${product.restaurant.name})` : ''}`,
+          },
+        })
+      } catch (histErr) {
+        logger.warn('price-history', 'Failed to log price change history in restaurant-dashboard/products/[id]', histErr)
+      }
+    }
 
     try {
       revalidateStorefront(product.category?.slug, product.restaurant?.slug)

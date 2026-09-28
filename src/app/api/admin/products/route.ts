@@ -29,11 +29,19 @@ export async function GET(request: Request) {
     const andClauses: any[] = []
 
     if (categoryId && categoryId !== 'ALL' && categoryId !== 'undefined' && categoryId !== 'null') {
+      const directChildren = await prisma.category.findMany({
+        where: { parentId: categoryId },
+        select: { id: true }
+      })
+      const directIds = directChildren.map(c => c.id)
+      const subChildren = directIds.length > 0 ? await prisma.category.findMany({
+        where: { parentId: { in: directIds } },
+        select: { id: true }
+      }) : []
+      const allCategoryIds = [categoryId, ...directIds, ...subChildren.map(c => c.id)]
+
       andClauses.push({
-        OR: [
-          { categoryId },
-          { category: { parentId: categoryId } },
-        ]
+        categoryId: { in: allCategoryIds }
       })
     }
 
@@ -79,11 +87,6 @@ export async function GET(request: Request) {
         OR: [
           {
             restaurantId: null,
-            inventories: {
-              some: {
-                storeId
-              }
-            }
           },
           {
             restaurant: {

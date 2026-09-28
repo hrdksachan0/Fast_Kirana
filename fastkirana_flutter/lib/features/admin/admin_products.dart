@@ -15,6 +15,7 @@ import '../../core/services/supabase_service.dart';
 import '../../core/services/admin_authorization.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../providers/restaurant_provider.dart';
+import '../../providers/store_hub_provider.dart';
 
 class AdminProductsScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -55,7 +56,8 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
   @override
   Widget build(BuildContext context) {
     ref.watch(restaurantsProvider);
-    final productsAsync = ref.watch(productsProvider(null));
+    final currentHub = ref.watch(currentStoreHubProvider);
+    final productsAsync = ref.watch(adminProductsProvider(currentHub.id));
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
@@ -69,7 +71,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                 onPressed: () => Navigator.pop(context),
               ),
               title: Text(
-                'Manage Catalog',
+                'Manage Catalog (${currentHub.city})',
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 17),
                   fontWeight: FontWeight.w900,
@@ -82,7 +84,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   onPressed: () {
                     HapticFeedback.lightImpact();
                     // ignore: unused_result
-                    ref.refresh(productsProvider(null));
+                    ref.refresh(adminProductsProvider(currentHub.id));
                     // ignore: unused_result
                     ref.refresh(categoriesProvider);
                   },
@@ -225,9 +227,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     }).toList();
                   } else if (_selectedGroceryCategoryId != 'ALL') {
                     filtered = filtered.where((p) {
-                      return p.categoryId == _selectedGroceryCategoryId ||
-                          (p.category?.id == _selectedGroceryCategoryId) ||
-                          (p.category?.slug == _selectedGroceryCategoryId);
+                      return isProductInGroceryCategory(p, _selectedGroceryCategoryId);
                     }).toList();
                   }
                 } else {
@@ -535,11 +535,13 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
       } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
     }
 
+    final currentHub = ref.read(currentStoreHubProvider);
     try {
       await ref.read(dioProvider).patch(
         '/api/products/${p.id}',
         data: {
           'stock': clampedStock,
+          'storeId': currentHub.id,
         },
         options: AdminAuthorization.withStaffAuth(Options()),
       );
@@ -699,7 +701,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     final outletName = isRestaurant ? getOutletName(p) : null;
     final currentStock = _localStock[p.id] ?? p.stock;
     final isLowStock = !isRestaurant && currentStock <= (p.minStock > 0 ? p.minStock : 5);
-    final isAvailable = _localAvailability[p.id] ?? (p.isAvailable && (isRestaurant || currentStock > 0));
+    final isAvailable = _localAvailability[p.id] ?? p.isAvailable;
     final variants = p.parsedVariants;
 
     return Container(

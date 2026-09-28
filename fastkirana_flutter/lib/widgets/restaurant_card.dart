@@ -206,6 +206,8 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
     final hasOffer = rawOffer.isNotEmpty;
     final offer = rawOffer;
     final isSurgeAlert = r.activeOrdersCount >= 6;
+    final isPaused = r.pauseUntil != null && r.pauseUntil!.isNotEmpty && DateTime.tryParse(r.pauseUntil!) != null && DateTime.parse(r.pauseUntil!).isAfter(DateTime.now());
+    final pauseMinsLeft = isPaused ? DateTime.parse(r.pauseUntil!).difference(DateTime.now()).inMinutes : 0;
 
     final addressText = _formatDisplayAddress(r.address);
     final ratingVal = r.rating > 0 ? r.rating : 4.8;
@@ -403,6 +405,46 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                                 ),
                               ),
                             ),
+                          if (isPaused && !isSurgeAlert) ...[
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFD97706), Color(0xFFB45309)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFD97706).withValues(alpha: 0.4),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.pause_circle_filled, size: 11, color: Colors.white),
+                                    const SizedBox(width: 3),
+                                    Flexible(
+                                      child: Text(
+                                        pauseMinsLeft > 0 ? 'PAUSED · ${pauseMinsLeft}M LEFT' : 'PAUSED',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: Responsive.scaledFontSize(context, 8.5),
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                          letterSpacing: 0.2,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -559,6 +601,80 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                                       letterSpacing: 0.2,
                                     ),
                                   ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    // Paused Overlay (Amber — visible but less severe than Closed)
+                    if (isPaused && isOpen)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF78350F).withValues(alpha: 0.65),
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                          ),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD97706),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    blurRadius: 6,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.pause_circle_filled, size: 14, color: Colors.white),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'TEMPORARILY PAUSED',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: Responsive.scaledFontSize(context, 11),
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (pauseMinsLeft > 0) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Back in ~$pauseMinsLeft mins',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: Responsive.scaledFontSize(context, 9.5),
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white.withValues(alpha: 0.95),
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                  if (r.pauseReason != null && r.pauseReason!.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      r.pauseReason == 'HIGH_ORDER_SURGE' ? 'High order rush'
+                                        : r.pauseReason == 'HEAVY_RAIN' ? 'Bad weather'
+                                        : r.pauseReason == 'RIDER_SHORTAGE' ? 'Riders unavailable'
+                                        : r.pauseReason == 'STOCK_AUDIT' ? 'Restocking'
+                                        : r.pauseReason == 'TECHNICAL_MAINTENANCE' ? 'Maintenance'
+                                        : '',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white.withValues(alpha: 0.8),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),

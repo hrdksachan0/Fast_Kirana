@@ -22,6 +22,7 @@ import 'admin_products.dart';
 import 'vendor_console_screen.dart';
 import '../../core/theme/responsive.dart';
 import '../../widgets/app_confirmation_dialog.dart';
+import '../../widgets/store_serviceability_sheet.dart';
 
 class AdminDashboard extends ConsumerStatefulWidget {
   const AdminDashboard({super.key});
@@ -32,7 +33,6 @@ class AdminDashboard extends ConsumerStatefulWidget {
 
 class _AdminDashboardState extends ConsumerState<AdminDashboard> {
   int _currentIndex = 0;
-  final bool _isStoreOpen = true;
 
   static const Color primaryRed = Color(0xFFE20A22);
 
@@ -242,6 +242,8 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     final hubsAsync = ref.watch(activeStoreHubsProvider);
     final activeHubs = hubsAsync.valueOrNull ?? StoreHub.defaultHubs;
     final currentHub = ref.watch(currentStoreHubProvider);
+    final storeSettings = ref.watch(storeSettingsProvider).valueOrNull;
+    final isStoreOpen = storeSettings != null ? (storeSettings.groceryMartOpen || storeSettings.restaurantOpen) : true;
 
     return PopScope(
       canPop: false,
@@ -368,10 +370,10 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                       decoration: BoxDecoration(
-                        color: _isStoreOpen ? const Color(0xFF064E3B) : const Color(0xFF7F1D1D),
+                        color: isStoreOpen ? const Color(0xFF064E3B) : const Color(0xFF7F1D1D),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: _isStoreOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          color: isStoreOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
                           width: 1,
                         ),
                       ),
@@ -382,17 +384,17 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                             width: 6,
                             height: 6,
                             decoration: BoxDecoration(
-                              color: _isStoreOpen ? const Color(0xFF34D399) : const Color(0xFFF87171),
+                              color: isStoreOpen ? const Color(0xFF34D399) : const Color(0xFFF87171),
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _isStoreOpen ? 'OPEN' : 'CLOSED',
+                            isStoreOpen ? 'OPEN' : 'CLOSED',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w900,
-                              color: _isStoreOpen ? const Color(0xFF34D399) : const Color(0xFFFCA5A5),
+                              color: isStoreOpen ? const Color(0xFF34D399) : const Color(0xFFFCA5A5),
                               letterSpacing: 0.3,
                             ),
                           ),
@@ -400,7 +402,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                           Icon(
                             Icons.keyboard_arrow_down_rounded,
                             size: 13,
-                            color: _isStoreOpen ? const Color(0xFF34D399) : const Color(0xFFFCA5A5),
+                            color: isStoreOpen ? const Color(0xFF34D399) : const Color(0xFFFCA5A5),
                           ),
                         ],
                       ),
@@ -428,7 +430,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
               ),
             ),
 
-            if (!_isStoreOpen)
+            if (!isStoreOpen)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
@@ -879,6 +881,20 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                     bgColor: const Color(0xFFF0F9FF),
                     isOpen: _martOpen,
                     onChanged: _updateMart,
+                    onPause: () {
+                      Navigator.pop(context);
+                      StoreServiceabilitySheet.show(
+                        context,
+                        targetType: 'HUB',
+                        targetId: 'default',
+                        storeName: 'FastKirana Mart',
+                        currentIsOpen: _martOpen,
+                        dio: ref.read(dioProvider),
+                        onStatusChanged: (isOpen, pauseUntil) {
+                          ref.invalidate(storeSettingsProvider);
+                        },
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 16),
@@ -922,6 +938,21 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                               bgColor: const Color(0xFFFEF2F2),
                               isOpen: isOpen,
                               onChanged: (val) => _updateRestaurant(rest, val),
+                              onPause: () {
+                                Navigator.pop(context);
+                                StoreServiceabilitySheet.show(
+                                  context,
+                                  targetType: 'RESTAURANT',
+                                  targetId: rest.id,
+                                  storeName: rest.name,
+                                  currentIsOpen: isOpen,
+                                  dio: ref.read(dioProvider),
+                                  onStatusChanged: (newOpen, pauseUntil) {
+                                    ref.invalidate(restaurantsProvider);
+                                    ref.invalidate(storeSettingsProvider);
+                                  },
+                                );
+                              },
                             ),
                           );
                         }).toList(),
@@ -952,6 +983,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
     required Color bgColor,
     required bool isOpen,
     required ValueChanged<bool> onChanged,
+    VoidCallback? onPause,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1023,6 +1055,28 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
               ],
             ),
           ),
+          if (onPause != null && isOpen) ...[
+            GestureDetector(
+              onTap: onPause,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.pause_circle_outlined, size: 14, color: Color(0xFFD97706)),
+                    const SizedBox(width: 4),
+                    Text('Pause', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFFD97706))),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
           Switch(
             value: isOpen,
             activeThumbColor: const Color(0xFF16A34A),

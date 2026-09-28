@@ -303,6 +303,8 @@ class ProductRepository {
     int limit = 1000,
     bool forceRefresh = false,
     bool? includeRestaurants,
+    bool admin = false,
+    bool includeUnavailable = false,
   }) async {
     final effectiveStoreId = (storeId != null && storeId.isNotEmpty)
         ? storeId
@@ -369,8 +371,9 @@ class ProductRepository {
       final cached = _hubCachedProducts[effectiveStoreId];
       final lastTime = _hubLastFetchTime[effectiveStoreId];
 
-      // 1. In-memory cache hit for full catalog of this specific hub
+      // 1. In-memory cache hit for full catalog of this specific hub (customers only)
       if (!forceRefresh &&
+          !admin &&
           search == null &&
           restaurantId == null &&
           cached != null &&
@@ -381,8 +384,8 @@ class ProductRepository {
         return _filterProducts(cached, category: category, search: search, restaurantId: restaurantId);
       }
 
-      // 2. Disk cache hit for this specific hub (survives app restarts)
-      if (!forceRefresh && search == null && restaurantId == null) {
+      // 2. Disk cache hit for this specific hub (survives app restarts, customers only)
+      if (!forceRefresh && !admin && search == null && restaurantId == null) {
         final diskProducts = await _loadProductsFromDisk(effectiveStoreId);
         if (diskProducts != null && diskProducts.length >= 150) {
           _hubCachedProducts[effectiveStoreId] = diskProducts;
@@ -401,14 +404,16 @@ class ProductRepository {
             categoryId: resolvedId,
             storeId: effectiveStoreId,
             includeRestaurants: includeRestaurants,
+            admin: admin,
+            includeUnavailable: includeUnavailable,
           ).catchError((_) => <Product>[]);
           return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
         }
       }
 
-      // 3. In-flight fetch reuse
+      // 3. In-flight fetch reuse (customers only)
       final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, categoryId: resolvedId, storeId: effectiveStoreId, limit: limit);
-      if (_inFlightFetches.containsKey(key) && !forceRefresh) {
+      if (_inFlightFetches.containsKey(key) && !forceRefresh && !admin) {
         final products = await _inFlightFetches[key]!;
         return _filterProducts(products, category: category, search: search, restaurantId: restaurantId);
       }
@@ -422,10 +427,12 @@ class ProductRepository {
         categoryId: resolvedId,
         storeId: effectiveStoreId,
         includeRestaurants: includeRestaurants,
+        admin: admin,
+        includeUnavailable: includeUnavailable,
       );
-      _inFlightFetches[key] = future;
+      if (!admin) _inFlightFetches[key] = future;
       final liveProducts = await future;
-      _inFlightFetches.remove(key);
+      if (!admin) _inFlightFetches.remove(key);
 
       return _filterProducts(liveProducts, category: category, search: search, restaurantId: restaurantId);
     } catch (e, st) {
@@ -463,6 +470,8 @@ class ProductRepository {
     String? categoryId,
     String? storeId,
     bool? includeRestaurants,
+    bool admin = false,
+    bool includeUnavailable = false,
   }) async {
     final effectiveStoreId = (storeId != null && storeId.isNotEmpty)
         ? storeId
@@ -482,8 +491,8 @@ class ProductRepository {
         ? category
         : null;
 
-    final String etagKey = '${effectiveStoreId ?? ''}|${effectiveCatId ?? ''}|${effectiveCatSlug ?? ''}|${restaurantId ?? ''}|$limit';
-    final String? cachedETag = _eTags[etagKey];
+    final String etagKey = '${effectiveStoreId ?? ''}|${effectiveCatId ?? ''}|${effectiveCatSlug ?? ''}|${restaurantId ?? ''}|$limit|${admin ? 'admin' : ''}';
+    final String? cachedETag = admin ? null : _eTags[etagKey];
 
     final response = await dio.get(
       '/api/products',
@@ -495,6 +504,8 @@ class ProductRepository {
         if (effectiveCatId != null) 'categoryId': effectiveCatId,
         if (effectiveCatSlug != null) 'category': effectiveCatSlug,
         if (effectiveStoreId != null) 'storeId': effectiveStoreId,
+        if (admin) 'admin': 'true',
+        if (includeUnavailable) 'includeUnavailable': 'true',
       },
       options: Options(
         headers: {
@@ -557,7 +568,7 @@ class ProductRepository {
         (restaurantId == null || restaurantId.isEmpty) &&
         limit >= 100 &&
         liveProducts.length >= 20;
-    if (isFullCatalog) {
+    if (isFullCatalog && !admin) {
       final targetHub = effectiveStoreId ?? (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
       _hubCachedProducts[targetHub] = liveProducts;
       _hubLastFetchTime[targetHub] = DateTime.now();

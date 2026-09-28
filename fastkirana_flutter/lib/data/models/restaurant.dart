@@ -31,6 +31,8 @@ class Restaurant {
   final int activeOrdersCount;
   final String? ownerPhone;
   final double? commissionRate;
+  final String? pauseUntil;
+  final String? pauseReason;
 
   Restaurant({
     required this.id,
@@ -63,6 +65,8 @@ class Restaurant {
     this.activeOrdersCount = 0,
     this.ownerPhone,
     this.commissionRate,
+    this.pauseUntil,
+    this.pauseReason,
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
@@ -142,6 +146,8 @@ class Restaurant {
       lat: parseLat(),
       lng: parseLng(),
       activeOrdersCount: json['activeOrdersCount'] != null ? int.tryParse(json['activeOrdersCount'].toString()) ?? 0 : 0,
+      pauseUntil: json['pauseUntil']?.toString(),
+      pauseReason: json['pauseReason']?.toString(),
     );
   }
 
@@ -204,6 +210,8 @@ class Restaurant {
     int? activeOrdersCount,
     String? ownerPhone,
     double? commissionRate,
+    String? pauseUntil,
+    String? pauseReason,
   }) {
     return Restaurant(
       id: id ?? this.id,
@@ -236,6 +244,8 @@ class Restaurant {
       activeOrdersCount: activeOrdersCount ?? this.activeOrdersCount,
       ownerPhone: ownerPhone ?? this.ownerPhone,
       commissionRate: commissionRate ?? this.commissionRate,
+      pauseUntil: pauseUntil ?? this.pauseUntil,
+      pauseReason: pauseReason ?? this.pauseReason,
     );
   }
 }

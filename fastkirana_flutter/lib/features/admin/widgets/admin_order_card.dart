@@ -11,6 +11,7 @@ import '../../../core/utils/restaurant_utils.dart';
 import '../../../data/models/order.dart';
 import '../../../providers/store_settings_provider.dart';
 import '../../orders/order_detail_screen.dart';
+import '../../delivery/widgets/rider_cart_modal.dart';
 
 /// Reusable Admin Order Card extracted from admin_orders_list.dart
 /// Handles status badges, KOT dispatch, rider assignments, super-edit, and items preview.
@@ -105,11 +106,14 @@ class AdminOrderCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statusColor = getStatusColor(order.status);
     final custName = order.customerName?.isNotEmpty == true ? order.customerName! : 'Customer';
-    final custPhone = (order.customerPhone != null && order.customerPhone!.trim().isNotEmpty)
+    final resolvedPhone = (order.customerPhone?.trim().isNotEmpty == true)
         ? order.customerPhone!.trim()
-        : (order.addressRaw?['phone']?.toString().isNotEmpty == true
+        : (order.addressRaw?['phone']?.toString().trim().isNotEmpty == true)
             ? order.addressRaw!['phone'].toString().trim()
-            : (order.customerPhone?.isNotEmpty == true ? order.customerPhone! : 'Not Available'));
+            : (order.addressRaw?['mobile']?.toString().trim().isNotEmpty == true)
+                ? order.addressRaw!['mobile'].toString().trim()
+                : '';
+    final custPhone = resolvedPhone.isNotEmpty ? resolvedPhone : 'Not Available';
     final custAddr = order.customerAddress?.trim().isNotEmpty == true
         ? order.customerAddress!.trim()
         : (order.addressRaw?['address']?.toString().trim().isNotEmpty == true
@@ -623,23 +627,64 @@ class AdminOrderCard extends ConsumerWidget {
                 Row(
                   children: [
                     IconButton(
-                      onPressed: onWhatsappCustomer != null ? () => onWhatsappCustomer!(custPhone, order.readableId ?? order.id) : null,
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        final phoneToMsg = resolvedPhone.isNotEmpty ? resolvedPhone : custPhone;
+                        if (phoneToMsg.isEmpty || phoneToMsg == 'Not Available') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('No phone number found for this customer'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+                        if (onWhatsappCustomer != null) {
+                          onWhatsappCustomer!(phoneToMsg, order.readableId ?? order.id);
+                        } else {
+                          var clean = phoneToMsg.replaceAll(RegExp(r'[^0-9]'), '');
+                          if (!clean.startsWith('91') && clean.length == 10) clean = '91$clean';
+                          if (clean.isNotEmpty) {
+                            launchUrl(Uri.parse('https://wa.me/$clean'), mode: LaunchMode.externalApplication);
+                          }
+                        }
+                      },
                       icon: const Icon(Icons.chat_rounded, color: AppDesignSystem.green600, size: 18),
                       style: IconButton.styleFrom(
                         backgroundColor: AppDesignSystem.green100,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.all(8),
                       ),
+                      tooltip: 'WhatsApp Customer',
                     ),
                     const SizedBox(width: 6),
                     IconButton(
-                      onPressed: onCallCustomer != null ? () => onCallCustomer!(custPhone) : null,
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        final phoneToCall = resolvedPhone.isNotEmpty ? resolvedPhone : custPhone;
+                        final clean = phoneToCall.replaceAll(RegExp(r'[^0-9+]'), '');
+                        if (clean.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('No phone number found for this customer'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+                        if (onCallCustomer != null) {
+                          onCallCustomer!(clean);
+                        } else {
+                          launchUrl(Uri.parse('tel:$clean'), mode: LaunchMode.externalApplication);
+                        }
+                      },
                       icon: const Icon(Icons.phone, color: Colors.white, size: 18),
                       style: IconButton.styleFrom(
                         backgroundColor: primaryRed,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.all(8),
                       ),
+                      tooltip: 'Call Customer',
                     ),
                   ],
                 ),
@@ -758,69 +803,60 @@ class AdminOrderCard extends ConsumerWidget {
             ),
           ],
 
-          // 3. Ordered Items List
+          // 3. Ordered Items List with Photo Preview Strip & View Cart Modal (Like Rider)
           if (itemsList.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'ITEMS (${itemsList.length}):',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 10),
-                      fontWeight: FontWeight.w800,
-                      color: AppDesignSystem.slate500,
-                      letterSpacing: 0.5,
-                    ),
+                  RiderCartPreviewWidget(
+                    order: order.toJson(),
+                    onViewCart: () => showRiderCartModal(context, order.toJson()),
                   ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: itemsList.map((item) {
-                      final isItemRefunded = item.isRefunded || item.refundAmount > 0;
-                      return GestureDetector(
-                        onTap: onShowSubstitution != null ? () => onShowSubstitution!(order, item) : null,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isItemRefunded ? const Color(0xFFFFE4E6) : AppDesignSystem.slate50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: isItemRefunded ? const Color(0xFFFDA4AF) : AppDesignSystem.slate200),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${item.quantity}x ${item.name}',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11),
-                                  fontWeight: FontWeight.w700,
-                                  color: isItemRefunded ? const Color(0xFFBE123C) : AppDesignSystem.slate700,
-                                  decoration: isItemRefunded ? TextDecoration.lineThrough : null,
-                                ),
-                              ),
-                              if (isItemRefunded) ...[
-                                const SizedBox(width: 4),
-                                Text(
-                                  '↩️ -₹${item.refundAmount > 0 ? item.refundAmount.toInt() : (item.price * item.quantity).toInt()}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: const Color(0xFFE11D48),
+                  if (onShowSubstitution != null) ...[
+                    const SizedBox(height: 6),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: itemsList.map((item) {
+                          final isItemRefunded = item.isRefunded || item.refundAmount > 0;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: GestureDetector(
+                              onTap: () => onShowSubstitution!(order, item),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                decoration: BoxDecoration(
+                                  color: isItemRefunded ? const Color(0xFFFFE4E6) : AppDesignSystem.slate50,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: isItemRefunded ? const Color(0xFFFDA4AF) : AppDesignSystem.slate200,
                                   ),
                                 ),
-                              ] else ...[
-                                const SizedBox(width: 4),
-                                const Icon(Icons.swap_horiz_rounded, size: 12, color: AppDesignSystem.slate400),
-                              ],
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${item.quantity}x ${item.name}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 10),
+                                        fontWeight: FontWeight.w600,
+                                        color: isItemRefunded ? const Color(0xFFBE123C) : AppDesignSystem.slate700,
+                                        decoration: isItemRefunded ? TextDecoration.lineThrough : null,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    const Icon(Icons.swap_horiz_rounded, size: 11, color: AppDesignSystem.slate400),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1421,7 +1457,7 @@ class AdminOrderCard extends ConsumerWidget {
                             const Icon(Icons.chat_bubble_outline_rounded, size: 15, color: AppDesignSystem.slate900),
                             const SizedBox(width: 6),
                             Text(
-                              'WhatsApp KOT',
+                              order.isCombined ? 'Share Slips' : (order.isRestaurantOrder ? 'WhatsApp KOT' : 'WhatsApp Slip'),
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 12),
                                 fontWeight: FontWeight.w800,

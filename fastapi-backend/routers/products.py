@@ -289,9 +289,12 @@ def generate_slug(name: str) -> str:
     return slug.strip('-')
 
 
-def serialize_product(p: Product, local_stock: Optional[int] = None) -> Dict[str, Any]:
+def serialize_product(p: Product, local_stock: Optional[int] = None, is_admin: bool = False) -> Dict[str, Any]:
     stock_val = local_stock if local_stock is not None else (p.stock or 0)
-    is_avail = bool(p.isAvailable) if local_stock is None else (bool(p.isAvailable) and local_stock > 0)
+    if is_admin:
+        is_avail = bool(p.isAvailable)
+    else:
+        is_avail = bool(p.isAvailable) if local_stock is None else (bool(p.isAvailable) and local_stock > 0)
 
     cat_dict = None
     if getattr(p, 'category', None):
@@ -507,18 +510,20 @@ async def get_products(
     elif excludeRestaurant or (not is_worker and not includeUnavailable and not category):
         filters.append(Product.restaurantId == None)
 
-    # Strict Store ID Isolation: Every query is strictly bound to the requested target_store
-    inv_sub_conditions = [
-        StoreInventory.productId == Product.id,
-        StoreInventory.storeId == target_store
-    ]
-    if not is_worker and not includeUnavailable and not admin:
-        inv_sub_conditions.append(StoreInventory.stock > 0)
-
-    grocery_scope = and_(
-        Product.restaurantId.is_(None),
-        exists().where(and_(*inv_sub_conditions))
-    )
+    # Store ID Isolation: Customers only see in-stock products in target store.
+    # Admins/Workers see the entire catalog so they can manage, toggle availability, and replenish stock.
+    if admin or is_worker or includeUnavailable:
+        grocery_scope = Product.restaurantId.is_(None)
+    else:
+        inv_sub_conditions = [
+            StoreInventory.productId == Product.id,
+            StoreInventory.storeId == target_store,
+            StoreInventory.stock > 0
+        ]
+        grocery_scope = and_(
+            Product.restaurantId.is_(None),
+            exists().where(and_(*inv_sub_conditions))
+        )
 
     rest_scope = Product.restaurant.has(Restaurant.storeId == target_store)
     filters.append(or_(grocery_scope, rest_scope))
@@ -793,12 +798,13 @@ async def get_products(
         inv_map = {inv.productId: inv.stock for inv in inv_list}
 
     serialized_products = []
+    is_admin_mode = bool(admin or is_worker or includeUnavailable)
     for p in products:
         if p.restaurantId:
             local_stk = p.stock or 99999
         else:
-            local_stk = inv_map.get(p.id, 0)
-        serialized_products.append(serialize_product(p, local_stock=local_stk))
+            local_stk = inv_map.get(p.id, (p.stock or 0) if is_admin_mode else 0)
+        serialized_products.append(serialize_product(p, local_stock=local_stk, is_admin=is_admin_mode))
 
     response_data = {
         "products": serialized_products,

@@ -63,6 +63,7 @@ export function OrdersTab({
 
   const [cancelConfirmOrder, setCancelConfirmOrder] = React.useState<any | null>(null)
   const [refundOrder, setRefundOrder] = React.useState<any | null>(null)
+  const [shareSelectOrder, setShareSelectOrder] = React.useState<any | null>(null)
   const [updatingPaymentId, setUpdatingPaymentId] = React.useState<string | null>(null)
   const [syncingOrderId, setSyncingOrderId] = React.useState<string | null>(null)
 
@@ -484,19 +485,77 @@ export function OrdersTab({
     }
   }
 
-  const shareKitchenOrder = (o: any) => {
+  const shareKitchenOrder = (o: any, targetType?: 'RESTAURANT' | 'GROCERY') => {
+    const isGrocery = targetType === 'GROCERY' || (!targetType && isGroceryOrder(o) && !o.isCombined)
     const isPickup = isOrderPickup(o)
     const isRetail = getOrderMethod(o) === 'RETAIL'
     const restSub = o.subOrders?.find((s: any) => s.type === 'RESTAURANT')
-    const orderId = restSub?.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
-    const outletName = restSub?.shopName || (o.restaurantId ? (o.restaurantName || o.shopName) : null) || 'Restaurant'
+    const grocerySub = o.subOrders?.find((s: any) => s.type !== 'RESTAURANT')
     const orderTime = formatOrderTime(o.createdAt)
-    
+
+    if (isGrocery) {
+      // 🛒 GROCERY PACKING SLIP
+      const targetSub = grocerySub || o
+      const orderId = targetSub.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
+      const targetItems = (targetSub.items && targetSub.items.length > 0)
+        ? targetSub.items
+        : (o.items || []).filter((it: any) => !it.restaurantId)
+
+      let text = `🛒 *FASTKIRANA MART - PACKING SLIP*\n`
+      text += `━━━━━━━━━━━━━━━━━━━━━\n`
+      text += `🆔 *Order Token:* #${orderId}\n`
+      text += `⏰ *Order Time:* ${orderTime}\n`
+      text += `🏪 *Hub:* FastKirana Mart (Dark Store)\n`
+      const custAddr = o.address?.formattedAddress || o.address?.address || o.customerAddress || ''
+      if (custAddr) {
+        text += `📍 *Address:* ${custAddr}\n`
+      }
+      const custName = o.userName || o.customerName || 'Customer'
+      const custPhone = (o.userPhone || o.customerPhone || '').replace(/\D/g, '').slice(-10)
+      if (custPhone) {
+        text += `👤 *Customer:* ${custName} (+91 ${custPhone})\n`
+      }
+      text += `━━━━━━━━━━━━━━━━━━━━━\n`
+      text += `📦 *ITEMS TO PACK:*\n\n`
+
+      if (targetItems && Array.isArray(targetItems) && targetItems.length > 0) {
+        targetItems.forEach((item: any, index: number) => {
+          let displayName = item.name || ''
+          if (item.selectedVariant) {
+            displayName += ` [${item.selectedVariant.replace(/[()]/g, '').trim()}]`
+          }
+          text += `${index + 1}. *${displayName}*  ➜  *Qty: ${item.quantity}*\n`
+          if (item.notes && item.notes.trim()) {
+            text += `   ↳ _Item Note: ${item.notes.trim()}_\n`
+          }
+        })
+        const totalQty = targetItems.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
+        text += `\n🔢 *Total Items to Pack:* ${totalQty} items\n`
+      } else {
+        text += `(Check Admin Dashboard for full items)\n`
+      }
+      text += `💳 *Payment:* ${o.paymentMethod || 'COD'} (${(o.paymentStatus || 'PENDING').toUpperCase()})\n`
+      text += `━━━━━━━━━━━━━━━━━━━━━\n`
+      if (o.notes?.trim()) {
+        text += `📝 *Note:* ${o.notes.trim()}\n`
+        text += `━━━━━━━━━━━━━━━━━━━━━\n`
+      }
+      text += `⚡ *Picker Note:* Expiry date verify karein aur carry bag me safely seal karein.`
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
+      window.open(url, '_blank')
+      return
+    }
+
+    // 🍽️ RESTAURANT KITCHEN ORDER
+    const targetSub = restSub || o
+    const orderId = targetSub.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
+    const outletName = targetSub.shopName || (o.restaurantId ? (o.restaurantName || o.shopName) : null) || 'Restaurant'
+
     let text = `🍽️ *FASTKIRANA KITCHEN ORDER*\n`
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
     text += `🆔 *Order Token:* #${orderId}\n`
     text += `⏰ *Order Time:* ${orderTime}\n`
-    
+
     let typeStr = '🛵 Doorstep Delivery (Rider Pickup)'
     if (isPickup) {
       typeStr = '🛍️ Self Pickup (Customer Takeaway)'
@@ -522,7 +581,7 @@ export function OrdersTab({
     }
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
     text += `📋 *ITEMS TO PREPARE:*\n\n`
-    
+
     const targetItems = (o.restaurantItems && o.restaurantItems.length > 0)
       ? o.restaurantItems
       : (restSub?.items && restSub.items.length > 0)
@@ -551,7 +610,7 @@ export function OrdersTab({
     }
 
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
-    
+
     // Customer Notes / Cooking Instructions (Sanitize automated packaging fee string)
     let customerNote = (o.notes || o.deliveryInstructions || '').trim()
     if (customerNote.toLowerCase().includes('premium thermal packaging')) {
@@ -565,6 +624,14 @@ export function OrdersTab({
     text += `👨‍🍳 *Chef Note:* Kripya fresh prepare karein aur safely pack karein.`
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
     window.open(url, '_blank')
+  }
+
+  const handleShareClick = (o: any) => {
+    if (o.isCombined && o.subOrders && o.subOrders.length > 1) {
+      setShareSelectOrder(o)
+    } else {
+      shareKitchenOrder(o, isGroceryOrder(o) ? 'GROCERY' : 'RESTAURANT')
+    }
   }
 
   const isGroceryOrder = (o: any) => {
@@ -897,7 +964,7 @@ export function OrdersTab({
                     onCancelOrder={(order) => setCancelConfirmOrder(order)}
                     onRefundOrder={(order) => setRefundOrder(order)}
                     onSendKOT={sendRemotePrintKOT}
-                    onShareKitchen={shareKitchenOrder}
+                    onShareKitchen={handleShareClick}
                     onPrintInvoice={printCustomerInvoice}
                     sendingKotIds={sendingKotIds}
                     printedKotIds={printedKotIds}
@@ -1335,9 +1402,9 @@ export function OrdersTab({
                                 })()}
                                 <button
                                   type="button"
-                                  onClick={() => shareKitchenOrder(o)}
+                                  onClick={() => handleShareClick(o)}
                                   className="flex-1 py-1 px-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-[9px] font-black rounded-md transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 whitespace-nowrap text-center"
-                                  title="Share products-only WhatsApp slip with Kitchen"
+                                  title="Share order slip on WhatsApp"
                                 >
                                   📱 Share
                                 </button>
@@ -1490,7 +1557,7 @@ export function OrdersTab({
                   onCancelOrder={(order) => setCancelConfirmOrder(order)}
                   onRefundOrder={(order) => setRefundOrder(order)}
                   onSendKOT={sendRemotePrintKOT}
-                  onShareKitchen={shareKitchenOrder}
+                  onShareKitchen={handleShareClick}
                   onPrintInvoice={printCustomerInvoice}
                   sendingKotIds={sendingKotIds}
                   printedKotIds={printedKotIds}
@@ -1719,9 +1786,9 @@ export function OrdersTab({
                             </button>
                             <button
                               type="button"
-                              onClick={() => shareKitchenOrder(o)}
+                              onClick={() => handleShareClick(o)}
                               className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9.5px] font-black rounded-lg transition-all cursor-pointer shadow-2xs"
-                              title="Share products-only WhatsApp slip with Kitchen"
+                              title="Share products-only WhatsApp slip with Kitchen/Mart"
                             >
                               📱 Share
                             </button>
@@ -1820,6 +1887,73 @@ export function OrdersTab({
             onUpdateOrderStatus(refundOrder.id, refundOrder.status)
           }}
         />
+      )}
+
+      {/* Share Outlet Slip Selection Modal for Combined Orders */}
+      {shareSelectOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" onClick={() => setShareSelectOrder(null)}>
+          <div className="bg-white dark:bg-zinc-900 border border-border rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-2 border-b border-border/40">
+              <div>
+                <h3 className="text-sm font-black text-text-primary">
+                  Share Order #{shareSelectOrder.readableId || shareSelectOrder.id.slice(0, 8)}
+                </h3>
+                <p className="text-xs text-text-muted">Choose slip to send on WhatsApp:</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShareSelectOrder(null)}
+                className="p-1 rounded-lg text-text-muted hover:bg-muted cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const o = shareSelectOrder
+                  setShareSelectOrder(null)
+                  shareKitchenOrder(o, 'RESTAURANT')
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-left transition-all active:scale-95 cursor-pointer"
+              >
+                <span className="text-2xl shrink-0">🍽️</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-rose-600 dark:text-rose-400">Restaurant Kitchen KOT</p>
+                  <p className="text-[11px] text-text-secondary">Send cooked food &amp; chef notes to restaurant</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const o = shareSelectOrder
+                  setShareSelectOrder(null)
+                  shareKitchenOrder(o, 'GROCERY')
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-left transition-all active:scale-95 cursor-pointer"
+              >
+                <span className="text-2xl shrink-0">🛒</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-emerald-600 dark:text-emerald-400">Grocery Mart Packing Slip</p>
+                  <p className="text-[11px] text-text-secondary">Send grocery items &amp; address to dark store</p>
+                </div>
+              </button>
+            </div>
+
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                onClick={() => setShareSelectOrder(null)}
+                className="text-xs font-bold text-text-muted hover:text-text-primary transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
