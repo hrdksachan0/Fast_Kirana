@@ -78,7 +78,7 @@ jobs:
 
       - name: Build Android Release APK
         working-directory: fastkirana_flutter
-        run: flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
