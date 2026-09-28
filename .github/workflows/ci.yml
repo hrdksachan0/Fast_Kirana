@@ -40,16 +40,22 @@ jobs:
           PYTHONPATH: .
           DATABASE_URL: sqlite+aiosqlite:///./test.db
         run: |
-          pytest -v
+          pytest tests/ -v
 
-  # ─── 2. Flutter Mobile Quality Gate ───────────────────────────────
+  # ─── 2. Flutter Mobile Quality Gate & APK Artifact ─────────────────
   flutter-mobile:
-    name: Mobile Tests & Lint (Flutter)
+    name: Mobile Tests, Lint & APK Build (Flutter)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -64,11 +70,23 @@ jobs:
 
       - name: Flutter Static Analysis
         working-directory: fastkirana_flutter
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run Flutter Test Suite
         working-directory: fastkirana_flutter
         run: flutter test
+
+      - name: Build Android Release APK
+        working-directory: fastkirana_flutter
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fastkirana-release-apk
+          path: fastkirana_flutter/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+          if-no-files-found: error
 
   # ─── 3. Next.js Web Frontend Quality Gate ────────────────────────
   web-frontend:

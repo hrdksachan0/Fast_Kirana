@@ -6,8 +6,12 @@ from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, ForeignKey,
     Text, JSON, Index, UniqueConstraint, Enum as SAEnum
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from database import Base
+
+# Cross-dialect ARRAY type that gracefully falls back to JSON on SQLite (used in test suites)
+PG_ARRAY_OR_JSON = ARRAY(String).with_variant(JSON, "sqlite")
 
 
 # Python enums for validation only (NOT mapped as PostgreSQL enum types)
@@ -121,7 +125,7 @@ class Product(Base):
     unit: Mapped[str] = mapped_column(String)
     stock: Mapped[int] = mapped_column(Integer, default=0)
     isAvailable: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    tags: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    tags: Mapped[Optional[List[str]]] = mapped_column(PG_ARRAY_OR_JSON, nullable=True)
     variants: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True)
     addons: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True)
     minStock: Mapped[int] = mapped_column(Integer, default=10)
@@ -387,7 +391,7 @@ class Restaurant(Base):
     bannerUrl: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     city: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    cuisineTags: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    cuisineTags: Mapped[Optional[List[str]]] = mapped_column(PG_ARRAY_OR_JSON, nullable=True)
     rating: Mapped[float] = mapped_column(Float, default=4.0)
     reviewCount: Mapped[int] = mapped_column(Integer, default=0)
     deliveryTime: Mapped[str] = mapped_column(String, default="30-40 mins")
@@ -784,7 +788,7 @@ class FoodDish(Base):
     isVeg: Mapped[bool] = mapped_column(Boolean, default=True)
     isAvailable: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     sortOrder: Mapped[int] = mapped_column(Integer, default=0)
-    tags: Mapped[Optional[list]] = mapped_column(JSON, default=list)
+    tags: Mapped[Optional[List[str]]] = mapped_column(PG_ARRAY_OR_JSON, default=list)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

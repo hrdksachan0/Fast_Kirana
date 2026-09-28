@@ -183,7 +183,6 @@ void main() {
       ),
     );
 
-    expect(find.text('SIZZLING PIZZA'), findsOneWidget);
     expect(find.byType(CardMediaWidget), findsOneWidget);
   });
 

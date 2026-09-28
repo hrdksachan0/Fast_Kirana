@@ -1089,22 +1089,100 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   LatLng? _lastRouteStart;
   LatLng? _lastRouteEnd;
   bool _isFetchingRoute = false;
+  static final Map<String, List<LatLng>> _routeCache = {};
+
+  /// Decodes Google Maps encoded polyline algorithm into a List<LatLng>
+  List<LatLng> _decodeGooglePolyline(String encoded) {
+    final List<LatLng> poly = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    while (index < len) {
+      int b, shift = 0, result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      final int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      final int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      poly.add(LatLng(lat / 1e5, lng / 1e5));
+    }
+    return poly;
+  }
+
+  void _applyRoutePoints(List<LatLng> points, LatLng start, LatLng end) {
+    if (!mounted || points.isEmpty) return;
+    _lastRouteStart = start;
+    _lastRouteEnd = end;
+    setState(() {
+      _roadPolylinePoints = points;
+      _polylines.clear();
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('delivery_route'),
+          points: _roadPolylinePoints,
+          color: const Color(0xFF2563EB),
+          width: 4,
+          jointType: JointType.round,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          patterns: [PatternItem.dash(12), PatternItem.gap(8)],
+        ),
+      );
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('delivery_route_shadow'),
+          points: _roadPolylinePoints,
+          color: const Color(0xFF2563EB).withValues(alpha: 0.18),
+          width: 8,
+          jointType: JointType.round,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+        ),
+      );
+    });
+  }
 
   Future<void> _fetchRoadRoute(LatLng start, LatLng end) async {
     if (_isFetchingRoute) return;
+
+    // 1. In-memory cache check: ZERO network / ZERO cost if already fetched for these coordinates
+    final cacheKey = '${start.latitude.toStringAsFixed(4)},${start.longitude.toStringAsFixed(4)}->${end.latitude.toStringAsFixed(4)},${end.longitude.toStringAsFixed(4)}';
+    if (_routeCache.containsKey(cacheKey)) {
+      final cached = _routeCache[cacheKey]!;
+      if (cached.isNotEmpty) {
+        _applyRoutePoints(cached, start, end);
+        return;
+      }
+    }
+
     if (_lastRouteStart != null && _lastRouteEnd != null) {
       final dStart = _getHaversineDistance(_lastRouteStart!, start);
       final dEnd = _getHaversineDistance(_lastRouteEnd!, end);
-      if (dStart < 0.03 && dEnd < 0.03 && _roadPolylinePoints.length > 2) {
-        return; // Position hasn't significantly moved
+      if (dStart < 0.05 && dEnd < 0.05 && _roadPolylinePoints.length > 2) {
+        return; // Position hasn't significantly moved (>50m)
       }
     }
 
     _isFetchingRoute = true;
+    final dio = Dio();
+
+    // 2. TIER 1: Open-source OSRM routing (100% Free, ₹0 cloud cost)
     try {
-      final dio = Dio();
-      final url = 'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson';
-      final response = await dio.get(url).timeout(const Duration(seconds: 4));
+      final osrmUrl = 'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson';
+      final response = await dio.get(osrmUrl).timeout(const Duration(seconds: 4));
 
       if (response.statusCode == 200 && response.data != null) {
         final routes = response.data['routes'] as List?;
@@ -1120,45 +1198,78 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                 points.add(LatLng(lat, lng));
               }
             }
-
-            if (points.isNotEmpty && mounted) {
-              _lastRouteStart = start;
-              _lastRouteEnd = end;
-              setState(() {
-                _roadPolylinePoints = points;
-                _polylines.clear();
-                _polylines.add(
-                  Polyline(
-                    polylineId: const PolylineId('delivery_route'),
-                    points: _roadPolylinePoints,
-                    color: const Color(0xFF3B82F6),
-                    width: 4,
-                    jointType: JointType.round,
-                    startCap: Cap.roundCap,
-                    endCap: Cap.roundCap,
-                    patterns: [PatternItem.dash(12), PatternItem.gap(8)],
-                  ),
-                );
-                _polylines.add(
-                  Polyline(
-                    polylineId: const PolylineId('delivery_route_shadow'),
-                    points: _roadPolylinePoints,
-                    color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
-                    width: 8,
-                    jointType: JointType.round,
-                    startCap: Cap.roundCap,
-                    endCap: Cap.roundCap,
-                  ),
-                );
-              });
+            if (points.isNotEmpty) {
+              _routeCache[cacheKey] = points;
+              _applyRoutePoints(points, start, end);
               _isFetchingRoute = false;
               return;
             }
           }
         }
       }
-    } catch (e) { LoggerService.error("Bare catch", e); }
+    } catch (e) {
+      LoggerService.info('OSRM route fetch unavailable, attempting fallback: $e');
+    }
 
+    // 3. TIER 2: Google Maps Directions API (Fallback if OSRM is down, single-call cached)
+    if (AppConfig.googleMapsApiKey.isNotEmpty) {
+      try {
+        final gmapsUrl = 'https://maps.googleapis.com/maps/api/directions/json?origin=${start.latitude},${start.longitude}&destination=${end.latitude},${end.longitude}&mode=driving&key=${AppConfig.googleMapsApiKey}';
+        final response = await dio.get(gmapsUrl).timeout(const Duration(seconds: 5));
+
+        if (response.statusCode == 200 && response.data != null) {
+          final routes = response.data['routes'] as List?;
+          if (routes != null && routes.isNotEmpty) {
+            final overview = routes.first['overview_polyline'] as Map<String, dynamic>?;
+            final pointsStr = overview?['points'] as String?;
+            if (pointsStr != null && pointsStr.isNotEmpty) {
+              final decodedPoints = _decodeGooglePolyline(pointsStr);
+              if (decodedPoints.isNotEmpty) {
+                _routeCache[cacheKey] = decodedPoints;
+                _applyRoutePoints(decodedPoints, start, end);
+                _isFetchingRoute = false;
+                return;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        LoggerService.error('Google Directions API fallback error', e);
+      }
+    }
+
+    // 4. TIER 3: Backend Directions Proxy (/api/directions)
+    try {
+      final backendDio = ref.read(dioProvider);
+      final res = await backendDio.get('/api/directions', queryParameters: {
+        'origin': '${start.latitude},${start.longitude}',
+        'destination': '${end.latitude},${end.longitude}',
+      }).timeout(const Duration(seconds: 5));
+
+      if (res.statusCode == 200 && res.data != null) {
+        final pointsData = res.data['points'] as List?;
+        if (pointsData != null && pointsData.isNotEmpty) {
+          final points = <LatLng>[];
+          for (final p in pointsData) {
+            if (p is List && p.length >= 2) {
+              points.add(LatLng((p[0] as num).toDouble(), (p[1] as num).toDouble()));
+            } else if (p is Map && p['lat'] != null && p['lng'] != null) {
+              points.add(LatLng((p['lat'] as num).toDouble(), (p['lng'] as num).toDouble()));
+            }
+          }
+          if (points.isNotEmpty) {
+            _routeCache[cacheKey] = points;
+            _applyRoutePoints(points, start, end);
+            _isFetchingRoute = false;
+            return;
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 5. TIER 4: Geodesic direct line fallback (Prevents UI lock, 0 cost)
+    final directLine = [start, end];
+    _applyRoutePoints(directLine, start, end);
     _isFetchingRoute = false;
   }
 

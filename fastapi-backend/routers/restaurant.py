@@ -801,7 +801,7 @@ async def restaurant_dashboard_create_product(
         unit=payload.get("unit") or "1 Serving",
         stock=parse_int(payload.get("stock"), 999),
         isAvailable=bool(payload.get("isAvailable", True)),
-        tags=payload.get("tags") if isinstance(payload.get("tags"), list) else ["restaurant"],
+        tags=[str(t).strip() for t in payload.get("tags") if str(t).strip()] if isinstance(payload.get("tags"), list) else ["restaurant"],
         variants=variants if isinstance(variants, (list, dict)) else None,
         addons=payload.get("addons") if isinstance(payload.get("addons"), list) else None,
         costPrice=parse_float(payload.get("costPrice"), 0.0),
@@ -920,7 +920,7 @@ async def restaurant_dashboard_update_product(
     if "variants" in payload:
         product.variants = payload["variants"] if isinstance(payload["variants"], (list, dict)) else None
     if "tags" in payload:
-        product.tags = payload["tags"] if isinstance(payload["tags"], list) else product.tags
+        product.tags = [str(t).strip() for t in payload["tags"] if str(t).strip()] if isinstance(payload["tags"], list) else product.tags
 
     await db.commit()
     await db.refresh(product)

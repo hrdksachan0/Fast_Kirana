@@ -27,7 +27,7 @@ describe('Core Pricing & Distance Utilities', () => {
       assert.equal(rules.isServiceable, true)
       assert.equal(rules.baseFee, 25)
       assert.equal(rules.deliveryFee, 25)
-      assert.equal(rules.freeDeliveryThreshold, 199)
+      assert.equal(rules.freeDeliveryThreshold, 149)
     })
 
     test('Zone 2: 2.0 - 3.0 km', () => {

@@ -78,7 +78,7 @@ void main() {
     // Add item while offline
     final added = notifier.addProduct(product, 2);
     expect(added, isTrue);
-    await pumpEventQueue();
+    await Future.delayed(const Duration(milliseconds: 350));
 
     // Verify UI state has the item immediately (optimistic UI)
     expect(notifier.getQuantity('p101'), equals(2));
@@ -101,7 +101,7 @@ void main() {
     // 1. User performs action while offline
     shouldNetworkFail = true;
     notifier.addProduct(product, 3);
-    await pumpEventQueue();
+    await Future.delayed(const Duration(milliseconds: 350));
     expect(await cartRepo.hasPendingSync(), isTrue);
     expect(syncCallCount, equals(0));
 

@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme/design_system.dart';
 import '../core/routes/page_transitions.dart';
 import '../data/models/brand_offer_card_data.dart';
 import '../data/models/category.dart';
 import '../data/models/restaurant.dart';
-import '../data/repositories/banner_repository.dart';
 import '../providers/banner_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/restaurant_provider.dart';

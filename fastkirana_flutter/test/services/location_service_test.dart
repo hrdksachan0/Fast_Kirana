@@ -15,16 +15,16 @@ void main() {
 
     group('Tier 1: 0 to 2 km (Local)', () {
       test('subtotal below threshold charges ₹25', () {
-        final tier = LocationService.getDeliveryTier(1.2, 150.0);
+        final tier = LocationService.getDeliveryTier(1.2, 100.0);
         expect(tier.isServiceable, isTrue);
         expect(tier.deliveryFee, 25.0);
         expect(tier.baseFee, 25.0);
-        expect(tier.freeDeliveryThreshold, 199.0);
+        expect(tier.freeDeliveryThreshold, 149.0);
         expect(tier.tierName, contains('2 km'));
       });
 
       test('subtotal at threshold gets free delivery', () {
-        final tier = LocationService.getDeliveryTier(1.2, 199.0);
+        final tier = LocationService.getDeliveryTier(1.2, 149.0);
         expect(tier.deliveryFee, 0.0);
       });
 
@@ -40,11 +40,11 @@ void main() {
         expect(tier.isServiceable, isTrue);
         expect(tier.deliveryFee, 35.0);
         expect(tier.baseFee, 35.0);
-        expect(tier.freeDeliveryThreshold, 299.0);
+        expect(tier.freeDeliveryThreshold, 249.0);
       });
 
       test('subtotal at threshold gets free delivery', () {
-        final tier = LocationService.getDeliveryTier(2.5, 299.0);
+        final tier = LocationService.getDeliveryTier(2.5, 249.0);
         expect(tier.deliveryFee, 0.0);
       });
     });
@@ -55,11 +55,11 @@ void main() {
         expect(tier.isServiceable, isTrue);
         expect(tier.deliveryFee, 50.0);
         expect(tier.baseFee, 50.0);
-        expect(tier.freeDeliveryThreshold, 399.0);
+        expect(tier.freeDeliveryThreshold, 349.0);
       });
 
       test('subtotal at threshold gets free delivery', () {
-        final tier = LocationService.getDeliveryTier(4.2, 399.0);
+        final tier = LocationService.getDeliveryTier(4.2, 349.0);
         expect(tier.deliveryFee, 0.0);
       });
     });
@@ -86,7 +86,7 @@ void main() {
 
     group('Boundary values', () {
       test('exactly 2.0 km is in Tier 1', () {
-        final tier = LocationService.getDeliveryTier(2.0, 150.0);
+        final tier = LocationService.getDeliveryTier(2.0, 100.0);
         expect(tier.isServiceable, isTrue);
         expect(tier.deliveryFee, 25.0);
       });

@@ -56,12 +56,6 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
 
   static const Color slateDark = AppDesignSystem.slate900;
 
-  String _calculateEtaText(double distanceKm) {
-    if (distanceKm <= 2.5) return '10-15 mins';
-    if (distanceKm <= 4.5) return '15-25 mins';
-    return '20-30 mins';
-  }
-
   @override
   void initState() {
     super.initState();
