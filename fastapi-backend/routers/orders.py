@@ -2331,7 +2331,23 @@ async def get_order_details(
                     "subtotal": safe_float(co.subtotal),
                     "total": safe_float(co.total),
                     "itemsCount": len(co.items),
-                    "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": safe_float(i.price), "imageUrl": i.imageUrl} for i in co.items],
+                    "restaurantId": co.restaurantId,
+                    "items": [
+                        {
+                            "id": i.id,
+                            "productId": i.productId,
+                            "name": i.name,
+                            "quantity": i.quantity,
+                            "price": safe_float(i.price),
+                            "imageUrl": i.imageUrl,
+                            "selectedVariant": i.selectedVariant,
+                            "notes": i.notes,
+                            "restaurantId": co.restaurantId,
+                            "isRestaurantItem": is_rest,
+                            "type": "RESTAURANT" if is_rest else "GROCERY",
+                        }
+                        for i in co.items
+                    ],
                 })
 
             grocery_sub = next((s for s in sub_orders if s["type"] == "GROCERY"), None)
@@ -2376,7 +2392,19 @@ async def get_order_details(
                     "email": user_email,
                     "phone": order.user.phone if order.user else None,
                 } if order.user else None,
-                "items": [{"id": i.id, "productId": i.productId, "name": i.name, "price": safe_float(i.price), "quantity": i.quantity, "imageUrl": i.imageUrl} for i in all_items],
+                "items": [
+                    {
+                        "id": i.id,
+                        "productId": i.productId,
+                        "name": i.name,
+                        "price": safe_float(i.price),
+                        "quantity": i.quantity,
+                        "imageUrl": i.imageUrl,
+                        "selectedVariant": i.selectedVariant,
+                        "notes": i.notes,
+                    }
+                    for i in all_items
+                ],
                 "address": {
                     "id": order.address.id,
                     "label": order.address.label,
@@ -2404,6 +2432,7 @@ async def get_order_details(
     user_name = (order.user.name.strip() if (order.user and order.user.name) else None) or "Customer"
     user_email = (order.user.email if order.user else None) or ""
     user_phone = (order.address.phone if (order.address and order.address.phone) else None) or (order.user.phone if (order.user and order.user.phone) else None) or order.shopPhone or None
+    is_rest_single = safe_enum_str(order.orderType) == "RESTAURANT" or bool(order.restaurantId)
 
     single_resp = {
         "id": order.id,
@@ -2411,6 +2440,10 @@ async def get_order_details(
         "userId": order.userId,
         "addressId": order.addressId,
         "status": safe_enum_str(order.status, "PENDING"),
+        "orderType": safe_enum_str(order.orderType, "RESTAURANT" if is_rest_single else "GROCERY"),
+        "restaurantId": order.restaurantId,
+        "restaurantName": order.shopName if is_rest_single else None,
+        "isRestaurant": is_rest_single,
         "subtotal": safe_float(order.subtotal),
         "discount": safe_float(order.discount),
         "deliveryFee": safe_float(order.deliveryFee),
@@ -2439,7 +2472,22 @@ async def get_order_details(
             "email": user_email,
             "phone": order.user.phone if order.user else None,
         } if order.user else None,
-        "items": [{"id": i.id, "productId": i.productId, "name": i.name, "price": safe_float(i.price), "quantity": i.quantity, "imageUrl": i.imageUrl} for i in order.items],
+        "items": [
+            {
+                "id": i.id,
+                "productId": i.productId,
+                "name": i.name,
+                "price": safe_float(i.price),
+                "quantity": i.quantity,
+                "imageUrl": i.imageUrl,
+                "selectedVariant": i.selectedVariant,
+                "notes": i.notes,
+                "restaurantId": order.restaurantId,
+                "isRestaurantItem": is_rest_single,
+                "type": "RESTAURANT" if is_rest_single else "GROCERY",
+            }
+            for i in order.items
+        ],
         "address": {
             "id": order.address.id,
             "label": order.address.label,

@@ -183,9 +183,25 @@ class KotPrintService {
       }
     }
 
-    // 3. Filter items array if combined or mixed
+    // 3. Dedicated restaurant order check
+    final bool isExplicitRestOrder = order['orderType'] == 'RESTAURANT' ||
+        order['restaurantId'] != null ||
+        order['shopType'] == 'RESTAURANT' ||
+        (order['readableId']?.toString().toUpperCase().endsWith('-R') ?? false) ||
+        (order['shopName'] != null &&
+            order['shopName'].toString().isNotEmpty &&
+            order['shopName'] != 'FastKirana Grocery' &&
+            order['shopName'] != 'FastKirana Dark Store' &&
+            order['shopName'] != 'FastKirana Store');
+
+    // 4. Items array
     if (order['items'] is List) {
       final allItems = (order['items'] as List);
+
+      // Dedicated restaurant order — every item belongs to the kitchen!
+      if (isExplicitRestOrder) {
+        return allItems;
+      }
 
       // Check if any items have explicit restaurant flags
       final explicitRestItems = allItems.where((it) {
@@ -209,12 +225,7 @@ class KotPrintService {
         return explicitRestItems;
       }
 
-      // Check if order is marked as combined or mixed
-      final bool isCombined = order['isCombined'] == true ||
-          order['combinedId'] != null ||
-          order['shopName']?.toString().contains('Combined') == true ||
-          order['shopName']?.toString().contains('+') == true;
-
+      // Fallback for un-split combined orders: omit pure packaged grocery items
       const pureGrocery = [
         'campa', 'pepsi', 'coca cola', 'sprite', 'thums up', 'frooti', 'maaza', 'limca', 'sting', 'cold drink',
         'atta', 'raw rice', 'dal', 'mustard oil', 'refined oil', 'ghee', 'washing powder', 'soap', 'shampoo',
@@ -226,9 +237,6 @@ class KotPrintService {
         final name = (it['name'] ?? (it['product'] is Map ? it['product']['name'] : '')).toString().toLowerCase().trim();
         final isGrocery = pureGrocery.any((k) => name.contains(k));
         if (isGrocery) return false;
-        if (isCombined) {
-          return RestaurantRegistry.isFoodDishName(name);
-        }
         return true;
       }).toList();
 
@@ -237,7 +245,6 @@ class KotPrintService {
       }
 
       return allItems;
-
     }
 
     return [];
@@ -538,7 +545,21 @@ class KotPrintService {
             );
           }),
 
-          pw.SizedBox(height: 8),
+          pw.SizedBox(height: 6),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'TOTAL DISHES: ${targetItems.length}',
+                style: pw.TextStyle(font: monoFont, fontSize: 10, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.Text(
+                'TOTAL QTY: ${targetItems.fold<int>(0, (sum, it) => sum + ((it['quantity'] as num?)?.toInt() ?? 1))}',
+                style: pw.TextStyle(font: monoFont, fontSize: 10, fontWeight: pw.FontWeight.bold),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
           pw.Divider(thickness: 1, borderStyle: pw.BorderStyle.dashed),
           pw.SizedBox(height: 4),
 

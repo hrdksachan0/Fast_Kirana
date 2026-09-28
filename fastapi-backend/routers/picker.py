@@ -595,6 +595,9 @@ async def get_picker_orders(
             p_unit = (p_obj.unit or "").strip() if p_obj and p_obj.unit else None
             effective_variant = i.selectedVariant or p_unit
 
+            is_rest_item = bool(o.restaurantId or (p_obj and (p_obj.restaurantId or p_obj.isRestaurantItem)))
+            rest_id = (p_obj.restaurantId if p_obj else None) or o.restaurantId
+
             order_items.append({
                 "id": i.id,
                 "productId": i.productId,
@@ -605,11 +608,16 @@ async def get_picker_orders(
                 "selectedVariant": effective_variant,
                 "unit": p_unit or effective_variant,
                 "notes": i.notes,
+                "restaurantId": rest_id,
+                "isRestaurantItem": is_rest_item,
+                "type": "RESTAURANT" if is_rest_item else "GROCERY",
                 "product": {
                     "id": p_obj.id,
                     "name": p_obj.name,
                     "imageUrl": p_obj.imageUrl,
                     "unit": p_unit,
+                    "restaurantId": p_obj.restaurantId if p_obj else None,
+                    "isRestaurantItem": p_obj.isRestaurantItem if p_obj else None,
                     "variants": p_obj.variants,
                     "category": {
                         "id": p_obj.category.id,
@@ -667,6 +675,8 @@ async def get_picker_orders(
             "deliveryMethod": o.deliveryMethod,
             "shopName": o.shopName,
             "notes": o.notes,
+            "orderType": "RESTAURANT" if o.restaurantId else "GROCERY",
+            "isRestaurant": bool(o.restaurantId),
             "restaurantId": o.restaurantId,
             "items": order_items,
             "user": {"name": o.user.name, "phone": o.user.phone, "email": o.user.email} if o.user else None,

@@ -181,16 +181,35 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
 
   const restSub = order.subOrders?.find((s: any) => s.type === 'RESTAURANT' || s.restaurantId)
   
-  // Extract strictly restaurant dishes (omit any grocery items)
-  let targetItems = (order.restaurantItems && order.restaurantItems.length > 0)
-    ? order.restaurantItems
-    : (restSub?.items && restSub.items.length > 0)
-    ? restSub.items
-    : (order.items || [])
+  const isExplicitRestaurantOrder = 
+    order.orderType === 'RESTAURANT' || 
+    Boolean(order.restaurantId) || 
+    Boolean(order.readableId && String(order.readableId).toUpperCase().endsWith('-R')) ||
+    (shopType && shopType !== 'GROCERY' && shopType !== 'FastKirana Grocery' && shopType !== 'FastKirana Dark Store')
 
-  // 1. Primary: Strict ID-wise & Type Filter (Most Reliable & Accurate)
-  if (Array.isArray(targetItems) && targetItems.length > 0) {
-    const idFiltered = targetItems.filter((it: any) => {
+  // Extract strictly restaurant dishes (omit any grocery items)
+  let targetItems: any[] = []
+
+  if (Array.isArray(order.restaurantItems) && order.restaurantItems.length > 0) {
+    // 1. Explicit restaurant items array from API/subOrder
+    targetItems = order.restaurantItems
+  } else if (Array.isArray(restSub?.items) && restSub.items.length > 0) {
+    // 2. Items from the restaurant sub-order
+    targetItems = restSub.items
+  } else if (isExplicitRestaurantOrder && Array.isArray(order.items) && order.items.length > 0) {
+    // 3. Dedicated restaurant order — every item in it belongs to the kitchen!
+    targetItems = order.items
+  } else if (Array.isArray(order.items) && order.items.length > 0) {
+    // 4. Combined / un-split order where grocery and restaurant items might be mixed together
+    const pureGroceryCategories = ['personal-care', 'home-cleaning', 'household', 'grocery', 'staples', 'packaged-food']
+    const pureGroceryKeywords = [
+      'atta', 'raw rice', 'dal packet', 'mustard oil', 'refined oil', 'washing powder',
+      'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner',
+      'harpic', 'rin', 'tide', 'biscuit', 'sugar', 'salt', 'spices', 'pepsi', 'coca cola',
+      'sprite', 'thums up', 'frooti', 'maaza', 'limca', 'sting'
+    ]
+
+    const idFiltered = order.items.filter((it: any) => {
       if (!it) return false
       return (
         Boolean(it.restaurantId) ||
@@ -200,46 +219,32 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
         it.product?.isRestaurantItem === true
       )
     })
+
     if (idFiltered.length > 0) {
       targetItems = idFiltered
-    }
-  }
-
-  // 2. Secondary fallback for combined orders where item flags are missing
-  if (order.isCombined && (!order.restaurantItems || order.restaurantItems.length === 0) && (!restSub?.items || restSub.items.length === 0)) {
-    const cookedFoodWhitelists = [
-      'dosa', 'burger', 'pizza', 'sandwich', 'roll', 'frankie', 'chowmein', 'noodles',
-      'fried rice', 'paneer', 'manchurian', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
-      'pasta', 'thali', 'roti', 'naan', 'gravy', 'curry', 'biryani', 'pav bhaji', 'fries',
-      'momos', 'samosa', 'maggi', 'soup'
-    ]
-    const pureGroceryCategories = ['personal-care', 'home-cleaning', 'household', 'grocery', 'staples']
-    const pureGroceryKeywords = [
-      'atta', 'raw rice', 'dal packet', 'mustard oil', 'refined oil', 'washing powder',
-      'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner'
-    ]
-    const filtered = targetItems.filter((it: any) => {
-      if (Boolean(it.restaurantId) || it.type === 'RESTAURANT' || it.isRestaurantItem === true) return true
-      const name = (it.name || '').toLowerCase()
-      if (cookedFoodWhitelists.some((cw) => name.includes(cw))) return true
-      const slug = (it.categorySlug || it.category?.slug || '').toLowerCase()
-      if (pureGroceryCategories.some((c: string) => slug.includes(c))) return false
-      if (pureGroceryKeywords.some((k: string) => name.includes(k))) return false
-      return true
-    })
-    if (filtered.length > 0) {
-      targetItems = filtered
+    } else {
+      // Exclude pure packaged grocery items, keep all food dishes
+      targetItems = order.items.filter((it: any) => {
+        if (!it) return false
+        const name = (it.name || '').toLowerCase()
+        const slug = (it.categorySlug || it.category?.slug || '').toLowerCase()
+        if (pureGroceryCategories.some((c: string) => slug.includes(c))) return false
+        if (pureGroceryKeywords.some((k: string) => name.includes(k))) return false
+        return true
+      })
     }
   }
 
   const outletName = restSub?.shopName || order.restaurantName || (order.restaurantId ? order.shopName : null) || shopType
   const orderIdText = restSub?.readableId 
     ? `#${restSub.readableId}` 
-    : (order.readableId && order.isCombined)
+    : (order.readableId && order.isCombined && !String(order.readableId).toUpperCase().endsWith('-R'))
     ? `#${order.readableId}-R`
     : order.readableId 
-    ? `#${order.readableId}` 
+    ? (String(order.readableId).startsWith('#') ? order.readableId : `#${order.readableId}`)
     : `#${(order.id || '').slice(0, 8).toUpperCase()}`
+
+  const totalQty = targetItems.reduce((acc: number, it: any) => acc + (Number(it.quantity) || 1), 0)
 
   const itemsHtml = targetItems.map((item: any) => `
     <tr style="border-bottom: 1px dashed #ddd;">
@@ -354,6 +359,11 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
         <table class="items-table">
           ${itemsHtml}
         </table>
+
+        <div style="font-weight: bold; font-size: 12px; border-top: 1px dashed #000; padding: 6px 0; display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span>TOTAL DISHES: ${targetItems.length}</span>
+          <span>TOTAL QTY: ${totalQty}</span>
+        </div>
 
         <div class="footer">
           *** FASTKIRANA KITCHEN SYSTEM ***<br/>

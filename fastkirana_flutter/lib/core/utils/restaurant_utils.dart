@@ -110,14 +110,18 @@ class RestaurantRegistry {
 
     // Exact cooked dish keywords
     const dishKeywords = [
-      'spring roll', 'veg roll', 'paneer roll', 'egg roll', 'kathi roll', 'frankie roll',
+      'spring roll', 'veg roll', 'paneer roll', 'egg roll', 'kathi roll', 'frankie roll', 'wrap',
       'burger', 'pizza', 'sandwich', 'sandwitch', 'chowmein', 'noodle', 'noodles',
       'fried rice', 'manchurian', 'calzone', 'pasta', 'thali', 'biryani',
       'pav bhaji', 'pavbhaji', 'momos', 'momo', 'garlic bread',
       'chole bhature', 'bhature', 'kulcha', 'dosa', 'idli', 'vada', 'vadapav',
+      'french fries', 'fries', 'finger', 'finger chips', 'peri peri',
       'chilli potato', 'crispy corn', 'paneer tikka', 'soya chaap', 'chaap',
       'handi paneer', 'kadhai paneer', 'shahi paneer', 'dal makhani', 'tandoori roti',
-      'butter naan', 'garlic naan', 'missi roti', 'paneer paratha', 'aloo paratha'
+      'butter naan', 'garlic naan', 'missi roti', 'paneer paratha', 'aloo paratha',
+      'shake', 'cold coffee', 'coffee', 'tea', 'chai', 'beverage', 'mocktail', 'lassi',
+      'maggi', 'soup', 'samosa', 'cutlet', 'tikki', 'curry', 'gravy', 'kofta', 'korma',
+      'rajma', 'chana', 'jeera rice', 'pulao', 'dessert', 'pastry', 'cake', 'waffle'
     ];
     return dishKeywords.any((k) => n.contains(k));
   }
