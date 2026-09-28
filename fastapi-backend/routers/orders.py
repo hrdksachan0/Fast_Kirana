@@ -2913,6 +2913,17 @@ async def update_order(
         order.storeId
     )
 
+    deliv_user_dict = None
+    if order.deliveryUserId:
+        try:
+            du_stmt = select(User).where(User.id == order.deliveryUserId)
+            du_res = await db.execute(du_stmt)
+            du_obj = du_res.scalars().first()
+            if du_obj:
+                deliv_user_dict = {"name": du_obj.name, "phone": du_obj.phone}
+        except Exception:
+            pass
+
     return {
         "id": order.id,
         "readableId": order.readableId,
@@ -2938,7 +2949,7 @@ async def update_order(
         "shopPhone": order.shopPhone,
         "notes": order.notes,
         "couponCode": order.couponCode,
-        "deliveryUser": {"name": order.deliveryUser.name, "phone": order.deliveryUser.phone} if getattr(order, "deliveryUser", None) else None,
+        "deliveryUser": deliv_user_dict,
     }
 
 

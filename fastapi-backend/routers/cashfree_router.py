@@ -202,6 +202,10 @@ async def create_cashfree_order(
         }
 
 
+# Cache to debounce/deduplicate alerts across concurrent polling requests and webhooks (order_key -> timestamp)
+_alerted_orders_cache: Dict[str, float] = {}
+
+
 @router.post("/payment/cashfree/verify")
 @router.post("/payments/cashfree/verify")
 async def verify_cashfree_payment(
@@ -214,6 +218,24 @@ async def verify_cashfree_payment(
 
     raw_id = (req.orderId or req.cfOrderId or "").strip()
     clean_id = re.sub(r"_r\d+$", "", raw_id)
+
+    # 1. FAST PATH: Check PostgreSQL first before making slow external gateway calls!
+    # If already verified & marked PAID, return instantly in ~2ms.
+    stmt = select(Order).where(
+        (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == raw_id)
+    )
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+
+    if order and order.paymentStatus == PaymentStatus.PAID:
+        return {
+            "success": True,
+            "orderId": order.id,
+            "paymentStatus": "PAID",
+            "isPaid": True,
+            "cfPaymentId": f"CF_{order.id}",
+            "orderAmount": float(order.total or 0),
+        }
 
     headers = _get_cashfree_headers()
     check_id = req.cfOrderId or raw_id
@@ -240,13 +262,6 @@ async def verify_cashfree_payment(
     successful_payment = next((p for p in payments if p.get("payment_status") == "SUCCESS"), None)
     is_paid = (cf_order and cf_order.get("order_status") == "PAID") or (successful_payment is not None)
 
-    # Locate the order in PostgreSQL
-    stmt = select(Order).where(
-        (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == raw_id)
-    )
-    res = await db.execute(stmt)
-    order = res.scalars().first()
-
     if not order:
         # Preflight checkout check (e.g. Flutter mobile calls verify before order insertion)
         if is_paid:
@@ -266,17 +281,6 @@ async def verify_cashfree_payment(
             "message": "Payment has not been completed on Cashfree gateway.",
         }
 
-    # If already marked PAID in DB, return success
-    if order.paymentStatus == PaymentStatus.PAID:
-        return {
-            "success": True,
-            "orderId": order.id,
-            "paymentStatus": "PAID",
-            "isPaid": True,
-            "cfPaymentId": f"CF_{order.id}",
-            "orderAmount": float(order.total or 0),
-        }
-
     if is_paid:
         payment_id_str = str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}"
         order.paymentStatus = PaymentStatus.PAID
@@ -289,10 +293,12 @@ async def verify_cashfree_payment(
             order.status = OrderStatus.PENDING
 
         # Handle companion combined orders if present
+        comb_orders = []
         if order.combinedId:
             comb_stmt = select(Order).where(Order.combinedId == order.combinedId)
             comb_res = await db.execute(comb_stmt)
-            for co in comb_res.scalars().all():
+            comb_orders = comb_res.scalars().all()
+            for co in comb_orders:
                 co.paymentStatus = PaymentStatus.PAID
                 co.paymentMethod = PaymentMethod.UPI
                 if not co.notes or "Cashfree PG Paid" not in co.notes:
@@ -300,27 +306,53 @@ async def verify_cashfree_payment(
                 if co.status == OrderStatus.ADMIN_PENDING:
                     co.status = OrderStatus.PENDING
 
+        # ── DEDUPLICATION GUARD: Ensure WhatsApp alert is sent EXACTLY ONCE ──
+        order_key = str(order.combinedId or order.id)
+        now_ts = time.time()
+        already_notified = False
+
+        if order.notes and "[CF_PAID_ALERT_SENT]" in order.notes:
+            already_notified = True
+        elif any(co.notes and "[CF_PAID_ALERT_SENT]" in co.notes for co in comb_orders):
+            already_notified = True
+        elif order_key in _alerted_orders_cache and (now_ts - _alerted_orders_cache[order_key]) < 600:
+            already_notified = True
+
+        if not already_notified:
+            _alerted_orders_cache[order_key] = now_ts
+            order.notes = f"{order.notes} [CF_PAID_ALERT_SENT]" if order.notes else "[CF_PAID_ALERT_SENT]"
+            for co in comb_orders:
+                co.notes = f"{co.notes} [CF_PAID_ALERT_SENT]" if co.notes else "[CF_PAID_ALERT_SENT]"
+
         await db.commit()
 
-        # Push & WhatsApp Notification
-        try:
-            from utils.firebase import send_fcm_topic_notification
-            send_fcm_topic_notification(
-                topic="admin_alerts",
-                title="💳 Cashfree Payment Confirmed",
-                body=f"Order #{order.readableId or order.id[:8]} paid successfully (₹{float(order.total):.2f})",
-                data={"orderId": order.id, "type": "payment_confirmed"}
-            )
-            from routers.orders import send_whatsapp_alert
-            admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total):.0f}. Payment: PAID ✅"
-            for admin_phone in ["7054470303", "8112849854"]:
-                if background_tasks:
-                    background_tasks.add_task(send_whatsapp_alert, admin_phone, admin_text)
+        # Push & WhatsApp Notification (fired ONLY once)
+        if not already_notified:
+            try:
+                from utils.firebase import send_fcm_topic_notification
+                send_fcm_topic_notification(
+                    topic="admin_alerts",
+                    title="💳 Cashfree Payment Confirmed",
+                    body=f"Order #{order.readableId or order.id[:8]} paid successfully (₹{float(order.total):.2f})",
+                    data={"orderId": order.id, "type": "payment_confirmed"}
+                )
+                from routers.orders import send_whatsapp_alert
+                if comb_orders:
+                    combined_total = sum(float(co.total or 0) for co in comb_orders)
+                    base_id = str(order.readableId or "").split("-")[0] or order.id[:6].upper()
+                    outlets = " + ".join(dict.fromkeys(co.shopName for co in comb_orders if co.shopName)) or "Combined Order"
+                    admin_text = f"💳 *PAID Online Order (Cashfree)* #{base_id} [{outlets}] Total: ₹{combined_total:.0f}. Payment: PAID ✅"
                 else:
-                    import asyncio
-                    asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text))
-        except Exception as fcm_err:
-            logger.warning(f"Cashfree payment notification error: {fcm_err}")
+                    admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total):.0f}. Payment: PAID ✅"
+
+                for admin_phone in ["7054470303", "8112849854"]:
+                    if background_tasks:
+                        background_tasks.add_task(send_whatsapp_alert, admin_phone, admin_text)
+                    else:
+                        import asyncio
+                        asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text))
+            except Exception as fcm_err:
+                logger.warning(f"Cashfree payment notification error: {fcm_err}")
 
         return {
             "success": True,
@@ -408,10 +440,12 @@ async def cashfree_webhook(
             if order.status == OrderStatus.ADMIN_PENDING:
                 order.status = OrderStatus.PENDING
 
+            comb_orders = []
             if order.combinedId:
                 comb_stmt = select(Order).where(Order.combinedId == order.combinedId)
                 comb_res = await db.execute(comb_stmt)
-                for co in comb_res.scalars().all():
+                comb_orders = comb_res.scalars().all()
+                for co in comb_orders:
                     co.paymentStatus = PaymentStatus.PAID
                     co.paymentMethod = PaymentMethod.UPI
                     if not co.notes or "Cashfree PG Paid" not in co.notes:
@@ -419,15 +453,41 @@ async def cashfree_webhook(
                     if co.status == OrderStatus.ADMIN_PENDING:
                         co.status = OrderStatus.PENDING
 
+            # ── DEDUPLICATION GUARD: Ensure WhatsApp alert is sent EXACTLY ONCE ──
+            order_key = str(order.combinedId or order.id)
+            now_ts = time.time()
+            already_notified = False
+
+            if order.notes and "[CF_PAID_ALERT_SENT]" in order.notes:
+                already_notified = True
+            elif any(co.notes and "[CF_PAID_ALERT_SENT]" in co.notes for co in comb_orders):
+                already_notified = True
+            elif order_key in _alerted_orders_cache and (now_ts - _alerted_orders_cache[order_key]) < 600:
+                already_notified = True
+
+            if not already_notified:
+                _alerted_orders_cache[order_key] = now_ts
+                order.notes = f"{order.notes} [CF_PAID_ALERT_SENT]" if order.notes else "[CF_PAID_ALERT_SENT]"
+                for co in comb_orders:
+                    co.notes = f"{co.notes} [CF_PAID_ALERT_SENT]" if co.notes else "[CF_PAID_ALERT_SENT]"
+
             await db.commit()
 
-            try:
-                from routers.orders import send_whatsapp_alert
-                admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total):.0f}. Payment: PAID ✅"
-                import asyncio
-                for admin_phone in ["7054470303", "8112849854"]:
-                    asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text))
-            except Exception as wa_err:
-                logger.warning(f"Cashfree webhook WhatsApp notification error: {wa_err}")
+            if not already_notified:
+                try:
+                    from routers.orders import send_whatsapp_alert
+                    if comb_orders:
+                        combined_total = sum(float(co.total or 0) for co in comb_orders)
+                        base_id = str(order.readableId or "").split("-")[0] or order.id[:6].upper()
+                        outlets = " + ".join(dict.fromkeys(co.shopName for co in comb_orders if co.shopName)) or "Combined Order"
+                        admin_text = f"💳 *PAID Online Order (Cashfree)* #{base_id} [{outlets}] Total: ₹{combined_total:.0f}. Payment: PAID ✅"
+                    else:
+                        admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total):.0f}. Payment: PAID ✅"
+
+                    import asyncio
+                    for admin_phone in ["7054470303", "8112849854"]:
+                        asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text))
+                except Exception as wa_err:
+                    logger.warning(f"Cashfree webhook WhatsApp notification error: {wa_err}")
 
     return Response(status_code=200, content="OK")
