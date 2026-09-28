@@ -2575,6 +2575,12 @@ async def update_order(
     if not is_owner and not is_admin and not is_delivery and not is_picker and not is_restaurant_staff:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+    # Enforce order state machine transitions
+    from services.order_calculation_service import validate_status_transition
+    is_valid_transition, transition_err = validate_status_transition(order.status.value, target_status.value)
+    if not is_valid_transition and not is_admin:
+        raise HTTPException(status_code=400, detail=transition_err)
+
     # Strict Role Assignment for Status Transitions
     if target_status == OrderStatus.CANCELLED:
         if is_owner and not is_admin:
