@@ -30,6 +30,7 @@ import 'widgets/delivery_payment_sheet.dart';
 import 'widgets/delivery_wallet_tab.dart';
 import 'widgets/delivery_history_tab.dart';
 import 'widgets/delivery_orders_tab.dart';
+import '../admin/widgets/admin_console_skeletons.dart';
 import '../common/widgets/battery_optimization_dialog.dart';
 import '../../core/services/notification_service.dart';
 import '../../widgets/app_confirmation_dialog.dart';
@@ -50,7 +51,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   int _pendingSyncCount = 0;
 
   List<Map<String, dynamic>> _orders = _cachedDeliveryOrders;
-
+  final Map<String, DateTime> _recentlyDeliveredOrders = {};
 
   Map<String, dynamic>? _walletInfo;
   Timer? _autoRefreshTimer;
@@ -492,6 +493,38 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         notes.contains('STORE PICKUP');
   }
 
+  /// Guards against replica replication lag resurrecting recently delivered orders
+  void _applyDeliveredGuard(List<Map<String, dynamic>> list) {
+    final now = DateTime.now();
+    _recentlyDeliveredOrders.removeWhere((_, time) => now.difference(time).inMinutes >= 3);
+
+    for (final o in list) {
+      final id = o['id']?.toString() ?? '';
+      final cid = o['combinedId']?.toString() ?? '';
+      final subIds = (o['subOrderIds'] is List)
+          ? (o['subOrderIds'] as List).map((e) => e.toString()).toList()
+          : <String>[];
+      final isRecentlyDelivered = _recentlyDeliveredOrders.containsKey(id) ||
+          (cid.isNotEmpty && _recentlyDeliveredOrders.containsKey(cid)) ||
+          subIds.any((sid) => _recentlyDeliveredOrders.containsKey(sid));
+
+      if (isRecentlyDelivered) {
+        o['status'] = 'DELIVERED';
+        o['paymentStatus'] = 'PAID';
+        o['deliveredAt'] ??= now.toIso8601String();
+        if (o['subOrders'] is List) {
+          for (final sub in (o['subOrders'] as List)) {
+            if (sub is Map) {
+              sub['status'] = 'DELIVERED';
+              sub['paymentStatus'] = 'PAID';
+              sub['deliveredAt'] ??= now.toIso8601String();
+            }
+          }
+        }
+      }
+    }
+  }
+
   /// Fetch 100% Real Live Orders from Database
   Future<void> _fetchOrders({bool silent = false}) async {
     if (_isFetchingOrders) return;
@@ -558,8 +591,11 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             .where((o) => !_isSelfPickupOrder(o))
             .toList();
 
+        _applyDeliveredGuard(parsed);
+
         if (parsed.isNotEmpty && mounted) {
           final merged = _mergeCombinedOrders(parsed);
+          _applyDeliveredGuard(merged);
           setState(() {
             _orders = merged;
             _isLoading = false;
@@ -629,7 +665,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             })
             .where((o) => !_isSelfPickupOrder(o))
             .toList();
+
+        _applyDeliveredGuard(parsed);
         final merged = _mergeCombinedOrders(parsed);
+        _applyDeliveredGuard(merged);
 
         if (mounted) {
           setState(() {
@@ -717,8 +756,21 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         0.0, (sum, o) => sum + ((o['total'] as num?)?.toDouble() ?? 0.0),
       );
 
-      // Determine combined status (lowest progress wins)
+      // Check if combined order or any companion was recently delivered
+      final isCombinedRecentlyDelivered = (entry.key.isNotEmpty && _recentlyDeliveredOrders.containsKey(entry.key)) ||
+          subOrders.any((s) => _recentlyDeliveredOrders.containsKey(s['id']?.toString()));
+
+      if (isCombinedRecentlyDelivered) {
+        for (final sub in subOrders) {
+          sub['status'] = 'DELIVERED';
+          sub['paymentStatus'] = 'PAID';
+          sub['deliveredAt'] ??= DateTime.now().toIso8601String();
+        }
+      }
+
+      // Determine combined status (lowest progress wins, but DELIVERED if all active are DELIVERED or recently delivered)
       String combinedStatus(List<String> statuses) {
+        if (isCombinedRecentlyDelivered) return 'DELIVERED';
         final active = statuses.where((s) => s != 'CANCELLED').toList();
         if (active.isEmpty) return 'CANCELLED';
         if (active.contains('PENDING')) return 'PENDING';
@@ -736,7 +788,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
       // Determine payment:
       // An order is only PAID if ALL sub-orders have paymentStatus == 'PAID'
-      final allSubOrdersPaid = subOrders.every((o) {
+      final allSubOrdersPaid = isCombinedRecentlyDelivered || subOrders.every((o) {
         final ps = (o['paymentStatus'] ?? '').toString().toUpperCase().trim();
         return ps == 'PAID';
       });
@@ -762,14 +814,26 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         return isRest ? '🍽️ $name' : '🛒 Grocery';
       }).toList();
 
+      final resolvedMergedStatus = combinedStatus(statuses);
+      if (resolvedMergedStatus == 'DELIVERED') {
+        for (final sub in subOrders) {
+          sub['status'] = 'DELIVERED';
+          sub['paymentStatus'] = 'PAID';
+          sub['deliveredAt'] ??= DateTime.now().toIso8601String();
+        }
+      }
+
       final merged = Map<String, dynamic>.from(primary);
       merged['id'] = primary['id']; // keep primary id for status updates
       merged['readableId'] = baseId;
       merged['items'] = allItems;
       merged['total'] = combinedTotal;
-      merged['status'] = combinedStatus(statuses);
+      merged['status'] = resolvedMergedStatus;
       merged['paymentMethod'] = anyCod ? 'COD' : (primary['paymentMethod'] ?? 'UPI');
-      merged['paymentStatus'] = allSubOrdersPaid ? 'PAID' : (primary['paymentStatus'] ?? 'PENDING');
+      merged['paymentStatus'] = (allSubOrdersPaid || resolvedMergedStatus == 'DELIVERED') ? 'PAID' : (primary['paymentStatus'] ?? 'PENDING');
+      if (resolvedMergedStatus == 'DELIVERED') {
+        merged['deliveredAt'] ??= DateTime.now().toIso8601String();
+      }
       merged['isCombined'] = true;
       merged['subOrders'] = subOrders;
       merged['subOrderIds'] = subOrders.map((o) => o['id']?.toString()).where((id) => id != null).toList();
@@ -911,16 +975,87 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     setState(() => _updatingOrderId = orderId);
     HapticFeedback.mediumImpact();
 
-    // 1. Instant offline handling (0ms lag in elevator/basement)
-    if (_isDeviceOffline) {
-      setState(() {
-        for (final o in _orders) {
-          if (o['id'] == orderId || (o['subOrderIds'] is List && (o['subOrderIds'] as List).contains(orderId))) {
-            o['status'] = newStatus;
+    // Find the order to determine if COD and if combined
+    Map<String, dynamic>? matchingOrder;
+    for (final o in _orders) {
+      if (o['id'] == orderId || o['readableId'] == orderId) {
+        matchingOrder = o;
+        break;
+      }
+      if (o['subOrderIds'] is List && (o['subOrderIds'] as List).contains(orderId)) {
+        matchingOrder = o;
+        break;
+      }
+    }
+    final safeOrder = matchingOrder ?? <String, dynamic>{};
+    final isCod = safeOrder['paymentMethod'] == 'COD';
+    final isCombined = safeOrder['isCombined'] == true;
+    final subOrderIds = (safeOrder['subOrderIds'] as List<dynamic>?)?.cast<String>() ?? [];
+
+    // Build the list of order IDs to update
+    final partnerId = extra?['partnerOrderId']?.toString();
+    final idsToUpdate = isCombined && subOrderIds.isNotEmpty
+        ? subOrderIds
+        : ((partnerId != null && partnerId.isNotEmpty && partnerId != orderId) ? [orderId, partnerId] : [orderId]);
+
+    // 0ms Instant Optimistic UI Update (Update local UI instantly before network)
+    final now = DateTime.now();
+    if (newStatus == 'DELIVERED') {
+      _recentlyDeliveredOrders[orderId] = now;
+      for (final id in idsToUpdate) {
+        _recentlyDeliveredOrders[id] = now;
+      }
+      final cid = safeOrder['combinedId']?.toString();
+      if (cid != null && cid.isNotEmpty) {
+        _recentlyDeliveredOrders[cid] = now;
+      }
+    }
+
+    setState(() {
+      for (final o in _orders) {
+        final oId = o['id']?.toString();
+        final subIds = (o['subOrderIds'] is List)
+            ? (o['subOrderIds'] as List).map((e) => e.toString()).toList()
+            : <String>[];
+        if (oId == orderId || idsToUpdate.contains(oId) || subIds.any((s) => idsToUpdate.contains(s))) {
+          o['status'] = newStatus;
+          if (newStatus == 'DELIVERED') {
+            o['paymentStatus'] = 'PAID';
+            o['deliveredAt'] = now.toIso8601String();
+            if (o['subOrders'] is List) {
+              for (final sub in (o['subOrders'] as List)) {
+                if (sub is Map) {
+                  sub['status'] = 'DELIVERED';
+                  sub['paymentStatus'] = 'PAID';
+                  sub['deliveredAt'] = now.toIso8601String();
+                }
+              }
+            }
           }
         }
-      });
-      _savePersistedOrders(_orders);
+      }
+    });
+    _savePersistedOrders(_orders);
+
+    if (newStatus == 'DELIVERED') {
+      _confettiController.play();
+      HapticFeedback.heavyImpact();
+      _locationService.stopTracking();
+    } else if (newStatus == 'SHIPPED') {
+      HapticFeedback.heavyImpact();
+      _locationService.startTracking(
+        orderId: orderId,
+        readableId: safeOrder['readableId']?.toString(),
+        relatedOrderIds: (safeOrder['subOrderIds'] is List)
+            ? (safeOrder['subOrderIds'] as List).map((e) => e.toString()).toList()
+            : null,
+        riderId: _currentUserId ?? 'rider_current',
+        dioClient: ref.read(dioProvider),
+      );
+    }
+
+    // 1. Instant offline handling (0ms lag in elevator/basement)
+    if (_isDeviceOffline) {
       await _enqueueOfflineAction(orderId, newStatus, extra);
       if (mounted) setState(() => _updatingOrderId = null);
       return;
@@ -929,28 +1064,25 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     try {
       final dio = ref.read(dioProvider);
 
-      // Find the order to determine if COD and if combined
-      Map<String, dynamic>? matchingOrder;
-      for (final o in _orders) {
-        if (o['id'] == orderId || o['readableId'] == orderId) {
-          matchingOrder = o;
-          break;
+      // Concurrent direct update to Supabase for immediate sync across consoles
+      try {
+        final sb = SupabaseService.client;
+        if (sb != null) {
+          final sbData = <String, dynamic>{
+            'status': newStatus,
+            'updatedAt': now.toIso8601String(),
+            if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
+            if (newStatus == 'DELIVERED') 'deliveredAt': now.toIso8601String(),
+          };
+          for (final id in idsToUpdate) {
+            sb.from('orders').update(sbData).eq('id', id).catchError((_) {});
+          }
+          final cid = safeOrder['combinedId']?.toString();
+          if (cid != null && cid.isNotEmpty) {
+            sb.from('orders').update(sbData).eq('combinedId', cid).catchError((_) {});
+          }
         }
-        if (o['subOrderIds'] is List && (o['subOrderIds'] as List).contains(orderId)) {
-          matchingOrder = o;
-          break;
-        }
-      }
-      final safeOrder = matchingOrder ?? <String, dynamic>{};
-      final isCod = safeOrder['paymentMethod'] == 'COD';
-      final isCombined = safeOrder['isCombined'] == true;
-      final subOrderIds = (safeOrder['subOrderIds'] as List<dynamic>?)?.cast<String>() ?? [];
-
-      // Build the list of order IDs to update
-      final partnerId = extra?['partnerOrderId']?.toString();
-      final idsToUpdate = isCombined && subOrderIds.isNotEmpty
-          ? subOrderIds
-          : ((partnerId != null && partnerId.isNotEmpty && partnerId != orderId) ? [orderId, partnerId] : [orderId]);
+      } catch (_) {}
 
       bool anySuccess = false;
 
@@ -1025,55 +1157,18 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       }
 
       if (anySuccess) {
-        if (newStatus == 'DELIVERED') {
-          _confettiController.play();
-          HapticFeedback.heavyImpact();
-          _locationService.stopTracking();
-        } else if (newStatus == 'SHIPPED') {
-          HapticFeedback.heavyImpact();
-          final matching = _orders.firstWhere(
-            (o) => o['id'] == orderId,
-            orElse: () => <String, dynamic>{'id': orderId},
-          );
-          _locationService.startTracking(
-            orderId: orderId,
-            readableId: matching['readableId']?.toString(),
-            relatedOrderIds: (matching['subOrderIds'] is List)
-                ? (matching['subOrderIds'] as List).map((e) => e.toString()).toList()
-                : null,
-            riderId: _currentUserId ?? 'rider_current',
-            dioClient: dio,
-          );
-        }
-
-        // Re-fetch orders (also recalculates local wallet from order data)
+        // Re-fetch orders (protected by _recentlyDeliveredOrders)
         await _fetchOrders(silent: true);
         // Fetch authoritative wallet from server (RiderWallet table) — this is the source of truth
         await _fetchWallet();
       } else {
-        // Enqueue offline action and optimistically update local UI
+        // Enqueue offline action if network call failed
         await _enqueueOfflineAction(orderId, newStatus, extra);
-        setState(() {
-          for (final o in _orders) {
-            if (o['id'] == orderId || (o['subOrderIds'] is List && (o['subOrderIds'] as List).contains(orderId))) {
-              o['status'] = newStatus;
-            }
-          }
-        });
-        _savePersistedOrders(_orders);
       }
     } catch (e) {
       debugPrint('[DeliveryDashboard] Status update error: $e');
       // Save offline on network failure
       await _enqueueOfflineAction(orderId, newStatus, extra);
-      setState(() {
-        for (final o in _orders) {
-          if (o['id'] == orderId || (o['subOrderIds'] is List && (o['subOrderIds'] as List).contains(orderId))) {
-            o['status'] = newStatus;
-          }
-        }
-      });
-      _savePersistedOrders(_orders);
     } finally {
       if (mounted) setState(() => _updatingOrderId = null);
     }
@@ -1300,7 +1395,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppDesignSystem.success))
+                      ? const RiderDashboardSkeleton(itemCount: 3)
                       : IndexedStack(
                           index: _activeTab,
                           children: [

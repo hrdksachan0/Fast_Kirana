@@ -14,6 +14,7 @@ import '../../core/utils/order_item_helper.dart';
 import '../../core/services/secure_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/store_serviceability_sheet.dart';
+import 'widgets/admin_console_skeletons.dart';
 
 class VendorConsoleScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -989,7 +990,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
             )
           : null,
       body: (_isLoadingVendors && !widget.isVendorSelf)
-          ? const Center(child: CircularProgressIndicator(color: primaryRed))
+          ? const VendorConsoleSkeleton()
           : (!widget.isVendorSelf && _vendors.isEmpty)
               ? _buildEmptyVendorsView()
               : Column(
@@ -1105,7 +1106,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                     // Tab Content
                     Expanded(
                       child: _isLoadingDetails
-                          ? const Center(child: CircularProgressIndicator(color: primaryRed))
+                          ? const AdminOrdersListSkeleton(itemCount: 3)
                           : TabBarView(
                               controller: _tabController,
                               children: [

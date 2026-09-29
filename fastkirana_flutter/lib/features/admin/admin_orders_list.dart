@@ -30,6 +30,7 @@ import 'widgets/admin_substitution_sheet.dart';
 import 'widgets/admin_refund_sheet.dart';
 import 'widgets/admin_share_sheet.dart';
 import 'widgets/admin_orders_empty_view.dart';
+import 'widgets/admin_console_skeletons.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/order_alarm_service.dart';
@@ -59,6 +60,26 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   static List<Order> _cachedOrders = [];
   List<Order> _allOrders = _cachedOrders;
   bool _isLoading = _cachedOrders.isEmpty;
+  static final Map<String, DateTime> _recentlyDeliveredOrderIds = {};
+
+  static int _orderStatusRank(OrderStatus s) {
+    switch (s) {
+      case OrderStatus.adminPending:
+        return 0;
+      case OrderStatus.pending:
+        return 1;
+      case OrderStatus.confirmed:
+        return 2;
+      case OrderStatus.packed:
+        return 3;
+      case OrderStatus.shipped:
+        return 4;
+      case OrderStatus.delivered:
+        return 5;
+      case OrderStatus.cancelled:
+        return 6;
+    }
+  }
 
   // Persistent previous state stats to avoid UI jumping abruptly to 0 0 0 0
   static double _lastTodaySales = 0.0;
@@ -563,13 +584,31 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       final Map<String, Order> orderMap = {};
 
       void addOrUpdate(Order o) {
+        final now = DateTime.now();
+        _recentlyDeliveredOrderIds.removeWhere((_, time) => now.difference(time).inMinutes >= 3);
+        if (_recentlyDeliveredOrderIds.containsKey(o.id) || (o.combinedId != null && _recentlyDeliveredOrderIds.containsKey(o.combinedId!))) {
+          o = o.copyWith(status: OrderStatus.delivered, paymentStatus: 'PAID');
+        }
+
         final existing = orderMap[o.id];
         if (existing == null) {
           orderMap[o.id] = o;
         } else {
+          // Never downgrade a DELIVERED or CANCELLED order!
+          if (existing.status == OrderStatus.delivered && o.status != OrderStatus.delivered) {
+            return;
+          }
+          if (existing.status == OrderStatus.cancelled && o.status != OrderStatus.cancelled) {
+            return;
+          }
+
           final existingItemCount = existing.items?.length ?? 0;
           final newItemCount = o.items?.length ?? 0;
-          if (newItemCount > existingItemCount || o.createdAt.isAfter(existing.createdAt) || (o.status != existing.status && o.status != OrderStatus.pending)) {
+          final isMoreItems = newItemCount > existingItemCount;
+          final isNewerStatus = _orderStatusRank(o.status) > _orderStatusRank(existing.status);
+          final isSameStatusNewerData = o.status == existing.status && (isMoreItems || o.createdAt.isAfter(existing.createdAt));
+
+          if (isNewerStatus || isSameStatusNewerData) {
             orderMap[o.id] = o;
           }
         }
@@ -738,7 +777,16 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         (sum, o) => sum + o.refundAmount,
       );
 
+      var resolvedSubOrders = subOrders;
+      final isCombinedRecentlyDelivered = (entry.key.isNotEmpty && _recentlyDeliveredOrderIds.containsKey(entry.key)) ||
+          subOrders.any((s) => _recentlyDeliveredOrderIds.containsKey(s.id));
+
+      if (isCombinedRecentlyDelivered) {
+        resolvedSubOrders = subOrders.map((s) => s.copyWith(status: OrderStatus.delivered, paymentStatus: 'PAID')).toList();
+      }
+
       OrderStatus combinedStatus(List<OrderStatus> statuses) {
+        if (isCombinedRecentlyDelivered) return OrderStatus.delivered;
         final active = statuses.where((s) => s != OrderStatus.cancelled).toList();
         if (active.isEmpty) return OrderStatus.cancelled;
         if (active.contains(OrderStatus.adminPending)) return OrderStatus.adminPending;
@@ -749,12 +797,12 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         return OrderStatus.delivered;
       }
 
-      final statuses = subOrders.map((o) => o.status).toList();
+      final statuses = resolvedSubOrders.map((o) => o.status).toList();
 
       final baseReadableId = (primary.readableId ?? '')
           .replaceAll(RegExp(r'-[GR]\d*$', caseSensitive: false), '');
 
-      final subLabels = subOrders.map((o) {
+      final subLabels = resolvedSubOrders.map((o) {
         final isRest = o.isRestaurantOrder;
         final name = (o.shopName != null && o.shopName!.trim().isNotEmpty && o.shopName != 'FastKirana Dark Store' && o.shopName != 'FastKirana Store')
             ? o.shopName!.trim()
@@ -762,15 +810,20 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         return isRest ? '🍽️ $name' : '🛒 $name';
       }).toList();
 
-      final combinedDeliveryFee = subOrders.fold<double>(
+      final combinedDeliveryFee = resolvedSubOrders.fold<double>(
         0.0,
         (sum, o) => sum + o.deliveryFee,
       );
 
-      final combinedMiscFee = subOrders.fold<double>(
+      final combinedMiscFee = resolvedSubOrders.fold<double>(
         0.0,
         (sum, o) => sum + o.miscFee,
       );
+
+      final resolvedMergedStatus = combinedStatus(statuses);
+      if (resolvedMergedStatus == OrderStatus.delivered) {
+        resolvedSubOrders = resolvedSubOrders.map((s) => s.copyWith(status: OrderStatus.delivered, paymentStatus: 'PAID')).toList();
+      }
 
       final merged = primary.copyWith(
         readableId: baseReadableId.isNotEmpty ? baseReadableId : primary.readableId,
@@ -779,11 +832,12 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         refundAmount: combinedRefundAmount,
         deliveryFee: combinedDeliveryFee,
         miscFee: combinedMiscFee,
-        status: combinedStatus(statuses),
+        status: resolvedMergedStatus,
+        paymentStatus: resolvedMergedStatus == OrderStatus.delivered ? 'PAID' : primary.paymentStatus,
         shopName: subLabels.join(' + '),
         combinedId: entry.key,
         isCombined: true,
-        subOrders: subOrders,
+        subOrders: resolvedSubOrders,
         subLabels: subLabels,
       );
 
@@ -811,13 +865,31 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       final Map<String, Order> orderMap = {};
 
       void addOrUpdate(Order o) {
+        final now = DateTime.now();
+        _recentlyDeliveredOrderIds.removeWhere((_, time) => now.difference(time).inMinutes >= 3);
+        if (_recentlyDeliveredOrderIds.containsKey(o.id) || (o.combinedId != null && _recentlyDeliveredOrderIds.containsKey(o.combinedId!))) {
+          o = o.copyWith(status: OrderStatus.delivered, paymentStatus: 'PAID');
+        }
+
         final existing = orderMap[o.id];
         if (existing == null) {
           orderMap[o.id] = o;
         } else {
+          // Never downgrade a DELIVERED or CANCELLED order!
+          if (existing.status == OrderStatus.delivered && o.status != OrderStatus.delivered) {
+            return;
+          }
+          if (existing.status == OrderStatus.cancelled && o.status != OrderStatus.cancelled) {
+            return;
+          }
+
           final existingItemCount = existing.items?.length ?? 0;
           final newItemCount = o.items?.length ?? 0;
-          if (newItemCount > existingItemCount || o.createdAt.isAfter(existing.createdAt) || (o.status != existing.status && o.status != OrderStatus.pending)) {
+          final isMoreItems = newItemCount > existingItemCount;
+          final isNewerStatus = _orderStatusRank(o.status) > _orderStatusRank(existing.status);
+          final isSameStatusNewerData = o.status == existing.status && (isMoreItems || o.createdAt.isAfter(existing.createdAt));
+
+          if (isNewerStatus || isSameStatusNewerData) {
             orderMap[o.id] = o;
           }
         }
@@ -974,10 +1046,35 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           ? order.subOrders!.map((s) => s.id).toList()
           : [order.id];
 
+      if (newStatus == OrderStatus.delivered) {
+        final now = DateTime.now();
+        _recentlyDeliveredOrderIds[order.id] = now;
+        for (final id in idsToUpdate) {
+          _recentlyDeliveredOrderIds[id] = now;
+        }
+        if (order.combinedId != null && order.combinedId!.isNotEmpty) {
+          _recentlyDeliveredOrderIds[order.combinedId!] = now;
+        }
+      }
+
       setState(() {
         _allOrders = _allOrders.map((o) {
           if (o.id == order.id || idsToUpdate.contains(o.id) || (order.combinedId != null && o.combinedId == order.combinedId)) {
-            return o.copyWith(status: newStatus);
+            final updatedSubs = o.subOrders?.map((s) {
+              if (idsToUpdate.contains(s.id) || s.id == order.id) {
+                return s.copyWith(
+                  status: newStatus,
+                  paymentStatus: newStatus == OrderStatus.delivered ? 'PAID' : s.paymentStatus,
+                );
+              }
+              return s;
+            }).toList();
+
+            return o.copyWith(
+              status: newStatus,
+              paymentStatus: newStatus == OrderStatus.delivered ? 'PAID' : o.paymentStatus,
+              subOrders: updatedSubs,
+            );
           }
           return o;
         }).toList();
@@ -1832,7 +1929,7 @@ $formattedItems
           // 4. Orders List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: primaryRed))
+                ? const AdminOrdersListSkeleton(itemCount: 4)
                 : _error != null
                     ? Center(
                         child: Column(

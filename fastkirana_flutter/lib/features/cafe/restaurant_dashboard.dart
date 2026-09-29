@@ -38,6 +38,7 @@ import 'widgets/restaurant_sales_report_tab.dart';
 import 'widgets/restaurant_metrics_bar.dart';
 import 'widgets/restaurant_order_card_view.dart';
 import 'widgets/restaurant_prep_time_modal.dart';
+import '../admin/widgets/admin_console_skeletons.dart';
 import 'widgets/restaurant_kot_modal.dart';
 import 'widgets/restaurant_outlet_switcher_modal.dart';
 import 'widgets/restaurant_quick86_sheet.dart';
@@ -90,6 +91,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   }
 
   final Set<String> _knownPendingOrderIds = {};
+  final Map<String, DateTime> _recentlyDeliveredOrCancelledIds = {};
   final AudioPlayer _audioPlayer = AudioPlayer();
   Timer? _pendingAlarmTimer;
   bool _isPlayingAlarm = false;
@@ -805,7 +807,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
         // If picker API was empty, try fallback
         if (parsed.isEmpty && _assignedRestaurantId != null) {
           try {
-            final fbRes = await dio.get('/api/restaurant-dashboard/orders?restaurantId=$_assignedRestaurantId&limit=100');
+            final fbRes = await dio.get('/api/restaurant-dashboard/orders?restaurantId=$_assignedRestaurantId&status=live&limit=100');
             if (fbRes.statusCode == 200 && fbRes.data != null) {
               final fbList = fbRes.data is List ? fbRes.data : (fbRes.data['orders'] ?? []);
               if (fbList.isNotEmpty) {
@@ -815,12 +817,21 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
           } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
         }
 
+        final now = DateTime.now();
+        _recentlyDeliveredOrCancelledIds.removeWhere((_, time) => now.difference(time).inMinutes >= 3);
+
         // Filter out pure grocery orders & unpaid online orders (Restaurant only prepares COD or PAID orders)
+        // Also strictly discard DELIVERED or CANCELLED orders from the live kitchen queue
         parsed = parsed.where((o) {
+          final id = (o['id'] ?? '').toString();
+          final rId2 = (o['readableId'] ?? '').toString();
+          if (_recentlyDeliveredOrCancelledIds.containsKey(id) || (rId2.isNotEmpty && _recentlyDeliveredOrCancelledIds.containsKey(rId2))) {
+            return false;
+          }
           final oType = (o['orderType'] ?? '').toString().toUpperCase();
           if (oType == 'GROCERY') return false;
           final status = (o['status'] ?? '').toString().toUpperCase();
-          if (status == 'ADMIN_PENDING') return false;
+          if (status == 'ADMIN_PENDING' || status == 'DELIVERED' || status == 'CANCELLED') return false;
           final rId = (o['restaurantId'] ?? o['restaurant']?['id'] ?? '').toString().trim();
           if (rId.isEmpty) return false;
 
@@ -990,6 +1001,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
 
   Future<void> _updateOrderStatus(String orderId, String nextStatus, {int? prepTime}) async {
     HapticFeedback.selectionClick();
+
+    if (nextStatus == 'DELIVERED' || nextStatus == 'CANCELLED') {
+      _recentlyDeliveredOrCancelledIds[orderId] = DateTime.now();
+    }
 
     // 1. Instant Optimistic UI Update (0ms)
     setState(() {
@@ -1510,7 +1525,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
           // Tab Content
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: primaryRed))
+                ? const RestaurantDashboardSkeleton(itemCount: 3)
                 : _activeTab == 0
                     ? _buildLiveOrdersTab()
                     : _activeTab == 1

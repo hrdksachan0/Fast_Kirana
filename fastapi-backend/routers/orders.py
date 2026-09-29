@@ -2859,26 +2859,84 @@ async def update_order(
     is_customer_cancel = is_owner and target_status == OrderStatus.CANCELLED
     should_sync_status = is_explicit_all or is_customer_cancel or target_status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]
 
+    companions = []
     if order.combinedId:
         sibling_stmt = select(Order).where(Order.combinedId == order.combinedId, Order.id != order.id)
         sibling_res = await db.execute(sibling_stmt)
-        companion = sibling_res.scalars().first()
+        companions = list(sibling_res.scalars().all())
 
-        if companion:
-            if should_sync_status:
-                companion.status = order.status
-                companion.updatedAt = datetime.utcnow()
-            if order.deliveryUserId:
-                companion.deliveryUserId = order.deliveryUserId
-            if target_status == OrderStatus.DELIVERED:
-                companion.paymentStatus = PaymentStatus.PAID
-                companion.deliveredAt = datetime.utcnow()
+    # Fallback companion detection via readableId base (e.g. 2103-G / 2103-R)
+    if not companions and order.readableId and ("-G" in order.readableId or "-R" in order.readableId):
+        base_readable = re.sub(r'-[GR\d]+$', '', order.readableId)
+        if base_readable:
+            base_stmt = select(Order).where(
+                Order.readableId.like(f"{base_readable}-%"),
+                Order.id != order.id
+            )
+            base_res = await db.execute(base_stmt)
+            companions = list(base_res.scalars().all())
+
+    for companion in companions:
+        if should_sync_status:
+            companion.status = order.status
+            companion.updatedAt = datetime.utcnow()
+        if order.deliveryUserId:
+            companion.deliveryUserId = order.deliveryUserId
+        if target_status == OrderStatus.DELIVERED:
+            companion.paymentStatus = PaymentStatus.PAID
+            companion.deliveredAt = datetime.utcnow()
+            companion.status = OrderStatus.DELIVERED
+            companion.updatedAt = datetime.utcnow()
 
     await db.commit()
     await db.refresh(order)
     clear_order_cache(order.id)
     if order.combinedId:
         clear_order_cache(order.combinedId)
+
+    for companion in companions:
+        clear_order_cache(companion.id)
+        if companion.combinedId:
+            clear_order_cache(companion.combinedId)
+        try:
+            await manager.broadcast_to_channel("general", {
+                "event": "STATUS_UPDATE",
+                "orderId": companion.id,
+                "status": companion.status.value,
+                "order": {
+                    "id": companion.id,
+                    "status": companion.status.value,
+                    "total": float(companion.total),
+                    "updatedAt": companion.updatedAt.isoformat()
+                }
+            })
+            await manager.broadcast_to_channel(f"order_{companion.id}", {
+                "event": "STATUS_UPDATE",
+                "orderId": companion.id,
+                "restaurantId": companion.restaurantId,
+                "status": companion.status.value,
+                "lat": companion.deliveryLat,
+                "lng": companion.deliveryLng
+            })
+            if companion.readableId:
+                await manager.broadcast_to_channel(f"order_{companion.readableId}", {
+                    "event": "STATUS_UPDATE",
+                    "orderId": companion.id,
+                    "readableId": companion.readableId,
+                    "restaurantId": companion.restaurantId,
+                    "status": companion.status.value,
+                    "lat": companion.deliveryLat,
+                    "lng": companion.deliveryLng
+                })
+            if companion.restaurantId:
+                await manager.broadcast_to_channel(f"restaurant_{companion.restaurantId}", {
+                    "event": "STATUS_UPDATE",
+                    "orderId": companion.id,
+                    "restaurantId": companion.restaurantId,
+                    "status": companion.status.value,
+                })
+        except Exception as comp_err:
+            logger.warning(f"Failed companion broadcast for {companion.id}: {comp_err}")
 
     # Dispatch real-time WebSocket alerts
     await manager.broadcast_to_channel("general", {
