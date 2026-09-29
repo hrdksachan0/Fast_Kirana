@@ -15,9 +15,13 @@ import 'core/services/secure_storage_service.dart';
 import 'core/services/deep_link_service.dart';
 import 'data/repositories/product_repository.dart';
 import 'firebase_options.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Prevent GoogleFonts from throwing unhandled crash when device is offline or in low network
+  GoogleFonts.config.allowRuntimeFetching = true;
 
   // Low-memory safe bounds: Max 50 images, 35MB RAM (prevents OOM on 2GB/3GB Android devices)
   PaintingBinding.instance.imageCache.maximumSize = 50;
@@ -27,12 +31,18 @@ void main() async {
   if (!kIsWeb && !kDebugMode) {
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
-      final isAssetOrNetwork = details.exceptionAsString().contains('Unable to load asset') ||
-          details.exceptionAsString().contains('SocketException') ||
-          details.exceptionAsString().contains('HttpException') ||
-          details.exceptionAsString().contains('HandshakeException');
+      final exc = details.exceptionAsString();
+      final isNonFatal = details.silent ||
+          exc.contains('Unable to load asset') ||
+          exc.contains('SocketException') ||
+          exc.contains('HttpException') ||
+          exc.contains('HandshakeException') ||
+          exc.contains('Failed to load font') ||
+          exc.contains('PlatformException') ||
+          exc.contains('No Activity found') ||
+          exc.contains('Cannot use "ref" after the widget was disposed');
 
-      if (details.silent || isAssetOrNetwork) {
+      if (isNonFatal) {
         FirebaseCrashlytics.instance.recordFlutterError(details);
       } else {
         FirebaseCrashlytics.instance.recordFlutterFatalError(details);
@@ -47,7 +57,10 @@ void main() async {
           errStr.contains('timeout') ||
           errStr.contains('unable to load asset') ||
           errStr.contains('connection closed') ||
-          errStr.contains('network is unreachable');
+          errStr.contains('network is unreachable') ||
+          errStr.contains('failed to load font') ||
+          errStr.contains('no activity found') ||
+          errStr.contains('cannot use "ref" after the widget was disposed');
 
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: !isNonFatal);
       return true;

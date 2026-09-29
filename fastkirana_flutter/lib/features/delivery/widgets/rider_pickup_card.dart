@@ -2,12 +2,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../core/services/logger_service.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
+import '../../../core/utils/app_url_launcher.dart';
 import 'order_recipient_helper.dart';
 import 'rider_cart_modal.dart';
 
@@ -322,7 +322,7 @@ class RiderPickupCard extends StatelessWidget {
                         Bounceable(
                           onTap: () {
                             final clean = outlet.phone!.replaceAll(' ', '').trim();
-                            launchUrl(Uri.parse('tel:$clean'));
+                            AppUrlLauncher.launchString('tel:$clean', context: context);
                           },
                           child: Container(
                             padding: const EdgeInsets.all(6),
@@ -544,7 +544,7 @@ class RiderPickupCard extends StatelessWidget {
                         onTap: () {
                           if (customerPhone.isNotEmpty) {
                             final cleanPhone = customerPhone.replaceAll(' ', '').trim();
-                            launchUrl(Uri.parse('tel:$cleanPhone'));
+                            AppUrlLauncher.launchString('tel:$cleanPhone', context: context);
                           }
                         },
                         child: Container(

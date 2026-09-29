@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/app_url_launcher.dart';
 import '../../../core/theme/responsive.dart';
 import '../../../core/config/app_config.dart';
 import '../../../data/models/order.dart';
@@ -175,7 +175,7 @@ class TrackingReviewCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             GestureDetector(
-              onTap: () => launchUrl(Uri.parse('tel:${AppConfig.supportPhone}')),
+              onTap: () => AppUrlLauncher.launchString('tel:${AppConfig.supportPhone}', context: context),
               child: Text(
                 'Call FastKirana Support (${AppConfig.supportPhone})',
                 style: GoogleFonts.inter(

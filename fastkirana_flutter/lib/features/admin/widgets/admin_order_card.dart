@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/app_url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/routes/page_transitions.dart';
@@ -645,7 +645,7 @@ class AdminOrderCard extends ConsumerWidget {
                           var clean = phoneToMsg.replaceAll(RegExp(r'[^0-9]'), '');
                           if (!clean.startsWith('91') && clean.length == 10) clean = '91$clean';
                           if (clean.isNotEmpty) {
-                            launchUrl(Uri.parse('https://wa.me/$clean'), mode: LaunchMode.externalApplication);
+                            AppUrlLauncher.launchString('https://wa.me/$clean', context: context);
                           }
                         }
                       },
@@ -675,7 +675,7 @@ class AdminOrderCard extends ConsumerWidget {
                         if (onCallCustomer != null) {
                           onCallCustomer!(clean);
                         } else {
-                          launchUrl(Uri.parse('tel:$clean'), mode: LaunchMode.externalApplication);
+                          AppUrlLauncher.launchString('tel:$clean', context: context);
                         }
                       },
                       icon: const Icon(Icons.phone, color: Colors.white, size: 18),
@@ -770,7 +770,7 @@ class AdminOrderCard extends ConsumerWidget {
                       onPressed: () {
                         final phone = (order.deliveryBoyPhone ?? order.deliveryUser?.phone ?? '').replaceAll(RegExp(r'\D'), '');
                         if (phone.isNotEmpty) {
-                          launchUrl(Uri.parse('https://wa.me/$phone?text=Hello%20FastKirana%20Rider,%20regarding%20Order%20%23${order.displayId}:'), mode: LaunchMode.externalApplication);
+                          AppUrlLauncher.launchString('https://wa.me/$phone?text=Hello%20FastKirana%20Rider,%20regarding%20Order%20%23${order.displayId}:', context: context);
                         }
                       },
                       icon: const Icon(Icons.chat_rounded, color: AppDesignSystem.green600, size: 16),
@@ -786,7 +786,7 @@ class AdminOrderCard extends ConsumerWidget {
                       onPressed: () {
                         final phone = order.deliveryBoyPhone ?? order.deliveryUser?.phone;
                         if (phone != null && phone.isNotEmpty) {
-                          launchUrl(Uri.parse('tel:$phone'));
+                          AppUrlLauncher.launchString('tel:$phone', context: context);
                         }
                       },
                       icon: const Icon(Icons.phone, color: Colors.white, size: 16),

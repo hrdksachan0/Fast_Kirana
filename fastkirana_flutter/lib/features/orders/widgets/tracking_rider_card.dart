@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/app_url_launcher.dart';
 import '../../../core/theme/responsive.dart';
 import '../../../data/models/order.dart';
 
@@ -192,7 +192,7 @@ class TrackingRiderCard extends StatelessWidget {
                       onPressed: () async {
                         HapticFeedback.lightImpact();
                         final wpUrl = 'https://wa.me/$cleanPhone?text=Hi%20$riderName,%20checking%20on%20my%20order';
-                        launchUrl(Uri.parse(wpUrl), mode: LaunchMode.externalApplication);
+                        AppUrlLauncher.launchString(wpUrl, context: context);
                       },
                       icon: const Icon(Icons.chat_bubble_rounded, size: 17, color: Color(0xFF16A34A)),
                       style: IconButton.styleFrom(
@@ -207,7 +207,7 @@ class TrackingRiderCard extends StatelessWidget {
                     ElevatedButton.icon(
                       onPressed: () async {
                         HapticFeedback.heavyImpact();
-                        launchUrl(Uri.parse('tel:$riderPhone'));
+                        AppUrlLauncher.launchString('tel:$riderPhone', context: context);
                       },
                       icon: const Icon(Icons.phone_rounded, size: 13, color: Colors.white),
                       label: Text(

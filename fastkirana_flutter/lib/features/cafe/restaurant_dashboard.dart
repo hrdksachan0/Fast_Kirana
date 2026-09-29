@@ -401,10 +401,12 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   }
 
   Future<void> _initOutletDetails() async {
+    if (!mounted) return;
     // 0. Synchronous check immediately runs first so zero wait time
     _resolveOutletDetailsSync();
 
     final dio = ref.read(dioProvider);
+    final user = ref.read(authProvider).valueOrNull;
 
     // 1. Fetch dynamic active restaurants from backend to support ANY new outlet
     try {
@@ -434,8 +436,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       }
     } catch (_) {}
 
+    if (!mounted) return;
+
     // 2. Refresh phone and ID with fresh dynamic outlet data if needed
-    final user = ref.read(authProvider).valueOrNull;
     final userPhone = (user?.phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
     final last10 = userPhone.length >= 10 ? userPhone.substring(userPhone.length - 10) : userPhone;
 
@@ -479,13 +482,17 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     } else {
       _fetchOrders();
     }
+    if (!mounted) return;
     _initSupabaseRealtime();
     _initNotificationSubscriptions();
   }
 
   Future<void> _initNotificationSubscriptions() async {
+    if (!mounted) return;
+    final dio = ref.read(dioProvider);
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
       final userRole = (prefs.getString('user_role') ?? '').toUpperCase().trim();
       if (userRole == 'ADMIN' || userRole == 'SUPER_ADMIN') {
         // Admin already receives canonical admin_orders notifications.
@@ -495,8 +502,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
 
       final notif = NotificationService();
       await notif.init();
+      if (!mounted) return;
       await notif.requestPermissions();
-      final dio = ref.read(dioProvider);
+      if (!mounted) return;
 
       // Subscribe to restaurant topics for instant order buzz
       final outletId = _assignedRestaurantId ?? widget.initialRestaurantId;

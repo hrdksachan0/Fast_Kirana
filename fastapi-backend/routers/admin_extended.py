@@ -23,6 +23,7 @@ import re
 import os
 import json
 import time
+import math
 
 from database import get_db
 from models import (
@@ -3994,6 +3995,123 @@ async def undo_bulk_update(
 
     await db.commit()
     return {"success": True, "reverted": len(records)}
+
+
+@router.get("/price-history")
+async def get_price_history(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    search: Optional[str] = Query(None),
+    type: Optional[str] = Query(None),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Fetch paginated price history log for admin dashboard.
+    Supports search across changedBy, product name, and restaurant name,
+    plus changeType filtering (VENDOR_UPDATE, ADMIN_UPDATE, etc.).
+    """
+    conditions = []
+    if type and type.upper() != "ALL":
+        conditions.append(PriceHistory.changeType == type)
+
+    search_term = (search or "").strip()
+    if search_term:
+        conditions.append(
+            or_(
+                PriceHistory.changedBy.ilike(f"%{search_term}%"),
+                Product.name.ilike(f"%{search_term}%"),
+                Restaurant.name.ilike(f"%{search_term}%"),
+            )
+        )
+
+    # Base count query
+    count_stmt = (
+        select(func.count(PriceHistory.id))
+        .outerjoin(Product, PriceHistory.productId == Product.id)
+        .outerjoin(Restaurant, Product.restaurantId == Restaurant.id)
+    )
+    if conditions:
+        count_stmt = count_stmt.where(and_(*conditions))
+
+    total_count = (await db.execute(count_stmt)).scalar() or 0
+
+    # 24h count
+    past_24h = datetime.utcnow() - timedelta(hours=24)
+    recent_24h_stmt = select(func.count(PriceHistory.id)).where(PriceHistory.createdAt >= past_24h)
+    recent_24h_count = (await db.execute(recent_24h_stmt)).scalar() or 0
+
+    # Paginated records
+    skip = (page - 1) * limit
+    stmt = (
+        select(PriceHistory)
+        .outerjoin(Product, PriceHistory.productId == Product.id)
+        .outerjoin(Restaurant, Product.restaurantId == Restaurant.id)
+        .options(
+            selectinload(PriceHistory.product).selectinload(Product.restaurant),
+            selectinload(PriceHistory.product).selectinload(Product.category),
+        )
+    )
+    if conditions:
+        stmt = stmt.where(and_(*conditions))
+
+    stmt = stmt.order_by(desc(PriceHistory.createdAt)).offset(skip).limit(limit)
+    res = await db.execute(stmt)
+    records = res.scalars().all()
+
+    total_increases = 0
+    total_decreases = 0
+    formatted_records = []
+
+    for r in records:
+        old_p = float(r.oldPrice or 0.0)
+        new_p = float(r.newPrice or 0.0)
+        price_diff = new_p - old_p
+        if price_diff > 0:
+            total_increases += 1
+        elif price_diff < 0:
+            total_decreases += 1
+
+        percent_change = 0.0
+        if old_p > 0:
+            percent_change = round((price_diff / old_p) * 100, 1)
+
+        p = r.product
+        formatted_records.append({
+            "id": r.id,
+            "productId": r.productId,
+            "productName": p.name if p else "Unknown Item",
+            "productImage": p.imageUrl if p else None,
+            "restaurantName": p.restaurant.name if (p and p.restaurant) else None,
+            "categoryName": p.category.name if (p and p.category) else None,
+            "currentPrice": float(p.price) if (p and p.price is not None) else new_p,
+            "oldPrice": old_p,
+            "newPrice": new_p,
+            "oldMrp": float(r.oldMrp or 0.0),
+            "newMrp": float(r.newMrp or 0.0),
+            "priceDiff": round(price_diff, 2),
+            "percentChange": percent_change,
+            "changeType": r.changeType,
+            "changedBy": r.changedBy or "VENDOR",
+            "createdAt": r.createdAt.isoformat() if r.createdAt else None,
+        })
+
+    return {
+        "success": True,
+        "records": formatted_records,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total_count,
+            "totalPages": math.ceil(total_count / limit) if limit > 0 else 1,
+        },
+        "stats": {
+            "totalRecords": total_count,
+            "recent24hCount": recent_24h_count,
+            "totalIncreases": total_increases,
+            "totalDecreases": total_decreases,
+        },
+    }
 
 
 # ============================================================

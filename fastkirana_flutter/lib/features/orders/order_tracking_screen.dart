@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/utils/app_url_launcher.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
@@ -1723,7 +1724,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                     actionText: 'View Details',
                                     onTap: () {
                                       if (activeBanner.link != null && activeBanner.link!.isNotEmpty) {
-                                        launchUrl(Uri.parse(activeBanner.link!), mode: LaunchMode.externalApplication);
+                                        AppUrlLauncher.launchString(activeBanner.link!, context: context, mode: LaunchMode.externalApplication);
                                       }
                                     },
                                   );

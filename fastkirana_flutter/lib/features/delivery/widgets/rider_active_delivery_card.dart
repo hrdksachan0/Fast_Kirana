@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/app_url_launcher.dart';
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/utils/restaurant_utils.dart';
@@ -383,7 +383,7 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                         onTap: () {
                           if (customerPhone.isNotEmpty) {
                             final cleanPhone = customerPhone.replaceAll(' ', '').trim();
-                            launchUrl(Uri.parse('tel:$cleanPhone'));
+                            AppUrlLauncher.launchString('tel:$cleanPhone', context: context);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Customer phone number not available')),
