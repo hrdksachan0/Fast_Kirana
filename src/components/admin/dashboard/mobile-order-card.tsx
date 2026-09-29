@@ -162,12 +162,16 @@ export function MobileOrderCard({
                 📱 ONLINE / UPI ✅
               </span>
             )
-          ) : (
-            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full shadow-2xs">
-              ⏳ {o.paymentMethod || 'COD'} (UNPAID)
-            </span>
-          )}
-        </button>
+          ) : o.paymentStatus === 'PARTIALLY_PAID' ? (
+              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full shadow-2xs" title="Some sub-orders in this combo are unpaid">
+                ⚠️ PARTIAL ({o.paymentMethod || 'UPI'})
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full shadow-2xs">
+                ⏳ {o.paymentMethod || 'COD'} (UNPAID)
+              </span>
+            )}
+          </button>
       </div>
 
       {/* ── Rider Pickup Details Banner ── */}

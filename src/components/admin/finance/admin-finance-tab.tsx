@@ -670,7 +670,13 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                       ) : tx.paymentStatus === 'PAID' ? (
                         <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md">
                           <CheckCircle2 className="w-2.5 h-2.5" />
-                          {tx.category === 'ONLINE_BANK' ? 'UPI (Admin ✓)' : tx.category === 'CASHFREE_ONLINE' ? 'UPI (Cashfree)' : tx.category === 'RIDER_QR' ? 'UPI (Rider QR)' : `${tx.paymentMethod} (PAID)`}
+                          {tx.category === 'ONLINE_BANK'
+                            ? (tx.verifiedBy?.includes('Admin') ? 'UPI (Admin ✓)' : `${tx.paymentMethod || 'UPI'} (PAID)`)
+                            : tx.category === 'CASHFREE_ONLINE'
+                            ? 'UPI (Cashfree)'
+                            : tx.category === 'RIDER_QR'
+                            ? 'UPI (Rider QR)'
+                            : `${tx.paymentMethod || 'UPI'} (PAID)`}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md">
@@ -705,7 +711,7 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                         </span>
                       ) : tx.category === 'ONLINE_BANK' ? (
                         <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-center gap-1">
-                          <Check className="w-3 h-3" /> In Bank (Admin ✓)
+                          <Check className="w-3 h-3" /> {tx.verifiedBy?.includes('Admin') ? 'In Bank (Admin ✓)' : 'In Bank (Online)'}
                         </span>
                       ) : tx.category === 'CASHFREE_ONLINE' ? (
                         <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-center gap-1">

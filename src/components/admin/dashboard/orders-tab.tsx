@@ -272,12 +272,27 @@ export function OrdersTab({
               ? 'PACKED'
               : primary.status
 
+            const isAllPaid = group.every(s => (s.paymentStatus || '').toUpperCase() === 'PAID')
+            const isAnyPaid = group.some(s => (s.paymentStatus || '').toUpperCase() === 'PAID')
+            const isAllCod = group.every(s => (s.paymentMethod || '').toUpperCase() === 'COD')
+            const primaryPaymentMethod = group.find(s => s.paymentMethod && s.paymentMethod !== 'COD')?.paymentMethod || primary.paymentMethod || 'COD'
+
+            const consPaymentStatus = isAllPaid 
+              ? 'PAID' 
+              : isAnyPaid 
+              ? 'PARTIALLY_PAID' 
+              : (primary.paymentStatus || 'PENDING')
+
+            const consPaymentMethod = isAllCod ? 'COD' : primaryPaymentMethod
+
             const masterOrder = {
               ...primary,
               readableId: baseId,
               isCombined: true,
               total: combinedTotal,
               status: consStatus,
+              paymentStatus: consPaymentStatus,
+              paymentMethod: consPaymentMethod,
               items: allItems,
               shopName: restSub
                 ? `Dark Store + ${restSub.restaurantName || restSub.shopName || 'Restaurant'}`
@@ -1170,22 +1185,29 @@ export function OrdersTab({
                             return (
                               <>
                                 <div className="line-clamp-2">{formatAddress(o.address)}</div>
-                                <div className="mt-1 flex items-center gap-1.5">
-                                  <span className="font-mono text-[9px] text-text-muted">
-                                    [{o.deliveryLat?.toFixed(4)}, {o.deliveryLng?.toFixed(4)}]
-                                  </span>
-                                  {o.deliveryLat && o.deliveryLng && (
-                                    <a
-                                      href={`https://www.google.com/maps?q=${o.deliveryLat},${o.deliveryLng}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center justify-center p-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0 text-sm"
-                                      title="Open exact GPS coordinates on Google Maps"
-                                    >
-                                      📍
-                                    </a>
-                                  )}
-                                </div>
+                                {(() => {
+                                  const lat = o.deliveryLat ?? o.address?.lat
+                                  const lng = o.deliveryLng ?? o.address?.lng
+                                  if (lat != null && lng != null && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
+                                    return (
+                                      <div className="mt-1 flex items-center gap-1.5">
+                                        <span className="font-mono text-[9px] text-text-muted">
+                                          [{Number(lat).toFixed(4)}, {Number(lng).toFixed(4)}]
+                                        </span>
+                                        <a
+                                          href={`https://www.google.com/maps?q=${lat},${lng}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center justify-center p-1 rounded hover:bg-primary/10 text-primary transition-colors shrink-0 text-sm"
+                                          title="Open exact GPS coordinates on Google Maps"
+                                        >
+                                          📍
+                                        </a>
+                                      </div>
+                                    )
+                                  }
+                                  return null
+                                })()}
                               </>
                             )
                           })()}
@@ -1219,6 +1241,10 @@ export function OrdersTab({
                                   📱 ONLINE / UPI ✅
                                 </span>
                               )
+                            ) : o.paymentStatus === 'PARTIALLY_PAID' ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full mt-1 hover:bg-amber-500/25 shadow-2xs" title="Some sub-orders in this combo are unpaid">
+                                ⚠️ PARTIAL ({o.paymentMethod || 'UPI'})
+                              </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full mt-1 hover:bg-rose-500/25">
                                 ⏳ {o.paymentMethod || 'COD'} (UNPAID)
@@ -1743,6 +1769,10 @@ export function OrdersTab({
                                   📱 ONLINE / UPI ✅
                                 </span>
                               )
+                            ) : o.paymentStatus === 'PARTIALLY_PAID' ? (
+                              <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded-full mt-0.5 hover:bg-amber-500/25 shadow-2xs" title="Some sub-orders in this combo are unpaid">
+                                ⚠️ PARTIAL ({o.paymentMethod || 'UPI'})
+                              </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/30 px-1.5 py-0.5 rounded-full mt-0.5 hover:bg-rose-500/25">
                                 ⏳ {o.paymentMethod || 'COD'} (UNPAID)

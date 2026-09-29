@@ -312,64 +312,7 @@ export async function GET(request: Request) {
       ? (status === 'ADMIN_PENDING' ? adminPendingCount : status === 'PAYMENT_PENDING' ? paymentPendingCount : (statRow[status.toLowerCase() as keyof typeof statRow] ?? allCount))
       : allCount
 
-    // Background auto-sync: Automatically check Razorpay for recent unpaid orders (last 2 hours)
-    const recentUnpaid = ordersRaw.filter((o: any) => 
-      o.paymentStatus !== 'PAID' && (Date.now() - new Date(o.createdAt).getTime()) < 2 * 60 * 60 * 1000
-    )
-
-    if (recentUnpaid.length > 0) {
-      try {
-        const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-        const keySecret = process.env.RAZORPAY_KEY_SECRET
-        if (!keyId || !keySecret) throw new Error('Razorpay credentials not configured')
-        const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
-        const rzpRes = await fetch('https://api.razorpay.com/v1/payments?count=50', {
-          headers: { Authorization: authHeader },
-          cache: 'no-store'
-        })
-        if (rzpRes.ok) {
-          const rzpData = await rzpRes.json()
-          const items = rzpData.items || []
-
-          for (const unp of recentUnpaid) {
-            const orderTotalPaise = Math.round(Number(unp.total) * 100)
-            const targetReadableId = String(unp.readableId || '')
-            const matched = items.find((p: any) => {
-              if (p.status !== 'captured' && p.status !== 'authorized') return false
-              const hasExplicitIdMatch = 
-                (p.notes?.orderId && p.notes.orderId === unp.id) ||
-                (targetReadableId && p.notes?.readableId === targetReadableId) ||
-                (targetReadableId && p.description && p.description.includes(targetReadableId)) ||
-                (p.order_id && (unp as any).razorpayOrderId && p.order_id === (unp as any).razorpayOrderId)
-              
-              if (hasExplicitIdMatch && p.amount === orderTotalPaise) {
-                return true
-              }
-              return false
-            })
-
-            if (matched) {
-              unp.paymentStatus = 'PAID'
-              unp.paymentMethod = 'UPI'
-              if (unp.status === 'PENDING' || unp.status === 'CANCELLED') {
-                unp.status = 'CONFIRMED'
-              }
-              // Update in DB asynchronously
-              prisma.$executeRaw`
-                UPDATE orders 
-                SET "paymentStatus" = 'PAID'::"PaymentStatus",
-                    "paymentMethod" = 'UPI'::"PaymentMethod",
-                    status = CASE WHEN status IN ('PENDING', 'CANCELLED') THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
-                    "updatedAt" = NOW()
-                WHERE id = ${unp.id}
-              `.catch(() => {})
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Background auto-sync Razorpay notice in admin orders API:', e)
-      }
-    }
+    // Cashfree is the sole payment gateway. No external polling is needed here; Cashfree uses webhooks and explicit verification.
 
     const orders = ordersRaw.map((o) => {
       const user = allUsers.find(u => u.id === o.userId) || { name: 'Customer', email: '', phone: '' }

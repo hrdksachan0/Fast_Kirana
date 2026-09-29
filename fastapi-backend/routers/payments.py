@@ -11,7 +11,7 @@ import razorpay
 
 from database import get_db
 from config import settings
-from models import Order, PaymentStatus, OrderStatus
+from models import Order, PaymentStatus, OrderStatus, PaymentMethod
 
 logger = logging.getLogger("fastapi-backend")
 
@@ -40,124 +40,44 @@ async def get_payment_methods():
 
 
 @router.post("/razorpay/create-order")
-async def create_razorpay_order_in_payments(
-    payload: Dict[str, Any] = Body(...),
-    db: AsyncSession = Depends(get_db)
-):
+async def create_razorpay_order_in_payments():
     """
-    Create Razorpay Order (amount in paise).
-    """
-    order_id = payload.get("orderId")
-    if not order_id:
-        raise HTTPException(status_code=400, detail="orderId is required")
-
-    stmt = select(Order).where(Order.id == order_id)
-    res = await db.execute(stmt)
-    order = res.scalars().first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-
-    amount_in_paise = int(round(float(order.total) * 100))
-
-    if amount_in_paise < 100:
-        raise HTTPException(status_code=400, detail="Minimum payment amount must be at least ₹1.00 (100 paise)")
-
-    try:
-        client = get_razorpay_client()
-        data = {
-            "amount": amount_in_paise,
-            "currency": "INR",
-            "receipt": order.id,
-            "notes": {
-                "readableId": str(order.readableId or ""),
-                "customerName": "Customer"
-            }
-        }
-        rzp_order = client.order.create(data=data)
-
-        return {
-            "success": True,
-            "razorpayOrderId": rzp_order["id"],
-            "keyId": settings.RAZORPAY_KEY_ID,
-            "amount": rzp_order["amount"],
-            "currency": rzp_order["currency"],
-            "orderId": order.id
-        }
-    except Exception as e:
-        logger.error(f"Razorpay order creation error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Razorpay error: {str(e)}")
-
-
-@router.post("/razorpay/verify-signature")
-async def verify_razorpay_signature_in_payments(
-    payload: Dict[str, Any] = Body(...),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Verify Razorpay payment signature and mark order as PAID / CONFIRMED.
-    """
-    order_id = payload.get("orderId")
-    razorpay_order_id = payload.get("razorpay_order_id")
-    razorpay_payment_id = payload.get("razorpay_payment_id")
-    razorpay_signature = payload.get("razorpay_signature")
-
-    if not all([order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature]):
-        raise HTTPException(status_code=400, detail="Missing required signature parameters")
-
-    stmt = select(Order).where(Order.id == order_id)
-    res = await db.execute(stmt)
-    order = res.scalars().first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-
-    generated_signature = hmac.new(
-        settings.RAZORPAY_KEY_SECRET.encode("utf-8"),
-        f"{razorpay_order_id}|{razorpay_payment_id}".encode("utf-8"),
-        hashlib.sha256
-    ).hexdigest()
-
-    if generated_signature != razorpay_signature:
-        raise HTTPException(status_code=400, detail="Invalid Razorpay payment signature")
-
-    order.paymentStatus = PaymentStatus.PAID
-    order.status = OrderStatus.CONFIRMED
-    await db.commit()
-    await db.refresh(order)
-
-    return {
-        "success": True,
-        "message": "Payment verified successfully!",
-        "orderId": order.id,
-        "status": order.status.value,
-        "paymentStatus": order.paymentStatus.value
-    }
-
-
-@router.post("/verify")
-async def verify_payment(
-    payload: Dict[str, Any] = Body(...),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Payment verification endpoint — DISABLED.
-    All payment verification must go through /razorpay/verify-signature
-    with proper HMAC signature verification.
+    Razorpay is decommissioned. Only Cashfree PG is supported.
     """
     raise HTTPException(
-        status_code=403,
-        detail="Direct payment verification is disabled. Use gateway-specific verification endpoints with proper signature validation."
+        status_code=400,
+        detail="Razorpay has been decommissioned. Please use Cashfree PG (/api/payment/cashfree/create-order)."
     )
 
 
+@router.post("/razorpay/verify-signature")
+async def verify_razorpay_signature_in_payments():
+    """
+    Razorpay is decommissioned. Only Cashfree PG is supported.
+    """
+    raise HTTPException(
+        status_code=400,
+        detail="Razorpay has been decommissioned. Please use Cashfree PG (/api/payment/cashfree/verify)."
+    )
+
+
+@router.post("/verify")
+@router.post("/cashfree/sync-order")
 @router.post("/razorpay/sync-order")
-async def sync_razorpay_order_in_payments(
+async def sync_cashfree_order_in_payments(
     payload: Dict[str, Any] = Body(...),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Sync order with Razorpay: query Razorpay API for captured payment and mark order as PAID.
+    Sync order with Cashfree: query Cashfree API for captured payment.
+    Never marks as PAID unless Cashfree explicitly confirms SUCCESS / PAID.
+    Atomically syncs companion orders if this is a combined order.
     """
-    order_id = payload.get("orderId")
+    import httpx
+    import re
+    from routers.cashfree_router import CASHFREE_BASE_URL, _get_cashfree_headers
+
+    order_id = payload.get("orderId") or payload.get("order_id")
     if not order_id:
         raise HTTPException(status_code=400, detail="orderId is required")
 
@@ -169,7 +89,16 @@ async def sync_razorpay_order_in_payments(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
+    # If already verified PAID, ensure companion sub-orders are also in sync
     if order.paymentStatus == PaymentStatus.PAID:
+        if order.combinedId:
+            comb_stmt = select(Order).where(Order.combinedId == order.combinedId)
+            comb_res = await db.execute(comb_stmt)
+            for co in comb_res.scalars().all():
+                if co.paymentStatus != PaymentStatus.PAID:
+                    co.paymentStatus = PaymentStatus.PAID
+                    co.paymentMethod = PaymentMethod.UPI
+            await db.commit()
         return {
             "success": True,
             "paymentStatus": "PAID",
@@ -177,59 +106,90 @@ async def sync_razorpay_order_in_payments(
             "updated": False,
         }
 
-    matched_payment = None
-    try:
-        client = get_razorpay_client()
-        rzp_payments = client.payment.all({"count": 50})
-        items = rzp_payments.get("items", [])
-        order_total_paise = int(round(float(order.total) * 100))
-        target_readable = str(order.readableId or "")
-
-        for p in items:
-            if p.get("status") not in ["captured", "authorized"]:
-                continue
-            notes = p.get("notes") or {}
-            notes_order_id = str(notes.get("orderId", ""))
-            notes_readable_id = str(notes.get("readableId", ""))
-            desc = str(p.get("description", ""))
-
-            has_match = (
-                notes_order_id == order.id
-                or (target_readable and notes_readable_id == target_readable)
-                or (target_readable and target_readable in desc)
-            )
-
-            if has_match and int(p.get("amount", 0)) == order_total_paise:
-                matched_payment = p
-                break
-    except Exception as e:
-        logger.warning(f"Razorpay sync check error: {e}")
-
-    if not matched_payment:
-        return {
-            "success": True,
-            "paymentStatus": order.paymentStatus.value,
-            "status": order.status.value,
-            "updated": False,
-            "message": "No captured online payment detected on Razorpay yet.",
-        }
-
-    now = datetime.utcnow()
+    # Fetch companion orders if combined
+    companion_orders = []
     if order.combinedId:
         comb_stmt = select(Order).where(Order.combinedId == order.combinedId)
         comb_res = await db.execute(comb_stmt)
-        for o in comb_res.scalars().all():
-            o.paymentStatus = PaymentStatus.PAID
-            if o.status == OrderStatus.PENDING or o.status == OrderStatus.ADMIN_PENDING:
-                o.status = OrderStatus.CONFIRMED
-            o.confirmedAt = now
-            o.updatedAt = now
-    else:
-        order.paymentStatus = PaymentStatus.PAID
-        if order.status == OrderStatus.PENDING or order.status == OrderStatus.ADMIN_PENDING:
-            order.status = OrderStatus.CONFIRMED
-        order.confirmedAt = now
-        order.updatedAt = now
+        companion_orders = comb_res.scalars().all()
+    if not companion_orders:
+        companion_orders = [order]
+
+    headers = _get_cashfree_headers()
+    candidate_ids = [order.id]
+    if order.readableId:
+        candidate_ids.append(order.readableId)
+        base_rid = order.readableId.split("-")[0]
+        if base_rid and base_rid != order.readableId:
+            candidate_ids.append(base_rid)
+    if order.combinedId:
+        candidate_ids.append(order.combinedId)
+    for co in companion_orders:
+        if co.id not in candidate_ids:
+            candidate_ids.append(co.id)
+        if co.readableId and co.readableId not in candidate_ids:
+            candidate_ids.append(co.readableId)
+
+    cf_order = None
+    successful_payment = None
+    checked_ids = set()
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for cid in candidate_ids:
+            if not cid:
+                continue
+            sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", str(cid).strip())[:45]
+            if sanitized in checked_ids:
+                continue
+            checked_ids.add(sanitized)
+
+            try:
+                res = await client.get(f"{CASHFREE_BASE_URL}/orders/{sanitized}", headers=headers)
+                if res.status_code == 200:
+                    cf_data = res.json()
+                    if cf_data.get("order_status") == "PAID":
+                        cf_order = cf_data
+                        break
+                    elif not cf_order:
+                        cf_order = cf_data
+            except Exception as e:
+                logger.warning(f"Error checking Cashfree order {sanitized}: {e}")
+
+            try:
+                p_res = await client.get(f"{CASHFREE_BASE_URL}/orders/{sanitized}/payments", headers=headers)
+                if p_res.status_code == 200:
+                    payments = p_res.json()
+                    sp = next((p for p in payments if p.get("payment_status") == "SUCCESS"), None)
+                    if sp:
+                        successful_payment = sp
+                        break
+            except Exception as e:
+                logger.warning(f"Error checking Cashfree payments for {sanitized}: {e}")
+
+    is_paid = (cf_order and cf_order.get("order_status") == "PAID") or (successful_payment is not None)
+
+    if not is_paid:
+        return {
+            "success": False,
+            "paymentStatus": order.paymentStatus.value,
+            "status": order.status.value,
+            "updated": False,
+            "message": "No captured online payment detected on Cashfree gateway.",
+        }
+
+    now = datetime.utcnow()
+    cf_payment_id = str(successful_payment.get("cf_payment_id", "")) if successful_payment else str(cf_order.get("cf_order_id", ""))
+    cf_note = f"Cashfree PG Paid (Ref: {cf_payment_id})"
+
+    for o in companion_orders:
+        o.paymentStatus = PaymentStatus.PAID
+        o.paymentMethod = PaymentMethod.UPI
+        if not o.notes or "Cashfree PG Paid" not in o.notes:
+            o.notes = f"{o.notes} | {cf_note}" if o.notes else cf_note
+        if o.status == OrderStatus.PENDING or o.status == OrderStatus.ADMIN_PENDING:
+            o.status = OrderStatus.CONFIRMED
+        o.confirmedAt = now
+        o.updatedAt = now
 
     await db.commit()
     await db.refresh(order)
@@ -239,5 +199,5 @@ async def sync_razorpay_order_in_payments(
         "paymentStatus": "PAID",
         "status": order.status.value,
         "updated": True,
-        "message": "Order payment verified and confirmed successfully!",
+        "message": "Order payment verified on Cashfree and confirmed successfully!",
     }

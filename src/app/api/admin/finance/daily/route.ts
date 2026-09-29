@@ -77,8 +77,14 @@ export async function GET(req: NextRequest) {
         })
 
         const cfChecks = eligibleForCfCheck.map(async (o: any) => {
-          for (const cid of [o.id, o.readableId]) {
-            if (!cid) continue
+          const idsToProbe = [
+            o.id,
+            o.readableId,
+            o.readableId ? String(o.readableId).replace(/-[GR\d]+$/i, '') : null,
+            o.combinedId
+          ].filter(Boolean) as string[]
+
+          for (const cid of idsToProbe) {
             try {
               const res = await fetch(`${cfBaseUrl}/orders/${cid}`, {
                 headers: {
@@ -93,6 +99,9 @@ export async function GET(req: NextRequest) {
                 const data = await res.json()
                 if (data.order_status === 'PAID') {
                   cashfreePaidIds.add(o.id)
+                  if (o.combinedId) {
+                    cashfreePaidIds.add(o.combinedId)
+                  }
                   break
                 }
               }
@@ -125,7 +134,7 @@ export async function GET(req: NextRequest) {
       const oStatus = String(o.status || 'PENDING').toUpperCase()
       const notes = String(o.notes || '')
       const isDoorstepQr = notes.includes('Doorstep UPI') || notes.includes('QR Scan') || notes.includes('Rider QR')
-      const isInCashfree = cashfreePaidIds.has(o.id) || notes.includes('Cashfree PG') || notes.includes('CF_')
+      const isInCashfree = cashfreePaidIds.has(o.id) || (o.combinedId && cashfreePaidIds.has(o.combinedId)) || notes.includes('Cashfree PG') || notes.includes('CF_')
       const isAdminVerified = notes.includes('Admin Verified')
       // Extract admin name from notes (e.g. "Admin Verified by Sooraj")
       const adminNameMatch = notes.match(/Admin Verified by (.+?)(?:\s*\||$)/)
@@ -156,7 +165,13 @@ export async function GET(req: NextRequest) {
         category = 'RIDER_QR'
         verifiedBy = `Rider QR (${o.deliveryUser?.name || 'Rider'})`
       } else if (pStatus === 'PAID') {
-        if (o.cashSettledToAdmin) {
+        if (pMethod !== 'COD') {
+          // Online / UPI payment: credit to Bank/Online, NOT counter cash
+          cashfreeOnlineTotal += tot
+          cashfreeOnlineCount += 1
+          category = 'ONLINE_BANK'
+          verifiedBy = `${pMethod} (Online)`
+        } else if (o.cashSettledToAdmin) {
           counterCashTotal += tot
           counterCashCount += 1
           category = 'COUNTER_CASH'
@@ -170,7 +185,7 @@ export async function GET(req: NextRequest) {
           counterCashTotal += tot
           counterCashCount += 1
           category = 'COUNTER_CASH'
-          verifiedBy = 'Cash Paid'
+          verifiedBy = 'Counter Cash'
         }
       } else {
         // Pending

@@ -1350,86 +1350,211 @@ async def admin_set_user_password(
     }
 
 
+@router.post("/orders/sync-cashfree")
 @router.post("/orders/sync-razorpay")
-async def admin_sync_razorpay_order(
-    payload: dict = Body(...),
+@router.post("/orders/{order_id}/verify-payment")
+async def admin_sync_cashfree_order(
+    payload: dict = Body(default={}),
+    order_id: Optional[str] = None,
     current_admin: Any = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Reconcile pending order with Razorpay payment ID.
+    Reconcile pending order with Cashfree payment gateway.
+    NEVER blindly marks order as PAID unless Cashfree explicitly confirms PAID status
+    or admin provides manual_override=True.
+    Synchronizes both sub-orders atomically if this is a combined order.
     """
     import httpx
+    import re
     from config import settings
-    payment_id = payload.get("paymentId")
-    order_id = payload.get("orderId")
+    from routers.cashfree_router import CASHFREE_BASE_URL, _get_cashfree_headers
 
-    if not payment_id and not order_id:
-        raise HTTPException(status_code=400, detail="Either paymentId or orderId is required")
+    req_order_id = order_id or payload.get("orderId") or payload.get("order_id")
+    payment_id = payload.get("paymentId") or payload.get("payment_id") or payload.get("cfPaymentId")
+    manual_override = bool(payload.get("manual_override") or payload.get("manualOverride"))
+
+    if not req_order_id and not payment_id:
+        raise HTTPException(status_code=400, detail="Either orderId or paymentId is required")
 
     target_order = None
-    if order_id:
-        stmt = select(Order).where(or_(Order.id == order_id, Order.readableId == str(order_id)))
+    if req_order_id:
+        clean_oid = str(req_order_id).strip()
+        stmt = select(Order).where(or_(Order.id == clean_oid, Order.readableId == clean_oid))
+        res = await db.execute(stmt)
+        target_order = res.scalars().first()
+
+    if not target_order and payment_id:
+        stmt = select(Order).where(Order.notes.ilike(f"%{payment_id}%"))
         res = await db.execute(stmt)
         target_order = res.scalars().first()
 
     if not target_order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # If Razorpay payment ID is provided, verify directly with Razorpay API
-    if payment_id and settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET:
-        import base64
-        auth_str = base64.b64encode(f"{settings.RAZORPAY_KEY_ID}:{settings.RAZORPAY_KEY_SECRET}".encode()).decode()
-        async with httpx.AsyncClient() as client:
-            try:
-                rzp_res = await client.get(
-                    f"https://api.razorpay.com/v1/payments/{payment_id}",
-                    headers={"Authorization": f"Basic {auth_str}"}
-                )
-                if rzp_res.status_code == 200:
-                    rzp_data = rzp_res.json()
-                    if rzp_data.get("status") in ["captured", "authorized"]:
-                        target_order.paymentStatus = PaymentStatus.PAID
-                        if target_order.status in [OrderStatus.PENDING, OrderStatus.ADMIN_PENDING]:
-                            target_order.status = OrderStatus.CONFIRMED
-                        await db.commit()
-                        return {"success": True, "message": f"Payment {payment_id} verified. Order marked PAID."}
-                    else:
-                        raise HTTPException(status_code=400, detail=f"Razorpay status is {rzp_data.get('status')}")
-            except HTTPException:
-                raise
-            except Exception as rzp_err:
-                logger.warning(f"Razorpay live check error: {rzp_err}")
+    # Fetch companion orders if combined
+    companion_orders = []
+    if target_order.combinedId:
+        comb_stmt = select(Order).where(Order.combinedId == target_order.combinedId)
+        comb_res = await db.execute(comb_stmt)
+        companion_orders = comb_res.scalars().all()
+    if not companion_orders:
+        companion_orders = [target_order]
 
-    # Direct fallback: Mark order as verified by admin
-    target_order.paymentStatus = PaymentStatus.PAID
-    if target_order.status in [OrderStatus.PENDING, OrderStatus.ADMIN_PENDING]:
-        target_order.status = OrderStatus.CONFIRMED
+    now_dt = datetime.utcnow()
+
+    # Manual admin override branch
+    if manual_override:
+        admin_id_str = getattr(current_admin, "id", "admin")
+        for o in companion_orders:
+            o.paymentStatus = PaymentStatus.PAID
+            o.paymentMethod = PaymentMethod.UPI
+            override_note = f"Admin Manual Verification (by {admin_id_str})"
+            if not o.notes or "Admin Manual Verification" not in o.notes:
+                o.notes = f"{o.notes} | {override_note}" if o.notes else override_note
+            if o.status in [OrderStatus.PENDING, OrderStatus.ADMIN_PENDING]:
+                o.status = OrderStatus.CONFIRMED
+            o.updatedAt = now_dt
+        await db.commit()
+
+        for o in companion_orders:
+            try:
+                status_evt = {
+                    "event": "STATUS_UPDATE",
+                    "orderId": o.id,
+                    "status": o.status.value,
+                    "restaurantId": o.restaurantId,
+                    "order": {
+                        "id": o.id,
+                        "readableId": o.readableId,
+                        "status": o.status.value,
+                        "restaurantId": o.restaurantId,
+                        "total": float(o.total),
+                        "paymentStatus": o.paymentStatus.value,
+                        "updatedAt": o.updatedAt.isoformat() if o.updatedAt else now_dt.isoformat()
+                    }
+                }
+                await manager.broadcast_to_channel("general", status_evt)
+                await manager.broadcast_to_channel(f"order_{o.id}", status_evt)
+                if o.restaurantId:
+                    await manager.broadcast_to_channel(f"restaurant_{o.restaurantId}", status_evt)
+            except Exception:
+                pass
+
+        return {"success": True, "message": f"Order #{target_order.readableId or target_order.id} manually verified and marked PAID by admin."}
+
+    # Query Cashfree PG
+    headers = _get_cashfree_headers()
+    candidate_ids = []
+    if payment_id:
+        candidate_ids.append(payment_id)
+    if req_order_id:
+        candidate_ids.append(req_order_id)
+    candidate_ids.append(target_order.id)
+    if target_order.readableId:
+        candidate_ids.append(target_order.readableId)
+        base_rid = target_order.readableId.split("-")[0]
+        if base_rid and base_rid != target_order.readableId:
+            candidate_ids.append(base_rid)
+    if target_order.combinedId:
+        candidate_ids.append(target_order.combinedId)
+    for co in companion_orders:
+        if co.id not in candidate_ids:
+            candidate_ids.append(co.id)
+        if co.readableId and co.readableId not in candidate_ids:
+            candidate_ids.append(co.readableId)
+
+    cf_order = None
+    successful_payment = None
+    checked_ids = set()
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for cid in candidate_ids:
+            if not cid:
+                continue
+            sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", str(cid).strip())[:45]
+            if sanitized in checked_ids:
+                continue
+            checked_ids.add(sanitized)
+
+            try:
+                res = await client.get(f"{CASHFREE_BASE_URL}/orders/{sanitized}", headers=headers)
+                if res.status_code == 200:
+                    cf_data = res.json()
+                    if cf_data.get("order_status") == "PAID":
+                        cf_order = cf_data
+                        break
+                    elif not cf_order:
+                        cf_order = cf_data
+            except Exception as e:
+                logger.warning(f"Error checking Cashfree order {sanitized}: {e}")
+
+            try:
+                p_res = await client.get(f"{CASHFREE_BASE_URL}/orders/{sanitized}/payments", headers=headers)
+                if p_res.status_code == 200:
+                    payments = p_res.json()
+                    sp = next((p for p in payments if p.get("payment_status") == "SUCCESS"), None)
+                    if sp:
+                        successful_payment = sp
+                        break
+            except Exception as e:
+                logger.warning(f"Error checking Cashfree payments for {sanitized}: {e}")
+
+    is_paid = (cf_order and cf_order.get("order_status") == "PAID") or (successful_payment is not None)
+
+    if not is_paid:
+        cf_status = cf_order.get("order_status") if cf_order else "NOT FOUND / UNPAID"
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cashfree reports order is {cf_status}. No successful online payment found. Order cannot be marked PAID."
+        )
+
+    # Online payment is genuine and confirmed on Cashfree! Mark all companion orders as PAID!
+    cf_payment_id = str(successful_payment.get("cf_payment_id", "")) if successful_payment else str(cf_order.get("cf_order_id", ""))
+    cf_note = f"Cashfree PG Paid (Ref: {cf_payment_id})"
+
+    for o in companion_orders:
+        o.paymentStatus = PaymentStatus.PAID
+        o.paymentMethod = PaymentMethod.UPI
+        if not o.notes or "Cashfree PG Paid" not in o.notes:
+            o.notes = f"{o.notes} | {cf_note}" if o.notes else cf_note
+        if o.status in [OrderStatus.PENDING, OrderStatus.ADMIN_PENDING]:
+            o.status = OrderStatus.CONFIRMED
+        o.updatedAt = now_dt
+
     await db.commit()
 
-    try:
-        status_evt = {
-            "event": "STATUS_UPDATE",
-            "orderId": target_order.id,
-            "status": target_order.status.value,
-            "restaurantId": target_order.restaurantId,
-            "order": {
-                "id": target_order.id,
-                "readableId": target_order.readableId,
-                "status": target_order.status.value,
-                "restaurantId": target_order.restaurantId,
-                "total": float(target_order.total),
-                "updatedAt": target_order.updatedAt.isoformat() if target_order.updatedAt else datetime.utcnow().isoformat()
+    # Broadcast WebSocket updates for all companion orders
+    for o in companion_orders:
+        try:
+            status_evt = {
+                "event": "STATUS_UPDATE",
+                "orderId": o.id,
+                "status": o.status.value,
+                "restaurantId": o.restaurantId,
+                "order": {
+                    "id": o.id,
+                    "readableId": o.readableId,
+                    "status": o.status.value,
+                    "restaurantId": o.restaurantId,
+                    "total": float(o.total),
+                    "paymentStatus": o.paymentStatus.value,
+                    "updatedAt": o.updatedAt.isoformat() if o.updatedAt else now_dt.isoformat()
+                }
             }
-        }
-        await manager.broadcast_to_channel("general", status_evt)
-        await manager.broadcast_to_channel(f"order_{target_order.id}", status_evt)
-        if target_order.restaurantId:
-            await manager.broadcast_to_channel(f"restaurant_{target_order.restaurantId}", status_evt)
-    except Exception:
-        pass
+            await manager.broadcast_to_channel("general", status_evt)
+            await manager.broadcast_to_channel(f"order_{o.id}", status_evt)
+            if o.restaurantId:
+                await manager.broadcast_to_channel(f"restaurant_{o.restaurantId}", status_evt)
+        except Exception:
+            pass
 
-    return {"success": True, "message": f"Order #{target_order.readableId or target_order.id} marked PAID."}
+    return {
+        "success": True,
+        "message": f"Order #{target_order.readableId or target_order.id} payment verified on Cashfree. Marked as PAID.",
+        "cfPaymentId": cf_payment_id,
+        "ordersUpdated": [o.readableId or o.id for o in companion_orders]
+    }
 
 
 @router.get("/reports/orders")
@@ -1668,7 +1793,13 @@ async def get_daily_finance_reconciliation(
         ]
 
         async def _check_cf(client, o):
-            for cid in [o.id, o.readableId]:
+            candidate_ids = [o.id, o.readableId]
+            if o.combinedId:
+                candidate_ids.append(o.combinedId)
+            if o.readableId and "-" in o.readableId:
+                candidate_ids.append(o.readableId.split("-")[0])
+
+            for cid in candidate_ids:
                 if not cid:
                     continue
                 try:
@@ -1742,6 +1873,11 @@ async def get_daily_finance_reconciliation(
                 rider_qr_count += 1
                 category = "RIDER_QR"
                 verified_by = f"Rider QR ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
+            elif p_method in ["UPI", "ONLINE", "CARD", "NET_BANKING", "WALLET"]:
+                cashfree_online_total += tot
+                cashfree_online_count += 1
+                category = "ONLINE_BANK"
+                verified_by = f"{p_method} (Online)"
             elif o.cashSettledToAdmin:
                 counter_cash_total += tot
                 counter_cash_count += 1
