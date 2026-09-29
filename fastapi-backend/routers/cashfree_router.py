@@ -330,12 +330,34 @@ async def verify_cashfree_payment(
         if not already_notified:
             try:
                 from utils.firebase import send_fcm_topic_notification
-                send_fcm_topic_notification(
-                    topic="admin_alerts",
-                    title="💳 Cashfree Payment Confirmed",
-                    body=f"Order #{order.readableId or order.id[:8]} paid successfully (₹{float(order.total):.2f})",
-                    data={"orderId": order.id, "type": "payment_confirmed"}
-                )
+                from routers.orders import dispatch_isolated_order_fcm_notifications
+
+                target_orders = comb_orders if comb_orders else [order]
+                for o in target_orders:
+                    if background_tasks:
+                        background_tasks.add_task(
+                            dispatch_isolated_order_fcm_notifications,
+                            o.id,
+                            o.readableId,
+                            o.restaurantId,
+                            o.shopName,
+                            float(o.total),
+                            "CONFIRMED",
+                            o.storeId
+                        )
+                    else:
+                        import asyncio
+                        asyncio.create_task(
+                            dispatch_isolated_order_fcm_notifications(
+                                o.id,
+                                o.readableId,
+                                o.restaurantId,
+                                o.shopName,
+                                float(o.total),
+                                "CONFIRMED",
+                                o.storeId
+                            )
+                        )
                 from routers.orders import send_whatsapp_alert
                 if comb_orders:
                     combined_total = sum(float(co.total or 0) for co in comb_orders)
