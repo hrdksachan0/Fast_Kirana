@@ -353,6 +353,14 @@ const nextConfig: NextConfig = {
       },
       // Settings, Search, Upload, Push, SuperAdmin & Cron -> FastAPI
       {
+        source: '/api/public/settings/:path*',
+        destination: `${apiDest}/api/settings/:path*`,
+      },
+      {
+        source: '/api/public/settings',
+        destination: `${apiDest}/api/settings`,
+      },
+      {
         source: '/api/settings/:path*',
         destination: `${apiDest}/api/settings/:path*`,
       },

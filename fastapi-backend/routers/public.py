@@ -3,7 +3,7 @@ Public Routes (no auth required)
 Banners, coupons/validate, public settings, geocode
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Body, Query
+from fastapi import APIRouter, Depends, HTTPException, Body, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import or_
@@ -294,3 +294,15 @@ async def get_system_diagnostics(
         report["database"]["error"] = str(e)
 
     return report
+ 
+ 
+@router.get("/public/settings")
+async def get_public_settings_alias(
+    response: Response,
+    storeId: Optional[str] = Query(None),
+    hubId: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """Public settings alias for storefront."""
+    from routers.settings import get_public_settings
+    return await get_public_settings(response=response, storeId=storeId, hubId=hubId, db=db)

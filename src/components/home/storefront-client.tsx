@@ -121,7 +121,7 @@ export function StorefrontClient({
     const checkStoreStatus = async () => {
       if (document.visibilityState !== 'visible') return
       try {
-        const res = await fetch('/api/public/settings')
+        const res = await fetch('/api/settings')
         if (!res.ok) return
         const data = await res.json()
         const isOpen = data.grocery_mart_open !== false && data.grocery_mart_open !== 'false'
