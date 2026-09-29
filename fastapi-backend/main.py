@@ -107,23 +107,62 @@ app.add_middleware(
 from fastapi.middleware.gzip import GZipMiddleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Middleware for Process Time Header & Request Logging
+# In-memory sliding window rate limiter for public scraper protection
+_ip_request_history: dict = {}
+_MAX_REQUESTS_PER_MINUTE = 200
+
+# Middleware for Request Correlation ID, Enterprise Security Headers & Rate Limiting
 @app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
-    start_time = time.time()
+async def enterprise_security_and_tracing_middleware(request: Request, call_next):
+    # 1. Request Correlation ID
+    request_id = request.headers.get("x-request-id") or f"req-{uuid.uuid4().hex[:10]}"
+    request.state.request_id = request_id
+
+    # 2. Public Scraper & Abuse Rate Limiting (exclude health, docs, webhooks)
+    path = request.url.path
+    if not (path.startswith("/health") or path.startswith("/docs") or path.startswith("/openapi") or path.startswith("/ws") or "webhook" in path):
+        client_ip = request.client.host if request.client else "unknown"
+        now_ts = time.time()
+        history = [ts for ts in _ip_request_history.get(client_ip, []) if now_ts - ts < 60]
+        if len(history) >= _MAX_REQUESTS_PER_MINUTE:
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "success": False,
+                    "error": "Too Many Requests",
+                    "message": "Rate limit exceeded. Please try again in a few seconds.",
+                    "requestId": request_id
+                },
+                headers={"Retry-After": "30", "X-Request-ID": request_id}
+            )
+        history.append(now_ts)
+        _ip_request_history[client_ip] = history
+
+    # 3. Execution Timing
+    start_time = time.perf_counter()
     response = await call_next(request)
-    process_time = time.time() - start_time
+    process_time = time.perf_counter() - start_time
+
+    # 4. Observability & Tracing Headers
+    response.headers["X-Request-ID"] = request_id
     response.headers["X-Process-Time"] = f"{process_time:.4f}s"
+
+    # 5. Enterprise Security Headers (Clickjacking, MIME-sniffing, XSS protection)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
     return response
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
-import uuid
 
 # Global Exception Handlers for transparent, actionable UX feedback
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     detail_str = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+    req_id = getattr(request.state, "request_id", None)
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -131,7 +170,8 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
             "error": detail_str,
             "detail": detail_str,
             "message": detail_str,
-            "statusCode": exc.status_code
+            "statusCode": exc.status_code,
+            "requestId": req_id
         },
         headers=getattr(exc, "headers", None)
     )
@@ -145,6 +185,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         msg = err.get("msg", "Invalid value")
         error_messages.append(f"{loc}: {msg}" if loc else msg)
     summary = "; ".join(error_messages) if error_messages else "Invalid request data"
+    req_id = getattr(request.state, "request_id", None)
     
     return JSONResponse(
         status_code=422,
@@ -154,14 +195,15 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "detail": summary,
             "message": summary,
             "rawErrors": errors,
-            "statusCode": 422
+            "statusCode": 422,
+            "requestId": req_id
         }
     )
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    correlation_id = str(uuid.uuid4())
-    print(f"CRITICAL ERROR [CorrelationID: {correlation_id}] on {request.url}: {exc}")
+    correlation_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    logger.error(f"CRITICAL ERROR [ReqID: {correlation_id}] on {request.url}: {exc}")
     if settings.SENTRY_DSN:
         sentry_sdk.capture_exception(exc)
     err_str = str(exc) or "An internal server error occurred. Please contact support."
@@ -173,9 +215,37 @@ async def global_exception_handler(request: Request, exc: Exception):
             "detail": err_str,
             "message": err_str,
             "correlationId": correlation_id,
+            "requestId": correlation_id,
             "statusCode": 500
         }
     )
+
+# OpenAPI Swagger Customization: Adds 'Authorize 🔓' button for JWT testing
+from fastapi.openapi.utils import get_openapi
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    openapi_schema["components"] = openapi_schema.get("components", {})
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Enter your JWT token to authorize admin and protected endpoints directly in Swagger UI."
+        }
+    }
+    openapi_schema["security"] = [{"BearerAuth": []}]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
 
 # Include API Routers
 app.include_router(products.router, prefix="/api")
