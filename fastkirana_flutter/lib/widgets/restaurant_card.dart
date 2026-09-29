@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
+import '../core/widgets/app_cached_image.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/restaurant.dart';
@@ -83,9 +85,13 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
     if (r.bannerUrl != null && r.bannerUrl!.isNotEmpty && r.bannerUrl!.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: r.bannerUrl!,
+        cacheManager: FastKiranaImageCacheManager.instance,
         fit: BoxFit.cover,
         memCacheWidth: 600,
         memCacheHeight: 400,
+        maxWidthDiskCache: 800,
+        maxHeightDiskCache: 600,
+        fadeInDuration: const Duration(milliseconds: 180),
         placeholder: (_, __) => _buildImagePlaceholder(),
         errorWidget: (_, __, ___) => _buildLocalOrFallbackImage(r),
       );
@@ -104,9 +110,13 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
       }
       return CachedNetworkImage(
         imageUrl: 'https://www.fastkirana.in${r.bannerUrl}',
+        cacheManager: FastKiranaImageCacheManager.instance,
         fit: BoxFit.cover,
         memCacheWidth: 600,
         memCacheHeight: 400,
+        maxWidthDiskCache: 800,
+        maxHeightDiskCache: 600,
+        fadeInDuration: const Duration(milliseconds: 180),
         placeholder: (_, __) => _buildImagePlaceholder(),
         errorWidget: (_, __, ___) => _buildLocalOrFallbackImage(r),
       );
@@ -116,9 +126,13 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
     if (r.logoUrl != null && r.logoUrl!.isNotEmpty && r.logoUrl!.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: r.logoUrl!,
+        cacheManager: FastKiranaImageCacheManager.instance,
         fit: BoxFit.cover,
         memCacheWidth: 400,
         memCacheHeight: 400,
+        maxWidthDiskCache: 600,
+        maxHeightDiskCache: 600,
+        fadeInDuration: const Duration(milliseconds: 180),
         placeholder: (_, __) => _buildImagePlaceholder(),
         errorWidget: (_, __, ___) => _buildLocalOrFallbackImage(r),
       );
@@ -133,14 +147,14 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
   }
 
   Widget _buildImagePlaceholder() {
-    return Container(
-      color: AppDesignSystem.slate100,
-      child: const Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.orange600),
-        ),
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFFF1F5F9),
+      highlightColor: const Color(0xFFFAFAFA),
+      period: const Duration(milliseconds: 1400),
+      child: Container(
+        color: const Color(0xFFF1F5F9),
+        width: double.infinity,
+        height: double.infinity,
       ),
     );
   }

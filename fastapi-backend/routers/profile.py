@@ -8,6 +8,7 @@ import random
 import uuid
 import logging
 
+from pydantic import BaseModel, Field
 from database import get_db
 from models import User, OtpToken
 from routers.auth import require_auth, normalize_phone, send_whatsapp_otp
@@ -15,6 +16,15 @@ from routers.auth import require_auth, normalize_phone, send_whatsapp_otp
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/profile", tags=["User Profile"])
+
+
+class ProfileSetupRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100, description="Full name")
+    phone: str = Field(..., min_length=10, max_length=15, description="Mobile number")
+
+
+class UpdateNameRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=60, description="Full name")
 
 
 def get_user_id(user: Dict[str, Any]) -> str:
@@ -45,28 +55,16 @@ async def get_profile_setup(
 
 @router.post("/setup")
 async def setup_profile(
-    payload: Dict[str, Any] = Body(...),
+    payload: ProfileSetupRequest,
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Set up profile name and phone.
+    Set up profile name and phone with strict Pydantic V2 validation.
     """
     user_id = get_user_id(current_user)
-    name = payload.get("name")
-    phone = payload.get("phone")
-
-    if not name or not isinstance(name, str) or not name.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Full name is required"
-        )
-
-    if not phone or not isinstance(phone, str) or len(phone.strip()) < 10:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please enter a valid mobile number (at least 10 digits)"
-        )
+    name = payload.name.strip()
+    phone = payload.phone.strip()
 
     try:
         stmt = select(User).where(User.id == user_id)
@@ -79,8 +77,13 @@ async def setup_profile(
                 detail="User not found"
             )
 
-        trimmed_name = name.strip()
+        trimmed_name = name
         normalized_phone = normalize_phone(phone)
+        if len(normalized_phone) < 10:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please enter a valid 10-digit mobile number"
+            )
 
         # Check if phone is already registered to another user
         stmt_phone = select(User).where(User.phone == normalized_phone, User.id != user_id)
@@ -110,27 +113,19 @@ async def setup_profile(
 
 @router.post("/update-name")
 async def update_name(
-    payload: Dict[str, Any] = Body(...),
+    payload: UpdateNameRequest,
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Update name.
+    Update name strictly validated via Pydantic V2.
     """
     user_id = get_user_id(current_user)
-    name = payload.get("name")
-
-    if not name or not isinstance(name, str) or not name.strip():
+    trimmed_name = payload.name.strip()
+    if not trimmed_name:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Name cannot be empty"
-        )
-
-    trimmed_name = name.strip()
-    if len(trimmed_name) > 60:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Name is too long (maximum 60 characters)"
         )
 
     try:

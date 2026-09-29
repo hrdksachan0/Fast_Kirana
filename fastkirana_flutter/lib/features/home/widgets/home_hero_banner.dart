@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/widgets/app_cached_image.dart';
 import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import '../../../core/routes/page_transitions.dart';
 import '../../../data/models/category.dart';
@@ -183,9 +184,13 @@ class HomeHeroBanner extends ConsumerWidget {
                       height: context.isCompact ? 78 : 96,
                       child: CachedNetworkImage(
                         imageUrl: slide['webFallback'] as String,
+                        cacheManager: FastKiranaImageCacheManager.instance,
                         fit: BoxFit.contain,
                         memCacheWidth: 200,
                         memCacheHeight: 200,
+                        maxWidthDiskCache: 300,
+                        maxHeightDiskCache: 300,
+                        fadeInDuration: const Duration(milliseconds: 180),
                         placeholder: (_, __) => Image.asset(
                           slide['imageAsset'] as String,
                           fit: BoxFit.contain,

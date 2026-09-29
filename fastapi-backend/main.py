@@ -23,24 +23,47 @@ try:
 except ImportError:
     sentry_sdk = None
 
+import logging
+logger = logging.getLogger("main")
+
 from contextlib import asynccontextmanager
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize high-performance caching (Redis if configured, otherwise fast in-memory)
+    # 1. Warm up PostgreSQL Connection Pool (Zero Cold Starts)
+    try:
+        from database import engine
+        from sqlalchemy import text
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
+        logger.info("[Lifespan] PostgreSQL connection pool warmed up successfully.")
+    except Exception as e:
+        logger.warning(f"[Lifespan] DB pool warmup skipped/failed: {e}")
+
+    # 2. Initialize high-performance caching (Redis if configured, otherwise fast in-memory)
     if settings.REDIS_URL:
         try:
             from redis import asyncio as aioredis
             from fastapi_cache.backends.redis import RedisBackend
             redis = aioredis.from_url(settings.REDIS_URL)
             FastAPICache.init(RedisBackend(redis), prefix="fastkirana-cache")
+            logger.info("[Lifespan] Redis cache initialized.")
         except Exception:
             FastAPICache.init(InMemoryBackend(), prefix="fastkirana-cache")
     else:
         FastAPICache.init(InMemoryBackend(), prefix="fastkirana-cache")
+
     yield
+
+    # 3. Graceful Shutdown: Dispose DB connection pool cleanly
+    try:
+        from database import engine
+        await engine.dispose()
+        logger.info("[Lifespan] Database connection pool disposed cleanly.")
+    except Exception:
+        pass
 
 from starlette.types import ASGIApp, Scope, Receive, Send
 

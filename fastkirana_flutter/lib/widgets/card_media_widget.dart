@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:video_player/video_player.dart';
 import '../core/config/app_config.dart';
+import '../core/widgets/app_cached_image.dart';
 
 /// Ultra-Aesthetic Hybrid Media Widget for Category & Spotlight Offer Cards
 /// Supports:
@@ -164,7 +166,7 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: Border.all(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   width: 1.0,
                 ),
               ),
@@ -179,10 +181,10 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.52),
+                  color: Colors.black.withValues(alpha: 0.52),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.18),
+                    color: Colors.white.withValues(alpha: 0.18),
                     width: 0.6,
                   ),
                 ),
@@ -335,9 +337,24 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
       final resolvedUrl = _resolveUrl(widget.imageUrl!);
       return CachedNetworkImage(
         imageUrl: resolvedUrl,
+        cacheManager: FastKiranaImageCacheManager.instance,
         fit: widget.fit,
+        memCacheWidth: 600,
+        memCacheHeight: 600,
+        maxWidthDiskCache: 800,
+        maxHeightDiskCache: 800,
+        fadeInDuration: const Duration(milliseconds: 180),
         alignment: Alignment.center,
-        placeholder: (_, __) => const SizedBox.shrink(),
+        placeholder: (_, __) => Shimmer.fromColors(
+          baseColor: const Color(0xFFF1F5F9),
+          highlightColor: const Color(0xFFFAFAFA),
+          period: const Duration(milliseconds: 1400),
+          child: Container(
+            color: const Color(0xFFF1F5F9),
+            width: double.infinity,
+            height: double.infinity,
+          ),
+        ),
         errorWidget: (_, __, ___) => _buildFallbackVisual(),
       );
     }

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
+import '../../core/widgets/app_cached_image.dart';
 import '../../data/models/product.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../core/theme/design_system.dart';
@@ -383,9 +385,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       if (banner.startsWith('http')) {
         return CachedNetworkImage(
           imageUrl: banner,
+          cacheManager: FastKiranaImageCacheManager.instance,
           fit: BoxFit.cover,
           memCacheWidth: 800,
           memCacheHeight: 400,
+          maxWidthDiskCache: 1000,
+          maxHeightDiskCache: 600,
+          fadeInDuration: const Duration(milliseconds: 180),
+          placeholder: (_, __) => _buildBannerPlaceholder(),
           errorWidget: (_, __, ___) => _buildFallbackBanner(),
         );
       } else if (banner.startsWith('/')) {
@@ -400,14 +407,32 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         }
         return CachedNetworkImage(
           imageUrl: 'https://www.fastkirana.in$banner',
+          cacheManager: FastKiranaImageCacheManager.instance,
           fit: BoxFit.cover,
           memCacheWidth: 800,
           memCacheHeight: 400,
+          maxWidthDiskCache: 1000,
+          maxHeightDiskCache: 600,
+          fadeInDuration: const Duration(milliseconds: 180),
+          placeholder: (_, __) => _buildBannerPlaceholder(),
           errorWidget: (_, __, ___) => _buildFallbackBanner(),
         );
       }
     }
     return _buildFallbackBanner();
+  }
+
+  Widget _buildBannerPlaceholder() {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFF1E293B), // Slate 800
+      highlightColor: const Color(0xFF334155),
+      period: const Duration(milliseconds: 1400),
+      child: Container(
+        color: const Color(0xFF1E293B),
+        width: double.infinity,
+        height: double.infinity,
+      ),
+    );
   }
 
   Widget _buildFallbackBanner() {
@@ -426,9 +451,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       if (logo.startsWith('http')) {
         return CachedNetworkImage(
           imageUrl: logo,
+          cacheManager: FastKiranaImageCacheManager.instance,
           fit: BoxFit.cover,
           memCacheWidth: 200,
           memCacheHeight: 200,
+          maxWidthDiskCache: 300,
+          maxHeightDiskCache: 300,
+          fadeInDuration: const Duration(milliseconds: 180),
+          placeholder: (_, __) => _buildLogoPlaceholder(),
           errorWidget: (_, __, ___) => _buildFallbackLogo(),
         );
       } else if (logo.startsWith('/')) {
@@ -442,14 +472,32 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         }
         return CachedNetworkImage(
           imageUrl: 'https://www.fastkirana.in$logo',
+          cacheManager: FastKiranaImageCacheManager.instance,
           fit: BoxFit.cover,
           memCacheWidth: 200,
           memCacheHeight: 200,
+          maxWidthDiskCache: 300,
+          maxHeightDiskCache: 300,
+          fadeInDuration: const Duration(milliseconds: 180),
+          placeholder: (_, __) => _buildLogoPlaceholder(),
           errorWidget: (_, __, ___) => _buildFallbackLogo(),
         );
       }
     }
     return _buildFallbackLogo();
+  }
+
+  Widget _buildLogoPlaceholder() {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFFF1F5F9),
+      highlightColor: const Color(0xFFFAFAFA),
+      period: const Duration(milliseconds: 1400),
+      child: Container(
+        color: const Color(0xFFF1F5F9),
+        width: double.infinity,
+        height: double.infinity,
+      ),
+    );
   }
 
   Widget _buildFallbackLogo() {
@@ -1275,11 +1323,13 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
       if (url.startsWith('http')) {
         return CachedNetworkImage(
           imageUrl: url,
+          cacheManager: FastKiranaImageCacheManager.instance,
           fit: BoxFit.cover,
           memCacheWidth: 200,
           memCacheHeight: 200,
           maxWidthDiskCache: 200,
           maxHeightDiskCache: 200,
+          fadeInDuration: const Duration(milliseconds: 180),
           placeholder: (_, __) => Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 18))),
           errorWidget: (_, __, ___) => _buildLocalAssetOrEmoji(cat),
         );

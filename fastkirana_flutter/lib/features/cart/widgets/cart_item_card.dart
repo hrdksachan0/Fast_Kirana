@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
+import '../../../core/widgets/app_cached_image.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../data/models/cart.dart';
 import '../../../widgets/shimmer_box.dart';
@@ -51,8 +52,14 @@ class CartItemCard extends StatelessWidget {
             padding: const EdgeInsets.all(4),
             child: product.imageUrl != null && product.imageUrl!.isNotEmpty
                 ? CachedNetworkImage(
-                    imageUrl: product.imageUrl!,
+                    imageUrl: AppCachedImage.normalizeUrl(product.imageUrl!) ?? product.imageUrl!,
+                    cacheManager: FastKiranaImageCacheManager.instance,
                     fit: BoxFit.contain,
+                    memCacheWidth: 150,
+                    memCacheHeight: 150,
+                    maxWidthDiskCache: 300,
+                    maxHeightDiskCache: 300,
+                    fadeInDuration: const Duration(milliseconds: 180),
                     placeholder: (_, __) => const ShimmerBox(width: 48, height: 48),
                     errorWidget: (_, __, ___) => const Icon(
                       Icons.shopping_basket_outlined,

@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, time
 import urllib.parse
 import math
+from pydantic import BaseModel, Field
 
 from database import get_db, AsyncSessionLocal
 from models import Order, OrderItem, RiderWallet, CashDepositTransaction, User, Address, OrderStatus, PaymentMethod, PaymentStatus, StoreSetting
@@ -549,9 +550,15 @@ async def get_rider_delivery_location(
     }
 
 
+class RiderLocationUpdate(BaseModel):
+    lat: float = Field(..., ge=-90.0, le=90.0, description="Rider latitude (-90 to +90)")
+    lng: float = Field(..., ge=-180.0, le=180.0, description="Rider longitude (-180 to +180)")
+    orderId: Optional[str] = Field(None, description="Active order ID")
+
+
 @router.post("/location")
 async def update_rider_live_location(
-    payload: Dict[str, Any] = Body(...),
+    payload: RiderLocationUpdate,
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db),
     background_tasks: BackgroundTasks = BackgroundTasks()
@@ -559,15 +566,13 @@ async def update_rider_live_location(
     """
     Update rider's live tracking GPS coordinates and active order coordinates.
     Also triggers automatic 'Arriving in 2 Mins' notification when rider enters within 500m.
+    Strictly validated via Pydantic V2 schema.
     """
     require_delivery_or_admin(current_user)
     user_id = current_user.get("id") or current_user.get("sub")
-    lat = payload.get("lat")
-    lng = payload.get("lng")
-    order_id = payload.get("orderId")
-
-    if lat is None or lng is None:
-        raise HTTPException(status_code=400, detail="Missing lat or lng coordinates")
+    lat = payload.lat
+    lng = payload.lng
+    order_id = payload.orderId
 
     try:
         stmt = select(User).where(User.id == user_id)

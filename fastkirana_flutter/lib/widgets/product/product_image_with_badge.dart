@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../core/widgets/app_cached_image.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../core/utils/dish_timing.dart';
 import '../../data/models/product.dart';
@@ -372,6 +373,7 @@ class ProductImage extends StatelessWidget {
           padding: EdgeInsets.all(s * 6),
           child: CachedNetworkImage(
             imageUrl: resolved,
+            cacheManager: FastKiranaImageCacheManager.instance,
             fit: BoxFit.contain,
             width: double.infinity,
             height: double.infinity,
