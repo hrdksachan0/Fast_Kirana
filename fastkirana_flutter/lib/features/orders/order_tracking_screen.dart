@@ -175,37 +175,27 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
-  Future<void> _handleCashfreeSuccess(String cfOrderId) async {
+  Future<void> _handleCashfreeSuccess(String cfOrderId, {bool alreadyVerified = false}) async {
     HapticFeedback.heavyImpact();
     setState(() => _isProcessingPayment = true);
     try {
-      final dio = ref.read(dioProvider);
-      final verifyRes = await dio.post('/api/payment/cashfree/verify', data: {
-        'orderId': widget.orderId,
-        'cfOrderId': cfOrderId,
-      });
-      if (verifyRes.statusCode == 200 && verifyRes.data != null) {
-        final data = verifyRes.data;
-        if (data['isPaid'] == true || data['paymentStatus'] == 'PAID') {
-          await _fetchLiveOrder();
+      if (!alreadyVerified) {
+        final dio = ref.read(dioProvider);
+        final verifyRes = await dio.post('/api/payment/cashfree/verify', data: {
+          'orderId': widget.orderId,
+          'cfOrderId': cfOrderId,
+        });
+        if (verifyRes.statusCode != 200 || verifyRes.data == null || (verifyRes.data['isPaid'] != true && verifyRes.data['paymentStatus'] != 'PAID')) {
           if (mounted) {
             setState(() => _isProcessingPayment = false);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                backgroundColor: brandGreen,
+                backgroundColor: AppDesignSystem.warning,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                content: Row(
-                  children: [
-                    const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '🎉 Payment Received! Order #${_order?.readableId ?? widget.orderId} is now PAID.',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
-                    ),
-                  ],
+                content: Text(
+                  'Payment was cancelled or could not be verified. Please retry or pay Cash on Delivery.',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
                 ),
               ),
             );
@@ -213,6 +203,31 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           return;
         }
       }
+
+      await _fetchLiveOrder();
+      if (mounted) {
+        setState(() => _isProcessingPayment = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: brandGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '🎉 Payment Received! Order #${_order?.readableId ?? widget.orderId} is now PAID.',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      return;
     } catch (e) {
       debugPrint('Error updating paid status from Cashfree: $e');
     }
@@ -243,7 +258,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         'cfOrderId': cfOrderId,
       });
       if (verifyRes.data != null && (verifyRes.data['isPaid'] == true || verifyRes.data['paymentStatus'] == 'PAID')) {
-        await _handleCashfreeSuccess(cfOrderId);
+        await _handleCashfreeSuccess(cfOrderId, alreadyVerified: true);
         return;
       }
     } catch (_) {}

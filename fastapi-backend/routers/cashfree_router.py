@@ -306,7 +306,7 @@ async def verify_cashfree_payment(
                 if co.status == OrderStatus.ADMIN_PENDING:
                     co.status = OrderStatus.PENDING
 
-        # ── DEDUPLICATION GUARD: Ensure WhatsApp alert is sent EXACTLY ONCE ──
+        # ── DISTRIBUTED ATOMIC DEDUPLICATION GUARD: Ensure WhatsApp alert is sent EXACTLY ONCE ──
         order_key = str(order.combinedId or order.id)
         now_ts = time.time()
         already_notified = False
@@ -317,6 +317,14 @@ async def verify_cashfree_payment(
             already_notified = True
         elif order_key in _alerted_orders_cache and (now_ts - _alerted_orders_cache[order_key]) < 600:
             already_notified = True
+        else:
+            try:
+                from utils.cache import acquire_lock
+                lock_acquired = await acquire_lock(f"lock:cf:paid_notif:{order_key}", ttl_seconds=3600)
+                if not lock_acquired:
+                    already_notified = True
+            except Exception as e:
+                logger.warning(f"[Cashfree] Distributed lock check failed: {e}")
 
         if not already_notified:
             _alerted_orders_cache[order_key] = now_ts
@@ -367,12 +375,13 @@ async def verify_cashfree_payment(
                 else:
                     admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total):.0f}. Payment: PAID ✅"
 
+                dedupe_ref = order.readableId or order.id
                 for admin_phone in ["7054470303", "8112849854"]:
                     if background_tasks:
-                        background_tasks.add_task(send_whatsapp_alert, admin_phone, admin_text)
+                        background_tasks.add_task(send_whatsapp_alert, admin_phone, admin_text, dedupe_ref)
                     else:
                         import asyncio
-                        asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text))
+                        asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text, dedupe_ref))
             except Exception as fcm_err:
                 logger.warning(f"Cashfree payment notification error: {fcm_err}")
 
@@ -475,7 +484,7 @@ async def cashfree_webhook(
                     if co.status == OrderStatus.ADMIN_PENDING:
                         co.status = OrderStatus.PENDING
 
-            # ── DEDUPLICATION GUARD: Ensure WhatsApp alert is sent EXACTLY ONCE ──
+            # ── DISTRIBUTED ATOMIC DEDUPLICATION GUARD: Ensure WhatsApp alert is sent EXACTLY ONCE ──
             order_key = str(order.combinedId or order.id)
             now_ts = time.time()
             already_notified = False
@@ -486,6 +495,14 @@ async def cashfree_webhook(
                 already_notified = True
             elif order_key in _alerted_orders_cache and (now_ts - _alerted_orders_cache[order_key]) < 600:
                 already_notified = True
+            else:
+                try:
+                    from utils.cache import acquire_lock
+                    lock_acquired = await acquire_lock(f"lock:cf:paid_notif:{order_key}", ttl_seconds=3600)
+                    if not lock_acquired:
+                        already_notified = True
+                except Exception as e:
+                    logger.warning(f"[Cashfree] Webhook distributed lock check failed: {e}")
 
             if not already_notified:
                 _alerted_orders_cache[order_key] = now_ts
@@ -506,9 +523,10 @@ async def cashfree_webhook(
                     else:
                         admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total):.0f}. Payment: PAID ✅"
 
+                    dedupe_ref = order.readableId or order.id
                     import asyncio
                     for admin_phone in ["7054470303", "8112849854"]:
-                        asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text))
+                        asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text, dedupe_ref))
                 except Exception as wa_err:
                     logger.warning(f"Cashfree webhook WhatsApp notification error: {wa_err}")
 

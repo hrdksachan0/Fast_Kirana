@@ -265,7 +265,7 @@ async def geocode_address(address_str: str) -> Optional[dict]:
     return None
 
 
-async def send_whatsapp_alert(phone: str, text: str) -> bool:
+async def send_whatsapp_alert(phone: str, text: str, dedupe_key: Optional[str] = None) -> bool:
     token = re.sub(r'\s+', '', os.getenv("WHATSAPP_TOKEN", "").strip().strip('"').strip("'"))
     phone_id = re.sub(r'\s+', '', os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip().strip('"').strip("'"))
     template_name = os.getenv("WHATSAPP_ORDER_TEMPLATE_NAME", "fastkirana_otp").strip().strip('"').strip("'")
@@ -277,6 +277,28 @@ async def send_whatsapp_alert(phone: str, text: str) -> bool:
 
     digits = "".join(c for c in str(phone) if c.isdigit())
     clean_phone = digits if len(digits) > 10 else f"91{digits[-10:]}"
+
+    # Deduplication Guard: Atomic distributed lock on Redis (1 hour TTL)
+    # Extracts order readableId / key from dedupe_key or regex matching "#<id>" in text
+    order_ref = dedupe_key
+    if not order_ref and text:
+        match = re.search(r"#([A-Za-z0-9_-]+)", text)
+        if match:
+            order_ref = match.group(1).split("[")[0].strip()
+        else:
+            order_ref = text[:32].replace(" ", "_")
+
+    if order_ref:
+        lock_key = f"lock:wa:alert:{clean_phone}:{order_ref}"
+        try:
+            from utils.cache import acquire_lock
+            acquired = await acquire_lock(lock_key, ttl_seconds=3600)
+            if not acquired:
+                logger.info(f"[WhatsApp Alert] Skipping duplicate alert to {clean_phone} for key {lock_key}")
+                return True
+        except Exception as lock_err:
+            logger.warning(f"[WhatsApp Alert] Dedupe lock error: {lock_err}")
+
     url = f"https://graph.facebook.com/v20.0/{phone_id}/messages"
     headers = {
         "Authorization": f"Bearer {token}",

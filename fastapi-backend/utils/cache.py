@@ -165,3 +165,34 @@ async def invalidate_catalog_cache():
     await invalidate_cache_pattern("categories:*")
     await invalidate_cache_pattern("search:*")
     logger.info("[Cache] Catalog cache invalidated across Redis & Memory.")
+
+
+async def acquire_lock(key: str, ttl_seconds: int = 3600) -> bool:
+    """
+    Acquire an atomic distributed lock using Redis SET NX EX.
+    Guarantees that across multiple processes and servers, only 1 caller can acquire
+    the lock for the given duration. Returns True if acquired, False otherwise.
+    Falls back gracefully to local memory cache if Redis is not connected.
+    """
+    redis = await get_redis_connection()
+    if redis:
+        try:
+            # set(name, value, nx=True, ex=ttl_seconds) returns True if set, None if already exists
+            res = await redis.set(key, "1", nx=True, ex=ttl_seconds)
+            return bool(res)
+        except Exception as e:
+            logger.warning(f"[Cache] Redis acquire_lock error for {key}: {e}")
+
+    # Fallback to local memory lock
+    now = time.time()
+    if key in _LOCAL_CACHE:
+        if _LOCAL_CACHE_EXPIRY.get(key, 0) > now:
+            return False
+        else:
+            _LOCAL_CACHE.pop(key, None)
+            _LOCAL_CACHE_EXPIRY.pop(key, None)
+
+    _LOCAL_CACHE[key] = "1"
+    _LOCAL_CACHE_EXPIRY[key] = now + ttl_seconds
+    return True
+
