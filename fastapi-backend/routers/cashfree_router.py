@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request, Response, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 import httpx
@@ -459,6 +460,7 @@ async def verify_cashfree_payment(
 
 
 @router.get("/payment/cashfree/webhook")
+@router.get("/payments/cashfree/webhook")
 async def cashfree_webhook_status():
     """
     Cashfree webhook health check/status endpoint.
@@ -467,12 +469,15 @@ async def cashfree_webhook_status():
 
 
 @router.post("/payment/cashfree/webhook")
+@router.post("/payments/cashfree/webhook")
 async def cashfree_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Webhook endpoint to receive Cashfree server-to-server transaction notifications.
+    Handles PAYMENT_SUCCESS, PAYMENT_FAILED, and USER_DROPPED with full deduplication,
+    FCM sound alerts to kitchen & store, WhatsApp notifications, and WebSocket broadcasts.
     """
     try:
         raw_body = await request.body()
@@ -480,7 +485,7 @@ async def cashfree_webhook(
     except Exception:
         return Response(status_code=400, content="Invalid JSON")
 
-    # C5 FIX: Verify Cashfree webhook signature
+    # Verify Cashfree webhook signature if secret configured
     webhook_secret = os.environ.get("CASHFREE_WEBHOOK_SECRET", "")
     if webhook_secret:
         signature = request.headers.get("x-webhook-signature", "")
@@ -494,8 +499,10 @@ async def cashfree_webhook(
                 hashlib.sha256
             ).hexdigest()
             if not hmac.compare_digest(expected, signature):
+                logger.warning("[Cashfree Webhook] Invalid webhook signature received")
                 return Response(status_code=401, content="Invalid webhook signature")
 
+    event_type = payload.get("type", "")
     data = payload.get("data", {})
     order_data = data.get("order", {})
     payment_data = data.get("payment", {})
@@ -506,16 +513,22 @@ async def cashfree_webhook(
     if not cf_order_id:
         return Response(status_code=200, content="OK")
 
-    clean_id = re.sub(r"_r\d+$", "", cf_order_id)
+    clean_id = re.sub(r"_r\d+$", "", str(cf_order_id).strip())
 
-    if payment_status == "SUCCESS":
-        stmt = select(Order).where(
+    # ── 1. PAYMENT SUCCESS FLOW ──────────────────────────────────────────
+    if event_type == "PAYMENT_SUCCESS_WEBHOOK" or payment_status == "SUCCESS":
+        stmt = select(Order).options(
+            selectinload(Order.address),
+            selectinload(Order.user),
+            selectinload(Order.restaurant)
+        ).where(
             (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == cf_order_id)
         )
         res = await db.execute(stmt)
         order = res.scalars().first()
 
         if order and order.paymentStatus != PaymentStatus.PAID:
+            was_cod = (order.paymentMethod == PaymentMethod.COD)
             order.paymentStatus = PaymentStatus.PAID
             order.paymentMethod = PaymentMethod.UPI
             cf_ref = payment_data.get("cf_payment_id") or cf_order_id
@@ -523,12 +536,16 @@ async def cashfree_webhook(
             if not order.notes or "Cashfree PG Paid" not in order.notes:
                 order.notes = f"{order.notes} | {cf_note}" if order.notes else cf_note
 
-            if order.status == OrderStatus.ADMIN_PENDING:
-                order.status = OrderStatus.PENDING
+            if order.status == OrderStatus.ADMIN_PENDING or order.status == OrderStatus.PENDING:
+                order.status = OrderStatus.CONFIRMED
 
             comb_orders = []
             if order.combinedId:
-                comb_stmt = select(Order).where(Order.combinedId == order.combinedId)
+                comb_stmt = select(Order).options(
+                    selectinload(Order.address),
+                    selectinload(Order.user),
+                    selectinload(Order.restaurant)
+                ).where(Order.combinedId == order.combinedId)
                 comb_res = await db.execute(comb_stmt)
                 comb_orders = comb_res.scalars().all()
                 for co in comb_orders:
@@ -536,10 +553,10 @@ async def cashfree_webhook(
                     co.paymentMethod = PaymentMethod.UPI
                     if not co.notes or "Cashfree PG Paid" not in co.notes:
                         co.notes = f"{co.notes} | {cf_note}" if co.notes else cf_note
-                    if co.status == OrderStatus.ADMIN_PENDING:
-                        co.status = OrderStatus.PENDING
+                    if co.status == OrderStatus.ADMIN_PENDING or co.status == OrderStatus.PENDING:
+                        co.status = OrderStatus.CONFIRMED
 
-            # ── DISTRIBUTED ATOMIC DEDUPLICATION GUARD: Ensure WhatsApp alert is sent EXACTLY ONCE ──
+            # ── DISTRIBUTED ATOMIC DEDUPLICATION GUARD: Ensure alerts are sent EXACTLY ONCE ──
             order_key = str(order.combinedId or order.id)
             now_ts = time.time()
             already_notified = False
@@ -567,7 +584,30 @@ async def cashfree_webhook(
 
             await db.commit()
 
+            # ── Realtime Broadcast & Multi-Channel Notifications ──────────────────
             if not already_notified:
+                import asyncio
+                target_orders = comb_orders if comb_orders else [order]
+
+                # 1. FCM Push to Darkstore & Restaurant Kitchen
+                try:
+                    from routers.orders import dispatch_isolated_order_fcm_notifications
+                    for o in target_orders:
+                        asyncio.create_task(
+                            dispatch_isolated_order_fcm_notifications(
+                                o.id,
+                                o.readableId,
+                                o.restaurantId,
+                                o.shopName,
+                                float(o.total or 0),
+                                "CONFIRMED",
+                                o.storeId
+                            )
+                        )
+                except Exception as fcm_err:
+                    logger.warning(f"[Cashfree Webhook] FCM dispatch notice: {fcm_err}")
+
+                # 2. WhatsApp Notification
                 try:
                     from routers.orders import send_whatsapp_alert
                     if comb_orders:
@@ -576,13 +616,46 @@ async def cashfree_webhook(
                         outlets = " + ".join(dict.fromkeys(co.shopName for co in comb_orders if co.shopName)) or "Combined Order"
                         admin_text = f"💳 *PAID Online Order (Cashfree)* #{base_id} [{outlets}] Total: ₹{combined_total:.0f}. Payment: PAID ✅"
                     else:
-                        admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total):.0f}. Payment: PAID ✅"
+                        admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total or 0):.0f}. Payment: PAID ✅"
+
+                    if was_cod:
+                        admin_text = f"⚠️ *LATE PAYMENT RECONCILED* (Cashfree) #{order.readableId or order.id[:6].upper()} of ₹{float(order.total or 0):.0f}. Paid Online ✅. DO NOT COLLECT CASH!"
 
                     dedupe_ref = order.readableId or order.id
-                    import asyncio
                     for admin_phone in ["7054470303", "8112849854"]:
                         asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text, dedupe_ref))
                 except Exception as wa_err:
-                    logger.warning(f"Cashfree webhook WhatsApp notification error: {wa_err}")
+                    logger.warning(f"[Cashfree Webhook] WhatsApp notification error: {wa_err}")
+
+                # 3. Live WebSocket Event Broadcast to Customer & Dashboard
+                try:
+                    from routers.websockets import manager
+                    for o in target_orders:
+                        clean_oid = str(o.readableId or o.id).strip().lstrip("#")
+                        asyncio.create_task(manager.broadcast_to_channel(f"order_{clean_oid}", {
+                            "event": "PAYMENT_CONFIRMED",
+                            "orderId": o.id,
+                            "readableId": o.readableId,
+                            "status": "CONFIRMED",
+                            "paymentStatus": "PAID"
+                        }))
+                except Exception as ws_err:
+                    logger.warning(f"[Cashfree Webhook] WebSocket broadcast notice: {ws_err}")
+
+    # ── 2. PAYMENT FAILED / DROPPED FLOW ─────────────────────────────────
+    elif (
+        event_type in ["PAYMENT_FAILED_WEBHOOK", "PAYMENT_USER_DROPPED_WEBHOOK"] or
+        payment_status in ["FAILED", "USER_DROPPED"]
+    ):
+        stmt = select(Order).where(
+            (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == cf_order_id)
+        )
+        res = await db.execute(stmt)
+        order = res.scalars().first()
+        if order and order.paymentStatus != PaymentStatus.PAID and order.paymentMethod != PaymentMethod.COD:
+            order.paymentStatus = PaymentStatus.FAILED
+            await db.commit()
+            logger.info(f"[Cashfree Webhook] Marked order #{order.readableId or order.id} as PAYMENT_FAILED")
 
     return Response(status_code=200, content="OK")
+
