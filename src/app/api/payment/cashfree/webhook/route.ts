@@ -67,6 +67,13 @@ export async function POST(req: NextRequest) {
           const order = orders[0]
           const wasCod = (order.paymentMethod || '').toUpperCase() === 'COD'
 
+          // Build Cashfree audit note with real payment reference
+          const cfPayId = paymentData?.cf_payment_id || paymentData?.payment_id || ''
+          const cfPayMode = paymentData?.payment_group || paymentData?.payment_method?.upi?.channel || 'UPI'
+          const cfNote = cfPayId
+            ? `Cashfree Auto-Paid (Webhook CF_${cfPayId}, ${cfPayMode})`
+            : 'Cashfree Auto-Paid (Webhook)'
+
           if (order.paymentStatus !== 'PAID') {
             if (order.combinedId) {
               await prisma.$executeRaw`
@@ -74,6 +81,11 @@ export async function POST(req: NextRequest) {
                 SET "paymentStatus" = 'PAID'::"PaymentStatus",
                     "paymentMethod" = 'UPI'::"PaymentMethod",
                     "status" = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+                    notes = CASE 
+                      WHEN notes IS NULL OR notes = '' THEN ${cfNote}
+                      WHEN notes LIKE '%Cashfree%' THEN notes
+                      ELSE notes || ' | ' || ${cfNote}
+                    END,
                     "updatedAt" = NOW()
                 WHERE "combinedId" = ${order.combinedId}
               `
@@ -83,6 +95,11 @@ export async function POST(req: NextRequest) {
                 SET "paymentStatus" = 'PAID'::"PaymentStatus",
                     "paymentMethod" = 'UPI'::"PaymentMethod",
                     "status" = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+                    notes = CASE 
+                      WHEN notes IS NULL OR notes = '' THEN ${cfNote}
+                      WHEN notes LIKE '%Cashfree%' THEN notes
+                      ELSE notes || ' | ' || ${cfNote}
+                    END,
                     "updatedAt" = NOW()
                 WHERE id = ${order.id}
               `

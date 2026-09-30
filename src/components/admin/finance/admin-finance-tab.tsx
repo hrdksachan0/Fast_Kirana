@@ -718,19 +718,19 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                         <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md">
                           <CheckCircle2 className="w-2.5 h-2.5" />
                           {tx.category === 'CASHFREE_ONLINE'
-                            ? 'UPI (Cashfree ✓)'
+                            ? 'UPI Online (Cashfree ✓)'
                             : tx.category === 'RIDER_QR'
-                            ? 'UPI (Rider QR)'
+                            ? 'UPI (Rider QR ✓)'
                             : tx.category === 'RIDER_CASH'
-                            ? 'COD (Cash)'
+                            ? 'Cash (COD — Rider)'
                             : tx.category === 'COUNTER_CASH'
-                            ? 'COD (Counter)'
+                            ? 'Cash (Counter/Walk-in)'
                             : `${tx.paymentMethod || 'UPI'} (PAID)`}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md">
                           <Clock className="w-2.5 h-2.5" />
-                          {tx.paymentMethod} (PENDING)
+                          {tx.paymentMethod === 'COD' ? 'COD (Cash)' : `${tx.paymentMethod} (Pending)`}
                         </span>
                       )}
                     </td>
@@ -772,15 +772,19 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                         </span>
                       ) : tx.category === 'RIDER_CASH' ? (
                         <span className="text-[10px] font-bold text-amber-600 flex items-center justify-center gap-1">
-                          <Clock className="w-3 h-3" /> With Rider (Cash)
+                          <Clock className="w-3 h-3" /> {tx.riderName ? `With ${tx.riderName}` : 'With Rider'} (Cash)
+                        </span>
+                      ) : tx.category === 'COUNTER_CASH' ? (
+                        <span className="text-[10px] font-bold text-blue-600 flex items-center justify-center gap-1">
+                          <Check className="w-3 h-3" /> Counter Sale
                         </span>
                       ) : tx.category === 'PENDING_ONLINE' ? (
                         <span className="text-[10px] font-bold text-amber-600 flex items-center justify-center gap-1">
                           <Clock className="w-3 h-3" /> Awaiting Payment
                         </span>
                       ) : (
-                        <span className="text-[10px] font-medium text-amber-600">
-                          Pending Delivery
+                        <span className="text-[10px] font-medium text-amber-600 flex items-center justify-center gap-1">
+                          <Truck className="w-3 h-3" /> {tx.riderName ? `${tx.riderName} Delivering` : 'Pending Delivery'}
                         </span>
                       )}
                     </td>

@@ -75,12 +75,16 @@ export async function GET(req: NextRequest) {
       const pMethod = String(o.paymentMethod || 'COD').toUpperCase()
       const oStatus = String(o.status || 'PENDING').toUpperCase()
       const notes = String(o.notes || '')
+      const riderName = o.deliveryUser?.name || null
 
       // Doorstep QR detection: rider showed QR to customer at delivery
       const isDoorstepQr = notes.includes('Doorstep UPI') || notes.includes('QR Scan') || notes.includes('Rider QR')
 
-      // Cashfree PG detection: notes written by verify/webhook route
+      // Cashfree PG detection from notes (written by verify route or webhook)
       const hasCashfreeNote = notes.includes('Cashfree PG') || notes.includes('CF_') || notes.includes('Cashfree Auto-Paid')
+      // Extract CF payment reference for display
+      const cfRefMatch = notes.match(/CF_(\d+)/)
+      const cfRef = cfRefMatch ? cfRefMatch[1] : null
 
       // Admin manual verification
       const isAdminVerified = notes.includes('Admin Verified')
@@ -103,58 +107,69 @@ export async function GET(req: NextRequest) {
         riderQrTotal += tot
         riderQrCount += 1
         category = 'RIDER_QR'
-        verifiedBy = `Rider QR (${o.deliveryUser?.name || 'Rider'})`
+        verifiedBy = `Rider QR (${riderName || 'Rider'})`
 
       } else if (pStatus === 'PAID' && isOnlineMethod) {
         // ── CASHFREE PG ONLINE ──
-        // Since Cashfree is the ONLY gateway, every non-COD non-doorstep-QR PAID order = Cashfree
+        // Since Cashfree is the ONLY gateway, every non-COD non-doorstep-QR PAID order = Cashfree verified
         cashfreeOnlineTotal += tot
         cashfreeOnlineCount += 1
         category = 'CASHFREE_ONLINE'
 
         if (isAdminVerified) {
-          verifiedBy = `Cashfree PG (Admin: ${adminVerifierName})`
+          verifiedBy = `Cashfree Gateway (Admin: ${adminVerifierName})`
+        } else if (hasCashfreeNote && cfRef) {
+          verifiedBy = `Cashfree Gateway ✓ (CF_${cfRef})`
         } else if (hasCashfreeNote) {
-          verifiedBy = 'Cashfree PG (Auto ✓)'
+          verifiedBy = 'Cashfree Gateway ✓ (Auto)'
         } else {
-          verifiedBy = 'Cashfree PG (Online)'
+          // No notes but PAID+UPI = still Cashfree verified (only gateway)
+          verifiedBy = 'Cashfree Gateway (Verified)'
         }
 
       } else if (pStatus === 'PAID' && pMethod === 'COD') {
-        // ── COD PAID ──
+        // ── COD PAID ── (cash collected or settled)
         if (o.cashSettledToAdmin) {
           counterCashTotal += tot
           counterCashCount += 1
           category = 'COUNTER_CASH'
-          verifiedBy = 'Settled to Counter'
+          verifiedBy = riderName ? `Settled to Counter (via ${riderName})` : 'Settled to Counter'
         } else if (oStatus === 'DELIVERED') {
           riderCashTotal += tot
           riderCashCount += 1
           category = 'RIDER_CASH'
-          verifiedBy = `Rider Cash (${o.deliveryUser?.name || 'Rider'})`
+          verifiedBy = `Rider Cash (${riderName || 'Rider'})`
         } else {
+          // COD PAID but not yet delivered — counter/walk-in pickup or admin-marked
           counterCashTotal += tot
           counterCashCount += 1
           category = 'COUNTER_CASH'
-          verifiedBy = 'Counter Cash'
+          verifiedBy = 'Counter Cash (Walk-in)'
         }
 
       } else {
         // ── PENDING (not yet paid) ──
         if (pMethod === 'COD') {
           if (oStatus === 'DELIVERED') {
+            // Delivered but paymentStatus not marked PAID yet — rider has the cash
             riderCashTotal += tot
             riderCashCount += 1
             category = 'RIDER_CASH'
-            verifiedBy = `Rider Cash (${o.deliveryUser?.name || 'Rider'})`
+            verifiedBy = `Rider Cash (${riderName || 'Rider'})`
+          } else if (['CONFIRMED', 'PREPARING', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY'].includes(oStatus)) {
+            // COD order in transit — cash will be collected at doorstep
+            pendingCodTotal += tot
+            pendingCodCount += 1
+            category = 'PENDING_DELIVERY'
+            verifiedBy = riderName ? `COD via ${riderName} (On Way)` : 'COD at Doorstep'
           } else {
             pendingCodTotal += tot
             pendingCodCount += 1
             category = 'PENDING_DELIVERY'
-            verifiedBy = 'COD at Doorstep'
+            verifiedBy = 'COD (Awaiting Dispatch)'
           }
         } else {
-          // Online method but not yet PAID
+          // Online method but not yet PAID — customer hasn't completed payment
           pendingOnlineTotal += tot
           pendingOnlineCount += 1
           category = 'PENDING_ONLINE'
@@ -203,12 +218,19 @@ export async function GET(req: NextRequest) {
     const riderSummary = riders
       .map((r: any) => {
         const cashInHand = Number(r.riderWallet?.cashInHand || 0)
-        const riderDelivered = transactions.filter(
-          (t: any) => t.riderName === r.name && t.orderStatus === 'DELIVERED'
+        // Match by deliveryUserId for accuracy (not name string)
+        const riderOrders = orders.filter(
+          (o: any) => o.deliveryUserId === r.id
         )
-        const todayCashCollected = riderDelivered
-          .filter((t: any) => t.category === 'RIDER_CASH' || (t.paymentMethod === 'COD' && !t.cashSettled))
-          .reduce((s: number, t: any) => s + t.total, 0)
+        const riderDeliveredOrders = riderOrders.filter(
+          (o: any) => String(o.status || '').toUpperCase() === 'DELIVERED'
+        )
+        const todayCashCollected = riderDeliveredOrders
+          .filter((o: any) => {
+            const pm = String(o.paymentMethod || 'COD').toUpperCase()
+            return pm === 'COD' && !o.cashSettledToAdmin
+          })
+          .reduce((s: number, o: any) => s + Number(o.total || 0), 0)
 
         return {
           id: r.id,
@@ -216,8 +238,8 @@ export async function GET(req: NextRequest) {
           phone: r.phone || '',
           cashInHand,
           todayCashCollected,
-          todayDeliveredCount: riderDelivered.length,
-          todayDeliveredTotal: riderDelivered.reduce((s: number, t: any) => s + t.total, 0),
+          todayDeliveredCount: riderDeliveredOrders.length,
+          todayDeliveredTotal: riderDeliveredOrders.reduce((s: number, o: any) => s + Number(o.total || 0), 0),
         }
       })
       .filter((r: any) => r.cashInHand > 0 || r.todayDeliveredCount > 0)
