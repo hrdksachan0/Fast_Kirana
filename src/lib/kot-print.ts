@@ -13,23 +13,23 @@ interface PrintQueueItem {
 let printQueue: PrintQueueItem[] = []
 let isPrinting = false
 
-function getFreshHiddenIframe(): HTMLIFrameElement {
-  let existing = document.getElementById('fastkirana-silent-printer') as HTMLIFrameElement | null
-  if (existing && existing.parentNode) {
-    existing.parentNode.removeChild(existing)
+function getPrintingIframe(): HTMLIFrameElement {
+  let iframe = document.getElementById('fastkirana-silent-printer') as HTMLIFrameElement | null
+  if (!iframe) {
+    iframe = document.createElement('iframe')
+    iframe.id = 'fastkirana-silent-printer'
+    iframe.style.position = 'fixed'
+    iframe.style.right = '-9999px'
+    iframe.style.bottom = '-9999px'
+    iframe.style.width = '80mm'
+    iframe.style.height = '3500px'
+    iframe.style.minHeight = '3500px'
+    iframe.style.opacity = '0.01'
+    iframe.style.pointerEvents = 'none'
+    iframe.style.border = '0'
+    iframe.style.zIndex = '-9999'
+    document.body.appendChild(iframe)
   }
-  const iframe = document.createElement('iframe')
-  iframe.id = 'fastkirana-silent-printer'
-  iframe.style.position = 'fixed'
-  iframe.style.right = '-9999px'
-  iframe.style.bottom = '-9999px'
-  iframe.style.width = '350px'
-  iframe.style.height = '450px'
-  iframe.style.opacity = '0.01'
-  iframe.style.pointerEvents = 'none'
-  iframe.style.border = '0'
-  iframe.style.zIndex = '-9999'
-  document.body.appendChild(iframe)
   return iframe
 }
 
@@ -68,11 +68,10 @@ async function processPrintQueue() {
           } catch (e) {
             console.error('Mobile print error:', e)
           }
-        }, 350)
+        }, 400)
       }
     } else {
-      // Fresh clean iframe on every print to avoid stale DOM/HTML retention
-      const iframe = getFreshHiddenIframe()
+      const iframe = getPrintingIframe()
       const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
 
       if (iframeDoc && iframe.contentWindow) {
@@ -80,28 +79,33 @@ async function processPrintQueue() {
         iframeDoc.write(item.html)
         iframeDoc.close()
 
-        await new Promise((resolve) => setTimeout(resolve, 80))
+        // 🛡️ Allow full DOM calculation and font metrics layout before triggering print dialog
+        await new Promise((resolve) => setTimeout(resolve, 250))
 
         try {
           iframe.contentWindow.focus()
           iframe.contentWindow.print()
         } catch (printErr) {
           console.warn('Iframe print blocked, falling back to window.open:', printErr)
-          const printWindow = window.open('', '_blank', 'width=450,height=600')
+          const printWindow = window.open('', '_blank', 'width=450,height=800')
           if (printWindow) {
             printWindow.document.write(item.html)
             printWindow.document.close()
             printWindow.focus()
-            printWindow.print()
+            setTimeout(() => {
+              try { printWindow.print() } catch (_) {}
+            }, 250)
           }
         }
       } else {
-        const printWindow = window.open('', '_blank', 'width=450,height=600')
+        const printWindow = window.open('', '_blank', 'width=450,height=800')
         if (printWindow) {
           printWindow.document.write(item.html)
           printWindow.document.close()
           printWindow.focus()
-          printWindow.print()
+          setTimeout(() => {
+            try { printWindow.print() } catch (_) {}
+          }, 250)
         }
       }
     }
@@ -113,7 +117,7 @@ async function processPrintQueue() {
       if (printQueue.length > 0) {
         processPrintQueue()
       }
-    }, 50)
+    }, 150)
   }
 }
 
@@ -273,16 +277,23 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
         <title>KOT - ${orderIdText}</title>
         <style>
           @page {
-            size: auto;
+            size: 78mm auto;
             margin: 0mm;
           }
-          body {
+          html, body {
             font-family: 'Courier New', Courier, monospace;
-            width: 78mm;
-            margin: 0 auto;
-            padding: 8px;
+            width: 78mm !important;
+            max-width: 78mm !important;
+            margin: 0 auto !important;
+            padding: 4px 6px !important;
             color: #000;
             background: #fff;
+            height: auto !important;
+            min-height: 100% !important;
+            overflow: visible !important;
+            box-sizing: border-box !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .title {
             font-size: 18px;
@@ -322,9 +333,17 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
             font-weight: bold;
           }
           @media print {
-            body {
-              width: 100%;
-              padding: 4px;
+            html, body {
+              width: 78mm !important;
+              max-width: 78mm !important;
+              height: auto !important;
+              overflow: visible !important;
+              margin: 0 !important;
+              padding: 4px 6px !important;
+            }
+            .items-table tr, .info-table tr, .footer {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
           }
         </style>
@@ -376,6 +395,8 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
           *** FASTKIRANA KITCHEN SYSTEM ***<br/>
           Prompt & Hot Preparation Verified
         </div>
+        <!-- 🛡️ Thermal roll cutter buffer: feeds paper past the cutter blade before cutting -->
+        <div style="height: 50px; min-height: 50px; width: 100%; display: block; clear: both; page-break-inside: avoid;"></div>
       </body>
     </html>
   `
@@ -452,14 +473,21 @@ export function generateInvoiceHtml(order: any): string {
       <head>
         <title>Invoice - ${orderIdText}</title>
         <style>
-          @page { size: auto; margin: 0mm; }
-          body {
+          @page { size: 78mm auto; margin: 0mm; }
+          html, body {
             font-family: 'Courier New', Courier, monospace;
-            width: 78mm;
-            margin: 0 auto;
-            padding: 8px;
+            width: 78mm !important;
+            max-width: 78mm !important;
+            margin: 0 auto !important;
+            padding: 4px 6px !important;
             color: #000;
             background: #fff;
+            height: auto !important;
+            min-height: 100% !important;
+            overflow: visible !important;
+            box-sizing: border-box !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .title { font-size: 18px; font-weight: 900; text-align: center; letter-spacing: 1px; }
           .subtitle { text-align: center; font-size: 11px; font-weight: bold; margin-bottom: 8px; border-bottom: 2px dashed #000; padding-bottom: 6px; }
@@ -467,6 +495,20 @@ export function generateInvoiceHtml(order: any): string {
           .items-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
           .summary-table { width: 100%; font-size: 11px; border-top: 2px dashed #000; padding-top: 6px; margin-bottom: 8px; }
           .footer { text-align: center; font-size: 10px; margin-top: 10px; border-top: 2px dashed #000; padding-top: 6px; font-weight: bold; }
+          @media print {
+            html, body {
+              width: 78mm !important;
+              max-width: 78mm !important;
+              height: auto !important;
+              overflow: visible !important;
+              margin: 0 !important;
+              padding: 4px 6px !important;
+            }
+            .items-table tr, .info-table tr, .summary-table tr, .footer {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+          }
         </style>
       </head>
       <body>
@@ -533,6 +575,8 @@ export function generateInvoiceHtml(order: any): string {
           Thank you for ordering with FastKirana!<br/>
           Support: +91 70544 70303
         </div>
+        <!-- 🛡️ Thermal roll cutter buffer: feeds paper past the cutter blade before cutting -->
+        <div style="height: 50px; min-height: 50px; width: 100%; display: block; clear: both; page-break-inside: avoid;"></div>
       </body>
     </html>
   `
