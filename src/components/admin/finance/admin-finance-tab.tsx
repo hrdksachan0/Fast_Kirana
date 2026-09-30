@@ -51,6 +51,7 @@ interface RiderSummary {
   name: string
   phone: string
   cashInHand: number
+  todayCashCollected?: number
   todayDeliveredCount: number
   todayDeliveredTotal: number
 }
@@ -91,7 +92,7 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'CASHFREE' | 'RIDER_QR' | 'RIDER_CASH' | 'COUNTER_CASH' | 'PENDING'>('ALL')
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'CASHFREE' | 'RIDER_QR' | 'RIDER_CASH' | 'COUNTER_CASH' | 'COD_PENDING' | 'ONLINE_PENDING' | 'CANCELLED'>('ALL')
   const [settlingRiderId, setSettlingRiderId] = useState<string | null>(null)
 
   // Fetch Finance Data
@@ -188,7 +189,9 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
       if (activeFilter === 'RIDER_QR' && tx.category !== 'RIDER_QR') return false
       if (activeFilter === 'RIDER_CASH' && tx.category !== 'RIDER_CASH') return false
       if (activeFilter === 'COUNTER_CASH' && tx.category !== 'COUNTER_CASH') return false
-      if (activeFilter === 'PENDING' && !tx.category.startsWith('PENDING')) return false
+      if (activeFilter === 'COD_PENDING' && tx.category !== 'PENDING_DELIVERY') return false
+      if (activeFilter === 'ONLINE_PENDING' && tx.category !== 'PENDING_ONLINE') return false
+      if (activeFilter === 'CANCELLED' && tx.category !== 'CANCELLED') return false
 
       // Search Query
       if (searchQuery.trim()) {
@@ -455,16 +458,28 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
           </p>
         </div>
 
-        {summary.pendingCodTotal > 0 && (
-          <div className="bg-background/10 border border-background/20 px-4 py-2.5 rounded-2xl text-left md:text-right">
-            <p className="text-[11px] font-bold text-background/90 uppercase tracking-wide">
-              🛵 COD on the way (Delivering)
-            </p>
-            <p className="text-lg font-black text-background">
-              {formatPrice(summary.pendingCodTotal)} <span className="text-xs font-semibold opacity-80">({summary.pendingCodCount} orders)</span>
-            </p>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {summary.pendingCodTotal > 0 && (
+            <div className="bg-background/10 border border-background/20 px-4 py-2.5 rounded-2xl text-left md:text-right">
+              <p className="text-[11px] font-bold text-background/90 uppercase tracking-wide">
+                🛵 COD on the way (Delivering)
+              </p>
+              <p className="text-lg font-black text-background">
+                {formatPrice(summary.pendingCodTotal)} <span className="text-xs font-semibold opacity-80">({summary.pendingCodCount} orders)</span>
+              </p>
+            </div>
+          )}
+          {summary.pendingOnlineTotal > 0 && (
+            <div className="bg-background/10 border border-background/20 px-4 py-2.5 rounded-2xl text-left md:text-right">
+              <p className="text-[11px] font-bold text-amber-300 uppercase tracking-wide">
+                ⏳ Awaiting Online Payment
+              </p>
+              <p className="text-lg font-black text-background">
+                {formatPrice(summary.pendingOnlineTotal)} <span className="text-xs font-semibold opacity-80">({summary.pendingOnlineCount} orders)</span>
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── RIDER CASH HANDOVER (1-CLICK SETTLE) ── */}
@@ -494,12 +509,18 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                 <div>
                   <h4 className="font-bold text-sm text-text-primary">{r.name}</h4>
                   <p className="text-xs text-text-secondary font-medium mt-0.5">{r.phone || 'No phone'}</p>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
                     <span className="text-[11px] font-bold text-text-secondary">
-                      Delivered: <strong className="text-text-primary">{r.todayDeliveredCount}</strong>
+                      Delivered Today: <strong className="text-text-primary">{r.todayDeliveredCount}</strong>
                     </span>
+                    {r.todayCashCollected !== undefined && (
+                      <span className="text-[11px] font-bold text-text-secondary">
+                        Today Cash: <strong className="text-text-primary">{formatPrice(r.todayCashCollected)}</strong>
+                      </span>
+                    )}
                     <span className="text-[11px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
-                      Cash: {formatPrice(r.cashInHand)}
+                      {r.todayDeliveredCount === 0 && r.cashInHand > 0 ? 'Past Unsettled: ' : 'Cash: '}
+                      {formatPrice(r.cashInHand)}
                     </span>
                   </div>
                 </div>
@@ -608,14 +629,40 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
           {summary.pendingCodCount > 0 && (
             <button
               type="button"
-              onClick={() => setActiveFilter('PENDING')}
+              onClick={() => setActiveFilter('COD_PENDING')}
               className={`px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all ${
-                activeFilter === 'PENDING'
+                activeFilter === 'COD_PENDING'
                   ? 'bg-rose-600 text-white shadow-xs'
                   : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20'
               }`}
             >
-              ⏳ On The Way ({summary.pendingCodCount})
+              🛵 On The Way ({summary.pendingCodCount})
+            </button>
+          )}
+          {summary.pendingOnlineCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveFilter('ONLINE_PENDING')}
+              className={`px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all ${
+                activeFilter === 'ONLINE_PENDING'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
+              }`}
+            >
+              ⏳ Awaiting Payment ({summary.pendingOnlineCount})
+            </button>
+          )}
+          {data?.transactions?.some((t) => t.category === 'CANCELLED') && (
+            <button
+              type="button"
+              onClick={() => setActiveFilter('CANCELLED')}
+              className={`px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all ${
+                activeFilter === 'CANCELLED'
+                  ? 'bg-zinc-700 text-white shadow-xs'
+                  : 'bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-500/20'
+              }`}
+            >
+              ❌ Cancelled ({data.transactions.filter((t) => t.category === 'CANCELLED').length})
             </button>
           )}
         </div>
@@ -728,6 +775,10 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                       ) : tx.category === 'RIDER_CASH' ? (
                         <span className="text-[10px] font-bold text-amber-600 flex items-center justify-center gap-1">
                           <Clock className="w-3 h-3" /> With Rider (Cash)
+                        </span>
+                      ) : tx.category === 'PENDING_ONLINE' ? (
+                        <span className="text-[10px] font-bold text-amber-600 flex items-center justify-center gap-1">
+                          <Clock className="w-3 h-3" /> Awaiting Payment
                         </span>
                       ) : (
                         <span className="text-[10px] font-medium text-amber-600">

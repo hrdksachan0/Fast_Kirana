@@ -253,12 +253,16 @@ export async function GET(req: NextRequest) {
         const riderDelivered = transactions.filter(
           (t: any) => t.riderName === r.name && t.orderStatus === 'DELIVERED'
         )
+        const todayCashCollected = riderDelivered
+          .filter((t: any) => t.category === 'RIDER_CASH' || (t.paymentMethod === 'COD' && !t.cashSettled))
+          .reduce((s: number, t: any) => s + t.total, 0)
 
         return {
           id: r.id,
           name: r.name || 'Rider',
           phone: r.phone || '',
           cashInHand,
+          todayCashCollected,
           todayDeliveredCount: riderDelivered.length,
           todayDeliveredTotal: riderDelivered.reduce((s: number, t: any) => s + t.total, 0),
         }

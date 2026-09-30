@@ -7,31 +7,37 @@ interface PrintQueueItem {
   id: string
   html: string
   title: string
+  timestamp: number
 }
 
 let printQueue: PrintQueueItem[] = []
 let isPrinting = false
 
-function getHiddenIframe(): HTMLIFrameElement {
-  let iframe = document.getElementById('fastkirana-silent-printer') as HTMLIFrameElement
-  if (!iframe) {
-    iframe = document.createElement('iframe')
-    iframe.id = 'fastkirana-silent-printer'
-    iframe.style.position = 'fixed'
-    iframe.style.right = '-9999px'
-    iframe.style.bottom = '-9999px'
-    iframe.style.width = '350px'
-    iframe.style.height = '450px'
-    iframe.style.opacity = '0.01'
-    iframe.style.pointerEvents = 'none'
-    iframe.style.border = '0'
-    iframe.style.zIndex = '-9999'
-    document.body.appendChild(iframe)
+function getFreshHiddenIframe(): HTMLIFrameElement {
+  let existing = document.getElementById('fastkirana-silent-printer') as HTMLIFrameElement | null
+  if (existing && existing.parentNode) {
+    existing.parentNode.removeChild(existing)
   }
+  const iframe = document.createElement('iframe')
+  iframe.id = 'fastkirana-silent-printer'
+  iframe.style.position = 'fixed'
+  iframe.style.right = '-9999px'
+  iframe.style.bottom = '-9999px'
+  iframe.style.width = '350px'
+  iframe.style.height = '450px'
+  iframe.style.opacity = '0.01'
+  iframe.style.pointerEvents = 'none'
+  iframe.style.border = '0'
+  iframe.style.zIndex = '-9999'
+  document.body.appendChild(iframe)
   return iframe
 }
 
 async function processPrintQueue() {
+  const now = Date.now()
+  // 🛡️ Auto-flush stale print jobs older than 15 seconds to prevent old orders from printing!
+  printQueue = printQueue.filter(item => (now - item.timestamp) < 15000)
+
   if (printQueue.length === 0) return
   if (isPrinting) {
     // Safety auto-unlock if stuck for over 3 seconds
@@ -65,7 +71,8 @@ async function processPrintQueue() {
         }, 350)
       }
     } else {
-      const iframe = getHiddenIframe()
+      // Fresh clean iframe on every print to avoid stale DOM/HTML retention
+      const iframe = getFreshHiddenIframe()
       const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
 
       if (iframeDoc && iframe.contentWindow) {
@@ -73,7 +80,7 @@ async function processPrintQueue() {
         iframeDoc.write(item.html)
         iframeDoc.close()
 
-        await new Promise((resolve) => setTimeout(resolve, 50))
+        await new Promise((resolve) => setTimeout(resolve, 80))
 
         try {
           iframe.contentWindow.focus()
@@ -406,10 +413,14 @@ export function printKOTReceipt(order: any, shopType: string = 'RESTAURANT', for
   const html = generateKOTHtml(order, shopType)
   const orderIdText = order.readableId ? `#${order.readableId}` : `#${(order.id || '').slice(0, 8)}`
 
+  // Discard any expired print queue items (>15s)
+  printQueue = printQueue.filter(it => (Date.now() - it.timestamp) < 15000)
+
   printQueue.push({
     id: order.id,
     html,
-    title: `KOT-${orderIdText}`
+    title: `KOT-${orderIdText}`,
+    timestamp: now,
   })
 
   processPrintQueue()
@@ -537,7 +548,8 @@ export function printCustomerInvoice(order: any) {
   printQueue.push({
     id: order.id,
     html,
-    title: `INV-${orderIdText}`
+    title: `INV-${orderIdText}`,
+    timestamp: Date.now(),
   })
 
   processPrintQueue()

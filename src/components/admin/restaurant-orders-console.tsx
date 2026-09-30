@@ -488,41 +488,52 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
         const cleanId = String(orderId).trim().replace(/^#/, '')
         const now = Date.now()
         
-        let orderToPrint = ordersRef.current.find((o) => o.id === orderId || o.readableId === orderId || o.id === cleanId)
-        if (!orderToPrint) {
-          try {
-            const res = await fetch(`/api/orders/${cleanId}`, {
-              headers: authHeaders,
-            })
-            if (res.ok) {
-              const data = await res.json()
-              orderToPrint = data.order || data
-            }
-          } catch (e) {
-            console.error('Failed to fetch remote order for KOT print:', e)
-          }
-        }
+        let orderToPrint: any = null
 
-        // 🛡️ Reliable Instant Fallback: If order wasn't in memory/DB, construct directly from broadcast payload
-        if (!orderToPrint && payload.payload?.items && payload.payload.items.length > 0) {
+        // 🛡️ Priority 1: If broadcast carries explicit dishes (Send KOT / Admin Dispatch),
+        // ALWAYS use this fresh authoritative payload so stale orders in memory never get printed!
+        if (payload.payload?.items && Array.isArray(payload.payload.items) && payload.payload.items.length > 0) {
+          const exactMatched = ordersRef.current.find((o) => o.id === cleanId)
           orderToPrint = {
+            ...(exactMatched || {}),
             id: cleanId,
-            readableId: payload.payload.readableId,
-            restaurantId: payload.payload.restaurantId || effectiveRestaurantId || null,
-            status: 'CONFIRMED',
-            total: 0,
-            deliveryFee: 0,
-            taxes: 0,
-            miscFee: 0,
-            discount: 0,
-            createdAt: payload.payload.printedAt || new Date().toISOString(),
-            paymentMethod: 'ONLINE',
-            deliveryMethod: payload.payload.deliveryMethod || 'DELIVERY',
-            user: { name: payload.payload.customerName || 'Customer', phone: null },
-            address: { houseNo: '', street: '', area: '', city: '', pincode: '' },
+            readableId: payload.payload.readableId || exactMatched?.readableId || cleanId,
+            restaurantId: payload.payload.restaurantId || exactMatched?.restaurantId || effectiveRestaurantId || null,
+            status: exactMatched?.status || 'CONFIRMED',
+            total: exactMatched?.total || 0,
+            deliveryFee: exactMatched?.deliveryFee || 0,
+            taxes: exactMatched?.taxes || 0,
+            miscFee: exactMatched?.miscFee || 0,
+            discount: exactMatched?.discount || 0,
+            createdAt: exactMatched?.createdAt || payload.payload.printedAt || new Date().toISOString(),
+            paymentMethod: exactMatched?.paymentMethod || 'ONLINE',
+            deliveryMethod: payload.payload.deliveryMethod || exactMatched?.deliveryMethod || 'DELIVERY',
+            user: {
+              name: payload.payload.customerName || (exactMatched as any)?.user?.name || (exactMatched as any)?.userName || 'Customer',
+              phone: (exactMatched as any)?.user?.phone || null,
+            },
+            userName: payload.payload.customerName || (exactMatched as any)?.userName || 'Customer',
+            address: exactMatched?.address || { houseNo: '', street: '', area: '', city: '', pincode: '' },
             items: payload.payload.items,
-            shopName: payload.payload.shopName,
-            notes: payload.payload.notes,
+            restaurantItems: payload.payload.items, // Explicit guarantee for KOT generator
+            shopName: payload.payload.shopName || exactMatched?.shopName,
+            notes: payload.payload.notes ?? exactMatched?.notes,
+          }
+        } else {
+          // Priority 2: Exact ID match from in-memory orders
+          orderToPrint = ordersRef.current.find((o) => o.id === cleanId || o.id === orderId)
+          if (!orderToPrint) {
+            try {
+              const res = await fetch(`/api/orders/${cleanId}`, {
+                headers: authHeaders,
+              })
+              if (res.ok) {
+                const data = await res.json()
+                orderToPrint = data.order || data
+              }
+            } catch (e) {
+              console.error('Failed to fetch remote order for KOT print:', e)
+            }
           }
         }
 
@@ -534,13 +545,16 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
         const combinedKey = (orderToPrint as any)?.combinedId ? String((orderToPrint as any).combinedId).trim() : null
         const baseReadableKey = String((orderToPrint as any)?.readableId || cleanId).replace(/-[GR\d]+$/i, '')
         
-        // Client-side 10-second deduplication guard (checks cleanId, combinedId, and baseReadableId)
+        // Client-side deduplication guard
+        // Manual "Send KOT" dispatches use a tighter 3-second guard to allow intentional re-prints
+        const isManualDispatch = payload.payload?.manual === true
+        const cooldownMs = isManualDispatch ? 3000 : 8000
         const lastPrinted = (window as any).__lastKOTPrintTimestamps?.[cleanId] ||
           (combinedKey ? (window as any).__lastKOTPrintTimestamps?.[combinedKey] : null) ||
           (baseReadableKey ? (window as any).__lastKOTPrintTimestamps?.[baseReadableKey] : null)
 
-        if (lastPrinted && (now - lastPrinted) < 10000) {
-          console.warn(`[Kitchen KOT Channel] 🛡️ Ignored duplicate reprint broadcast for #${cleanId} (${Math.round((10000 - (now - lastPrinted))/1000)}s cooldown active)`)
+        if (lastPrinted && (now - lastPrinted) < cooldownMs) {
+          console.warn(`[Kitchen KOT Channel] 🛡️ Ignored duplicate reprint broadcast for #${cleanId} (${Math.round((cooldownMs - (now - lastPrinted))/1000)}s cooldown active)`)
           return
         }
         if (!(window as any).__lastKOTPrintTimestamps) {
@@ -550,7 +564,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
         if (combinedKey) (window as any).__lastKOTPrintTimestamps[combinedKey] = now
         if (baseReadableKey) (window as any).__lastKOTPrintTimestamps[baseReadableKey] = now
         if (orderToPrint) {
-          console.log('Received remote reprint request for Order ID:', cleanId)
+          console.log('Received remote reprint request for Order ID:', cleanId, 'dishes count:', orderToPrint.items?.length)
           // Play alert so kitchen staff notices the KOT
           if (soundEnabledRef.current && !audioContextBlockedRef.current) {
             playKitchenAlarmChime()

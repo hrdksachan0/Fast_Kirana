@@ -76,7 +76,7 @@ export async function POST(
         SET "paymentMethod" = 'COD'::"PaymentMethod",
             "paymentStatus" = 'PENDING'::"PaymentStatus",
             "status" = 'CONFIRMED'::"OrderStatus",
-            "confirmedAt" = NOW(),
+            "confirmedAt" = COALESCE("confirmedAt", NOW()),
             "updatedAt" = NOW()
         WHERE "combinedId" = ${order.combinedId}
       `
@@ -86,7 +86,7 @@ export async function POST(
         SET "paymentMethod" = 'COD'::"PaymentMethod",
             "paymentStatus" = 'PENDING'::"PaymentStatus",
             "status" = 'CONFIRMED'::"OrderStatus",
-            "confirmedAt" = NOW(),
+            "confirmedAt" = COALESCE("confirmedAt", NOW()),
             "updatedAt" = NOW()
         WHERE id = ${order.id}
       `

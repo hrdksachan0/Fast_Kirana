@@ -45,7 +45,7 @@ class KotPrintService {
         ? [lastTimeId, lastTimeReadable, lastTimeBase].whereType<DateTime>().reduce((a, b) => a.isAfter(b) ? a : b)
         : null;
 
-    if (lastTime != null && now.difference(lastTime).inSeconds < 10) {
+    if (lastTime != null && now.difference(lastTime).inSeconds < 3) {
       debugPrint('[KotPrintService] ⚠️ Multi-tap ignored for #$cleanReadable / #$cleanId (cooldown active)');
       return true;
     }

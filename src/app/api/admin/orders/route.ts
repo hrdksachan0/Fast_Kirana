@@ -70,6 +70,7 @@ export async function GET(request: Request) {
       if (effectiveStoreId) {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
@@ -91,6 +92,7 @@ export async function GET(request: Request) {
       } else {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
@@ -119,6 +121,7 @@ export async function GET(request: Request) {
       if (effectiveStoreId) {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
@@ -132,6 +135,7 @@ export async function GET(request: Request) {
       } else {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
@@ -147,6 +151,7 @@ export async function GET(request: Request) {
       if (effectiveStoreId) {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
@@ -166,6 +171,7 @@ export async function GET(request: Request) {
       } else {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
@@ -184,6 +190,7 @@ export async function GET(request: Request) {
       if (effectiveStoreId) {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
@@ -195,6 +202,7 @@ export async function GET(request: Request) {
       } else {
         ordersRaw = await prisma.$queryRaw`
           SELECT o.id, o."readableId", o.status::text as status, o.total, o."createdAt", o."updatedAt",
+                 o."confirmedAt", o."packedAt", o."shippedAt", o."deliveredAt",
                  o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."isB2B", o."deliveryMethod", o."shopName", o."shopPhone", o."addressId", o."userId", o."restaurantId", o.notes,
                  o."combinedId", o."orderType"::text as "orderType", o."deliveryLat", o."deliveryLng", o."storeId", o."deliveryUserId"
@@ -350,6 +358,10 @@ export async function GET(request: Request) {
         total: o.total,
         createdAt: new Date(o.createdAt).toISOString(),
         updatedAt: new Date(o.updatedAt).toISOString(),
+        confirmedAt: o.confirmedAt ? new Date(o.confirmedAt).toISOString() : null,
+        packedAt: o.packedAt ? new Date(o.packedAt).toISOString() : null,
+        shippedAt: o.shippedAt ? new Date(o.shippedAt).toISOString() : null,
+        deliveredAt: o.deliveredAt ? new Date(o.deliveredAt).toISOString() : null,
         userName: user.name,
         userEmail: user.email,
         userPhone: address?.phone || user.phone || o.shopPhone || null,

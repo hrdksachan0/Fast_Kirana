@@ -30,37 +30,61 @@ export function LiveOpsTab({
   sendCartNotification,
   openWhatsAppModal,
 }: LiveOpsTabProps) {
-  const pickTimeOrders = liveOrders.filter(
-    (o) => o.confirmedAt && o.packedAt && !o.restaurantId && o.orderType !== 'RESTAURANT'
-  )
-  const prepTimeOrders = liveOrders.filter(
-    (o) => o.confirmedAt && o.packedAt && (!!o.restaurantId || o.orderType === 'RESTAURANT')
-  )
-  const deliveryTimeOrders = liveOrders.filter((o) => o.shippedAt && o.deliveredAt)
+  // Calculate average pick time for completed grocery pickings (in minutes)
+  const avgPickTime = useMemo(() => {
+    const validOrders = (liveOrders || []).filter((o) => {
+      if (o.status === 'CANCELLED') return false
+      if (o.restaurantId || o.orderType === 'RESTAURANT') return false
+      const confirmed = parseDateInput(o.confirmedAt)?.getTime()
+      const packed = parseDateInput(o.packedAt)?.getTime()
+      return confirmed && packed && packed > confirmed
+    })
 
-  const avgPickTime =
-    pickTimeOrders.length > 0
-      ? Math.round(
-          pickTimeOrders.reduce((sum, o) => sum + (new Date(o.packedAt).getTime() - new Date(o.confirmedAt).getTime()), 0
-        ) / pickTimeOrders.length / 60000
-        )
-      : 0
-  const avgPrepTime =
-    prepTimeOrders.length > 0
-      ? Math.round(
-          prepTimeOrders.reduce((sum, o) => sum + (new Date(o.packedAt).getTime() - new Date(o.confirmedAt).getTime()), 0
-        ) / prepTimeOrders.length / 60000
-        )
-      : 0
-  const avgDeliveryTime =
-    deliveryTimeOrders.length > 0
-      ? Math.round(
-          deliveryTimeOrders.reduce(
-            (sum, o) => sum + (new Date(o.deliveredAt).getTime() - new Date(o.shippedAt).getTime()),
-            0
-          ) / deliveryTimeOrders.length / 60000
-        )
-      : 0
+    if (validOrders.length === 0) return 0
+    const totalMinutes = validOrders.reduce((sum, o) => {
+      const confirmed = parseDateInput(o.confirmedAt)!.getTime()
+      const packed = parseDateInput(o.packedAt)!.getTime()
+      return sum + (packed - confirmed) / 60000
+    }, 0)
+    return Math.max(0, Math.round(totalMinutes / validOrders.length))
+  }, [liveOrders])
+
+  // Calculate average prep time for completed cafe/restaurant prep (in minutes)
+  const avgPrepTime = useMemo(() => {
+    const validOrders = (liveOrders || []).filter((o) => {
+      if (o.status === 'CANCELLED') return false
+      if (!o.restaurantId && o.orderType !== 'RESTAURANT') return false
+      const confirmed = parseDateInput(o.confirmedAt)?.getTime()
+      const packed = parseDateInput(o.packedAt)?.getTime()
+      return confirmed && packed && packed > confirmed
+    })
+
+    if (validOrders.length === 0) return 0
+    const totalMinutes = validOrders.reduce((sum, o) => {
+      const confirmed = parseDateInput(o.confirmedAt)!.getTime()
+      const packed = parseDateInput(o.packedAt)!.getTime()
+      return sum + (packed - confirmed) / 60000
+    }, 0)
+    return Math.max(0, Math.round(totalMinutes / validOrders.length))
+  }, [liveOrders])
+
+  // Calculate average delivery transit time (in minutes)
+  const avgDeliveryTime = useMemo(() => {
+    const validOrders = (liveOrders || []).filter((o) => {
+      if (o.status === 'CANCELLED') return false
+      const shipped = parseDateInput(o.shippedAt)?.getTime()
+      const delivered = parseDateInput(o.deliveredAt)?.getTime()
+      return shipped && delivered && delivered > shipped
+    })
+
+    if (validOrders.length === 0) return 0
+    const totalMinutes = validOrders.reduce((sum, o) => {
+      const shipped = parseDateInput(o.shippedAt)!.getTime()
+      const delivered = parseDateInput(o.deliveredAt)!.getTime()
+      return sum + (delivered - shipped) / 60000
+    }, 0)
+    return Math.max(0, Math.round(totalMinutes / validOrders.length))
+  }, [liveOrders])
 
   // Consolidate multi-outlet sub-orders sharing combinedId so each combined checkout counts as 1 master order
   const consolidatedLiveOrders = useMemo(() => {

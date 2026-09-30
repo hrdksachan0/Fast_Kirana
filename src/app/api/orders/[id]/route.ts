@@ -606,7 +606,14 @@ export async function PATCH(
         safePhoto = null
       }
 
+      const isAlreadyPaidOnline = 
+        existingOrder.paymentStatus === 'PAID' && 
+        existingOrder.paymentMethod !== 'COD'
+
       const isDoorstepQrOrOnline = 
+        isAlreadyPaidOnline ||
+        existingOrder.paymentMethod === 'UPI' || 
+        existingOrder.paymentMethod === 'ONLINE' || 
         paymentMethod === 'UPI' || 
         paymentMethod === 'ONLINE' || 
         paymentCollectedBy === 'ONLINE' || 
@@ -654,8 +661,11 @@ export async function PATCH(
         `
       }
 
-      // If order assigned to a delivery rider, update RiderWallet for cash collected ONLY if a rider delivered it
-      if (existingOrder.status !== 'DELIVERED' && existingOrder.deliveryUserId && (userRole === 'DELIVERY' || paymentCollectedBy === 'RIDER')) {
+      // If order assigned to a delivery rider, update RiderWallet ONLY if physical cash was collected by rider
+      const isCashOrder = (existingOrder.paymentMethod === 'COD' || newPaymentMethod === 'COD') && !isDoorstepQrOrOnline
+      const isDeliveredByRider = userRole === 'DELIVERY' || paymentCollectedBy === 'RIDER'
+
+      if (existingOrder.status !== 'DELIVERED' && existingOrder.deliveryUserId && isDeliveredByRider && isCashOrder) {
         try {
           const riderId = existingOrder.deliveryUserId
           const orderTotal = parseFloat(existingOrder.total) || 0
@@ -663,18 +673,18 @@ export async function PATCH(
           let actualCashChange = 0
           if (cashAmount !== undefined && cashAmount !== null && !isNaN(parseFloat(String(cashAmount)))) {
             actualCashChange = parseFloat(String(cashAmount))
-          } else if (!isDoorstepQrOrOnline && (paymentCollectedBy === 'RIDER' || !paymentCollectedBy)) {
+          } else {
             actualCashChange = orderTotal
           }
 
-          if (actualCashChange !== 0) {
+          if (actualCashChange > 0) {
             const wallet = await prisma.riderWallet.findUnique({ where: { userId: riderId } })
             if (wallet) {
               await prisma.riderWallet.update({
                 where: { userId: riderId },
                 data: {
                   cashInHand: { increment: actualCashChange },
-                  totalCollected: { increment: Math.max(0, actualCashChange) }
+                  totalCollected: { increment: actualCashChange }
                 }
               })
             } else {
@@ -683,7 +693,7 @@ export async function PATCH(
                   userId: riderId,
                   cashInHand: actualCashChange,
                   cashLimit: 10000,
-                  totalCollected: Math.max(0, actualCashChange),
+                  totalCollected: actualCashChange,
                   totalDeposited: 0
                 }
               })
@@ -750,7 +760,7 @@ export async function PATCH(
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "packedAt" = NOW(),
+              "packedAt" = COALESCE("packedAt", NOW()),
               "updatedAt" = NOW() 
           WHERE "combinedId" = ${existingOrder.combinedId}
         `
@@ -758,7 +768,7 @@ export async function PATCH(
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "packedAt" = NOW(),
+              "packedAt" = COALESCE("packedAt", NOW()),
               "updatedAt" = NOW() 
           WHERE id = ${existingOrder.id}
         `
@@ -803,7 +813,8 @@ export async function PATCH(
         await prisma.$executeRaw`
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
-              "confirmedAt" = NOW(),
+              "confirmedAt" = COALESCE("confirmedAt", NOW()),
+              "packedAt" = NULL,
               "estimatedDelivery" = ${estimatedDeliveryVal},
               "updatedAt" = NOW() 
           WHERE "combinedId" = ${existingOrder.combinedId}
@@ -814,7 +825,8 @@ export async function PATCH(
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
               "assignedChefId" = ${targetChefId},
-              "confirmedAt" = NOW(),
+              "confirmedAt" = COALESCE("confirmedAt", NOW()),
+              "packedAt" = NULL,
               "estimatedDelivery" = ${estimatedDeliveryVal},
               "updatedAt" = NOW() 
             WHERE id = ${existingOrder.id}
@@ -825,7 +837,8 @@ export async function PATCH(
           UPDATE orders 
           SET status = ${status}::"OrderStatus", 
               "assignedPickerId" = ${targetPickerId},
-              "confirmedAt" = NOW(),
+              "confirmedAt" = COALESCE("confirmedAt", NOW()),
+              "packedAt" = NULL,
               "estimatedDelivery" = ${estimatedDeliveryVal},
               "updatedAt" = NOW() 
           WHERE id = ${existingOrder.id}
