@@ -1843,40 +1843,40 @@ async def get_daily_finance_reconciliation(
         o_status = str(o.status.value if hasattr(o.status, "value") else o.status).upper()
         notes = str(o.notes or "")
         is_doorstep_qr = "Doorstep UPI" in notes or "QR Scan" in notes or "Rider QR" in notes
-        is_in_cashfree = o.id in cashfree_paid_ids or "Cashfree PG" in notes or "CF_" in notes
+        is_in_cashfree = o.id in cashfree_paid_ids or "Cashfree PG" in notes or "CF_" in notes or "Cashfree Auto-Paid" in notes
         is_admin_verified = "Admin Verified" in notes
         admin_match = re.search(r"Admin Verified by (.+?)(?:\s*\||$)", notes)
         admin_verifier_name = admin_match.group(1).strip() if admin_match else "Admin"
+        cf_ref_match = re.search(r"CF_(\d+)", notes)
+        cf_ref = cf_ref_match.group(1) if cf_ref_match else None
 
         if o_status == "CANCELLED":
             verified_by = "Order Cancelled"
             category = "CANCELLED"
-        elif p_status == "PAID" and is_admin_verified:
-            cashfree_online_total += tot
-            cashfree_online_count += 1
-            category = "ONLINE_BANK"
-            verified_by = f"Admin ({admin_verifier_name})"
-        elif is_in_cashfree:
+        elif p_status == "PAID" and is_doorstep_qr:
+            rider_qr_total += tot
+            rider_qr_count += 1
+            category = "RIDER_QR"
+            verified_by = f"Rider QR ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
+        elif p_status == "PAID" and p_method != "COD":
+            # Cashfree is the sole payment gateway — every non-COD non-doorstep PAID order = Cashfree
             cashfree_online_total += tot
             cashfree_online_count += 1
             category = "CASHFREE_ONLINE"
-            verified_by = "Cashfree Gateway (Auto)"
-        elif p_status == "PAID":
-            if is_doorstep_qr:
-                rider_qr_total += tot
-                rider_qr_count += 1
-                category = "RIDER_QR"
-                verified_by = f"Rider QR ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
-            elif p_method in ["UPI", "ONLINE", "CARD", "NET_BANKING", "WALLET"]:
-                cashfree_online_total += tot
-                cashfree_online_count += 1
-                category = "ONLINE_BANK"
-                verified_by = f"{p_method} (Online)"
-            elif o.cashSettledToAdmin:
+            if is_admin_verified:
+                verified_by = f"Cashfree Gateway (Admin: {admin_verifier_name})"
+            elif cf_ref:
+                verified_by = f"Cashfree Gateway ✓ (CF_{cf_ref})"
+            elif is_in_cashfree:
+                verified_by = "Cashfree Gateway ✓ (Auto)"
+            else:
+                verified_by = "Cashfree Gateway (Verified)"
+        elif p_status == "PAID" and p_method == "COD":
+            if o.cashSettledToAdmin:
                 counter_cash_total += tot
                 counter_cash_count += 1
                 category = "COUNTER_CASH"
-                verified_by = "Settled to Counter"
+                verified_by = f"Settled to Counter (via {o.deliveryUser.name})" if o.deliveryUser else "Settled to Counter"
             elif o_status == "DELIVERED":
                 rider_cash_total += tot
                 rider_cash_count += 1
@@ -1886,7 +1886,7 @@ async def get_daily_finance_reconciliation(
                 counter_cash_total += tot
                 counter_cash_count += 1
                 category = "COUNTER_CASH"
-                verified_by = "Cash Paid"
+                verified_by = "Counter Cash (Walk-in)"
         else:
             # Payment status PENDING / FAILED
             if p_method == "COD":
@@ -1896,16 +1896,21 @@ async def get_daily_finance_reconciliation(
                     rider_cash_count += 1
                     category = "RIDER_CASH"
                     verified_by = f"Rider Cash ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
+                elif o_status in ["CONFIRMED", "PREPARING", "PACKED", "SHIPPED", "OUT_FOR_DELIVERY"]:
+                    pending_cod_total += tot
+                    pending_cod_count += 1
+                    category = "PENDING_DELIVERY"
+                    verified_by = f"COD via {o.deliveryUser.name} (On Way)" if o.deliveryUser else "COD at Doorstep"
                 else:
                     pending_cod_total += tot
                     pending_cod_count += 1
                     category = "PENDING_DELIVERY"
-                    verified_by = "COD at Doorstep"
+                    verified_by = "COD (Awaiting Dispatch)"
             else:
                 pending_online_total += tot
                 pending_online_count += 1
                 category = "PENDING_ONLINE"
-                verified_by = "Awaiting Online Payment"
+                verified_by = "Awaiting Cashfree Payment"
 
         # Format readable created time in IST
         order_ist = o.createdAt + timedelta(hours=5, minutes=30) if o.createdAt else None
@@ -1926,6 +1931,7 @@ async def get_daily_finance_reconciliation(
             "category": category,
             "verifiedBy": verified_by,
             "riderName": o.deliveryUser.name if o.deliveryUser else None,
+            "deliveryUserId": o.deliveryUserId,
             "cashSettled": bool(o.cashSettledToAdmin),
             "cashSettledAt": to_iso_utc(o.cashSettledAt) if o.cashSettledAt else None,
         })
@@ -1945,8 +1951,15 @@ async def get_daily_finance_reconciliation(
         wallet = r.riderWallet
         cash_in_hand = float(wallet.cashInHand) if wallet else 0.0
 
-        # Today's delivered orders for this rider
-        r_del_orders = [t for t in transactions if t.get("riderName") == r.name and t.get("orderStatus") == "DELIVERED"]
+        # Today's delivered orders for this rider matched by deliveryUserId
+        r_del_orders = [
+            t for t in transactions
+            if t.get("deliveryUserId") == r.id and t.get("orderStatus") == "DELIVERED"
+        ]
+        today_cash = sum(
+            t["total"] for t in r_del_orders
+            if t.get("paymentMethod") == "COD" and not t.get("cashSettled")
+        )
 
         if cash_in_hand > 0 or len(r_del_orders) > 0:
             rider_summary.append({
@@ -1954,6 +1967,7 @@ async def get_daily_finance_reconciliation(
                 "name": r.name or "Rider",
                 "phone": r.phone or "",
                 "cashInHand": cash_in_hand,
+                "todayCashCollected": round(today_cash, 2),
                 "todayDeliveredCount": len(r_del_orders),
                 "todayDeliveredTotal": sum(t["total"] for t in r_del_orders),
             })
