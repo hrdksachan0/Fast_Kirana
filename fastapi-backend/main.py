@@ -23,8 +23,8 @@ try:
 except ImportError:
     sentry_sdk = None
 
-import logging
-logger = logging.getLogger("main")
+from utils.logging_config import setup_logging
+logger = setup_logging(settings.APP_ENV)
 
 from contextlib import asynccontextmanager
 from fastapi_cache import FastAPICache
@@ -94,13 +94,55 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 import uuid
 
+# Configure SlowAPI Route Rate Limiter (with fallback if dependency pending)
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    limiter = Limiter(key_func=get_remote_address)
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+except ImportError:
+    limiter = None
+
 # Configure CORS Middleware for Web & Mobile
+_cors_origins = [
+    "https://fastkirana.in",
+    "https://www.fastkirana.in",
+    "https://admin.fastkirana.in",
+    "https://store.fastkirana.in",
+]
+_env_domains = [d.strip() for d in os.getenv("CORS_ORIGINS", "").split(",") if d.strip()]
+if _env_domains:
+    _cors_origins.extend(_env_domains)
+
+if settings.APP_ENV != "production":
+    _cors_origins.extend([
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+    ])
+
+_cors_allow_all = os.getenv("CORS_ALLOW_ALL", "false").lower() == "true"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_origins=["*"] if _cors_allow_all else _cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "x-user-id",
+        "x-user-role",
+        "x-user-email",
+        "x-user-phone",
+        "x-internal-secret",
+        "x-store-id",
+        "x-request-id",
+    ],
+    expose_headers=["x-process-time", "x-request-id"],
 )
 
 # GZip Compression Middleware (Reduces payload size by ~80% for fast mobile load)

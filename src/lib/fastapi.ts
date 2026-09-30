@@ -35,6 +35,10 @@ class FastApiClient {
             ...(headers as Record<string, string> | undefined),
         };
 
+        if (typeof window === "undefined" && process.env.INTERNAL_API_SECRET) {
+            finalHeaders["x-internal-secret"] = process.env.INTERNAL_API_SECRET;
+        }
+
         const resolvedToken = token || (await getAuthToken());
         if (resolvedToken) {
             finalHeaders["Authorization"] = `Bearer ${resolvedToken}`;

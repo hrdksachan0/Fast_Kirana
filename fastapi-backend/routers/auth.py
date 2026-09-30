@@ -64,13 +64,21 @@ async def get_current_user(
             if user and not is_token_expired(user):
                 return user
 
-        # 3. Check x-user-id / x-user-email with DB verification (matches Next.js staff checks)
+        # 3. Check x-user-* headers with DB verification (internal server-to-server calls)
         x_user_id = request.headers.get("x-user-id")
         x_user_email = request.headers.get("x-user-email")
         x_user_phone = request.headers.get("x-user-phone")
         x_user_role = request.headers.get("x-user-role")
+        x_internal_secret = request.headers.get("x-internal-secret")
+        internal_secret = os.getenv("INTERNAL_API_SECRET", "")
 
-        if x_user_id or x_user_email or x_user_phone:
+        trust_headers = False
+        if internal_secret and x_internal_secret == internal_secret:
+            trust_headers = True  # Secure mode
+        elif not internal_secret:
+            trust_headers = True  # Grace period: secret not configured yet
+
+        if trust_headers and (x_user_id or x_user_email or x_user_phone):
             try:
                 conditions = []
                 if x_user_id:
@@ -108,24 +116,6 @@ async def get_current_user(
             except Exception as e:
                 logger.error(f"Error querying db_user in get_current_user: {e}")
 
-        # Fallback for Next.js staff/admin requests with verified headers
-        norm_role = str(x_user_role or "").upper()
-        if (
-            norm_role in ["ADMIN", "CHEF", "RESTAURANT_OWNER", "PICKER", "DELIVERY", "VENDOR"]
-            or (x_user_phone and "8112849854" in x_user_phone)
-            or (x_user_email and ("admin" in x_user_email.lower() or "hrdk" in x_user_email.lower()))
-        ):
-            effective_role = norm_role if norm_role in ["ADMIN", "CHEF", "RESTAURANT_OWNER", "PICKER", "DELIVERY", "VENDOR"] else "ADMIN"
-            return {
-                "id": x_user_id or "admin-user",
-                "sub": x_user_id or "admin-user",
-                "email": x_user_email or "admin@fastkirana.com",
-                "name": "Staff User" if effective_role != "ADMIN" else "Admin User",
-                "role": effective_role,
-                "phone": x_user_phone or "+918112849854",
-                "assignedRestaurantId": None,
-            }
-
     return None
 
 
@@ -149,18 +139,9 @@ async def require_auth(
 async def require_admin(
     user: Dict[str, Any] = Depends(require_auth)
 ) -> Dict[str, Any]:
-    """Require admin role."""
+    """Require admin role from verified user token or session."""
     role = str(user.get("role") or "").upper()
-    phone = str(user.get("phone") or "")
-    email = str(user.get("email") or "").lower()
-    is_admin = (
-        role in ["ADMIN", "SUPER_ADMIN"]
-        or "8112849854" in phone
-        or "8112849854" in email
-        or email.startswith("admin")
-        or "hrdk" in email
-    )
-    if not is_admin:
+    if role not in ["ADMIN", "SUPER_ADMIN"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden - admin access required",
@@ -722,27 +703,27 @@ async def verify_otp(
     phone = normalize_phone(raw_ident)
     entered_otp = "".join(c for c in (body.otp or "") if c.isdigit())
 
-    print(f"[OTP-VERIFY] phone={phone}, entered_otp={entered_otp}, raw={raw_ident}")
+    logger.info(f"[OTP-VERIFY] Verification attempt for phone={phone}")
 
     is_valid = False
 
-    # H17 FIX: Master OTP bypass for Google Play / App Store review accounts
-    # Matches Next.js: src/app/api/auth/otp/verify/route.ts line 125
-    MASTER_OTPS = ['261300']
-    if entered_otp in MASTER_OTPS:
+    # App Store / Play Store review accounts ONLY - non-existent test number
+    _REVIEW_ACCOUNTS: Dict[str, str] = {
+        "0000000000": "261300",
+    }
+    if phone in _REVIEW_ACCOUNTS and entered_otp == _REVIEW_ACCOUNTS[phone]:
         is_valid = True
-        print(f"[OTP-VERIFY] Master OTP accepted for phone={phone}")
+        logger.info(f"[OTP-VERIFY] Review account OTP accepted for test phone={phone}")
 
     # Check OTP from in-memory cache
     for p_key in [phone, f"+91{phone}", f"91{phone}"]:
         cached = _otp_cache.get(p_key)
         if cached:
             code, expiry = cached
-            print(f"[OTP-VERIFY] Cache hit for key={p_key}, stored_code={code}, entered={entered_otp}")
             if entered_otp == code:
                 is_valid = True
                 _otp_cache.pop(p_key, None)
-                print("[OTP-VERIFY] Cache match!")
+                logger.info(f"[OTP-VERIFY] Cache match for phone={phone}")
                 break
 
     # Check 2: Database otp_tokens table — match OTP AND phone pattern AND not expired
@@ -778,7 +759,7 @@ async def verify_otp(
 
             if db_tokens:
                 is_valid = True
-                print(f"[OTP-VERIFY] DB match found for entered_otp={entered_otp}")
+                logger.info(f"[OTP-VERIFY] DB match found for phone={phone}")
                 for dt in db_tokens:
                     try:
                         await db.delete(dt)
@@ -786,12 +767,12 @@ async def verify_otp(
                         pass
                 await db.commit()
             else:
-                print(f"[OTP-VERIFY] No DB match found for entered_otp={entered_otp}")
+                logger.debug(f"[OTP-VERIFY] No DB match found for phone={phone}")
         except Exception as e:
-            print(f"[OTP-VERIFY] Error checking OtpToken in DB: {e}")
+            logger.error(f"[OTP-VERIFY] Error checking OtpToken in DB: {e}")
 
     if not is_valid:
-        print(f"[OTP-VERIFY] FINAL REJECTION for phone={phone}, otp={entered_otp}")
+        logger.warning(f"[OTP-VERIFY] Rejection for phone={phone}")
         raise HTTPException(status_code=400, detail="Invalid or expired OTP code")
 
     print(f"[OTP-VERIFY] OTP verified successfully for phone={phone}")
@@ -1142,9 +1123,7 @@ async def check_email(
         canonical_user = None
         for u in matching_users:
             role_str = u.role.value if hasattr(u.role, "value") else str(u.role)
-            if (phone_digits == "9170942500" and u.email == "superadmin@fastkirana.com") or \
-               (phone_digits == "7054470303" and u.email == "admin@fastkirana.com") or \
-               role_str in ["RESTAURANT_OWNER", "CHEF", "ADMIN"] or \
+            if role_str in ["RESTAURANT_OWNER", "CHEF", "ADMIN", "SUPER_ADMIN"] or \
                bool(u.assignedRestaurantId):
                 canonical_user = u
                 break
@@ -1160,11 +1139,7 @@ async def check_email(
 
         if canonical_user:
             role_str = canonical_user.role.value if hasattr(canonical_user.role, "value") else str(canonical_user.role)
-            is_master_admin = (
-                phone_digits in ["7054470303", "9170942500"] or
-                canonical_user.email in ["admin@fastkirana.com", "superadmin@fastkirana.com"]
-            )
-            effective_role = "ADMIN" if is_master_admin else role_str
+            effective_role = role_str
             data = {
                 "exists": True,
                 "isWorker": effective_role != "USER",
@@ -1206,11 +1181,7 @@ async def check_email(
             return {"success": True, "data": data, **data}
 
         role_str = user.role.value if hasattr(user.role, "value") else str(user.role)
-        is_master_admin = (
-            normalized_email in ["admin@fastkirana.com", "superadmin@fastkirana.com"] or
-            (user.phone and ("7054470303" in user.phone or "9170942500" in user.phone))
-        )
-        effective_role = "ADMIN" if is_master_admin else role_str
+        effective_role = role_str
         data = {
             "exists": True,
             "isWorker": effective_role != "USER",

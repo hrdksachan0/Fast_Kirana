@@ -654,8 +654,7 @@ async def get_picker_orders(
         if assigned_picker:
             picker_phone = str(assigned_picker.get("phone") or "")
             picker_email = str(assigned_picker.get("email") or "").lower()
-            picker_role = str(assigned_picker.get("role") or "").upper()
-            if "7054470303" in picker_phone or "9170942500" in picker_phone or "admin" in picker_role or picker_email.startswith("admin") or picker_email.startswith("superadmin"):
+            if picker_role in ["ADMIN", "SUPER_ADMIN"]:
                 assigned_picker = None
         assigned_chef = workers.get(o.assignedChefId)
         rest_obj = restaurants.get(o.restaurantId)

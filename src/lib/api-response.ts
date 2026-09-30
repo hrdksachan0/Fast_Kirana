@@ -77,9 +77,9 @@ export class ApiResponder {
       status,
       headers: {
         'x-request-id': requestId,
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id, x-request-id',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id, x-request-id, x-internal-secret',
       },
     })
   }
@@ -110,9 +110,9 @@ export class ApiResponder {
       status,
       headers: {
         'x-request-id': requestId,
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id, x-request-id',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id, x-request-id, x-internal-secret',
       },
     })
   }

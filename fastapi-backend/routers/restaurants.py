@@ -342,13 +342,7 @@ async def update_restaurant(
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
-    is_admin = (
-        role in ["ADMIN", "SUPER_ADMIN"]
-        or "8112849854" in phone
-        or "8112849854" in email
-        or email.startswith("admin")
-        or "hrdk" in email
-    )
+    is_admin = role in ["ADMIN", "SUPER_ADMIN"]
     user_outlet = assigned_restaurant_id
     if not user_outlet:
         u_id = current_user.get("id") or current_user.get("sub")

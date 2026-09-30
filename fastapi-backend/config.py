@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     # JWT Authentication Config
     AUTH_SECRET: str = os.getenv("AUTH_SECRET", "")
     ALGORITHM: str = "HS256"
+    INTERNAL_API_SECRET: str = os.getenv("INTERNAL_API_SECRET", "")
 
     # Store Defaults
     DEFAULT_RIDER_CASH_LIMIT: float = 2000.0

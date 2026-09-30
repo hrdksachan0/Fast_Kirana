@@ -138,7 +138,7 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
           const dbEmail = (dbUser.email || '').toLowerCase()
           const dbPhone = (dbUser.phone || '').replace(/\D/g, '').slice(-10)
           const isDbSuper = isRootAdminAccount({ email: dbEmail, phone: dbPhone, role: dbRole }) ||
-            dbEmail.startsWith('admin') || dbEmail.includes('hrdk') || isSuperadminPhone(dbPhone) ||
+            isSuperadminPhone(dbPhone) ||
             (dbRole === 'ADMIN' && !dbUser.assignedStoreId)
 
           if (isDbSuper || (dbRole && (allowedRoles.includes(dbRole) || dbRole === 'ADMIN' || dbRole === 'SUPER_ADMIN'))) {
@@ -153,27 +153,6 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
                   assignedStoreId: dbUser.assignedStoreId,
                   assignedRestaurantId: dbUser.assignedRestaurantId,
                 }
-              }
-            }
-          }
-        }
-
-        // Direct admin fallback for verified admin headers
-        if (
-          rawUserRole === 'ADMIN' ||
-          (rawUserPhone && isSuperadminPhone(rawUserPhone.replace(/\D/g, '').slice(-10))) ||
-          (rawUserEmail && (rawUserEmail.startsWith('admin') || rawUserEmail.includes('hrdk')))
-        ) {
-          return {
-            error: null,
-            session: {
-              user: {
-                id: rawUserId || 'admin-user',
-                role: 'ADMIN' as any,
-                phone: rawUserPhone || '+918112849854',
-                email: rawUserEmail || 'admin@fastkirana.com',
-                assignedStoreId: null,
-                assignedRestaurantId: null,
               }
             }
           }

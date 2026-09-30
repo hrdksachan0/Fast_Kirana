@@ -94,14 +94,13 @@ export function isRootAdminAccount(identifier?: {
   // 1. Explicit global superadmin emails (HQ Master accounts)
   if (
     email === 'admin@fastkirana.com' ||
-    email === 'superadmin@fastkirana.com' ||
-    email.startsWith('superadmin@')
+    email === 'superadmin@fastkirana.com'
   ) {
     return true
   }
 
-  // 2. Known master admin phones (7054470303, 9170942500)
-  if (phone === '7054470303' || phone === '9170942500' || isSuperadminPhone(phone)) {
+  // 2. Verified master admin phones loaded from super_admins table
+  if (isSuperadminPhone(phone)) {
     return true
   }
 

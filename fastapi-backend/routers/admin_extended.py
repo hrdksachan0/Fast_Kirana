@@ -934,11 +934,18 @@ async def admin_update_user(
         if new_role_upper not in [r.value for r in Role]:
             raise HTTPException(status_code=400, detail="Invalid role")
 
-        # Root admin safeguard
+        # Root admin safeguard - check database super_admins table
         clean_user_phone = re.sub(r"\D", "", user.phone or "")[-10:]
+        from models import SuperAdmin
+        sa_res = await db.execute(
+            select(SuperAdmin).where(
+                SuperAdmin.phone.like(f"%{clean_user_phone}%"),
+                SuperAdmin.isActive == True
+            )
+        ) if clean_user_phone else None
         is_root_admin = (
-            user.email in ["admin@fastkirana.com", "superadmin@fastkirana.com"]
-            or clean_user_phone in ["7054470303", "9170942500", "8112849854"]
+            (sa_res.scalars().first() is not None if sa_res else False)
+            or user.email in ["admin@fastkirana.com", "superadmin@fastkirana.com"]
         )
         if is_root_admin and new_role_upper != "ADMIN":
             raise HTTPException(status_code=403, detail="Root Admin accounts cannot be downgraded")

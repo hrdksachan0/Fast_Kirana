@@ -1482,15 +1482,9 @@ async def update_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Auth Guard checks - matching Next.js staff checks with strict outlet isolation
-    is_admin = (
-        role == "ADMIN"
-        or "8112849854" in phone
-        or "8112849854" in email
-        or email.startswith("admin")
-        or "hrdk" in email
-    )
-    is_chef = role in ["CHEF", "RESTAURANT_OWNER"] or email.startswith("restaurant")
+    # Auth Guard checks - role-based isolation
+    is_admin = role in ["ADMIN", "SUPER_ADMIN"]
+    is_chef = role in ["CHEF", "RESTAURANT_OWNER"]
     is_picker = role == "PICKER"
 
     if not is_admin and not is_chef and not is_picker:
