@@ -175,3 +175,87 @@ async def pool_health():
             content={"status": "error", "detail": str(e)}
         )
 
+
+from fastapi.responses import PlainTextResponse
+
+@health_router.get("/metrics", response_class=PlainTextResponse)
+@health_router.get("/api/metrics", response_class=PlainTextResponse)
+async def prometheus_metrics():
+    """
+    Standard Prometheus / Grafana metrics exporter endpoint.
+    Exposes real-time DB connection pool stats, active WebSockets, and system uptime.
+    Scrapeable by Prometheus, Grafana Cloud, Datadog, or Railway metrics.
+    """
+    lines = []
+    
+    # 1. System Uptime
+    uptime_sec = int(time.time() - SERVER_BOOT_TIME)
+    lines.append("# HELP fastkirana_uptime_seconds Total seconds since FastAPI server boot")
+    lines.append("# TYPE fastkirana_uptime_seconds gauge")
+    lines.append(f"fastkirana_uptime_seconds {uptime_sec}")
+    lines.append("")
+
+    # 2. Database Connection Pool Metrics
+    try:
+        from database import engine
+        pool = engine.pool
+        size = pool.size()
+        checked_in = pool.checkedin()
+        checked_out = pool.checkedout()
+        overflow = pool.overflow()
+        max_overflow = getattr(pool, "_max_overflow", 10)
+        utilization = round(checked_out / max(size, 1), 4)
+
+        lines.append("# HELP fastkirana_db_pool_size Configured SQLAlchemy connection pool size")
+        lines.append("# TYPE fastkirana_db_pool_size gauge")
+        lines.append(f"fastkirana_db_pool_size {size}")
+        lines.append("")
+
+        lines.append("# HELP fastkirana_db_pool_checked_in Idle database connections in pool")
+        lines.append("# TYPE fastkirana_db_pool_checked_in gauge")
+        lines.append(f"fastkirana_db_pool_checked_in {checked_in}")
+        lines.append("")
+
+        lines.append("# HELP fastkirana_db_pool_checked_out Active database connections in use")
+        lines.append("# TYPE fastkirana_db_pool_checked_out gauge")
+        lines.append(f"fastkirana_db_pool_checked_out {checked_out}")
+        lines.append("")
+
+        lines.append("# HELP fastkirana_db_pool_overflow Active overflow connections beyond pool size")
+        lines.append("# TYPE fastkirana_db_pool_overflow gauge")
+        lines.append(f"fastkirana_db_pool_overflow {overflow}")
+        lines.append("")
+
+        lines.append("# HELP fastkirana_db_pool_max_overflow Maximum allowed overflow connections")
+        lines.append("# TYPE fastkirana_db_pool_max_overflow gauge")
+        lines.append(f"fastkirana_db_pool_max_overflow {max_overflow}")
+        lines.append("")
+
+        lines.append("# HELP fastkirana_db_pool_utilization_ratio Database connection pool utilization ratio (0.0 to 1.0)")
+        lines.append("# TYPE fastkirana_db_pool_utilization_ratio gauge")
+        lines.append(f"fastkirana_db_pool_utilization_ratio {utilization}")
+        lines.append("")
+    except Exception as e:
+        lines.append(f"# Error collecting DB pool metrics: {e}")
+
+    # 3. Active Real-time WebSocket Metrics
+    try:
+        from routers.websockets import manager
+        ws_channels = len(manager.active_connections)
+        ws_clients = sum(len(conns) for conns in manager.active_connections.values())
+
+        lines.append("# HELP fastkirana_websocket_active_channels Number of active WebSocket channels")
+        lines.append("# TYPE fastkirana_websocket_active_channels gauge")
+        lines.append(f"fastkirana_websocket_active_channels {ws_channels}")
+        lines.append("")
+
+        lines.append("# HELP fastkirana_websocket_active_clients Number of active real-time WebSocket clients")
+        lines.append("# TYPE fastkirana_websocket_active_clients gauge")
+        lines.append(f"fastkirana_websocket_active_clients {ws_clients}")
+        lines.append("")
+    except Exception:
+        pass
+
+    return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4; charset=utf-8")
+
+

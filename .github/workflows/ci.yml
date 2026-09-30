@@ -34,13 +34,16 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
 
-      - name: Run Pytest Test Suite
+      - name: Run Pytest Test Suite (SQLite Default or Supabase Staging DB)
         working-directory: fastapi-backend
         env:
           PYTHONPATH: .
-          DATABASE_URL: sqlite+aiosqlite:///./test.db
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING || 'sqlite+aiosqlite:///./test.db' }}
+          CASHFREE_ENV: TEST
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET || 'ci_test_secret_32chars_long_key_00' }}
         run: |
           pytest tests/ -v
+
 
   # ─── 2. Flutter Mobile Quality Gate & APK Artifact ─────────────────
   flutter-mobile:

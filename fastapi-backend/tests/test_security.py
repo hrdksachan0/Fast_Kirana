@@ -208,3 +208,30 @@ class TestDBPoolConfig:
         """pool_pre_ping must be True to catch dead connections."""
         from database import engine
         assert engine.pool._pre_ping is True, "pool_pre_ping must be enabled"
+
+
+# ─── Test 9: Prometheus & Monitoring Endpoints ───────────────────
+
+class TestPrometheusAndMonitoring:
+    """Verify Prometheus /metrics and /health/pool endpoints are registered."""
+
+    @pytest.mark.asyncio
+    async def test_metrics_endpoint_returns_prometheus_format(self):
+        """The /metrics endpoint must output valid Prometheus text format."""
+        from routers.health import prometheus_metrics
+        response = await prometheus_metrics()
+        body = response.body.decode("utf-8")
+        assert "fastkirana_db_pool_size" in body, "Must export fastkirana_db_pool_size metric"
+        assert "fastkirana_db_pool_checked_in" in body, "Must export fastkirana_db_pool_checked_in metric"
+        assert "fastkirana_db_pool_checked_out" in body, "Must export fastkirana_db_pool_checked_out metric"
+        assert "fastkirana_uptime_seconds" in body, "Must export fastkirana_uptime_seconds metric"
+
+    @pytest.mark.asyncio
+    async def test_pool_health_returns_status(self):
+        """The /health/pool endpoint must return pool health stats."""
+        from routers.health import pool_health
+        res = await pool_health()
+        assert "status" in res, "Must return status in pool health"
+        assert "pool" in res, "Must return pool details in pool health"
+        assert "size" in res["pool"], "Must return pool size"
+
