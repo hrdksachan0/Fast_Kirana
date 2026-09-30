@@ -1476,8 +1476,26 @@ async def create_order(
             order_address_id = pickup_address.id
 
         is_online_paid = False
+        incoming_payment_status = str(payload.get("paymentStatus") or "").upper()
+        incoming_payment_id = str(payload.get("paymentId") or payload.get("cfPaymentId") or "").strip()
+        incoming_cf_order_id = str(payload.get("cfOrderId") or "").strip()
+
         if payment_method != "COD":
-            pass
+            if incoming_payment_status == "PAID" or bool(incoming_payment_id):
+                is_online_paid = True
+            elif incoming_cf_order_id:
+                try:
+                    from routers.cashfree_router import CASHFREE_BASE_URL, _get_cashfree_headers
+                    headers = _get_cashfree_headers()
+                    sanitized_check_id = re.sub(r"[^a-zA-Z0-9_-]", "_", incoming_cf_order_id)[:45]
+                    async with httpx.AsyncClient(timeout=4.0) as client:
+                        cf_res = await client.get(f"{CASHFREE_BASE_URL}/orders/{sanitized_check_id}", headers=headers)
+                        if cf_res.status_code == 200:
+                            cf_data = cf_res.json()
+                            if cf_data.get("order_status") == "PAID":
+                                is_online_paid = True
+                except Exception as cf_e:
+                    logger.warning(f"Error checking Cashfree for new order: {cf_e}")
         auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
         is_auto_approve = auto_approve_setting.lower() == "true"
         initial_order_status = OrderStatus.PENDING if (is_online_paid or is_auto_approve) else OrderStatus.ADMIN_PENDING
@@ -1504,6 +1522,10 @@ async def create_order(
 
         if is_premium_packaging and not any("Premium Thermal Packaging" in p for p in notes_parts):
             notes_parts.append("✨ Premium Thermal Packaging Requested (+₹15)")
+
+        if is_online_paid and not any("Cashfree PG Paid" in p for p in notes_parts):
+            cf_note_ref = f"Cashfree PG Paid (Ref: {incoming_payment_id})" if incoming_payment_id else "Cashfree PG Paid"
+            notes_parts.append(cf_note_ref)
 
         final_order_notes = " | ".join(notes_parts) if notes_parts else None
 
