@@ -38,10 +38,13 @@ jobs:
         working-directory: fastapi-backend
         env:
           PYTHONPATH: .
-          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING || 'sqlite+aiosqlite:///./test.db' }}
+          DATABASE_URL: sqlite+aiosqlite:///./test.db
           CASHFREE_ENV: TEST
-          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET || 'ci_test_secret_32chars_long_key_00' }}
+          INTERNAL_API_SECRET: ci_test_secret_32chars_long_key_00
         run: |
+          if [ -n "${{ secrets.DATABASE_URL_STAGING }}" ]; then
+            export DATABASE_URL="${{ secrets.DATABASE_URL_STAGING }}"
+          fi
           pytest tests/ -v
 
 

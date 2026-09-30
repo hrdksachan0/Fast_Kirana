@@ -5,8 +5,10 @@ import 'package:fastkirana_flutter/core/services/offline_sync_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
   });
 
   group('OfflineSyncService Console Queues', () {
