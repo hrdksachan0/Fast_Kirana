@@ -1981,14 +1981,13 @@ async def admin_get_live_carts(
             if not u:
                 continue
             user_store = getattr(u, "assignedStoreId", None)
-            if storeId == "hub-209206":
-                if user_store in ["hub-816107", "hub-224122"]:
-                    continue
-                filtered_carts.append(c)
+            if user_store:
+                if user_store == storeId:
+                    filtered_carts.append(c)
             else:
                 pin = storeId.replace("hub-", "")
                 has_pin = u.addresses and any(a.pincode == pin for a in u.addresses if a.pincode)
-                if user_store == storeId or has_pin:
+                if has_pin or (storeId == "hub-209206" and not u.addresses):
                     filtered_carts.append(c)
         carts_db = filtered_carts
 

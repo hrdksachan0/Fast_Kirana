@@ -12,6 +12,9 @@ import '../../core/services/location_service.dart';
 import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/store_hub_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../data/models/store_hub.dart';
+import '../../widgets/hub_conflict_dialog.dart';
 import 'map_picker_screen.dart';
 import '../home/main_shell.dart';
 import '../../widgets/unserviceable_location_banner.dart';
@@ -27,6 +30,30 @@ class DeliveryLocationScreen extends ConsumerStatefulWidget {
 class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen> {
   final _searchController = TextEditingController();
   bool _isFetchingGps = false;
+
+  Future<bool> _checkAndHandleHubConflict(double lat, double lng) async {
+    final hubs = ref.read(activeStoreHubsProvider).value ?? StoreHub.defaultHubs;
+    StoreHub? targetHub;
+    for (final h in hubs) {
+      if (h.isPointInsideGeofence(lat, lng)) {
+        targetHub = h;
+        break;
+      }
+    }
+    if (targetHub != null) {
+      final conflictingHubId = ref.read(cartProvider.notifier).checkHubConflict(targetHub.id);
+      if (conflictingHubId != null) {
+        final currentHub = ref.read(currentStoreHubProvider);
+        final proceed = await HubConflictDialog.show(
+          context,
+          oldHubName: currentHub.name,
+          newHubName: targetHub.name,
+        );
+        return proceed;
+      }
+    }
+    return true;
+  }
 
   static const Color primaryOrange = Color(0xFFEA580C);
   static const Color slateDark = Color(0xFF0F172A);
@@ -625,6 +652,8 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                 padding: const EdgeInsets.only(right: 8),
                                 child: InkWell(
                                   onTap: () async {
+                                    final proceed = await _checkAndHandleHubConflict(hub.latitude, hub.longitude);
+                                    if (!proceed || !mounted) return;
                                     HapticFeedback.lightImpact();
                                     final addr = Address(
                                       id: 'hub_${hub.id}',
@@ -740,6 +769,10 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                         padding: const EdgeInsets.only(right: 8),
                         child: InkWell(
                           onTap: () async {
+                            final lat = loc['lat'] as double;
+                            final lng = loc['lng'] as double;
+                            final proceed = await _checkAndHandleHubConflict(lat, lng);
+                            if (!proceed || !mounted) return;
                             HapticFeedback.lightImpact();
                             final addr = Address(
                               id: 'chip_${DateTime.now().millisecondsSinceEpoch}',
@@ -923,6 +956,10 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
 
                           return InkWell(
                             onTap: () async {
+                              if (addr.latitude != null && addr.longitude != null) {
+                                final proceed = await _checkAndHandleHubConflict(addr.latitude!, addr.longitude!);
+                                if (!proceed || !mounted) return;
+                              }
                               HapticFeedback.selectionClick();
                               ref.read(selectedAddressProvider.notifier).state = addr;
                               final prefs = await SharedPreferences.getInstance();

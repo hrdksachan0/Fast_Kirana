@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Body, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Response, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 import os
@@ -156,6 +156,7 @@ async def get_public_settings(
     response: Response,
     storeId: Optional[str] = Query(None),
     hubId: Optional[str] = Query(None),
+    x_store_id: Optional[str] = Header(None, alias="x-store-id"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -163,7 +164,7 @@ async def get_public_settings(
     with dynamic open/close scheduler under IST timezone and multi-hub layering.
     Uses ultra-fast memory cache (<5ms response).
     """
-    effective_store_id = storeId or hubId
+    effective_store_id = storeId or hubId or x_store_id
     cache_key = str(effective_store_id or "default")
     now = time.time()
 
@@ -209,9 +210,29 @@ async def get_public_settings(
         settings_map["cafe_open"] = "true" if check_is_store_open(settings_map, "cafe") else "false"
         settings_map["restaurant_open"] = "true" if check_is_store_open(settings_map, "restaurant") else "false"
 
+        # Check if this specific hub has any active restaurants
+        if effective_store_id and effective_store_id != "all":
+            try:
+                hub_rest_count_stmt = select(func.count(Restaurant.id)).where(
+                    Restaurant.storeId == effective_store_id,
+                    Restaurant.isActive == True
+                )
+                rest_count_res = await db.execute(hub_rest_count_stmt)
+                hub_rest_count = rest_count_res.scalar() or 0
+                if hub_rest_count == 0:
+                    settings_map["restaurant_open"] = "false"
+                    settings_map["cafe_open"] = "false"
+                    settings_map["category_open_restaurant-food"] = "false"
+                    settings_map["category_open_cafe"] = "false"
+            except Exception as cnt_err:
+                logger.warning(f"Failed to count hub restaurants: {cnt_err}")
+
         # Populate outlet statuses
         try:
-            rest_res = await db.execute(select(Restaurant).where(Restaurant.isActive == True))
+            rest_stmt = select(Restaurant).where(Restaurant.isActive == True)
+            if effective_store_id and effective_store_id != "all":
+                rest_stmt = rest_stmt.where(Restaurant.storeId == effective_store_id)
+            rest_res = await db.execute(rest_stmt)
             for r in rest_res.scalars().all():
                 from routers.stores_service import check_restaurant_is_open
                 r_open = check_restaurant_is_open(r)

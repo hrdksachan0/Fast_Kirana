@@ -136,7 +136,17 @@ async def get_delivery_orders(
     """
     require_delivery_or_admin(current_user)
     user_id = current_user.get("id") or current_user.get("sub")
-    effective_store_id = storeId or current_user.get("assignedStoreId")
+    user_role = str(current_user.get("role", "")).upper()
+    is_admin = user_role in ["ADMIN", "SUPER_ADMIN", "SUPERADMIN"]
+    assigned_store_id = current_user.get("assignedStoreId")
+
+    # Delivery riders are strictly restricted to their assigned dark store hub
+    if user_role == "DELIVERY" and not is_admin:
+        if not assigned_store_id:
+            return []
+        effective_store_id = assigned_store_id
+    else:
+        effective_store_id = storeId or assigned_store_id
 
     today_start = datetime.combine(datetime.utcnow().date(), time.min)
 
@@ -724,8 +734,17 @@ async def accept_batch_orders(
         if not orders:
             raise HTTPException(status_code=404, detail="No matching orders found to batch accept")
 
-        # Verify none of them are already claimed by another rider
+        user_role = str(current_user.get("role", "")).upper()
+        is_admin = user_role in ["ADMIN", "SUPER_ADMIN", "SUPERADMIN"]
+        user_store = current_user.get("assignedStoreId")
+
+        # Verify none of them belong to another store or are already claimed by another rider
         for o in orders:
+            if not is_admin and user_store and o.storeId and o.storeId != user_store:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Order #{o.readableId or o.id[:8]} belongs to a different store hub"
+                )
             if o.deliveryUserId and o.deliveryUserId != user_id:
                 raise HTTPException(
                     status_code=400,
@@ -810,6 +829,14 @@ async def _dispatch_nearest_rider_internal(order_id: str, db: AsyncSession, max_
         pickup_lat = 26.1534185
         pickup_lng = 80.1714024
         pickup_name = "FastKirana Darkstore Hub"
+        if order.storeId:
+            from models import DarkStore
+            store_res = await db.execute(select(DarkStore).where(DarkStore.id == order.storeId))
+            dark_store = store_res.scalars().first()
+            if dark_store and dark_store.latitude is not None and dark_store.longitude is not None:
+                pickup_lat = float(dark_store.latitude)
+                pickup_lng = float(dark_store.longitude)
+                pickup_name = dark_store.name or pickup_name
 
     # Query active, unblocked delivery partners with wallets
     from models import Role
@@ -919,7 +946,7 @@ async def _dispatch_nearest_rider_internal(order_id: str, db: AsyncSession, max_
             "pickupName": pickup_name,
             "pickupLat": pickup_lat,
             "pickupLng": pickup_lng,
-            "customerAddress": order.address.street if order.address else "Ghatampur",
+            "customerAddress": order.address.street if (order.address and order.address.street) else ((order.address.city if (order.address and order.address.city) else "Local Express Area")),
             "distanceKm": round(best["distance_km"], 2),
             "total": float(order.total),
             "paymentMethod": order.paymentMethod.value,

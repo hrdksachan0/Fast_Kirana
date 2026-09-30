@@ -480,11 +480,12 @@ async def check_delivery(
                 surge_fee = float(settings_map["surge_fee"])
 
         dist_km = get_distance_km(store_lat, store_lng, lat, lng)
+        store_name = hub.name if (storeId and storeId != "all" and hub and hub.name) else settings_map.get("store_name", "Local Central Hub")
         rules = get_delivery_rules(dist_km, {
             "maxRadiusKm": max_radius_km,
             "surgeFee": surge_fee,
             "settings": settings_map,
-            "storeName": settings_map.get("store_name", "Ghatampur Central Hub")
+            "storeName": store_name
         })
 
         return rules

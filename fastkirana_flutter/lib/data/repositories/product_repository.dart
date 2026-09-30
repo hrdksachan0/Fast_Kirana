@@ -652,9 +652,17 @@ class ProductRepository {
     return result;
   }
 
-  Future<Product> getProduct(String id) async {
+  Future<Product> getProduct(String id, {String? storeId}) async {
     try {
-      final response = await dio.get('/api/products/$id');
+      final effectiveStoreId = (storeId != null && storeId.isNotEmpty)
+          ? storeId
+          : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : null);
+      final response = await dio.get(
+        '/api/products/$id',
+        queryParameters: {
+          if (effectiveStoreId != null) 'storeId': effectiveStoreId,
+        },
+      );
       final data = response.data;
       if (data is Map) {
         return Product.fromJson(Map<String, dynamic>.from(data));

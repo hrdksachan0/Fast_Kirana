@@ -111,11 +111,12 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    // 2. Global Finance Summary metrics for Today
+    // 2. Hub-Scoped Finance Summary metrics for Today
     const todayDeliveredOrders = await prisma.order.findMany({
       where: {
         status: 'DELIVERED',
-        deliveredAt: { gte: todayStart }
+        deliveredAt: { gte: todayStart },
+        ...(storeId && storeId !== 'all' ? { storeId } : {}),
       },
       select: {
         id: true,
@@ -143,15 +144,19 @@ export async function GET(request: NextRequest) {
     })
 
     const todayAllDeposits = await prisma.cashDepositTransaction.aggregate({
-      where: { createdAt: { gte: todayStart } },
+      where: {
+        createdAt: { gte: todayStart },
+        ...(storeId && storeId !== 'all' ? { rider: { assignedStoreId: storeId } } : {}),
+      },
       _sum: { amount: true }
     })
 
     const totalCashDepositedToday = todayAllDeposits._sum.amount || 0
     const pendingRiderCash = ridersWithWallets.reduce((sum, r) => sum + Math.max(0, r.cashInHand), 0)
 
-    // Recent deposit transactions
+    // Recent deposit transactions scoped to store
     const recentDeposits = await prisma.cashDepositTransaction.findMany({
+      where: (storeId && storeId !== 'all') ? { rider: { assignedStoreId: storeId } } : {},
       take: 20,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -282,8 +287,18 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     const clearAll = searchParams.get('clearAll') === 'true'
+    const effectiveStoreId = getEffectiveStoreId(session, searchParams.get('storeId'))
 
     if (id) {
+      if (effectiveStoreId && effectiveStoreId !== 'all') {
+        const item = await prisma.cashDepositTransaction.findUnique({
+          where: { id },
+          include: { rider: { select: { assignedStoreId: true } } }
+        })
+        if (item && item.rider?.assignedStoreId && item.rider.assignedStoreId !== effectiveStoreId) {
+          return NextResponse.json({ error: 'Forbidden: Cannot delete deposits from another store hub' }, { status: 403 })
+        }
+      }
       await prisma.cashDepositTransaction.delete({
         where: { id }
       })
@@ -293,8 +308,14 @@ export async function DELETE(request: NextRequest) {
       })
     }
 
-    // Clear all deposits
-    const deleted = await prisma.cashDepositTransaction.deleteMany({})
+    // Clear all deposits scoped to effectiveStoreId
+    const deleteWhere = (effectiveStoreId && effectiveStoreId !== 'all')
+      ? { rider: { assignedStoreId: effectiveStoreId } }
+      : {}
+
+    const deleted = await prisma.cashDepositTransaction.deleteMany({
+      where: deleteWhere
+    })
     return NextResponse.json({
       success: true,
       message: `Cleared ${deleted.count} cash deposit logs.`

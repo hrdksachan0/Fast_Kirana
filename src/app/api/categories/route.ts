@@ -10,7 +10,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const rootOnly = searchParams.get('rootOnly') === 'true'
-    const cacheKey = `${CACHE_KEYS.CATEGORIES}:${rootOnly ? 'root' : 'all'}`
+    const storeId = searchParams.get('storeId')
+    const cacheKey = `${CACHE_KEYS.CATEGORIES}:${rootOnly ? 'root' : 'all'}:${storeId || 'all'}`
 
     const cached = await cache.get<any[]>(cacheKey)
     if (cached) {
@@ -27,6 +28,18 @@ export async function GET(request: Request) {
       where.parentId = null
     }
 
+    const productWhere = storeId && storeId !== 'all' ? {
+      where: {
+        restaurantId: null,
+        inventories: {
+          some: {
+            storeId,
+            stock: { gt: 0 }
+          }
+        }
+      }
+    } : { where: { restaurantId: null } }
+
     const categories = await prisma.category.findMany({
       where,
       orderBy: {
@@ -40,12 +53,12 @@ export async function GET(request: Request) {
           orderBy: { sortOrder: 'asc' },
           include: {
             _count: {
-              select: { products: true },
+              select: { products: productWhere },
             },
           },
         },
         _count: {
-          select: { products: true },
+          select: { products: productWhere },
         },
       },
     })

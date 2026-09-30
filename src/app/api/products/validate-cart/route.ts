@@ -10,7 +10,9 @@ export async function POST(request: NextRequest) {
   const validation = await validateBody(request, validateCartSchema)
   if (!validation.success) return validation.error
 
-  const { items } = validation.data
+  const { items, storeId } = validation.data
+  const queryStoreId = new URL(request.url).searchParams.get('storeId')
+  const effectiveStoreId = storeId || queryStoreId || null
 
   try {
     const productIds = items.map((item: any) => item.product?.id ? item.product.id.split('_')[0] : null).filter(Boolean)
@@ -18,28 +20,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ hasChanges: false, updates: [] })
     }
 
-    const dbProducts = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: {
-        id: true, name: true, price: true, mrp: true, stock: true,
-        isAvailable: true, variants: true, addons: true, category: true, tags: true,
-        restaurantId: true,
-        restaurant: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            lat: true,
-            lng: true,
-            deliveryRadiusKm: true,
-            isOpen: true,
-            openTime: true,
-            closeTime: true,
+    const [dbProducts, storeInventories] = await Promise.all([
+      prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: {
+          id: true, name: true, price: true, mrp: true, stock: true,
+          isAvailable: true, variants: true, addons: true, category: true, tags: true,
+          restaurantId: true,
+          restaurant: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              lat: true,
+              lng: true,
+              deliveryRadiusKm: true,
+              isOpen: true,
+              openTime: true,
+              closeTime: true,
+            }
           }
-        }
-      },
-    })
+        },
+      }),
+      effectiveStoreId && effectiveStoreId !== 'all'
+        ? prisma.storeInventory.findMany({
+            where: {
+              storeId: effectiveStoreId,
+              productId: { in: productIds },
+            },
+            select: {
+              productId: true,
+              stock: true,
+              isAvailable: true,
+              priceOverride: true,
+            }
+          })
+        : Promise.resolve([])
+    ])
 
+    const inventoryMap = new Map(storeInventories.map(inv => [inv.productId, inv]))
     const updates: any[] = []
 
     for (const item of items) {
@@ -62,8 +81,12 @@ export async function POST(request: NextRequest) {
       }
 
       const dbProduct = dbProducts.find((p: any) => p.id === productId)
+      const localInv = inventoryMap.get(productId)
+      const isAvailableInStore = dbProduct?.restaurantId
+        ? dbProduct?.isAvailable
+        : (dbProduct?.isAvailable && (localInv ? localInv.isAvailable : !effectiveStoreId))
 
-      if (!dbProduct || !dbProduct.isAvailable) {
+      if (!dbProduct || !isAvailableInStore) {
         updates.push({
           type: 'OUT_OF_STOCK',
           productId: clientProduct.id,
@@ -72,9 +95,11 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      let dbPrice = dbProduct.price
+      let dbPrice = localInv?.priceOverride ?? dbProduct.price
       let dbMrp = dbProduct.mrp
-      let dbStock = dbProduct.stock
+      let dbStock = dbProduct.restaurantId
+        ? dbProduct.stock
+        : (localInv ? localInv.stock : (effectiveStoreId ? 0 : dbProduct.stock))
 
       if (variantName && dbProduct.variants && Array.isArray(dbProduct.variants)) {
         const variant = (dbProduct.variants as any[]).find((v: any) => v.name === variantName)

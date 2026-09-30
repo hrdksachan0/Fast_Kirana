@@ -8,6 +8,7 @@ import { triggerHaptic } from '@/lib/haptic'
 import { getDistanceKm } from '@/lib/distance'
 import { getLast10Digits } from '@/lib/phone'
 import { DEFAULT_STORE_PINCODE, resolveStorePincode } from '@/lib/checkout'
+import { useUIStore } from '@/stores/ui-store'
 
 export interface AddressFormData {
   label: string
@@ -36,6 +37,8 @@ export function useCheckoutAddress({
   storeSettingsMap,
 }: UseCheckoutAddressProps) {
   const { data: session } = useSession()
+  const activeCity = useUIStore((s) => s.activeCity) || 'Ghatampur'
+  const activePincode = resolveStorePincode(storeSettingsMap) || DEFAULT_STORE_PINCODE
   const prefilledPhoneRef = useRef(false)
   const activeCheckoutAddressRef = useRef<{ id: string; addresses: Address[] } | null>(null)
 
@@ -55,8 +58,8 @@ export function useCheckoutAddress({
     houseNo: '.',
     street: '',
     area: '.',
-    city: 'Ghatampur',
-    pincode: DEFAULT_STORE_PINCODE,
+    city: activeCity,
+    pincode: activePincode,
     phone: '',
     isDefault: false,
     lat: null,
@@ -146,7 +149,7 @@ export function useCheckoutAddress({
           toast.dismiss(toastId)
           setIsDetectingLocation(false)
           toast.error(
-            `Detected location is outside our delivery zone (${dist.toFixed(1)} km away). If you are ordering for home, please type your Ghatampur address manually.`,
+            `Detected location is outside our delivery zone (${dist.toFixed(1)} km away). If you are ordering for home, please type your ${activeCity} address manually.`,
             { duration: 6000 }
           )
           return
@@ -166,8 +169,8 @@ export function useCheckoutAddress({
 
               let route = ''
               let sublocality = ''
-              let city = 'Ghatampur'
-              let postcode = DEFAULT_STORE_PINCODE
+              let city = activeCity
+              let postcode = activePincode
 
               addressComponents.forEach((comp: any) => {
                 if (comp.types.includes('route')) {
@@ -247,11 +250,22 @@ export function useCheckoutAddress({
     }
 
     const serviceablePincode = resolveStorePincode(storeSettingsMap)
-    const allowedPincodes = [
+    const { availableHubs } = useUIStore.getState()
+    const dynamicHubPincodes = availableHubs
+      .map((h: any) => h.id ? (h.id.match(/\b\d{6}\b/) || [])[0] : null)
+      .filter(Boolean) as string[]
+
+    const configuredPincodes = (storeSettingsMap.serviceable_pincodes || '')
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+
+    const allowedPincodes = Array.from(new Set([
       serviceablePincode,
       DEFAULT_STORE_PINCODE,
       '209206',
       '224122',
+      '816107',
       '209201',
       '209214',
       '209208',
@@ -260,9 +274,12 @@ export function useCheckoutAddress({
       '208011',
       '208012',
       '208020',
-    ]
+      ...dynamicHubPincodes,
+      ...configuredPincodes,
+    ]))
+
     if (!allowedPincodes.includes(cleanPincode)) {
-      toast.error(`FastKirana delivers to Ghatampur (209206) & Akbarpur (224122). Pincode ${cleanPincode} is not serviceable.`)
+      toast.error(`Pincode ${cleanPincode} is not currently serviceable in this delivery zone.`)
       return null
     }
 
@@ -277,7 +294,13 @@ export function useCheckoutAddress({
       return null
     }
 
-    const inferredCity = cleanPincode === '224122' ? 'Akbarpur' : (addressForm.city || 'Ghatampur')
+    let inferredCity = addressForm.city
+    if (!inferredCity || inferredCity === 'Ghatampur') {
+      if (cleanPincode === '224122') inferredCity = 'Akbarpur'
+      else if (cleanPincode === '816107') inferredCity = 'Pakur'
+      else if (activeCity) inferredCity = activeCity
+      else inferredCity = 'Ghatampur'
+    }
 
     setIsSavingAddress(true)
     try {

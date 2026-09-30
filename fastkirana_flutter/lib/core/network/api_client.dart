@@ -56,6 +56,11 @@ final dioProvider = Provider<Dio>((ref) {
           options.headers['Authorization'] = 'Bearer $token';
         }
 
+        // ─── Hub Isolation: Automatically inject active darkstore hub ID ──
+        if (AppConfig.darkstoreId.isNotEmpty) {
+          options.headers.putIfAbsent('x-store-id', () => AppConfig.darkstoreId);
+        }
+
         final isAuthRoute = options.path.contains('/api/auth');
         final isPublicGetRoute = kIsWeb &&
             options.method == 'GET' &&

@@ -143,7 +143,7 @@ export async function buildSettingsMap(storeId?: string | null): Promise<Record<
     }),
     prisma.restaurant.findMany({
       where: { isActive: true },
-      select: { id: true, slug: true, name: true, isOpen: true, openTime: true, closeTime: true, updatedAt: true },
+      select: { id: true, slug: true, name: true, isOpen: true, openTime: true, closeTime: true, updatedAt: true, storeId: true },
     }),
   ])
 
@@ -235,30 +235,41 @@ export async function buildSettingsMap(storeId?: string | null): Promise<Record<
     }
   }
 
-  for (const r of activeRestaurants) {
+  const hubRestaurants = (storeId && storeId !== 'all')
+    ? activeRestaurants.filter(r => (r as any).storeId === storeId)
+    : activeRestaurants
+
+  for (const r of hubRestaurants) {
     const opStatus = checkStoreOperatingStatus(r)
     settingsMap[`outlet_open_${r.id}`] = opStatus.isOpen ? 'true' : 'false'
     if (r.slug) settingsMap[`outlet_open_${r.slug}`] = opStatus.isOpen ? 'true' : 'false'
   }
 
-  const wedson = activeRestaurants.find(r => r.slug?.includes('wedson') || r.name?.toLowerCase().includes('wedson'))
-  if (wedson) {
-    const opStatus = checkStoreOperatingStatus(wedson)
-    settingsMap['restaurant_open'] = opStatus.isOpen ? 'true' : 'false'
-    if (wedson.openTime) settingsMap['restaurant_open_time'] = wedson.openTime
-    if (wedson.closeTime) settingsMap['restaurant_close_time'] = wedson.closeTime
+  if (storeId && storeId !== 'all' && hubRestaurants.length === 0) {
+    settingsMap['restaurant_open'] = 'false'
+    settingsMap['cafe_open'] = 'false'
+    settingsMap['category_open_restaurant-food'] = 'false'
+    settingsMap['category_open_cafe'] = 'false'
   } else {
-    settingsMap['restaurant_open'] = checkIsStoreOpen(settingsMap, 'restaurant') ? 'true' : 'false'
-  }
+    const wedson = hubRestaurants.find(r => r.slug?.includes('wedson') || r.name?.toLowerCase().includes('wedson'))
+    if (wedson) {
+      const opStatus = checkStoreOperatingStatus(wedson)
+      settingsMap['restaurant_open'] = opStatus.isOpen ? 'true' : 'false'
+      if (wedson.openTime) settingsMap['restaurant_open_time'] = wedson.openTime
+      if (wedson.closeTime) settingsMap['restaurant_close_time'] = wedson.closeTime
+    } else {
+      settingsMap['restaurant_open'] = checkIsStoreOpen(settingsMap, 'restaurant') ? 'true' : 'false'
+    }
 
-  const cafe = activeRestaurants.find(r => r.slug?.includes('as-restaurant') || r.slug?.includes('cafe') || r.name?.toLowerCase().includes('a.s.'))
-  if (cafe) {
-    const opStatus = checkStoreOperatingStatus(cafe)
-    settingsMap['cafe_open'] = opStatus.isOpen ? 'true' : 'false'
-    if (cafe.openTime) settingsMap['cafe_open_time'] = cafe.openTime
-    if (cafe.closeTime) settingsMap['cafe_close_time'] = cafe.closeTime
-  } else {
-    settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
+    const cafe = hubRestaurants.find(r => r.slug?.includes('as-restaurant') || r.slug?.includes('cafe') || r.name?.toLowerCase().includes('a.s.'))
+    if (cafe) {
+      const opStatus = checkStoreOperatingStatus(cafe)
+      settingsMap['cafe_open'] = opStatus.isOpen ? 'true' : 'false'
+      if (cafe.openTime) settingsMap['cafe_open_time'] = cafe.openTime
+      if (cafe.closeTime) settingsMap['cafe_close_time'] = cafe.closeTime
+    } else {
+      settingsMap['cafe_open'] = checkIsStoreOpen(settingsMap, 'cafe') ? 'true' : 'false'
+    }
   }
 
   // Grocery store status calculation:

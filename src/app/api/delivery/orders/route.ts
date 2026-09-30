@@ -26,8 +26,10 @@ export async function GET(request: NextRequest) {
     if (riderUser) effectiveUserId = riderUser.id
   }
 
-  let riderStoreId: string | null = queryStoreId || null
-  if (effectiveUserId && !riderStoreId) {
+  const isPlatformAdmin = session?.user?.role === 'ADMIN' && !(session?.user as any)?.assignedStoreId
+
+  let riderStoreId: string | null = null
+  if (effectiveUserId) {
     try {
       const riderUser = await prisma.user.findUnique({
         where: { id: effectiveUserId },
@@ -35,6 +37,16 @@ export async function GET(request: NextRequest) {
       })
       riderStoreId = riderUser?.assignedStoreId || null
     } catch (_) {}
+  }
+
+  // Only root/superadmins without assigned store can use queryStoreId or view all
+  if (isPlatformAdmin && queryStoreId && queryStoreId !== 'all') {
+    riderStoreId = queryStoreId
+  }
+
+  // Non-superadmin staff must have an assigned store to view orders
+  if (!riderStoreId && !isPlatformAdmin) {
+    return NextResponse.json([])
   }
 
   try {

@@ -9,6 +9,7 @@ export async function GET(
   try {
     const { id } = await params
     const { searchParams } = new URL(request.url)
+    const effectiveStoreId = searchParams.get('storeId') || request.headers.get('x-store-id')
 
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '30', 10)))
@@ -16,7 +17,7 @@ export async function GET(
     const search = searchParams.get('search')?.trim().toLowerCase() || ''
     const skip = (page - 1) * limit
 
-    const cacheKey = `category_products:${id}:${page}:${limit}:${sort}:${search}`
+    const cacheKey = `category_products:${id}:${effectiveStoreId || 'all'}:${page}:${limit}:${sort}:${search}`
     const cached = await getCache(cacheKey)
     if (cached) {
       return NextResponse.json(cached)
@@ -51,6 +52,16 @@ export async function GET(
       isAvailable: true
     }
 
+    if (effectiveStoreId && effectiveStoreId !== 'all') {
+      where.inventories = {
+        some: {
+          storeId: effectiveStoreId,
+          stock: { gt: 0 },
+          isAvailable: true,
+        }
+      }
+    }
+
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -79,7 +90,15 @@ export async function GET(
         where,
         include: {
           category: { select: { id: true, name: true, slug: true } },
-          images: { select: { id: true, url: true, sortOrder: true } }
+          images: { select: { id: true, url: true, sortOrder: true } },
+          ...(effectiveStoreId && effectiveStoreId !== 'all'
+            ? {
+                inventories: {
+                  where: { storeId: effectiveStoreId },
+                  select: { stock: true, isAvailable: true, priceOverride: true }
+                }
+              }
+            : {})
         },
         orderBy,
         skip,
@@ -89,6 +108,20 @@ export async function GET(
     ])
 
     const totalPages = Math.ceil(totalCount / limit)
+
+    const mappedProducts = products.map((p: any) => {
+      if (effectiveStoreId && effectiveStoreId !== 'all' && p.inventories && p.inventories.length > 0) {
+        const inv = p.inventories[0]
+        return {
+          ...p,
+          stock: inv.stock,
+          isAvailable: inv.isAvailable && inv.stock > 0,
+          price: inv.priceOverride != null ? inv.priceOverride : p.price,
+          inventories: undefined,
+        }
+      }
+      return p
+    })
 
     const responsePayload = {
       success: true,
@@ -101,7 +134,7 @@ export async function GET(
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1
       },
-      products
+      products: mappedProducts
     }
 
     // Cache for 60 seconds

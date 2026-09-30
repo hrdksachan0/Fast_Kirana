@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useCart } from '@/hooks/use-cart'
 import { useCartStore } from '@/stores/cart-store'
+import { useUIStore } from '@/stores/ui-store'
 import { toast } from 'sonner'
 import { ShieldCheck } from 'lucide-react'
 import { isProductStoreClosed } from '@/lib/utils'
@@ -41,10 +42,11 @@ export default function CheckoutPage() {
     updateQuantity,
     updateCartProduct,
   } = useCart()
-  const appliedCouponCode = useCartStore((s) => s.appliedCouponCode)
+  const activeStoreId = useUIStore((s) => s.activeStoreId)
+  const activeCity = useUIStore((s) => s.activeCity) || 'Local'
 
   // 1. Settings & Store Config Hook
-  const settings = useCheckoutSettings()
+  const settings = useCheckoutSettings(activeStoreId)
   const {
     storeSettingsMap,
     isSettingsLoading,
@@ -106,10 +108,11 @@ export default function CheckoutPage() {
     async function validateCartOnCheckout() {
       if (items.length === 0) return
       try {
-        const res = await fetch('/api/products/validate-cart', {
+        const storeParam = activeStoreId && activeStoreId !== 'all' ? `?storeId=${encodeURIComponent(activeStoreId)}` : ''
+        const res = await fetch(`/api/products/validate-cart${storeParam}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items }),
+          body: JSON.stringify({ items, storeId: activeStoreId || undefined }),
         })
         if (res.ok) {
           const data = await res.json()
@@ -170,7 +173,7 @@ export default function CheckoutPage() {
     addresses,
     selectedAddressId,
     selectedAddress,
-    appliedCouponCode,
+    appliedCouponCode: pricing.appliedCoupon?.code || null,
     contactPhone,
     packagingOption,
     packagingFee: pricing.packagingFee,
@@ -191,6 +194,7 @@ export default function CheckoutPage() {
     saveAddressCore,
     isSavingAddress,
     clearCart,
+    storeId: activeStoreId,
   })
 
   // Early Return Barriers
@@ -234,7 +238,7 @@ export default function CheckoutPage() {
             ⚡ Quick Checkout
           </h1>
           <p className="text-[11px] text-text-muted mt-0.5">
-            Ghatampur fastest local delivery to your doorstep
+            {activeCity ? `${activeCity} fastest local delivery to your doorstep` : 'Fastest local delivery to your doorstep'}
           </p>
         </div>
         <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-accent bg-accent/10 px-3 py-1 rounded-full border border-accent/20">

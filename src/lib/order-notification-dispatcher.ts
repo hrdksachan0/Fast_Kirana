@@ -135,8 +135,9 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
           }
         )
 
-        // Broadcast ONCE to canonical Admin Topic (prevents duplicate pushes)
-        sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
+        // Broadcast to store-scoped admin topic (or canonical fallback)
+        const adminTopic = order.storeId ? `admin_orders_${order.storeId}` : 'admin_orders'
+        sendTopicWithRetry(fcmMessaging, { topic: adminTopic, ...staffPayload }).catch(() => {})
 
         // Only notify Pickers/Riders and Kitchens if NOT awaiting admin approval
         if (!isAdminPending) {
@@ -174,10 +175,13 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
               }
             )
 
-            // Direct tokens to Pickers
+            // Direct tokens to Pickers assigned to this store hub
             const pickerTokens = await prisma.fcmToken.findMany({
               where: {
-                user: { role: Role.PICKER },
+                user: {
+                  role: Role.PICKER,
+                  ...(order.storeId ? { OR: [{ assignedStoreId: order.storeId }, { assignedStoreId: null }] } : {}),
+                },
               },
               select: { token: true },
             })
@@ -185,10 +189,13 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
               fcmMessaging.send({ token: pToken.token, ...pickerPayload }).catch(() => {})
             }
 
-            // Direct tokens to Delivery Riders
+            // Direct tokens to Delivery Riders assigned to this store hub
             const riderTokens = await prisma.fcmToken.findMany({
               where: {
-                user: { role: Role.DELIVERY },
+                user: {
+                  role: Role.DELIVERY,
+                  ...(order.storeId ? { OR: [{ assignedStoreId: order.storeId }, { assignedStoreId: null }] } : {}),
+                },
               },
               select: { token: true },
             })
@@ -196,9 +203,12 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
               fcmMessaging.send({ token: rToken.token, ...riderPayload }).catch(() => {})
             }
 
-            // Broadcast to Single Canonical Picker Topic
+            // Broadcast to Hub-Scoped Picker & Rider Topics
             const pickerTopic = order.storeId ? `picker_orders_${order.storeId}` : 'picker_orders'
             sendTopicWithRetry(fcmMessaging, { topic: pickerTopic, ...pickerPayload }).catch(() => {})
+
+            const riderTopic = order.storeId ? `delivery_orders_${order.storeId}` : 'delivery_orders'
+            sendTopicWithRetry(fcmMessaging, { topic: riderTopic, ...riderPayload }).catch(() => {})
           }
 
           // Restaurant owner notification (Single canonical topic)

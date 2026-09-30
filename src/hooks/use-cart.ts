@@ -109,8 +109,9 @@ export function useCart() {
       return
     }
 
+    const activeStoreId = useUIStore.getState().activeStoreId
     checkFreeDeliveryUnlock(() => {
-      useCartStore.getState().addItem(product)
+      useCartStore.getState().addItem(product, activeStoreId)
     })
     playCartPop()
     triggerHaptic('light')

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, Response, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import or_, and_, not_, func, text, exists
@@ -440,7 +440,10 @@ async def get_products(
     is_worker = role in ["ADMIN", "CHEF"]
 
     normalized_search = search.strip().lower().replace("  ", " ") if search else ""
-    target_store = storeId if storeId and storeId.lower() != "all" else "hub-209206"
+    header_store = request.headers.get("x-store-id")
+    target_store = storeId or header_store
+    if not target_store or target_store.lower() == "all":
+        target_store = "hub-209206"
 
     # Check cache for public catalog and search requests (<5ms response)
     is_cacheable = not is_worker and not includeUnavailable and not admin
@@ -1285,6 +1288,8 @@ async def validate_checkout_cart(
 @router.get("/{id}")
 async def get_product_details(
     id: str,
+    storeId: Optional[str] = Query(None),
+    x_store_id: Optional[str] = Header(None, alias="x-store-id"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1300,7 +1305,23 @@ async def get_product_details(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    return serialize_product(product)
+    target_store = storeId or x_store_id
+    local_stock = None
+    if target_store:
+        if product.restaurantId:
+            if product.restaurant and product.restaurant.storeId and product.restaurant.storeId != target_store:
+                return serialize_product(product, local_stock=0)
+            local_stock = product.stock or 99999
+        else:
+            inv_stmt = select(StoreInventory).where(
+                StoreInventory.storeId == target_store,
+                StoreInventory.productId == product.id
+            )
+            inv_res = await db.execute(inv_stmt)
+            inv = inv_res.scalars().first()
+            local_stock = inv.stock if inv else 0
+
+    return serialize_product(product, local_stock=local_stock)
 
 
 @router.post("")

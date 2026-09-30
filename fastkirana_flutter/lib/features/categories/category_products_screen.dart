@@ -7,6 +7,7 @@ import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/store_hub_provider.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../providers/cart_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -519,21 +520,49 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                           });
 
                           if (list.isEmpty) {
+                            final currentHub = ref.watch(currentStoreHubProvider);
+                            final hubCity = currentHub.city.isNotEmpty ? currentHub.city : currentHub.name;
                             return Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('🍿', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 40))),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'No products found',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 13),
-                                      fontWeight: FontWeight.w700,
-                                      color: AppDesignSystem.textSecondary,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFFEF2F2),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.inventory_2_outlined,
+                                        size: 38,
+                                        color: AppDesignSystem.primary,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Aisles Stocking Soon in $hubCity!',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: Responsive.scaledFontSize(context, 15),
+                                        fontWeight: FontWeight.w800,
+                                        color: AppDesignSystem.textPrimary,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'We are currently onboarding fresh stock for this aisle in our $hubCity darkstore.',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: Responsive.scaledFontSize(context, 12),
+                                        fontWeight: FontWeight.w500,
+                                        color: AppDesignSystem.textSecondary,
+                                        height: 1.35,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           }

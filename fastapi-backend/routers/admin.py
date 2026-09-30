@@ -915,13 +915,7 @@ async def get_admin_inventory_forecast(
     try:
         from models import StoreInventory
         
-        # Check if storeId has localized inventory; if 0, fall back to hub-209206 (Ghatampur Central Hub)
         effective_store_id = storeId
-        if storeId and storeId.lower() != 'all':
-            inv_cnt_stmt = select(func.count()).select_from(StoreInventory).where(StoreInventory.storeId == storeId)
-            inv_cnt = (await db.execute(inv_cnt_stmt)).scalar() or 0
-            if inv_cnt == 0:
-                effective_store_id = "hub-209206"
 
         # Load active products from categories other than cafe
         products_stmt = select(Product).options(selectinload(Product.category)).join(Category).where(

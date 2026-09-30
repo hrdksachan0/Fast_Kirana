@@ -19,6 +19,7 @@ import {
 import { getDistanceKm } from '@/lib/distance'
 import { isCafeProduct } from '@/lib/utils'
 import { getRestaurantLocation } from '@/lib/restaurant-location'
+import { useUIStore } from '@/stores/ui-store'
 import { AddressFormData } from './use-checkout-address'
 
 export interface UseCheckoutPaymentProps {
@@ -49,6 +50,7 @@ export interface UseCheckoutPaymentProps {
   saveAddressCore: () => Promise<{ savedAddress: Address; newAddresses: Address[] } | null>
   isSavingAddress: boolean
   clearCart: () => void
+  storeId?: string | null
 }
 
 export function useCheckoutPayment({
@@ -79,7 +81,10 @@ export function useCheckoutPayment({
   saveAddressCore,
   isSavingAddress,
   clearCart,
+  storeId,
 }: UseCheckoutPaymentProps) {
+  const activeStoreIdFromStore = useUIStore((s) => s.activeStoreId)
+  const effectiveStoreId = storeId || activeStoreIdFromStore || null
   const router = useRouter()
   const { data: session } = useSession()
 
@@ -145,7 +150,10 @@ export function useCheckoutPayment({
     setIsPlacingOrder(true)
     setOverlayState('creating-order')
     try {
-      const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
+      const settingsUrl = effectiveStoreId && effectiveStoreId !== 'all'
+        ? `/api/settings?storeId=${encodeURIComponent(effectiveStoreId)}`
+        : '/api/settings'
+      const settingsRes = await fetch(settingsUrl, { cache: 'no-store' })
       const settings: SettingsMap = await settingsRes.json()
 
       const validation = await validateCheckoutEligibility({
@@ -183,6 +191,7 @@ export function useCheckoutPayment({
         isOrderForSomeone: Boolean(orderForSomeone),
         receiverName: orderForSomeone ? recipientName.trim() : undefined,
         receiverPhone: orderForSomeone ? recipientPhone.replace(/\D/g, '') : undefined,
+        storeId: effectiveStoreId,
       })
 
       const res = await fetch('/api/orders', {
@@ -190,6 +199,7 @@ export function useCheckoutPayment({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...payload,
+          storeId: effectiveStoreId || undefined,
           existingOrderId: activePendingOrderId || undefined,
           notes: finalNotes,
         }),
@@ -252,7 +262,10 @@ export function useCheckoutPayment({
     setIsPlacingOrder(true)
     setOverlayState('creating-order')
     try {
-      const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
+      const settingsUrl = effectiveStoreId && effectiveStoreId !== 'all'
+        ? `/api/settings?storeId=${encodeURIComponent(effectiveStoreId)}`
+        : '/api/settings'
+      const settingsRes = await fetch(settingsUrl, { cache: 'no-store' })
       const settings: SettingsMap = await settingsRes.json()
 
       const validation = await validateCheckoutEligibility({
@@ -290,6 +303,7 @@ export function useCheckoutPayment({
         isOrderForSomeone: Boolean(orderForSomeone),
         receiverName: orderForSomeone ? recipientName.trim() : undefined,
         receiverPhone: orderForSomeone ? recipientPhone.replace(/\D/g, '') : undefined,
+        storeId: effectiveStoreId,
       })
 
       const orderRes = await fetch('/api/orders', {
@@ -297,6 +311,7 @@ export function useCheckoutPayment({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...payload,
+          storeId: effectiveStoreId || undefined,
           existingOrderId: activePendingOrderId || undefined,
           notes: finalNotes,
         }),

@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input'
 import { triggerHaptic } from '@/lib/haptic'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 import { WishlistClient } from '@/components/account/wishlist-client'
+import { useUIStore } from '@/stores/ui-store'
 
 interface AccountDashboardProps {
   user: {
@@ -412,9 +413,28 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
 
     const cleanPincode = addressForm.pincode.trim().replace(/\s+/g, '')
-    const validPincodes = ['209206', '224122', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
+    const availableHubs = useUIStore.getState().availableHubs
+    const dynamicHubPincodes = availableHubs
+      .map((h: any) => h.id ? (h.id.match(/\b\d{6}\b/) || [])[0] : null)
+      .filter(Boolean) as string[]
+
+    const validPincodes = Array.from(new Set([
+      '209206',
+      '224122',
+      '816107',
+      '209201',
+      '209214',
+      '209208',
+      '208001',
+      '208002',
+      '208011',
+      '208012',
+      '208020',
+      ...dynamicHubPincodes,
+    ]))
+
     if (!validPincodes.includes(cleanPincode)) {
-      toast.error('FastKirana delivers to Ghatampur (209206) & Akbarpur (224122)')
+      toast.error(`Pincode ${cleanPincode} is not currently serviceable in our delivery zones.`)
       return
     }
 
@@ -426,7 +446,13 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
     setIsSavingAddress(true)
     try {
-      const city = cleanPincode === '224122' ? 'Akbarpur' : 'Ghatampur'
+      let city = 'Ghatampur'
+      if (cleanPincode === '224122') city = 'Akbarpur'
+      else if (cleanPincode === '816107') city = 'Pakur'
+      else {
+        const matched = availableHubs.find((h: any) => h.id?.includes(cleanPincode))
+        city = matched?.city || useUIStore.getState().activeCity || 'Ghatampur'
+      }
       const payload = {
         label: addressForm.label || 'Home',
         houseNo: '.',
@@ -458,7 +484,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
           label: 'Home',
           street: '',
           phone: user.phone || '',
-          pincode: '209206',
+          pincode: useUIStore.getState().activeStoreId?.match(/\b\d{6}\b/)?.[0] || '209206',
           isDefault: false,
         })
       } else {
@@ -479,9 +505,28 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
 
     const cleanPincode = addressForm.pincode.trim().replace(/\s+/g, '')
-    const validPincodes = ['209206', '224122', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
+    const availableHubs = useUIStore.getState().availableHubs
+    const dynamicHubPincodes = availableHubs
+      .map((h: any) => h.id ? (h.id.match(/\b\d{6}\b/) || [])[0] : null)
+      .filter(Boolean) as string[]
+
+    const validPincodes = Array.from(new Set([
+      '209206',
+      '224122',
+      '816107',
+      '209201',
+      '209214',
+      '209208',
+      '208001',
+      '208002',
+      '208011',
+      '208012',
+      '208020',
+      ...dynamicHubPincodes,
+    ]))
+
     if (!validPincodes.includes(cleanPincode)) {
-      toast.error('FastKirana delivers to Ghatampur (209206) & Akbarpur (224122)')
+      toast.error(`Pincode ${cleanPincode} is not currently serviceable in our delivery zones.`)
       return
     }
 
@@ -493,7 +538,13 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
     setIsSavingAddress(true)
     try {
-      const city = cleanPincode === '224122' ? 'Akbarpur' : 'Ghatampur'
+      let city = 'Ghatampur'
+      if (cleanPincode === '224122') city = 'Akbarpur'
+      else if (cleanPincode === '816107') city = 'Pakur'
+      else {
+        const matched = availableHubs.find((h: any) => h.id?.includes(cleanPincode))
+        city = matched?.city || useUIStore.getState().activeCity || 'Ghatampur'
+      }
       const payload = {
         id: editingAddress.id,
         label: addressForm.label,

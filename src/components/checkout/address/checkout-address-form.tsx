@@ -185,7 +185,7 @@ export function CheckoutAddressForm({
             <h3 className="font-black text-xs sm:text-sm text-text-primary">
               {editingAddressId ? 'Edit Address' : 'Add Delivery Address'}
             </h3>
-            <p className="text-[10px] text-text-muted">Ghatampur local delivery</p>
+            <p className="text-[10px] text-text-muted">{addressForm.city ? `${addressForm.city} local delivery` : 'Local delivery'}</p>
           </div>
         </div>
         {hasExistingAddresses && (
@@ -261,7 +261,7 @@ export function CheckoutAddressForm({
           id="street"
           required
           rows={2}
-          placeholder="House / Flat No., Street, Landmark, Ghatampur"
+          placeholder={`House / Flat No., Street, Landmark, ${addressForm.city || 'Local'}`}
           value={addressForm.street}
           onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
           className="mt-1 block w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-medium focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-text-muted/60"
@@ -374,8 +374,8 @@ export function CheckoutAddressForm({
             <span>City & Pincode</span>
           </Label>
           <div className="mt-1 h-9 px-3 flex items-center justify-between rounded-xl border border-border bg-muted/30 text-xs font-bold text-text-secondary">
-            <span>Ghatampur</span>
-            <span className="text-primary font-black">209206</span>
+            <span>{addressForm.city || 'Local'}</span>
+            <span className="text-primary font-black">{addressForm.pincode || ''}</span>
           </div>
         </div>
       </div>

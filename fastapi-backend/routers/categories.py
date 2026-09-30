@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Response, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, or_, and_, exists
@@ -69,7 +69,8 @@ async def get_categories(
     response: Response,
     admin: Optional[str] = None,
     all: Optional[str] = None,
-    storeId: Optional[str] = None,
+    storeId: Optional[str] = Query(None),
+    x_store_id: Optional[str] = Header(None, alias="x-store-id"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -79,8 +80,9 @@ async def get_categories(
     """
     import time
     now = time.time()
+    effective_store_id = storeId or x_store_id
     include_all = (admin == "true") or (all == "true")
-    cache_key = f"categories:{include_all}:{storeId or 'all'}"
+    cache_key = f"categories:{include_all}:{effective_store_id or 'all'}"
     
     cached_val = await get_cached(cache_key)
     if cached_val is not None:
@@ -89,7 +91,7 @@ async def get_categories(
         return cached_val
 
     try:
-        if storeId and storeId != "all":
+        if effective_store_id and effective_store_id != "all":
             # Isolate by dark store inventory
             stmt = (
                 select(Category, func.count(Product.id).label("product_count"))
@@ -101,7 +103,7 @@ async def get_categories(
                         exists().where(
                             and_(
                                 StoreInventory.productId == Product.id,
-                                StoreInventory.storeId == storeId,
+                                StoreInventory.storeId == effective_store_id,
                                 StoreInventory.stock > 0
                             )
                         )
@@ -355,12 +357,17 @@ async def delete_category(
 async def get_categories_catalog(
     includeProducts: bool = False,
     limitPerCat: int = 8,
+    storeId: Optional[str] = Query(None),
+    x_store_id: Optional[str] = Header(None, alias="x-store-id"),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get structured grocery categories catalog with product counts and preview items.
     Matches Next.js /api/categories/catalog: root categories only, nested subcategories with counts.
+    Isolates product counts and inventory to effective storeId hub.
     """
+    effective_store_id = storeId or x_store_id
+
     stmt = (
         select(Category)
         .where(
@@ -375,11 +382,23 @@ async def get_categories_catalog(
     formatted_catalog = []
     for cat in root_categories:
         # Product count for root category
-        count_stmt = select(func.count(Product.id)).where(
+        count_filters = [
             Product.categoryId == cat.id,
             Product.restaurantId.is_(None),
             Product.isAvailable == True
-        )
+        ]
+        if effective_store_id and effective_store_id != "all":
+            count_filters.append(
+                exists().where(
+                    and_(
+                        StoreInventory.productId == Product.id,
+                        StoreInventory.storeId == effective_store_id,
+                        StoreInventory.stock > 0,
+                        StoreInventory.isAvailable == True
+                    )
+                )
+            )
+        count_stmt = select(func.count(Product.id)).where(*count_filters)
         count_res = await db.execute(count_stmt)
         p_count = count_res.scalar() or 0
 
@@ -394,11 +413,23 @@ async def get_categories_catalog(
 
         formatted_subs = []
         for sub in children:
-            sub_count_stmt = select(func.count(Product.id)).where(
+            sub_count_filters = [
                 Product.categoryId == sub.id,
                 Product.restaurantId.is_(None),
                 Product.isAvailable == True
-            )
+            ]
+            if effective_store_id and effective_store_id != "all":
+                sub_count_filters.append(
+                    exists().where(
+                        and_(
+                            StoreInventory.productId == Product.id,
+                            StoreInventory.storeId == effective_store_id,
+                            StoreInventory.stock > 0,
+                            StoreInventory.isAvailable == True
+                        )
+                    )
+                )
+            sub_count_stmt = select(func.count(Product.id)).where(*sub_count_filters)
             sub_count_res = await db.execute(sub_count_stmt)
             sub_p_count = sub_count_res.scalar() or 0
             formatted_subs.append({
@@ -423,13 +454,25 @@ async def get_categories_catalog(
         }
 
         if includeProducts:
+            prods_filters = [
+                Product.categoryId == cat.id,
+                Product.restaurantId.is_(None),
+                Product.isAvailable == True
+            ]
+            if effective_store_id and effective_store_id != "all":
+                prods_filters.append(
+                    exists().where(
+                        and_(
+                            StoreInventory.productId == Product.id,
+                            StoreInventory.storeId == effective_store_id,
+                            StoreInventory.stock > 0,
+                            StoreInventory.isAvailable == True
+                        )
+                    )
+                )
             prods_stmt = (
                 select(Product)
-                .where(
-                    Product.categoryId == cat.id,
-                    Product.restaurantId.is_(None),
-                    Product.isAvailable == True
-                )
+                .where(*prods_filters)
                 .order_by(
                     Product.sortOrder.desc(),
                     Product.isBestSeller.desc(),
@@ -458,10 +501,22 @@ async def get_categories_catalog(
         formatted_catalog.append(cat_dict)
 
     # Total grocery products count
-    total_prods_stmt = select(func.count(Product.id)).where(
+    total_filters = [
         Product.restaurantId.is_(None),
         Product.isAvailable == True
-    )
+    ]
+    if effective_store_id and effective_store_id != "all":
+        total_filters.append(
+            exists().where(
+                and_(
+                    StoreInventory.productId == Product.id,
+                    StoreInventory.storeId == effective_store_id,
+                    StoreInventory.stock > 0,
+                    StoreInventory.isAvailable == True
+                )
+            )
+        )
+    total_prods_stmt = select(func.count(Product.id)).where(*total_filters)
     total_prods_res = await db.execute(total_prods_stmt)
     total_grocery_products = total_prods_res.scalar() or 0
 
@@ -480,11 +535,16 @@ async def get_category_products(
     limit: int = 30,
     sort: str = "default",
     search: Optional[str] = None,
+    storeId: Optional[str] = Query(None),
+    x_store_id: Optional[str] = Header(None, alias="x-store-id"),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get paginated grocery products for a specific category ID.
+    Enforces storeId inventory stock checks.
     """
+    effective_store_id = storeId or x_store_id
+
     stmt = select(Category).where(
         or_(Category.id == id, Category.slug == id)
     )
@@ -499,6 +559,18 @@ async def get_category_products(
         Product.restaurantId.is_(None),
         Product.isAvailable == True
     ]
+
+    if effective_store_id and effective_store_id != "all":
+        filters.append(
+            exists().where(
+                and_(
+                    StoreInventory.productId == Product.id,
+                    StoreInventory.storeId == effective_store_id,
+                    StoreInventory.stock > 0,
+                    StoreInventory.isAvailable == True
+                )
+            )
+        )
 
     if search:
         filters.append(Product.name.ilike(f"%{search}%"))

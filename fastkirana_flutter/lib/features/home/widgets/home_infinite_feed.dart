@@ -8,6 +8,7 @@ import '../../../core/routes/page_transitions.dart';
 import '../../../data/models/product.dart';
 import '../../../data/models/category.dart';
 import '../../../providers/product_provider.dart';
+import '../../../providers/store_hub_provider.dart';
 import '../../../widgets/product_card.dart';
 import '../../categories/category_products_screen.dart';
 import '../utils/category_visual_helper.dart';
@@ -217,8 +218,10 @@ class HomeInfiniteFeed {
     required bool isLoading,
     required int selectedFilterIndex,
   }) {
+    final currentHub = ref.watch(currentStoreHubProvider);
+    final hubCity = currentHub.city.isNotEmpty ? currentHub.city : currentHub.name;
     String title = 'All Groceries & Essentials';
-    String subtitle = '⚡ Fast Delivery from Ghatampur darkstore';
+    String subtitle = '⚡ Fast Delivery from $hubCity darkstore';
     IconData icon = Icons.auto_awesome_rounded;
 
     final categories = ref.read(categoriesProvider).valueOrNull ?? [];
@@ -483,36 +486,11 @@ class HomeInfiniteFeed {
             }
           }
 
-          // Fallback to rich default estimates if database count is 0
-          if (totalCount <= 0) {
-            final slug = parent.slug.toLowerCase();
-            if (slug.contains('kitchen') || slug.contains('atta') || slug.contains('ration')) {
-              totalCount = 42;
-            } else if (slug.contains('fruit') || slug.contains('veg')) {
-              totalCount = 33;
-            } else if (slug.contains('snack') || slug.contains('munch')) {
-              totalCount = 28;
-            } else if (slug.contains('dry') || slug.contains('super')) {
-              totalCount = 24;
-            } else if (slug.contains('beverage') || slug.contains('drink')) {
-              totalCount = 19;
-            } else if (slug.contains('ice') || slug.contains('dessert')) {
-              totalCount = 15;
-            } else if (slug.contains('package')) {
-              totalCount = 18;
-            } else if (slug.contains('care') || slug.contains('hygiene')) {
-              totalCount = 22;
-            } else if (slug.contains('home') || slug.contains('clean')) {
-              totalCount = 20;
-            } else if (slug.contains('dairy') || slug.contains('milk')) {
-              totalCount = 25;
-            } else {
-              totalCount = 16;
-            }
-          }
-
           categorySumMap[parent.id] = totalCount;
         }
+
+        final currentHub = ref.watch(currentStoreHubProvider);
+        final hubCity = currentHub.city.isNotEmpty ? currentHub.city : currentHub.name;
 
         return [
           // Section Title Header
@@ -548,7 +526,7 @@ class HomeInfiniteFeed {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Browse complete aisles & subcategories in Ghatampur',
+                          'Browse complete aisles & subcategories in $hubCity',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w600,
@@ -576,7 +554,7 @@ class HomeInfiniteFeed {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final cat = groceryCategories[index];
-                  final totalCount = categorySumMap[cat.id] ?? (cat.productCount ?? 16);
+                  final totalCount = categorySumMap[cat.id] ?? (cat.productCount ?? 0);
                   final bgTint = CategoryVisualHelper.getSoftColor(cat.slug, cat.name);
                   final borderTint = CategoryVisualHelper.getBorderColor(cat.slug, cat.name);
 
@@ -643,11 +621,11 @@ class HomeInfiniteFeed {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '$totalCount+ items',
+                                  totalCount > 0 ? '$totalCount+ items' : 'Coming soon',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: Responsive.scaledFontSize(context, 9.5),
                                     fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF64748B),
+                                    color: totalCount > 0 ? const Color(0xFF64748B) : AppDesignSystem.primary,
                                   ),
                                 ),
                               ],

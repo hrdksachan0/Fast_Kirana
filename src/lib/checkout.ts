@@ -301,6 +301,7 @@ export function buildOrderPayload(
     isOrderForSomeone?: boolean
     receiverName?: string
     receiverPhone?: string
+    storeId?: string | null
   }
 ) {
   return {
@@ -322,5 +323,6 @@ export function buildOrderPayload(
     couponCode: ctx.appliedCouponCode,
     packagingOption: ctx.packagingOption || 'NORMAL',
     packagingFee: ctx.packagingFee || 0,
+    storeId: ctx.storeId || undefined,
   }
 }

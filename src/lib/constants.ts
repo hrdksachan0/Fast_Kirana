@@ -14,7 +14,6 @@ export const OUTLET_AS_RESTAURANT_ID = 'REST-101'
 export const OUTLET_WEDSON_ID = 'REST-102'
 export const OUTLET_BAL_UDYAN_ID = 'REST-103'
 export const OUTLET_PIZZA_LOVERS_ID = 'REST-104'
-export const OUTLET_PARI_MILK_ID = 'REST-104'
 
 // Backward compatibility legacy CUIDs
 export const LEGACY_AS_RESTAURANT_ID = 'cms2p1lap0000n0id8alldboy'

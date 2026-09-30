@@ -14,6 +14,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const storeId = searchParams.get('storeId') || request.headers.get('x-store-id')
 
     const product = await prisma.product.findFirst({
       where: {
@@ -24,6 +26,7 @@ export async function GET(
       },
       include: {
         category: true,
+        restaurant: true,
         images: true,
         reviews: {
           include: {
@@ -43,6 +46,27 @@ export async function GET(
 
     if (!product) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    }
+
+    if (storeId) {
+      if (product.restaurantId) {
+        if (product.restaurant && product.restaurant.storeId && product.restaurant.storeId !== storeId) {
+          product.isAvailable = false
+          product.stock = 0
+        }
+      } else {
+        const inv = await prisma.storeInventory.findUnique({
+          where: {
+            productId_storeId: {
+              productId: product.id,
+              storeId,
+            },
+          },
+        })
+        const stock = inv?.stock ?? 0
+        product.stock = stock
+        product.isAvailable = (inv?.isAvailable ?? false) && stock > 0
+      }
     }
 
     return NextResponse.json(product)

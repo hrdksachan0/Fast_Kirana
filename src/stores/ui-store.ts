@@ -237,6 +237,16 @@ export const useUIStore = create<UIState>((set) => ({
       }
       localStorage.setItem('fk-location', `${city} Central`)
     }
+
+    // Clear cart if switching from another hub with active items
+    try {
+      const { useCartStore } = require('@/stores/cart-store')
+      const cartState = useCartStore.getState()
+      if (cartState.items.length > 0 && cartState.hubId && cartState.hubId !== hub.id) {
+        cartState.clearCart()
+      }
+    } catch (_) {}
+
     set({
       activeStoreId: hub.id,
       activeCity: city,

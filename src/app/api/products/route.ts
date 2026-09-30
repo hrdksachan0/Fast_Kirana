@@ -425,17 +425,19 @@ export async function GET(request: NextRequest) {
         }
       })
 
+      const existingAnd = Array.isArray(where.AND) ? where.AND : (where.AND ? [where.AND] : [])
       const searchWhere: Prisma.ProductWhereInput = {
         ...(where.category ? { category: where.category } : {}),
         ...(where.restaurantId !== undefined ? { restaurantId: where.restaurantId } : {}),
         ...(where.restaurant ? { restaurant: where.restaurant } : {}),
         ...(!isWorker && !includeUnavailable ? { isAvailable: true } : (where.isAvailable !== undefined ? { isAvailable: where.isAvailable } : {})),
+        ...(existingAnd.length > 0 ? { AND: existingAnd } : {}),
       }
 
       const queryOptions: any = {
         where: {
           ...searchWhere,
-          AND: wordClauses
+          AND: [...existingAnd, ...wordClauses]
         }
       }
       if (isWorker) {

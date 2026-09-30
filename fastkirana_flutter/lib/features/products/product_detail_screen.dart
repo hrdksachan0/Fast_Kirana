@@ -352,9 +352,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               } else if (outletName.contains('Bal Udyan')) {
                                 chipColor = AppDesignSystem.violet600;
                                 chipBg = AppDesignSystem.violet50;
-                              } else if (outletName.contains('Pari') || outletName.contains('Dairy')) {
-                                chipColor = AppDesignSystem.emerald700;
-                                chipBg = AppDesignSystem.green50;
+                              } else if (outletName.contains('Pizza') || outletName.contains('Hot Pizza')) {
+                                chipColor = const Color(0xFFE11D48);
+                                chipBg = const Color(0xFFFFF1F2);
                               } else if (outletName.contains('A.S')) {
                                 chipColor = AppDesignSystem.cyan600;
                                 chipBg = AppDesignSystem.sky50;

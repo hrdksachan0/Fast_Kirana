@@ -6,45 +6,68 @@ import '../models/product.dart';
 
 class RestaurantRepository {
   final Dio _dio;
-  static List<Restaurant>? _cachedRestaurants;
-  static DateTime? _lastRestaurantsFetch;
-  static Future<List<Restaurant>>? _inFlightRestaurantsFetch;
+  static final Map<String, List<Restaurant>> _cachedRestaurantsByStore = {};
+  static final Map<String, DateTime> _lastRestaurantsFetchByStore = {};
+  static final Map<String, Future<List<Restaurant>>> _inFlightByStore = {};
   static final Map<String, List<Product>> _cachedMenus = {};
   static final Map<String, DateTime> _menuCacheTimes = {};
   static final Map<String, Future<List<Product>>> _inFlightMenuFetches = {};
 
   RestaurantRepository(this._dio);
 
-  Future<List<Restaurant>> getRestaurants({String? cuisine, String? search, bool forceRefresh = false}) async {
+  Future<List<Restaurant>> getRestaurants({
+    String? storeId,
+    String? cuisine,
+    String? search,
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = '${storeId ?? 'all'}_${cuisine ?? ''}_${search ?? ''}';
     try {
       final now = DateTime.now();
+      final lastFetch = _lastRestaurantsFetchByStore[cacheKey];
+      final cached = _cachedRestaurantsByStore[cacheKey];
+
       if (!forceRefresh &&
-          _cachedRestaurants != null &&
-          _cachedRestaurants!.isNotEmpty &&
-          _lastRestaurantsFetch != null &&
-          now.difference(_lastRestaurantsFetch!).inMinutes < 5) {
-        return _cachedRestaurants!;
+          cached != null &&
+          lastFetch != null &&
+          now.difference(lastFetch).inMinutes < 5) {
+        return cached;
       }
 
-      if (_inFlightRestaurantsFetch != null && !forceRefresh) {
-        return await _inFlightRestaurantsFetch!;
+      if (_inFlightByStore.containsKey(cacheKey) && !forceRefresh) {
+        return await _inFlightByStore[cacheKey]!;
       }
 
-      _inFlightRestaurantsFetch = _fetchRestaurants();
-      final list = await _inFlightRestaurantsFetch!;
-      _inFlightRestaurantsFetch = null;
+      final fetchFuture = _fetchRestaurants(storeId: storeId, cuisine: cuisine, search: search);
+      _inFlightByStore[cacheKey] = fetchFuture;
+      final list = await fetchFuture;
+      _inFlightByStore.remove(cacheKey);
+      _cachedRestaurantsByStore[cacheKey] = list;
+      _lastRestaurantsFetchByStore[cacheKey] = DateTime.now();
       return list;
-    } catch (e, st) { LoggerService.error('RestaurantRepository: getRestaurants failed', e, st);
-      _inFlightRestaurantsFetch = null;
-      if (_cachedRestaurants != null && _cachedRestaurants!.isNotEmpty) {
-        return _cachedRestaurants!;
+    } catch (e, st) {
+      LoggerService.error('RestaurantRepository: getRestaurants failed', e, st);
+      _inFlightByStore.remove(cacheKey);
+      if (_cachedRestaurantsByStore.containsKey(cacheKey)) {
+        return _cachedRestaurantsByStore[cacheKey]!;
       }
       return _getStaticFallbackRestaurants();
     }
   }
 
-  Future<List<Restaurant>> _fetchRestaurants() async {
-    final response = await _dio.get('/api/restaurants');
+  Future<List<Restaurant>> _fetchRestaurants({String? storeId, String? cuisine, String? search}) async {
+    final queryParams = <String, dynamic>{};
+    if (storeId != null && storeId.isNotEmpty && storeId != 'all') {
+      queryParams['storeId'] = storeId;
+    }
+    if (cuisine != null && cuisine.isNotEmpty && cuisine != 'all') {
+      queryParams['cuisine'] = cuisine;
+    }
+    if (search != null && search.isNotEmpty) {
+      queryParams['search'] = search;
+    }
+
+    final response = await _dio.get('/api/restaurants', queryParameters: queryParams);
     if (response.statusCode == 200 && response.data != null) {
       final data = response.data;
       List rawList = [];
@@ -56,8 +79,6 @@ class RestaurantRepository {
       final parsed = rawList
           .map((json) => Restaurant.fromJson(json as Map<String, dynamic>))
           .toList();
-      _cachedRestaurants = parsed;
-      _lastRestaurantsFetch = DateTime.now();
       RestaurantRegistry.registerAll(parsed);
       return parsed;
     }

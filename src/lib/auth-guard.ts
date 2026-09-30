@@ -202,7 +202,7 @@ export async function requireAdmin(request?: Request) {
  *   const { error, session } = await requireOrderAccess(order.userId, [], request)
  *   if (error) return error
  */
-export async function requireOrderAccess(orderUserId: string, extraRoles: string[] = [], request?: Request) {
+export async function requireOrderAccess(orderUserId: string, extraRoles: string[] = [], request?: Request, orderStoreId?: string | null) {
   // 1. Check Bearer token first
   const authHeader = request?.headers?.get('authorization') || request?.headers?.get('Authorization')
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -219,6 +219,10 @@ export async function requireOrderAccess(orderUserId: string, extraRoles: string
         const isOwner = orderUserId === dbUser.id
         const isStaff = staffRoles.includes(dbUser.role)
         if (isOwner || isStaff) {
+          // Cross-hub isolation: branch staff can only access orders belonging to their assigned store
+          if (isStaff && !isOwner && dbUser.assignedStoreId && orderStoreId && dbUser.assignedStoreId !== orderStoreId) {
+            return { error: NextResponse.json({ error: 'Forbidden: Access restricted to your assigned hub' }, { status: 403 }), session: null }
+          }
           return {
             error: null,
             session: {
@@ -256,6 +260,15 @@ export async function requireOrderAccess(orderUserId: string, extraRoles: string
   if (!isOwner && !isStaff) {
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }), session: null }
   }
+
+  // Cross-hub isolation: branch staff can only access orders belonging to their assigned store
+  if (isStaff && !isOwner) {
+    const userAssignedStoreId = session.user.assignedStoreId
+    if (userAssignedStoreId && orderStoreId && userAssignedStoreId !== orderStoreId) {
+      return { error: NextResponse.json({ error: 'Forbidden: Access restricted to your assigned hub' }, { status: 403 }), session: null }
+    }
+  }
+
   return { error: null, session }
 }
 

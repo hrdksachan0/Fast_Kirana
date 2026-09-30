@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useUIStore } from '@/stores/ui-store'
 import {
   DEFAULT_DELIVERY_RADIUS_KM,
   DEFAULT_STORE_LAT,
@@ -36,7 +37,10 @@ export interface CheckoutSettings {
   cafeCloseTime: string
 }
 
-export function useCheckoutSettings(): CheckoutSettings {
+export function useCheckoutSettings(explicitStoreId?: string | null): CheckoutSettings {
+  const activeStoreId = useUIStore((s) => s.activeStoreId)
+  const targetStoreId = explicitStoreId !== undefined ? explicitStoreId : activeStoreId
+
   const [storeSettingsMap, setStoreSettingsMap] = useState<Record<string, string>>({})
   const [isSettingsLoading, setIsSettingsLoading] = useState(true)
   const [deliveryRadius, setDeliveryRadius] = useState(DEFAULT_DELIVERY_RADIUS_KM)
@@ -58,7 +62,11 @@ export function useCheckoutSettings(): CheckoutSettings {
   const [cafeCloseTime, setCafeCloseTime] = useState('23:59')
 
   useEffect(() => {
-    fetch('/api/settings', { cache: 'no-store' })
+    setIsSettingsLoading(true)
+    const url = targetStoreId && targetStoreId !== 'all'
+      ? `/api/settings?storeId=${encodeURIComponent(targetStoreId)}`
+      : '/api/settings'
+    fetch(url, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data && typeof data === 'object') {
@@ -121,7 +129,7 @@ export function useCheckoutSettings(): CheckoutSettings {
         console.error('Error fetching settings on checkout mount:', err)
         setIsSettingsLoading(false)
       })
-  }, [])
+  }, [targetStoreId])
 
   return {
     storeSettingsMap,

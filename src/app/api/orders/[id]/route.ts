@@ -44,7 +44,7 @@ export async function GET(
     const order = orders[0]
 
     // Check ownership (order owner) or staff role
-    const { error: authError, session } = await requireOrderAccess(order.userId, [], request)
+    const { error: authError, session } = await requireOrderAccess(order.userId, [], request, order.storeId)
     const isDirectSecretLink = id === order.id && typeof order.id === 'string' && order.id.length >= 20
     if (authError && !isDirectSecretLink) return authError
 
@@ -315,6 +315,7 @@ export async function PATCH(
   let verifiedUserRole: string | null = (session?.user as any)?.role || null
   let verifiedUserPhone: string | null = (session?.user as any)?.phone || null
   let assignedRestaurantId: string | null = (session?.user as any)?.assignedRestaurantId || null
+  let assignedStoreId: string | null = (session?.user as any)?.assignedStoreId || null
 
   // Cryptographic Bearer JWT verification (Flutter app & API clients)
   const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
@@ -325,13 +326,14 @@ export async function PATCH(
       const { prisma } = await import('@/lib/prisma')
       const dbUser = await prisma.user.findUnique({
         where: { id: jwtPayload.userId },
-        select: { id: true, role: true, phone: true, isBlocked: true, assignedRestaurantId: true }
+        select: { id: true, role: true, phone: true, isBlocked: true, assignedRestaurantId: true, assignedStoreId: true }
       })
       if (dbUser && !dbUser.isBlocked) {
         verifiedUserId = dbUser.id
         verifiedUserRole = dbUser.role
         verifiedUserPhone = dbUser.phone
         assignedRestaurantId = dbUser.assignedRestaurantId
+        assignedStoreId = dbUser.assignedStoreId
       }
     }
   }
@@ -362,7 +364,7 @@ export async function PATCH(
 
     // Check order exists and ownership
     const existingOrders: any[] = await prisma.$queryRaw`
-      SELECT id, "userId", "readableId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId", "combinedId", "paymentMethod"::text as "paymentMethod", "paymentStatus"::text as "paymentStatus", total, notes FROM orders WHERE id = ${id} OR "readableId" = ${id} OR "readableId" ILIKE ${id + '%'} OR "combinedId" = ${id} LIMIT 1
+      SELECT id, "userId", "readableId", "storeId", status::text as status, "assignedPickerId", "assignedChefId", "deliveryUserId", "shopName", "restaurantId", "combinedId", "paymentMethod"::text as "paymentMethod", "paymentStatus"::text as "paymentStatus", total, notes FROM orders WHERE id = ${id} OR "readableId" = ${id} OR "readableId" ILIKE ${id + '%'} OR "combinedId" = ${id} LIMIT 1
     `
 
     if (existingOrders.length === 0) {
@@ -507,6 +509,11 @@ export async function PATCH(
       if (assignedRestaurantId && existingOrder.restaurantId && existingOrder.restaurantId !== assignedRestaurantId) {
         return NextResponse.json({ error: 'You can only manage orders for your assigned restaurant' }, { status: 403 })
       }
+    }
+
+    // Dark store staff (picker, delivery, branch admin) can only modify orders belonging to their assigned hub
+    if (!isOwner && assignedStoreId && existingOrder.storeId && existingOrder.storeId !== assignedStoreId) {
+      return NextResponse.json({ error: 'Forbidden: Access restricted to your assigned hub' }, { status: 403 })
     }
 
     // Claim checks / locking mechanisms (only for non-admin staff)

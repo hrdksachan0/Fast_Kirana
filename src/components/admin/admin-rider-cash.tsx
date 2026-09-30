@@ -170,7 +170,8 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
   const handleClearAllDeposits = async () => {
     if (!confirm('Are you sure you want to delete all cash deposit logs to clean up data?')) return
     try {
-      const res = await fetch('/api/admin/rider-cash?clearAll=true', {
+      const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
+      const res = await fetch(`/api/admin/rider-cash?clearAll=true${storeParam}`, {
         method: 'DELETE'
       })
       const data = await res.json()

@@ -9,6 +9,7 @@ import '../../../../providers/banner_provider.dart';
 import '../../../../providers/restaurant_provider.dart';
 import '../../../../widgets/curated_brand_offer_card.dart';
 import '../../../../widgets/restaurant_card.dart';
+import '../../../../providers/store_hub_provider.dart';
 import '../../cafe/cafe_menu_screen.dart';
 
 class HomeFoodStorefront extends ConsumerWidget {
@@ -17,6 +18,7 @@ class HomeFoodStorefront extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final restaurantsAsync = ref.watch(homeRestaurantsProvider);
+    final hub = ref.watch(currentStoreHubProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,7 +54,7 @@ class HomeFoodStorefront extends ConsumerWidget {
                     ),
                     const SizedBox(height: 1),
                     Text(
-                      'Order food from your favorite spots in Ghatampur',
+                      'Order food from your favorite spots in ${hub.city}',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w500,
@@ -93,13 +95,53 @@ class HomeFoodStorefront extends ConsumerWidget {
 
         // Restaurant Cards List
         restaurantsAsync.when(
-          data: (restaurants) => ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: restaurants.length,
-            itemBuilder: (context, index) => RestaurantCard(restaurant: restaurants[index]),
-          ),
+          data: (restaurants) {
+            if (restaurants.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text('🍳', style: TextStyle(fontSize: 32)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Kitchens Coming Soon in ${hub.city}!',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF92400E),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Partner restaurants and kitchens are currently onboarding for this store.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFFB45309),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: restaurants.length,
+              itemBuilder: (context, index) => RestaurantCard(restaurant: restaurants[index]),
+            );
+          },
           loading: () => const Padding(
             padding: EdgeInsets.all(32),
             child: Center(

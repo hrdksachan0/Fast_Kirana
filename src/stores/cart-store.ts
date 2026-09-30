@@ -43,7 +43,9 @@ export interface CartItem {
 
 interface CartState {
   items: CartItem[]
-  addItem: (product: CartProduct) => void
+  hubId: string | null
+  setHubId: (hubId: string | null) => void
+  addItem: (product: CartProduct, hubId?: string | null) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
@@ -63,24 +65,44 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      hubId: null,
+      setHubId: (hubId) => set({ hubId }),
       appliedCouponCode: null,
       setAppliedCouponCode: (code) => set({ appliedCouponCode: code }),
 
-      addItem: (product: CartProduct) => {
+      addItem: (product: CartProduct, hubId?: string | null) => {
         if (!product || product.stock <= 0 || product.isAvailable === false) return
         set((state) => {
-          const existing = state.items.find((item) => item?.product?.id === product.id)
+          let items = state.items
+          const currentHubId = state.hubId
+          let effectiveHubId = hubId
+          if (!effectiveHubId) {
+            try {
+              const { useUIStore } = require('@/stores/ui-store')
+              effectiveHubId = useUIStore.getState().activeStoreId
+            } catch (_) {}
+          }
+          if (!effectiveHubId && typeof window !== 'undefined') {
+            effectiveHubId = localStorage.getItem('fk-store-id')
+          }
+          // If hubId is provided/derived and differs from existing non-empty cart hubId, reset cart
+          if (effectiveHubId && currentHubId && currentHubId !== effectiveHubId && items.length > 0) {
+            items = []
+          }
+          const targetHubId = effectiveHubId || currentHubId || null
+          const existing = items.find((item) => item?.product?.id === product.id)
           if (existing) {
             const maxAllowed = product.stock > 0 ? product.stock : 9999
             return {
-              items: state.items.map((item) =>
+              hubId: targetHubId,
+              items: items.map((item) =>
                 item?.product?.id === product.id
                   ? { ...item, quantity: Math.min(item.quantity + 1, maxAllowed) }
                   : item
               ),
             }
           }
-          return { items: [...state.items, { product, quantity: 1 }] }
+          return { hubId: targetHubId, items: [...items, { product, quantity: 1 }] }
         })
       },
 
@@ -107,7 +129,7 @@ export const useCartStore = create<CartState>()(
         })
       },
 
-      clearCart: () => set({ items: [], appliedCouponCode: null }),
+      clearCart: () => set({ items: [], appliedCouponCode: null, hubId: null }),
 
       clearRestaurantItems: () => {
         set((state) => ({

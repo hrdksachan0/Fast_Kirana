@@ -137,9 +137,7 @@ export function getRestaurantLocation(
   }
   if (
     lowerSlug.includes('pizza') ||
-    lowerSlug.includes('pari') ||
-    lowerName.includes('pizza') ||
-    lowerName.includes('pari')
+    lowerName.includes('pizza')
   ) {
     return KNOWN_RESTAURANT_LOCATIONS['REST-104']
   }

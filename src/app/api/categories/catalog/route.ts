@@ -5,13 +5,30 @@ import { getCache, setCache } from '@/lib/search-cache'
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
+    const effectiveStoreId = searchParams.get('storeId') || request.headers.get('x-store-id')
     const includeProducts = searchParams.get('includeProducts') === 'true'
     const limitPerCat = parseInt(searchParams.get('limitPerCat') || '8', 10)
 
-    const cacheKey = `grocery_categories_catalog:${includeProducts}:${limitPerCat}`
+    const cacheKey = `grocery_categories_catalog:${effectiveStoreId || 'all'}:${includeProducts}:${limitPerCat}`
     const cached = await getCache(cacheKey)
     if (cached) {
       return NextResponse.json(cached)
+    }
+
+    const productWhere: any = {
+      restaurantId: null,
+      isAvailable: true,
+      ...(effectiveStoreId && effectiveStoreId !== 'all'
+        ? {
+            inventories: {
+              some: {
+                storeId: effectiveStoreId,
+                stock: { gt: 0 },
+                isAvailable: true,
+              }
+            }
+          }
+        : {})
     }
 
     // 1. Fetch All Grocery Categories (excluding restaurant food category, root categories only)
@@ -37,10 +54,7 @@ export async function GET(request: Request) {
             _count: {
               select: {
                 products: {
-                  where: {
-                    restaurantId: null,
-                    isAvailable: true
-                  }
+                  where: productWhere
                 }
               }
             }
@@ -50,20 +64,14 @@ export async function GET(request: Request) {
         _count: {
           select: {
             products: {
-              where: {
-                restaurantId: null,
-                isAvailable: true
-              }
+              where: productWhere
             }
           }
         },
         ...(includeProducts
           ? {
               products: {
-                where: {
-                  restaurantId: null,
-                  isAvailable: true
-                },
+                where: productWhere,
                 select: {
                   id: true,
                   name: true,
@@ -114,7 +122,7 @@ export async function GET(request: Request) {
     }))
 
     const totalGroceryProducts = await prisma.product.count({
-      where: { restaurantId: null, isAvailable: true }
+      where: productWhere
     })
 
     const payload = {

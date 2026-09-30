@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import desc, delete
@@ -81,12 +81,15 @@ async def broadcast_cart_update(cart_id: str, user_id: Optional[str] = None):
 
 @router.get("")
 async def get_cart(
+    storeId: Optional[str] = Query(None),
+    x_store_id: Optional[str] = Header(None),
     current_user: Optional[dict] = Depends(get_current_user),
     x_guest_id: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get current user's or guest's cart with items and product details.
+    Supports per-hub localized stock & availability hydration.
     """
     user_id = get_user_id(current_user)
 
@@ -117,6 +120,25 @@ async def get_cart(
     )
     cart_items = items_result.scalars().all()
 
+    # Hydrate per-store inventory overlay if storeId / x-store-id is provided
+    effective_store = storeId or x_store_id
+    inv_map = {}
+    if cart_items and effective_store and effective_store != "all":
+        try:
+            from models import StoreInventory
+            p_ids = [ci.productId for ci in cart_items if ci.productId]
+            if p_ids:
+                inv_res = await db.execute(
+                    select(StoreInventory).where(
+                        StoreInventory.storeId == effective_store,
+                        StoreInventory.productId.in_(p_ids)
+                    )
+                )
+                for inv in inv_res.scalars().all():
+                    inv_map[inv.productId] = inv
+        except Exception:
+            pass
+
     items_list = []
     subtotal = 0.0
 
@@ -132,6 +154,13 @@ async def get_cart(
                 variant = next((v for v in product.variants if v.get("name") == item.selectedVariant), None)
                 if variant and isinstance(variant.get("price"), (int, float)):
                     price = float(variant["price"])
+
+            stock = product.stock
+            is_available = product.isAvailable
+            if product.id in inv_map:
+                inv = inv_map[product.id]
+                stock = int(inv.stock or 0)
+                is_available = bool(inv.isAvailable if inv.isAvailable is not None else stock > 0)
 
             item_total = price * item.quantity
             subtotal += item_total
@@ -150,8 +179,8 @@ async def get_cart(
                     "price": price,
                     "discount": product.discount,
                     "unit": product.unit,
-                    "stock": product.stock,
-                    "isAvailable": product.isAvailable,
+                    "stock": stock,
+                    "isAvailable": is_available,
                     "tags": product.tags,
                     "variants": product.variants,
                 },

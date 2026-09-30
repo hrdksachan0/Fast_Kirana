@@ -23,8 +23,9 @@ final restaurantSearchQueryProvider = StateProvider<String>((ref) => '');
 
 final restaurantsProvider = FutureProvider<List<Restaurant>>((ref) async {
   ref.keepAlive();
+  final hub = ref.watch(currentStoreHubProvider);
   final repo = ref.watch(restaurantRepositoryProvider);
-  return repo.getRestaurants();
+  return repo.getRestaurants(storeId: hub.id);
 });
 
 /// Helper to calculate distance between user's current selected address and a restaurant

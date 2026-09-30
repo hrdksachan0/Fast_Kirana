@@ -57,10 +57,7 @@ export function normalizeRestaurantId(id: string | null | undefined): string | n
     clean === 'hot-pizza-lovers' ||
     clean === 'pizza-lovers' ||
     clean === 'pizza-lover' ||
-    clean.includes('pizza') ||
-    clean === 'pari-milk' ||
-    clean === 'pari-milk-dairy-sweets' ||
-    clean.includes('pari')
+    clean.includes('pizza')
   ) {
     return 'REST-104'
   }

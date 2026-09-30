@@ -21,7 +21,9 @@ export async function GET(request: Request) {
     
     const paramStoreId = searchParams.get('storeId')
     const userAssignedStoreId = session?.user?.assignedStoreId
-    const effectiveStoreId = userAssignedStoreId || (paramStoreId && paramStoreId !== 'all' ? paramStoreId : null)
+    const effectiveStoreId = (!isPlatformAdmin && userAssignedStoreId)
+      ? userAssignedStoreId
+      : (userAssignedStoreId || (paramStoreId && paramStoreId !== 'all' ? paramStoreId : null))
 
     let assignedRestaurantId = session?.user?.assignedRestaurantId
 
@@ -130,7 +132,7 @@ export async function GET(request: Request) {
             AND o."storeId" = ${effectiveStoreId}
           ORDER BY o."createdAt" ASC
         `
-      } else {
+      } else if (isPlatformAdmin) {
         orders = await prisma.$queryRaw`
           SELECT o.id, o."userId", o."addressId", o."readableId",
                   o.status::text as status,
@@ -147,6 +149,8 @@ export async function GET(request: Request) {
             AND (o."orderType"::text = 'GROCERY' OR o."orderType" IS NULL)
           ORDER BY o."createdAt" ASC
         `
+      } else {
+        orders = []
       }
     }
 

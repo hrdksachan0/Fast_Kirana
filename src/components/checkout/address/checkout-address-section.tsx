@@ -4,6 +4,7 @@ import { cn, formatAddress, formatPhone } from '@/lib/utils'
 import { getDistanceKm } from '@/lib/distance'
 import { CheckoutAddressForm } from './checkout-address-form'
 import { AddressFormData } from '@/hooks/checkout/use-checkout-address'
+import { useUIStore } from '@/stores/ui-store'
 
 interface CheckoutAddressSectionProps {
   addresses: Address[]
@@ -103,13 +104,14 @@ export function CheckoutAddressSection({
           <button
             type="button"
             onClick={() => {
+              const activeCity = useUIStore.getState().activeCity || 'Local'
               setAddressForm({
                 label: 'Home',
                 houseNo: '.',
                 street: '',
                 area: '.',
-                city: 'Ghatampur',
-                pincode: storeSettingsMap['store_pincode'] || '209206',
+                city: activeCity,
+                pincode: storeSettingsMap['store_pincode'] || addressForm.pincode || '',
                 phone: addressForm.phone,
                 isDefault: false,
                 lat: null,

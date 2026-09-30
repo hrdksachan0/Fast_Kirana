@@ -994,7 +994,9 @@ async def create_order(
             # Cell-tower drift auto-heal (matches frontend checkout.ts logic)
             p_code = (address.pincode or "").strip()
             c_name = (address.city or "").lower().strip()
-            is_explicit_local = p_code in ["209206", "224122"] or "ghatampur" in c_name or "akbarpur" in c_name
+            known_hub_pins = [s.id.replace("hub-", "") for s in active_dark_stores if s.id and s.id.startswith("hub-")]
+            known_hub_cities = [(s.city or "").lower().strip() for s in active_dark_stores if s.city] + [re.sub(r"\s+(Hub|Market|Central|Dark\s*Store).*$", "", s.name or "", flags=re.IGNORECASE).lower().strip() for s in active_dark_stores if s.name]
+            is_explicit_local = (p_code in known_hub_pins) or any((c and c in c_name) for c in known_hub_cities)
             if dist_km > max_radius and is_explicit_local:
                 logger.warning(f"[Auto-Heal] Address {address.id} cell-tower drift ({dist_km:.1f} km) for local pincode {p_code}. Treating as local express zone.")
                 dist_km = 1.5
@@ -1016,7 +1018,9 @@ async def create_order(
             dist_km = get_distance_km(store_lat, store_lng, target_lat, target_lng)
             p_code = (address.pincode or "").strip()
             c_name = (address.city or "").lower().strip()
-            is_explicit_local = p_code in ["209206", "224122"] or "ghatampur" in c_name or "akbarpur" in c_name
+            known_hub_pins = [s.id.replace("hub-", "") for s in active_dark_stores if s.id and s.id.startswith("hub-")]
+            known_hub_cities = [(s.city or "").lower().strip() for s in active_dark_stores if s.city] + [re.sub(r"\s+(Hub|Market|Central|Dark\s*Store).*$", "", s.name or "", flags=re.IGNORECASE).lower().strip() for s in active_dark_stores if s.name]
+            is_explicit_local = (p_code in known_hub_pins) or any((c and c in c_name) for c in known_hub_cities)
             if dist_km > max_radius and is_explicit_local:
                 logger.warning(f"[Auto-Heal] Address {address.id} cell-tower drift ({dist_km:.1f} km) for local pincode {p_code}. Treating as local express zone.")
                 dist_km = 1.5
@@ -2051,6 +2055,7 @@ async def create_order(
 @router.get("")
 async def list_orders(
     all: bool = False,
+    storeId: Optional[str] = Query(None),
     userId: Optional[str] = Query(None),
     current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -2067,11 +2072,31 @@ async def list_orders(
             return []
 
         if is_staff and all:
-            # Fetch all orders in the system with user details
+            is_superadmin = role in ["SUPER_ADMIN", "SUPERADMIN"]
+            assigned_store = current_user.get("assignedStoreId") if current_user and not is_superadmin else None
+            effective_store = assigned_store or storeId
+
+            # Unassigned pickers or riders cannot view company-wide orders
+            if role in ["PICKER", "DELIVERY"] and not assigned_store:
+                return []
+
             stmt = select(Order, User).outerjoin(User, Order.userId == User.id).options(
                 selectinload(Order.items),
                 selectinload(Order.address)
-            ).order_by(Order.createdAt.desc()).limit(1000)
+            )
+
+            if effective_store and effective_store != "all":
+                if effective_store == "hub-209206":
+                    stmt = stmt.where(or_(Order.storeId == effective_store, Order.storeId.is_(None)))
+                else:
+                    stmt = stmt.where(Order.storeId == effective_store)
+
+            if role in ["CHEF", "RESTAURANT_OWNER"]:
+                rest_id = current_user.get("assignedRestaurantId")
+                if rest_id:
+                    stmt = stmt.where(Order.restaurantId == rest_id)
+
+            stmt = stmt.order_by(Order.createdAt.desc()).limit(1000)
             
             res = await db.execute(stmt)
             rows = res.all()
@@ -2311,6 +2336,12 @@ async def get_order_details(
     # Access Authorization Guard
     if not is_staff and order.userId != user_id:
         raise HTTPException(status_code=403, detail="Unauthorized to view this order")
+
+    # Store isolation guard for staff
+    if is_staff and (role or "").upper() not in ["SUPER_ADMIN", "SUPERADMIN"]:
+        assigned_store = current_user.get("assignedStoreId")
+        if assigned_store and order.storeId and order.storeId != assigned_store and role not in ["CHEF", "RESTAURANT_OWNER"]:
+            raise HTTPException(status_code=403, detail="Forbidden: Order belongs to a different store hub")
 
     # Fetch delivery executive details
     delivery_user = None
@@ -2643,9 +2674,21 @@ async def update_order(
         else:
             if not (is_admin or is_picker):
                 raise HTTPException(status_code=403, detail="Only Dark Store pickers can accept or pack grocery orders")
+            picker_store = current_user.get("assignedStoreId")
+            if not is_admin and picker_store and order.storeId and order.storeId != picker_store:
+                raise HTTPException(status_code=403, detail="Forbidden: You can only pick/pack orders for your assigned store hub")
     elif target_status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
         if not (is_admin or is_delivery):
             raise HTTPException(status_code=403, detail="Only delivery riders can ship or deliver orders")
+        rider_store = current_user.get("assignedStoreId")
+        if not is_admin and rider_store and order.storeId and order.storeId != rider_store:
+            raise HTTPException(status_code=403, detail="Forbidden: You can only deliver orders for your assigned store hub")
+
+    # Store-scoped admin check
+    is_superadmin = (current_user.get("role") or "").upper() in ["SUPER_ADMIN", "SUPERADMIN"]
+    admin_store = current_user.get("assignedStoreId")
+    if is_admin and not is_superadmin and admin_store and order.storeId and order.storeId != admin_store:
+        raise HTTPException(status_code=403, detail="Forbidden: Order belongs to a different store hub")
 
     if is_restaurant_staff and not is_admin:
         if not order.restaurantId:

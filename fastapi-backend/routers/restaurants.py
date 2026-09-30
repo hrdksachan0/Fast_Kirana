@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, Response, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import or_, and_, not_, func, text
@@ -42,6 +42,7 @@ async def get_restaurants(
     cuisine: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     storeId: Optional[str] = Query(None),
+    x_store_id: Optional[str] = Header(None, alias="x-store-id"),
     all: bool = Query(False),
     current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -52,9 +53,10 @@ async def get_restaurants(
     """
     role = current_user.get("role") if current_user else None
     is_admin = role == "ADMIN"
+    effective_store_id = storeId or x_store_id
 
     # Serve public requests from cache
-    cache_key = f"{cuisine}:{search}:{storeId or 'all'}:{all}"
+    cache_key = f"{cuisine}:{search}:{effective_store_id or 'all'}:{all}"
     now = time.time()
     if not is_admin and not all and not search:
         if cache_key in _restaurants_cache and (now - _restaurants_cache_time) < RESTAURANTS_CACHE_TTL:
@@ -66,8 +68,8 @@ async def get_restaurants(
     if not is_admin or not all:
         filters.append(Restaurant.isActive == True)
 
-    if storeId and storeId != "all":
-        filters.append(Restaurant.storeId == storeId)
+    if effective_store_id and effective_store_id != "all":
+        filters.append(Restaurant.storeId == effective_store_id)
 
     if cuisine:
         filters.append(Restaurant.cuisineTags.op('?')(cuisine))

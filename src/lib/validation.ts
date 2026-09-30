@@ -261,6 +261,7 @@ export const validateCartSchema = z.object({
     }),
     quantity: z.coerce.number().int().positive(),
   })).min(1, 'Cart items are required'),
+  storeId: z.string().nullable().optional(),
 })
 
 // ── Generic Validation Helper ───────────────────────────────────────
