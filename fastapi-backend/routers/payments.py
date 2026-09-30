@@ -7,8 +7,6 @@ from datetime import datetime
 import hmac
 import hashlib
 import logging
-import razorpay
-
 from database import get_db
 from config import settings
 from models import Order, PaymentStatus, OrderStatus, PaymentMethod
@@ -18,16 +16,10 @@ logger = logging.getLogger("fastapi-backend")
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
 
-def get_razorpay_client():
-    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
-        raise HTTPException(status_code=500, detail="Razorpay API keys not configured in server environment")
-    return razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-
-
 @router.get("/methods")
 async def get_payment_methods():
     """
-    Get supported payment methods.
+    Get supported payment methods (Cash on Delivery, UPI, Cashfree Online, Wallet).
     """
     return {
         "methods": [
@@ -39,31 +31,8 @@ async def get_payment_methods():
     }
 
 
-@router.post("/razorpay/create-order")
-async def create_razorpay_order_in_payments():
-    """
-    Razorpay is decommissioned. Only Cashfree PG is supported.
-    """
-    raise HTTPException(
-        status_code=400,
-        detail="Razorpay has been decommissioned. Please use Cashfree PG (/api/payment/cashfree/create-order)."
-    )
-
-
-@router.post("/razorpay/verify-signature")
-async def verify_razorpay_signature_in_payments():
-    """
-    Razorpay is decommissioned. Only Cashfree PG is supported.
-    """
-    raise HTTPException(
-        status_code=400,
-        detail="Razorpay has been decommissioned. Please use Cashfree PG (/api/payment/cashfree/verify)."
-    )
-
-
 @router.post("/verify")
 @router.post("/cashfree/sync-order")
-@router.post("/razorpay/sync-order")
 async def sync_cashfree_order_in_payments(
     payload: Dict[str, Any] = Body(...),
     db: AsyncSession = Depends(get_db)
