@@ -88,13 +88,22 @@ async def deep_health_check(db: AsyncSession = Depends(get_db)):
     except Exception:
         pass
 
-    # 4. Server Uptime Calculation
-    uptime_seconds = int(time.time() - SERVER_BOOT_TIME)
-    days = uptime_seconds // 86400
-    hours = (uptime_seconds % 86400) // 3600
-    minutes = (uptime_seconds % 3600) // 60
-    secs = uptime_seconds % 60
-    uptime_human = f"{days}d {hours}h {minutes}m {secs}s" if days > 0 else f"{hours}h {minutes}m {secs}s"
+    # 5. Connection Pool Metrics
+    pool_stats = {}
+    try:
+        from database import engine
+        pool = engine.pool
+        pool_stats = {
+            "size": pool.size(),
+            "checkedIn": pool.checkedin(),
+            "checkedOut": pool.checkedout(),
+            "overflow": pool.overflow(),
+            "maxOverflow": pool._max_overflow,
+            "totalActive": pool.checkedout() + pool.overflow(),
+            "utilization": f"{round((pool.checkedout() / max(pool.size(), 1)) * 100)}%",
+        }
+    except Exception:
+        pool_stats = {"status": "unavailable"}
 
     overall_status = "healthy" if is_db_connected else "degraded"
 
@@ -111,7 +120,8 @@ async def deep_health_check(db: AsyncSession = Depends(get_db)):
         "database": {
             "status": "connected" if is_db_connected else "disconnected",
             "latencyMs": db_latency_ms,
-            "type": "PostgreSQL (Neon / Supabase)"
+            "type": "PostgreSQL (Neon / Supabase)",
+            "pool": pool_stats,
         },
         "cache": {
             "status": "connected" if is_redis_connected else "in-memory-fallback",
@@ -128,3 +138,40 @@ async def deep_health_check(db: AsyncSession = Depends(get_db)):
         return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=payload)
 
     return payload
+
+
+@health_router.get("/health/pool", status_code=status.HTTP_200_OK)
+@health_router.get("/api/health/pool", status_code=status.HTTP_200_OK)
+async def pool_health():
+    """Quick connection pool status for monitoring dashboards."""
+    try:
+        from database import engine
+        pool = engine.pool
+        checked_out = pool.checkedout()
+        total_size = pool.size()
+        overflow = pool.overflow()
+        utilization_pct = round((checked_out / max(total_size, 1)) * 100)
+
+        status_label = "healthy"
+        if utilization_pct > 80:
+            status_label = "warning"
+        if utilization_pct > 95 or overflow > pool._max_overflow * 0.8:
+            status_label = "critical"
+
+        return {
+            "status": status_label,
+            "pool": {
+                "size": total_size,
+                "checkedIn": pool.checkedin(),
+                "checkedOut": checked_out,
+                "overflow": overflow,
+                "maxOverflow": pool._max_overflow,
+                "utilization": f"{utilization_pct}%",
+            },
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "detail": str(e)}
+        )
+

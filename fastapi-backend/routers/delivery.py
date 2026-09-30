@@ -563,6 +563,8 @@ async def get_rider_delivery_location(
 class RiderLocationUpdate(BaseModel):
     lat: float = Field(..., ge=-90.0, le=90.0, description="Rider latitude (-90 to +90)")
     lng: float = Field(..., ge=-180.0, le=180.0, description="Rider longitude (-180 to +180)")
+    heading: Optional[float] = Field(0.0, description="Rider bearing / heading angle in degrees (0-360)")
+    speed: Optional[float] = Field(0.0, description="Rider speed in m/s or km/h")
     orderId: Optional[str] = Field(None, description="Active order ID")
 
 
@@ -615,9 +617,9 @@ async def update_rider_live_location(
                         "orderId": clean_oid,
                         "lat": float(lat),
                         "lng": float(lng),
-                        "heading": float(payload.get("heading") or 0.0),
-                        "speed": float(payload.get("speed") or 0.0),
-                        "timestamp": datetime.utcnow().isoformat()
+                        "heading": float(payload.heading or 0.0),
+                        "speed": float(payload.speed or 0.0),
+                        "timestamp": datetime.now(timezone.utc).isoformat()
                     })
                 except Exception:
                     pass
