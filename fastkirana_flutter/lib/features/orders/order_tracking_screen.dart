@@ -1624,7 +1624,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   fillHeight: true,
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 36),
+                    padding: EdgeInsets.fromLTRB(Responsive.horizontalPadding(context).clamp(12.0, 20.0), 10, Responsive.horizontalPadding(context).clamp(12.0, 20.0), 36),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -1649,6 +1649,84 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                               statusStep: statusStep,
                               onPayOnline: _payOrderOnline,
                               onSwitchToCOD: _confirmAndSwitchToCOD,
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+
+                          // 🌟 Hero Live ETA Card (Zepto / Blinkit style)
+                          if (!isDelivered && !isCancelled) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF0F172A).withValues(alpha: 0.18),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF00B140).withValues(alpha: 0.18),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.bolt_rounded, color: Color(0xFF00E676), size: 22),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _etaText.isNotEmpty ? 'Arriving in $_etaText' : (statusStep >= 3 ? 'Arriving in ~12-15 mins' : 'Preparing your order'),
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 14.5),
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                            letterSpacing: -0.2,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            Container(
+                                              width: 6,
+                                              height: 6,
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFF00E676),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              statusStep >= 3
+                                                  ? (_distanceText.isNotEmpty ? '$_distanceText away • On the way' : 'Rider is on the way')
+                                                  : 'FastKirana Express Delivery',
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 11),
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF94A3B8),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 12),
                           ],

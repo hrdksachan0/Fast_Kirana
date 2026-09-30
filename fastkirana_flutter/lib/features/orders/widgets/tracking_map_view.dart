@@ -127,26 +127,29 @@ class TrackingMapView extends StatelessWidget {
     return RepaintBoundary(
       child: Column(
         children: [
-          // ── Map Container ──
+          // ── Map Container with Vengeance Specular Border & Adaptive Height ──
           Container(
-            height: MediaQuery.sizeOf(context).height < 500
-                ? MediaQuery.sizeOf(context).height * 0.38
-                : 310,
+            height: Responsive.isTablet(context)
+                ? 380.0
+                : (MediaQuery.sizeOf(context).height * 0.33).clamp(230.0, 310.0),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: const Color(0xFF00B140).withValues(alpha: 0.35),
+                width: 1.4,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 4),
+                  color: const Color(0xFF00B140).withValues(alpha: 0.10),
+                  blurRadius: 22,
+                  spreadRadius: -2,
+                  offset: const Offset(0, 6),
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 6,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 1),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),

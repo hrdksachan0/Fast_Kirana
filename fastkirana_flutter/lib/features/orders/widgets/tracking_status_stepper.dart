@@ -27,7 +27,6 @@ class TrackingStatusStepper extends StatelessWidget {
   Widget build(BuildContext context) {
     const slateDark = Color(0xFF0F172A);
     const slateMuted = Color(0xFF64748B);
-    const slateBorder = Color(0xFFE2E8F0);
 
     if (isCancelled) {
       return Container(
@@ -123,12 +122,20 @@ class TrackingStatusStepper extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: slateBorder),
+        border: Border.all(
+          color: (isDelivered ? const Color(0xFF00B140) : const Color(0xFF2563EB)).withValues(alpha: 0.28),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
+            color: (isDelivered ? const Color(0xFF00B140) : const Color(0xFF2563EB)).withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 1),
           ),
         ],
       ),

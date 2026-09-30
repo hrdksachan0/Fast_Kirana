@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:collection/collection.dart';
 import '../../../core/utils/app_url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
@@ -925,9 +926,19 @@ class AdminOrderCard extends ConsumerWidget {
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
-                          value: (order.deliveryBoyName?.toLowerCase().contains('aryan') == true)
-                              ? 'ARYAN'
-                              : ((order.deliveryBoyName?.isNotEmpty == true) ? 'STORE_PARTNER' : 'UNASSIGNED'),
+                          value: () {
+                            if (order.deliveryBoyName == null || order.deliveryBoyName!.trim().isEmpty) {
+                              return 'UNASSIGNED';
+                            }
+                            final norm = order.deliveryBoyName!.trim().toLowerCase();
+                            final matched = availableRiders.firstWhereOrNull(
+                              (r) => r['name']?.trim().toLowerCase() == norm ||
+                                     r['id'] == order.deliveryBoyName ||
+                                     r['phone'] == order.deliveryBoyPhone,
+                            );
+                            if (matched != null) return matched['id'];
+                            return 'STORE_PARTNER';
+                          }(),
                           isExpanded: true,
                           icon: const Icon(Icons.arrow_drop_down_rounded, color: AppDesignSystem.slate600, size: 20),
                           borderRadius: BorderRadius.circular(12),
