@@ -246,7 +246,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                       decoration: const InputDecoration(
                         icon: Icon(Icons.person_outline_rounded, size: 18, color: AppDesignSystem.textTertiary),
                         border: InputBorder.none,
-                        hintText: 'admin@fastkirana.in',
+                        hintText: 'Enter admin email or username',
                       ),
                     ),
                   ),

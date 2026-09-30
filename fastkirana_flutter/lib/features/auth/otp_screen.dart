@@ -429,7 +429,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                       style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: slateDark),
                       decoration: InputDecoration(
                         icon: const Icon(Icons.person_outline_rounded, size: 18, color: slateLight),
-                        hintText: 'e.g. Rahul Sharma',
+                        hintText: 'Enter your full name',
                         hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: slateLight),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(vertical: 12),

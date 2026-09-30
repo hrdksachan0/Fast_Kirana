@@ -185,7 +185,7 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
 
     return data.transactions.filter((tx) => {
       // Category Filter
-      if (activeFilter === 'CASHFREE' && tx.category !== 'CASHFREE_ONLINE' && tx.category !== 'ONLINE_BANK') return false
+      if (activeFilter === 'CASHFREE' && tx.category !== 'CASHFREE_ONLINE') return false
       if (activeFilter === 'RIDER_QR' && tx.category !== 'RIDER_QR') return false
       if (activeFilter === 'RIDER_CASH' && tx.category !== 'RIDER_CASH') return false
       if (activeFilter === 'COUNTER_CASH' && tx.category !== 'COUNTER_CASH') return false
@@ -717,12 +717,14 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                       ) : tx.paymentStatus === 'PAID' ? (
                         <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md">
                           <CheckCircle2 className="w-2.5 h-2.5" />
-                          {tx.category === 'ONLINE_BANK'
-                            ? (tx.verifiedBy?.includes('Admin') ? 'UPI (Admin ✓)' : `${tx.paymentMethod || 'UPI'} (PAID)`)
-                            : tx.category === 'CASHFREE_ONLINE'
-                            ? 'UPI (Cashfree)'
+                          {tx.category === 'CASHFREE_ONLINE'
+                            ? 'UPI (Cashfree ✓)'
                             : tx.category === 'RIDER_QR'
                             ? 'UPI (Rider QR)'
+                            : tx.category === 'RIDER_CASH'
+                            ? 'COD (Cash)'
+                            : tx.category === 'COUNTER_CASH'
+                            ? 'COD (Counter)'
                             : `${tx.paymentMethod || 'UPI'} (PAID)`}
                         </span>
                       ) : (
@@ -737,7 +739,7 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg border ${
                           tx.category === 'CANCELLED'
                             ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                            : tx.category === 'CASHFREE_ONLINE' || tx.category === 'ONLINE_BANK'
+                            : tx.category === 'CASHFREE_ONLINE'
                             ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                             : tx.category === 'RIDER_QR'
                             ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30'
@@ -756,13 +758,9 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
                         <span className="text-[10px] font-bold text-rose-500">
                           Cancelled
                         </span>
-                      ) : tx.category === 'ONLINE_BANK' ? (
-                        <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-center gap-1">
-                          <Check className="w-3 h-3" /> {tx.verifiedBy?.includes('Admin') ? 'In Bank (Admin ✓)' : 'In Bank (Online)'}
-                        </span>
                       ) : tx.category === 'CASHFREE_ONLINE' ? (
                         <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-center gap-1">
-                          <Check className="w-3 h-3" /> In Bank (Cashfree)
+                          <Check className="w-3 h-3" /> In Bank (Cashfree ✓)
                         </span>
                       ) : tx.category === 'RIDER_QR' ? (
                         <span className="text-[10px] font-bold text-purple-600 flex items-center justify-center gap-1">

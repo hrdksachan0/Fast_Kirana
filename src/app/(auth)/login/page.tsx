@@ -579,7 +579,7 @@ function LoginForm() {
                 <Input
                   id="email"
                   type={loginType === 'WHATSAPP' ? 'tel' : 'text'}
-                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit WhatsApp number' : 'superadmin, admin@fastkirana.com or 10-digit mobile'}
+                  placeholder={loginType === 'WHATSAPP' ? 'Enter 10-digit mobile number' : 'Enter email or 10-digit mobile number'}
                   value={email}
                   onChange={(e) => {
                     let val = e.target.value
@@ -753,7 +753,7 @@ function LoginForm() {
                   id="otp"
                   type="text"
                   maxLength={6}
-                  placeholder="123456"
+                  placeholder="••••••"
                   value={otp}
                   onChange={(e) => setOtp(getLast10Digits(e.target.value))}
                   className="pl-11 h-12 tracking-[0.6em] text-center font-black text-lg focus:tracking-[0.6em] rounded-xl border-border bg-white/50 dark:bg-black/20 focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all placeholder:text-text-muted/40 placeholder:tracking-normal"
@@ -832,7 +832,7 @@ function LoginForm() {
                   <Input
                     id="name"
                     type="text"
-                    placeholder="John Doe"
+                    placeholder="Enter your full name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60"
@@ -853,7 +853,7 @@ function LoginForm() {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="9876543210"
+                    placeholder="Enter 10-digit mobile number"
                     value={phone}
                     onChange={(e) => setPhone(getLast10Digits(e.target.value))}
                     className="pl-11 h-12 rounded-xl border-border bg-white/50 dark:bg-black/20 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted/60"
