@@ -1653,80 +1653,131 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                             const SizedBox(height: 12),
                           ],
 
-                          // 🌟 Hero Live ETA Card (Zepto / Blinkit style)
+                          // 🌟 Hero Live Status & Accurate ETA Card (100% Dynamic, Zero Fake Timing)
                           if (!isDelivered && !isCancelled) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF0F172A).withValues(alpha: 0.18),
-                                    blurRadius: 14,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF00B140).withValues(alpha: 0.18),
-                                      shape: BoxShape.circle,
+                            Builder(
+                              builder: (context) {
+                                String heroTitle;
+                                String heroSubtitle;
+                                IconData heroIcon;
+                                Color heroAccent;
+
+                                if (statusStep >= 3) {
+                                  // Out for Delivery (SHIPPED)
+                                  heroAccent = const Color(0xFF00E676);
+                                  heroIcon = Icons.two_wheeler_rounded;
+                                  if (_etaText.isNotEmpty && _etaText != 'Delivered 🎉') {
+                                    heroTitle = 'Arriving in $_etaText';
+                                    heroSubtitle = _distanceText.isNotEmpty
+                                        ? '$_distanceText away • Live GPS Tracking'
+                                        : 'Rider is on the way to your doorstep';
+                                  } else if (_order?.estimatedDelivery != null && _order!.estimatedDelivery!.isAfter(DateTime.now())) {
+                                    final est = _order!.estimatedDelivery!;
+                                    final hourMin = "${est.hour > 12 ? est.hour - 12 : (est.hour == 0 ? 12 : est.hour)}:${est.minute.toString().padLeft(2, '0')} ${est.hour >= 12 ? 'PM' : 'AM'}";
+                                    heroTitle = 'Expected Delivery by $hourMin';
+                                    heroSubtitle = 'Rider is heading to your doorstep';
+                                  } else {
+                                    heroTitle = 'Out for Delivery';
+                                    heroSubtitle = _distanceText.isNotEmpty
+                                        ? '$_distanceText away • On the way'
+                                        : 'Rider is heading to your doorstep';
+                                  }
+                                } else if (statusStep == 2) {
+                                  // Packed / Rider Assigned
+                                  heroAccent = const Color(0xFF38BDF8);
+                                  heroIcon = Icons.inventory_2_rounded;
+                                  heroTitle = 'Packed & Ready for Pickup';
+                                  heroSubtitle = 'Delivery partner is picking up your package';
+                                } else if (statusStep == 1) {
+                                  // Confirmed & Preparing
+                                  heroAccent = const Color(0xFF10B981);
+                                  heroIcon = Icons.storefront_rounded;
+                                  heroTitle = 'Order Confirmed & Preparing';
+                                  heroSubtitle = 'Store team is packing fresh items';
+                                } else {
+                                  // Placed / Pending
+                                  heroAccent = const Color(0xFFF59E0B);
+                                  heroIcon = Icons.schedule_rounded;
+                                  heroTitle = 'Order Placed Successfully';
+                                  heroSubtitle = 'Awaiting store confirmation';
+                                }
+
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                    child: const Icon(Icons.bolt_rounded, color: Color(0xFF00E676), size: 22),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0F172A).withValues(alpha: 0.18),
+                                        blurRadius: 14,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _etaText.isNotEmpty ? 'Arriving in $_etaText' : (statusStep >= 3 ? 'Arriving in ~12-15 mins' : 'Preparing your order'),
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 14.5),
-                                            fontWeight: FontWeight.w900,
-                                            color: Colors.white,
-                                            letterSpacing: -0.2,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: heroAccent.withValues(alpha: 0.18),
+                                          shape: BoxShape.circle,
                                         ),
-                                        const SizedBox(height: 2),
-                                        Row(
+                                        child: Icon(heroIcon, color: heroAccent, size: 22),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Container(
-                                              width: 6,
-                                              height: 6,
-                                              decoration: const BoxDecoration(
-                                                color: Color(0xFF00E676),
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 5),
                                             Text(
-                                              statusStep >= 3
-                                                  ? (_distanceText.isNotEmpty ? '$_distanceText away • On the way' : 'Rider is on the way')
-                                                  : 'FastKirana Express Delivery',
+                                              heroTitle,
                                               style: GoogleFonts.inter(
-                                                fontSize: Responsive.scaledFontSize(context, 11),
-                                                fontWeight: FontWeight.w600,
-                                                color: const Color(0xFF94A3B8),
+                                                fontSize: Responsive.scaledFontSize(context, 14.5),
+                                                fontWeight: FontWeight.w900,
+                                                color: Colors.white,
+                                                letterSpacing: -0.2,
                                               ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  width: 6,
+                                                  height: 6,
+                                                  decoration: BoxDecoration(
+                                                    color: heroAccent,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 5),
+                                                Expanded(
+                                                  child: Text(
+                                                    heroSubtitle,
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: Responsive.scaledFontSize(context, 11),
+                                                      fontWeight: FontWeight.w600,
+                                                      color: const Color(0xFF94A3B8),
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                );
+                              },
                             ),
                             const SizedBox(height: 12),
                           ],
