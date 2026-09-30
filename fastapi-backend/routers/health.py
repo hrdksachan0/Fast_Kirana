@@ -88,19 +88,31 @@ async def deep_health_check(db: AsyncSession = Depends(get_db)):
     except Exception:
         pass
 
+    # 4. Server Uptime Calculation
+    uptime_seconds = int(time.time() - SERVER_BOOT_TIME)
+    days = uptime_seconds // 86400
+    hours = (uptime_seconds % 86400) // 3600
+    minutes = (uptime_seconds % 3600) // 60
+    secs = uptime_seconds % 60
+    uptime_human = f"{days}d {hours}h {minutes}m {secs}s" if days > 0 else f"{hours}h {minutes}m {secs}s"
+
     # 5. Connection Pool Metrics
     pool_stats = {}
     try:
         from database import engine
         pool = engine.pool
+        size = pool.size()
+        checked_out = pool.checkedout()
+        overflow = pool.overflow()
+        max_overflow = getattr(pool, "_max_overflow", 10)
         pool_stats = {
-            "size": pool.size(),
+            "size": size,
             "checkedIn": pool.checkedin(),
-            "checkedOut": pool.checkedout(),
-            "overflow": pool.overflow(),
-            "maxOverflow": pool._max_overflow,
-            "totalActive": pool.checkedout() + pool.overflow(),
-            "utilization": f"{round((pool.checkedout() / max(pool.size(), 1)) * 100)}%",
+            "checkedOut": checked_out,
+            "overflow": overflow,
+            "maxOverflow": max_overflow,
+            "totalActive": checked_out + overflow,
+            "utilization": f"{round((checked_out / max(size, 1)) * 100)}%",
         }
     except Exception:
         pool_stats = {"status": "unavailable"}
