@@ -340,10 +340,10 @@ function ProductCardComponent({ product, isCompact = false }: ProductCardProps) 
   return (
     <div
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-[20px] transition-all duration-300 ease-out active:scale-[0.98] cursor-pointer",
+        "group relative flex flex-col overflow-hidden rounded-[20px] transition-all duration-300 ease-out cursor-pointer skipper-tap",
         isRestaurant 
-          ? "bg-white dark:bg-[#141210] border border-amber-500/25 hover:border-amber-500/50 shadow-[0_2px_10px_rgba(245,158,11,0.06)] hover:shadow-[0_12px_28px_-6px_rgba(245,158,11,0.15)]"
-          : "bg-white dark:bg-[#121215] border border-zinc-200/80 dark:border-zinc-800/80 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.08),0_4px_10px_rgba(0,0,0,0.03)] hover:-translate-y-0.5",
+          ? "bg-white dark:bg-[#141210] border border-amber-500/25 hover:border-amber-500/60 shadow-[0_2px_10px_rgba(245,158,11,0.06)] hover:shadow-[0_14px_30px_-4px_rgba(245,158,11,0.22)] hover:-translate-y-1"
+          : "bg-white dark:bg-[#12141a] border border-zinc-200/80 dark:border-white/10 hover:border-emerald-500/40 dark:hover:border-emerald-400/40 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.02)] hover:shadow-[0_14px_30px_-6px_rgba(0,177,64,0.18)] hover:-translate-y-1",
         isCompact 
           ? "h-[215px] min-[375px]:h-[235px] sm:h-[255px]" 
           : "h-[250px] min-[375px]:h-[272px] sm:h-[294px]"

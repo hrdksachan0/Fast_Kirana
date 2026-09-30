@@ -155,6 +155,73 @@ class AppDesignSystem {
     ),
   ];
 
+  // ============================================
+  // LUXURY TOKENS (Skipper UI, Vengeance UI, Animaster Lib)
+  // ============================================
+
+  // Vengeance UI: Obsidian Glass & Specular Gradients
+  static const Color obsidianBg = Color(0xFF0A0D12);
+  static const Color obsidianSurface = Color(0xFF121820);
+  static const Color obsidianCard = Color(0xFF18202C);
+  static const Color obsidianBorder = Color(0x1FFFFFFF);
+
+  static List<BoxShadow> glowEmerald = [
+    BoxShadow(
+      color: const Color(0xFF00B140).withValues(alpha: 0.28),
+      blurRadius: 20,
+      spreadRadius: 1,
+    ),
+  ];
+
+  static List<BoxShadow> glowBrand = [
+    BoxShadow(
+      color: const Color(0xFFE20A22).withValues(alpha: 0.28),
+      blurRadius: 20,
+      spreadRadius: 1,
+    ),
+  ];
+
+  static List<BoxShadow> glowAmber = [
+    BoxShadow(
+      color: const Color(0xFFF59E0B).withValues(alpha: 0.28),
+      blurRadius: 20,
+      spreadRadius: 1,
+    ),
+  ];
+
+  static const LinearGradient specularEmeraldGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF00E676), Color(0xFF00B140), Colors.transparent],
+    stops: [0.0, 0.45, 1.0],
+  );
+
+  static const LinearGradient specularBrandGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF4D62), Color(0xFFE20A22), Colors.transparent],
+    stops: [0.0, 0.45, 1.0],
+  );
+
+  // Skipper UI: Motion Timing
+  static const Curve springCurve = Curves.easeOutBack;
+  static const Duration springDuration = Duration(milliseconds: 240);
+
+  // Animaster Lib: Specular Liquid Shimmer Gradients
+  static const LinearGradient animasterShimmerLight = LinearGradient(
+    begin: Alignment(-1.0, -0.3),
+    end: Alignment(1.0, 0.3),
+    colors: [Color(0xFFF1F5F9), Color(0xFFFFFFFF), Color(0xFFF1F5F9)],
+    stops: [0.15, 0.5, 0.85],
+  );
+
+  static const LinearGradient animasterShimmerDark = LinearGradient(
+    begin: Alignment(-1.0, -0.3),
+    end: Alignment(1.0, 0.3),
+    colors: [Color(0xFF18202C), Color(0xFF2A3649), Color(0xFF18202C)],
+    stops: [0.15, 0.5, 0.85],
+  );
+
   // Radius (Normalized to Web standard scale)
   static const double radiusXs = 4;
   static const double radiusSm = 6;

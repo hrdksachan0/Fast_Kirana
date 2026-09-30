@@ -153,12 +153,13 @@ class AddToCartButton extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(s(8)),
+        borderRadius: BorderRadius.circular(s(9)),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withValues(alpha: 0.30),
-            blurRadius: s(6),
-            offset: Offset(0, s(2)),
+            color: primaryColor.withValues(alpha: 0.35),
+            blurRadius: s(9),
+            offset: Offset(0, s(2.5)),
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -270,16 +271,17 @@ class AddToCartButton extends ConsumerWidget {
         padding: EdgeInsets.symmetric(horizontal: s(12)),
         decoration: BoxDecoration(
           color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4),
-          borderRadius: BorderRadius.circular(s(8)),
+          borderRadius: BorderRadius.circular(s(9)),
           border: Border.all(
             color: isFood ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
-            width: s(1.3),
+            width: s(1.4),
           ),
           boxShadow: [
             BoxShadow(
-              color: primaryColor.withValues(alpha: 0.12),
-              blurRadius: s(5),
-              offset: Offset(0, s(1.5)),
+              color: primaryColor.withValues(alpha: 0.20),
+              blurRadius: s(8),
+              offset: Offset(0, s(2)),
+              spreadRadius: 0,
             ),
           ],
         ),
