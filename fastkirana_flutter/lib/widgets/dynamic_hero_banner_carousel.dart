@@ -168,10 +168,9 @@ class DynamicHeroBannerCarousel extends ConsumerWidget {
         }
 
         final screenWidth = MediaQuery.of(context).size.width;
-        // Proportionate 3:4 curated offer card dimensions (matching 896x1200 promo posters)
-        // Height is kept compact (~205-220px instead of 380px) so content below stays visible above the fold
-        final cardHeight = (screenWidth * 0.52).clamp(195.0, 220.0);
-        final cardWidth = cardHeight * 0.75;
+        // Large showcase banner height (380px) restored as requested, calibrated to 3:4 / 896x1200 aspect ratio
+        const double cardHeight = 380.0;
+        final double cardWidth = (cardHeight * 0.747).clamp(260.0, screenWidth * 0.80);
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),

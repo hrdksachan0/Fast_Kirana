@@ -263,14 +263,21 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
 
   /// ─── 0. PURE FULL-BLEED PHOTO & VIDEO CARD (Zero text, zero coupons, pure media) ───
   Widget _buildPureMediaCard(BuildContext context) {
-    return SizedBox.expand(
-      child: CardMediaWidget(
-        imageUrl: widget.imageUrl,
-        videoUrl: widget.videoUrl,
-        imageAsset: widget.imageAsset,
-        fit: BoxFit.cover,
-        borderRadius: widget.height < 220 ? 16.5 : 26.5,
-        showLiveBadge: false, // Pure photo/video: NO BADGES, NO TEXT
+    final br = widget.height < 220 ? 16.5 : 26.5;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(br),
+      child: Container(
+        color: widget.backgroundColor ?? const Color(0xFF141414),
+        child: SizedBox.expand(
+          child: CardMediaWidget(
+            imageUrl: widget.imageUrl,
+            videoUrl: widget.videoUrl,
+            imageAsset: widget.imageAsset,
+            fit: BoxFit.contain,
+            borderRadius: br,
+            showLiveBadge: false, // Pure photo/video: NO BADGES, NO TEXT
+          ),
+        ),
       ),
     );
   }
