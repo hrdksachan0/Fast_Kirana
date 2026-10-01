@@ -140,3 +140,16 @@
 -dontnote
 -dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
 -dontwarn javax.annotation.**
+
+# ──────────────────────────────────────────────
+# R8 Aggressive Dead Code & Log Stripping
+# ──────────────────────────────────────────────
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int d(...);
+}
+
+# Preserve LineNumberTable and SourceFile for Crashlytics stack traces
+-renamesourcefileattribute SourceFile
+-keepattributes SourceFile,LineNumberTable
