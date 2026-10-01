@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+import * as crypto from 'crypto'
 
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID || ''
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY || ''
@@ -8,6 +8,17 @@ const CASHFREE_API_VERSION = process.env.CASHFREE_API_VERSION || '2023-08-01'
 const BASE_URL = CASHFREE_ENV === 'PRODUCTION'
   ? 'https://api.cashfree.com/pg'
   : 'https://sandbox.cashfree.com/pg'
+
+function getAppUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'
+  return (raw.includes('fastkirana.in') && !raw.includes('www.') && !raw.includes('api.'))
+    ? raw.replace('fastkirana.in', 'www.fastkirana.in')
+    : raw
+}
+
+function getApiUrl(): string {
+  return (process.env.API_BASE_URL || 'https://api.fastkirana.in').replace(/\/+$/, '')
+}
 
 export interface CreateCashfreeOrderParams {
   orderId: string
@@ -80,11 +91,8 @@ export async function createCashfreeOrder(params: CreateCashfreeOrderParams): Pr
     }
   }
 
-  const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'
-  const appUrl = (rawAppUrl.includes('fastkirana.in') && !rawAppUrl.includes('www.') && !rawAppUrl.includes('api.'))
-    ? rawAppUrl.replace('fastkirana.in', 'www.fastkirana.in')
-    : rawAppUrl
-  const apiUrl = (process.env.API_BASE_URL || 'https://api.fastkirana.in').replace(/\/+$/, '')
+  const appUrl = getAppUrl()
+  const apiUrl = getApiUrl()
 
   const payload: any = {
     order_id: sanitizedOrderId,
@@ -251,6 +259,8 @@ export async function createCashfreePaymentLink(params: {
 }): Promise<{ linkId: string; linkUrl: string; linkQrUrl: string }> {
   const cleanPhone = params.customerPhone.replace(/\D/g, '').slice(-10)
   const phone = cleanPhone.length === 10 ? cleanPhone : '9999999999'
+  const appUrl = getAppUrl()
+  const apiUrl = getApiUrl()
 
   const payload = {
     link_id: params.linkId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 45),
