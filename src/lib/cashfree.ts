@@ -265,8 +265,8 @@ export async function createCashfreePaymentLink(params: {
         : 'customer@fastkirana.in',
     },
     link_meta: {
-      return_url: params.returnUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'}/order/${params.linkId}`,
-      notify_url: params.notifyUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'}/api/payment/cashfree/webhook`,
+      return_url: params.returnUrl || `${appUrl}/order/${params.linkId}`,
+      notify_url: params.notifyUrl || `${apiUrl}/api/payment/cashfree/webhook`,
     },
     link_notify: {
       send_sms: false,

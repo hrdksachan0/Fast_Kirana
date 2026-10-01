@@ -27,7 +27,7 @@ class AppConfig {
   /// Public storefront URL (web links shared in notifications, etc.)
   static const String webStorefrontUrl = String.fromEnvironment(
     'WEB_STOREFRONT_URL',
-    defaultValue: 'https://fastkirana.in',
+    defaultValue: 'https://www.fastkirana.in',
   );
 
   // ─── Supabase Realtime ──────────────────────────────────────────
