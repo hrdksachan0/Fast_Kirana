@@ -86,7 +86,7 @@ async def get_categories(
     
     cached_val = await get_cached(cache_key)
     if cached_val is not None:
-        response.headers["Cache-Control"] = "public, s-maxage=120, stale-while-revalidate=300"
+        response.headers["Cache-Control"] = "public, s-maxage=180, stale-while-revalidate=360"
         response.headers["X-FastKirana-Cache"] = "HIT"
         return cached_val
 
@@ -147,7 +147,7 @@ async def get_categories(
         _categories_cache_time[cache_key] = now
         await set_cached(cache_key, categories_data, CATEGORIES_CACHE_TTL)
 
-        response.headers["Cache-Control"] = "public, s-maxage=120, stale-while-revalidate=300"
+        response.headers["Cache-Control"] = "public, s-maxage=180, stale-while-revalidate=360"
         response.headers["X-FastKirana-Cache"] = "MISS"
         return categories_data
     except Exception as e:
@@ -355,6 +355,7 @@ async def delete_category(
 
 @router.get("/catalog")
 async def get_categories_catalog(
+    response: Response,
     includeProducts: bool = False,
     limitPerCat: int = 8,
     storeId: Optional[str] = Query(None),
@@ -365,8 +366,16 @@ async def get_categories_catalog(
     Get structured grocery categories catalog with product counts and preview items.
     Matches Next.js /api/categories/catalog: root categories only, nested subcategories with counts.
     Isolates product counts and inventory to effective storeId hub.
+    Uses ultra-fast Redis / memory cache (3-min TTL).
     """
     effective_store_id = storeId or x_store_id
+    cache_key = f"categories:catalog:{includeProducts}:{limitPerCat}:{effective_store_id or 'all'}"
+
+    cached_val = await get_cached(cache_key)
+    if cached_val is not None:
+        response.headers["Cache-Control"] = "public, s-maxage=180, stale-while-revalidate=360"
+        response.headers["X-FastKirana-Cache"] = "HIT"
+        return cached_val
 
     stmt = (
         select(Category)
@@ -520,12 +529,17 @@ async def get_categories_catalog(
     total_prods_res = await db.execute(total_prods_stmt)
     total_grocery_products = total_prods_res.scalar() or 0
 
-    return {
+    catalog_result = {
         "success": True,
         "totalCategories": len(formatted_catalog),
         "totalGroceryProducts": total_grocery_products,
         "categories": formatted_catalog
     }
+
+    await set_cached(cache_key, catalog_result, CATEGORIES_CACHE_TTL)
+    response.headers["Cache-Control"] = "public, s-maxage=180, stale-while-revalidate=360"
+    response.headers["X-FastKirana-Cache"] = "MISS"
+    return catalog_result
 
 
 @router.get("/{id}/products")

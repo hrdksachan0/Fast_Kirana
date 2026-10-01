@@ -7,6 +7,7 @@ import '../core/network/api_client.dart';
 import '../core/utils/restaurant_utils.dart';
 import 'cart_provider.dart';
 import 'store_hub_provider.dart';
+import 'hub_availability_provider.dart';
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
   return ProductRepository(ref.read(dioProvider));
