@@ -265,36 +265,16 @@ export async function POST(request: Request) {
       const targetStoreId = (body.storeId && body.storeId !== 'all') ? String(body.storeId).trim() : ((session?.user as any)?.assignedStoreId || null)
       const initialStockNum = parseInt(String(stock), 10) || 0
 
-      if (targetStoreId && targetStoreId !== 'all') {
-        // Only seed inventory for the targeted dark store
-        await prisma.storeInventory.upsert({
-          where: {
-            productId_storeId: {
-              productId: product.id,
-              storeId: targetStoreId,
-            }
-          },
-          create: {
+      const allStores = await prisma.darkStore.findMany({ select: { id: true } })
+      if (allStores.length > 0) {
+        await prisma.storeInventory.createMany({
+          data: allStores.map((s) => ({
+            storeId: s.id,
             productId: product.id,
-            storeId: targetStoreId,
-            stock: initialStockNum,
-          },
-          update: {
-            stock: initialStockNum,
-          }
+            stock: (targetStoreId && s.id !== targetStoreId) ? 0 : initialStockNum,
+          })),
+          skipDuplicates: true,
         })
-      } else {
-        const allStores = await prisma.darkStore.findMany({ select: { id: true } })
-        if (allStores.length > 0) {
-          await prisma.storeInventory.createMany({
-            data: allStores.map((s) => ({
-              storeId: s.id,
-              productId: product.id,
-              stock: initialStockNum,
-            })),
-            skipDuplicates: true,
-          })
-        }
       }
     } catch (seedErr) {
       console.warn('Could not seed store_inventories for new product:', seedErr)

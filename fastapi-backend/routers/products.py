@@ -1447,30 +1447,15 @@ async def create_product(
 
         from models import StoreInventory, DarkStore
         try:
-            if target_store_id and target_store_id != "all":
-                inv_stmt = select(StoreInventory).where(
-                    StoreInventory.productId == product.id,
-                    StoreInventory.storeId == target_store_id
-                )
-                inv_res = await db.execute(inv_stmt)
-                existing_inv = inv_res.scalars().first()
-                if existing_inv:
-                    existing_inv.stock = initial_stock_num
-                else:
-                    db.add(StoreInventory(
-                        productId=product.id,
-                        storeId=target_store_id,
-                        stock=initial_stock_num
-                    ))
-            else:
-                stores_res = await db.execute(select(DarkStore.id))
-                all_store_ids = stores_res.scalars().all()
-                for sid in all_store_ids:
-                    db.add(StoreInventory(
-                        productId=product.id,
-                        storeId=sid,
-                        stock=initial_stock_num
-                    ))
+            stores_res = await db.execute(select(DarkStore.id))
+            all_store_ids = stores_res.scalars().all()
+            for sid in all_store_ids:
+                store_stock = initial_stock_num if (not target_store_id or sid == target_store_id) else 0
+                db.add(StoreInventory(
+                    productId=product.id,
+                    storeId=sid,
+                    stock=store_stock
+                ))
         except Exception as seed_err:
             logger.warning(f"Could not seed store_inventories for product {product.id}: {seed_err}")
 
