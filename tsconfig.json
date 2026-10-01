@@ -41,6 +41,7 @@
     "fastkirana_flutter",
     ".next/dev",
     "scratch",
+    "scripts",
     "src/scripts",
     "test_api_products.ts",
     "check_all_products.ts"

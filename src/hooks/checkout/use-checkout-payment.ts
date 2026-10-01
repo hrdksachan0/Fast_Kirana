@@ -96,8 +96,10 @@ export function useCheckoutPayment({
     id: string
     readableId?: string
     totalAmount: number
+    cfOrderId?: string
+    pendingPayload?: any
   } | null>(null)
-  const [overlayState, setOverlayState] = useState<'creating-order' | 'awaiting-payment' | 'verifying-payment' | 'success' | null>(null)
+  const [overlayState, setOverlayState] = useState<'creating-order' | 'preparing-payment' | 'awaiting-payment' | 'verifying-payment' | 'success' | null>(null)
   const [orderReadableId, setOrderReadableId] = useState<string | undefined>(undefined)
 
   // Preload Payment SDKs
@@ -251,7 +253,8 @@ export function useCheckoutPayment({
   const handleCashfreeCheckout = async (
     overrideMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET',
     overrideAddressId?: string,
-    overrideAddresses?: Address[]
+    overrideAddresses?: Address[],
+    grandTotal?: number
   ) => {
     const selectedMethod = overrideMethod || paymentMethod
     const activeAddresses = overrideAddresses || addresses
@@ -259,8 +262,9 @@ export function useCheckoutPayment({
     const activeSelectedAddress =
       activeAddresses.find((a) => a.id === activeAddressId) || selectedAddress
 
+
     setIsPlacingOrder(true)
-    setOverlayState('creating-order')
+    setOverlayState('preparing-payment')
     try {
       const settingsUrl = effectiveStoreId && effectiveStoreId !== 'all'
         ? `/api/settings?storeId=${encodeURIComponent(effectiveStoreId)}`
@@ -287,6 +291,7 @@ export function useCheckoutPayment({
       const effectiveCustomerPhone = getEffectiveCustomerPhone(activeSelectedAddress)
       const finalNotes = getOrderNotes()
 
+      // Build the order payload (but DON'T create the order yet)
       const payload = buildOrderPayload({
         finalAddressId: validation.finalAddressId!,
         paymentMethod: selectedMethod,
@@ -306,45 +311,61 @@ export function useCheckoutPayment({
         storeId: effectiveStoreId,
       })
 
-      const orderRes = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...payload,
-          storeId: effectiveStoreId || undefined,
-          existingOrderId: activePendingOrderId || undefined,
-          notes: finalNotes,
-        }),
-      })
+      // Calculate total for Cashfree payment
+      // Use grandTotal from caller (checkout page) if available, otherwise estimate from cart
+      let paymentAmount = grandTotal || 0
+      if (!paymentAmount || paymentAmount <= 0) {
+        paymentAmount = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0) + packagingFee
+      }
 
-      const orderData = await orderRes.json()
-
-      if (!orderRes.ok) {
-        toast.error(getApiErrorMessage(orderData, 'Failed to initialize order'))
-        setIsPlacingOrder(false)
-        setOverlayState(null)
+      // Free order edge case: skip Cashfree entirely, place order directly
+      if (paymentAmount <= 0) {
+        const orderRes = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...payload,
+            storeId: effectiveStoreId || undefined,
+            notes: finalNotes,
+            paymentStatus: 'PAID',
+            paymentId: `FREE_PROMO_${Date.now()}`,
+          }),
+        })
+        const orderData = await orderRes.json()
+        if (orderRes.ok) {
+          clearCart()
+          triggerHaptic('success')
+          setOrderReadableId(orderData.readableId || orderData.id?.slice(0, 8))
+          setOverlayState('success')
+          toast.success('🎉 Order placed successfully! (100% Free Promo)')
+          setTimeout(() => {
+            window.location.replace(`/order/${orderData.id}/success`)
+          }, 1200)
+        } else {
+          setOverlayState(null)
+          toast.error(getApiErrorMessage(orderData, 'Failed to place order'))
+          setIsPlacingOrder(false)
+        }
         return
       }
 
-      // 100% Free order edge case: auto-confirmed on server
-      if (orderData.paymentStatus === 'PAID' || Number(orderData.total || 0) <= 0) {
-        clearCart()
-        triggerHaptic('success')
-        setOrderReadableId(orderData.readableId || orderData.id?.slice(0, 8))
-        setOverlayState('success')
-        toast.success('🎉 Order placed successfully! (100% Free Promo)')
-        setTimeout(() => {
-          window.location.replace(`/order/${orderData.id}/success`)
-        }, 1200)
-        return
-      }
-
-      setActivePendingOrderId(orderData.id)
+      // ═══════════════════════════════════════════════════════════════════════
+      // PAY FIRST: Create Cashfree payment session with amount (no DB order)
+      // ═══════════════════════════════════════════════════════════════════════
+      const userName = (session?.user as any)?.name || 'FastKirana Customer'
+      const userEmail = (session?.user as any)?.email || undefined
+      const userPhone = effectiveCustomerPhone || (session?.user as any)?.phone || '9999999999'
 
       const cfRes = await fetch('/api/payment/cashfree/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: orderData.id }),
+        body: JSON.stringify({
+          amount: paymentAmount,
+          customerPhone: userPhone,
+          customerEmail: userEmail,
+          customerName: userName,
+          note: `FastKirana Checkout ₹${paymentAmount}`,
+        }),
       })
 
       const cfData = await cfRes.json()
@@ -354,11 +375,6 @@ export function useCheckoutPayment({
         toast.error(getApiErrorMessage(cfData, 'Cashfree payment session could not be created.'))
         setIsPlacingOrder(false)
         setOverlayState(null)
-        setFailedPaymentOrder({
-          id: orderData.id,
-          readableId: orderData.readableId,
-          totalAmount: Number(orderData.total || 0),
-        })
         return
       }
 
@@ -368,11 +384,6 @@ export function useCheckoutPayment({
         toast.error('Payment gateway SDK failed to load.')
         setIsPlacingOrder(false)
         setOverlayState(null)
-        setFailedPaymentOrder({
-          id: orderData.id,
-          readableId: orderData.readableId,
-          totalAmount: Number(orderData.total || 0),
-        })
         return
       }
 
@@ -380,30 +391,99 @@ export function useCheckoutPayment({
         mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'SANDBOX' ? 'sandbox' : 'production',
       })
 
+      // Store payload for post-payment order creation
+      const pendingPayload = {
+        ...payload,
+        storeId: effectiveStoreId || undefined,
+        notes: finalNotes,
+      }
+
       let paymentSuccess = false
 
+      // ═══════════════════════════════════════════════════════════════════════
+      // POST-PAYMENT: Verify & create order in DB only after PAID
+      // ═══════════════════════════════════════════════════════════════════════
       let pollCount = 0
-      const checkVerification = async () => {
+      const checkVerificationAndCreateOrder = async () => {
         if (paymentSuccess) return true
         try {
           const verifyRes = await fetch('/api/payment/cashfree/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId: orderData.id, cfOrderId: cfData.orderId }),
+            body: JSON.stringify({ orderId: cfData.orderId, cfOrderId: cfData.orderId }),
           })
           const verifyData = await verifyRes.json()
           if (verifyRes.ok && (verifyData.paymentStatus === 'PAID' || verifyData.isPaid === true)) {
             paymentSuccess = true
             clearInterval(pollTimer)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
-            clearCart()
-            triggerHaptic('success')
-            setOrderReadableId(orderData.readableId || orderData.id?.slice(0, 8))
-            setOverlayState('success')
-            toast.success('🎉 Payment Verified Successfully!')
-            setTimeout(() => {
-              window.location.replace(`/order/${orderData.id}/success`)
-            }, 1200)
+
+            // Payment verified! Now create the order in DB
+            setOverlayState('creating-order')
+            const resolvedPaymentId = verifyData.cfPaymentId || verifyData.paymentId || `CF_${cfData.orderId}`
+
+            let orderCreated = false
+            let orderData: any = null
+
+            // Retry order creation up to 3 times (critical: payment already taken)
+            for (let retry = 0; retry < 3; retry++) {
+              try {
+                const orderRes = await fetch('/api/orders', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    ...pendingPayload,
+                    paymentStatus: 'PAID',
+                    paymentId: resolvedPaymentId,
+                    cfOrderId: cfData.orderId,
+                  }),
+                })
+                orderData = await orderRes.json()
+                if (orderRes.ok) {
+                  orderCreated = true
+                  break
+                }
+                console.warn(`Order creation attempt ${retry + 1} failed:`, orderData)
+              } catch (orderErr) {
+                console.error(`Order creation attempt ${retry + 1} error:`, orderErr)
+              }
+              if (retry < 2) await new Promise((r) => setTimeout(r, 2000))
+            }
+
+            if (orderCreated && orderData) {
+              clearCart()
+              triggerHaptic('success')
+              setOrderReadableId(orderData.readableId || orderData.id?.slice(0, 8))
+              setOverlayState('success')
+              toast.success('🎉 Payment Verified & Order Placed!')
+              setTimeout(() => {
+                window.location.replace(`/order/${orderData.id}/success`)
+              }, 1500)
+            } else {
+              // 🛡️ EMERGENCY RECOVERY: Payment succeeded but order creation failed
+              // Save to localStorage as backup — webhook/cron will reconcile
+              try {
+                const emergencyData = {
+                  payload: pendingPayload,
+                  paymentId: resolvedPaymentId,
+                  cfOrderId: cfData.orderId,
+                  amount: paymentAmount,
+                  timestamp: Date.now(),
+                }
+                localStorage.setItem(`fk_emergency_order_${cfData.orderId}`, JSON.stringify(emergencyData))
+              } catch (_) {}
+
+              clearCart()
+              triggerHaptic('success')
+              setOverlayState('success')
+              toast.success(
+                '✅ Payment of ₹' + paymentAmount + ' successful! Your order is being confirmed. You will receive confirmation shortly.',
+                { duration: 8000 }
+              )
+              setTimeout(() => {
+                window.location.replace('/orders')
+              }, 3000)
+            }
             return true
           }
         } catch (_) {}
@@ -416,13 +496,13 @@ export function useCheckoutPayment({
           clearInterval(pollTimer)
           return
         }
-        await checkVerification()
+        await checkVerificationAndCreateOrder()
       }, 2000)
 
       const handleVisibilityChange = async () => {
         if (document.visibilityState === 'visible') {
           setOverlayState('verifying-payment')
-          await checkVerification()
+          await checkVerificationAndCreateOrder()
         }
       }
       document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -440,7 +520,7 @@ export function useCheckoutPayment({
         setOverlayState('verifying-payment')
         let isVerified = false
         for (let attempt = 0; attempt < 10; attempt++) {
-          isVerified = await checkVerification()
+          isVerified = await checkVerificationAndCreateOrder()
           if (isVerified || paymentSuccess) break
           await new Promise((resolve) => setTimeout(resolve, 1500))
         }
@@ -454,10 +534,12 @@ export function useCheckoutPayment({
             console.log('Cashfree modal closed with note:', result.error)
           }
           triggerHaptic('warning')
+          // No DB order was created — show retry options without orderId
           setFailedPaymentOrder({
-            id: orderData.id,
-            readableId: orderData.readableId,
-            totalAmount: Number(orderData.total || 0),
+            id: '', // No DB order exists
+            totalAmount: paymentAmount,
+            cfOrderId: cfData.orderId,
+            pendingPayload,
           })
         }
       } catch (checkoutErr) {
@@ -465,7 +547,7 @@ export function useCheckoutPayment({
         setOverlayState('verifying-payment')
         let isVerified = false
         for (let attempt = 0; attempt < 8; attempt++) {
-          isVerified = await checkVerification()
+          isVerified = await checkVerificationAndCreateOrder()
           if (isVerified || paymentSuccess) break
           await new Promise((resolve) => setTimeout(resolve, 1500))
         }
@@ -476,9 +558,10 @@ export function useCheckoutPayment({
           setIsPlacingOrder(false)
           setOverlayState(null)
           setFailedPaymentOrder({
-            id: orderData.id,
-            readableId: orderData.readableId,
-            totalAmount: Number(orderData.total || 0),
+            id: '',
+            totalAmount: paymentAmount,
+            cfOrderId: cfData.orderId,
+            pendingPayload,
           })
         }
       }

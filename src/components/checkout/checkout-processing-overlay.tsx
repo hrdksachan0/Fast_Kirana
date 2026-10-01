@@ -17,6 +17,7 @@ import {
 
 export type CheckoutOverlayState =
   | 'creating-order'
+  | 'preparing-payment'
   | 'awaiting-payment'
   | 'verifying-payment'
   | 'success'
@@ -306,6 +307,65 @@ export function CheckoutProcessingOverlay({
                     </motion.div>
                   )
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════ STATE 1.5: PREPARING PAYMENT SESSION ══════════════ */}
+          {state === 'preparing-payment' && (
+            <div className="flex flex-col items-center">
+              {/* Security Badge */}
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-700 dark:text-blue-400 text-[11px] font-black tracking-wide uppercase mb-6 shadow-xs"
+              >
+                <Lock className="h-3 w-3" />
+                <span>Secure Payment Gateway</span>
+              </motion.div>
+
+              {/* Animated Shield */}
+              <div className="relative w-28 h-28 flex items-center justify-center mb-5">
+                <motion.div
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.15, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute inset-0 rounded-full bg-indigo-500/20 blur-sm"
+                />
+                <motion.div
+                  animate={{ rotate: [0, 5, -5, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="relative z-10 w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500 via-blue-600 to-indigo-700 shadow-xl shadow-indigo-500/35 flex items-center justify-center text-white border-2 border-white/30"
+                >
+                  <ShieldCheck className="h-10 w-10 drop-shadow-md stroke-[2.2]" />
+                </motion.div>
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
+                Setting Up Payment
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1 mb-5 max-w-xs">
+                Connecting to secure payment gateway...
+              </p>
+
+              {/* Loading Bar */}
+              <div className="w-full bg-zinc-100 dark:bg-zinc-800/80 rounded-full h-2 p-0.5 overflow-hidden mb-4 border border-zinc-200/60 dark:border-zinc-700/60 shadow-inner">
+                <motion.div
+                  animate={{ width: ['15%', '70%', '90%'] }}
+                  transition={{ duration: 3, ease: 'easeInOut' }}
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-500 shadow-xs relative overflow-hidden"
+                >
+                  <motion.div
+                    animate={{ x: ['-100%', '200%'] }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent w-1/2"
+                  />
+                </motion.div>
+              </div>
+
+              {/* Trust Badges */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
+                <Lock className="h-3.5 w-3.5 text-indigo-500" />
+                <span>256-bit Encrypted • RBI Compliant</span>
               </div>
             </div>
           )}

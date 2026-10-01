@@ -390,7 +390,8 @@ export default function CheckoutPage() {
           payment.handleCashfreeCheckout(
             'UPI',
             activeCheckoutAddressRef.current?.id || selectedAddressId,
-            activeCheckoutAddressRef.current?.addresses || addresses
+            activeCheckoutAddressRef.current?.addresses || addresses,
+            pricing.grandTotal
           )
         }}
       />
@@ -411,6 +412,16 @@ export default function CheckoutPage() {
           payment.setFailedPaymentOrder(null)
           payment.handleCashfreeCheckout(
             'UPI',
+            activeCheckoutAddressRef.current?.id || selectedAddressId,
+            activeCheckoutAddressRef.current?.addresses || addresses,
+            pricing.grandTotal
+          )
+        }}
+        onConfirmCodFresh={() => {
+          payment.setFailedPaymentOrder(null)
+          payment.setPaymentMethod('COD')
+          payment.handlePlaceOrder(
+            'COD',
             activeCheckoutAddressRef.current?.id || selectedAddressId,
             activeCheckoutAddressRef.current?.addresses || addresses
           )

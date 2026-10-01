@@ -14,6 +14,7 @@ export interface PaymentFailedCodModalProps {
   onClose: () => void
   onSuccessCod: (orderId: string) => void
   onRetryPayment?: () => void
+  onConfirmCodFresh?: () => void
 }
 
 const TOTAL_COUNTDOWN_SECONDS = 60
@@ -26,6 +27,7 @@ export function PaymentFailedCodModal({
   onClose,
   onSuccessCod,
   onRetryPayment,
+  onConfirmCodFresh,
 }: PaymentFailedCodModalProps) {
   const [secondsRemaining, setSecondsRemaining] = useState(TOTAL_COUNTDOWN_SECONDS)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -70,6 +72,19 @@ export function PaymentFailedCodModal({
     setIsCancelled(true)
     if (timerRef.current) clearInterval(timerRef.current)
 
+    // If no DB order was created (pay-first flow), just close modal
+    if (!orderId) {
+      triggerHaptic('light')
+      toast.info(
+        isAutoTimeout
+          ? '⏳ Payment complete nahi hua. Koi charge nahi kata.'
+          : '🛑 Payment cancel kar diya gaya. Koi charge nahi kata.'
+      )
+      setIsProcessing(false)
+      onClose()
+      return
+    }
+
     try {
       triggerHaptic('light')
       const res = await fetch(`/api/orders/${orderId}`, {
@@ -104,6 +119,13 @@ export function PaymentFailedCodModal({
     if (isProcessing || isCancelled) return
     setIsProcessing(true)
     if (timerRef.current) clearInterval(timerRef.current)
+
+    // Pay-first flow: no DB order exists yet, create a fresh COD order
+    if (!orderId && onConfirmCodFresh) {
+      triggerHaptic('success')
+      onConfirmCodFresh()
+      return
+    }
 
     try {
       triggerHaptic('success')
