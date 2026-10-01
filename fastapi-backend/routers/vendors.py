@@ -238,8 +238,9 @@ async def get_vendor_details(
         Order.createdAt >= start_dt,
         Order.createdAt <= end_dt,
     ]
-    if storeId and storeId != "all":
-        order_filters.append(Order.storeId == storeId)
+    effective_store = storeId or getattr(vendor, "storeId", None)
+    if effective_store and effective_store != "all":
+        order_filters.append(Order.storeId == effective_store)
 
     item_sales_summary: Dict[str, Dict[str, Any]] = {}
     for p in attached_products:

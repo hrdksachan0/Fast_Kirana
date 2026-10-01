@@ -31,7 +31,7 @@ from models import (
     PaymentMethod, PaymentStatus, RiderWallet, StoreInventory, DarkStore,
     StoreSetting, StockAlert, PriceHistory, PromoBanner, RestaurantPayout,
     CashDepositTransaction, VendorPayout, Vendor, RestaurantReview, Review,
-    Address, Restaurant, ProductBatch, StockLog
+    Address, Restaurant, ProductBatch, StockLog, OrderItem
 )
 from routers.auth import require_admin
 from routers.cart import get_user_id
@@ -1649,6 +1649,195 @@ async def admin_restaurant_sales(
         "dateRange": {
             "start": start.isoformat(),
             "end": end.isoformat()
+        }
+    }
+
+
+@router.get("/store-product-sales")
+async def admin_store_product_sales(
+    startDate: Optional[str] = Query(None),
+    endDate: Optional[str] = Query(None),
+    storeId: Optional[str] = Query(None),
+    vendorId: Optional[str] = Query(None),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Store-wise / Hub-wise Product Sales & Finance Report.
+    Returns itemized breakdown of products sold, units, gross revenue, cost price,
+    vendor share, and gross profit margin, strictly isolated by dark store hub.
+    """
+    now_utc = datetime.utcnow()
+    ist_offset = timedelta(hours=5, minutes=30)
+    now_ist = now_utc + ist_offset
+
+    if startDate:
+        start_local = datetime.strptime(f"{startDate} 00:00:00", "%Y-%m-%d %H:%M:%S")
+        start = start_local - ist_offset
+    else:
+        start_local = datetime.combine((now_ist - timedelta(days=7)).date(), datetime.min.time())
+        start = start_local - ist_offset
+
+    if endDate:
+        end_local = datetime.strptime(f"{endDate} 23:59:59", "%Y-%m-%d %H:%M:%S")
+        end = end_local - ist_offset
+    else:
+        end_local = datetime.combine(now_ist.date(), datetime.max.time())
+        end = end_local - ist_offset
+
+    effective_store = storeId or (getattr(current_admin, "assignedStoreId", None) if hasattr(current_admin, "assignedStoreId") else (current_admin.get("assignedStoreId") if isinstance(current_admin, dict) else None))
+
+    # 1. Fetch Dark Stores Map
+    stores_stmt = select(DarkStore)
+    stores_res = await db.execute(stores_stmt)
+    dark_stores = stores_res.scalars().all()
+    store_map = {s.id: {"name": s.name, "city": s.city} for s in dark_stores}
+
+    # 2. Build delivered orders query
+    order_filters = [
+        Order.status == OrderStatus.DELIVERED,
+        Order.createdAt >= start,
+        Order.createdAt <= end
+    ]
+    if effective_store and effective_store.lower() != "all":
+        order_filters.append(Order.storeId == effective_store)
+
+    order_stmt = (
+        select(Order)
+        .options(
+            selectinload(Order.items).selectinload(OrderItem.product)
+        )
+        .where(and_(*order_filters))
+        .order_by(desc(Order.createdAt))
+    )
+    orders_res = await db.execute(order_stmt)
+    orders = orders_res.scalars().all()
+
+    # 3. Itemized Sales Aggregation
+    product_sales_map: Dict[str, Dict[str, Any]] = {}
+    store_totals: Dict[str, Dict[str, Any]] = {}
+
+    for s_id in store_map:
+        store_totals[s_id] = {
+            "storeId": s_id,
+            "storeName": store_map[s_id]["name"],
+            "city": store_map[s_id]["city"],
+            "totalOrders": 0,
+            "totalUnitsSold": 0,
+            "totalRevenue": 0.0,
+            "totalCost": 0.0,
+            "grossProfit": 0.0
+        }
+
+    visited_order_ids_per_store: Dict[str, set] = {s_id: set() for s_id in store_map}
+
+    for order in orders:
+        s_id = order.storeId or "hub-209206"
+        if s_id not in store_totals:
+            store_totals[s_id] = {
+                "storeId": s_id,
+                "storeName": store_map.get(s_id, {}).get("name", s_id),
+                "city": store_map.get(s_id, {}).get("city", ""),
+                "totalOrders": 0,
+                "totalUnitsSold": 0,
+                "totalRevenue": 0.0,
+                "totalCost": 0.0,
+                "grossProfit": 0.0
+            }
+            visited_order_ids_per_store[s_id] = set()
+
+        if order.id not in visited_order_ids_per_store[s_id]:
+            visited_order_ids_per_store[s_id].add(order.id)
+            store_totals[s_id]["totalOrders"] += 1
+
+        for item in (order.items or []):
+            # Only consider grocery products (or items matching vendor if vendorId provided)
+            prod = item.product
+            item_vendor_id = getattr(prod, "vendorId", None) if prod else None
+            item_vendor_name = getattr(prod, "vendor", None) if prod else None
+
+            if vendorId and item_vendor_id != vendorId:
+                continue
+
+            qty = int(item.quantity or 0)
+            selling_prc = float(item.price or 0.0)
+            cost_prc = float(item.costPrice if item.costPrice is not None and item.costPrice > 0 else (prod.costPrice if prod and prod.costPrice else 0.0))
+            line_rev = qty * selling_prc
+            line_cost = qty * cost_prc
+            line_profit = line_rev - line_cost
+
+            # Update store totals
+            store_totals[s_id]["totalUnitsSold"] += qty
+            store_totals[s_id]["totalRevenue"] += line_rev
+            store_totals[s_id]["totalCost"] += line_cost
+            store_totals[s_id]["grossProfit"] += line_profit
+
+            # Aggregate per product-store key
+            prod_key = f"{s_id}_{item.productId or item.name}"
+            if prod_key not in product_sales_map:
+                product_sales_map[prod_key] = {
+                    "productId": item.productId,
+                    "name": item.name,
+                    "storeId": s_id,
+                    "storeName": store_map.get(s_id, {}).get("name", s_id),
+                    "city": store_map.get(s_id, {}).get("city", ""),
+                    "vendorId": item_vendor_id,
+                    "vendorName": item_vendor_name or "Direct Warehouse",
+                    "unit": getattr(prod, "unit", "") if prod else "",
+                    "unitsSold": 0,
+                    "unitSellingPrice": selling_prc,
+                    "unitCostPrice": cost_prc,
+                    "totalRevenue": 0.0,
+                    "totalCost": 0.0,
+                    "grossProfit": 0.0,
+                    "profitMarginPct": 0.0
+                }
+
+            entry = product_sales_map[prod_key]
+            entry["unitsSold"] += qty
+            entry["totalRevenue"] += line_rev
+            entry["totalCost"] += line_cost
+            entry["grossProfit"] += line_profit
+
+    # Round all values
+    for s_id, st in store_totals.items():
+        st["totalRevenue"] = round(st["totalRevenue"], 2)
+        st["totalCost"] = round(st["totalCost"], 2)
+        st["grossProfit"] = round(st["grossProfit"], 2)
+
+    product_list = list(product_sales_map.values())
+    for p in product_list:
+        p["totalRevenue"] = round(p["totalRevenue"], 2)
+        p["totalCost"] = round(p["totalCost"], 2)
+        p["grossProfit"] = round(p["grossProfit"], 2)
+        if p["totalRevenue"] > 0:
+            p["profitMarginPct"] = round((p["grossProfit"] / p["totalRevenue"]) * 100.0, 1)
+
+    product_list.sort(key=lambda x: (x["totalRevenue"], x["unitsSold"]), reverse=True)
+
+    # Grand summary
+    grand_revenue = sum(st["totalRevenue"] for st in store_totals.values())
+    grand_cost = sum(st["totalCost"] for st in store_totals.values())
+    grand_profit = sum(st["grossProfit"] for st in store_totals.values())
+    grand_units = sum(st["totalUnitsSold"] for st in store_totals.values())
+    grand_orders = sum(st["totalOrders"] for st in store_totals.values())
+
+    return {
+        "summary": {
+            "totalRevenue": round(grand_revenue, 2),
+            "totalCost": round(grand_cost, 2),
+            "grossProfit": round(grand_profit, 2),
+            "profitMarginPct": round((grand_profit / grand_revenue) * 100.0, 1) if grand_revenue > 0 else 0.0,
+            "totalUnitsSold": grand_units,
+            "totalOrders": grand_orders
+        },
+        "stores": [st for st in store_totals.values() if st["totalOrders"] > 0 or effective_store == st["storeId"]],
+        "products": product_list,
+        "dateRange": {
+            "startDate": start_local.strftime("%Y-%m-%d"),
+            "endDate": end_local.strftime("%Y-%m-%d"),
+            "utcStart": start.isoformat(),
+            "utcEnd": end.isoformat()
         }
     }
 
