@@ -79,6 +79,11 @@ const nextConfig: NextConfig = {
     const useFastApiProxy = process.env.USE_FASTAPI_PROXY !== 'false';
 
     const fastApiRewrites = [
+      // Auth Refresh -> Railway FastAPI
+      {
+        source: '/api/auth/refresh',
+        destination: `${apiDest}/api/auth/refresh`,
+      },
       // Health Check -> Railway FastAPI
       {
         source: '/api/health',

@@ -14,9 +14,16 @@ class SecureStorage {
 
   static const _legacyPrefsKeys = <String>{
     'auth_token',
+    'refresh_token',
     'user_data',
     'user_id',
     'user_phone',
+    'user_email',
+    'user_name',
+    'user_role',
+    'assigned_restaurant_id',
+    'assigned_store_id',
+    'fcm_token',
   };
 
   // ─── In-memory auth cache (avoids repeated I/O on every API call) ───
@@ -164,21 +171,24 @@ class SecureStorage {
     try {
       final value = await _storage.read(key: key);
       if (value != null && value.isNotEmpty) return value;
+    } catch (e) {
+      LoggerService.error('SecureStorageService: read storage failed, trying prefs', e);
+    }
 
-      if (_legacyPrefsKeys.contains(key)) {
-        final prefs = await SharedPreferences.getInstance();
-        final legacy = prefs.getString(key);
-        if (legacy != null && legacy.isNotEmpty) {
-          await _storage.write(key: key, value: legacy);
-          await prefs.remove(key);
-          return legacy;
-        }
+    // Always fall back to SharedPreferences if secure storage returned null or failed.
+    // NEVER call prefs.remove(key) here — SharedPreferences acts as a permanent persistent backup
+    // against Android Keystore corruption, OS updates, and process restarts.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final fallback = prefs.getString(key);
+      if (fallback != null && fallback.isNotEmpty) {
+        try {
+          await _storage.write(key: key, value: fallback);
+        } catch (_) {}
+        return fallback;
       }
-    } catch (e) { LoggerService.error('SecureStorageService: read', e);
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        return prefs.getString(key);
-      } catch (e, _) { LoggerService.error('SecureStorageService: read fallback', e); }
+    } catch (e, _) {
+      LoggerService.error('SecureStorageService: read fallback error', e);
     }
     return null;
   }
@@ -221,11 +231,16 @@ class SecureStorage {
   static Future<void> deleteAll() async {
     invalidateCache();
     try {
+      for (final key in _legacyPrefsKeys) {
+        await _storage.delete(key: key);
+      }
       await _storage.deleteAll();
     } catch (e, _) { LoggerService.error('SecureStorageService: deleteAll', e); }
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+      for (final key in _legacyPrefsKeys) {
+        await prefs.remove(key);
+      }
     } catch (e, _) { LoggerService.error('SecureStorageService: deleteAll fallback', e); }
   }
 

@@ -200,6 +200,11 @@ class OTPVerifyRequest(BaseModel):
     otp: str
 
 
+class RefreshTokenRequest(BaseModel):
+    refreshToken: Optional[str] = None
+    token: Optional[str] = None
+
+
 class SessionResponse(BaseModel):
     success: Optional[bool] = True
     needsProfileSetup: Optional[bool] = False
@@ -570,6 +575,93 @@ async def get_me(
         assignedRestaurantId=user.assignedRestaurantId,
         needsProfileSetup=not user.name or not user.phone,
     )
+
+
+@router.post("/refresh")
+async def refresh_token(
+    request: Request,
+    body: Optional[RefreshTokenRequest] = None,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Refresh an expired or near-expiry token without forcing the user to log in again.
+    Extracts token from JSON body, Authorization Bearer header, or cookies, validates
+    the user against PostgreSQL/SQLite, and returns a renewed 30-day token.
+    """
+    raw_token = None
+    if body:
+        raw_token = body.refreshToken or body.token
+    if not raw_token and credentials and credentials.credentials:
+        raw_token = credentials.credentials
+    if not raw_token:
+        auth_hdr = request.headers.get("Authorization") or request.headers.get("authorization")
+        if auth_hdr and auth_hdr.lower().startswith("bearer "):
+            raw_token = auth_hdr.split(" ", 1)[1].strip()
+    if not raw_token:
+        raw_token = (
+            request.cookies.get("fastapi_token") or
+            request.cookies.get("__Secure-authjs.session-token") or
+            request.cookies.get("authjs.session-token") or
+            request.cookies.get("next-auth.session-token")
+        )
+
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No token provided for refresh"
+        )
+
+    user_info = extract_user_from_token(raw_token, verify_exp=False)
+    if not user_info or not user_info.get("id"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or unparseable token"
+        )
+
+    user_id = user_info["id"]
+    stmt = select(User).where(User.id == user_id)
+    res = await db.execute(stmt)
+    user = res.scalars().first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account no longer exists"
+        )
+
+    if user.isBlocked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Account blocked: {user.blockReason or 'Contact support'}"
+        )
+
+    role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+    new_token = create_access_token({
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": role_val,
+        "phone": user.phone,
+        "assignedRestaurantId": user.assignedRestaurantId,
+        "assignedStoreId": user.assignedStoreId,
+    })
+
+    return {
+        "success": True,
+        "token": new_token,
+        "accessToken": new_token,
+        "refreshToken": new_token,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": role_val,
+            "phone": user.phone,
+            "assignedRestaurantId": user.assignedRestaurantId,
+            "assignedStoreId": user.assignedStoreId,
+        }
+    }
 
 
 _otp_cache: Dict[str, tuple[str, float]] = {}

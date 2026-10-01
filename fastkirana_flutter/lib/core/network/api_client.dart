@@ -125,12 +125,10 @@ final dioProvider = Provider<Dio>((ref) {
               final retryResponse = await dio.fetch(requestOptions);
               return handler.resolve(retryResponse);
             } else {
-              // Token refresh returned empty - clean up local credentials
-              await SecureStorage.deleteAll();
+              LoggerService.warning('ApiClient: Token refresh returned empty, keeping user session');
             }
           } catch (e, _) {
-            LoggerService.error('ApiClient: token refresh failed', e);
-            await SecureStorage.deleteAll();
+            LoggerService.error('ApiClient: token refresh failed, keeping user session', e);
           }
         }
       }
@@ -270,7 +268,7 @@ Future<String?> _refreshToken() async {
 
     if (res.statusCode == 200 && res.data != null) {
       final String? newToken = res.data['token'] ?? res.data['accessToken'];
-      final String? newRefreshToken = res.data['refreshToken'];
+      final String? newRefreshToken = res.data['refreshToken'] ?? newToken;
 
       if (newToken != null && newToken.isNotEmpty) {
         await SecureStorage.saveAuthToken(newToken);
@@ -281,7 +279,7 @@ Future<String?> _refreshToken() async {
         return newToken;
       }
     } else if (res.statusCode == 401 || res.statusCode == 403) {
-      await SecureStorage.deleteAll();
+      LoggerService.warning('ApiClient: Refresh token endpoint returned ${res.statusCode}');
     }
   } catch (e, _) {
     LoggerService.error('ApiClient: token refresh error', e);

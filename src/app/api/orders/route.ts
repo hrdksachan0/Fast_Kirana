@@ -1102,14 +1102,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 🛡️ Strict Anti-Fraud Guard:
-    // If online payment is requested for a non-free order, reject if not verified as PAID by gateway
-    if (isOnlineRequested && !isFreePromo && !isStaffSession && !isOnlinePaid) {
-      return NextResponse.json({
-        error: 'Online payment could not be verified by the payment gateway. Order was not placed. Please complete the payment or select Cash on Delivery (COD).',
-      }, { status: 400 })
-    }
-
+    // 🛡️ Online Payment Status & Auto-Routing:
+    // If online payment is verified (or 100% free coupon), mark PAID.
+    // If online payment is in-flight/pending, store as PENDING so it lands in the "Payment Pending" admin section.
     const paymentStatus = isOnlinePaid ? PaymentStatus.PAID : PaymentStatus.PENDING
 
     let resolvedPaymentMethod: PaymentMethod = isFreePromo ? PaymentMethod.UPI : PaymentMethod.COD
@@ -1122,10 +1117,11 @@ export async function POST(request: NextRequest) {
     }
 
     const autoApproveSetting = settingsMap['admin_auto_approve_orders']
-    // Online Paid orders skip ADMIN_PENDING and go directly to PENDING (Auto-approved).
-    // Cash on Delivery (COD) orders require Admin Approval (ADMIN_PENDING) unless auto-approve setting is explicitly true.
     const isAutoApprove = autoApproveSetting === 'true'
-    const initialOrderStatus = isOnlinePaid
+    // Online Paid orders skip ADMIN_PENDING and go directly to PENDING (Auto-approved).
+    // Online UNPAID orders land in PENDING (Payment Pending queue in Admin dashboard).
+    // Cash on Delivery (COD) orders require Admin Approval (ADMIN_PENDING) unless auto-approve is true.
+    const initialOrderStatus = isOnlineRequested
       ? OrderStatus.PENDING
       : (isAutoApprove ? OrderStatus.PENDING : OrderStatus.ADMIN_PENDING)
 
@@ -1509,17 +1505,21 @@ export async function POST(request: NextRequest) {
         } catch (_) {}
 
         // Multi-channel notifications via domain dispatcher (Push, FCM, WhatsApp)
-        dispatchOrderNotifications({
-          createdOrders,
-          isOnlinePaid,
-          notificationTitle: isOnlinePaid ? '💳 Order Confirmed & Paid!' : 'New Order Received 📦',
-          adminPhones,
-          origin,
-          userPhone: body.phone || body.customerPhone || address?.phone,
-          settingsMap,
-        }).catch((notifErr) => {
-          console.error('Failed to dispatch order notifications:', notifErr)
-        })
+        // Note: Unpaid online orders stay safely in Admin's "Payment Pending" section without prematurely dispatching riders
+        const isAwaitingOnlinePayment = isOnlineRequested && !isOnlinePaid
+        if (!isAwaitingOnlinePayment) {
+          dispatchOrderNotifications({
+            createdOrders,
+            isOnlinePaid,
+            notificationTitle: isOnlinePaid ? '💳 Order Confirmed & Paid!' : 'New Order Received 📦',
+            adminPhones,
+            origin,
+            userPhone: body.phone || body.customerPhone || address?.phone,
+            settingsMap,
+          }).catch((notifErr) => {
+            console.error('Failed to dispatch order notifications:', notifErr)
+          })
+        }
       } catch (sseErr) {
         console.error('Failed to emit SSE/notifications for new orders:', sseErr)
       }

@@ -9,14 +9,19 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import Base, get_db
 from main import app
+import models
+
+from sqlalchemy.pool import StaticPool
 
 # In-memory SQLite async engine for fast, isolated backend testing
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+TEST_DATABASE_URL = "sqlite+aiosqlite:///file:testmemdb?mode=memory&cache=shared&uri=true"
 
 test_engine = create_async_engine(
     TEST_DATABASE_URL,
     echo=False,
     future=True,
+    poolclass=StaticPool,
+    connect_args={"check_same_thread": False},
 )
 
 TestingSessionLocal = async_sessionmaker(

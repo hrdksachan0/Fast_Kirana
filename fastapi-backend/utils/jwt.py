@@ -81,7 +81,7 @@ def decrypt_jwe(token: str, secret_str: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def decode_nextauth_jwt(token: str) -> Optional[Dict[str, Any]]:
+def decode_nextauth_jwt(token: str, verify_exp: bool = True) -> Optional[Dict[str, Any]]:
     """
     Decode NextAuth.js JWT or JWE encrypted token.
     Supports both standard HS256 JWTs and encrypted JWE tokens.
@@ -97,7 +97,7 @@ def decode_nextauth_jwt(token: str) -> Optional[Dict[str, Any]]:
             algorithms=["HS256"],
             options={
                 "verify_signature": True,
-                "verify_exp": True,
+                "verify_exp": verify_exp,
             }
         )
         return payload
@@ -112,14 +112,14 @@ def decode_nextauth_jwt(token: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def extract_user_from_token(token: str) -> Optional[Dict[str, Any]]:
+def extract_user_from_token(token: str, verify_exp: bool = True) -> Optional[Dict[str, Any]]:
     """
     Extract user info from NextAuth JWT.
 
     Returns dict with: id, email, role, phone, assignedRestaurantId
     or None if token invalid.
     """
-    payload = decode_nextauth_jwt(token)
+    payload = decode_nextauth_jwt(token, verify_exp=verify_exp)
     if not payload:
         return None
 
