@@ -155,13 +155,16 @@ export function useAdminProducts({
   }, [productPage, selectedCategoryFilter, searchQuery, selectedTypeFilter, selectedHubId, authHeaders])
 
   useEffect(() => {
-    fetchProducts()
-  }, [fetchProducts])
+    const catalogTabs = ['products', 'categories', 'alerts', 'inward', 'bulk-update', 'csv-import', 'reports', 'analytics', 'forecast', 'banners', 'restaurant-report']
+    if (activeTab && catalogTabs.includes(activeTab)) {
+      fetchProducts()
+    }
+  }, [fetchProducts, activeTab])
 
   useEffect(() => {
     // Only load 1000 products if user is viewing product/catalog tabs
     const catalogTabs = ['products', 'categories', 'alerts', 'inward', 'bulk-update', 'csv-import', 'reports', 'analytics', 'forecast', 'banners', 'restaurant-report']
-    if (activeTab && !catalogTabs.includes(activeTab) && allProducts.length > 0) {
+    if (!activeTab || !catalogTabs.includes(activeTab) || allProducts.length > 0) {
       return
     }
 
@@ -189,7 +192,7 @@ export function useAdminProducts({
     return () => {
       active = false
     }
-  }, [selectedHubId, activeTab])
+  }, [selectedHubId, activeTab, allProducts.length, authHeaders])
 
   const handleNewProductTypeChange = (type: 'grocery' | 'cafe' | 'restaurant') => {
     setNewProductType(type)

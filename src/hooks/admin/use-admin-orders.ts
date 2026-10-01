@@ -124,11 +124,23 @@ export function useAdminOrders({
     }
   }, [orderPage, orderStatusFilter, orderSearchQuery, selectedHubId, authHeaders, onNewOrderDetected])
 
-  useEffect(() => {
-    fetchOrders()
+  const isFirstMountRef = useRef(true)
 
-    // 10-second fast polling for active live action queue, 30s for history
-    const pollInterval = ordersSubTab === 'active' ? 10000 : 30000
+  useEffect(() => {
+    // If we already have initialOrders from server and haven't altered filters, skip initial mount fetch
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false
+      if (initialOrders && initialOrders.length > 0 && orderPage === 1 && orderStatusFilter === 'ALL' && !orderSearchQuery) {
+        prevKnownOrderIds.current = new Set(initialOrders.map((o: any) => o.id))
+      } else {
+        fetchOrders()
+      }
+    } else {
+      fetchOrders()
+    }
+
+    // 15-second fast polling for active live action queue, 30s for history
+    const pollInterval = ordersSubTab === 'active' ? 15000 : 30000
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       fetchOrders()
@@ -150,7 +162,7 @@ export function useAdminOrders({
         document.removeEventListener('visibilitychange', handleVisibility)
       }
     }
-  }, [fetchOrders, orderRefreshKey, ordersSubTab])
+  }, [fetchOrders, orderRefreshKey, ordersSubTab, initialOrders, orderPage, orderStatusFilter, orderSearchQuery])
 
   const handleOpenOrderModal = useCallback(async (order: any) => {
     if (!order) return

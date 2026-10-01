@@ -128,7 +128,7 @@ export function useAdminRealtime({
         selectedHubId && selectedHubId !== 'all'
           ? `&storeId=${encodeURIComponent(selectedHubId)}`
           : ''
-      const res = await fetch(`/api/admin/orders?limit=30${storeQuery}&t=${Date.now()}`)
+      const res = await fetch(`/api/admin/orders?limit=30&skipStats=true${storeQuery}&t=${Date.now()}`)
       if (res.ok) {
         const data = await res.json()
         const fetched = Array.isArray(data?.orders)
@@ -160,14 +160,23 @@ export function useAdminRealtime({
     }
   }, [selectedHubId, playNewOrderChime])
 
-  // Active polling every 12 seconds for live order synchronization + visibility refocus refetch
+  const isFirstMountRef = useRef(true)
+
+  // Active polling every 15 seconds for live order synchronization + visibility refocus refetch
   useEffect(() => {
-    fetchLiveOrdersList()
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false
+      if (initialOrders && initialOrders.length > 0) {
+        knownLiveOrderIds.current = new Set(initialOrders.map((o: any) => o.id))
+      } else {
+        fetchLiveOrdersList()
+      }
+    }
 
     const livePollInterval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       fetchLiveOrdersList()
-    }, 12000)
+    }, 15000)
 
     const handleVisibility = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
@@ -186,7 +195,7 @@ export function useAdminRealtime({
         document.removeEventListener('visibilitychange', handleVisibility)
       }
     }
-  }, [fetchLiveOrdersList])
+  }, [fetchLiveOrdersList, initialOrders])
 
   // Tri-channel listener: Supabase, SSE, Railway WebSocket
   useEffect(() => {

@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const fastApiUrl = (
       process.env.NEXT_PUBLIC_FASTAPI_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      'https://fastkiran-backend-production.up.railway.app'
+      'https://fastkirana-production-0cdd.up.railway.app'
     ).replace(/\/+$/, '')
 
     const token =
@@ -42,10 +42,16 @@ export async function GET(request: Request) {
         headers['if-none-match'] = incomingIfNoneMatch
       }
 
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 1500)
+
       const fastRes = await fetch(`${fastApiUrl}/api/admin/live-carts${query}`, {
         headers,
         cache: 'no-store',
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
+
       if (fastRes.status === 304) {
         return new NextResponse(null, { status: 304 })
       }
@@ -66,12 +72,14 @@ export async function GET(request: Request) {
         some: {} // has at least one item
       },
       updatedAt: {
-        gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // past 24 hours
+        gte: new Date(Date.now() - 12 * 60 * 60 * 1000) // past 12 hours
       }
     }
 
     if (storeId && storeId !== 'all') {
-      whereClause.user = await getStoreUserFilter(storeId)
+      whereClause.user = {
+        assignedStoreId: storeId
+      }
     }
 
     // Fetch active carts that have at least one item, updated in the past 12 hours

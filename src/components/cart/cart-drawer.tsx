@@ -145,15 +145,16 @@ export function CartDrawer() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  const cartProductIdsKey = useMemo(() => items.map((i) => i.product.id).sort().join(','), [items])
+
   useEffect(() => {
-    if (!isOpen || items.length === 0) {
+    if (!isOpen || !cartProductIdsKey) {
       setRecommendations([])
       return
     }
     
-    const productIds = items.map((i) => i.product.id).join(',')
     const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-    fetch(`/api/products/upsell?productIds=${productIds}${storeParam}`)
+    fetch(`/api/products/upsell?productIds=${cartProductIdsKey}${storeParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.products) {
@@ -161,7 +162,7 @@ export function CartDrawer() {
         }
       })
       .catch((err) => console.error('Failed to fetch upsell products:', err))
-  }, [isOpen, items, activeStoreId])
+  }, [isOpen, cartProductIdsKey, activeStoreId])
 
   const groceryItems = items.filter((item) => !isCafeProduct(item.product))
   const cafeItems = items.filter((item) => isCafeProduct(item.product))

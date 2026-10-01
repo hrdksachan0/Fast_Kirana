@@ -119,7 +119,6 @@ export default async function AdminPage(props: {
       ? Prisma.sql`AND "storeId" = ${initialStoreId}`
       : Prisma.empty
 
-
     const [todayStatsRaw, statusStatsRaw, ...results] = await Promise.all([
       prisma.$queryRaw<Array<{
         today_orders: number
@@ -141,33 +140,26 @@ export default async function AdminPage(props: {
           ${storeSqlWhere}
       `,
       prisma.$queryRaw<Array<{
-        total: number
-        pending: number
-        payment_pending: number
-        confirmed: number
-        packed: number
-        shipped: number
-        delivered: number
-        cancelled: number
+        status: string
+        paymentMethod: string
+        paymentStatus: string
+        count: number
       }>>`
         SELECT 
-          COUNT(DISTINCT CASE WHEN "paymentMethod" = 'COD' OR "paymentStatus" = 'PAID' OR status::text != 'PENDING' THEN COALESCE("combinedId", id) END)::int as total,
-          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID') THEN COALESCE("combinedId", id) END)::int as pending,
-          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND "paymentMethod" != 'COD' AND "paymentStatus" != 'PAID' THEN COALESCE("combinedId", id) END)::int as payment_pending,
-          COUNT(DISTINCT CASE WHEN status::text = 'CONFIRMED' THEN COALESCE("combinedId", id) END)::int as confirmed,
-          COUNT(DISTINCT CASE WHEN status::text = 'PACKED' THEN COALESCE("combinedId", id) END)::int as packed,
-          COUNT(DISTINCT CASE WHEN status::text = 'SHIPPED' THEN COALESCE("combinedId", id) END)::int as shipped,
-          COUNT(DISTINCT CASE WHEN status::text = 'DELIVERED' THEN COALESCE("combinedId", id) END)::int as delivered,
-          COUNT(DISTINCT CASE WHEN status::text = 'CANCELLED' THEN COALESCE("combinedId", id) END)::int as cancelled
+          status::text as status,
+          "paymentMethod"::text as "paymentMethod",
+          "paymentStatus"::text as "paymentStatus",
+          COUNT(DISTINCT COALESCE("combinedId", id))::int as count
         FROM orders
         WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
           ${storeSqlWhere}
+        GROUP BY status, "paymentMethod", "paymentStatus"
       `,
       prisma.user.count({
         where: {
           NOT: { email: { startsWith: 'guest-' } },
-          ...(Object.keys(userStoreFilter).length > 0 ? userStoreFilter : {})
-        } as any
+          ...(initialStoreId && initialStoreId !== 'all' ? { assignedStoreId: initialStoreId } : {})
+        }
       }),
       initialStoreId && initialStoreId !== 'all'
         ? prisma.storeInventory.count({
@@ -183,28 +175,6 @@ export default async function AdminPage(props: {
               restaurantId: null,
             },
           }),
-      initialStoreId && initialStoreId !== 'all'
-        ? prisma.$queryRaw`
-            SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
-                   COUNT(DISTINCT COALESCE("combinedId", id))::int as count,
-                   COALESCE(SUM(total), 0)::float as total,
-                   COALESCE(SUM(subtotal), 0)::float as subtotal,
-                   COALESCE(SUM(discount), 0)::float as discount
-            FROM orders
-            WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
-              AND "storeId" = ${initialStoreId}
-            GROUP BY "shopName", "restaurantId", "orderType", status
-          `
-        : prisma.$queryRaw`
-            SELECT "shopName", "restaurantId", "orderType"::text as "orderType", status::text as status,
-                   COUNT(DISTINCT COALESCE("combinedId", id))::int as count,
-                   COALESCE(SUM(total), 0)::float as total,
-                   COALESCE(SUM(subtotal), 0)::float as subtotal,
-                   COALESCE(SUM(discount), 0)::float as discount
-            FROM orders
-            WHERE "deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL
-            GROUP BY "shopName", "restaurantId", "orderType", status
-          `,
       prisma.order.findMany({
         where: storeWhere,
         take: 40,
@@ -269,7 +239,6 @@ export default async function AdminPage(props: {
     ])
 
     const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0, today_delivery_fee: 0, today_packaging_fee: 0 }
-    const statusRow = (statusStatsRaw as any[])?.[0] || { total: 0, pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
 
     todayOrdersCount = todayRow.today_orders || 0
     todayRevenue = todayRow.today_sales || 0
@@ -278,11 +247,10 @@ export default async function AdminPage(props: {
     todayPackagingFee = todayRow.today_packaging_fee || 0
     userCount = (results[0] as number) || 0
     lowStockCount = (results[1] as number) || 0
-    const groupStats = (results[2] as any[]) || []
-    const recentOrdersList = (results[3] as any[]) || []
-    categoriesRaw = (results[4] as any[]) || []
-    storesRaw = (results[5] as any[]) || []
-    restaurantsRaw = (results[6] as any[]) || []
+    const recentOrdersList = (results[2] as any[]) || []
+    categoriesRaw = (results[3] as any[]) || []
+    storesRaw = (results[4] as any[]) || []
+    restaurantsRaw = (results[5] as any[]) || []
 
     productsRaw = []
     reviewsRaw = []
@@ -292,52 +260,64 @@ export default async function AdminPage(props: {
 
     ordersRaw = recentOrdersList
 
-    let platformDeliveredRevenue = 0
-    groupStats.forEach((group: any) => {
-      const isRestaurant = !!group.restaurantId || group.orderType === 'RESTAURANT' || (group.shopName && group.shopName.toLowerCase().includes('restaurant'))
-      
-      const count = group.count || 0
-      // Food net sales (strictly food subtotal minus discount - packaging and delivery fees excluded)
-      const foodNetSales = (group.subtotal || 0) - (group.discount || 0)
-      // Total order value (customer collection: food + delivery fee + packaging miscFee)
-      const totalOrderValue = group.total || 0
+    // Fast in-memory aggregation of status counts
+    let totalOrdersAgg = 0
+    let pendingAgg = 0
+    let paymentPendingAgg = 0
+    let confirmedAgg = 0
+    let packedAgg = 0
+    let shippedAgg = 0
+    let deliveredAgg = 0
+    let cancelledAgg = 0
 
-      if (isRestaurant) {
-        restaurantTotalOrders += count
-        if (group.status === 'DELIVERED') {
-          restaurantRevenue += foodNetSales // Strictly Food Net Sales (no packaging, no delivery fee)
-          restaurantDeliveredOrders += count
-          platformDeliveredRevenue += totalOrderValue
-        } else if (group.status !== 'CANCELLED') {
-          restaurantActiveOrders += count
+    for (const row of (statusStatsRaw as any[] || [])) {
+      const st = row.status
+      const pm = row.paymentMethod
+      const ps = row.paymentStatus
+      const c = Number(row.count) || 0
+
+      if (st === 'PENDING') {
+        if (pm === 'COD' || ps === 'PAID') {
+          pendingAgg += c
+          totalOrdersAgg += c
+        } else {
+          paymentPendingAgg += c
         }
+      } else if (st === 'CONFIRMED') {
+        confirmedAgg += c
+        totalOrdersAgg += c
+      } else if (st === 'PACKED') {
+        packedAgg += c
+        totalOrdersAgg += c
+      } else if (st === 'SHIPPED') {
+        shippedAgg += c
+        totalOrdersAgg += c
+      } else if (st === 'DELIVERED') {
+        deliveredAgg += c
+        totalOrdersAgg += c
+      } else if (st === 'CANCELLED') {
+        cancelledAgg += c
+        totalOrdersAgg += c
       } else {
-        groceryTotalOrders += count
-        if (group.status === 'DELIVERED') {
-          groceryRevenue += totalOrderValue
-          groceryDeliveredOrders += count
-          platformDeliveredRevenue += totalOrderValue
-        } else if (group.status !== 'CANCELLED') {
-          groceryActiveOrders += count
-        }
+        totalOrdersAgg += c
       }
-    })
+    }
 
-    revenue = platformDeliveredRevenue + cafeRevenue
-    totalOrdersCount = statusRow.total || 0
-    activeOrdersCount = (statusRow.pending || 0) + (statusRow.confirmed || 0) + (statusRow.packed || 0) + (statusRow.shipped || 0)
-    deliveredOrdersCount = statusRow.delivered || 0
+    revenue = todayRevenue
+    totalOrdersCount = totalOrdersAgg
+    activeOrdersCount = pendingAgg + confirmedAgg + packedAgg + shippedAgg
+    deliveredOrdersCount = deliveredAgg
     orderCount = deliveredOrdersCount
 
     initialOrderCounts = {
       ALL: totalOrdersCount,
-      PENDING: statusRow.pending || 0,
-      PAYMENT_PENDING: statusRow.payment_pending || 0,
-      CONFIRMED: statusRow.confirmed || 0,
-      PACKED: statusRow.packed || 0,
-      SHIPPED: statusRow.shipped || 0,
-      DELIVERED: statusRow.delivered || 0,
-      CANCELLED: statusRow.cancelled || 0,
+      PENDING: pendingAgg,
+      PAYMENT_PENDING: paymentPendingAgg,
+      CONFIRMED: confirmedAgg,
+      PACKED: packedAgg,
+      SHIPPED: shippedAgg,
+      DELIVERED: deliveredAgg,
+      CANCELLED: cancelledAgg,
     }
   } catch (error) {
     console.error('Database connection warning in admin page:', error)

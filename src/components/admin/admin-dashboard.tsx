@@ -203,8 +203,11 @@ export function AdminDashboard({
   const [groceryAutoTiming, setGroceryAutoTiming] = useState<boolean>(false)
   const [isTogglingStore, setIsTogglingStore] = useState<boolean>(false)
 
-  // Fetch / refresh stores and restaurants list on mount
+  // Fetch / refresh stores and restaurants list only if not pre-populated by server
   useEffect(() => {
+    if (initialStores && initialStores.length > 0 && initialRestaurants && initialRestaurants.length > 0) {
+      return
+    }
     let isMounted = true
     const refreshStoresAndRestaurants = async () => {
       try {
@@ -228,7 +231,7 @@ export function AdminDashboard({
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [initialStores, initialRestaurants])
 
   // Media Library state
   const [showMediaLibrary, setShowMediaLibrary] = useState(false)

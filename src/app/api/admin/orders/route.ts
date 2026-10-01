@@ -4,6 +4,14 @@ import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 
+// 15-second in-memory stats cache per store to prevent concurrent full-table aggregation hammering
+interface OrdersStatsCacheEntry {
+  timestamp: number
+  statRow: any
+  todayRow: any
+}
+const ordersStatsCache = new Map<string, OrdersStatsCacheEntry>()
+
 export async function GET(request: Request) {
   const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
@@ -15,6 +23,7 @@ export async function GET(request: Request) {
   const status = searchParams.get('status')
   const search = searchParams.get('search')
   const paramStoreId = searchParams.get('storeId')
+  const skipStats = searchParams.get('skipStats') === 'true'
   
   // Strictly enforce hub isolation: branch admins CANNOT query other hubs or ALL!
   const effectiveStoreId = getEffectiveStoreId(session, paramStoreId)
@@ -252,56 +261,126 @@ export async function GET(request: Request) {
       ? Prisma.sql`AND "storeId" = ${effectiveStoreId}`
       : Prisma.empty
 
-    const [statusStatsRaw, todayStatsRaw] = await Promise.all([
-      prisma.$queryRaw<Array<{
-        total: number
-        admin_pending: number
-        pending: number
-        payment_pending: number
-        confirmed: number
-        packed: number
-        shipped: number
-        delivered: number
-        cancelled: number
-      }>>`
-        SELECT 
-          COUNT(DISTINCT COALESCE("combinedId", id))::int as total,
-          COUNT(DISTINCT CASE WHEN status::text = 'ADMIN_PENDING' THEN COALESCE("combinedId", id) END)::int as admin_pending,
-          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID') THEN COALESCE("combinedId", id) END)::int as pending,
-          COUNT(DISTINCT CASE WHEN status::text = 'PENDING' AND "paymentMethod" != 'COD' AND "paymentStatus" != 'PAID' THEN COALESCE("combinedId", id) END)::int as payment_pending,
-          COUNT(DISTINCT CASE WHEN status::text = 'CONFIRMED' THEN COALESCE("combinedId", id) END)::int as confirmed,
-          COUNT(DISTINCT CASE WHEN status::text = 'PACKED' THEN COALESCE("combinedId", id) END)::int as packed,
-          COUNT(DISTINCT CASE WHEN status::text = 'SHIPPED' THEN COALESCE("combinedId", id) END)::int as shipped,
-          COUNT(DISTINCT CASE WHEN status::text = 'DELIVERED' THEN COALESCE("combinedId", id) END)::int as delivered,
-          COUNT(DISTINCT CASE WHEN status::text = 'CANCELLED' THEN COALESCE("combinedId", id) END)::int as cancelled
-        FROM orders
-        WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
-          ${storeSqlWhere}
-      `,
-      prisma.$queryRaw<Array<{
-        today_orders: number
-        today_sales: number
-        today_delivered_sales: number
-        today_delivery_fee: number
-        today_packaging_fee: number
-      }>>`
-        SELECT 
-          COUNT(DISTINCT COALESCE("combinedId", id))::int as today_orders,
-          COALESCE(SUM(total), 0)::float as today_sales,
-          COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN GREATEST(0, (total - COALESCE("refundAmount", 0))) ELSE 0 END), 0)::float as today_delivered_sales,
-          COALESCE(SUM("deliveryFee"), 0)::float as today_delivery_fee,
-          COALESCE(SUM("miscFee"), 0)::float as today_packaging_fee
-        FROM orders
-        WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
-          AND status::text != 'CANCELLED'
-          AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID')
-          AND "createdAt" >= ${startOfToday}
-          ${storeSqlWhere}
-      `
-    ])
+    const cacheKey = effectiveStoreId || 'all'
+    const cachedStats = ordersStatsCache.get(cacheKey)
+    const isCacheValid = cachedStats && (Date.now() - cachedStats.timestamp < 15000)
 
-    const statRow = (statusStatsRaw as any[])?.[0] || { total: 0, admin_pending: 0, pending: 0, payment_pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
-    const todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0, today_delivery_fee: 0, today_packaging_fee: 0 }
+    let statRow = { total: 0, admin_pending: 0, pending: 0, payment_pending: 0, confirmed: 0, packed: 0, shipped: 0, delivered: 0, cancelled: 0 }
+    let todayRow = { today_orders: 0, today_sales: 0, today_delivered_sales: 0, today_delivery_fee: 0, today_packaging_fee: 0 }
+
+    if (skipStats) {
+      if (cachedStats) {
+        statRow = cachedStats.statRow
+        todayRow = cachedStats.todayRow
+      }
+    } else if (isCacheValid) {
+      statRow = cachedStats.statRow
+      todayRow = cachedStats.todayRow
+    } else {
+      const [statusStatsRaw, todayStatsRaw] = await Promise.all([
+        prisma.$queryRaw<Array<{
+          status: string
+          paymentMethod: string
+          paymentStatus: string
+          count: number
+        }>>`
+          SELECT 
+            status::text as status,
+            "paymentMethod"::text as "paymentMethod",
+            "paymentStatus"::text as "paymentStatus",
+            COUNT(DISTINCT COALESCE("combinedId", id))::int as count
+          FROM orders
+          WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
+            ${storeSqlWhere}
+          GROUP BY status, "paymentMethod", "paymentStatus"
+        `,
+        prisma.$queryRaw<Array<{
+          today_orders: number
+          today_sales: number
+          today_delivered_sales: number
+          today_delivery_fee: number
+          today_packaging_fee: number
+        }>>`
+          SELECT 
+            COUNT(DISTINCT COALESCE("combinedId", id))::int as today_orders,
+            COALESCE(SUM(total), 0)::float as today_sales,
+            COALESCE(SUM(CASE WHEN status::text = 'DELIVERED' THEN GREATEST(0, (total - COALESCE("refundAmount", 0))) ELSE 0 END), 0)::float as today_delivered_sales,
+            COALESCE(SUM("deliveryFee"), 0)::float as today_delivery_fee,
+            COALESCE(SUM("miscFee"), 0)::float as today_packaging_fee
+          FROM orders
+          WHERE ("deliveryMethod" != 'RETAIL' OR "deliveryMethod" IS NULL)
+            AND status::text != 'CANCELLED'
+            AND ("paymentMethod" = 'COD' OR "paymentStatus" = 'PAID')
+            AND "createdAt" >= ${startOfToday}
+            ${storeSqlWhere}
+        `
+      ])
+
+      let totalAgg = 0
+      let adminPendingAgg = 0
+      let pendingAgg = 0
+      let paymentPendingAgg = 0
+      let confirmedAgg = 0
+      let packedAgg = 0
+      let shippedAgg = 0
+      let deliveredAgg = 0
+      let cancelledAgg = 0
+
+      for (const row of (statusStatsRaw as any[] || [])) {
+        const st = row.status
+        const pm = row.paymentMethod
+        const ps = row.paymentStatus
+        const c = Number(row.count) || 0
+
+        if (st === 'ADMIN_PENDING') {
+          adminPendingAgg += c
+          totalAgg += c
+        } else if (st === 'PENDING') {
+          if (pm === 'COD' || ps === 'PAID') {
+            pendingAgg += c
+            totalAgg += c
+          } else {
+            paymentPendingAgg += c
+          }
+        } else if (st === 'CONFIRMED') {
+          confirmedAgg += c
+          totalAgg += c
+        } else if (st === 'PACKED') {
+          packedAgg += c
+          totalAgg += c
+        } else if (st === 'SHIPPED') {
+          shippedAgg += c
+          totalAgg += c
+        } else if (st === 'DELIVERED') {
+          deliveredAgg += c
+          totalAgg += c
+        } else if (st === 'CANCELLED') {
+          cancelledAgg += c
+          totalAgg += c
+        } else {
+          totalAgg += c
+        }
+      }
+
+      statRow = {
+        total: totalAgg,
+        admin_pending: adminPendingAgg,
+        pending: pendingAgg,
+        payment_pending: paymentPendingAgg,
+        confirmed: confirmedAgg,
+        packed: packedAgg,
+        shipped: shippedAgg,
+        delivered: deliveredAgg,
+        cancelled: cancelledAgg,
+      }
+      todayRow = (todayStatsRaw as any[])?.[0] || { today_orders: 0, today_sales: 0, today_delivered_sales: 0, today_delivery_fee: 0, today_packaging_fee: 0 }
+
+      ordersStatsCache.set(cacheKey, {
+        timestamp: Date.now(),
+        statRow,
+        todayRow,
+      })
+    }
 
     const allCount = statRow.total || 0
     const adminPendingCount = statRow.admin_pending || 0
