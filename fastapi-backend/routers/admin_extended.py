@@ -3173,6 +3173,8 @@ async def create_admin_banner(
     db.add(banner)
     await db.commit()
     await db.refresh(banner)
+    from utils.cache import invalidate_cache_pattern
+    await invalidate_cache_pattern("banners:*")
     return {"success": True, "banner": banner}
 
 
@@ -3240,6 +3242,8 @@ async def update_admin_banner(
 
     await db.commit()
     await db.refresh(banner)
+    from utils.cache import invalidate_cache_pattern
+    await invalidate_cache_pattern("banners:*")
     return {"success": True, "banner": banner}
 
 
@@ -3262,6 +3266,8 @@ async def delete_admin_banner(
 
     await db.delete(banner)
     await db.commit()
+    from utils.cache import invalidate_cache_pattern
+    await invalidate_cache_pattern("banners:*")
     return {"success": True, "message": "Banner deleted successfully"}
 
 

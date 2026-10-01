@@ -295,7 +295,8 @@ export async function GET(request: NextRequest) {
         NOT: [
           { tags: { has: 'cafe' } },
           { category: { slug: 'cafe' } }
-        ]
+        ],
+        ...(where.AND ? { AND: where.AND } : {})
       }
 
       const featuredProducts = await prisma.product.findMany({
@@ -341,24 +342,27 @@ export async function GET(request: NextRequest) {
       }
 
       // Override stock and availability with localized dark store inventory
-      const activeStoreId = storeId || 'hub-209206'
-      if (activeStoreId && finalProducts.length > 0) {
+      if (storeId && finalProducts.length > 0) {
         const inventories = await prisma.storeInventory.findMany({
           where: {
-            storeId: activeStoreId,
+            storeId,
             productId: { in: finalProducts.map(p => p.id) }
           }
         })
         const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
         finalProducts = finalProducts.map(p => {
           const isRest = !!p.restaurantId
-          const localStock = isRest ? p.stock : (inventoryMap.has(p.id) ? inventoryMap.get(p.id)! : p.stock)
+          const localStock = isRest ? p.stock : (inventoryMap.get(p.id) ?? 0)
           return {
             ...p,
             stock: localStock,
             isAvailable: isRest ? p.isAvailable : (p.isAvailable && localStock > 0)
           }
         })
+      }
+
+      if (!isWorker && !includeUnavailable) {
+        finalProducts = finalProducts.filter(p => p.isAvailable && (p.stock ?? 0) > 0)
       }
 
       const trendingResponseData = {

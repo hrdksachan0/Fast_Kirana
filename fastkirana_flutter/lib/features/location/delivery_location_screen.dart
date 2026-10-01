@@ -18,6 +18,7 @@ import '../../widgets/hub_conflict_dialog.dart';
 import 'map_picker_screen.dart';
 import '../home/main_shell.dart';
 import '../../widgets/unserviceable_location_banner.dart';
+import '../../providers/product_provider.dart';
 
 class DeliveryLocationScreen extends ConsumerStatefulWidget {
   final bool autoFetchLocation;
@@ -669,6 +670,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                       isDefault: true,
                                     );
                                     ref.read(selectedAddressProvider.notifier).state = addr;
+                                    refreshAllCatalogProviders(ref);
                                     final prefs = await SharedPreferences.getInstance();
                                     await prefs.setBool('has_chosen_location', true);
 
@@ -789,6 +791,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                             );
 
                             ref.read(selectedAddressProvider.notifier).state = addr;
+                            refreshAllCatalogProviders(ref);
                             final prefs = await SharedPreferences.getInstance();
                             await prefs.setBool('has_chosen_location', true);
 
@@ -962,6 +965,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                               }
                               HapticFeedback.selectionClick();
                               ref.read(selectedAddressProvider.notifier).state = addr;
+                              refreshAllCatalogProviders(ref);
                               final prefs = await SharedPreferences.getInstance();
                               await prefs.setBool('has_chosen_location', true);
                               if (!context.mounted) return;

@@ -203,5 +203,7 @@ void refreshAllCatalogProviders(WidgetRef ref) {
   ref.invalidate(trendingProductsProvider);
   ref.invalidate(categoriesProvider);
   ref.invalidate(productsProvider);
+  ref.invalidate(hubAvailabilityProvider);
+  ref.invalidate(nearestHubResultProvider);
 }
 

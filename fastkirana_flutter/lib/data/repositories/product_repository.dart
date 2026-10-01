@@ -41,8 +41,7 @@ class ProductRepository {
   static List<Category> get preloadedCategories => _cachedCategories ?? [];
   static List<Product> get preloadedProducts {
     final defaultId = AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206';
-    return _hubCachedProducts[defaultId] ??
-        (_hubCachedProducts.isNotEmpty ? _hubCachedProducts.values.first : []);
+    return _hubCachedProducts[defaultId] ?? [];
   }
   static bool get hasPreloadedData =>
       (_cachedCategories?.isNotEmpty ?? false) || (_hubCachedProducts.isNotEmpty);
@@ -69,8 +68,8 @@ class ProductRepository {
       final diskProducts = results[0] as List<Product>?;
       final diskCategories = results[1] as List<Category>?;
 
-      // Only promote to in-memory cache on launch if full catalog is intact (>= 50 products)
-      if (diskProducts != null && diskProducts.length >= 50) {
+      // Only promote to in-memory cache on launch if full catalog is intact
+      if (diskProducts != null) {
         _hubCachedProducts[effectiveHub] = diskProducts;
         _hubLastFetchTime[effectiveHub] = DateTime.now();
       }
@@ -114,8 +113,9 @@ class ProductRepository {
   static Future<List<Product>?> _loadProductsFromDisk([String? hubId]) async {
     try {
       final effectiveHub = (hubId != null && hubId.isNotEmpty) ? hubId : AppConfig.darkstoreId;
+      if (effectiveHub.isEmpty) return null;
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_diskProductsKey(effectiveHub)) ?? prefs.getString('cached_products_v5');
+      final raw = prefs.getString(_diskProductsKey(effectiveHub));
       if (raw == null || raw.isEmpty) return null;
       final List<dynamic> jsonList = jsonDecode(raw);
       return jsonList
@@ -377,7 +377,6 @@ class ProductRepository {
           search == null &&
           restaurantId == null &&
           cached != null &&
-          cached.length >= 150 &&
           lastTime != null &&
           now.difference(lastTime).inMinutes < _cacheTTLMinutes) {
         debugPrint('[ProductRepo] in-memory cache HIT for hub $effectiveStoreId: ${cached.length} items');
@@ -387,7 +386,7 @@ class ProductRepository {
       // 2. Disk cache hit for this specific hub (survives app restarts, customers only)
       if (!forceRefresh && !admin && search == null && restaurantId == null) {
         final diskProducts = await _loadProductsFromDisk(effectiveStoreId);
-        if (diskProducts != null && diskProducts.length >= 150) {
+        if (diskProducts != null) {
           _hubCachedProducts[effectiveStoreId] = diskProducts;
           final diskFresh = await _isDiskCacheFresh(effectiveStoreId);
           if (diskFresh) {
@@ -566,8 +565,7 @@ class ProductRepository {
         (categoryId == null || categoryId.isEmpty) &&
         (search == null || search.isEmpty) &&
         (restaurantId == null || restaurantId.isEmpty) &&
-        limit >= 100 &&
-        liveProducts.length >= 20;
+        limit >= 100;
     if (isFullCatalog && !admin) {
       final targetHub = effectiveStoreId ?? (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
       _hubCachedProducts[targetHub] = liveProducts;

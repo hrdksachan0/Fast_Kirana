@@ -156,10 +156,7 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
       id: hub.id,
     );
 
-    ProductRepository.invalidateHubCache(hub.id);
-    ref.invalidate(homeProductCatalogProvider);
-    ref.invalidate(productsProvider(null));
-    ref.invalidate(hubAvailabilityProvider);
+    refreshAllCatalogProviders(ref);
 
     if (mounted) {
       Navigator.pop(context, hubAddress);
