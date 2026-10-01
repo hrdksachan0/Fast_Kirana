@@ -71,18 +71,20 @@ async def get_categories(
     all: Optional[str] = None,
     storeId: Optional[str] = Query(None),
     x_store_id: Optional[str] = Header(None, alias="x-store-id"),
+    pruneEmpty: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get all categories. If not admin/all, filters out 'cafe' and 'restaurant'.
     If storeId is provided, isolates product count and category availability by dark store hub.
+    If pruneEmpty is 'true', omits categories with 0 available products in this hub.
     Uses ultra-fast Redis / memory cache (<5ms response).
     """
     import time
     now = time.time()
     effective_store_id = storeId or x_store_id
     include_all = (admin == "true") or (all == "true")
-    cache_key = f"categories:{include_all}:{effective_store_id or 'all'}"
+    cache_key = f"categories:{include_all}:{effective_store_id or 'all'}:{pruneEmpty or '0'}"
     
     cached_val = await get_cached(cache_key)
     if cached_val is not None:
@@ -142,6 +144,9 @@ async def get_categories(
             pid = c.get("parentId")
             if pid and pid in cat_map:
                 cat_map[pid]["_count"]["products"] += c["_count"]["products"]
+
+        if pruneEmpty == "true":
+            categories_data = [c for c in categories_data if c["_count"]["products"] > 0]
 
         _categories_cache[cache_key] = categories_data
         _categories_cache_time[cache_key] = now

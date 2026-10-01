@@ -117,6 +117,10 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                     name.startsWith('fast food')) {
                   return false;
                 }
+                if (c.productCount != null) {
+                  final anyHasCount = categories.any((cat) => (cat.productCount ?? 0) > 0);
+                  if (anyHasCount && (c.productCount ?? 0) == 0) return false;
+                }
                 return true;
               }).toList();
 

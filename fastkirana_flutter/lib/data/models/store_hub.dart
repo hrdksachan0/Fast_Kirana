@@ -124,8 +124,8 @@ class StoreHub {
   static const StoreHub defaultPakur = StoreHub(
     id: 'hub-816107',
     name: 'Pakur Central Hub',
-    latitude: 24.6380383,
-    longitude: 87.8557741,
+    latitude: 24.857778,
+    longitude: 87.774167,
     deliveryRadiusKm: 5.0,
     isActive: true,
     groceryOpen: true,

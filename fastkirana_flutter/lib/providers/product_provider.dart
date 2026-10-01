@@ -8,6 +8,7 @@ import '../core/utils/restaurant_utils.dart';
 import 'cart_provider.dart';
 import 'store_hub_provider.dart';
 import 'hub_availability_provider.dart';
+import 'restaurant_provider.dart';
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
   return ProductRepository(ref.read(dioProvider));
@@ -16,7 +17,8 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) {
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getCategories();
+  final hub = ref.watch(currentStoreHubProvider);
+  return repo.getCategories(storeId: hub.id);
 });
 
 final trendingProductsProvider = FutureProvider<List<Product>>((ref) async {
@@ -206,5 +208,7 @@ void refreshAllCatalogProviders(WidgetRef ref) {
   ref.invalidate(productsProvider);
   ref.invalidate(hubAvailabilityProvider);
   ref.invalidate(nearestHubResultProvider);
+  ref.invalidate(restaurantsProvider);
+  ref.invalidate(homeRestaurantsProvider);
 }
 

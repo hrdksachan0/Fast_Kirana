@@ -675,21 +675,23 @@ class ProductRepository {
     }
   }
 
-  Future<List<Category>> getCategories({String? storeId, bool forceRefresh = false}) async {
-    const effectiveHub = 'global';
+  Future<List<Category>> getCategories({String? storeId, bool forceRefresh = false, bool pruneEmpty = false}) async {
+    final effectiveHub = (storeId != null && storeId.isNotEmpty)
+        ? storeId
+        : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'global');
     final cachedForHub = _hubCachedCategories[effectiveHub];
     final lastFetch = _hubCategoryLastFetchTime[effectiveHub];
     final isMemFresh = lastFetch != null && DateTime.now().difference(lastFetch).inMinutes < _cacheTTLMinutes;
 
-    // 1. In-memory cache hit (only if healthy count >= 10)
-    if (!forceRefresh && isMemFresh && cachedForHub != null && cachedForHub.length >= 10) {
+    // 1. In-memory cache hit
+    if (!forceRefresh && isMemFresh && cachedForHub != null) {
       return cachedForHub;
     }
 
-    // 2. Disk cache hit (survives app restarts — 0ms instant render, only if full taxonomy >= 10)
+    // 2. Disk cache hit (survives app restarts — 0ms instant render)
     if (!forceRefresh) {
       final diskCategories = await _loadCategoriesFromDisk(effectiveHub);
-      if (diskCategories != null && diskCategories.length >= 10) {
+      if (diskCategories != null) {
         _hubCachedCategories[effectiveHub] = diskCategories;
         _cachedCategories = diskCategories;
         final diskFresh = await _isDiskCategoryCacheFresh(effectiveHub);
@@ -697,40 +699,42 @@ class ProductRepository {
           return diskCategories;
         }
         // Background refresh if stale without blocking the immediate UI return
-        dio.get('/api/categories').then((response) {
+        dio.get('/api/categories', queryParameters: {
+          if (effectiveHub != 'global') 'storeId': effectiveHub,
+          if (pruneEmpty) 'pruneEmpty': 'true',
+        }).then((response) {
           final data = response.data;
           if (data is List) {
             final cats = data.map((json) => Category.fromJson(Map<String, dynamic>.from(json as Map))).toList();
-            if (cats.length >= 10) {
-              _hubCachedCategories[effectiveHub] = cats;
-              _cachedCategories = cats;
-              _hubCategoryLastFetchTime[effectiveHub] = DateTime.now();
-              _saveCategoriesToDisk(cats, effectiveHub);
-            }
+            _hubCachedCategories[effectiveHub] = cats;
+            _cachedCategories = cats;
+            _hubCategoryLastFetchTime[effectiveHub] = DateTime.now();
+            _saveCategoriesToDisk(cats, effectiveHub);
           }
         }).catchError((_) => null);
         return diskCategories;
       }
     }
 
-    // 3. Network fetch (Global categories taxonomy)
+    // 3. Network fetch (Hub-scoped categories taxonomy)
     try {
-      final response = await dio.get('/api/categories');
+      final response = await dio.get('/api/categories', queryParameters: {
+        if (effectiveHub != 'global') 'storeId': effectiveHub,
+        if (pruneEmpty) 'pruneEmpty': 'true',
+      });
       final data = response.data;
       if (data is List) {
         final cats = data.map((json) => Category.fromJson(Map<String, dynamic>.from(json as Map))).toList();
         if (cats.isNotEmpty) {
-          if (cats.length >= 10) {
-            _hubCachedCategories[effectiveHub] = cats;
-            _cachedCategories = cats;
-            _hubCategoryLastFetchTime[effectiveHub] = DateTime.now();
-            _saveCategoriesToDisk(cats, effectiveHub);
-          }
+          _hubCachedCategories[effectiveHub] = cats;
+          _cachedCategories = cats;
+          _hubCategoryLastFetchTime[effectiveHub] = DateTime.now();
+          _saveCategoriesToDisk(cats, effectiveHub);
           return cats;
         }
       }
     } catch (e, st) {
-      LoggerService.error('ProductRepository: getCategories failed', e, st);
+      LoggerService.error('ProductRepository: getCategories failed for $effectiveHub', e, st);
     }
 
     // Disk cache fallback on network failure even if stale

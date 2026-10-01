@@ -289,12 +289,24 @@ def generate_slug(name: str) -> str:
     return slug.strip('-')
 
 
-def serialize_product(p: Product, local_stock: Optional[int] = None, is_admin: bool = False) -> Dict[str, Any]:
+def serialize_product(
+    p: Product, 
+    local_stock: Optional[int] = None, 
+    is_admin: bool = False,
+    local_price: Optional[float] = None
+) -> Dict[str, Any]:
     stock_val = local_stock if local_stock is not None else (p.stock or 0)
     if is_admin:
         is_avail = bool(p.isAvailable)
     else:
         is_avail = bool(p.isAvailable) if local_stock is None else (bool(p.isAvailable) and local_stock > 0)
+
+    # Localized price override support
+    effective_mrp = float(p.mrp or 0.0)
+    effective_price = float(local_price) if (local_price is not None and local_price > 0) else float(p.price or 0.0)
+    if effective_mrp < effective_price:
+        effective_mrp = effective_price
+    effective_discount = round(((effective_mrp - effective_price) / effective_mrp) * 100) if effective_mrp > effective_price else 0.0
 
     cat_dict = None
     if getattr(p, 'category', None):
@@ -335,9 +347,10 @@ def serialize_product(p: Product, local_stock: Optional[int] = None, is_admin: b
         "imageUrl": p.imageUrl,
         "categoryId": p.categoryId,
         "restaurantId": p.restaurantId,
-        "mrp": float(p.mrp or 0.0),
-        "price": float(p.price or 0.0),
-        "discount": float(p.discount or 0.0),
+        "mrp": effective_mrp,
+        "price": effective_price,
+        "discount": effective_discount,
+        "priceOverride": float(local_price) if local_price is not None else None,
         "unit": p.unit or "pcs",
         "stock": stock_val,
         "isAvailable": is_avail,
@@ -441,8 +454,11 @@ async def get_products(
 
     normalized_search = search.strip().lower().replace("  ", " ") if search else ""
     header_store = request.headers.get("x-store-id")
-    target_store = storeId or header_store
-    if not target_store or target_store.lower() == "all":
+    raw_store = storeId or header_store
+    target_store = raw_store if (raw_store and raw_store.lower() != "all") else None
+
+    # Only default for generic customer requests when NO store is provided at all
+    if not target_store and not admin and not is_worker and not includeUnavailable:
         target_store = "hub-209206"
 
     # Check cache for public catalog and search requests (<5ms response)
@@ -788,7 +804,7 @@ async def get_products(
             total_res = await db.execute(total_stmt)
             total = total_res.scalar()
 
-    # Local store stock overrides applied ONLY to serialized dicts (NEVER modifying ORM instances!)
+    # Local store stock and price overrides applied ONLY to serialized dicts (NEVER modifying ORM instances!)
     inv_map = {}
     if target_store and products:
         prod_ids = [p.id for p in products]
@@ -798,16 +814,23 @@ async def get_products(
         )
         inv_res = await db.execute(inv_stmt)
         inv_list = inv_res.scalars().all()
-        inv_map = {inv.productId: inv.stock for inv in inv_list}
+        inv_map = {inv.productId: (inv.stock, inv.priceOverride) for inv in inv_list}
 
     serialized_products = []
     is_admin_mode = bool(admin or is_worker or includeUnavailable)
     for p in products:
         if p.restaurantId:
             local_stk = p.stock or 99999
+            local_prc = None
         else:
-            local_stk = inv_map.get(p.id, (p.stock or 0) if is_admin_mode else 0)
-        serialized_products.append(serialize_product(p, local_stock=local_stk, is_admin=is_admin_mode))
+            inv_info = inv_map.get(p.id)
+            if inv_info:
+                local_stk = inv_info[0]
+                local_prc = inv_info[1]
+            else:
+                local_stk = (p.stock or 0) if is_admin_mode else 0
+                local_prc = None
+        serialized_products.append(serialize_product(p, local_stock=local_stk, is_admin=is_admin_mode, local_price=local_prc))
 
     response_data = {
         "products": serialized_products,
@@ -1320,8 +1343,9 @@ async def get_product_details(
             inv_res = await db.execute(inv_stmt)
             inv = inv_res.scalars().first()
             local_stock = inv.stock if inv else 0
+            local_price = inv.priceOverride if inv else None
 
-    return serialize_product(product, local_stock=local_stock)
+    return serialize_product(product, local_stock=local_stock, local_price=local_price)
 
 
 @router.post("")
@@ -1672,27 +1696,34 @@ async def update_product(
         else:
             product.stock = parsed_stock
 
-    if target_store_id and target_store_id != 'all' and "stock" in payload:
-        val = parse_int(payload['stock'], 0)
-        local_stock_val = val
-        try:
-            inv_stmt = select(StoreInventory).where(
-                StoreInventory.productId == product.id,
-                StoreInventory.storeId == target_store_id
-            )
-            inv_res = await db.execute(inv_stmt)
-            existing_inv = inv_res.scalars().first()
-            if existing_inv:
-                existing_inv.stock = val
-            else:
-                new_inv = StoreInventory(
-                    productId=product.id,
-                    storeId=target_store_id,
-                    stock=val
+    if target_store_id and target_store_id != 'all':
+        has_stock = "stock" in payload
+        has_price_override = "priceOverride" in payload or ("price" in payload and target_store_id != "hub-209206")
+        val = parse_int(payload['stock'], 0) if has_stock else None
+        price_ovr = parse_float(payload.get('priceOverride') or payload.get('price'), None) if has_price_override else None
+        if has_stock or has_price_override:
+            try:
+                inv_stmt = select(StoreInventory).where(
+                    StoreInventory.productId == product.id,
+                    StoreInventory.storeId == target_store_id
                 )
-                db.add(new_inv)
-        except Exception as inv_err:
-            print(f"Warning: Failed to update StoreInventory in product update: {inv_err}")
+                inv_res = await db.execute(inv_stmt)
+                existing_inv = inv_res.scalars().first()
+                if existing_inv:
+                    if val is not None:
+                        existing_inv.stock = val
+                    if price_ovr is not None:
+                        existing_inv.priceOverride = price_ovr
+                else:
+                    new_inv = StoreInventory(
+                        productId=product.id,
+                        storeId=target_store_id,
+                        stock=val if val is not None else (product.stock or 0),
+                        priceOverride=price_ovr
+                    )
+                    db.add(new_inv)
+            except Exception as inv_err:
+                print(f"Warning: Failed to update StoreInventory in product update: {inv_err}")
 
     try:
         await db.commit()

@@ -489,6 +489,13 @@ class HomeInfiniteFeed {
           categorySumMap[parent.id] = totalCount;
         }
 
+        final anyHasCount = categorySumMap.values.any((v) => v > 0);
+        final displayCategories = anyHasCount
+            ? groceryCategories.where((c) => (categorySumMap[c.id] ?? 0) > 0).toList()
+            : groceryCategories;
+
+        if (displayCategories.isEmpty) return [const SliverToBoxAdapter(child: SizedBox.shrink())];
+
         final currentHub = ref.watch(currentStoreHubProvider);
         final hubCity = currentHub.city.isNotEmpty ? currentHub.city : currentHub.name;
 
@@ -553,7 +560,7 @@ class HomeInfiniteFeed {
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final cat = groceryCategories[index];
+                  final cat = displayCategories[index];
                   final totalCount = categorySumMap[cat.id] ?? (cat.productCount ?? 0);
                   final bgTint = CategoryVisualHelper.getSoftColor(cat.slug, cat.name);
                   final borderTint = CategoryVisualHelper.getBorderColor(cat.slug, cat.name);
@@ -636,7 +643,7 @@ class HomeInfiniteFeed {
                     ),
                   );
                 },
-                childCount: groceryCategories.length,
+                childCount: displayCategories.length,
               ),
             ),
           ),
