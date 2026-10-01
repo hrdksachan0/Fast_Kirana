@@ -221,6 +221,11 @@ async def get_delivery_orders(
                 continue
             if o1.storeId != o2.storeId:
                 continue
+            # Sibling orders of the same combined checkout or same customer must NOT be batched together
+            if o1.combinedId and o2.combinedId and o1.combinedId == o2.combinedId:
+                continue
+            if o1.userId and o2.userId and o1.userId == o2.userId:
+                continue
 
             lat2 = (o2.address.lat if o2.address else None) or o2.deliveryLat
             lng2 = (o2.address.lng if o2.address else None) or o2.deliveryLng
@@ -283,6 +288,11 @@ async def get_delivery_orders(
                 for j in range(i + 1, len(r_orders)):
                     o2 = r_orders[j]
                     if o2.id in paired:
+                        continue
+                    # Sibling orders of the same combined checkout or same customer must NOT be batched together
+                    if o1.combinedId and o2.combinedId and o1.combinedId == o2.combinedId:
+                        continue
+                    if o1.userId and o2.userId and o1.userId == o2.userId:
                         continue
                     lat2 = (o2.address.lat if o2.address else None) or o2.deliveryLat
                     lng2 = (o2.address.lng if o2.address else None) or o2.deliveryLng

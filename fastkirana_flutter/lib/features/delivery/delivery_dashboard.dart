@@ -840,6 +840,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       merged['subLabels'] = subLabels;
       merged['shopName'] = subLabels.join(' + ');
 
+      // Cleanse batch data if it mistakenly points to one of our own sibling sub-orders
+      final batchPartnerId = (merged['batch'] as Map?)?['partnerOrderId']?.toString();
+      if (batchPartnerId != null && merged['subOrderIds'].contains(batchPartnerId)) {
+        merged.remove('batch');
+      }
+
       result.add(merged);
     }
 
