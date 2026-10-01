@@ -392,10 +392,12 @@ export function useCheckoutPayment({
       })
 
       // Store payload for post-payment order creation
+      const cfTag = `[CF_ORDER:${cfData.orderId}]`
+      const notesWithCf = finalNotes ? `${finalNotes} | ${cfTag}` : cfTag
       const pendingPayload = {
         ...payload,
         storeId: effectiveStoreId || undefined,
-        notes: finalNotes,
+        notes: notesWithCf,
       }
 
       let paymentSuccess = false

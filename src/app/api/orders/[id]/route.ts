@@ -617,22 +617,23 @@ export async function PATCH(
         existingOrder.paymentStatus === 'PAID' && 
         existingOrder.paymentMethod !== 'COD'
 
+      // Only switch to UPI if order was already paid online or customer explicitly paid via online QR at doorstep
       const isDoorstepQrOrOnline = 
         isAlreadyPaidOnline ||
         existingOrder.paymentMethod === 'UPI' || 
         existingOrder.paymentMethod === 'ONLINE' || 
         paymentMethod === 'UPI' || 
         paymentMethod === 'ONLINE' || 
-        paymentCollectedBy === 'ONLINE' || 
-        paymentCollectedBy === 'OWNER' || 
-        isRiderCash === false ||
-        (userRole !== 'DELIVERY' && paymentCollectedBy !== 'RIDER')
+        paymentCollectedBy === 'ONLINE'
 
       const newPaymentMethod = isDoorstepQrOrOnline 
         ? 'UPI' 
         : (paymentMethod && ['COD', 'UPI', 'CARD', 'WALLET'].includes(paymentMethod) 
             ? paymentMethod 
             : (['COD', 'UPI', 'CARD', 'WALLET'].includes(existingOrder.paymentMethod) ? existingOrder.paymentMethod : 'COD'))
+
+      // If COD order was delivered by admin/counter (not rider), cash was received directly at store counter (Galla)
+      const isCounterSettled = (newPaymentMethod === 'COD') && (userRole !== 'DELIVERY' && paymentCollectedBy !== 'RIDER')
 
       const finalDelivUserId = userRole === 'DELIVERY' 
         ? existingOrder.deliveryUserId 
@@ -645,6 +646,8 @@ export async function PATCH(
               "paymentStatus" = 'PAID'::"PaymentStatus",
               "paymentMethod" = ${newPaymentMethod}::"PaymentMethod",
               "deliveryUserId" = ${finalDelivUserId},
+              "cashSettledToAdmin" = CASE WHEN ${isCounterSettled} THEN true ELSE "cashSettledToAdmin" END,
+              "cashSettledAt" = CASE WHEN ${isCounterSettled} THEN COALESCE("cashSettledAt", NOW()) ELSE "cashSettledAt" END,
               "deliveryPhoto" = ${safePhoto}, 
               "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(String(deliveryLat)) : null}, 
               "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(String(deliveryLng)) : null}, 
@@ -659,6 +662,8 @@ export async function PATCH(
               "paymentStatus" = 'PAID'::"PaymentStatus",
               "paymentMethod" = ${newPaymentMethod}::"PaymentMethod",
               "deliveryUserId" = ${finalDelivUserId},
+              "cashSettledToAdmin" = CASE WHEN ${isCounterSettled} THEN true ELSE "cashSettledToAdmin" END,
+              "cashSettledAt" = CASE WHEN ${isCounterSettled} THEN COALESCE("cashSettledAt", NOW()) ELSE "cashSettledAt" END,
               "deliveryPhoto" = ${safePhoto}, 
               "deliveryLat" = ${deliveryLat !== undefined && deliveryLat !== null ? parseFloat(String(deliveryLat)) : null}, 
               "deliveryLng" = ${deliveryLng !== undefined && deliveryLng !== null ? parseFloat(String(deliveryLng)) : null}, 

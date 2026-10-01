@@ -81,9 +81,9 @@ export async function GET(req: NextRequest) {
       const isDoorstepQr = notes.includes('Doorstep UPI') || notes.includes('QR Scan') || notes.includes('Rider QR')
 
       // Cashfree PG detection from notes (written by verify route or webhook)
-      const hasCashfreeNote = notes.includes('Cashfree PG') || notes.includes('CF_') || notes.includes('Cashfree Auto-Paid')
+      const hasCashfreeNote = notes.includes('Cashfree PG') || notes.includes('CF_') || notes.includes('Cashfree Auto-Paid') || notes.includes('[CF_ORDER:')
       // Extract CF payment reference for display
-      const cfRefMatch = notes.match(/CF_(\d+)/)
+      const cfRefMatch = notes.match(/CF_([a-zA-Z0-9_-]+)/) || notes.match(/\[CF_ORDER:([^\]]+)\]/)
       const cfRef = cfRefMatch ? cfRefMatch[1] : null
 
       // Admin manual verification
@@ -110,21 +110,27 @@ export async function GET(req: NextRequest) {
         verifiedBy = `Rider QR (${riderName || 'Rider'})`
 
       } else if (pStatus === 'PAID' && isOnlineMethod) {
-        // ── CASHFREE PG ONLINE ──
-        // Since Cashfree is the ONLY gateway, every non-COD non-doorstep-QR PAID order = Cashfree verified
-        cashfreeOnlineTotal += tot
-        cashfreeOnlineCount += 1
-        category = 'CASHFREE_ONLINE'
+        // ── CASHFREE PG ONLINE vs COUNTER DIRECT UPI ──
+        if (hasCashfreeNote || cfRef || isAdminVerified) {
+          cashfreeOnlineTotal += tot
+          cashfreeOnlineCount += 1
+          category = 'CASHFREE_ONLINE'
 
-        if (isAdminVerified) {
-          verifiedBy = `Cashfree Gateway (Admin: ${adminVerifierName})`
-        } else if (hasCashfreeNote && cfRef) {
-          verifiedBy = `Cashfree Gateway ✓ (CF_${cfRef})`
-        } else if (hasCashfreeNote) {
-          verifiedBy = 'Cashfree Gateway ✓ (Auto)'
+          if (isAdminVerified) {
+            verifiedBy = `Cashfree Gateway (Admin: ${adminVerifierName})`
+          } else if (hasCashfreeNote && cfRef) {
+            verifiedBy = `Cashfree Gateway ✓ (CF_${cfRef})`
+          } else if (hasCashfreeNote) {
+            verifiedBy = 'Cashfree Gateway ✓ (Auto)'
+          } else {
+            verifiedBy = 'Cashfree Gateway (Verified)'
+          }
         } else {
-          // No notes but PAID+UPI = still Cashfree verified (only gateway)
-          verifiedBy = 'Cashfree Gateway (Verified)'
+          // Paid at store counter / direct UPI (not through Cashfree PG)
+          counterCashTotal += tot
+          counterCashCount += 1
+          category = 'COUNTER_CASH'
+          verifiedBy = 'Counter / Direct UPI (Galla)'
         }
 
       } else if (pStatus === 'PAID' && pMethod === 'COD') {

@@ -1843,12 +1843,14 @@ async def get_daily_finance_reconciliation(
         o_status = str(o.status.value if hasattr(o.status, "value") else o.status).upper()
         notes = str(o.notes or "")
         is_doorstep_qr = "Doorstep UPI" in notes or "QR Scan" in notes or "Rider QR" in notes
-        is_in_cashfree = o.id in cashfree_paid_ids or "Cashfree PG" in notes or "CF_" in notes or "Cashfree Auto-Paid" in notes
+        cf_tag_match = re.search(r"\[CF_ORDER:([^\]]+)\]", notes)
+        cf_order_tag = cf_tag_match.group(1).strip() if cf_tag_match else None
+        cf_ref_match = re.search(r"CF_([a-zA-Z0-9_-]+)", notes)
+        cf_ref = cf_ref_match.group(1) if cf_ref_match else cf_order_tag
+        is_in_cashfree = o.id in cashfree_paid_ids or "Cashfree PG" in notes or "CF_" in notes or "Cashfree Auto-Paid" in notes or bool(cf_order_tag)
         is_admin_verified = "Admin Verified" in notes
         admin_match = re.search(r"Admin Verified by (.+?)(?:\s*\||$)", notes)
         admin_verifier_name = admin_match.group(1).strip() if admin_match else "Admin"
-        cf_ref_match = re.search(r"CF_(\d+)", notes)
-        cf_ref = cf_ref_match.group(1) if cf_ref_match else None
 
         if o_status == "CANCELLED":
             verified_by = "Order Cancelled"
@@ -1859,18 +1861,24 @@ async def get_daily_finance_reconciliation(
             category = "RIDER_QR"
             verified_by = f"Rider QR ({o.deliveryUser.name if o.deliveryUser else 'Rider'})"
         elif p_status == "PAID" and p_method != "COD":
-            # Cashfree is the sole payment gateway — every non-COD non-doorstep PAID order = Cashfree
-            cashfree_online_total += tot
-            cashfree_online_count += 1
-            category = "CASHFREE_ONLINE"
-            if is_admin_verified:
-                verified_by = f"Cashfree Gateway (Admin: {admin_verifier_name})"
-            elif cf_ref:
-                verified_by = f"Cashfree Gateway ✓ (CF_{cf_ref})"
-            elif is_in_cashfree:
-                verified_by = "Cashfree Gateway ✓ (Auto)"
+            # Cashfree PG vs Counter Direct UPI
+            if is_in_cashfree or cf_ref or is_admin_verified:
+                cashfree_online_total += tot
+                cashfree_online_count += 1
+                category = "CASHFREE_ONLINE"
+                if is_admin_verified:
+                    verified_by = f"Cashfree Gateway (Admin: {admin_verifier_name})"
+                elif cf_ref:
+                    verified_by = f"Cashfree Gateway ✓ (CF_{cf_ref})"
+                elif is_in_cashfree:
+                    verified_by = "Cashfree Gateway ✓ (Auto)"
+                else:
+                    verified_by = "Cashfree Gateway (Verified)"
             else:
-                verified_by = "Cashfree Gateway (Verified)"
+                counter_cash_total += tot
+                counter_cash_count += 1
+                category = "COUNTER_CASH"
+                verified_by = "Counter / Direct UPI (Galla)"
         elif p_status == "PAID" and p_method == "COD":
             if o.cashSettledToAdmin:
                 counter_cash_total += tot

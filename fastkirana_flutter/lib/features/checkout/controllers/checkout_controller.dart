@@ -683,6 +683,13 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       orderNotes = '$forStr | $orderNotes';
     }
 
+    if (state.pendingCashfreeOrderId != null && state.pendingCashfreeOrderId!.isNotEmpty) {
+      final cfTag = '[CF_ORDER:${state.pendingCashfreeOrderId}]';
+      if (!orderNotes.contains(cfTag)) {
+        orderNotes = '$orderNotes | $cfTag';
+      }
+    }
+
     final hasRestaurant = cart.items.any((i) => isRestaurantProduct(i.product));
     final hasGrocery = cart.items.any((i) => !isRestaurantProduct(i.product));
     String shopName = 'FastKirana Dark Store';
@@ -712,6 +719,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       shopName = 'A.S. Restaurant & Cafe';
     }
 
+    final isOnlinePaid = paymentId != null && paymentId.isNotEmpty;
     final orderId = 'FK-${(100000 + DateTime.now().millisecondsSinceEpoch % 900000)}';
 
     final newOrder = Order(
@@ -721,7 +729,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       addressId: selectedAddress?.id ?? 'addr_default',
       restaurantId: restaurantId,
       shopName: shopName,
-      status: OrderStatus.adminPending,
+      status: isOnlinePaid ? OrderStatus.confirmed : OrderStatus.adminPending,
       subtotal: subtotal,
       discount: _discountAmount,
       deliveryFee: deliveryFee,
@@ -729,7 +737,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       miscFee: packagingFee,
       total: grandTotal,
       paymentMethod: state.selectedPayment == 'online' ? PaymentMethod.upi : PaymentMethod.cod,
-      paymentStatus: paymentId != null ? 'PAID' : 'PENDING',
+      paymentStatus: isOnlinePaid ? 'PAID' : 'PENDING',
       deliveryMethod: state.deliveryMethod,
       customerName: receiverName,
       customerPhone: receiverPhone,
@@ -755,7 +763,6 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     var placedOrder = newOrder;
     try {
-      final isOnlinePaid = paymentId != null && paymentId.isNotEmpty;
       final apiPayload = {
         ...newOrder.toJson(),
         'userId': userId,

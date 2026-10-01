@@ -28,11 +28,13 @@ export async function POST(req: NextRequest) {
              o.total, o."paymentStatus"::text as "paymentStatus",
              o."paymentMethod"::text as "paymentMethod",
              o."shopName", o."restaurantId",
-             o."createdAt",
+             o."createdAt", o.notes,
              u.name as "userName", u.phone as "userPhone", u.email as "userEmail"
       FROM orders o
       LEFT JOIN users u ON o."userId" = u.id
-      WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId} LIMIT 1
+      WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId}
+         OR (o.notes IS NOT NULL AND o.notes ILIKE ${'%' + cleanId + '%'})
+      LIMIT 1
     `
 
     if (!orders || orders.length === 0) {
@@ -41,6 +43,10 @@ export async function POST(req: NextRequest) {
         const checkId = cfOrderId || cleanId
         const cfOrder = await getCashfreeOrder(checkId)
         if (cfOrder && cfOrder.order_status === 'PAID') {
+          try {
+            const { cache } = await import('@/lib/redis-client')
+            await cache.set(`cf_paid:${checkId}`, 'true', { ex: 3600 })
+          } catch (_) {}
           return NextResponse.json({
             success: true,
             orderId: cleanId,
@@ -52,6 +58,10 @@ export async function POST(req: NextRequest) {
         const payments = await getCashfreeOrderPayments(checkId)
         const successfulPayment = payments.find(p => p.payment_status === 'SUCCESS')
         if (successfulPayment) {
+          try {
+            const { cache } = await import('@/lib/redis-client')
+            await cache.set(`cf_paid:${checkId}`, 'true', { ex: 3600 })
+          } catch (_) {}
           return NextResponse.json({
             success: true,
             orderId: cleanId,
@@ -82,7 +92,13 @@ export async function POST(req: NextRequest) {
     let cfPaymentId = ''
     let paymentMode = 'UPI'
 
-    const idsToCheck = Array.from(new Set([cfOrderId, rawId, order.id].filter(Boolean))) as string[]
+    const noteMatches = [
+      order.notes?.match(/\[CF_ORDER:([^\]]+)\]/)?.[1],
+      order.notes?.match(/Cashfree Order:\s*(cf_[a-zA-Z0-9_-]+)/i)?.[1],
+      order.notes?.match(/Ref:\s*(?:CF_)?(cf_[a-zA-Z0-9_-]+)/i)?.[1],
+    ].filter(Boolean) as string[]
+
+    const idsToCheck = Array.from(new Set([cfOrderId, ...noteMatches, rawId, order.id].filter(Boolean))) as string[]
 
     for (const idToCheck of idsToCheck) {
       if (isPaid) break
@@ -120,8 +136,16 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
+    // Cache verification in Redis so subsequent requests know it's paid immediately
+    try {
+      const { cache } = await import('@/lib/redis-client')
+      for (const idToCache of idsToCheck) {
+        if (idToCache) await cache.set(`cf_paid:${idToCache}`, 'true', { ex: 3600 })
+      }
+    } catch (_) {}
+
     // Update ALL sub-orders in the combined group (or standalone order)
-    // Only mark payment as PAID — do NOT auto-confirm order status
+    // Mark payment as PAID and order status as CONFIRMED
     const cfNote = cfPaymentId ? `Cashfree PG Paid (Ref: ${cfPaymentId})` : 'Cashfree PG Paid'
 
     if (order.combinedId) {
@@ -129,6 +153,8 @@ export async function POST(req: NextRequest) {
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
+            "status" = CASE WHEN status IN ('PENDING', 'ADMIN_PENDING') THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+            "confirmedAt" = COALESCE("confirmedAt", NOW()),
             notes = CASE 
               WHEN notes IS NULL OR notes = '' THEN ${cfNote}
               WHEN notes LIKE '%Cashfree PG%' THEN notes
@@ -142,6 +168,8 @@ export async function POST(req: NextRequest) {
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
+            "status" = CASE WHEN status IN ('PENDING', 'ADMIN_PENDING') THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+            "confirmedAt" = COALESCE("confirmedAt", NOW()),
             notes = CASE 
               WHEN notes IS NULL OR notes = '' THEN ${cfNote}
               WHEN notes LIKE '%Cashfree PG%' THEN notes

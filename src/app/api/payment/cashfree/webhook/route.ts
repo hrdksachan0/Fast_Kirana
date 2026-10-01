@@ -53,6 +53,14 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ received: true, status: 'already_processing' })
         }
 
+        // Cache payment success so if client creates the order slightly later, it's immediately recognized as PAID
+        try {
+          await cache.set(`cf_paid:${cleanId}`, 'true', { ex: 3600 })
+          if (rawId && rawId !== cleanId) {
+            await cache.set(`cf_paid:${rawId}`, 'true', { ex: 3600 })
+          }
+        } catch (_) {}
+
         const orders: any[] = await prisma.$queryRaw`
           SELECT o.id, o."combinedId", o."readableId", o.status::text as status,
                  o.total, o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
@@ -60,7 +68,9 @@ export async function POST(req: NextRequest) {
                  u.name as "userName", u.phone as "userPhone"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
-          WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId} LIMIT 1
+          WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId}
+             OR (o.notes IS NOT NULL AND o.notes ILIKE ${'%' + cleanId + '%'})
+          LIMIT 1
         `
 
         if (orders.length > 0) {
@@ -80,7 +90,8 @@ export async function POST(req: NextRequest) {
                 UPDATE orders 
                 SET "paymentStatus" = 'PAID'::"PaymentStatus",
                     "paymentMethod" = 'UPI'::"PaymentMethod",
-                    "status" = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+                    "status" = CASE WHEN status IN ('PENDING', 'ADMIN_PENDING') THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+                    "confirmedAt" = COALESCE("confirmedAt", NOW()),
                     notes = CASE 
                       WHEN notes IS NULL OR notes = '' THEN ${cfNote}
                       WHEN notes LIKE '%Cashfree%' THEN notes
@@ -94,7 +105,8 @@ export async function POST(req: NextRequest) {
                 UPDATE orders 
                 SET "paymentStatus" = 'PAID'::"PaymentStatus",
                     "paymentMethod" = 'UPI'::"PaymentMethod",
-                    "status" = CASE WHEN status = 'PENDING' THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+                    "status" = CASE WHEN status IN ('PENDING', 'ADMIN_PENDING') THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
+                    "confirmedAt" = COALESCE("confirmedAt", NOW()),
                     notes = CASE 
                       WHEN notes IS NULL OR notes = '' THEN ${cfNote}
                       WHEN notes LIKE '%Cashfree%' THEN notes
@@ -245,7 +257,7 @@ export async function POST(req: NextRequest) {
           UPDATE orders
           SET "paymentStatus" = 'FAILED'::"PaymentStatus",
               "updatedAt" = NOW()
-          WHERE (id = ${cleanId} OR "readableId" = ${cleanId} OR id = ${rawId})
+          WHERE (id = ${cleanId} OR "readableId" = ${cleanId} OR id = ${rawId} OR (notes IS NOT NULL AND notes ILIKE ${'%' + cleanId + '%'}))
             AND "paymentStatus" != 'PAID'::"PaymentStatus"
             AND "paymentMethod" != 'COD'::"PaymentMethod"
         `.catch((err: any) => console.error('Error updating failed payment status:', err))

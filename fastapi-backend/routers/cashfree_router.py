@@ -227,7 +227,8 @@ async def verify_cashfree_payment(
     # 1. FAST PATH: Check PostgreSQL first before making slow external gateway calls!
     # If already verified & marked PAID, return instantly in ~2ms.
     stmt = select(Order).where(
-        (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == raw_id)
+        (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == raw_id) |
+        (Order.notes.ilike(f"%{clean_id}%"))
     )
     res = await db.execute(stmt)
     order = res.scalars().first()
@@ -273,6 +274,13 @@ async def verify_cashfree_payment(
             base_rid = order.readableId.split("-")[0]
             if base_rid and base_rid not in candidate_ids:
                 candidate_ids.append(base_rid)
+        if order.notes:
+            cf_matches = re.findall(r"\[CF_ORDER:([^\]]+)\]", order.notes)
+            cf_matches += re.findall(r"Cashfree Order:\s*(cf_[a-zA-Z0-9_-]+)", order.notes, re.IGNORECASE)
+            cf_matches += re.findall(r"Ref:\s*(?:CF_)?(cf_[a-zA-Z0-9_-]+)", order.notes, re.IGNORECASE)
+            for m in cf_matches:
+                if m and m not in candidate_ids:
+                    candidate_ids.append(m)
         if order.combinedId:
             if order.combinedId not in candidate_ids:
                 candidate_ids.append(order.combinedId)
@@ -283,6 +291,11 @@ async def verify_cashfree_payment(
                     candidate_ids.append(co.id)
                 if co.readableId and co.readableId not in candidate_ids:
                     candidate_ids.append(co.readableId)
+                if co.notes:
+                    co_cf_matches = re.findall(r"\[CF_ORDER:([^\]]+)\]", co.notes)
+                    for cm in co_cf_matches:
+                        if cm and cm not in candidate_ids:
+                            candidate_ids.append(cm)
 
     cf_order = None
     successful_payment = None
@@ -350,8 +363,10 @@ async def verify_cashfree_payment(
         if not order.notes or "Cashfree PG Paid" not in order.notes:
             order.notes = f"{order.notes} | {cf_note}" if order.notes else cf_note
 
-        if order.status == OrderStatus.ADMIN_PENDING:
-            order.status = OrderStatus.PENDING
+        if order.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
+            order.status = OrderStatus.CONFIRMED
+            if not order.confirmedAt:
+                order.confirmedAt = datetime.utcnow()
 
         # Handle companion combined orders if present
         comb_orders = []
@@ -364,8 +379,19 @@ async def verify_cashfree_payment(
                 co.paymentMethod = PaymentMethod.UPI
                 if not co.notes or "Cashfree PG Paid" not in co.notes:
                     co.notes = f"{co.notes} | {cf_note}" if co.notes else cf_note
-                if co.status == OrderStatus.ADMIN_PENDING:
-                    co.status = OrderStatus.PENDING
+                if co.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
+                    co.status = OrderStatus.CONFIRMED
+                    if not co.confirmedAt:
+                        co.confirmedAt = datetime.utcnow()
+
+        # Pre-cache payment confirmation in Redis
+        try:
+            from utils.cache import set_cache
+            await set_cache(f"cf_paid:{clean_id}", {"paid": True, "paymentId": payment_id_str}, ttl_seconds=3600)
+            if sanitized_check_id != clean_id:
+                await set_cache(f"cf_paid:{sanitized_check_id}", {"paid": True, "paymentId": payment_id_str}, ttl_seconds=3600)
+        except Exception:
+            pass
 
         # ── DISTRIBUTED ATOMIC DEDUPLICATION GUARD: Ensure WhatsApp alert is sent EXACTLY ONCE ──
         order_key = str(order.combinedId or order.id)
@@ -491,19 +517,21 @@ async def cashfree_webhook(
         return Response(status_code=400, content="Invalid JSON")
 
     # Verify Cashfree webhook signature if secret configured
-    webhook_secret = os.environ.get("CASHFREE_WEBHOOK_SECRET", "")
+    webhook_secret = os.environ.get("CASHFREE_WEBHOOK_SECRET") or settings.CASHFREE_SECRET_KEY or ""
     if webhook_secret:
         signature = request.headers.get("x-webhook-signature", "")
         timestamp = request.headers.get("x-webhook-timestamp", "")
         if signature and timestamp:
-            import hmac, hashlib
+            import hmac, hashlib, base64
             sign_payload = timestamp + raw_body.decode("utf-8")
-            expected = hmac.new(
+            digest = hmac.new(
                 webhook_secret.encode("utf-8"),
                 sign_payload.encode("utf-8"),
                 hashlib.sha256
-            ).hexdigest()
-            if not hmac.compare_digest(expected, signature):
+            ).digest()
+            expected_b64 = base64.b64encode(digest).decode("utf-8")
+            expected_hex = digest.hex()
+            if not (hmac.compare_digest(expected_b64, signature) or hmac.compare_digest(expected_hex, signature)):
                 logger.warning("[Cashfree Webhook] Invalid webhook signature received")
                 return Response(status_code=401, content="Invalid webhook signature")
 
@@ -522,12 +550,26 @@ async def cashfree_webhook(
 
     # ── 1. PAYMENT SUCCESS FLOW ──────────────────────────────────────────
     if event_type == "PAYMENT_SUCCESS_WEBHOOK" or payment_status == "SUCCESS":
+        cf_ref = payment_data.get("cf_payment_id") or cf_order_id
+        # Pre-cache payment success in Redis in case webhook arrives before order insertion
+        try:
+            from utils.cache import set_cache
+            await set_cache(f"cf_paid:{clean_id}", {"paid": True, "paymentId": cf_ref}, ttl_seconds=3600)
+            if str(cf_order_id) != clean_id:
+                await set_cache(f"cf_paid:{cf_order_id}", {"paid": True, "paymentId": cf_ref}, ttl_seconds=3600)
+        except Exception as e:
+            logger.warning(f"[Cashfree Webhook] Redis pre-caching failed: {e}")
+
         stmt = select(Order).options(
             selectinload(Order.address),
             selectinload(Order.user),
             selectinload(Order.restaurant)
         ).where(
-            (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == cf_order_id)
+            (Order.id == clean_id) | 
+            (Order.readableId == clean_id) | 
+            (Order.id == cf_order_id) |
+            (Order.notes.ilike(f"%{clean_id}%")) |
+            (Order.notes.ilike(f"%{cf_order_id}%"))
         )
         res = await db.execute(stmt)
         order = res.scalars().first()
@@ -536,13 +578,14 @@ async def cashfree_webhook(
             was_cod = (order.paymentMethod == PaymentMethod.COD)
             order.paymentStatus = PaymentStatus.PAID
             order.paymentMethod = PaymentMethod.UPI
-            cf_ref = payment_data.get("cf_payment_id") or cf_order_id
             cf_note = f"Cashfree PG Paid (Ref: {cf_ref})"
             if not order.notes or "Cashfree PG Paid" not in order.notes:
                 order.notes = f"{order.notes} | {cf_note}" if order.notes else cf_note
 
-            if order.status == OrderStatus.ADMIN_PENDING or order.status == OrderStatus.PENDING:
+            if order.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
                 order.status = OrderStatus.CONFIRMED
+                if not order.confirmedAt:
+                    order.confirmedAt = datetime.utcnow()
 
             comb_orders = []
             if order.combinedId:
@@ -558,8 +601,10 @@ async def cashfree_webhook(
                     co.paymentMethod = PaymentMethod.UPI
                     if not co.notes or "Cashfree PG Paid" not in co.notes:
                         co.notes = f"{co.notes} | {cf_note}" if co.notes else cf_note
-                    if co.status == OrderStatus.ADMIN_PENDING or co.status == OrderStatus.PENDING:
+                    if co.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
                         co.status = OrderStatus.CONFIRMED
+                        if not co.confirmedAt:
+                            co.confirmedAt = datetime.utcnow()
 
             # ── DISTRIBUTED ATOMIC DEDUPLICATION GUARD: Ensure alerts are sent EXACTLY ONCE ──
             order_key = str(order.combinedId or order.id)
@@ -653,7 +698,11 @@ async def cashfree_webhook(
         payment_status in ["FAILED", "USER_DROPPED"]
     ):
         stmt = select(Order).where(
-            (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == cf_order_id)
+            (Order.id == clean_id) | 
+            (Order.readableId == clean_id) | 
+            (Order.id == cf_order_id) |
+            (Order.notes.ilike(f"%{clean_id}%")) |
+            (Order.notes.ilike(f"%{cf_order_id}%"))
         )
         res = await db.execute(stmt)
         order = res.scalars().first()

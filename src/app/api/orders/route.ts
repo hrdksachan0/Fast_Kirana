@@ -1072,15 +1072,32 @@ export async function POST(request: NextRequest) {
     const isOnlineRequested = rawMethod === 'RAZORPAY' || rawMethod === 'UPI' || rawMethod === 'ONLINE'
 
     let isOnlinePaid = false
+    const paymentId = String(body.paymentId || body.cfPaymentId || body.razorpayPaymentId || body.razorpay_payment_id || '').trim()
+    const notesCfMatch = typeof body.notes === 'string' ? body.notes.match(/\[CF_ORDER:([^\]]+)\]/)?.[1] : null
+    const cfCheckId = body.cfOrderId || notesCfMatch || (paymentId.startsWith('CF_') ? paymentId.replace(/^CF_/, '') : (paymentId.startsWith('cf_') ? paymentId : null))
+
     if (isFreePromo) {
       isOnlinePaid = true
     } else if (isStaffSession && body.paymentStatus === 'PAID') {
       isOnlinePaid = true
-    } else if (isOnlineRequested || body.paymentStatus === 'PAID' || body.paymentId) {
-      const paymentId = String(body.paymentId || body.cfPaymentId || body.razorpayPaymentId || body.razorpay_payment_id || '').trim()
-      const cfCheckId = body.cfOrderId || (paymentId.startsWith('CF_') ? paymentId.replace(/^CF_/, '') : (paymentId.startsWith('cf_') ? paymentId : null))
-
+    } else if (isOnlineRequested || body.paymentStatus === 'PAID' || paymentId) {
+      // 1. Check Redis cache first (in case Cashfree webhook fired before client /api/orders request)
       if (cfCheckId) {
+        try {
+          const { cache } = await import('@/lib/redis-client')
+          let cachedPaid = await cache.get(`cf_paid:${cfCheckId}`)
+          if (!cachedPaid && cfCheckId.includes('_r')) {
+            const cleanCf = cfCheckId.replace(/_r\d+$/, '')
+            cachedPaid = await cache.get(`cf_paid:${cleanCf}`)
+          }
+          if (cachedPaid) {
+            isOnlinePaid = true
+          }
+        } catch (_) {}
+      }
+
+      // 2. Query Cashfree server if not yet marked paid
+      if (!isOnlinePaid && cfCheckId) {
         try {
           const cfOrder = await getCashfreeOrder(cfCheckId)
           if (cfOrder && cfOrder.order_status === 'PAID') {
@@ -1103,7 +1120,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 🛡️ Online Payment Status & Auto-Routing:
-    // If online payment is verified (or 100% free coupon), mark PAID.
+    // If online payment is verified (or 100% free promo), mark PAID.
     // If online payment is in-flight/pending, store as PENDING so it lands in the "Payment Pending" admin section.
     const paymentStatus = isOnlinePaid ? PaymentStatus.PAID : PaymentStatus.PENDING
 
@@ -1118,12 +1135,12 @@ export async function POST(request: NextRequest) {
 
     const autoApproveSetting = settingsMap['admin_auto_approve_orders']
     const isAutoApprove = autoApproveSetting === 'true'
-    // Online Paid orders skip ADMIN_PENDING and go directly to PENDING (Auto-approved).
+    // Online Paid orders (funds already captured) move straight to CONFIRMED.
     // Online UNPAID orders land in PENDING (Payment Pending queue in Admin dashboard).
     // Cash on Delivery (COD) orders require Admin Approval (ADMIN_PENDING) unless auto-approve is true.
-    const initialOrderStatus = isOnlineRequested
-      ? OrderStatus.PENDING
-      : (isAutoApprove ? OrderStatus.PENDING : OrderStatus.ADMIN_PENDING)
+    const initialOrderStatus = isOnlinePaid
+      ? OrderStatus.CONFIRMED
+      : (isOnlineRequested ? OrderStatus.PENDING : (isAutoApprove ? OrderStatus.PENDING : OrderStatus.ADMIN_PENDING))
 
     // 6. Create orders inside a Prisma Transaction
     const createdOrders = await prisma.$transaction(async (tx) => {
@@ -1315,6 +1332,24 @@ export async function POST(request: NextRequest) {
           })
         }
 
+        let resolvedOrderNotes: string | null = body.notes || orderInfo.notes || null
+        if (cfCheckId) {
+          const cfTag = `[CF_ORDER:${cfCheckId}]`
+          if (!resolvedOrderNotes) {
+            resolvedOrderNotes = cfTag
+          } else if (!resolvedOrderNotes.includes(cfCheckId)) {
+            resolvedOrderNotes = `${resolvedOrderNotes} | ${cfTag}`
+          }
+        }
+        if (isOnlinePaid) {
+          const cfPayRef = paymentId ? `Cashfree PG Paid (Ref: ${paymentId})` : 'Cashfree PG Paid'
+          if (!resolvedOrderNotes) {
+            resolvedOrderNotes = cfPayRef
+          } else if (!resolvedOrderNotes.includes('Cashfree PG Paid')) {
+            resolvedOrderNotes = `${resolvedOrderNotes} | ${cfPayRef}`
+          }
+        }
+
         let newOrder: any
         if (existingPendingOrder) {
           // Delete old order items before re-attaching updated snapshot
@@ -1327,6 +1362,7 @@ export async function POST(request: NextRequest) {
             data: {
               addressId: orderAddressId,
               status: initialOrderStatus,
+              confirmedAt: (isOnlinePaid || initialOrderStatus === OrderStatus.CONFIRMED) ? now : undefined,
               paymentMethod: resolvedPaymentMethod,
               paymentStatus,
               orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
@@ -1335,7 +1371,7 @@ export async function POST(request: NextRequest) {
                 : 'FastKirana Dark Store',
               restaurantId: orderInfo.type === 'RESTAURANT' ? orderInfo.restaurantId : null,
               storeId: resolvedStoreId || storeId || null,
-              notes: body.notes || orderInfo.notes || null,
+              notes: resolvedOrderNotes,
               deliveryMethod,
               deliveryLat: address.lat,
               deliveryLng: address.lng,
@@ -1370,6 +1406,7 @@ export async function POST(request: NextRequest) {
               combinedId: combinedId,
               orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
               status: initialOrderStatus,
+              confirmedAt: (isOnlinePaid || initialOrderStatus === OrderStatus.CONFIRMED) ? now : null,
 
               subtotal: orderInfo.subtotal,
               discount: orderInfo.discount,
@@ -1390,7 +1427,7 @@ export async function POST(request: NextRequest) {
               shopPhone: orderInfo.type === 'RESTAURANT'
                 ? (orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 81128 49854')
                 : (settingsMap['contact_phone'] || '+91 81128 49854'),
-              notes: body.notes || orderInfo.notes || null,
+              notes: resolvedOrderNotes,
               restaurantId: orderInfo.type === 'RESTAURANT' ? orderInfo.restaurantId : null,
               deliveryLat: address.lat,
               deliveryLng: address.lng,

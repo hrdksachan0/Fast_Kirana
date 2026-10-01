@@ -1483,26 +1483,50 @@ async def create_order(
         incoming_payment_status = str(payload.get("paymentStatus") or "").upper()
         incoming_payment_id = str(payload.get("paymentId") or payload.get("cfPaymentId") or "").strip()
         incoming_cf_order_id = str(payload.get("cfOrderId") or "").strip()
+        if not incoming_cf_order_id:
+            incoming_notes_str = str(payload.get("notes") or "")
+            cf_match = re.search(r"\[CF_ORDER:([^\]]+)\]", incoming_notes_str)
+            if cf_match:
+                incoming_cf_order_id = cf_match.group(1).strip()
+            elif incoming_payment_id.startswith("CF_"):
+                incoming_cf_order_id = incoming_payment_id.replace("CF_", "")
+            elif incoming_payment_id.startswith("cf_"):
+                incoming_cf_order_id = incoming_payment_id
 
         if payment_method != "COD":
             if incoming_payment_status == "PAID" or bool(incoming_payment_id):
                 is_online_paid = True
             elif incoming_cf_order_id:
+                # 1. Check Redis cache first (in case webhook fired before client checkout completed)
                 try:
-                    from routers.cashfree_router import CASHFREE_BASE_URL, _get_cashfree_headers
-                    headers = _get_cashfree_headers()
-                    sanitized_check_id = re.sub(r"[^a-zA-Z0-9_-]", "_", incoming_cf_order_id)[:45]
-                    async with httpx.AsyncClient(timeout=4.0) as client:
-                        cf_res = await client.get(f"{CASHFREE_BASE_URL}/orders/{sanitized_check_id}", headers=headers)
-                        if cf_res.status_code == 200:
-                            cf_data = cf_res.json()
-                            if cf_data.get("order_status") == "PAID":
-                                is_online_paid = True
-                except Exception as cf_e:
-                    logger.warning(f"Error checking Cashfree for new order: {cf_e}")
+                    from utils.cache import get_cache
+                    cached_val = await get_cache(f"cf_paid:{incoming_cf_order_id}")
+                    if not cached_val and "_r" in incoming_cf_order_id:
+                        clean_check = re.sub(r"_r\d+$", "", incoming_cf_order_id)
+                        cached_val = await get_cache(f"cf_paid:{clean_check}")
+                    if cached_val:
+                        is_online_paid = True
+                except Exception:
+                    pass
+
+                # 2. Query Cashfree server if not yet marked paid
+                if not is_online_paid:
+                    try:
+                        from routers.cashfree_router import CASHFREE_BASE_URL, _get_cashfree_headers
+                        headers = _get_cashfree_headers()
+                        sanitized_check_id = re.sub(r"[^a-zA-Z0-9_-]", "_", incoming_cf_order_id)[:45]
+                        async with httpx.AsyncClient(timeout=4.0) as client:
+                            cf_res = await client.get(f"{CASHFREE_BASE_URL}/orders/{sanitized_check_id}", headers=headers)
+                            if cf_res.status_code == 200:
+                                cf_data = cf_res.json()
+                                if cf_data.get("order_status") == "PAID":
+                                    is_online_paid = True
+                    except Exception as cf_e:
+                        logger.warning(f"Error checking Cashfree for new order: {cf_e}")
         auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
         is_auto_approve = auto_approve_setting.lower() == "true"
-        initial_order_status = OrderStatus.PENDING if (is_online_paid or is_auto_approve) else OrderStatus.ADMIN_PENDING
+        # Online Paid orders go straight to CONFIRMED
+        initial_order_status = OrderStatus.CONFIRMED if is_online_paid else (OrderStatus.PENDING if is_auto_approve else OrderStatus.ADMIN_PENDING)
 
         # Construct notes
         incoming_notes = (payload.get("notes") or "").strip()
@@ -1523,6 +1547,9 @@ async def create_order(
                     notes_parts.append(incoming_notes)
         elif incoming_notes:
             notes_parts.append(incoming_notes)
+
+        if incoming_cf_order_id and not any(incoming_cf_order_id in p for p in notes_parts):
+            notes_parts.append(f"[CF_ORDER:{incoming_cf_order_id}]")
 
         if is_premium_packaging and not any("Premium Thermal Packaging" in p for p in notes_parts):
             notes_parts.append("✨ Premium Thermal Packaging Requested (+₹15)")
@@ -1633,7 +1660,8 @@ async def create_order(
                 shopName=spec["shopName"],
                 shopPhone=spec["shopPhone"],
                 restaurantId=spec["restaurantId"],
-                notes=final_order_notes
+                notes=final_order_notes,
+                confirmedAt=datetime.utcnow() if initial_order_status == OrderStatus.CONFIRMED else None
             )
             db.add(ord_obj)
             await db.flush()
@@ -2840,34 +2868,46 @@ async def update_order(
         cash_amount_custom = payload.get("cashAmount")
 
         # Admin / Staff delivery handling:
-        # If order is delivered by ADMIN/STAFF (and not by a DELIVERY rider from the rider app):
-        # The money is collected by the store/owner, NOT the rider, unless paymentCollectedBy == 'RIDER'.
         if is_admin and not is_delivery:
-            if payment_collected_by != "RIDER":
-                is_owner_or_online = True
-            else:
-                is_owner_or_online = payment_collected_by in ["OWNER", "ONLINE"] or is_rider_cash is False
             # When admin delivers directly, do NOT attribute to any rider unless admin explicitly passed deliveryUserId
             if "deliveryUserId" in payload:
                 order.deliveryUserId = delivery_user_id
-            elif not is_delivery:
-                # Direct admin delivery — clear any auto-assigned rider so it doesn't count against riders
+            else:
                 order.deliveryUserId = None
-        else:
-            is_owner_or_online = payment_collected_by in ["OWNER", "ONLINE"] or is_rider_cash is False
 
-        if cash_amount_custom is not None:
-            try:
-                order_cash_collected = max(0.0, float(cash_amount_custom))
-            except (ValueError, TypeError):
-                order_cash_collected = float(order.total) if not is_owner_or_online else 0.0
-        else:
-            order_cash_collected = float(order.total) if not is_owner_or_online else 0.0
+        # Determine actual payment method on delivery:
+        # Preserve COD unless customer was already paid online or paid via doorstep UPI QR
+        is_already_paid_online = (
+            order.paymentStatus == PaymentStatus.PAID and
+            order.paymentMethod != PaymentMethod.COD
+        )
+        is_explicit_online = (
+            is_already_paid_online or
+            order.paymentMethod in [PaymentMethod.UPI, PaymentMethod.CARD, PaymentMethod.WALLET] or
+            payment_collected_by == "ONLINE"
+        )
 
-        new_payment_method = "UPI" if (is_owner_or_online and order_cash_collected == 0) else (order.paymentMethod.value if order.paymentMethod.value in ["COD", "UPI", "CARD", "WALLET"] else "COD")
+        if is_explicit_online:
+            new_payment_method = PaymentMethod.UPI
+            order_cash_collected = 0.0
+        else:
+            new_payment_method = PaymentMethod.COD
+            if cash_amount_custom is not None:
+                try:
+                    order_cash_collected = max(0.0, float(cash_amount_custom))
+                except (ValueError, TypeError):
+                    order_cash_collected = float(order.total)
+            else:
+                order_cash_collected = float(order.total)
 
         order.paymentStatus = PaymentStatus.PAID
-        order.paymentMethod = PaymentMethod(new_payment_method)
+        order.paymentMethod = new_payment_method
+
+        # If COD order was delivered by Admin/Staff (not rider), cash went directly to Counter (Galla)
+        if new_payment_method == PaymentMethod.COD and (is_admin and not is_delivery and payment_collected_by != "RIDER"):
+            order.cashSettledToAdmin = True
+            order.cashSettledAt = datetime.utcnow()
+
         order.deliveryPhoto = safe_photo
         order.deliveryLat = float(delivery_lat) if delivery_lat is not None else None
         order.deliveryLng = float(delivery_lng) if delivery_lng is not None else None
