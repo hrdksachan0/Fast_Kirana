@@ -179,7 +179,7 @@ export async function PATCH(request: NextRequest) {
       try {
         clearSettingsCache().catch(() => {})
         revalidateStorefront()
-        const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+        const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in'
         fetch(`${fastApiUrl}/api/stores/clear-cache`, { method: 'POST' }).catch(() => {})
       } catch (err) {
         console.error('Background revalidation failed:', err)

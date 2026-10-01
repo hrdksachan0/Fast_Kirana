@@ -271,7 +271,7 @@ export function useAdminRealtime({
     const connectRailwayWs = () => {
       if (!isSubscribed) return
       try {
-        const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+        const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.fastkirana.in'
         const cleanUrl = rawFastApiUrl.replace(/\/+$/, '')
         const wsUrl = cleanUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws'
         railwayWs = new WebSocket(wsUrl)

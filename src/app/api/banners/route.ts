@@ -6,7 +6,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
 
     // ─── FastAPI Railway Proxy First ──────────────────────────────────────────
-    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+    const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in'
     try {
       const fastApiResponse = await fetch(`${fastApiUrl}/api/banners?${searchParams.toString()}`, {
         headers: { 'Accept': 'application/json' },

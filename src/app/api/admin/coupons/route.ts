@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error('Failed to fetch coupons from Prisma, attempting FastAPI fallback:', error)
     try {
-      const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+      const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.fastkirana.in'
       const res = await fetch(`${apiDest}/api/coupons`, {
         headers: { 'Content-Type': 'application/json' },
         next: { revalidate: 0 },

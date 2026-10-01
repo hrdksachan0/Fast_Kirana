@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       await revalidateStorefront()
 
       try {
-        const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+        const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in'
         await fetch(`${fastApiUrl}/api/stores/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(3000) }).catch(() => {})
       } catch (_) {}
 

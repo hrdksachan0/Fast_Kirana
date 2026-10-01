@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching admin banners from Prisma, attempting FastAPI proxy fallback:', error)
     try {
-      const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+      const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.fastkirana.in'
       const { searchParams } = new URL(request.url)
       const q = searchParams.toString() ? `?${searchParams.toString()}` : ''
       const res = await fetch(`${apiDest}/api/banners${q}`, {
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
 
     // Ping FastAPI to invalidate its in-memory banner cache
     try {
-      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in'
       fetch(`${fastApiUrl}/api/banners/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {})
     } catch (_) {}
 
@@ -248,7 +248,7 @@ export async function PUT(request: NextRequest) {
 
     // Ping FastAPI to invalidate its in-memory banner cache
     try {
-      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in'
       fetch(`${fastApiUrl}/api/banners/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {})
     } catch (_) {}
 
@@ -296,7 +296,7 @@ export async function DELETE(request: NextRequest) {
 
     // Ping FastAPI to invalidate its in-memory banner cache
     try {
-      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in'
       fetch(`${fastApiUrl}/api/banners/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {})
     } catch (_) {}
 

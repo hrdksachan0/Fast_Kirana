@@ -15,8 +15,7 @@ import 'package:flutter/foundation.dart';
 
 class AppConfig {
   // ─── API Endpoints ──────────────────────────────────────────────
-  static const String primaryApiUrl =
-      'https://fastkirana-production-0cdd.up.railway.app';
+  static const String primaryApiUrl = 'https://api.fastkirana.in';
   static const String secondaryApiUrl = 'https://www.fastkirana.in';
 
   /// Primary URL, overridable at build time via --dart-define=API_BASE_URL=...

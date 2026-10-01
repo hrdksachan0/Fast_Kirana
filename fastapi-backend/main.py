@@ -111,6 +111,7 @@ _cors_origins = [
     "https://www.fastkirana.in",
     "https://admin.fastkirana.in",
     "https://store.fastkirana.in",
+    "https://api.fastkirana.in",
 ]
 _env_domains = [d.strip() for d in os.getenv("CORS_ORIGINS", "").split(",") if d.strip()]
 if _env_domains:

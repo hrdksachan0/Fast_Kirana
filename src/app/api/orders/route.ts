@@ -1480,7 +1480,7 @@ export async function POST(request: NextRequest) {
 
         // Real-time broadcast to FastAPI WebSocket server for instant Admin Live Action Queue updates
         try {
-          const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.FASTAPI_URL || 'https://fastkirana-production-0cdd.up.railway.app'
+          const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.FASTAPI_URL || 'https://api.fastkirana.in'
           const cleanFastApiUrl = fastApiUrl.replace(/\/+$/, '')
           for (const order of createdOrders) {
             fetch(`${cleanFastApiUrl}/api/ws/broadcast`, {

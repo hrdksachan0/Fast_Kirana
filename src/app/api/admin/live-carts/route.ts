@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const fastApiUrl = (
       process.env.NEXT_PUBLIC_FASTAPI_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      'https://fastkirana-production-0cdd.up.railway.app'
+      'https://api.fastkirana.in'
     ).replace(/\/+$/, '')
 
     const token =
