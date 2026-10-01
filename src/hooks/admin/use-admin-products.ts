@@ -653,7 +653,7 @@ export function useAdminProducts({
           productEditForm.unit === '1 pc' ||
           productEditForm.unit === '1 unit')
           ? lowestEditVariant.name
-          : productEditForm.unit
+          : (productEditForm.unit?.trim() || editingProduct.unit || (productEditForm.restaurantId ? '1 Serving' : '1 pc'))
 
       const res = await fetch(`/api/products/${editingProduct.id}`, {
         method: 'PATCH',
@@ -826,7 +826,7 @@ export function useAdminProducts({
         lowestNewVariant &&
         (!newProduct.unit || newProduct.unit === '1 pc' || newProduct.unit === '1 unit')
           ? lowestNewVariant.name
-          : newProduct.unit
+          : (newProduct.unit?.trim() || (newProduct.restaurantId ? '1 Serving' : '1 pc'))
 
       const res = await fetch('/api/products', {
         method: 'POST',

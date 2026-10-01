@@ -1392,7 +1392,7 @@ async def create_product(
         mrp=raw_mrp,
         price=raw_price,
         discount=discount,
-        unit=str(payload.get("unit", "pcs")).strip(),
+        unit=(str(payload.get("unit") or "").strip()) or ("1 Serving" if final_rest_id else "1 pc"),
         stock=99999 if final_rest_id else int(payload.get("stock", 0)),
         isAvailable=bool(payload.get("isAvailable", True)),
         tags=payload.get("tags") if isinstance(payload.get("tags"), list) else [],
@@ -1578,8 +1578,17 @@ async def update_product(
                 val = val.strip()
                 if key == 'description':
                     pass  # keep trimmed string, even if empty
+                elif key == 'unit':
+                    # Unit is NON-NULLABLE in PostgreSQL schema. Never allow None or empty!
+                    val = val if val else (product.unit or ('1 Serving' if product.restaurantId else '1 pc'))
+                elif key == 'name':
+                    val = val if val else product.name
                 elif val == "":
                     val = None
+            elif key == 'unit' and (val is None or val == ""):
+                val = product.unit or ('1 Serving' if product.restaurantId else '1 pc')
+            elif key == 'name' and (val is None or val == ""):
+                val = product.name
             elif val == "":
                 val = None
             setattr(product, key, val)

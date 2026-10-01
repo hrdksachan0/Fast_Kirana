@@ -374,7 +374,18 @@ async def admin_update_product(
     for field in ["name", "slug", "description", "imageUrl", "unit", "location",
                   "availableStartTime", "availableEndTime", "barcode", "vendor", "vendorId"]:
         if field in data:
-            setattr(product, field, data[field])
+            val = data[field]
+            if field == "unit":
+                val = str(val).strip() if val else None
+                if not val:
+                    val = product.unit or ('1 Serving' if product.restaurantId else '1 pc')
+                setattr(product, field, val)
+            elif field == "name":
+                val = str(val).strip() if val else None
+                if val:
+                    setattr(product, field, val)
+            else:
+                setattr(product, field, val)
 
     # Restaurant ID & Category ID auto-alignment
     if "restaurantId" in data:
