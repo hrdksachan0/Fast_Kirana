@@ -1311,9 +1311,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
 
   bool _isUnpaidOnline(Order order) {
-    final isCOD = order.paymentMethod == PaymentMethod.cod;
-    final isPaid = order.paymentStatus.toUpperCase() == 'PAID';
-    return !isCOD && !isPaid;
+    return AdminOrderCard.isUnpaidOnline(order);
   }
 
   Future<void> _verifyOnlinePayment(Order order) async {

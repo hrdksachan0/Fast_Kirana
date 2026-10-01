@@ -134,7 +134,11 @@ async def create_cashfree_order(
 
     app_url = settings.NEXT_PUBLIC_APP_URL.rstrip("/")
     if not app_url.startswith("https://"):
-        app_url = "https://fastkirana.in"
+        app_url = "https://www.fastkirana.in"
+    elif "fastkirana.in" in app_url and "www." not in app_url and "api." not in app_url:
+        app_url = "https://www.fastkirana.in"
+
+    api_url = getattr(settings, "API_BASE_URL", "https://api.fastkirana.in").rstrip("/")
 
     payload = {
         "order_id": sanitized_order_id,
@@ -143,7 +147,7 @@ async def create_cashfree_order(
         "customer_details": customer_details,
         "order_meta": {
             "return_url": f"{app_url}/order/{resolved_order_id}?payment=cf_success",
-            "notify_url": f"{app_url}/api/payment/cashfree/webhook",
+            "notify_url": f"{api_url}/api/payment/cashfree/webhook",
         },
         "order_note": req.note or "FastKirana Quick Commerce Order",
     }
@@ -283,6 +287,7 @@ async def verify_cashfree_payment(
     cf_order = None
     successful_payment = None
     checked_ids = set()
+    sanitized_check_id = clean_id
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         for cid in candidate_ids:

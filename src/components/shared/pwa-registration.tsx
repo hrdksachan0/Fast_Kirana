@@ -20,7 +20,7 @@ export function PWARegistration() {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       const registerSW = () => {
         navigator.serviceWorker
-          .register('/sw.js?v=2')
+          .register('/sw.js?v=5')
           .then((reg) => {
             reg.update()
           })

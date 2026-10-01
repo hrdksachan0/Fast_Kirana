@@ -261,5 +261,15 @@ export default async function OrderTrackingPage({ params }: OrderTrackingPagePro
     redirect('/')
   }
 
+  // Verify ownership or direct secret link access
+  const isDirectSecretLink = id === initialOrder.id && typeof initialOrder.id === 'string' && initialOrder.id.length >= 20
+  if (!isDirectSecretLink && !session?.user?.id) {
+    redirect('/login')
+  }
+
+  if (session?.user?.id && !isDirectSecretLink && initialOrder.userId !== session.user.id && session.user.role !== 'ADMIN') {
+    redirect('/')
+  }
+
   return <TrackingPageClient orderId={id} initialOrder={initialOrder} />
 }

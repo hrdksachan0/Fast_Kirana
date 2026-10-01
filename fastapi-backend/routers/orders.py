@@ -2307,15 +2307,15 @@ async def list_orders(
 @router.get("/{id}")
 async def get_order_details(
     id: str,
-    current_user: dict = Depends(require_auth),
+    current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get detailed order history. Supports combined checkouts and shields worker details.
+    Get detailed order history. Supports combined checkouts, direct secret tracking links, and shields worker details.
     """
-    user_id = current_user.get("id") or current_user.get("sub")
-    role = current_user.get("role")
-    is_staff = role in ["ADMIN", "CHEF", "DELIVERY", "PICKER", "RESTAURANT_OWNER"]
+    user_id = (current_user.get("id") or current_user.get("sub")) if current_user else None
+    role = current_user.get("role") if current_user else None
+    is_staff = role in ["ADMIN", "CHEF", "DELIVERY", "PICKER", "RESTAURANT_OWNER"] if role else False
 
     now = time.time()
     cache_key = f"{id}:{user_id}:{role}"
@@ -2333,13 +2333,19 @@ async def get_order_details(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # Access Authorization Guard
-    if not is_staff and order.userId != user_id:
-        raise HTTPException(status_code=403, detail="Unauthorized to view this order")
+    # Direct secret link access: If order has an unguessable ID with length >= 20 and matched exactly, allow viewing
+    is_direct_secret_link = (id == order.id and len(id) >= 20)
+
+    # Access Authorization Guard: If not holding direct secret link, require user session & authorization
+    if not is_direct_secret_link:
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required to view this order")
+        if not is_staff and order.userId != user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized to view this order")
 
     # Store isolation guard for staff
     if is_staff and (role or "").upper() not in ["SUPER_ADMIN", "SUPERADMIN"]:
-        assigned_store = current_user.get("assignedStoreId")
+        assigned_store = current_user.get("assignedStoreId") if current_user else None
         if assigned_store and order.storeId and order.storeId != assigned_store and role not in ["CHEF", "RESTAURANT_OWNER"]:
             raise HTTPException(status_code=403, detail="Forbidden: Order belongs to a different store hub")
 

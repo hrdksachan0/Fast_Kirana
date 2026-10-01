@@ -41,7 +41,8 @@ class Settings(BaseSettings):
     CASHFREE_API_VERSION: str = os.getenv("CASHFREE_API_VERSION", "2023-08-01")
 
     # App & Frontend URL
-    NEXT_PUBLIC_APP_URL: str = os.getenv("NEXT_PUBLIC_APP_URL", "https://fastkirana.in")
+    NEXT_PUBLIC_APP_URL: str = os.getenv("NEXT_PUBLIC_APP_URL", "https://www.fastkirana.in")
+    API_BASE_URL: str = os.getenv("API_BASE_URL", "https://api.fastkirana.in")
 
     # Supabase Configuration
     NEXT_PUBLIC_SUPABASE_URL: str = os.getenv("NEXT_PUBLIC_SUPABASE_URL", "https://bberzasmxwioxjynbuaf.supabase.co")

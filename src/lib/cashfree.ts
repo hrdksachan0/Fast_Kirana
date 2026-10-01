@@ -80,14 +80,20 @@ export async function createCashfreeOrder(params: CreateCashfreeOrderParams): Pr
     }
   }
 
+  const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'
+  const appUrl = (rawAppUrl.includes('fastkirana.in') && !rawAppUrl.includes('www.') && !rawAppUrl.includes('api.'))
+    ? rawAppUrl.replace('fastkirana.in', 'www.fastkirana.in')
+    : rawAppUrl
+  const apiUrl = (process.env.API_BASE_URL || 'https://api.fastkirana.in').replace(/\/+$/, '')
+
   const payload: any = {
     order_id: sanitizedOrderId,
     order_amount: parseFloat(params.amount.toFixed(2)),
     order_currency: 'INR',
     customer_details: customerDetails,
     order_meta: {
-      return_url: params.returnUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'}/order/${params.orderId}?payment=cf_success`,
-      notify_url: params.notifyUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'}/api/payment/cashfree/webhook`,
+      return_url: params.returnUrl || `${appUrl}/order/${params.orderId}?payment=cf_success`,
+      notify_url: params.notifyUrl || `${apiUrl}/api/payment/cashfree/webhook`,
     },
     order_note: params.note || 'FastKirana Quick Commerce Order',
   }

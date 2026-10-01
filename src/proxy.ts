@@ -75,10 +75,16 @@ export async function proxy(req: NextRequest) {
   }
 
   // Protect account, checkout, and order routes
+  // Direct secret order tracking/confirmation links (e.g. /order/ord_xxx, /order/ord_xxx/track)
+  // are allowed through to page-level authentication & ownership verification.
+  const isSecretOrderRoute =
+    nextUrl.pathname.startsWith('/order/') &&
+    (nextUrl.pathname.split('/')[2]?.length ?? 0) >= 15
+
   const isProtectedRoute =
     nextUrl.pathname.startsWith('/account') ||
     nextUrl.pathname.startsWith('/checkout') ||
-    nextUrl.pathname.startsWith('/order')
+    (nextUrl.pathname.startsWith('/order') && !isSecretOrderRoute)
 
   if (isProtectedRoute && !isLoggedIn) {
     let callbackUrl = nextUrl.pathname

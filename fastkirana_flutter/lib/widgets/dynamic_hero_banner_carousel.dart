@@ -167,12 +167,18 @@ class DynamicHeroBannerCarousel extends ConsumerWidget {
           return const SizedBox.shrink();
         }
 
+        final screenWidth = MediaQuery.of(context).size.width;
+        // Proportionate 3:4 curated offer card dimensions (matching 896x1200 promo posters)
+        // Height is kept compact (~205-220px instead of 380px) so content below stays visible above the fold
+        final cardHeight = (screenWidth * 0.52).clamp(195.0, 220.0);
+        final cardWidth = cardHeight * 0.75;
+
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: CuratedBrandOffersCarousel(
             items: cards,
-            cardWidth: 260,
-            cardHeight: 380,
+            cardWidth: cardWidth,
+            cardHeight: cardHeight,
             onCardTap: (card) => _handleCardTap(context, ref, card),
           ),
         );

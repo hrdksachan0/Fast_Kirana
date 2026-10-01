@@ -8,6 +8,7 @@ import '../../features/products/products_screen.dart';
 import '../../features/categories/categories_screen.dart';
 import '../../features/cart/cart_screen.dart';
 import '../../features/checkout/checkout_screen.dart';
+import '../../features/checkout/order_success_screen.dart';
 import '../../features/orders/orders_screen.dart';
 import '../../features/orders/order_tracking_screen.dart';
 import '../../features/profile/profile_screen.dart';
@@ -21,25 +22,40 @@ import '../../features/location/delivery_location_screen.dart';
 import '../../features/location/map_picker_screen.dart';
 import '../../features/cafe/restaurant_dashboard.dart';
 import '../widgets/contextual_brand_transition_screen.dart';
-import '../theme/design_system.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
-    final routeName = settings.name ?? '';
+    final rawRoute = settings.name ?? '';
+    final uri = Uri.tryParse(rawRoute);
+    final cleanPath = uri?.path ?? rawRoute;
 
-    // Handle deep links like /order/<id>/track or /order/<id>
-    final orderTrackMatch = RegExp(r'^/order/([^/]+)/track$').firstMatch(routeName);
-    if (orderTrackMatch != null) {
-      final orderId = orderTrackMatch.group(1) ?? '';
-      return FadeSlideRoute(page: OrderTrackingScreen(orderId: orderId));
+    // Handle deep links like /order/<id>/success or /orders/<id>/success
+    final orderSuccessMatch = RegExp(r'^/(?:orders?)/([^/]+)/success/?$').firstMatch(cleanPath);
+    if (orderSuccessMatch != null) {
+      final orderId = orderSuccessMatch.group(1) ?? '';
+      if (orderId.isNotEmpty && orderId != 'success') {
+        return FadeSlideRoute(page: OrderSuccessScreen(orderId: orderId));
+      }
     }
 
-    final orderDetailMatch = RegExp(r'^/order/([^/]+)$').firstMatch(routeName);
+    // Handle deep links like /order/<id>/track or /orders/<id>/track
+    final orderTrackMatch = RegExp(r'^/(?:orders?)/([^/]+)/track/?$').firstMatch(cleanPath);
+    if (orderTrackMatch != null) {
+      final orderId = orderTrackMatch.group(1) ?? '';
+      if (orderId.isNotEmpty && orderId != 'track') {
+        return FadeSlideRoute(page: OrderTrackingScreen(orderId: orderId));
+      }
+    }
+
+    // Handle deep links like /order/<id> or /orders/<id>
+    final orderDetailMatch = RegExp(r'^/(?:orders?)/([^/]+)/?$').firstMatch(cleanPath);
     if (orderDetailMatch != null) {
       final orderId = orderDetailMatch.group(1) ?? '';
-      return FadeSlideRoute(page: OrderTrackingScreen(orderId: orderId));
+      if (orderId.isNotEmpty && orderId != 'track' && orderId != 'success') {
+        return FadeSlideRoute(page: OrderTrackingScreen(orderId: orderId));
+      }
     }
 
     switch (settings.name) {
@@ -161,16 +177,8 @@ class AppRouter {
           ),
         );
       default:
-        return FadeThroughRoute(
-          page: Scaffold(
-            body: Center(
-              child: Text(
-                'Route not found: ${settings.name}',
-                style: const TextStyle(color: AppDesignSystem.danger),
-              ),
-            ),
-          ),
-        );
+        debugPrint('[AppRouter] Unrecognized route: ${settings.name}, falling back to MainShell');
+        return FadeThroughRoute(page: const MainShell());
     }
   }
 }

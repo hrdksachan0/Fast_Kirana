@@ -195,7 +195,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
           // ─── 1. Outer Doppelrand / Light Double-Bezel Architecture ───
           padding: const EdgeInsets.all(1.5),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(widget.height < 220 ? 18 : 28),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -225,11 +225,11 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
           child: Container(
             // ─── 2. Inner Concentric Core ───
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(26.5),
+              borderRadius: BorderRadius.circular(widget.height < 220 ? 16.5 : 26.5),
               color: widget.backgroundColor ?? palette.surface,
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(26.5),
+              borderRadius: BorderRadius.circular(widget.height < 220 ? 16.5 : 26.5),
               child: _buildCardContent(context, glowColor, palette),
             ),
           ),
@@ -269,7 +269,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
         videoUrl: widget.videoUrl,
         imageAsset: widget.imageAsset,
         fit: BoxFit.cover,
-        borderRadius: 26.5,
+        borderRadius: widget.height < 220 ? 16.5 : 26.5,
         showLiveBadge: false, // Pure photo/video: NO BADGES, NO TEXT
       ),
     );

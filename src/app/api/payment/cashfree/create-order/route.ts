@@ -89,7 +89,11 @@ export async function POST(request: NextRequest) {
 
     const cleanName = String(resolvedName || 'FastKirana Customer').trim() || 'FastKirana Customer'
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'
+    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'
+    const appUrl = (rawAppUrl.includes('fastkirana.in') && !rawAppUrl.includes('www.') && !rawAppUrl.includes('api.'))
+      ? rawAppUrl.replace('fastkirana.in', 'www.fastkirana.in')
+      : rawAppUrl
+    const apiUrl = (process.env.API_BASE_URL || 'https://api.fastkirana.in').replace(/\/+$/, '')
 
     const cfOrder = await createCashfreeOrder({
       orderId: resolvedOrderId,
@@ -99,7 +103,7 @@ export async function POST(request: NextRequest) {
       customerPhone: cleanPhone,
       customerEmail: cleanEmail,
       returnUrl: `${appUrl}/checkout/verify?order_id=${resolvedOrderId}&cf_order_id={order_id}`,
-      notifyUrl: `${appUrl}/api/payment/cashfree/webhook`,
+      notifyUrl: `${apiUrl}/api/payment/cashfree/webhook`,
       note: `FastKirana Order #${readableId || resolvedOrderId}`
     })
 

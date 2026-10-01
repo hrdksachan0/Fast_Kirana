@@ -93,7 +93,10 @@ class AdminOrderCard extends ConsumerWidget {
   static bool isUnpaidOnline(Order order) {
     final isCOD = order.paymentMethod == PaymentMethod.cod;
     final isPaid = order.paymentStatus.toUpperCase() == 'PAID';
-    return !isCOD && !isPaid;
+    final hasOnlineAttempt = (order.notes ?? '').contains('Cashfree') || 
+                             (order.notes ?? '').contains('UPI') ||
+                             (order.notes ?? '').contains('cf_');
+    return !isPaid && (!isCOD || hasOnlineAttempt);
   }
 
   static String formatOrderTime(DateTime dt) {

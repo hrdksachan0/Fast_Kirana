@@ -166,6 +166,30 @@ async def run_payment_recovery_cron(db: AsyncSession) -> Dict[str, Any]:
 
         for order in expired_orders:
             try:
+                # 🛡️ CRITICAL GATEWAY SAFEGUARD: Check Cashfree status before cancelling to protect paid orders!
+                is_cf_paid = False
+                try:
+                    from routers.cashfree_router import CASHFREE_BASE_URL, _get_cashfree_headers
+                    headers = _get_cashfree_headers()
+                    clean_id = str(order.id).strip()
+                    async with httpx.AsyncClient(timeout=4.0) as cf_client:
+                        cf_chk = await cf_client.get(f"{CASHFREE_BASE_URL}/orders/{clean_id}", headers=headers)
+                        if cf_chk.status_code == 200:
+                            cf_res_data = cf_chk.json()
+                            if cf_res_data.get("order_status") == "PAID":
+                                is_cf_paid = True
+                except Exception as cf_err:
+                    logger.warning(f"Cashfree check before cancel note for {order.id}: {cf_err}")
+
+                if is_cf_paid:
+                    order.paymentStatus = PaymentStatus.PAID
+                    order.status = OrderStatus.CONFIRMED
+                    cf_note = "Cashfree Auto-Reconciled by Cron (Paid ✅)"
+                    order.notes = f"{order.notes} | {cf_note}" if order.notes else cf_note
+                    await db.commit()
+                    logger.info(f"Cron salvaged Order #{order.readableId or order.id} - marked PAID and CONFIRMED")
+                    continue
+
                 # 1. Update order status
                 timeout_notes = (
                     f"{order.notes} [PAYMENT_TIMEOUT: Auto-cancelled after 30m]"
