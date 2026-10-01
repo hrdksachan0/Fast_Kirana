@@ -180,7 +180,12 @@ class Product {
         'menuSection': menuSection,
       };
 
-  bool get isInStock => stock > 0 && isAvailable;
+  bool get isInStock {
+    if (parsedVariants.isNotEmpty) {
+      return parsedVariants.any((v) => v.stock > 0) && isAvailable;
+    }
+    return stock > 0 && isAvailable;
+  }
   double get savings => mrp - price;
   int get discountPercentage => discount.toInt();
 

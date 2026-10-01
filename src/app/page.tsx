@@ -44,6 +44,15 @@ const productSelect = {
   isTopPick: true,
   sortOrder: true,
   createdAt: true,
+  inventories: {
+    where: {
+      storeId: 'hub-209206',
+    },
+    select: {
+      stock: true,
+      isAvailable: true,
+    },
+  },
   category: {
     select: {
       id: true,
@@ -147,7 +156,7 @@ const getCachedAllGroceryProducts = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-all-grocery-products-v5'],
+  ['storefront-all-grocery-products-v6'],
   { revalidate: 3600, tags: ['products'] }
 )
 
@@ -168,7 +177,7 @@ const getCachedFlashDeals = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-flash-deals-v28'],
+  ['storefront-flash-deals-v29'],
   { revalidate: 3600, tags: ['products', 'flash-deals'] }
 )
 
@@ -188,7 +197,7 @@ const getCachedBestSellers = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-best-sellers-v28'],
+  ['storefront-best-sellers-v29'],
   { revalidate: 3600, tags: ['products', 'best-sellers'] }
 )
 
@@ -207,7 +216,7 @@ const getCachedBreakfastDeals = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-breakfast-deals-v28'],
+  ['storefront-breakfast-deals-v29'],
   { revalidate: 3600, tags: ['products', 'breakfast-deals'] }
 )
 
@@ -226,7 +235,7 @@ const getCachedLunchDeals = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-lunch-deals-v28'],
+  ['storefront-lunch-deals-v29'],
   { revalidate: 3600, tags: ['products', 'lunch-deals'] }
 )
 
@@ -245,7 +254,7 @@ const getCachedTeaDeals = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-tea-deals-v28'],
+  ['storefront-tea-deals-v29'],
   { revalidate: 3600, tags: ['products', 'tea-deals'] }
 )
 
@@ -268,7 +277,7 @@ const getCachedNightCravings = unstable_cache(
       select: productSelect,
     })
   },
-  ['storefront-night-cravings-v28'],
+  ['storefront-night-cravings-v29'],
   { revalidate: 3600, tags: ['products', 'night-cravings'] }
 )
 
@@ -488,19 +497,24 @@ export default async function Home() {
     _count: c._count,
   }))
 
-  const mapProduct = (p: any): Product => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    description: p.description,
-    imageUrl: p.imageUrl,
-    categoryId: p.categoryId,
-    mrp: p.mrp,
-    price: p.price,
-    discount: p.discount,
-    unit: p.unit,
-    stock: p.stock,
-    isAvailable: p.isAvailable,
+  const mapProduct = (p: any): Product => {
+    const hubInv = p.inventories?.[0]
+    const effectiveStock = (hubInv && typeof hubInv.stock === 'number') ? hubInv.stock : (typeof p.stock === 'number' ? p.stock : 0)
+    const effectiveIsAvailable = (hubInv && typeof hubInv.isAvailable === 'boolean') ? hubInv.isAvailable : (p.isAvailable !== false)
+
+    return {
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      description: p.description,
+      imageUrl: p.imageUrl,
+      categoryId: p.categoryId,
+      mrp: p.mrp,
+      price: p.price,
+      discount: p.discount,
+      unit: p.unit,
+      stock: effectiveStock,
+      isAvailable: effectiveIsAvailable,
     tags: p.tags,
     minStock: p.minStock,
     variants: p.variants,
@@ -525,7 +539,8 @@ export default async function Home() {
         sortOrder: p.category.parent.sortOrder ?? 0,
       } : null,
     } : null,
-  })
+  }
+}
 
   const topPicks = sortProductsByStock(topPicksRaw.map(mapProduct))
   const flashDeals = sortProductsByStock(flashDealsRaw.map(mapProduct))

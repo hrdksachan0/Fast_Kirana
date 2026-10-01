@@ -83,11 +83,19 @@ export async function POST(request: NextRequest) {
         }
       }
       
+      let effectiveStock = dbProduct.stock ?? 0
+      if (dbProduct.variants && Array.isArray(dbProduct.variants) && dbProduct.variants.length > 0) {
+        const variantSum = (dbProduct.variants as any[]).reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+        if (variantSum > 0 || effectiveStock === 0) {
+          effectiveStock = variantSum
+        }
+      }
+
       stockMap[id] = {
         price: dbProduct.price,
         mrp: dbProduct.mrp,
-        stock: dbProduct.stock,
-        isAvailable: dbProduct.isAvailable,
+        stock: effectiveStock,
+        isAvailable: dbProduct.isAvailable && effectiveStock > 0,
       }
 
       // Save into cache for 20 seconds

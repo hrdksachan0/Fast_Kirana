@@ -341,17 +341,18 @@ export async function GET(request: NextRequest) {
       }
 
       // Override stock and availability with localized dark store inventory
-      if (storeId && finalProducts.length > 0) {
+      const activeStoreId = storeId || 'hub-209206'
+      if (activeStoreId && finalProducts.length > 0) {
         const inventories = await prisma.storeInventory.findMany({
           where: {
-            storeId,
+            storeId: activeStoreId,
             productId: { in: finalProducts.map(p => p.id) }
           }
         })
         const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
         finalProducts = finalProducts.map(p => {
           const isRest = !!p.restaurantId
-          const localStock = isRest ? p.stock : (inventoryMap.get(p.id) ?? 0)
+          const localStock = isRest ? p.stock : (inventoryMap.has(p.id) ? inventoryMap.get(p.id)! : p.stock)
           return {
             ...p,
             stock: localStock,
@@ -545,17 +546,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Override stock and availability with localized dark store inventory
-    if (storeId && products.length > 0) {
+    const activeStoreId = storeId || 'hub-209206'
+    if (activeStoreId && products.length > 0) {
       const inventories = await prisma.storeInventory.findMany({
         where: {
-          storeId,
+          storeId: activeStoreId,
           productId: { in: products.map(p => p.id) }
         }
       })
       const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
       products = products.map(p => {
         const isRest = !!p.restaurantId
-        const localStock = isRest ? p.stock : (inventoryMap.get(p.id) ?? 0)
+        const localStock = isRest ? p.stock : (inventoryMap.has(p.id) ? inventoryMap.get(p.id)! : p.stock)
         return {
           ...p,
           stock: localStock,

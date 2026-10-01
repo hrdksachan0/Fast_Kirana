@@ -202,8 +202,8 @@ function ProductCardComponent({ product, isCompact = false }: ProductCardProps) 
 
   // Total stock across all variants
   const totalStock = useMemo(() => {
-    if (!hasVariants) return product.stock
-    return variantsList.reduce((sum, v) => sum + (v.stock || 0), 0)
+    if (!hasVariants) return (typeof product.stock === 'number' ? product.stock : 0)
+    return variantsList.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
   }, [hasVariants, variantsList, product.stock])
 
   const resolvedIsAvailable = useMemo(() => {
@@ -217,17 +217,20 @@ function ProductCardComponent({ product, isCompact = false }: ProductCardProps) 
     if (liveState !== null && typeof liveState.stock === 'number') {
       return liveState.stock
     }
-    if (!resolvedIsAvailable || product.stock === 0 || (product as any).stock === 0) {
+    if (!resolvedIsAvailable) {
       return 0
     }
-    if (typeof product.stock === 'number' && product.stock > 0) {
+    if (isRestaurant || isCafe || Boolean(product.restaurantId) || Boolean((product as any).restaurantId)) {
+      return (typeof product.stock === 'number' && product.stock > 0) ? product.stock : 999
+    }
+    if (hasVariants) {
+      return totalStock
+    }
+    if (typeof product.stock === 'number') {
       return product.stock
     }
-    if (isRestaurant || isCafe || Boolean(product.restaurantId) || Boolean((product as any).restaurantId)) {
-      return 999
-    }
-    return totalStock
-  }, [liveState, resolvedIsAvailable, product.stock, isRestaurant, isCafe, product.restaurantId, totalStock])
+    return 0
+  }, [liveState, resolvedIsAvailable, isRestaurant, isCafe, product.restaurantId, hasVariants, totalStock, product.stock])
 
   // Calculate discount dynamically if price/mrp changed
   const resolvedDiscount = useMemo(() => {
