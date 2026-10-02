@@ -1,4 +1,5 @@
 'use client'
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { Star, RefreshCw, MessageSquare, ThumbsUp, Filter, User, Search } from 'lucide-react'

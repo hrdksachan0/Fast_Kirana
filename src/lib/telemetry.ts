@@ -1,3 +1,4 @@
+import { apiUrl } from '@/lib/api-url';
 export interface TelemetryContext {
   severity?: 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL'
   route?: string

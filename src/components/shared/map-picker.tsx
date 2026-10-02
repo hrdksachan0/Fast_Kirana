@@ -1,4 +1,5 @@
 'use client'
+import { apiUrl } from '@/lib/api-url';
 
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, Navigation, Search, X } from 'lucide-react'

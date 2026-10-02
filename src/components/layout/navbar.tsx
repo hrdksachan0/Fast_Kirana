@@ -1,4 +1,5 @@
 'use client'
+import { apiUrl } from '@/lib/api-url';
 
 import Link from 'next/link'
 import { Search, ShoppingBag, MapPin, User, ChevronDown, Sun, Moon, Heart } from 'lucide-react'

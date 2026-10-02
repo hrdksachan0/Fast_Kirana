@@ -1,4 +1,5 @@
 'use client'
+import { apiUrl } from '@/lib/api-url';
 
 import { useMemo, useState, useEffect } from 'react'
 import { toast } from 'sonner'

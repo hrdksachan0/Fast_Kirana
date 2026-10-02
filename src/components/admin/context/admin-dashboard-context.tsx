@@ -1,4 +1,5 @@
 'use client'
+import { apiUrl } from '@/lib/api-url';
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'

@@ -1,4 +1,5 @@
 'use client'
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
