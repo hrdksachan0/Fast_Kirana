@@ -171,21 +171,15 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 14,
-                      offset: const Offset(0, 3),
-                    ),
-                    BoxShadow(
-                      color: (isGrocery ? const Color(0xFFE20A22) : const Color(0xFFEA580C))
-                          .withValues(alpha: 0.06),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // ── Active Sliding Pill with Glowing Ambient Light ──
+                    // ── Active Sliding Pill with Clean Shadow ──
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 320),
                       curve: const Cubic(0.25, 1.0, 0.4, 1.0), // Smooth Apple-like spring
@@ -204,18 +198,16 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                           ),
                           borderRadius: BorderRadius.circular(26),
                           boxShadow: [
-                            // Vibrant Ambient Glow matching reference
                             BoxShadow(
                               color: (!isGrocery ? const Color(0xFFEA580C) : const Color(0xFFE20A22))
-                                  .withValues(alpha: 0.45 + (glowVal * 0.1)),
-                              blurRadius: 18,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 4),
+                                  .withValues(alpha: 0.22),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
                             ),
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
                             ),
                           ],
                         ),

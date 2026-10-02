@@ -147,18 +147,26 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                               const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppDesignSystem.textPrimary),
                               const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: AppDesignSystem.primaryGreen.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(5),
                                 ),
-                                child: Text(
-                                  currentHub.id.toUpperCase(),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: Responsive.scaledFontSize(context, 8.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.primaryGreen,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.bolt_rounded, size: 11, color: AppDesignSystem.primaryGreen),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      '10-15 MINS',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                                        fontWeight: FontWeight.w800,
+                                        color: AppDesignSystem.primaryGreen,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
