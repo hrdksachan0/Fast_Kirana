@@ -188,6 +188,17 @@ def test_state_machine_same_status_idempotent():
     assert err is None
 
 
+def test_state_machine_rider_pickup_transitions():
+    # Food/Express orders: Rider can pick up food directly from kitchen
+    is_valid_confirmed, err1 = validate_status_transition("CONFIRMED", "SHIPPED")
+    assert is_valid_confirmed is True
+    assert err1 is None
+
+    is_valid_preparing, err2 = validate_status_transition("PREPARING", "SHIPPED")
+    assert is_valid_preparing is True
+    assert err2 is None
+
+
 def test_state_machine_invalid_jumps():
     # Cannot jump from PENDING directly to DELIVERED
     is_valid, err = validate_status_transition("PENDING", "DELIVERED")
