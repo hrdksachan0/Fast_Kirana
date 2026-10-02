@@ -255,17 +255,24 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
     ? (String(order.readableId).startsWith('#') ? order.readableId : `#${order.readableId}`)
     : `#${(order.id || '').slice(0, 8).toUpperCase()}`
 
+  const customerName = order.userName || order.user?.name || 'Customer'
+  const deliveryMethod = (order.deliveryMethod || 'DELIVERY').toUpperCase()
+  const deliveryIcon = (deliveryMethod === 'SELF_PICKUP' || deliveryMethod === 'PICKUP') ? '🛍️ PICKUP' : '🛵 DELIVERY'
+  const cleanNote = order.notes
+    ? String(order.notes).replace(/✨\s*/g, '').replace(/^Note:\s*/i, '').trim()
+    : ''
+
   const totalQty = targetItems.reduce((acc: number, it: any) => acc + (Number(it.quantity) || 1), 0)
 
-  const itemsHtml = targetItems.map((item: any) => `
-    <tr style="border-bottom: 1px dashed #ddd;">
-      <td style="padding: 6px 0; font-weight: bold; font-size: 15px; vertical-align: top; width: 38px;">[${item.quantity}x]</td>
-      <td style="padding: 6px 0; font-size: 13px;">
-        <div style="font-weight: bold; font-size: 14px;">
+  const itemsHtml = targetItems.map((item: any, idx: number) => `
+    <tr style="border-bottom: 1px dashed #ccc;">
+      <td style="padding: 7px 2px 7px 0; font-weight: 900; font-size: 16px; vertical-align: top; width: 40px; text-align: center; letter-spacing: 0.5px;">${item.quantity}x</td>
+      <td style="padding: 7px 0; font-size: 13px;">
+        <div style="font-weight: 800; font-size: 14px; line-height: 1.3;">
           ${item.name}
-          ${item.selectedVariant ? `<span style="font-size: 11px; color: #d97706; margin-left: 4px;">(${item.selectedVariant})</span>` : ''}
         </div>
-        ${item.notes ? `<div style="font-size: 11px; color: #444; font-style: italic; margin-top: 2px;">📝 Note: ${item.notes}</div>` : ''}
+        ${item.selectedVariant ? `<div style="font-size: 11px; color: #555; margin-top: 1px;">▸ ${item.selectedVariant}</div>` : ''}
+        ${item.notes ? `<div style="font-size: 11px; color: #333; font-style: italic; margin-top: 2px;">📝 ${item.notes}</div>` : ''}
       </td>
     </tr>
   `).join('')
@@ -295,43 +302,6 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .title {
-            font-size: 18px;
-            font-weight: 900;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 4px;
-          }
-          .subtitle {
-            text-align: center;
-            font-size: 12px;
-            font-weight: bold;
-            margin-top: 2px;
-            margin-bottom: 8px;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 6px;
-          }
-          .info-table {
-            width: 100%;
-            font-size: 12px;
-            margin-bottom: 8px;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 8px;
-          }
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 10px;
-          }
-          .footer {
-            text-align: center;
-            font-size: 10px;
-            margin-top: 12px;
-            border-top: 2px dashed #000;
-            padding-top: 8px;
-            font-weight: bold;
-          }
           @media print {
             html, body {
               width: 78mm !important;
@@ -341,7 +311,7 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
               margin: 0 !important;
               padding: 4px 6px !important;
             }
-            .items-table tr, .info-table tr, .footer {
+            tr, .footer, .summary-bar {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
@@ -349,53 +319,65 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
         </style>
       </head>
       <body>
-        <div class="title">FASTKIRANA</div>
-        <div class="subtitle">KITCHEN ORDER TICKET (${shopType})</div>
-        
-        <table class="info-table">
+        <!-- ═══ HEADER ═══ -->
+        <div style="text-align: center; font-size: 20px; font-weight: 900; letter-spacing: 2px; margin: 4px 0 0;">FASTKIRANA</div>
+        <div style="text-align: center; font-size: 11px; font-weight: 700; margin: 2px 0 6px; border-bottom: 2px dashed #000; padding-bottom: 6px;">KITCHEN ORDER TICKET</div>
+
+        <!-- ═══ ORDER INFO ═══ -->
+        <table style="width: 100%; font-size: 12px; margin-bottom: 6px; border-collapse: collapse;">
           <tr>
-            <td style="font-weight: bold; width: 45%;">TICKET ID:</td>
-            <td style="text-align: right; font-weight: 900; font-size: 15px; width: 55%;">${orderIdText}</td>
+            <td style="font-weight: 900; font-size: 18px; padding: 4px 0;" colspan="2">${orderIdText}</td>
           </tr>
           <tr>
-            <td style="width: 45%;">Order Placed:</td>
-            <td style="text-align: right; font-weight: bold; width: 55%;">${orderDateStr} <span style="font-size: 10px; color: #555;">(${elapsedText})</span></td>
+            <td style="padding: 2px 0; color: #444;">Outlet</td>
+            <td style="text-align: right; font-weight: 700; padding: 2px 0;">${outletName}</td>
           </tr>
           <tr>
-            <td style="width: 45%;">KOT Printed:</td>
-            <td style="text-align: right; width: 55%;">${printDateStr}</td>
+            <td style="padding: 2px 0; color: #444;">Type</td>
+            <td style="text-align: right; font-weight: 700; padding: 2px 0;">${deliveryIcon}</td>
           </tr>
           <tr>
-            <td style="width: 45%;">Order Type:</td>
-            <td style="text-align: right; font-weight: bold; width: 55%;">${order.deliveryMethod || 'DELIVERY'}</td>
+            <td style="padding: 2px 0; color: #444;">Customer</td>
+            <td style="text-align: right; font-weight: 700; padding: 2px 0;">${customerName}</td>
           </tr>
           <tr>
-            <td style="width: 45%;">Customer:</td>
-            <td style="text-align: right; font-weight: bold; width: 55%;">${order.userName || order.user?.name || 'Customer'}</td>
+            <td style="padding: 2px 0; color: #444;">Placed</td>
+            <td style="text-align: right; font-weight: 600; padding: 2px 0;">${orderDateStr} <span style="font-size: 10px; color: #777;">(${elapsedText})</span></td>
           </tr>
-          ${order.notes ? `
           <tr>
-            <td style="width: 45%; vertical-align: top;">Order Note:</td>
-            <td style="text-align: right; font-weight: bold; color: #b45309; width: 55%;">${order.notes}</td>
-          </tr>` : ''}
+            <td style="padding: 2px 0; color: #444;">Printed</td>
+            <td style="text-align: right; padding: 2px 0;">${printDateStr}</td>
+          </tr>
         </table>
 
-        <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; text-transform: uppercase;">PREPARATION DISHES:</div>
-        
-        <table class="items-table">
+        ${cleanNote ? `
+        <div style="font-size: 11px; border: 1px dashed #999; padding: 4px 6px; margin-bottom: 6px; font-weight: 700; color: #b45309;">
+          📝 NOTE: ${cleanNote}
+        </div>
+        ` : ''}
+
+        <!-- ═══ DISHES ═══ -->
+        <div style="border-top: 2px dashed #000; border-bottom: 1px dashed #000; padding: 4px 0; margin-bottom: 2px;">
+          <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">🍳 Preparation Dishes</div>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
           ${itemsHtml}
         </table>
 
-        <div style="font-weight: bold; font-size: 12px; border-top: 1px dashed #000; padding: 6px 0; display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span>TOTAL DISHES: ${targetItems.length}</span>
+        <!-- ═══ SUMMARY ═══ -->
+        <div class="summary-bar" style="font-weight: 900; font-size: 13px; border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 6px 0; display: flex; justify-content: space-between;">
+          <span>DISHES: ${targetItems.length}</span>
           <span>TOTAL QTY: ${totalQty}</span>
         </div>
 
-        <div class="footer">
-          *** FASTKIRANA KITCHEN SYSTEM ***<br/>
-          Prompt & Hot Preparation Verified
+        <!-- ═══ FOOTER ═══ -->
+        <div class="footer" style="text-align: center; font-size: 9px; margin-top: 8px; font-weight: 700; color: #555;">
+          *** FASTKIRANA KITCHEN ***<br/>
+          Jaldi Banao • Garam Serve Karo ✓
         </div>
-        <!-- 🛡️ Thermal roll cutter buffer: feeds paper past the cutter blade before cutting -->
+
+        <!-- 🛡️ Thermal roll cutter buffer -->
         <div style="height: 50px; min-height: 50px; width: 100%; display: block; clear: both; page-break-inside: avoid;"></div>
       </body>
     </html>

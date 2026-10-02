@@ -93,51 +93,83 @@ def generate_standard_kot_text(
     notes: Optional[str] = None
 ) -> str:
     ist = timezone(timedelta(hours=5, minutes=30))
-    now_ist_time = datetime.now(ist).strftime("%d-%b-%Y, %I:%M %p")
-    line_len = 39
-    thick = "=" * line_len
+    now_ist_time = datetime.now(ist).strftime("%d-%b, %I:%M %p")
+    L = 39
+    thick = "═" * L
+    thin  = "─" * L
+
+    def center(t: str) -> str:
+        if len(t) >= L:
+            return t
+        p = (L - len(t)) // 2
+        return " " * p + t
+
+    def right_align(left: str, right: str) -> str:
+        gap = max(1, L - len(left) - len(right))
+        return f"{left}{' ' * gap}{right}"
 
     token = order_id_text.strip().lstrip("#")
     mode = (delivery_method or "DELIVERY").strip().upper()
-    left_header = f"#{token} [{mode}]"
-    right_header = now_ist_time
-
+    mode_icon = "PICKUP" if mode in ("SELF_PICKUP", "PICKUP") else "DELIVERY"
     brand_or_shop = shop_name.strip() if shop_name else "FastKirana"
     cust = (customer_name or "Customer").strip()
-    sub_header = f"{brand_or_shop}  • {cust}"
 
     lines = [thick]
-    if len(left_header) + len(right_header) + 1 <= line_len:
-        lines.append(left_header.ljust(line_len - len(right_header)) + right_header)
-    else:
-        lines.append(left_header)
-        lines.append(right_header.rjust(line_len))
-    lines.extend([
-        sub_header,
-        thick,
-    ])
+    lines.append(center("FASTKIRANA"))
+    lines.append(center("KITCHEN ORDER TICKET"))
+    lines.append(thick)
+
+    # Order info
+    lines.append(f"TICKET:  #{token}")
+    lines.append(right_align("Outlet:", f" {brand_or_shop}"))
+    lines.append(right_align("Type:", f" {mode_icon}"))
+    lines.append(right_align("Customer:", f" {cust}"))
+    lines.append(right_align("Time:", f" {now_ist_time}"))
+    lines.append(thin)
+
+    # Order note
+    clean_note = ""
+    if notes and notes.strip():
+        clean_note = notes.replace("✨ Note: ", "").replace("Note: ", "").replace("✨", "").strip()
+    if clean_note:
+        lines.append(f"NOTE: {clean_note}")
+        lines.append(thin)
+
+    # Dishes
+    lines.append("PREPARATION DISHES:")
+    lines.append("")
 
     total_qty = 0
-    for it in (items or []):
+    item_list = items or []
+    for idx, it in enumerate(item_list):
         qty = int(it.get("quantity") or 1)
         total_qty += qty
         name = (it.get("name") or "Item").strip()
         variant = it.get("selectedVariant")
-        var_text = f" ({variant})" if variant else ""
 
-        lines.append(f"[ ]  {qty} x {name}{var_text}")
+        lines.append(f" {qty}x  {name}")
+        if variant and variant.strip():
+            lines.append(f"      > {variant.strip()}")
         item_note = it.get("notes")
-        if item_note:
-            lines.append(f"     -> Note: {item_note.strip()}")
+        if item_note and item_note.strip():
+            lines.append(f"      Note: {item_note.strip()}")
+        if idx < len(item_list) - 1:
+            lines.append(thin)
 
+    # Summary
     lines.append(thick)
-    clean_note = ""
-    if notes and notes.strip():
-        clean_note = notes.replace("✨ Note: ", "").replace("Note: ", "").replace("✨", "").strip()
-    lines.append(f"Note: {clean_note}")
+    dishes_label = f"DISHES: {len(item_list)}"
+    qty_label = f"QTY: {total_qty}"
+    lines.append(right_align(dishes_label, qty_label))
     lines.append(thick)
+
+    # Footer
+    lines.append(center("*** FASTKIRANA KITCHEN ***"))
+    lines.append(center("Jaldi Banao - Garam Serve"))
+
     lines.extend(["\r\n\r\n\r\n"])
     return "\r\n".join(lines)
+
 
 
 @router.post("/kot-broadcast")

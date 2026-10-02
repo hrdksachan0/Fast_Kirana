@@ -198,64 +198,89 @@ function wrapText(text, limit) {
 function printKOT(order, items, user) {
   return new Promise((resolve) => {
     try {
-      const lineLength = LINE_LENGTH || 38;
-      const thickDivider = '='.repeat(lineLength);
-      const thinDivider = '-'.repeat(lineLength);
+      const L = LINE_LENGTH || 38;
+      const thick = String.fromCharCode(9552).repeat(L);  // ═
+      const thin  = String.fromCharCode(9472).repeat(L);  // ─
 
-      const centerText = (text) => {
-        if (text.length >= lineLength) return text;
-        const pad = Math.floor((lineLength - text.length) / 2);
-        return ' '.repeat(pad) + text;
+      const center = (t) => {
+        if (t.length >= L) return t;
+        const p = Math.floor((L - t.length) / 2);
+        return ' '.repeat(p) + t;
       };
-
-      let lines = [];
-      lines.push(thickDivider);
+      const rightAlign = (left, right) => {
+        const gap = Math.max(1, L - left.length - right.length);
+        return `${left}${' '.repeat(gap)}${right}`;
+      };
 
       const orderIdText = order.readableId ? `#${order.readableId}` : `#${order.id.slice(0, 8).toUpperCase()}`;
       const modeText = (order.deliveryMethod || 'DELIVERY').toUpperCase();
-      const leftHeader = `${orderIdText} [${modeText}]`;
-      const dateStr = new Date().toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      }).replace(',', '');
-
-      if ((leftHeader.length + dateStr.length + 1) <= lineLength) {
-        const headerSpacing = Math.max(1, lineLength - leftHeader.length - dateStr.length);
-        lines.push(`${leftHeader}${' '.repeat(headerSpacing)}${dateStr}`);
-      } else {
-        lines.push(leftHeader);
-        const pad = Math.max(0, lineLength - dateStr.length);
-        lines.push(`${' '.repeat(pad)}${dateStr}`);
-      }
-
+      const modeIcon = (modeText === 'SELF_PICKUP' || modeText === 'PICKUP') ? 'PICKUP' : 'DELIVERY';
       const brandOrShop = (order.shopName || order.restaurantName || 'FastKirana').trim();
       const customerName = (user?.name || order.userName || order.customerName || 'Customer').trim();
-      lines.push(`${brandOrShop}  • ${customerName}`);
-      lines.push(thickDivider);
+      const dateStr = new Date().toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit', month: 'short',
+        hour: '2-digit', minute: '2-digit', hour12: true,
+      }).replace(',', '');
+
+      let lines = [];
+
+      // ═══ HEADER ═══
+      lines.push(thick);
+      lines.push(center('FASTKIRANA'));
+      lines.push(center('KITCHEN ORDER TICKET'));
+      lines.push(thick);
+
+      // ═══ ORDER INFO ═══
+      lines.push(`TICKET:  ${orderIdText}`);
+      lines.push(rightAlign('Outlet:', ` ${brandOrShop}`));
+      lines.push(rightAlign('Type:', ` ${modeIcon}`));
+      lines.push(rightAlign('Customer:', ` ${customerName}`));
+      lines.push(rightAlign('Time:', ` ${dateStr}`));
+      lines.push(thin);
+
+      // ═══ ORDER NOTE ═══
+      const cleanNote = (order.notes || '').replace(/✨/g, '').replace(/^Note:\s*/i, '').trim();
+      if (cleanNote) {
+        lines.push(`NOTE: ${cleanNote}`);
+        lines.push(thin);
+      }
+
+      // ═══ DISHES ═══
+      lines.push('PREPARATION DISHES:');
+      lines.push('');
 
       let totalQty = 0;
-      (items || []).forEach((item) => {
+      const itemList = items || [];
+      itemList.forEach((item, idx) => {
         const qty = parseInt(item.quantity || 1, 10);
         totalQty += qty;
-        let itemName = item.name || 'Item';
-        if (item.selectedVariant) {
-          itemName += ` (${item.selectedVariant})`;
+        const name = (item.name || 'Item').trim();
+
+        lines.push(` ${qty}x  ${name}`);
+        if (item.selectedVariant && item.selectedVariant.trim()) {
+          lines.push(`      > ${item.selectedVariant.trim()}`);
         }
-        lines.push(`[ ]  ${qty} x ${itemName}`);
         if (item.notes && item.notes.trim()) {
-          lines.push(`     -> Note: ${item.notes.trim()}`);
+          lines.push(`      Note: ${item.notes.trim()}`);
+        }
+        if (idx < itemList.length - 1) {
+          lines.push(thin);
         }
       });
 
-      lines.push(thickDivider);
-      const cleanNote = (order.notes || '').replace(/✨/g, '').replace(/^Note:\s*/i, '').trim();
-      lines.push(`Note: ${cleanNote}`);
-      lines.push(thickDivider);
+      // ═══ SUMMARY ═══
+      lines.push(thick);
+      const dishesLabel = `DISHES: ${itemList.length}`;
+      const qtyLabel = `QTY: ${totalQty}`;
+      lines.push(rightAlign(dishesLabel, qtyLabel));
+      lines.push(thick);
+
+      // ═══ FOOTER ═══
+      lines.push(center('*** FASTKIRANA KITCHEN ***'));
+      lines.push(center('Jaldi Banao - Garam Serve'));
+
+      // Cutter feed buffer
       lines.push('\r\n\r\n\r\n');
 
       const receiptText = lines.join('\r\n');
@@ -265,7 +290,7 @@ function printKOT(order, items, user) {
 
       fs.writeFileSync(tempFilePath, receiptText, 'utf8');
 
-      const calculatedHeight = Math.max(350, (lines.length * 18) + 160);
+      const calculatedHeight = Math.max(400, (lines.length * 19) + 220);
 
       const psScript = `
 Add-Type -AssemblyName System.Drawing
@@ -301,7 +326,7 @@ $doc.Print()
           playSound('error');
           resolve(false);
         } else {
-          console.log(`[Print Success] 🖨️ KOT printed successfully for Order ${orderIdText}`);
+          console.log(`[Print Success] KOT printed for Order ${orderIdText}`);
           playSound('kot');
           resolve(true);
         }
