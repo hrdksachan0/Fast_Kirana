@@ -198,52 +198,35 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
     Boolean(order.readableId && String(order.readableId).toUpperCase().endsWith('-R')) ||
     (shopType && shopType !== 'GROCERY' && shopType !== 'FastKirana Grocery' && shopType !== 'FastKirana Dark Store')
 
-  // Extract strictly restaurant dishes (omit any grocery items)
+  // Extract strictly restaurant dishes (never drop dishes from restaurant orders)
   let targetItems: any[] = []
 
-  if (Array.isArray(order.restaurantItems) && order.restaurantItems.length > 0) {
-    // 1. Explicit restaurant items array from API/subOrder
-    targetItems = order.restaurantItems
+  if (isExplicitRestaurantOrder && Array.isArray(order.items) && order.items.length > 0) {
+    // 1. Dedicated restaurant order — EVERY item in it belongs to the kitchen!
+    targetItems = order.items
   } else if (Array.isArray(restSub?.items) && restSub.items.length > 0) {
     // 2. Items from the restaurant sub-order
     targetItems = restSub.items
-  } else if (isExplicitRestaurantOrder && Array.isArray(order.items) && order.items.length > 0) {
-    // 3. Dedicated restaurant order — every item in it belongs to the kitchen!
-    targetItems = order.items
+  } else if (Array.isArray(order.restaurantItems) && order.restaurantItems.length > 0) {
+    // 3. Explicit restaurant items array
+    targetItems = order.restaurantItems
   } else if (Array.isArray(order.items) && order.items.length > 0) {
-    // 4. Combined / un-split order where grocery and restaurant items might be mixed together
+    // 4. Combined / un-split order: omit pure packaged grocery items, keep all food dishes
     const pureGroceryCategories = ['personal-care', 'home-cleaning', 'household', 'grocery', 'staples', 'packaged-food']
     const pureGroceryKeywords = [
       'atta', 'raw rice', 'dal packet', 'mustard oil', 'refined oil', 'washing powder',
       'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner',
-      'harpic', 'rin', 'tide', 'biscuit', 'sugar', 'salt', 'spices', 'pepsi', 'coca cola',
-      'sprite', 'thums up', 'frooti', 'maaza', 'limca', 'sting'
+      'harpic', 'rin', 'tide', 'surf'
     ]
 
-    const idFiltered = order.items.filter((it: any) => {
+    targetItems = order.items.filter((it: any) => {
       if (!it) return false
-      return (
-        Boolean(it.restaurantId) ||
-        it.type === 'RESTAURANT' ||
-        it.isRestaurantItem === true ||
-        Boolean(it.product?.restaurantId) ||
-        it.product?.isRestaurantItem === true
-      )
+      const name = (it.name || '').toLowerCase()
+      const slug = (it.categorySlug || it.category?.slug || '').toLowerCase()
+      if (pureGroceryCategories.some((c: string) => slug.includes(c))) return false
+      if (pureGroceryKeywords.some((k: string) => name === k || name.startsWith(k + ' '))) return false
+      return true
     })
-
-    if (idFiltered.length > 0) {
-      targetItems = idFiltered
-    } else {
-      // Exclude pure packaged grocery items, keep all food dishes
-      targetItems = order.items.filter((it: any) => {
-        if (!it) return false
-        const name = (it.name || '').toLowerCase()
-        const slug = (it.categorySlug || it.category?.slug || '').toLowerCase()
-        if (pureGroceryCategories.some((c: string) => slug.includes(c))) return false
-        if (pureGroceryKeywords.some((k: string) => name.includes(k))) return false
-        return true
-      })
-    }
   }
 
   const outletName = restSub?.shopName || order.restaurantName || (order.restaurantId ? order.shopName : null) || shopType

@@ -276,53 +276,46 @@ async def broadcast_kot(
         logger.warning(f"[KOT Broadcast] DB order enrichment note: {e}")
 
     # Strict Restaurant Items Filter:
-    # Under no circumstances should grocery products (atta, dal, oil, soap, etc.) be printed on kitchen KOT!
-    cooked_food_whitelist = [
-        'dosa', 'burger', 'pizza', 'sandwich', 'roll', 'frankie', 'chowmein', 'noodles',
-        'fried rice', 'paneer', 'manchurian', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
-        'pasta', 'thali', 'roti', 'naan', 'gravy', 'curry', 'biryani', 'pav bhaji', 'fries',
-        'momos', 'samosa', 'maggi', 'soup', 'tikka', 'chole', 'bhature', 'kulcha', 'raita',
-        'sweet', 'gulab jamun', 'rasgulla', 'ice cream', 'beverage', 'mocktail', 'combo'
-    ]
-    pure_grocery_keywords = [
-        'atta', 'raw rice', 'dal', 'mustard oil', 'refined oil', 'ghee', 'washing powder',
-        'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner',
-        'harpic', 'vim bar', 'rin', 'tide', 'surf', 'namkeen packet', 'chips packet',
-        'biscuit', 'sugar', 'salt', 'masala packet', 'spices', 'refill', 'packet', 'pouch',
-        'campa', 'pepsi', 'coca cola', 'sprite', 'frooti', 'thums up', 'maaza', 'limca', 'sting',
-        'cold drink'
-    ]
+    # Dedicated restaurant orders must preserve 100% of their dishes!
+    is_explicit_rest = bool(
+        target_restaurant_id or
+        (clean_readable and clean_readable.upper().endswith("-R")) or
+        (target_readable and target_readable.upper().endswith("-R")) or
+        (order_obj and getattr(order_obj, 'orderType', None) == 'RESTAURANT')
+    )
 
     enriched_items = []
-    for it in target_items:
-        it_copy = dict(it)
-        name_lower = (it_copy.get("name") or "").lower().strip()
-        is_rest = bool(
-            it_copy.get("restaurantId") or
-            it_copy.get("isRestaurantItem") is True or
-            it_copy.get("type") == "RESTAURANT" or
-            any(cw in name_lower for cw in cooked_food_whitelist)
-        )
-        is_grocery = any(gw in name_lower for gw in pure_grocery_keywords)
-
-        # Skip grocery items unless explicitly assigned to this restaurant
-        if is_grocery and not it_copy.get("restaurantId"):
-            continue
-
-        if is_rest or not pure_grocery_keywords:
+    if is_explicit_rest and target_items:
+        # Dedicated restaurant order — keep every dish!
+        for it in target_items:
+            it_copy = dict(it)
+            if target_restaurant_id and not it_copy.get("restaurantId"):
+                it_copy["restaurantId"] = target_restaurant_id
+            it_copy["isRestaurantItem"] = True
+            it_copy["type"] = "RESTAURANT"
+            enriched_items.append(it_copy)
+    else:
+        # Mixed/unsplit order: omit pure packaged groceries, keep all food dishes
+        pure_grocery_keywords = [
+            'atta', 'raw rice', 'dal packet', 'mustard oil', 'refined oil', 'washing powder',
+            'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner',
+            'harpic', 'vim bar', 'rin', 'tide', 'surf'
+        ]
+        for it in target_items:
+            it_copy = dict(it)
+            name_lower = (it_copy.get("name") or "").lower().strip()
+            if any(gw in name_lower for gw in pure_grocery_keywords):
+                continue
             if target_restaurant_id and not it_copy.get("restaurantId"):
                 it_copy["restaurantId"] = target_restaurant_id
             it_copy["isRestaurantItem"] = True
             it_copy["type"] = "RESTAURANT"
             enriched_items.append(it_copy)
 
-    # Fallback: if list is empty, take target_items but filter out groceries
-    if not enriched_items:
+    if not enriched_items and target_items:
         for it in target_items:
-            name_lower = (it.get("name") or "").lower().strip()
-            if not any(gw in name_lower for gw in pure_grocery_keywords):
-                it_copy = dict(it, isRestaurantItem=True, type="RESTAURANT", restaurantId=target_restaurant_id)
-                enriched_items.append(it_copy)
+            it_copy = dict(it, isRestaurantItem=True, type="RESTAURANT", restaurantId=target_restaurant_id)
+            enriched_items.append(it_copy)
 
     final_readable = target_readable or clean_readable or clean_id
     if target_restaurant_id and not final_readable.upper().endswith("-R") and not final_readable.upper().endswith("-G"):

@@ -368,9 +368,11 @@ export function OrdersTab({
     // Strategy: Call server-side /api/kot-broadcast first as the single authoritative gateway.
     // This avoids double broadcast on Supabase client and ensures single print execution.
     try {
-      const targetItems = (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
+      const targetItems = (Array.isArray(targetOrder.items) && targetOrder.items.length > 0)
+        ? targetOrder.items
+        : (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
         ? targetOrder.restaurantItems
-        : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || []
+        : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || []
       const customerName = targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer'
 
       const res = await fetch(`${apiUrl()}/api/kot-broadcast`, {
@@ -419,9 +421,11 @@ export function OrdersTab({
             readableId: targetOrder.readableId,
             restaurantId: targetOrder.restaurantId || null,
             customerName: targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer',
-            items: (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
+            items: (Array.isArray(targetOrder.items) && targetOrder.items.length > 0)
+              ? targetOrder.items
+              : (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
               ? targetOrder.restaurantItems
-              : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || [],
+              : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || [],
             deliveryMethod: targetOrder.deliveryMethod || 'DELIVERY',
             notes: targetOrder.notes || null,
             shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
@@ -454,9 +458,11 @@ export function OrdersTab({
             })
           })
 
-          const targetItems = (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
+          const targetItems = (Array.isArray(targetOrder.items) && targetOrder.items.length > 0)
+            ? targetOrder.items
+            : (targetOrder.restaurantItems && targetOrder.restaurantItems.length > 0)
             ? targetOrder.restaurantItems
-            : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || []
+            : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || []
           const customerName = targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer'
 
           await channel.send({
