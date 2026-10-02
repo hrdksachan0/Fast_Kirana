@@ -204,7 +204,86 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { userId, password } = body
+    const { userId, password, action, name, phone, email, role, assignedStoreId } = body
+
+    if (action === 'create' || (!userId && phone)) {
+      if (!phone || !password) {
+        return NextResponse.json({ error: 'Phone and password are required' }, { status: 400 })
+      }
+      if (password.length < 6) {
+        return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
+      }
+
+      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://fastkiran-backend-production.up.railway.app'
+      try {
+        const authHeader = request.headers.get('authorization')
+        const cookieHeader = request.headers.get('cookie')
+        const proxyHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'x-user-role': 'ADMIN',
+          'x-user-phone': session?.user?.phone || '9170942500',
+          'x-user-email': session?.user?.email || 'admin@fastkirana.com',
+        }
+        if (authHeader) proxyHeaders['Authorization'] = authHeader
+        if (cookieHeader) proxyHeaders['Cookie'] = cookieHeader
+
+        const fastApiResponse = await fetch(`${fastApiUrl}/api/admin/users`, {
+          method: 'POST',
+          headers: proxyHeaders,
+          body: JSON.stringify({ action: 'create', ...body }),
+          signal: AbortSignal.timeout(6000),
+        })
+        if (fastApiResponse.ok) {
+          const data = await fastApiResponse.json()
+          return NextResponse.json(data)
+        }
+      } catch (proxyErr) {
+        console.warn('[AdminUsersProxy] FastAPI create user failed, using local DB:', proxyErr)
+      }
+
+      const cleanPhone = getLast10Digits(phone)
+      const passwordHash = await bcrypt.hash(password, 12)
+      const userRole = (role && ['DELIVERY', 'PICKER', 'CHEF', 'ADMIN', 'USER'].includes(role)) ? role : 'DELIVERY'
+      const storeId = assignedStoreId || null
+      const userName = name?.trim() || `Rider ${cleanPhone.slice(-4)}`
+      const userEmail = email?.trim()?.toLowerCase() || `${cleanPhone}@users.fastkirana.in`
+
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: cleanPhone },
+            { phone: `+91${cleanPhone}` },
+            { phone: `91${cleanPhone}` },
+            { email: userEmail }
+          ]
+        }
+      })
+
+      if (existingUser) {
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            name: userName,
+            role: userRole as any,
+            assignedStoreId: storeId,
+            passwordHash,
+          }
+        })
+        return NextResponse.json({ success: true, message: 'Existing account updated to staff/rider successfully!' })
+      } else {
+        await prisma.user.create({
+          data: {
+            name: userName,
+            phone: cleanPhone,
+            email: userEmail,
+            role: userRole as any,
+            assignedStoreId: storeId,
+            passwordHash,
+          }
+        })
+        return NextResponse.json({ success: true, message: 'New staff/rider created successfully!' })
+      }
+    }
 
     if (!userId || !password) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })

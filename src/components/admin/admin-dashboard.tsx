@@ -1153,6 +1153,7 @@ export function AdminDashboard({
               onRequestBlock={userHook.setBlockingUser}
               renderPagination={renderPagination}
               stores={storesList}
+              handleCreateStaff={userHook.handleCreateStaff}
             />
           )}
 

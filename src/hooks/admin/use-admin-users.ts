@@ -281,6 +281,41 @@ export function useAdminUsers({
     }
   }
 
+  const handleCreateStaff = async (staffData: {
+    name: string
+    phone: string
+    password: string
+    role: string
+    assignedStoreId?: string
+  }): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          action: 'create',
+          name: staffData.name,
+          phone: staffData.phone,
+          password: staffData.password,
+          role: staffData.role,
+          assignedStoreId: staffData.assignedStoreId || null,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(data.message || 'Staff / Rider created successfully!')
+        await fetchUsers()
+        return true
+      } else {
+        toast.error(data.error || data.detail || 'Failed to create staff/rider')
+        return false
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error creating staff')
+      return false
+    }
+  }
+
   return {
     users,
     setUsers,
@@ -319,5 +354,6 @@ export function useAdminUsers({
     handleUserStoreChange,
     handleSetPassword,
     handleUserPhoneSave,
+    handleCreateStaff,
   }
 }

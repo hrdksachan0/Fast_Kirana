@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Download, Loader2, Check, X } from 'lucide-react'
+import { Search, Download, Loader2, Check, X, UserPlus } from 'lucide-react'
 import { User } from '@prisma/client'
 import { formatDate } from '@/lib/date-helpers'
 import { formatDisplayEmail } from '@/lib/utils'
@@ -43,6 +43,7 @@ interface UsersTabProps {
   onRequestBlock: (user: UserWithCount) => void
   renderPagination: (page: number, total: number, perPage: number, onChange: (p: number) => void) => React.ReactNode
   stores?: Array<{ id: string; name: string }>
+  handleCreateStaff?: (staffData: { name: string; phone: string; password: string; role: string; assignedStoreId?: string }) => Promise<boolean>
 }
 
 export function UsersTab({
@@ -76,8 +77,59 @@ export function UsersTab({
   handleToggleBlock,
   onRequestBlock,
   renderPagination,
-  stores = []
+  stores = [],
+  handleCreateStaff,
 }: UsersTabProps) {
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false)
+  const [newStaffName, setNewStaffName] = useState('')
+  const [newStaffPhone, setNewStaffPhone] = useState('')
+  const [newStaffPassword, setNewStaffPassword] = useState('')
+  const [newStaffRole, setNewStaffRole] = useState('DELIVERY')
+  const [newStaffStoreId, setNewStaffStoreId] = useState('')
+  const [isSubmittingStaff, setIsSubmittingStaff] = useState(false)
+  const [staffError, setStaffError] = useState<string | null>(null)
+
+  const handleModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setStaffError(null)
+
+    const cleanPhone = newStaffPhone.replace(/\D/g, '')
+    if (cleanPhone.length !== 10) {
+      setStaffError('Please enter a valid 10-digit mobile number')
+      return
+    }
+    if (!newStaffPassword || newStaffPassword.length < 6) {
+      setStaffError('Password must be at least 6 characters')
+      return
+    }
+
+    if (!handleCreateStaff) {
+      setStaffError('Create staff handler not available')
+      return
+    }
+
+    setIsSubmittingStaff(true)
+    try {
+      const ok = await handleCreateStaff({
+        name: newStaffName.trim(),
+        phone: cleanPhone,
+        password: newStaffPassword.trim(),
+        role: newStaffRole,
+        assignedStoreId: newStaffStoreId || undefined,
+      })
+      if (ok) {
+        setIsAddStaffOpen(false)
+        setNewStaffName('')
+        setNewStaffPhone('')
+        setNewStaffPassword('')
+        setNewStaffRole('DELIVERY')
+        setNewStaffStoreId('')
+      }
+    } finally {
+      setIsSubmittingStaff(false)
+    }
+  }
+
   return (
     <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden animate-fade-in">
       {/* Header with export and filters */}
@@ -87,14 +139,26 @@ export function UsersTab({
             <h3 className="font-extrabold text-text-primary text-base">Customer Accounts</h3>
             <p className="text-[10px] text-text-secondary mt-0.5">Access user profiles and check transaction frequencies.</p>
           </div>
-          <button
-            onClick={handleExportCustomersCsv}
-            disabled={isExportingUsers}
-            className="ml-4 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50 shrink-0"
-          >
-            <Download className="h-3.5 w-3.5" />
-            {isExportingUsers ? 'Exporting...' : '📥 Export Customers'}
-          </button>
+          <div className="ml-4 flex items-center gap-2">
+            <button
+              onClick={() => {
+                setStaffError(null)
+                setIsAddStaffOpen(true)
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              ➕ Add Staff / Rider
+            </button>
+            <button
+              onClick={handleExportCustomersCsv}
+              disabled={isExportingUsers}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50 shrink-0"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {isExportingUsers ? 'Exporting...' : '📥 Export Customers'}
+            </button>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -353,6 +417,150 @@ export function UsersTab({
 
       {/* Pagination */}
       {renderPagination(userPage, userTotal, 10, setUserPage)}
+
+      {/* Add Staff / Rider Modal */}
+      {isAddStaffOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative animate-scale-up">
+            <button
+              onClick={() => setIsAddStaffOpen(false)}
+              className="absolute top-4 right-4 text-text-muted hover:text-text-primary p-1 rounded-lg hover:bg-muted/40 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <UserPlus className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-text-primary">Add Staff / Delivery Rider</h3>
+                <p className="text-[11px] text-text-secondary">Create a new partner account or promote existing number.</p>
+              </div>
+            </div>
+
+            {staffError && (
+              <div className="mb-4 p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 text-xs font-semibold">
+                ⚠️ {staffError}
+              </div>
+            )}
+
+            <form onSubmit={handleModalSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-[11px] font-bold text-text-secondary mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ramesh Kumar"
+                  value={newStaffName}
+                  onChange={(e) => setNewStaffName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-text-secondary mb-1">
+                  Mobile Number (10 Digits)
+                </label>
+                <div className="flex items-center">
+                  <span className="px-3 py-2 text-xs bg-muted/40 border border-r-0 border-border rounded-l-xl font-bold text-text-muted">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    placeholder="9876543210"
+                    value={newStaffPhone}
+                    onChange={(e) => setNewStaffPhone(e.target.value.replace(/\D/g, ''))}
+                    className="w-full px-3 py-2 text-xs rounded-r-xl border border-border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-text-secondary mb-1">
+                    Role
+                  </label>
+                  <select
+                    value={newStaffRole}
+                    onChange={(e) => setNewStaffRole(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-primary focus:outline-none cursor-pointer"
+                  >
+                    <option value="DELIVERY">🚴 Delivery Partner</option>
+                    <option value="PICKER">📦 Grocery Picker</option>
+                    <option value="CHEF">🍳 Cafe Chef</option>
+                    <option value="ADMIN">🛡️ Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-text-secondary mb-1">
+                    Store Hub
+                  </label>
+                  <select
+                    value={newStaffStoreId}
+                    onChange={(e) => setNewStaffStoreId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-card font-bold text-text-primary focus:outline-none cursor-pointer"
+                  >
+                    <option value="">No Hub (All Stores)</option>
+                    {stores.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        🏢 {s.name} Hub
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-text-secondary mb-1">
+                  Login Password (Min 6 Characters)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. rider123"
+                  value={newStaffPassword}
+                  onChange={(e) => setNewStaffPassword(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                  required
+                  minLength={6}
+                />
+                <p className="text-[10px] text-text-muted mt-1">
+                  Rider will use this phone number & password to log in to the Delivery app.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStaffOpen(false)}
+                  className="px-4 py-2 text-xs font-bold text-text-secondary hover:text-text-primary rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingStaff}
+                  className="px-5 py-2 text-xs font-black bg-primary hover:bg-primary/90 text-white rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {isSubmittingStaff ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Account'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

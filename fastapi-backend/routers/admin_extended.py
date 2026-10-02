@@ -991,8 +991,55 @@ async def admin_set_worker_password(
     H20 FIX: Admin sets/updates worker password.
     Syncs across all linked accounts sharing phone number.
     """
-    user_id = data.get("userId")
-    password = data.get("password")
+    action = data.get("action")
+    if action == "create" or data.get("isCreate") or (not user_id and data.get("phone")):
+        phone = data.get("phone")
+        password = data.get("password")
+        if not phone or not password:
+            raise HTTPException(status_code=400, detail="Phone and password are required")
+        if len(str(password)) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+        clean_phone = re.sub(r"\D", "", str(phone))[-10:]
+        from routers.auth import hash_password
+        pw_hash = hash_password(str(password))
+
+        role_str = str(data.get("role") or "DELIVERY").upper().strip()
+        assigned_store_id = data.get("assignedStoreId") or None
+        name = (data.get("name") or "").strip() or f"Rider {clean_phone[-4:]}"
+        email = (data.get("email") or "").strip().lower() or f"{clean_phone}@users.fastkirana.in"
+
+        patterns = [clean_phone, f"+91{clean_phone}", f"91{clean_phone}", email]
+        stmt = select(User).where(or_(User.phone.in_(patterns), User.email.in_(patterns)))
+        res = await db.execute(stmt)
+        existing_user = res.scalars().first()
+
+        if existing_user:
+            existing_user.name = name
+            existing_user.role = Role(role_str)
+            existing_user.assignedStoreId = assigned_store_id
+            existing_user.passwordHash = pw_hash
+            await db.commit()
+            await db.refresh(existing_user)
+            return {"success": True, "message": "User updated as staff/rider successfully", "userId": existing_user.id}
+        else:
+            import uuid
+            new_id = f"c_{uuid.uuid4().hex[:24]}"
+            new_user = User(
+                id=new_id,
+                name=name,
+                phone=clean_phone,
+                email=email,
+                role=Role(role_str),
+                assignedStoreId=assigned_store_id,
+                passwordHash=pw_hash,
+                createdAt=datetime.utcnow(),
+                updatedAt=datetime.utcnow()
+            )
+            db.add(new_user)
+            await db.commit()
+            await db.refresh(new_user)
+            return {"success": True, "message": "Staff/Rider created successfully", "userId": new_user.id}
 
     if not user_id or not password:
         raise HTTPException(status_code=400, detail="userId and password are required")

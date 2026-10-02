@@ -461,6 +461,7 @@ async def direct_login(
         "name": user.name,
         "role": role_val,
         "phone": user.phone,
+        "assignedStoreId": user.assignedStoreId,
         "assignedRestaurantId": user.assignedRestaurantId,
     })
 
@@ -470,9 +471,20 @@ async def direct_login(
         name=user.name,
         role=role_val,
         phone=user.phone,
+        assignedStoreId=user.assignedStoreId,
         assignedRestaurantId=user.assignedRestaurantId,
         token=token,
         needsProfileSetup=not user.name or not user.phone,
+        user={
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": role_val,
+            "phone": user.phone,
+            "assignedStoreId": user.assignedStoreId,
+            "assignedRestaurantId": user.assignedRestaurantId,
+            "isBlocked": user.isBlocked,
+        }
     )
 
 
@@ -536,6 +548,7 @@ async def login(
         "name": user.name,
         "role": role_val,
         "phone": user.phone,
+        "assignedStoreId": user.assignedStoreId,
         "assignedRestaurantId": user.assignedRestaurantId,
     })
 
@@ -545,9 +558,20 @@ async def login(
         name=user.name,
         role=role_val,
         phone=user.phone,
+        assignedStoreId=user.assignedStoreId,
         assignedRestaurantId=user.assignedRestaurantId,
         token=token,
         needsProfileSetup=not user.name or not user.phone,
+        user={
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": role_val,
+            "phone": user.phone,
+            "assignedStoreId": user.assignedStoreId,
+            "assignedRestaurantId": user.assignedRestaurantId,
+            "isBlocked": user.isBlocked,
+        }
     )
 
 
@@ -572,8 +596,19 @@ async def get_me(
         name=user.name,
         role=role_val,
         phone=user.phone,
+        assignedStoreId=user.assignedStoreId,
         assignedRestaurantId=user.assignedRestaurantId,
         needsProfileSetup=not user.name or not user.phone,
+        user={
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": role_val,
+            "phone": user.phone,
+            "assignedStoreId": user.assignedStoreId,
+            "assignedRestaurantId": user.assignedRestaurantId,
+            "isBlocked": user.isBlocked,
+        }
     )
 
 
@@ -1015,6 +1050,7 @@ async def update_profile(
         "name": user.name,
         "role": role_val,
         "phone": user.phone,
+        "assignedStoreId": user.assignedStoreId,
         "assignedRestaurantId": user.assignedRestaurantId,
     })
 
@@ -1024,9 +1060,20 @@ async def update_profile(
         name=user.name,
         role=role_val,
         phone=user.phone,
+        assignedStoreId=user.assignedStoreId,
         assignedRestaurantId=user.assignedRestaurantId,
         token=token,
         needsProfileSetup=not user.name or not user.phone,
+        user={
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": role_val,
+            "phone": user.phone,
+            "assignedStoreId": user.assignedStoreId,
+            "assignedRestaurantId": user.assignedRestaurantId,
+            "isBlocked": user.isBlocked,
+        }
     )
 
 
@@ -1123,6 +1170,7 @@ async def google_auth(
         "name": user.name,
         "role": role_val,
         "phone": user.phone,
+        "assignedStoreId": user.assignedStoreId,
         "assignedRestaurantId": user.assignedRestaurantId,
     })
 
@@ -1132,9 +1180,20 @@ async def google_auth(
         name=user.name,
         role=role_val,
         phone=user.phone,
+        assignedStoreId=user.assignedStoreId,
         assignedRestaurantId=user.assignedRestaurantId,
         token=token,
         needsProfileSetup=not user.name or not user.phone,
+        user={
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": role_val,
+            "phone": user.phone,
+            "assignedStoreId": user.assignedStoreId,
+            "assignedRestaurantId": user.assignedRestaurantId,
+            "isBlocked": user.isBlocked,
+        }
     )
 
 
@@ -1159,8 +1218,10 @@ async def get_session(authorization: Optional[str] = Header(None)):
         name=user_info.get("name"),
         role=user_info.get("role", "USER"),
         phone=user_info.get("phone"),
+        assignedStoreId=user_info.get("assignedStoreId"),
         assignedRestaurantId=user_info.get("assignedRestaurantId"),
         needsProfileSetup=not user_info.get("name") or not user_info.get("phone"),
+        user=user_info,
     )
 
 
