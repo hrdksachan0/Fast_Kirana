@@ -145,30 +145,6 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                               ),
                               const SizedBox(width: 3),
                               const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppDesignSystem.textPrimary),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.primaryGreen.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.bolt_rounded, size: 11, color: AppDesignSystem.primaryGreen),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      '10-15 MINS',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: Responsive.scaledFontSize(context, 8.5),
-                                        fontWeight: FontWeight.w800,
-                                        color: AppDesignSystem.primaryGreen,
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                             ],
                           ),
                         ],
