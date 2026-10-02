@@ -668,12 +668,14 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
     if (!context.mounted) return;
     if (choice == 'console') {
       await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(false);
+      if (!context.mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         FadeSlideRoute(page: consolePage),
         (route) => false,
       );
     } else {
       await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(true);
+      if (!context.mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/location',
         (route) => false,
