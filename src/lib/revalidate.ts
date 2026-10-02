@@ -37,9 +37,7 @@ export function revalidateStorefront(
 export function revalidateCategory(categorySlug: string) {
   try {
     revalidateTag('categories', 'max')
-    revalidateTag('products', 'max')
-    revalidatePath(`/category/${categorySlug}`)
-    revalidatePath('/category/[slug]', 'page')
+    revalidatePath(`/category/${categorySlug}`, 'page')
   } catch (err) {
     console.error(`Failed to revalidate category ${categorySlug}:`, err)
   }
@@ -68,20 +66,25 @@ export function revalidateSettings() {
   }
 }
 
+let lastRevalidateAllTime = 0
+
 export function revalidateAll() {
+  // Debounce global revalidation to at most once per 60 seconds
+  const now = Date.now()
+  if (now - lastRevalidateAllTime < 60000) {
+    return
+  }
+  lastRevalidateAllTime = now
+
   try {
     revalidateTag('products', 'max')
     revalidateTag('categories', 'max')
-    revalidateTag('restaurants', 'max')
-    revalidateTag('trending', 'max')
-    revalidateTag('flash-deals', 'max')
-    revalidateTag('best-sellers', 'max')
     revalidateTag('settings', 'max')
 
-    revalidatePath('/', 'layout')
-    revalidatePath('/cafe')
-    revalidatePath('/food')
-    revalidatePath('/category/[slug]', 'page')
+    // CRITICAL: Revalidate page ONLY, NEVER 'layout' (layout forces full-site rebuild causing 1M+ ISR writes)
+    revalidatePath('/', 'page')
+    revalidatePath('/cafe', 'page')
+    revalidatePath('/food', 'page')
   } catch (err) {
     console.error('Failed to trigger full revalidation:', err)
   }

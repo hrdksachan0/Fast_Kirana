@@ -119,14 +119,6 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/cafe/:path*`,
       },
       {
-        source: '/api/cart/:path*',
-        destination: `${apiDest}/api/cart/:path*`,
-      },
-      {
-        source: '/api/cart',
-        destination: `${apiDest}/api/cart`,
-      },
-      {
         source: '/api/coupons/:path*',
         destination: `${apiDest}/api/coupons/:path*`,
       },
@@ -177,14 +169,6 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/banners`,
       },
       {
-        source: '/api/wishlist/:path*',
-        destination: `${apiDest}/api/wishlist/:path*`,
-      },
-      {
-        source: '/api/wishlist',
-        destination: `${apiDest}/api/wishlist`,
-      },
-      {
         source: '/api/vendors/:path*',
         destination: `${apiDest}/api/vendors/:path*`,
       },
@@ -195,14 +179,6 @@ const nextConfig: NextConfig = {
       {
         source: '/api/delivery/:path*',
         destination: `${apiDest}/api/delivery/:path*`,
-      },
-      {
-        source: '/api/addresses/:path*',
-        destination: `${apiDest}/api/addresses/:path*`,
-      },
-      {
-        source: '/api/addresses',
-        destination: `${apiDest}/api/addresses`,
       },
       {
         source: '/api/profile/:path*',
@@ -382,14 +358,6 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/search`,
       },
       {
-        source: '/api/upload/:path*',
-        destination: `${apiDest}/api/upload/:path*`,
-      },
-      {
-        source: '/api/upload',
-        destination: `${apiDest}/api/upload`,
-      },
-      {
         source: '/api/push/:path*',
         destination: `${apiDest}/api/push/:path*`,
       },
@@ -486,6 +454,55 @@ const nextConfig: NextConfig = {
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET,DELETE,PATCH,POST,PUT,OPTIONS" },
           { key: "Access-Control-Allow-Headers", value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" },
+        ]
+      },
+      // Vercel Edge CDN Caching for Public Catalog APIs (Eliminates Fast Origin Transfer)
+      {
+        source: "/api/products",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=120, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=120, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=120, stale-while-revalidate=86400" },
+        ]
+      },
+      {
+        source: "/api/categories",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
+        ]
+      },
+      {
+        source: "/api/categories/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
+        ]
+      },
+      {
+        source: "/api/banners",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+        ]
+      },
+      {
+        source: "/api/restaurants",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=180, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=180, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=180, stale-while-revalidate=86400" },
+        ]
+      },
+      {
+        source: "/api/settings",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
         ]
       },
       {
