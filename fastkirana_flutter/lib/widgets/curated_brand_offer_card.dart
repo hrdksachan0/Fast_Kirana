@@ -267,13 +267,13 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
     return ClipRRect(
       borderRadius: BorderRadius.circular(br),
       child: Container(
-        color: widget.backgroundColor ?? const Color(0xFF141414),
+        color: widget.backgroundColor ?? Colors.white,
         child: SizedBox.expand(
           child: CardMediaWidget(
             imageUrl: widget.imageUrl,
             videoUrl: widget.videoUrl,
             imageAsset: widget.imageAsset,
-            fit: BoxFit.contain,
+            fit: BoxFit.cover,
             borderRadius: br,
             showLiveBadge: false, // Pure photo/video: NO BADGES, NO TEXT
           ),

@@ -168,9 +168,11 @@ class DynamicHeroBannerCarousel extends ConsumerWidget {
         }
 
         final screenWidth = MediaQuery.of(context).size.width;
-        // Calibrated hero banner height (195px) ensuring categories and products remain visible above the fold
-        const double cardHeight = 195.0;
-        final double cardWidth = (screenWidth * 0.88).clamp(280.0, 420.0);
+        // Hero banner dimensions:
+        // Height (360px) and calibrated width (78% of screen) showcase vibrant banners
+        // with next-card peeking and zero letterbox bars.
+        const double cardHeight = 360.0;
+        final double cardWidth = (screenWidth * 0.78).clamp(260.0, 340.0);
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),

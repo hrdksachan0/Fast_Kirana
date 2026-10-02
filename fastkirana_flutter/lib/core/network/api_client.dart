@@ -16,8 +16,10 @@ final dioProvider = Provider<Dio>((ref) {
     sendTimeout: const Duration(seconds: 20),
     headers: {
       'Content-Type': 'application/json',
-      'Connection': 'keep-alive',
-      'Accept-Encoding': 'gzip, deflate, br',
+      if (!kIsWeb) ...{
+        'Connection': 'keep-alive',
+        'Accept-Encoding': 'gzip, deflate, br',
+      },
     },
   ));
 

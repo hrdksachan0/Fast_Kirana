@@ -433,19 +433,27 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
             if (!isStoreOpen)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
                 color: const Color(0xFFDC2626),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 16),
+                    const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 15),
                     const SizedBox(width: 6),
-                    Text(
-                      'Store is CLOSED. Customers will see Store Closed banner.',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11.5),
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Store is CLOSED • Customers see Store Closed banner',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ],

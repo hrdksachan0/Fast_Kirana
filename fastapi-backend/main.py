@@ -120,9 +120,11 @@ if _env_domains:
 if settings.APP_ENV != "production":
     _cors_origins.extend([
         "http://localhost:3000",
+        "http://localhost:5000",
         "http://localhost:8000",
         "http://localhost:5173",
         "http://127.0.0.1:3000",
+        "http://127.0.0.1:5000",
     ])
 
 _cors_allow_all = os.getenv("CORS_ALLOW_ALL", "false").lower() == "true"
