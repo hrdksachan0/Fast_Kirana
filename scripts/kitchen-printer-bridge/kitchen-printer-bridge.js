@@ -248,8 +248,8 @@ function printKOT(order, items, user) {
       lines.push(center('* FASTKIRANA KITCHEN *'));
       lines.push(center(`Verify ${itemList.length} items packed`));
 
-      // Cutter feed buffer
-      lines.push('\r\n\r\n\r\n');
+      // Cutter feed buffer: 5 blank lines to advance receipt past cutter blade
+      lines.push('\r\n\r\n\r\n\r\n\r\n');
 
       const receiptText = lines.join('\r\n');
       const uniqueSuffix = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
@@ -257,8 +257,6 @@ function printKOT(order, items, user) {
       const psScriptPath = path.join(__dirname, `print_temp_${uniqueSuffix}.ps1`).replace(/\\/g, '/');
 
       fs.writeFileSync(tempFilePath, receiptText, 'utf8');
-
-      const calculatedHeight = Math.max(400, (lines.length * 19) + 220);
 
       const psScript = `
 Add-Type -AssemblyName System.Drawing
@@ -270,14 +268,26 @@ $doc.DefaultPageSettings.Margins.Right = 0
 $doc.DefaultPageSettings.Margins.Top = 0
 $doc.DefaultPageSettings.Margins.Bottom = 0
 
-$paperSize = New-Object System.Drawing.Printing.PaperSize("CustomKOT", 312, ${calculatedHeight})
+$text = Get-Content -Path "${tempFilePath}" -Raw -Encoding UTF8
+$font = New-Object System.Drawing.Font("Consolas", 10)
+
+# Accurately measure exact text dimensions with GDI+
+$bmp = New-Object System.Drawing.Bitmap(1, 1)
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$layoutSize = New-Object System.Drawing.SizeF(300, 25000)
+$measured = $g.MeasureString($text, $font, $layoutSize)
+$g.Dispose()
+$bmp.Dispose()
+
+# Convert measured height to hundredths of an inch with safety feed margin (never clip even for long orders)
+$neededHeight = [Math]::Max(600, [int]($measured.Height + 350))
+
+$paperSize = New-Object System.Drawing.Printing.PaperSize("CustomKOT", 312, $neededHeight)
 $doc.DefaultPageSettings.PaperSize = $paperSize
 
 $doc.add_PrintPage({
   param($sender, $e)
-  $font = New-Object System.Drawing.Font("Consolas", 10)
   $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Black)
-  $text = Get-Content -Path "${tempFilePath}" -Raw -Encoding UTF8
   $e.Graphics.DrawString($text, $font, $brush, 0, 0)
 })
 $doc.Print()
@@ -441,37 +451,33 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
         } catch (_) {}
       }
 
-      let targetItems = items || [];
-      const idFiltered = targetItems.filter((it) => {
-        return Boolean(it.restaurantId) || it.type === 'RESTAURANT' || it.isRestaurantItem === true || Boolean(it.product?.restaurantId);
-      });
+      const isExplicitRestaurantOrder = Boolean(
+        order.restaurantId ||
+        broadcastPayload.restaurantId ||
+        order.orderType === 'RESTAURANT' ||
+        (order.readableId && String(order.readableId).toUpperCase().endsWith('-R')) ||
+        (order.shopName && !String(order.shopName).toLowerCase().includes('dark store') && !String(order.shopName).toLowerCase().includes('grocery'))
+      );
 
-      if (idFiltered.length > 0) {
-        targetItems = idFiltered;
-      } else if (order.restaurantId || broadcastPayload.restaurantId || order.shopName || broadcastPayload.shopName) {
-        targetItems = items || [];
-      } else {
-        const cookedFoodWhitelists = [
-          'dosa', 'burger', 'pizza', 'sandwich', 'roll', 'frankie', 'chowmein', 'noodles',
-          'fried rice', 'paneer', 'manchurian', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
-          'pasta', 'thali', 'roti', 'naan', 'gravy', 'curry', 'biryani', 'pav bhaji', 'fries',
-          'momos', 'samosa', 'maggi', 'soup',
-        ];
+      let targetItems = [];
+      if (isExplicitRestaurantOrder && Array.isArray(items) && items.length > 0) {
+        // Dedicated restaurant order — EVERY dish in it belongs to the kitchen! Never drop any item!
+        targetItems = items;
+      } else if (Array.isArray(items) && items.length > 0) {
+        // Mixed/unsplit order: omit pure packaged grocery items, keep all food dishes
         const pureGroceryKeywords = [
-          'atta', 'raw rice', 'dal', 'mustard oil', 'refined oil', 'ghee', 'washing powder',
+          'atta', 'raw rice', 'dal packet', 'mustard oil', 'refined oil', 'washing powder',
           'soap', 'shampoo', 'toothpaste', 'brush', 'detergent', 'surf excel', 'toilet cleaner',
-          'harpic', 'vim bar', 'rin', 'tide', 'surf', 'namkeen packet', 'chips packet',
+          'harpic', 'vim bar', 'rin', 'tide', 'surf'
         ];
 
-        const filteredRestaurantItems = targetItems.filter((it) => {
+        const nonGrocery = items.filter((it) => {
+          if (!it) return false;
           const name = (it.name || '').toLowerCase();
-          if (cookedFoodWhitelists.some((cw) => name.includes(cw))) return true;
           return !pureGroceryKeywords.some((k) => name === k || name.startsWith(k + ' '));
         });
 
-        if (filteredRestaurantItems.length > 0) {
-          targetItems = filteredRestaurantItems;
-        }
+        targetItems = nonGrocery.length > 0 ? nonGrocery : items;
       }
 
       const printSuccess = await printKOT(order, targetItems, user);

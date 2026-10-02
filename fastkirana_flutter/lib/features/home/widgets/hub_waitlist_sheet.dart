@@ -111,9 +111,8 @@ class _HubWaitlistSheetState extends ConsumerState<HubWaitlistSheet> {
       }
     } catch (e) {
       if (mounted) {
-        // Fallback optimistic success to preserve delightful user experience even offline
         setState(() {
-          _isSuccess = true;
+          _errorMessage = 'Could not join waitlist. Please check your connection and try again.';
           _isLoading = false;
         });
       }

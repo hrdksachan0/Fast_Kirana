@@ -774,20 +774,6 @@ class ProductRepository {
       }
     } catch (e, st) { LoggerService.error('ProductRepository: categories fallback failed', e, st); }
 
-    final fallbacks = [
-      const Category(id: 'CAT-101', name: 'Fruits & Vegetables', slug: 'fruits-vegetables', imageUrl: '/fruits_vegetables_category.png', sortOrder: 1),
-      const Category(id: 'CAT-116', name: 'Dairy Products', slug: 'dairy-products', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789230143014-0cjv7m.webp', sortOrder: 0),
-      const Category(id: 'CAT-113', name: 'Kitchen & Ration', slug: 'kitchen-ration', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789047720250-xu6kpy.webp', sortOrder: 2),
-      const Category(id: 'CAT-104', name: 'Packaged Items', slug: 'packaged-items', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/categories/CAT-104.webp', sortOrder: 3),
-      const Category(id: 'SUB-115-01', name: 'Cookies & Namkeen', slug: 'cookies-namkeen', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789579040785-w7gcgz.jpg', sortOrder: 3),
-      const Category(id: 'CAT-114', name: 'Dry Fruits & Super Foods', slug: 'dry-fruits-super-foods', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789067277061-gfywnh.jpg', sortOrder: 4),
-      const Category(id: 'CAT-115', name: 'Cakes & Chocolates', slug: 'cakes-chocolates', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789580069746-5jc34m.webp', sortOrder: 5),
-      const Category(id: 'CAT-108', name: 'Beverages & Drinks', slug: 'beverages', imageUrl: '/beverages_category.png', sortOrder: 6),
-      const Category(id: 'CAT-105', name: 'Ice Cream & Desserts', slug: 'ice-cream', imageUrl: '/ice_cream_category.png', sortOrder: 7),
-      const Category(id: 'CAT-109', name: 'Personal Care & Hygiene', slug: 'personal-care', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789065601003-5xq1gj.jpg', sortOrder: 8),
-      const Category(id: 'CAT-107', name: 'Household Essentials', slug: 'household-essentials', imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/categories/CAT-107.webp', sortOrder: 9),
-    ];
-    _cachedCategories = fallbacks;
-    return fallbacks;
+    return [];
   }
 }

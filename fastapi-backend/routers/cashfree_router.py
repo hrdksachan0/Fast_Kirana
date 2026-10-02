@@ -1,4 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request, Response, BackgroundTasks
+import asyncio
+from datetime import datetime, timedelta
+import uuid
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -10,11 +14,13 @@ import logging
 import os
 import re
 import time
-from datetime import datetime
 
 from config import settings
 from database import get_db
-from models import Order, User, Address, OrderStatus, PaymentStatus, PaymentMethod
+from models import (
+    Order, User, Address, OrderStatus, PaymentStatus, PaymentMethod,
+    OrderItem, OrderType, Cart, CartItem, Product, Restaurant
+)
 from utils.firebase import send_fcm_topic_notification
 
 logger = logging.getLogger(__name__)
@@ -45,6 +51,11 @@ class CashfreeCreateOrderRequest(BaseModel):
     customerEmail: Optional[str] = None
     customerName: Optional[str] = None
     note: Optional[str] = "FastKirana Quick Commerce Order"
+    userId: Optional[str] = None
+    addressId: Optional[str] = None
+    items: Optional[List[Dict[str, Any]]] = None
+    cartPayload: Optional[Dict[str, Any]] = None
+    deliveryMethod: Optional[str] = None
 
 
 class CashfreeVerifyRequest(BaseModel):
@@ -196,6 +207,27 @@ async def create_cashfree_order(
                 status_code=response.status_code,
                 detail=f"Cashfree order creation failed: {error_msg}"
             )
+
+        # Cache pending order intent so webhook can auto-recover if client drops
+        try:
+            from utils.cache import set_cache
+            pending_payload = {
+                "orderId": data.get("order_id") or sanitized_order_id,
+                "amount": float(data.get("order_amount") or total_amount),
+                "userId": customer_id if customer_id != "guest_customer" else req.userId,
+                "addressId": req.addressId,
+                "customerPhone": clean_phone,
+                "customerName": resolved_name,
+                "customerEmail": resolved_email,
+                "items": req.items or (req.cartPayload.get("items") if isinstance(req.cartPayload, dict) else None),
+                "deliveryMethod": req.deliveryMethod or "DELIVERY",
+                "createdAt": time.time(),
+            }
+            await set_cache(f"cf_pending:{data.get('order_id') or sanitized_order_id}", pending_payload, ttl_seconds=86400)
+            if data.get("cf_order_id"):
+                await set_cache(f"cf_pending:{data.get('cf_order_id')}", pending_payload, ttl_seconds=86400)
+        except Exception as cache_err:
+            logger.warning(f"[Cashfree] Pending session cache notice: {cache_err}")
 
         return {
             "success": True,
@@ -490,6 +522,351 @@ async def verify_cashfree_payment(
     }
 
 
+async def auto_recover_unplaced_cashfree_order(
+    cf_order_id: str,
+    clean_id: str,
+    cf_ref: str,
+    order_data: Dict[str, Any],
+    payment_data: Dict[str, Any],
+    db: AsyncSession
+) -> Optional[Order]:
+    """
+    Emergency Auto-Recovery for paid Cashfree orders:
+    If a customer pays online via UPI/gateway but their client app closed, dropped connection,
+    or threw an error before completing POST /api/orders, this function reconstructs the order,
+    commits it to PostgreSQL, enqueues the kitchen KOT, and sends alerts so NO ORDER IS EVER MISSED!
+    """
+    try:
+        from utils.cache import get_cache
+        from sqlalchemy import text
+        import uuid
+
+        # 1. Check pending checkout cache
+        pending_data = await get_cache(f"cf_pending:{clean_id}")
+        if not pending_data and cf_order_id != clean_id:
+            pending_data = await get_cache(f"cf_pending:{cf_order_id}")
+
+        # 2. Extract customer details
+        cust_details = order_data.get("customer_details") or {}
+        raw_phone = (
+            cust_details.get("customer_phone")
+            or (pending_data.get("customerPhone") if pending_data else None)
+            or "9999999999"
+        )
+        clean_phone = re.sub(r"\D", "", str(raw_phone))[-10:]
+        if len(clean_phone) != 10:
+            clean_phone = "9999999999"
+
+        customer_name = (
+            cust_details.get("customer_name")
+            or (pending_data.get("customerName") if pending_data else None)
+            or "FastKirana Customer"
+        )
+        order_amount = float(order_data.get("order_amount") or (pending_data.get("amount") if pending_data else 0.0) or (payment_data.get("payment_amount") or 0.0))
+
+        # 3. Find user in database
+        u_stmt = select(User).where(User.phone == clean_phone)
+        u_res = await db.execute(u_stmt)
+        user = u_res.scalars().first()
+
+        user_id = user.id if user else (pending_data.get("userId") if pending_data and not str(pending_data.get("userId")).startswith("guest_") else None)
+        if not user_id:
+            # Create user if missing
+            user_id = f"usr_{uuid.uuid4().hex[:16]}"
+            user = User(
+                id=user_id,
+                name=customer_name,
+                email=f"{clean_phone}@fastkirana.in",
+                phone=clean_phone,
+                role="USER"
+            )
+            db.add(user)
+            await db.flush()
+
+        # 4. Resolve address
+        address = None
+        req_addr_id = pending_data.get("addressId") if pending_data else None
+        if req_addr_id:
+            a_stmt = select(Address).where(Address.id == req_addr_id)
+            a_res = await db.execute(a_stmt)
+            address = a_res.scalars().first()
+
+        if not address and user:
+            # Find default address, then any address
+            a_stmt = select(Address).where(Address.userId == user.id).order_by(Address.isDefault.desc())
+            a_res = await db.execute(a_stmt)
+            address = a_res.scalars().first()
+
+        if not address:
+            # Fallback express zone address
+            new_addr_id = f"addr_{uuid.uuid4().hex[:16]}"
+            address = Address(
+                id=new_addr_id,
+                userId=user_id,
+                label="Home",
+                houseNo="Ghatampur Express Zone",
+                street="NH34 Main Road",
+                area="Ghatampur",
+                city="Ghatampur",
+                pincode="209206",
+                phone=f"+91{clean_phone}",
+                lat=26.1534185,
+                lng=80.1714024,
+                isDefault=True
+            )
+            db.add(address)
+            await db.flush()
+
+        # 5. Resolve items
+        items_to_create = []
+        is_restaurant = False
+        target_restaurant_id = None
+        target_shop_name = "FastKirana Express"
+
+        # Check pending cache items first
+        cached_items = pending_data.get("items") if pending_data else None
+        if cached_items and isinstance(cached_items, list):
+            for it in cached_items:
+                prod = it.get("product") or it
+                p_id = str(it.get("productId") or prod.get("id") or "").split("_")[0]
+                p_name = it.get("name") or prod.get("name") or "Product"
+                p_price = float(it.get("price") or prod.get("price") or 0.0)
+                p_qty = int(it.get("quantity") or 1)
+                p_rest_id = it.get("restaurantId") or prod.get("restaurantId")
+                p_img = it.get("imageUrl") or prod.get("imageUrl")
+                p_var = it.get("selectedVariant") or prod.get("selectedVariant")
+                if p_rest_id:
+                    is_restaurant = True
+                    target_restaurant_id = p_rest_id
+
+                items_to_create.append({
+                    "productId": p_id or None,
+                    "name": p_name,
+                    "price": p_price,
+                    "quantity": p_qty,
+                    "imageUrl": p_img,
+                    "selectedVariant": p_var,
+                })
+
+        # If no cached items, inspect user's cart in database
+        if not items_to_create and user:
+            cart_stmt = select(Cart).where(Cart.userId == user.id)
+            cart_res = await db.execute(cart_stmt)
+            cart = cart_res.scalars().first()
+            if cart:
+                ci_stmt = select(CartItem).options(selectinload(CartItem.product)).where(CartItem.cartId == cart.id)
+                ci_res = await db.execute(ci_stmt)
+                c_items = ci_res.scalars().all()
+                for ci in c_items:
+                    prod = ci.product
+                    p_id = prod.id if prod else ci.productId
+                    p_name = prod.name if prod else "Product"
+                    p_price = float(ci.price or (prod.price if prod else 0.0))
+                    p_qty = int(ci.quantity or 1)
+                    p_rest_id = prod.restaurantId if prod else None
+                    if p_rest_id:
+                        is_restaurant = True
+                        target_restaurant_id = p_rest_id
+                    items_to_create.append({
+                        "productId": p_id,
+                        "name": p_name,
+                        "price": p_price,
+                        "quantity": p_qty,
+                        "imageUrl": prod.imageUrl if prod else None,
+                        "selectedVariant": ci.selectedVariant,
+                    })
+
+        # If still empty (e.g. cart cleared or instant buy), fallback to reconciled item
+        if not items_to_create:
+            items_to_create.append({
+                "productId": None,
+                "name": "Online Paid Order (Cashfree Reconciled)",
+                "price": order_amount,
+                "quantity": 1,
+                "imageUrl": None,
+                "selectedVariant": None,
+            })
+
+        # If restaurant item, find restaurant name
+        if is_restaurant and target_restaurant_id:
+            r_stmt = select(Restaurant).where(Restaurant.id == target_restaurant_id)
+            r_res = await db.execute(r_stmt)
+            r_obj = r_res.scalars().first()
+            if r_obj:
+                target_shop_name = r_obj.name
+        elif not is_restaurant and target_restaurant_id:
+            target_shop_name = "Restaurant"
+
+        # 6. Allocate Next Order Readable ID Sequence
+        seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')"))
+        next_seq = seq_res.scalar()
+        order_suffix = "-R" if is_restaurant else "-G"
+        readable_id = f"{next_seq}{order_suffix}"
+        new_order_id = f"ord_{uuid.uuid4().hex[:20]}"
+
+        calculated_subtotal = sum(it["price"] * it["quantity"] for it in items_to_create)
+        misc_fee = max(0.0, round(order_amount - calculated_subtotal, 2)) if order_amount > calculated_subtotal else 0.0
+
+        order_notes = f"[CF_ORDER:{cf_order_id}] | Cashfree PG Paid (Ref: {cf_ref}) | Auto-Reconciled from Webhook"
+
+        # 7. Create Order Row
+        order = Order(
+            id=new_order_id,
+            readableId=readable_id,
+            userId=user_id,
+            addressId=address.id,
+            combinedId=None,
+            restaurantId=target_restaurant_id if is_restaurant else None,
+            orderType=OrderType.RESTAURANT if is_restaurant else OrderType.GROCERY,
+            status=OrderStatus.CONFIRMED,
+            subtotal=calculated_subtotal if calculated_subtotal > 0 else order_amount,
+            discount=0.0,
+            deliveryFee=0.0,
+            taxes=0.0,
+            miscFee=misc_fee,
+            total=order_amount,
+            paymentMethod=PaymentMethod.UPI,
+            paymentStatus=PaymentStatus.PAID,
+            estimatedDelivery=datetime.utcnow() + timedelta(minutes=25),
+            deliveryLat=address.lat,
+            deliveryLng=address.lng,
+            deliveryMethod="DELIVERY",
+            isB2B=False,
+            shopName=target_shop_name,
+            shopPhone="+918112849854",
+            storeId="hub-209206",
+            createdAt=datetime.utcnow(),
+            updatedAt=datetime.utcnow(),
+            confirmedAt=datetime.utcnow(),
+            notes=order_notes,
+            refundAmount=0.0
+        )
+        db.add(order)
+        await db.flush()
+
+        # 8. Create Order Items
+        for it in items_to_create:
+            oi_id = f"oi_{uuid.uuid4().hex[:20]}"
+            oi = OrderItem(
+                id=oi_id,
+                orderId=new_order_id,
+                productId=it["productId"],
+                name=it["name"],
+                price=it["price"],
+                quantity=it["quantity"],
+                imageUrl=it.get("imageUrl"),
+                selectedVariant=it.get("selectedVariant"),
+                costPrice=0.0,
+                variants=None,
+                notes=None,
+                refundAmount=0.0,
+                isRefunded=False
+            )
+            db.add(oi)
+
+        # 9. Clear user's cart if used
+        if user:
+            cart_stmt = select(Cart).where(Cart.userId == user.id)
+            cart_res = await db.execute(cart_stmt)
+            cart = cart_res.scalars().first()
+            if cart:
+                await db.execute(text("DELETE FROM cart_items WHERE \"cartId\" = :cart_id"), {"cart_id": cart.id})
+
+        # 10. Enqueue Kitchen KOT for printing
+        if is_restaurant and target_restaurant_id:
+            try:
+                kot_items = [
+                    {"name": it["name"], "quantity": it["quantity"], "restaurantId": target_restaurant_id, "isRestaurantItem": True}
+                    for it in items_to_create
+                ]
+                kot_text = (
+                    "======================================\n"
+                    "            FASTKIRANA KOT\n"
+                    "======================================\n"
+                    f"TOKEN : #{readable_id} | {customer_name}\n"
+                    "TYPE  : DELIVERY\n"
+                    f"Print : {datetime.now().strftime('%d %b %Y %I:%M %p')}\n"
+                    "--------------------------------------\n"
+                    "QTY   ITEM\n"
+                    "--------------------------------------\n"
+                    + "\n".join([f"{it['quantity']}  x  {it['name']}" for it in items_to_create]) + "\n"
+                    "--------------------------------------\n"
+                    "      *** FASTKIRANA KITCHEN ***\n"
+                    "======================================"
+                )
+                kot_payload = {
+                    "orderId": new_order_id,
+                    "readableId": readable_id,
+                    "restaurantId": target_restaurant_id,
+                    "kotText": kot_text,
+                    "items": kot_items,
+                    "notes": order_notes,
+                    "customerName": customer_name,
+                    "deliveryMethod": "DELIVERY",
+                    "shopName": target_shop_name,
+                    "printedAt": datetime.utcnow().isoformat(),
+                    "manual": True,
+                    "source": "webhook_auto_recovery",
+                    "timestamp": int(time.time() * 1000)
+                }
+                kot_insert = text(
+                    "INSERT INTO kitchen_kot_queue (order_id, readable_id, restaurant_id, payload, status, created_at, attempts) "
+                    "VALUES (:oid, :rid, :rest_id, CAST(:payload AS jsonb), 'PENDING', NOW(), 0)"
+                )
+                await db.execute(kot_insert, {
+                    "oid": new_order_id,
+                    "rid": readable_id,
+                    "rest_id": target_restaurant_id,
+                    "payload": json.dumps(kot_payload)
+                })
+            except Exception as kot_err:
+                logger.warning(f"[Auto-Recovery] KOT enqueue error: {kot_err}")
+
+        await db.commit()
+        logger.info(f"🎉 [Auto-Recovery SUCCESS] Reconstructed and placed Order #{readable_id} for {customer_name} (₹{order_amount})!")
+
+        # 11. Async Alerts: WhatsApp & FCM & WebSockets
+        try:
+            from routers.orders import send_whatsapp_alert
+            admin_msg = (
+                f"🚨 *AUTO-RECONCILED ONLINE ORDER* #{readable_id}\n"
+                f"Customer: {customer_name} ({clean_phone})\n"
+                f"Total: ₹{order_amount:.0f} (PAID via Cashfree)\n"
+                f"Client dropped before sync — Order recovered and dispatched automatically! ✅"
+            )
+            for ap in ["7054470303", "8112849854"]:
+                asyncio.create_task(send_whatsapp_alert(ap, admin_msg, readable_id))
+        except Exception as wa_e:
+            logger.warning(f"[Auto-Recovery] WhatsApp alert failed: {wa_e}")
+
+        # FCM to Restaurant
+        if target_restaurant_id:
+            try:
+                from utils.firebase import send_fcm_topic_notification
+                asyncio.create_task(send_fcm_topic_notification(
+                    topic=f"restaurant_{target_restaurant_id}",
+                    title=f"🔔 NEW ORDER: #{readable_id} (₹{order_amount:.0f})",
+                    body=f"Auto-Reconciled: {', '.join([it['name'] for it in items_to_create])} - {customer_name}",
+                    data={"orderId": new_order_id, "readableId": readable_id, "restaurantId": target_restaurant_id, "status": "CONFIRMED"}
+                ))
+            except Exception as fcm_e:
+                logger.warning(f"[Auto-Recovery] FCM topic alert failed: {fcm_e}")
+
+        return order
+
+    except Exception as exc:
+        logger.error(f"❌ [Auto-Recovery FATAL] Could not auto-recover Cashfree order {cf_order_id}: {exc}", exc_info=True)
+        await db.rollback()
+        try:
+            from routers.orders import send_whatsapp_alert
+            err_msg = f"⚠️ *CRITICAL: UNRECONCILED CASHFREE PAYMENT!*\nOrder Ref: {cf_order_id}\nPayment Ref: {cf_ref}\nPlease check Cashfree dashboard immediately!"
+            for ap in ["7054470303", "8112849854"]:
+                asyncio.create_task(send_whatsapp_alert(ap, err_msg, cf_order_id))
+        except Exception:
+            pass
+        return None
+
+
 @router.get("/payment/cashfree/webhook")
 @router.get("/payments/cashfree/webhook")
 async def cashfree_webhook_status():
@@ -573,6 +950,17 @@ async def cashfree_webhook(
         )
         res = await db.execute(stmt)
         order = res.scalars().first()
+
+        if not order:
+            logger.info(f"[Cashfree Webhook] Order #{cf_order_id} not found in DB! Triggering resilient auto-recovery...")
+            order = await auto_recover_unplaced_cashfree_order(
+                cf_order_id=str(cf_order_id),
+                clean_id=clean_id,
+                cf_ref=str(cf_ref),
+                order_data=order_data,
+                payment_data=payment_data,
+                db=db
+            )
 
         if order and order.paymentStatus != PaymentStatus.PAID:
             was_cod = (order.paymentMethod == PaymentMethod.COD)

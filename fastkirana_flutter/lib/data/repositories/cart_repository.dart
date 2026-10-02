@@ -123,10 +123,14 @@ class CartRepository {
 
   Exception _handleError(DioException e) {
     if (e.response != null) {
-      return ApiException(
-        e.response?.data['error'] ?? 'Something went wrong',
-        e.response?.statusCode,
-      );
+      final data = e.response?.data;
+      String message = 'Something went wrong';
+      if (data is Map) {
+        message = data['detail']?.toString() ?? data['error']?.toString() ?? data['message']?.toString() ?? message;
+      } else if (data is String) {
+        message = data;
+      }
+      return ApiException(message, e.response?.statusCode);
     }
     return ApiException('Network error. Please check your connection.');
   }

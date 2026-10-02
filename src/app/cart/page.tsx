@@ -262,7 +262,7 @@ export default function CartPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to apply coupon')
+        toast.error(data.detail || data.error || data.message || 'Failed to apply coupon')
       } else {
         setAppliedCoupon({
           code: data.coupon.code,
@@ -783,7 +783,7 @@ export default function CartPage() {
             ) : (
               <form onSubmit={handleApplyCoupon} className="flex gap-2">
                 <Input
-                  placeholder="e.g. WELCOME50"
+                  placeholder="Enter Coupon Code"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
                   disabled={isCouponLoading}

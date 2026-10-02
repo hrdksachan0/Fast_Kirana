@@ -11,7 +11,6 @@ import 'payment_gateway_handler.dart';
 
 import '../../../core/theme/design_system.dart';
 import '../../../core/routes/page_transitions.dart';
-import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/logger_service.dart';
@@ -244,13 +243,12 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return;
     }
 
-    if (context != null && context.mounted) {
-      await completeOrderPlacement(
-        context,
-        cart: cart,
-        paymentId: resolvedPaymentId,
-      );
-    }
+    // Always complete order placement to backend API even if UI context was detached/unmounted during UPI app switch
+    await completeOrderPlacement(
+      context,
+      cart: cart,
+      paymentId: resolvedPaymentId,
+    );
   }
 
   Future<void> _onCashfreeError(CFErrorResponse errorResponse, String cfOrderId) async {
@@ -485,12 +483,32 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         final hasValidEmail = userEmail != null && userEmail.contains('@') && userEmail.contains('.');
         final customerName = user?.name ?? 'FastKirana Customer';
 
+        final itemsPayload = cart.items.map((i) {
+          final isRest = isRestaurantProduct(i.product);
+          final itemRestId = i.product.restaurantId ??
+              i.product.restaurant?.id ??
+              (isRest ? (RestaurantRegistry.find(getOutletName(i.product))?.id ?? 'REST-101') : null);
+          return {
+            'productId': i.product.id,
+            'quantity': i.quantity,
+            'price': i.product.price,
+            'name': i.product.name,
+            'selectedVariant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
+            'restaurantId': itemRestId,
+            'imageUrl': i.product.imageUrl,
+          };
+        }).toList();
+
         final cfOrderId = await _paymentHandler.launchPayment(
           amount: grandTotal,
-          customerPhone: rawPhone,
-          customerEmail: userEmail,
+          customerPhone: cleanPhone.isNotEmpty ? cleanPhone : rawPhone,
+          customerEmail: hasValidEmail ? userEmail : null,
           customerName: customerName,
           existingOrderId: state.pendingCashfreeOrderId,
+          userId: user?.id,
+          addressId: selectedAddress?.id,
+          items: itemsPayload,
+          deliveryMethod: state.deliveryMethod,
         );
 
         if (cfOrderId != null) {
@@ -553,7 +571,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   // ─── Complete Order Placement ──────────────────────────────────────────────
 
   Future<void> completeOrderPlacement(
-    BuildContext context, {
+    BuildContext? context, {
     required Cart cart,
     String? paymentId,
   }) async {
@@ -563,7 +581,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           (state.pendingGrandTotal != null && state.pendingGrandTotal! <= 0);
       if ((paymentId == null || paymentId.trim().isEmpty) && !isFreePromo) {
         state = state.copyWith(isPlacingOrder: false);
-        if (context.mounted) {
+        if (context != null && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: AppDesignSystem.primary,
@@ -608,7 +626,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     if (state.deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
       state = state.copyWith(isPlacingOrder: false);
-      if (context.mounted) {
+      if (context != null && context.mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         final originLabel = cartRestaurant != null ? cartRestaurant.name : 'our central hub';
         final maxRad = (cartRestaurant?.deliveryRadiusKm ?? 5.0).toStringAsFixed(1);
@@ -762,8 +780,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     );
 
     var placedOrder = newOrder;
+    Map<String, dynamic>? apiPayload;
     try {
-      final apiPayload = {
+      apiPayload = {
         ...newOrder.toJson(),
         'userId': userId,
         'userPhone': buyerPhone,
@@ -865,9 +884,12 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       if (isOnlinePaid) {
         debugPrint('Emergency Payment Recovery: Order $orderId was paid ($paymentId) but backend sync failed. Recovering gracefully.');
         await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);
+        if (apiPayload != null) {
+          unawaited(_retryOrderSync(apiPayload));
+        }
       } else {
         state = state.copyWith(isPlacingOrder: false);
-        if (context.mounted) {
+        if (context != null && context.mounted) {
           String errorMsg = 'Failed to place order. Please check your connection and try again.';
           if (e is DioException) {
             final serverErr = e.response?.data;
@@ -910,7 +932,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     ref.invalidate(ordersProvider(''));
     ref.invalidate(ordersProvider('admin'));
 
-    if (!context.mounted) return;
+    if (context == null || !context.mounted) return;
 
     final successPage = OrderSuccessScreen(
       orderId: placedOrder.displayId,
@@ -924,5 +946,20 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       context,
       FadeSlideRoute(page: successPage),
     );
+  }
+
+  Future<void> _retryOrderSync(Map<String, dynamic> apiPayload) async {
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await Future.delayed(Duration(seconds: attempt * 2));
+        final res = await ref.read(dioProvider).post('/api/orders', data: apiPayload);
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          debugPrint('✅ Background order sync succeeded on retry $attempt!');
+          break;
+        }
+      } catch (err) {
+        debugPrint('Background order sync retry $attempt note: $err');
+      }
+    }
   }
 }

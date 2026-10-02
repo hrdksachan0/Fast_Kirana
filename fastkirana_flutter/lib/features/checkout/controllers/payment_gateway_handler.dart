@@ -39,6 +39,10 @@ class PaymentGatewayHandler {
     required String? customerEmail,
     required String customerName,
     String? existingOrderId,
+    String? userId,
+    String? addressId,
+    List<Map<String, dynamic>>? items,
+    String? deliveryMethod,
   }) async {
     final cleanPhone = customerPhone.replaceAll(RegExp(r'[^\d]'), '');
     final phone10 = cleanPhone.length >= 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
@@ -53,6 +57,10 @@ class PaymentGatewayHandler {
           'customerPhone': phone10.length == 10 ? phone10 : '9999999999',
           if (hasValidEmail) 'customerEmail': customerEmail.trim(),
           'customerName': customerName,
+          if (userId != null) 'userId': userId,
+          if (addressId != null) 'addressId': addressId,
+          if (items != null) 'items': items,
+          if (deliveryMethod != null) 'deliveryMethod': deliveryMethod,
         },
         options: Options(sendTimeout: const Duration(seconds: 12), receiveTimeout: const Duration(seconds: 12)),
       );

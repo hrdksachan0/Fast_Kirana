@@ -633,7 +633,7 @@ async def get_picker_orders(
                     "imageUrl": p_obj.imageUrl,
                     "unit": p_unit,
                     "restaurantId": p_obj.restaurantId if p_obj else None,
-                    "isRestaurantItem": p_obj.isRestaurantItem if p_obj else None,
+                    "isRestaurantItem": bool(p_obj.restaurantId) if p_obj else False,
                     "variants": p_obj.variants,
                     "category": {
                         "id": p_obj.category.id,

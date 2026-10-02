@@ -130,52 +130,26 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         }
       }
     } catch (e) {
-      final cleanCode = code.trim().toUpperCase();
-      if (cleanCode == 'FIRST5' || cleanCode == 'RESTAURANT50' || cleanCode == 'CAFE50' || cleanCode == 'SAVE20') {
-        final discount = (cleanCode == 'RESTAURANT50' || cleanCode == 'CAFE50') ? 50.0 : (subtotal * 0.05).roundToDouble();
-        if (mounted) {
-          setState(() {
-            _appliedCoupon = cleanCode;
-            _couponDiscount = discount;
-            _freeGiftDetails = null;
-            _nudgeMessage = null;
-            _isBogoApplied = false;
-            _isApplyingCoupon = false;
-          });
-          if (!silent) {
-            CartCelebrationModal.show(
-              context: context,
-              confettiController: _confettiController,
-              title: '🥳 Discount Applied!',
-              subtitle: 'Congratulations! Coupon "$cleanCode" applied successfully to your order!',
-              savingsText: 'You Saved ₹${discount.toInt()} Extra on this Order',
-              isBogo: false,
-            );
-          }
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _isApplyingCoupon = false;
-            if (silent) {
-              _appliedCoupon = null;
-              _couponDiscount = 0.0;
-              _freeGiftDetails = null;
-              _nudgeMessage = null;
-              _isBogoApplied = false;
-              _bogoBadgeText = null;
-            }
-          });
-          if (!silent) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: primaryRed,
-                content: Text(e is ApiException ? e.message : 'Invalid coupon code. Try RESTAURANT50 or FIRST5'),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            );
-          }
+      if (mounted) {
+        setState(() {
+          _isApplyingCoupon = false;
+          _appliedCoupon = null;
+          _couponDiscount = 0.0;
+          _freeGiftDetails = null;
+          _nudgeMessage = null;
+          _isBogoApplied = false;
+          _bogoBadgeText = null;
+        });
+        if (!silent) {
+          final errorMessage = e is ApiException ? e.message : 'Invalid or expired coupon code';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: primaryRed,
+              content: Text(errorMessage),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
         }
       }
     }

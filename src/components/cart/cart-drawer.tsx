@@ -99,7 +99,7 @@ export function CartDrawer() {
       const data = await res.json()
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to apply coupon')
+        toast.error(data.detail || data.error || data.message || 'Failed to apply coupon')
       } else {
         const couponObj = {
           code: data.coupon.code,
@@ -1029,7 +1029,7 @@ export function CartDrawer() {
                   <form onSubmit={handleApplyCoupon} className="flex gap-2">
                     <input
                       ref={couponInputRef}
-                      placeholder="Enter Coupon (e.g. CAFE50)"
+                      placeholder="Enter Coupon Code"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
                       className="uppercase w-full px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs bg-white dark:bg-zinc-900 focus:outline-none focus:border-primary/45 font-bold"

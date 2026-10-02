@@ -196,3 +196,8 @@ async def acquire_lock(key: str, ttl_seconds: int = 3600) -> bool:
     _LOCAL_CACHE_EXPIRY[key] = now + ttl_seconds
     return True
 
+
+# Backward-compatible function aliases
+get_cache = get_cached
+set_cache = set_cached
+
