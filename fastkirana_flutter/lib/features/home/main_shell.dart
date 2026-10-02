@@ -115,6 +115,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).valueOrNull;
     final role = (user?.role ?? 'USER').toUpperCase();
+    final isCustomerMode = ref.watch(staffCustomerModeProvider);
 
     final isMasterAdmin = (user?.email == 'admin@fastkirana.com' ||
         user?.email == 'superadmin@fastkirana.com' ||
@@ -122,17 +123,17 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
         (user?.phone ?? '').contains('9170942500') ||
         role == 'ADMIN');
     final isAdmin = isMasterAdmin;
-    final isRiderOnly = !isAdmin && (
+    final isRiderOnly = !isAdmin && !isCustomerMode && (
       role == 'RIDER' ||
       role == 'DELIVERY' ||
       role == 'DELIVERY_PARTNER'
     );
-    final isChefOrOwnerOnly = !isAdmin && (
+    final isChefOrOwnerOnly = !isAdmin && !isCustomerMode && (
       role == 'CHEF' ||
       role == 'RESTAURANT_OWNER' ||
       role == 'RESTAURANT'
     );
-    final isPickerOnly = !isAdmin && (role == 'PICKER');
+    final isPickerOnly = !isAdmin && !isCustomerMode && (role == 'PICKER');
 
     // ─── STAFF DEDICATED CONSOLES ───────────────────────────
     // Riders, Restaurant Chefs/Owners, and Pickers only see their respected console

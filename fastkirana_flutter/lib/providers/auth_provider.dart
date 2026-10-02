@@ -185,3 +185,31 @@ final currentUserIdProvider = Provider<String?>((ref) {
 final currentUserProvider = Provider<User?>((ref) {
   return ref.watch(authProvider).valueOrNull;
 });
+
+/// Controls whether a staff user (Rider, Chef, Picker) is browsing as a Customer.
+class StaffCustomerModeNotifier extends StateNotifier<bool> {
+  StaffCustomerModeNotifier() : super(false) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final mode = prefs.getBool('staff_customer_mode') ?? false;
+      if (mounted) state = mode;
+    } catch (_) {}
+  }
+
+  Future<void> setCustomerMode(bool value) async {
+    state = value;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('staff_customer_mode', value);
+    } catch (_) {}
+  }
+}
+
+final staffCustomerModeProvider =
+    StateNotifierProvider<StaffCustomerModeNotifier, bool>((ref) {
+  return StaffCustomerModeNotifier();
+});

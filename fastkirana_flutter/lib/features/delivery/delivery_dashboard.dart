@@ -1268,7 +1268,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
     } else {
-      SystemNavigator.pop();
+      ref.read(staffCustomerModeProvider.notifier).setCustomerMode(true);
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     }
   }
 
