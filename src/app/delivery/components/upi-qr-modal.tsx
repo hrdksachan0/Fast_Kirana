@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -38,7 +39,7 @@ export default function UpiQrModal({
 
     async function loadQrData() {
       try {
-        const res = await fetch(`/api/delivery/orders/${order.id}/qr?t=${Date.now()}`)
+        const res = await fetch(`${apiUrl()}/api/delivery/orders/${order.id}/qr?t=${Date.now()}`)
         if (res.ok) {
           const data = await res.json()
           if (!isCancelled) {

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
@@ -494,7 +495,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       setOrderExportLoading(true)
       toast.loading('Fetching order-wise data...', { id: 'order-excel' })
 
-      const res = await fetch(`/api/admin/reports/orders?startDate=${startDate}&endDate=${endDate}&t=${Date.now()}`)
+      const res = await fetch(`${apiUrl()}/api/admin/reports/orders?startDate=${startDate}&endDate=${endDate}&t=${Date.now()}`)
       if (!res.ok) throw new Error('Failed to fetch order data')
       const data = await res.json()
       const orders = data.orders || []

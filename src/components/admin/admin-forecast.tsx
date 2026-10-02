@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
@@ -66,7 +67,7 @@ export function AdminForecast({ onRestockCompleted, categories, storeId }: Admin
     try {
       setLoading(true)
       const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/forecast${storeParam}`)
+      const res = await fetch(`${apiUrl()}/api/admin/forecast${storeParam}`)
       if (!res.ok) throw new Error('Failed to fetch forecast analytics')
       const data = await res.json()
       setForecastList(data.forecast || [])
@@ -110,7 +111,7 @@ export function AdminForecast({ onRestockCompleted, categories, storeId }: Admin
         const expiryDate = new Date()
         expiryDate.setMonth(expiryDate.getMonth() + 6) // Standard 6-month expiry fallback
 
-        const res = await fetch('/api/admin/inward', {
+        const res = await fetch(`${apiUrl()}/api/admin/inward`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

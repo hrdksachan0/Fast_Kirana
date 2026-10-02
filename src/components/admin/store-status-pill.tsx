@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import React, { useState, useEffect } from 'react'
 import {
@@ -104,7 +105,7 @@ export function StoreStatusPill({
     } catch (err: any) {
       // Fallback: try Next.js API route if FastAPI fails
       try {
-        const res = await fetch('/api/admin/serviceability/toggle', {
+        const res = await fetch(`${apiUrl()}/api/admin/serviceability/toggle`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

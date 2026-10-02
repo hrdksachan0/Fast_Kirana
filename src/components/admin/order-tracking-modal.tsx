@@ -22,6 +22,7 @@ import { formatAddress, formatPrice } from '@/lib/utils'
 import { printKOTReceipt } from '@/lib/kot-print'
 import { RecordRefundModal } from '@/components/admin/record-refund-modal'
 import { formatOrderTime, formatDate } from '@/lib/date-helpers'
+import { apiUrl } from '@/lib/api-url'
 
 interface Address {
   phone?: string
@@ -131,7 +132,7 @@ export default function OrderTrackingModal({
         : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || []
       const customerName = targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer'
 
-      const res = await fetch('/api/kot-broadcast', {
+      const res = await fetch(`${apiUrl()}/api/kot-broadcast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -395,7 +396,7 @@ export default function OrderTrackingModal({
                   type="button"
                   onClick={async () => {
                     try {
-                      const res = await fetch(`/api/orders/${order.id}`, {
+                      const res = await fetch(`${apiUrl()}/api/orders/${order.id}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'PENDING' }),

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -88,7 +89,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
   const fetchHistory = async () => {
     try {
       setLoadingHistory(true)
-      const res = await fetch('/api/admin/bulk-update')
+      const res = await fetch(`${apiUrl()}/api/admin/bulk-update`)
       if (!res.ok) throw new Error('Failed to load history')
       const data = await res.json()
       setHistoryList(data.batches || [])
@@ -102,7 +103,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
 
   useEffect(() => {
     fetchHistory()
-    fetch('/api/restaurants?all=true')
+    fetch(`${apiUrl()}/api/restaurants?all=true`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
@@ -146,7 +147,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
         preview: true
       }
 
-      const res = await fetch('/api/admin/bulk-update', {
+      const res = await fetch(`${apiUrl()}/api/admin/bulk-update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -185,7 +186,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
         preview: false
       }
 
-      const res = await fetch('/api/admin/bulk-update', {
+      const res = await fetch(`${apiUrl()}/api/admin/bulk-update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -217,7 +218,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
   const handleUndo = async (batchId: string) => {
     try {
       setUndoingBatchId(batchId)
-      const res = await fetch('/api/admin/bulk-update', {
+      const res = await fetch(`${apiUrl()}/api/admin/bulk-update`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ batchId })

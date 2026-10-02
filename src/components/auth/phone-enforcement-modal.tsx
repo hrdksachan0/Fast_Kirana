@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import React, { useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -28,7 +29,7 @@ export function PhoneEnforcementModal() {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/otp/send', {
+      const res = await fetch(`${apiUrl()}/api/auth/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: cleanDigits }),
@@ -57,7 +58,7 @@ export function PhoneEnforcementModal() {
     setLoading(true)
     try {
       const cleanDigits = getLast10Digits(phone)
-      const res = await fetch('/api/auth/otp/verify', {
+      const res = await fetch(`${apiUrl()}/api/auth/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: cleanDigits, otp: otp.trim() }),

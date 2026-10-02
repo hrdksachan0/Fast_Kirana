@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
@@ -113,7 +114,7 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
       const compressedFile = await compressImageClient(file)
       const data = new FormData()
       data.append('file', compressedFile)
-      const res = await fetch('/api/upload', {
+      const res = await fetch(`${apiUrl()}/api/upload`, {
         method: 'POST',
         body: data
       })
@@ -144,7 +145,7 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
     async function loadRestaurant() {
       try {
         setLoading(true)
-        const res = await fetch(`/api/restaurants/${assignedRestaurantId}`)
+        const res = await fetch(`${apiUrl()}/api/restaurants/${assignedRestaurantId}`)
         if (!res.ok) throw new Error('Failed to load restaurant data')
         const data = await res.json()
         
@@ -288,7 +289,7 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
         sortOrder: (s as any).sortOrder !== undefined ? (s as any).sortOrder : idx + 1,
       }))
 
-      const res = await fetch(`/api/restaurants/${assignedRestaurantId}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurants/${assignedRestaurantId}`, {
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',

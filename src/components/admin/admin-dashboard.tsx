@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
@@ -212,8 +213,8 @@ export function AdminDashboard({
     const refreshStoresAndRestaurants = async () => {
       try {
         const [storesRes, restRes] = await Promise.all([
-          fetch('/api/admin/stores').then((r) => (r.ok ? r.json() : [])),
-          fetch('/api/restaurants').then((r) => (r.ok ? r.json() : [])),
+          fetch(`${apiUrl()}/api/admin/stores`).then((r) => (r.ok ? r.json() : [])),
+          fetch(`${apiUrl()}/api/restaurants`).then((r) => (r.ok ? r.json() : [])),
         ])
         if (isMounted) {
           if (Array.isArray(storesRes) && storesRes.length > 0) {
@@ -354,7 +355,7 @@ export function AdminDashboard({
     try {
       const activeStore = targetStoreId || selectedHubId
       const storeParam = activeStore && activeStore !== 'all' ? `?storeId=${encodeURIComponent(activeStore)}` : ''
-      const res = await fetch(`/api/settings${storeParam}`, { cache: 'no-store' })
+      const res = await fetch(`${apiUrl()}/api/settings${storeParam}`, { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         setSettingsMap(data)
@@ -379,14 +380,14 @@ export function AdminDashboard({
       selectedHubId && selectedHubId !== 'all'
         ? `&storeId=${encodeURIComponent(selectedHubId)}`
         : ''
-    fetch(`/api/restaurants?all=true${storeParam}`)
+    fetch(`${apiUrl()}/api/restaurants?all=true${storeParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setRestaurantsList(data)
       })
       .catch(console.error)
 
-    fetch('/api/admin/stores')
+    fetch(`${apiUrl()}/api/admin/stores`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -418,7 +419,7 @@ export function AdminDashboard({
     const nextState = !groceryMartOpen
     setIsTogglingStore(true)
     try {
-      const res = await fetch('/api/admin/settings', {
+      const res = await fetch(`${apiUrl()}/api/admin/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -431,7 +432,7 @@ export function AdminDashboard({
         setGroceryMartOpen(nextState)
         setGroceryAutoTiming(false)
         if (selectedHubId && selectedHubId !== 'all') {
-          fetch('/api/admin/stores', {
+          fetch(`${apiUrl()}/api/admin/stores`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -465,7 +466,7 @@ export function AdminDashboard({
       const formData = new FormData()
       formData.append('file', compressedFile)
 
-      const res = await fetch('/api/upload', {
+      const res = await fetch(`${apiUrl()}/api/upload`, {
         method: 'POST',
         headers: {
           ...(sessionUserId
@@ -518,7 +519,7 @@ export function AdminDashboard({
   const handleOrderStatusChange = async (orderId: string, newStatus: string) => {
     orderHook.setUpdatingOrderId(orderId)
     try {
-      const res = await fetch(`/api/orders/${orderId}`, {
+      const res = await fetch(`${apiUrl()}/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -553,7 +554,7 @@ export function AdminDashboard({
     if (message === null) return
 
     try {
-      const res = await fetch('/api/admin/live-carts/notify', {
+      const res = await fetch(`${apiUrl()}/api/admin/live-carts/notify`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -810,7 +811,7 @@ export function AdminDashboard({
       return
     }
     let active = true
-    fetch(`/api/admin/alerts?storeId=${encodeURIComponent(selectedHubId)}&t=${Date.now()}`)
+    fetch(`${apiUrl()}/api/admin/alerts?storeId=${encodeURIComponent(selectedHubId)}&t=${Date.now()}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (active && data?.counts) {
@@ -1007,8 +1008,7 @@ export function AdminDashboard({
                     selectedHubId && selectedHubId !== 'all'
                       ? `&storeId=${encodeURIComponent(selectedHubId)}`
                       : ''
-                  const res = await fetch(
-                    `/api/products?limit=1000${storeQuery}&t=${Date.now()}`
+                  const res = await fetch(`${apiUrl()}/api/products?limit=1000${storeQuery}&t=${Date.now()}`
                   )
                   if (res.ok) {
                     const data = await res.json()
@@ -1222,8 +1222,7 @@ export function AdminDashboard({
                     selectedHubId && selectedHubId !== 'all'
                       ? `&storeId=${encodeURIComponent(selectedHubId)}`
                       : ''
-                  const res = await fetch(
-                    `/api/products?limit=1000${storeQuery}&t=${Date.now()}`
+                  const res = await fetch(`${apiUrl()}/api/products?limit=1000${storeQuery}&t=${Date.now()}`
                   )
                   if (res.ok) {
                     const data = await res.json()

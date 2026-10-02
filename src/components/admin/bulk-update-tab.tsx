@@ -2,6 +2,7 @@
 
 import { AdminBulkUpdate } from '@/components/admin/admin-bulk-update'
 import { toast } from 'sonner'
+import { apiUrl } from '@/lib/api-url'
 
 interface BulkUpdateTabProps {
   categories: any[]
@@ -15,7 +16,7 @@ export function BulkUpdateTab({ categories, onUpdateCompleted }: BulkUpdateTabPr
         categories={categories}
         onUpdateCompleted={async () => {
           try {
-            const res = await fetch('/api/products?limit=1000')
+            const res = await fetch(`${apiUrl()}/api/products?limit=1000`)
             if (res.ok) {
               const data = await res.json()
               if (data.products) {

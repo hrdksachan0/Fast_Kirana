@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -80,7 +81,7 @@ export default function RestaurantKitchenPage() {
   // Fetch available restaurants for selection
   useEffect(() => {
     const storeParam = (session?.user as any)?.assignedStoreId ? `?storeId=${encodeURIComponent((session?.user as any).assignedStoreId)}` : ''
-    fetch(`/api/restaurants${storeParam}`)
+    fetch(`${apiUrl()}/api/restaurants${storeParam}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         const list = Array.isArray(data) ? data : (data?.restaurants || [])

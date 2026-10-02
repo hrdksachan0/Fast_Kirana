@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { CartConflictDialog } from '@/components/cart/cart-conflict-dialog'
 import { BogoCartGiftCard } from '@/components/cart/bogo-cart-gift-card'
 import { isProductEligibleForCoupon } from '@/lib/coupon-rules'
+import { apiUrl } from '@/lib/api-url'
 
 export default function CartPage() {
   const { data: session } = useSession()
@@ -42,7 +43,7 @@ export default function CartPage() {
   const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
 
   useEffect(() => {
-    fetch('/api/settings', { cache: 'no-store' })
+    fetch(`${apiUrl()}/api/settings`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data.tax_rate !== undefined) {
@@ -146,7 +147,7 @@ export default function CartPage() {
         }
       }
 
-      fetch('/api/coupons/validate', {
+      fetch(`${apiUrl()}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -185,7 +186,7 @@ export default function CartPage() {
 
     // 2. If NO coupon code is applied, check for active auto-apply coupons!
     const restId = payloadItems.find((it) => it.restaurantId)?.restaurantId || null
-    const url = restId ? `/api/coupons?restaurantId=${restId}` : '/api/coupons'
+    const url = restId ? `${apiUrl()}/api/coupons?restaurantId=${restId}` : `${apiUrl()}/api/coupons`
 
     fetch(url)
       .then((res) => (res.ok ? res.json() : []))
@@ -201,7 +202,7 @@ export default function CartPage() {
           }
 
           try {
-            const valRes = await fetch('/api/coupons/validate', {
+            const valRes = await fetch(`${apiUrl()}/api/coupons/validate`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -248,7 +249,7 @@ export default function CartPage() {
     setIsCouponLoading(true)
     try {
       const payloadItems = formatItemsForCoupon(items)
-      const res = await fetch('/api/coupons/validate', {
+      const res = await fetch(`${apiUrl()}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

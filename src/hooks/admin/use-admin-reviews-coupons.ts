@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
+import { apiUrl } from '@/lib/api-url'
 
 interface UseAdminReviewsCouponsProps {
   initialReviews?: any[]
@@ -100,7 +101,7 @@ export function useAdminReviewsCoupons({
         setIsLoadingReviews(true)
         try {
           const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-          const res = await fetch(`/api/admin/reviews?t=${Date.now()}${storeQuery}`, { headers: authHeaders })
+          const res = await fetch(`${apiUrl()}/api/admin/reviews?t=${Date.now()}${storeQuery}`, { headers: authHeaders })
           if (res.ok) {
             const data = await res.json()
             setReviews(Array.isArray(data) ? data : (Array.isArray(data?.reviews) ? data.reviews : []))
@@ -124,7 +125,7 @@ export function useAdminReviewsCoupons({
       const loadCoupons = async () => {
         setIsLoadingCoupons(true)
         try {
-          const res = await fetch(`/api/admin/coupons?t=${Date.now()}`, { headers: authHeaders })
+          const res = await fetch(`${apiUrl()}/api/admin/coupons?t=${Date.now()}`, { headers: authHeaders })
           if (res.ok) {
             const data = await res.json()
             setCoupons(Array.isArray(data) ? data : (Array.isArray(data?.coupons) ? data.coupons : []))
@@ -157,7 +158,7 @@ export function useAdminReviewsCoupons({
 
     setSavingReviewId(editingReview.id)
     try {
-      const res = await fetch('/api/admin/reviews', {
+      const res = await fetch(`${apiUrl()}/api/admin/reviews`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({
@@ -194,7 +195,7 @@ export function useAdminReviewsCoupons({
     const reviewType = (reviews as any[]).find((r) => r.id === reviewId)?.type
     setDeletingReviewId(reviewId)
     try {
-      const res = await fetch('/api/admin/reviews', {
+      const res = await fetch(`${apiUrl()}/api/admin/reviews`, {
         method: 'DELETE',
         headers: authHeaders,
         body: JSON.stringify({ reviewId, type: reviewType }),
@@ -236,7 +237,7 @@ export function useAdminReviewsCoupons({
         maxUses: newCoupon.maxUses ? parseInt(newCoupon.maxUses) : null,
       }
 
-      const res = await fetch('/api/admin/coupons', {
+      const res = await fetch(`${apiUrl()}/api/admin/coupons`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify(payload),
@@ -313,7 +314,7 @@ export function useAdminReviewsCoupons({
     setSavingCouponId(editingCoupon.id)
     try {
       const isBogoOrFreeDelivery = couponEditForm.discountType === 'BOGO' || couponEditForm.discountType === 'FREE_DELIVERY'
-      const res = await fetch('/api/admin/coupons', {
+      const res = await fetch(`${apiUrl()}/api/admin/coupons`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({
@@ -360,7 +361,7 @@ export function useAdminReviewsCoupons({
   const handleToggleCoupon = async (couponId: string, currentActive: boolean) => {
     setSavingCouponId(couponId)
     try {
-      const res = await fetch('/api/admin/coupons', {
+      const res = await fetch(`${apiUrl()}/api/admin/coupons`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ couponId, isActive: !currentActive }),
@@ -384,7 +385,7 @@ export function useAdminReviewsCoupons({
     if (!confirm('Delete this coupon permanently?')) return
     setDeletingCouponId(couponId)
     try {
-      const res = await fetch('/api/admin/coupons', {
+      const res = await fetch(`${apiUrl()}/api/admin/coupons`, {
         method: 'DELETE',
         headers: authHeaders,
         body: JSON.stringify({ couponId }),

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
@@ -59,8 +60,7 @@ export function useAdminUsers({
         selectedHubId && selectedHubId !== 'all'
           ? `&storeId=${encodeURIComponent(selectedHubId)}`
           : ''
-      const res = await fetch(
-        `/api/admin/users?page=${userPage}&limit=10&search=${encodeURIComponent(
+      const res = await fetch(`${apiUrl()}/api/admin/users?page=${userPage}&limit=10&search=${encodeURIComponent(
           userSearch
         )}&role=${userRoleFilter}&status=${userStatusFilter}${storeQuery}&t=${Date.now()}`,
         { headers: authHeaders }
@@ -91,7 +91,7 @@ export function useAdminUsers({
   const handleToggleBlock = async (userToBlock: any, isBlocked: boolean, reason?: string) => {
     setIsUpdatingBlockStatus(true)
     try {
-      const res = await fetch('/api/admin/users/block', {
+      const res = await fetch(`${apiUrl()}/api/admin/users/block`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({
@@ -129,7 +129,7 @@ export function useAdminUsers({
   const handleExportCustomersCsv = async () => {
     setIsExportingUsers(true)
     try {
-      const res = await fetch(`/api/admin/users?limit=10000&role=USER&t=${Date.now()}`, { headers: authHeaders })
+      const res = await fetch(`${apiUrl()}/api/admin/users?limit=10000&role=USER&t=${Date.now()}`, { headers: authHeaders })
       if (!res.ok) {
         const errJson = await res.json().catch(() => null)
         const errMsg = errJson?.error || errJson?.detail || errJson?.message || `Failed to fetch customers (${res.status})`
@@ -187,7 +187,7 @@ export function useAdminUsers({
   const handleUserRoleChange = async (userId: string, newRole: string) => {
     setUpdatingUserRoleId(userId)
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch(`${apiUrl()}/api/admin/users`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ userId, role: newRole }),
@@ -208,7 +208,7 @@ export function useAdminUsers({
 
   const handleUserStoreChange = async (userId: string, newStoreId: string) => {
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch(`${apiUrl()}/api/admin/users`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ userId, assignedStoreId: newStoreId }),
@@ -234,7 +234,7 @@ export function useAdminUsers({
     }
     setSavingPasswordId(userId)
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch(`${apiUrl()}/api/admin/users`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({ userId, password: passwordInput }),
@@ -262,7 +262,7 @@ export function useAdminUsers({
 
     setSavingPhoneId(userId)
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch(`${apiUrl()}/api/admin/users`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ userId, phone: phoneInput.trim() }),
@@ -289,7 +289,7 @@ export function useAdminUsers({
     assignedStoreId?: string
   }): Promise<boolean> => {
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch(`${apiUrl()}/api/admin/users`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({

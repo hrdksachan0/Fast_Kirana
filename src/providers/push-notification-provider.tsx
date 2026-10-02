@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useSession } from 'next-auth/react'
+import { apiUrl } from '@/lib/api-url'
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -91,7 +92,7 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource,
       })
 
-      const res = await fetch('/api/push/subscribe', {
+      const res = await fetch(`${apiUrl()}/api/push/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subscription }),

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
@@ -87,13 +88,13 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
     try {
       setLoadingCatalog(true)
       const storeParam = storeId ? `&storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/products?limit=1000&admin=true&includeUnavailable=true${storeParam}&t=${Date.now()}`)
+      const res = await fetch(`${apiUrl()}/api/products?limit=1000&admin=true&includeUnavailable=true${storeParam}&t=${Date.now()}`)
       if (!res.ok) throw new Error('Failed to load products')
       const data = await res.json()
       setProducts(data.products || [])
       onInventoryUpdated?.()
       
-      const catRes = await fetch(`/api/categories?t=${Date.now()}`)
+      const catRes = await fetch(`${apiUrl()}/api/categories?t=${Date.now()}`)
       if (catRes.ok) {
         const catData = await catRes.json()
         setCategories(catData.categories || [])
@@ -196,7 +197,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
       setScannedProduct(null)
       setIsLinkingMode(false)
 
-      const res = await fetch(`/api/admin/inventory/master-lookup?barcode=${barcodeToSearch}`)
+      const res = await fetch(`${apiUrl()}/api/admin/inventory/master-lookup?barcode=${barcodeToSearch}`)
       if (!res.ok) throw new Error('Master lookup failed')
       const data = await res.json()
 
@@ -316,7 +317,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
       // 1. We must create the product first
       try {
         setSubmittingInward(true)
-        const createRes = await fetch('/api/admin/products', {
+        const createRes = await fetch(`${apiUrl()}/api/admin/products`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -352,7 +353,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
       const originalProd = products.find(p => p.id === scannedProduct.id)
       if (originalProd && (originalProd.mrp !== parseFloat(scannedProduct.mrp) || originalProd.price !== parseFloat(scannedProduct.price))) {
         try {
-          const updateRes = await fetch(`/api/products/${scannedProduct.id}`, {
+          const updateRes = await fetch(`${apiUrl()}/api/products/${scannedProduct.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -371,7 +372,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
     // 2. Register inward batch
     try {
       setSubmittingInward(true)
-      const res = await fetch('/api/admin/inward', {
+      const res = await fetch(`${apiUrl()}/api/admin/inward`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -419,7 +420,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
   const handleLinkBarcode = async (prodId: string) => {
     try {
       setSearchingMaster(true)
-      const res = await fetch(`/api/products/${prodId}`, {
+      const res = await fetch(`${apiUrl()}/api/products/${prodId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcode: inwardBarcode.trim() })
@@ -471,7 +472,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
 
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=10&admin=true&includeUnavailable=true`)
+        const res = await fetch(`${apiUrl()}/api/products?search=${encodeURIComponent(query)}&limit=10&admin=true&includeUnavailable=true`)
         if (res.ok) {
           const data = await res.json()
           setPosSearchResults(data.products || [])
@@ -540,7 +541,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
     if (!product) {
       try {
         setCheckoutLoading(true)
-        const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=1&admin=true&includeUnavailable=true`)
+        const res = await fetch(`${apiUrl()}/api/products?search=${encodeURIComponent(query)}&limit=1&admin=true&includeUnavailable=true`)
         if (res.ok) {
           const data = await res.json()
           if (data.products && data.products.length > 0) {
@@ -615,7 +616,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
 
     try {
       setCheckoutLoading(true)
-      const res = await fetch('/api/admin/inventory/pos-checkout', {
+      const res = await fetch(`${apiUrl()}/api/admin/inventory/pos-checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -663,7 +664,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
   const fetchHistory = async () => {
     try {
       setLoadingHistory(true)
-      const res = await fetch('/api/admin/inventory/history?limit=50')
+      const res = await fetch(`${apiUrl()}/api/admin/inventory/history?limit=50`)
       if (!res.ok) throw new Error('Failed to load history')
       const data = await res.json()
       setHistoryLogs(data.logs || [])

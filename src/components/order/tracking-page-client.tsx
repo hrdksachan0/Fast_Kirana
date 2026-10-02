@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
@@ -23,8 +24,8 @@ export function TrackingPageClient({ orderId, initialOrder }: TrackingPageClient
       if (!isBackground && !order) setLoading(true)
 
       const [res, settingsRes] = await Promise.all([
-        fetch(`/api/orders/${orderId}?t=${Date.now()}`),
-        fetch('/api/settings', { cache: 'no-store' }).catch(() => null)
+        fetch(`${apiUrl()}/api/orders/${orderId}?t=${Date.now()}`),
+        fetch(`${apiUrl()}/api/settings`, { cache: 'no-store' }).catch(() => null)
       ])
 
       if (settingsRes && settingsRes.ok) {

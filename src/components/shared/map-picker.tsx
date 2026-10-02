@@ -47,7 +47,7 @@ export default function MapPicker({
 
   // Fetch API key from server
   useEffect(() => {
-    fetch('/api/geocode/key')
+    fetch(`${apiUrl()}/api/geocode/key`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch API key')
         return res.json()
@@ -214,7 +214,7 @@ export default function MapPicker({
   const resolveAddress = async (lat: number, lng: number) => {
     setIsResolvingAddress(true)
     try {
-      const res = await fetch(`/api/geocode?lat=${lat}&lng=${lng}`)
+      const res = await fetch(`${apiUrl()}/api/geocode?lat=${lat}&lng=${lng}`)
       if (!res.ok) throw new Error('Geocoding api error')
       const resData = await res.json()
       

@@ -106,8 +106,8 @@ export function AdminDashboardProvider({
     const refreshStoresAndRestaurants = async () => {
       try {
         const [storesRes, restRes] = await Promise.all([
-          fetch('/api/admin/stores').then((r) => (r.ok ? r.json() : [])),
-          fetch('/api/restaurants').then((r) => (r.ok ? r.json() : [])),
+          fetch(`${apiUrl()}/api/admin/stores`).then((r) => (r.ok ? r.json() : [])),
+          fetch(`${apiUrl()}/api/restaurants`).then((r) => (r.ok ? r.json() : [])),
         ])
         if (isMounted) {
           if (Array.isArray(storesRes) && storesRes.length > 0) {

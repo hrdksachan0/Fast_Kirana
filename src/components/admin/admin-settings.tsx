@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
@@ -197,11 +198,11 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
         const storeQuery = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
 
         const [catResult, settingsResult] = await Promise.allSettled([
-          fetch('/api/categories', { headers: authHeaders }).then(async (r) => {
+          fetch(`${apiUrl()}/api/categories`, { headers: authHeaders }).then(async (r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
             return r.json()
           }),
-          fetch(`/api/settings${storeQuery}`, { cache: 'no-store', headers: authHeaders }).then(async (r) => {
+          fetch(`${apiUrl()}/api/settings${storeQuery}`, { cache: 'no-store', headers: authHeaders }).then(async (r) => {
             if (!r.ok) {
               const errBody = await r.json().catch(() => ({}))
               throw new Error(errBody.error || errBody.detail || `HTTP ${r.status}`)
@@ -361,7 +362,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
         categorySettingsPayload[`category_open_${slug}`] = isOpen ? 'true' : 'false'
       })
 
-      const res = await fetch('/api/admin/settings', {
+      const res = await fetch(`${apiUrl()}/api/admin/settings`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

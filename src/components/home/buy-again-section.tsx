@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Minus, History } from 'lucide-react'
@@ -45,7 +46,7 @@ export function BuyAgainSection() {
     async function fetchItems() {
       try {
         const storeParam = activeStoreId ? `?storeId=${encodeURIComponent(activeStoreId)}` : ''
-        const res = await fetch(`/api/products/buy-again${storeParam}`)
+        const res = await fetch(`${apiUrl()}/api/products/buy-again${storeParam}`)
         if (res.ok) {
           const data = await res.json()
           setItems(data)

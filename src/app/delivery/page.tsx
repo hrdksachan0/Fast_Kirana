@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
@@ -57,7 +58,7 @@ export default function DeliveryDashboard() {
 
   const fetchWallet = useCallback(async () => {
     try {
-      const res = await fetch('/api/delivery/wallet')
+      const res = await fetch(`${apiUrl()}/api/delivery/wallet`)
       if (res.ok) {
         const data = await res.json()
         setWalletInfo(data.wallet || null)
@@ -104,7 +105,7 @@ export default function DeliveryDashboard() {
     }
 
     try {
-      const res = await fetch('/api/delivery/orders')
+      const res = await fetch(`${apiUrl()}/api/delivery/orders`)
       if (res.ok) {
         const data = await res.json()
         setOrders(data)
@@ -317,14 +318,14 @@ export default function DeliveryDashboard() {
       const targetOrder = orders.find((o) => o.id === orderId)
       const companionId = targetOrder?.companionOrder?.id
 
-      const res = await fetch(`/api/orders/${orderId}`, {
+      const res = await fetch(`${apiUrl()}/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, ...extraData }),
       })
 
       if (companionId) {
-        await fetch(`/api/orders/${companionId}`, {
+        await fetch(`${apiUrl()}/api/orders/${companionId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus, ...extraData }),
@@ -408,7 +409,7 @@ export default function DeliveryDashboard() {
           if (now - lastLocationPostRef.current < 15000) return
           lastLocationPostRef.current = now
           try {
-            await fetch('/api/delivery/location', {
+            await fetch(`${apiUrl()}/api/delivery/location`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

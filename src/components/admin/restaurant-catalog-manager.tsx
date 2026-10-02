@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
@@ -108,9 +109,9 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
   // Fetch all store products & categories so local media gallery shows ALL photos in system
   useEffect(() => {
     Promise.all([
-      fetch('/api/products?limit=2000&includeUnavailable=true&admin=true').then(r => r.ok ? r.json() : null),
-      fetch('/api/restaurant-dashboard/products?restaurantId=ALL').then(r => r.ok ? r.json() : null),
-      fetch('/api/categories').then(r => r.ok ? r.json() : null)
+      fetch(`${apiUrl()}/api/products?limit=2000&includeUnavailable=true&admin=true`).then(r => r.ok ? r.json() : null),
+      fetch(`${apiUrl()}/api/restaurant-dashboard/products?restaurantId=ALL`).then(r => r.ok ? r.json() : null),
+      fetch(`${apiUrl()}/api/categories`).then(r => r.ok ? r.json() : null)
     ]).then(([prodData, restData, catData]) => {
       const allFetched = [
         ...(prodData?.products || []),
@@ -184,7 +185,7 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
       const compressedFile = await compressImageClient(file)
       const data = new FormData()
       data.append('file', compressedFile)
-      const res = await fetch('/api/upload', {
+      const res = await fetch(`${apiUrl()}/api/upload`, {
         method: 'POST',
         headers: {
           ...(session?.user?.id ? { 'x-user-id': session.user.id, 'x-user-role': session.user.role } : {})
@@ -225,7 +226,7 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
 
   useEffect(() => {
     const storeParam = (session?.user as any)?.assignedStoreId ? `?storeId=${encodeURIComponent((session?.user as any).assignedStoreId)}` : ''
-    fetch(`/api/restaurants${storeParam}`)
+    fetch(`${apiUrl()}/api/restaurants${storeParam}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         const list = Array.isArray(data) ? data : (data?.restaurants || [])
@@ -259,9 +260,9 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
 
       const [prodRes, catRes, sectionsRes] = await Promise.all([
         fetch(url, { cache: 'no-store' }),
-        fetch('/api/categories', { cache: 'no-store' }),
+        fetch(`${apiUrl()}/api/categories`, { cache: 'no-store' }),
         effectiveRestId 
-          ? fetch(`/api/restaurants/${effectiveRestId}/sections`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null)
+          ? fetch(`${apiUrl()}/api/restaurants/${effectiveRestId}/sections`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null)
           : Promise.resolve(null)
       ])
 
@@ -511,14 +512,14 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
       let res
       if (editingProduct) {
         // Edit Product
-        res = await fetch(`/api/restaurant-dashboard/products/${editingProduct.id}`, {
+        res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${editingProduct.id}`, {
           method: 'PATCH',
           headers: reqHeaders,
           body: JSON.stringify(payload)
         })
       } else {
         // Add Product
-        res = await fetch('/api/restaurant-dashboard/products', {
+        res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products`, {
           method: 'POST',
           headers: reqHeaders,
           body: JSON.stringify({
@@ -550,7 +551,7 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
     if (!confirmed) return
 
     try {
-      const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -580,7 +581,7 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
     const isCurrentlyOutOfStock = product.stock <= 0
     const newStock = isCurrentlyOutOfStock ? 999 : 0
     try {
-      const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -610,7 +611,7 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
   const handleToggleAvailability = async (product: Product) => {
     const newStatus = !product.isAvailable
     try {
-      const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

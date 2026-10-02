@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { toast } from 'sonner'
 import { X, Loader2, Check } from 'lucide-react'
+import { apiUrl } from '@/lib/api-url'
 
 export interface ProductEditForm {
   name: string
@@ -147,7 +148,7 @@ export function ProductEditModal({
   const [isCustomVendor, setIsCustomVendor] = useState(false)
 
   useEffect(() => {
-    fetch('/api/admin/vendors')
+    fetch(`${apiUrl()}/api/admin/vendors`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data.vendors)) {

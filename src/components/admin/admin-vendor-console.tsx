@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
@@ -237,7 +238,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
     setIsSendingVendorOtp(true)
     try {
-      const res = await fetch('/api/auth/otp/send', {
+      const res = await fetch(`${apiUrl()}/api/auth/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneToVerify }),
@@ -265,7 +266,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
     setIsVerifyingVendorOtp(true)
     try {
-      const res = await fetch('/api/auth/otp/verify', {
+      const res = await fetch(`${apiUrl()}/api/auth/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: cleanVendorPhone, otp: cleanCode }),
@@ -286,7 +287,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
   }
 
   useEffect(() => {
-    fetch('/api/admin/stores', { headers: authHeaders })
+    fetch(`${apiUrl()}/api/admin/stores`, { headers: authHeaders })
       .then((res) => res.json())
       .then((data) => {
         const list = Array.isArray(data.stores) ? data.stores : (Array.isArray(data) ? data : [])
@@ -313,7 +314,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     setLoadingVendors(true)
     try {
       const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/vendors${storeParam}`, { headers: authHeaders })
+      const res = await fetch(`${apiUrl()}/api/admin/vendors${storeParam}`, { headers: authHeaders })
       if (res.ok) {
         const data = await res.json()
         const list = Array.isArray(data.vendors) ? data.vendors : []
@@ -340,8 +341,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     setLoadingDetails(true)
     try {
       const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(
-        `/api/admin/vendors/${selectedVendorId}?startDate=${startDate}&endDate=${endDate}${storeParam}`,
+      const res = await fetch(`${apiUrl()}/api/admin/vendors/${selectedVendorId}?startDate=${startDate}&endDate=${endDate}${storeParam}`,
         { headers: authHeaders }
       )
       if (res.ok) {
@@ -494,7 +494,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
     setSavingVendor(true)
     try {
-      const res = await fetch('/api/admin/vendors', {
+      const res = await fetch(`${apiUrl()}/api/admin/vendors`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
@@ -543,7 +543,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
     setSavingPayout(true)
     try {
-      const res = await fetch('/api/admin/vendors/payout', {
+      const res = await fetch(`${apiUrl()}/api/admin/vendors/payout`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
@@ -577,7 +577,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
   const handleDeletePayout = async (payoutId: string) => {
     if (!confirm('Are you sure you want to void this payout entry?')) return
     try {
-      const res = await fetch(`/api/admin/vendors/payout?payoutId=${encodeURIComponent(payoutId)}`, {
+      const res = await fetch(`${apiUrl()}/api/admin/vendors/payout?payoutId=${encodeURIComponent(payoutId)}`, {
         method: 'DELETE',
         headers: authHeaders,
       })

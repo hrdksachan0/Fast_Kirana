@@ -117,7 +117,7 @@ export function Navbar() {
     lastFetchRef.current = Date.now()
     const currentStoreId = useUIStore.getState().activeStoreId
     const storeParam = currentStoreId && currentStoreId !== 'all' ? `?storeId=${encodeURIComponent(currentStoreId)}` : ''
-    fetch(`/api/store-status${storeParam}`)
+    fetch(`${apiUrl()}/api/store-status${storeParam}`)
       .then(res => res.json())
       .then(data => {
         const gOpen = data.grocery_mart_open !== 'false'
@@ -221,7 +221,7 @@ export function Navbar() {
     hydrateLocation()
 
     // Initial full settings hydration so distance tiers & financial rules are immediately available
-    fetch('/api/settings')
+    fetch(`${apiUrl()}/api/settings`)
       .then((res) => res.json())
       .then((data) => {
         if (data && typeof data === 'object') {

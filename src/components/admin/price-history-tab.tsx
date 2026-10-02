@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useCallback } from 'react'
 import {
@@ -77,7 +78,7 @@ export function PriceHistoryTab({ storeId }: PriceHistoryTabProps) {
         params.set('page', String(page))
         params.set('limit', '30')
 
-        const res = await fetch(`/api/admin/price-history?${params.toString()}`)
+        const res = await fetch(`${apiUrl()}/api/admin/price-history?${params.toString()}`)
         if (!res.ok) throw new Error('Failed to load price history')
 
         const data = await res.json()

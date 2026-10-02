@@ -35,7 +35,7 @@ export default function RestaurantLoginPage() {
       }
 
       // Fetch session info to verify chef authorization
-      const sessionRes = await fetch('/api/auth/session')
+      const sessionRes = await fetch(`${apiUrl()}/api/auth/session`)
       const session = await sessionRes.json()
       
       const role = session?.user?.role

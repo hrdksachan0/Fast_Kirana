@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -32,7 +33,7 @@ export function AdminPushNotifications() {
 
   const fetchNotificationData = async () => {
     try {
-      const res = await fetch('/api/admin/push-notifications')
+      const res = await fetch(`${apiUrl()}/api/admin/push-notifications`)
       if (res.ok) {
         const data = await res.json()
         setHistory(data.notifications || [])
@@ -56,7 +57,7 @@ export function AdminPushNotifications() {
 
     setIsSending(true)
     try {
-      const res = await fetch('/api/admin/push-notifications', {
+      const res = await fetch(`${apiUrl()}/api/admin/push-notifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -41,7 +41,7 @@ export function usePaymentPolling({
     if (isPaidRef.current || !orderId) return false
 
     try {
-      const endpoint = '/api/payment/cashfree/verify'
+      const endpoint = `${apiUrl()}/api/payment/cashfree/verify`
       const body = JSON.stringify({ orderId, cfOrderId })
 
       const res = await fetch(endpoint, {

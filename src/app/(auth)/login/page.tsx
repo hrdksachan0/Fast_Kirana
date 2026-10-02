@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -172,7 +173,7 @@ function LoginForm() {
     }
 
     try {
-      const res = await fetch('/api/auth/email/check', {
+      const res = await fetch(`${apiUrl()}/api/auth/email/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: normalizedInput }),
@@ -231,7 +232,7 @@ function LoginForm() {
   const sendOtp = async (targetEmail?: string) => {
     const emailToUse = targetEmail || email
     try {
-      const res = await fetch('/api/auth/otp/send', {
+      const res = await fetch(`${apiUrl()}/api/auth/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailToUse.toLowerCase().trim() }),
@@ -273,7 +274,7 @@ function LoginForm() {
         toast.success('Successfully logged in!')
         let activeRole = userRole
         try {
-          const sessRes = await fetch('/api/auth/session')
+          const sessRes = await fetch(`${apiUrl()}/api/auth/session`)
           const sessData = await sessRes.json()
           if (sessData?.user?.role) {
             activeRole = sessData.user.role
@@ -310,7 +311,7 @@ function LoginForm() {
     setIsLoading(true)
 
     try {
-      const res = await fetch('/api/auth/otp/verify', {
+      const res = await fetch(`${apiUrl()}/api/auth/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.toLowerCase().trim(), otp, forNextAuth: true }),
@@ -383,7 +384,7 @@ function LoginForm() {
       }
       let activeRole = userRole
       try {
-        const sessRes = await fetch('/api/auth/session')
+        const sessRes = await fetch(`${apiUrl()}/api/auth/session`)
         const sessData = await sessRes.json()
         if (sessData?.user?.role) {
           activeRole = sessData.user.role
@@ -445,7 +446,7 @@ function LoginForm() {
         setLoginType('WHATSAPP')
         setEmail(identifier)
         
-        const checkRes = await fetch('/api/auth/email/check', {
+        const checkRes = await fetch(`${apiUrl()}/api/auth/email/check`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: normalizePhoneNumber(identifier) }),
@@ -459,7 +460,7 @@ function LoginForm() {
         const checkData = checkJson.data || checkJson
         const finalEmail = checkData.email || normalizePhoneNumber(identifier)
         
-        const otpRes = await fetch('/api/auth/otp/send', {
+        const otpRes = await fetch(`${apiUrl()}/api/auth/otp/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: finalEmail.toLowerCase().trim() }),

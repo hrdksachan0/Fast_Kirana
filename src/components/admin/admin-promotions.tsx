@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
@@ -64,9 +65,9 @@ export function AdminPromotions({ storeId }: AdminPromotionsProps = {}) {
     try {
       const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
       const [flashRes, topRes, bestRes] = await Promise.all([
-        fetch(`/api/admin/products?flashDeals=true&limit=100${storeParam}`, { headers: authHeaders }).then(r => r.json()),
-        fetch(`/api/admin/products?topPicks=true&limit=100${storeParam}`, { headers: authHeaders }).then(r => r.json()),
-        fetch(`/api/admin/products?bestSellers=true&limit=100${storeParam}`, { headers: authHeaders }).then(r => r.json()),
+        fetch(`${apiUrl()}/api/admin/products?flashDeals=true&limit=100${storeParam}`, { headers: authHeaders }).then(r => r.json()),
+        fetch(`${apiUrl()}/api/admin/products?topPicks=true&limit=100${storeParam}`, { headers: authHeaders }).then(r => r.json()),
+        fetch(`${apiUrl()}/api/admin/products?bestSellers=true&limit=100${storeParam}`, { headers: authHeaders }).then(r => r.json()),
       ])
       
       setFlashProducts(flashRes.products || [])
@@ -86,7 +87,7 @@ export function AdminPromotions({ storeId }: AdminPromotionsProps = {}) {
     setIsLoading(true)
     try {
       const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/products?search=${encodeURIComponent(searchQuery)}&limit=50${storeParam}`, { headers: authHeaders })
+      const res = await fetch(`${apiUrl()}/api/admin/products?search=${encodeURIComponent(searchQuery)}&limit=50${storeParam}`, { headers: authHeaders })
       if (res.ok) {
         const data = await res.json()
         setSearchProducts(data.products || [])
@@ -118,7 +119,7 @@ export function AdminPromotions({ storeId }: AdminPromotionsProps = {}) {
     }
 
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`${apiUrl()}/api/products/${product.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ [field]: newValue }),

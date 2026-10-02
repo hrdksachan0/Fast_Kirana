@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { RestaurantCard } from '@/components/home/restaurant-card'
@@ -55,7 +56,7 @@ export function RestaurantListing({ initialRestaurants }: RestaurantListingProps
   useEffect(() => {
     if (initialRestaurants) return
     setIsLoading(true)
-    fetch(`/api/restaurants?city=${encodeURIComponent(activeCity)}`)
+    fetch(`${apiUrl()}/api/restaurants?city=${encodeURIComponent(activeCity)}`)
       .then(res => res.json())
       .then(data => {
         setRestaurants(Array.isArray(data) ? data : data.restaurants || [])

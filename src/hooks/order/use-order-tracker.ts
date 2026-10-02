@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -120,7 +121,7 @@ export function useOrderTracker({
   const handleCancelOrder = async () => {
     setIsCancelling(true)
     try {
-      const res = await fetch(`/api/orders/${order.id}`, {
+      const res = await fetch(`${apiUrl()}/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'CANCELLED' }),
@@ -260,7 +261,7 @@ export function useOrderTracker({
       const companionUpdates = compOrder ? editItems.filter(i => i.orderId === compOrder.id) : []
 
       const promises = [
-        fetch(`/api/orders/${order.id}/edit`, {
+        fetch(`${apiUrl()}/api/orders/${order.id}/edit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ updatedItems: primaryUpdates })
@@ -269,7 +270,7 @@ export function useOrderTracker({
 
       if (compOrder) {
         promises.push(
-          fetch(`/api/orders/${compOrder.id}/edit`, {
+          fetch(`${apiUrl()}/api/orders/${compOrder.id}/edit`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ updatedItems: companionUpdates })
@@ -334,7 +335,7 @@ export function useOrderTracker({
 
   // Fetch store coordinates and support phone on mount
   useEffect(() => {
-    fetch('/api/settings', { cache: 'no-store' })
+    fetch(`${apiUrl()}/api/settings`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data.store_lat) setStoreLat(parseFloat(data.store_lat))
@@ -378,7 +379,7 @@ export function useOrderTracker({
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       try {
         if (!isMainTerminal) {
-          const res = await fetch(`/api/orders/${order.id}`)
+          const res = await fetch(`${apiUrl()}/api/orders/${order.id}`)
           if (res.ok) {
             const data = await res.json()
             if (data && data.status) {
@@ -397,7 +398,7 @@ export function useOrderTracker({
         }
 
         if (compOrder && !isCompTerminal) {
-          const compRes = await fetch(`/api/orders/${compOrder.id}`)
+          const compRes = await fetch(`${apiUrl()}/api/orders/${compOrder.id}`)
           if (compRes.ok) {
             const compData = await compRes.json()
             if (compData && compData.status) {
@@ -431,7 +432,7 @@ export function useOrderTracker({
           const orderId = updated.id
 
           if (orderId === order.id) {
-            fetch(`/api/orders/${order.id}`)
+            fetch(`${apiUrl()}/api/orders/${order.id}`)
               .then(res => res.json())
               .then(data => {
                 if (data && data.status) {
@@ -450,7 +451,7 @@ export function useOrderTracker({
           }
 
           if (compOrder && orderId === compOrder.id) {
-            fetch(`/api/orders/${compOrder.id}`)
+            fetch(`${apiUrl()}/api/orders/${compOrder.id}`)
               .then(res => res.json())
               .then(data => {
                 if (data && data.status) {
@@ -479,7 +480,7 @@ export function useOrderTracker({
         try {
           const msg = JSON.parse(event.data)
           if (msg.event === 'STATUS_UPDATE' || msg.status) {
-            fetch(`/api/orders/${order.id}`)
+            fetch(`${apiUrl()}/api/orders/${order.id}`)
               .then(r => r.json())
               .then(data => {
                 if (data?.status) setOrder(data)

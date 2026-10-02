@@ -87,7 +87,7 @@ export function usePickerRealtime({
     if (!silent) setIsLoading(true)
 
     try {
-      const res = await fetch('/api/picker/orders')
+      const res = await fetch(`${apiUrl()}/api/picker/orders`)
       if (res.ok) {
         const data = await res.json()
         setOrders(data)

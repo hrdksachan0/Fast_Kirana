@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -49,7 +50,7 @@ export default function DoorstepPayPage() {
       setStatus('loading')
 
       // 1a. Fetch order info for display
-      const orderRes = await fetch(`/api/delivery/orders/${orderId}/qr?t=${Date.now()}`)
+      const orderRes = await fetch(`${apiUrl()}/api/delivery/orders/${orderId}/qr?t=${Date.now()}`)
       if (!orderRes.ok) {
         setErrorMsg('Order not found or expired.')
         setStatus('error')
@@ -69,7 +70,7 @@ export default function DoorstepPayPage() {
       })
 
       // 1b. Create Cashfree payment session
-      const cfRes = await fetch('/api/payment/cashfree/create-order', {
+      const cfRes = await fetch(`${apiUrl()}/api/payment/cashfree/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId }),
@@ -109,7 +110,7 @@ export default function DoorstepPayPage() {
           return
         }
         try {
-          const verifyRes = await fetch('/api/payment/cashfree/verify', {
+          const verifyRes = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orderId }),
@@ -135,7 +136,7 @@ export default function DoorstepPayPage() {
       // After modal closes, check once more
       if (!paymentSuccess) {
         try {
-          const verifyRes = await fetch('/api/payment/cashfree/verify', {
+          const verifyRes = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orderId }),

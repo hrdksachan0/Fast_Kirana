@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
@@ -155,7 +156,7 @@ export function AdminRestaurantReport({ storeId }: AdminRestaurantReportProps = 
     setLoadingPayouts(true)
     try {
       const storeParam = storeId ? `?storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/payouts${storeParam}`, { headers: authHeaders })
+      const res = await fetch(`${apiUrl()}/api/admin/payouts${storeParam}`, { headers: authHeaders })
       if (!res.ok) throw new Error('Failed to load payouts')
       const json = await res.json()
       setPastPayouts(json || [])
@@ -191,7 +192,7 @@ export function AdminRestaurantReport({ storeId }: AdminRestaurantReportProps = 
 
     setIsSettling(true)
     try {
-      const res = await fetch('/api/admin/payouts', {
+      const res = await fetch(`${apiUrl()}/api/admin/payouts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -231,7 +232,7 @@ export function AdminRestaurantReport({ storeId }: AdminRestaurantReportProps = 
     
     setUpdatingComm(true)
     try {
-      const res = await fetch(`/api/restaurants/${id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurants/${id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ commissionRate: Number(commValue) / 100 })

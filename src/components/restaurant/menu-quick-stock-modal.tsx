@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -68,7 +69,7 @@ export function MenuQuickStockModal({ isOpen, onClose, restaurantId }: MenuQuick
     triggerHaptic('selection')
 
     try {
-      const res = await fetch(`/api/restaurant-dashboard/products/${item.id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${item.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isAvailable: newStatus })

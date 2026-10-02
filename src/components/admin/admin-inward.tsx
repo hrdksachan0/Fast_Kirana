@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
@@ -65,7 +66,7 @@ export function AdminInward({ onInwardCompleted }: AdminInwardProps) {
   const fetchProducts = async () => {
     try {
       setLoadingProducts(true)
-      const res = await fetch('/api/products?limit=1000')
+      const res = await fetch(`${apiUrl()}/api/products?limit=1000`)
       if (!res.ok) throw new Error('Failed to load products')
       const data = await res.json()
       setProducts(data.products || [])
@@ -129,7 +130,7 @@ export function AdminInward({ onInwardCompleted }: AdminInwardProps) {
 
     try {
       setSubmitting(true)
-      const res = await fetch('/api/admin/inward', {
+      const res = await fetch(`${apiUrl()}/api/admin/inward`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

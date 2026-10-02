@@ -23,6 +23,7 @@ import {
 import { formatDate } from '@/lib/date-helpers'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { apiUrl } from '@/lib/api-url'
 
 interface Category {
   id: string
@@ -356,7 +357,7 @@ export function CouponsTab({
   const [restaurantDishes, setRestaurantDishes] = useState<Array<{ id: string; name: string; price: number; imageUrl?: string | null }>>([])
 
   useEffect(() => {
-    fetch('/api/restaurants?all=true')
+    fetch(`${apiUrl()}/api/restaurants?all=true`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -373,7 +374,7 @@ export function CouponsTab({
       setRestaurantDishes([])
       return
     }
-    fetch(`/api/restaurants/${targetRestId}/menu`)
+    fetch(`${apiUrl()}/api/restaurants/${targetRestId}/menu`)
       .then((res) => res.json())
       .then((data) => {
         if (data?.sections && Array.isArray(data.sections)) {

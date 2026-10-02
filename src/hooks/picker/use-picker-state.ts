@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
@@ -64,7 +65,7 @@ export function usePickerState({ orders, fetchOrders, playBeep }: UsePickerState
       setUpdatingId(orderId)
       const toastId = toast.loading('📦 All items picked! Automatically packing order...')
       try {
-        const res = await fetch(`/api/orders/${orderId}`, {
+        const res = await fetch(`${apiUrl()}/api/orders/${orderId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'PACKED' }),
@@ -97,7 +98,7 @@ export function usePickerState({ orders, fetchOrders, playBeep }: UsePickerState
     async (order: Order) => {
       setUpdatingId(order.id)
       try {
-        const res = await fetch(`/api/orders/${order.id}`, {
+        const res = await fetch(`${apiUrl()}/api/orders/${order.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'CONFIRMED' }),
@@ -261,7 +262,7 @@ export function usePickerState({ orders, fetchOrders, playBeep }: UsePickerState
         const orderId = selectedOrderIds[i]
         const order = orders.find((o) => o.id === orderId)
         if (order) {
-          await fetch(`/api/orders/${order.id}`, {
+          await fetch(`${apiUrl()}/api/orders/${order.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'CONFIRMED' }),
@@ -376,7 +377,7 @@ export function usePickerState({ orders, fetchOrders, playBeep }: UsePickerState
       setUpdatingId(orderId)
       const toastId = toast.loading('📦 Packing order...')
       try {
-        const res = await fetch(`/api/orders/${orderId}`, {
+        const res = await fetch(`${apiUrl()}/api/orders/${orderId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'PACKED' }),

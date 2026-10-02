@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -25,7 +26,7 @@ export function WishlistClient({ initialItems }: { initialItems?: WishlistItem[]
     if (initialItems && initialItems.length > 0) return
     setLoading(true)
     try {
-      const res = await fetch('/api/wishlist')
+      const res = await fetch(`${apiUrl()}/api/wishlist`)
       if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()
       setItems(data.items || [])
@@ -45,7 +46,7 @@ export function WishlistClient({ initialItems }: { initialItems?: WishlistItem[]
     triggerHaptic('light')
     setRemovingId(productId)
     try {
-      const res = await fetch('/api/wishlist', {
+      const res = await fetch(`${apiUrl()}/api/wishlist`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId }),
@@ -70,7 +71,7 @@ export function WishlistClient({ initialItems }: { initialItems?: WishlistItem[]
     try {
       await Promise.all(
         items.map((item) =>
-          fetch('/api/wishlist', {
+          fetch(`${apiUrl()}/api/wishlist`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ productId: item.productId }),

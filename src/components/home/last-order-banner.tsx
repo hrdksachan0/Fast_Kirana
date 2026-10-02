@@ -81,7 +81,7 @@ export function LastOrderBanner() {
     const pollInterval = setInterval(async () => {
       if (document.visibilityState !== 'visible') return
       try {
-        const res = await fetch(`/api/orders/${lastOrder.id}`)
+        const res = await fetch(`${apiUrl()}/api/orders/${lastOrder.id}`)
         if (res.ok) {
           const data = await res.json()
           if (data && data.status) {
@@ -106,7 +106,7 @@ export function LastOrderBanner() {
   const fetchLastOrder = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch('/api/orders')
+      const res = await fetch(`${apiUrl()}/api/orders`)
       if (res.ok) {
         const orders = await res.json()
         if (Array.isArray(orders) && orders.length > 0) {

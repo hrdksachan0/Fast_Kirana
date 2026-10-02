@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import Image from 'next/image'
@@ -198,7 +199,7 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
   const fetchReviews = async () => {
     try {
       const targetIdentifier = restaurant.id || restaurant.slug
-      const res = await fetch(`/api/restaurants/${targetIdentifier}/reviews?slug=${restaurant.slug || ''}`)
+      const res = await fetch(`${apiUrl()}/api/restaurants/${targetIdentifier}/reviews?slug=${restaurant.slug || ''}`)
       if (res.ok) {
         const data = await res.json()
         setReviews(data.reviews || [])
@@ -220,7 +221,7 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
     setIsSubmittingReview(true)
     try {
       const targetIdentifier = restaurant.id || restaurant.slug
-      const res = await fetch(`/api/restaurants/${targetIdentifier}/reviews`, {
+      const res = await fetch(`${apiUrl()}/api/restaurants/${targetIdentifier}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating: newRating, comment: newComment }),

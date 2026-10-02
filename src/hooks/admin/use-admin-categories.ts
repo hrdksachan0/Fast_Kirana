@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
+import { apiUrl } from '@/lib/api-url'
 
 interface UseAdminCategoriesProps {
   initialCategories?: any[]
@@ -49,7 +50,7 @@ export function useAdminCategories({ initialCategories }: UseAdminCategoriesProp
 
     setIsCreatingCategory(true)
     try {
-      const res = await fetch('/api/categories', {
+      const res = await fetch(`${apiUrl()}/api/categories`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
@@ -96,7 +97,7 @@ export function useAdminCategories({ initialCategories }: UseAdminCategoriesProp
 
     setSavingCategoryId(editingCategory.id)
     try {
-      const res = await fetch(`/api/categories/${editingCategory.id}`, {
+      const res = await fetch(`${apiUrl()}/api/categories/${editingCategory.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({
@@ -129,7 +130,7 @@ export function useAdminCategories({ initialCategories }: UseAdminCategoriesProp
     }
     setDeletingCategoryId(categoryId)
     try {
-      const res = await fetch(`/api/categories/${categoryId}`, {
+      const res = await fetch(`${apiUrl()}/api/categories/${categoryId}`, {
         method: 'DELETE',
         headers: authHeaders,
       })

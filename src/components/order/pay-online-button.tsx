@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState } from 'react'
 import { CreditCard, Loader2, ShieldCheck, ArrowRight, Lock } from 'lucide-react'
@@ -49,7 +50,7 @@ export function PayOnlineButton({
   const handleCheckPaymentStatus = async () => {
     setIsCheckingStatus(true)
     try {
-      const cfRes = await fetch('/api/payment/cashfree/verify', {
+      const cfRes = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId }),
@@ -82,7 +83,7 @@ export function PayOnlineButton({
 
     try {
       // 1. Try Cashfree First
-      const cfRes = await fetch('/api/payment/cashfree/create-order', {
+      const cfRes = await fetch(`${apiUrl()}/api/payment/cashfree/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, amount, customerPhone, customerName }),
@@ -106,7 +107,7 @@ export function PayOnlineButton({
               return
             }
             try {
-              const verifyRes = await fetch('/api/payment/cashfree/verify', {
+              const verifyRes = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderId }),
@@ -137,7 +138,7 @@ export function PayOnlineButton({
           setTimeout(async () => {
             if (!paymentConfirmed) {
               try {
-                const verifyRes = await fetch('/api/payment/cashfree/verify', {
+                const verifyRes = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ orderId }),

@@ -58,7 +58,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
   useEffect(() => {
     // Fetch categories
-    fetch('/api/categories')
+    fetch(`${apiUrl()}/api/categories`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -69,7 +69,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
     // Fetch trending searches (products scoped to active store)
     const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-    fetch(`/api/products?trending=true${storeParam}`)
+    fetch(`${apiUrl()}/api/products?trending=true${storeParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (data && Array.isArray(data.products)) {
@@ -208,7 +208,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       setLoading(true)
       try {
         const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-        const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=20${storeParam}`)
+        const res = await fetch(`${apiUrl()}/api/products?search=${encodeURIComponent(query)}&limit=20${storeParam}`)
         if (res.ok) {
           const data = await res.json()
           setSuggestions(data.products || [])

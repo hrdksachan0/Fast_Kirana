@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -76,13 +77,13 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
       setLoading(true)
       try {
         // 1. Fetch category sort rule
-        const ruleRes = await fetch(`/api/admin/categories/sort-rule?categorySlug=${selectedCategorySlug}`)
+        const ruleRes = await fetch(`${apiUrl()}/api/admin/categories/sort-rule?categorySlug=${selectedCategorySlug}`)
         const ruleData = await ruleRes.json()
         const activeRule = ruleData.rule || 'manual'
         setSortRule(activeRule)
 
         // 2. Fetch all products in category
-        const prodRes = await fetch(`/api/products?category=${selectedCategorySlug}&admin=true&limit=500`)
+        const prodRes = await fetch(`${apiUrl()}/api/products?category=${selectedCategorySlug}&admin=true&limit=500`)
         const prodData = await prodRes.json()
         const dbProducts = prodData.products || prodData || []
         
@@ -123,7 +124,7 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
       setModifiedPositions(updatedMap)
 
       // 3. Save sorting rule to settings
-      const ruleRes = await fetch('/api/admin/categories/sort-rule', {
+      const ruleRes = await fetch(`${apiUrl()}/api/admin/categories/sort-rule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categorySlug: selectedCategorySlug, rule: newRule })
@@ -136,7 +137,7 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
           id,
           sortOrder
         }))
-        const sortRes = await fetch('/api/admin/products/bulk-sort', {
+        const sortRes = await fetch(`${apiUrl()}/api/admin/products/bulk-sort`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ positions: positionsArray })
@@ -190,7 +191,7 @@ export function AdminSortManager({ isOpen, onClose, categories }: AdminSortManag
         return
       }
 
-      const res = await fetch('/api/admin/products/bulk-sort', {
+      const res = await fetch(`${apiUrl()}/api/admin/products/bulk-sort`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ positions: positionsArray })

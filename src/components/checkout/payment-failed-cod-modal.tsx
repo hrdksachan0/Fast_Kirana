@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -87,7 +88,7 @@ export function PaymentFailedCodModal({
 
     try {
       triggerHaptic('light')
-      const res = await fetch(`/api/orders/${orderId}`, {
+      const res = await fetch(`${apiUrl()}/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -129,7 +130,7 @@ export function PaymentFailedCodModal({
 
     try {
       triggerHaptic('success')
-      const res = await fetch(`/api/orders/${orderId}/convert-to-cod`, {
+      const res = await fetch(`${apiUrl()}/api/orders/${orderId}/convert-to-cod`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })

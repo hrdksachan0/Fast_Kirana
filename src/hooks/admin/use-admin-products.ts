@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ProductEditForm } from '@/components/admin/product-edit-modal'
 import { PRODUCT_TEMPLATES } from '@/lib/constants'
 import { toast } from 'sonner'
+import { apiUrl } from '@/lib/api-url'
 
 interface UseAdminProductsProps {
   initialProducts?: any[]
@@ -132,7 +133,7 @@ export function useAdminProducts({
           ? `&storeId=${encodeURIComponent(selectedHubId)}`
           : ''
       const res = await fetch(
-        `/api/admin/products?page=${productPage}&limit=10&categoryId=${selectedCategoryFilter}&search=${encodeURIComponent(
+        `${apiUrl()}/api/admin/products?page=${productPage}&limit=10&categoryId=${selectedCategoryFilter}&search=${encodeURIComponent(
           searchQuery
         )}&type=${selectedTypeFilter}${storeQuery}&t=${Date.now()}`,
         { headers: authHeaders }
@@ -175,7 +176,7 @@ export function useAdminProducts({
           selectedHubId && selectedHubId !== 'all'
             ? `&storeId=${encodeURIComponent(selectedHubId)}`
             : ''
-        const res = await fetch(`/api/products?limit=1000${storeQuery}&admin=true&includeUnavailable=true&t=${Date.now()}`, { headers: authHeaders })
+        const res = await fetch(`${apiUrl()}/api/products?limit=1000${storeQuery}&admin=true&includeUnavailable=true&t=${Date.now()}`, { headers: authHeaders })
         if (res.ok && active) {
           const data = await res.json()
           if (Array.isArray(data?.products)) {
@@ -347,7 +348,7 @@ export function useAdminProducts({
   const handleExportCsv = async (type: 'all' | 'grocery' | 'cafe') => {
     setIsExporting(true)
     try {
-      const url = `/api/admin/products?limit=5000${type !== 'all' ? `&type=${type}` : ''}`
+      const url = `${apiUrl()}/api/admin/products?limit=5000${type !== 'all' ? `&type=${type}` : ''}`
       const res = await fetch(url, { headers: authHeaders })
       const data = await res.json()
 
@@ -463,7 +464,7 @@ export function useAdminProducts({
   const handleReplenishCsv = async () => {
     setIsExporting(true)
     try {
-      const url = '/api/admin/products?limit=5000'
+      const url = `${apiUrl()}/api/admin/products?limit=5000`
       const res = await fetch(url, { headers: authHeaders })
       const data = await res.json()
 
@@ -658,7 +659,7 @@ export function useAdminProducts({
           ? lowestEditVariant.name
           : (productEditForm.unit?.trim() || editingProduct.unit || (productEditForm.restaurantId ? '1 Serving' : '1 pc'))
 
-      const res = await fetch(`/api/products/${editingProduct.id}`, {
+      const res = await fetch(`${apiUrl()}/api/products/${editingProduct.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -741,7 +742,7 @@ export function useAdminProducts({
     currentAvailable: boolean
   ) => {
     try {
-      const res = await fetch(`/api/products/${productId}`, {
+      const res = await fetch(`${apiUrl()}/api/products/${productId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -831,7 +832,7 @@ export function useAdminProducts({
           ? lowestNewVariant.name
           : (newProduct.unit?.trim() || (newProduct.restaurantId ? '1 Serving' : '1 pc'))
 
-      const res = await fetch('/api/products', {
+      const res = await fetch(`${apiUrl()}/api/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -934,7 +935,7 @@ export function useAdminProducts({
     }
 
     try {
-      const res = await fetch(`/api/products/${productId}`, {
+      const res = await fetch(`${apiUrl()}/api/products/${productId}`, {
         method: 'DELETE',
         headers: {
           ...(sessionUserId ? { 'x-user-id': sessionUserId } : {}),

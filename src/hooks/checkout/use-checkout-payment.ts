@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -196,7 +197,7 @@ export function useCheckoutPayment({
         storeId: effectiveStoreId,
       })
 
-      const res = await fetch('/api/orders', {
+      const res = await fetch(`${apiUrl()}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -320,7 +321,7 @@ export function useCheckoutPayment({
 
       // Free order edge case: skip Cashfree entirely, place order directly
       if (paymentAmount <= 0) {
-        const orderRes = await fetch('/api/orders', {
+        const orderRes = await fetch(`${apiUrl()}/api/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -356,7 +357,7 @@ export function useCheckoutPayment({
       const userEmail = (session?.user as any)?.email || undefined
       const userPhone = effectiveCustomerPhone || (session?.user as any)?.phone || '9999999999'
 
-      const cfRes = await fetch('/api/payment/cashfree/create-order', {
+      const cfRes = await fetch(`${apiUrl()}/api/payment/cashfree/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -409,7 +410,7 @@ export function useCheckoutPayment({
       const checkVerificationAndCreateOrder = async () => {
         if (paymentSuccess) return true
         try {
-          const verifyRes = await fetch('/api/payment/cashfree/verify', {
+          const verifyRes = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orderId: cfData.orderId, cfOrderId: cfData.orderId }),
@@ -430,7 +431,7 @@ export function useCheckoutPayment({
             // Retry order creation up to 3 times (critical: payment already taken)
             for (let retry = 0; retry < 3; retry++) {
               try {
-                const orderRes = await fetch('/api/orders', {
+                const orderRes = await fetch(`${apiUrl()}/api/orders`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -66,7 +67,7 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
       setIsUpdating(id)
-      const res = await fetch(`/api/restaurants/${id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurants/${id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ isOpen: !currentStatus })
@@ -92,7 +93,7 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
   const toggleActive = async (id: string, currentActive: boolean) => {
     try {
       setIsUpdating(id)
-      const res = await fetch(`/api/restaurants/${id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurants/${id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ isActive: !currentActive })
@@ -120,7 +121,7 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
 
     try {
       setIsDeleting(id)
-      const res = await fetch(`/api/restaurants/${id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurants/${id}`, {
         method: 'DELETE',
         headers: authHeaders,
       })

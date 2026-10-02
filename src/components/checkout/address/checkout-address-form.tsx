@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
@@ -100,7 +101,7 @@ export function CheckoutAddressForm({
 
     setIsSendingOtp(true)
     try {
-      const res = await fetch('/api/auth/otp/send', {
+      const res = await fetch(`${apiUrl()}/api/auth/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneToVerify }),
@@ -129,7 +130,7 @@ export function CheckoutAddressForm({
 
     setIsVerifyingOtp(true)
     try {
-      const res = await fetch('/api/auth/otp/verify', {
+      const res = await fetch(`${apiUrl()}/api/auth/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: cleanPhone, otp: cleanCode }),

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -33,7 +34,7 @@ export function RestaurantOffersCarousel({ restaurantId, restaurantName }: Resta
 
   useEffect(() => {
     if (!restaurantId) return
-    fetch(`/api/coupons?restaurantId=${encodeURIComponent(restaurantId)}`)
+    fetch(`${apiUrl()}/api/coupons?restaurantId=${encodeURIComponent(restaurantId)}`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {

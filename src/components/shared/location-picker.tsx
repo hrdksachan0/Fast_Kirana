@@ -66,7 +66,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
   // Fetch all dark store hubs when modal opens
   useEffect(() => {
     if (!open) return
-    fetch('/api/stores/hubs')
+    fetch(`${apiUrl()}/api/stores/hubs`)
       .then((res) => res.json())
       .then((data) => {
         if (data?.hubs && Array.isArray(data.hubs)) {
@@ -120,7 +120,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
     if (envKey) {
       setApiKey(envKey.trim().replace(/^["']|["']$/g, ''))
     } else {
-      fetch('/api/geocode/key')
+      fetch(`${apiUrl()}/api/geocode/key`)
         .then((res) => res.json())
         .then((data) => {
           if (data.apiKey) setApiKey(data.apiKey.trim().replace(/^["']|["']$/g, ''))
@@ -153,7 +153,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
       })
     } else {
       // Server fallback
-      fetch(`/api/geocode?lat=${lat}&lng=${lng}`)
+      fetch(`${apiUrl()}/api/geocode?lat=${lat}&lng=${lng}`)
         .then((res) => res.json())
         .then((data) => {
           const results = data.data?.results
@@ -436,7 +436,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
         }
       })
     } else {
-      fetch(`/api/geocode?address=${encodeURIComponent(searchQuery.trim())}`)
+      fetch(`${apiUrl()}/api/geocode?address=${encodeURIComponent(searchQuery.trim())}`)
         .then((res) => res.json())
         .then((data) => {
           setIsSearching(false)

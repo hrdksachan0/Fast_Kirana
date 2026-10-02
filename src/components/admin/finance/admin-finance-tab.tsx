@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import {
@@ -105,10 +106,10 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
       if (storeId && storeId.toLowerCase() !== 'all') params.set('storeId', storeId)
 
       // Try Next.js route first
-      let res = await fetch(`/api/admin/finance/daily?${params.toString()}`)
+      let res = await fetch(`${apiUrl()}/api/admin/finance/daily?${params.toString()}`)
       if (!res.ok) {
         // Fallback to FastAPI
-        res = await fetch(`/api/admin/finance/daily?${params.toString()}`)
+        res = await fetch(`${apiUrl()}/api/admin/finance/daily?${params.toString()}`)
       }
 
       if (!res.ok) throw new Error('Failed to load finance data')
@@ -159,7 +160,7 @@ export function AdminFinanceTab({ storeId }: AdminFinanceTabProps) {
 
     setSettlingRiderId(rider.id)
     try {
-      const res = await fetch('/api/admin/rider-cash', {
+      const res = await fetch(`${apiUrl()}/api/admin/rider-cash`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

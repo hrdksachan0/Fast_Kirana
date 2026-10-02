@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { Calendar, IndianRupee, RefreshCw, CheckCircle, Clock, Plus, Tag } from 'lucide-react'
@@ -43,7 +44,7 @@ export function RestaurantPayoutsLedger({ isAdmin = false, type = 'RESTAURANT' }
   const fetchPayouts = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/payouts?type=${type}`)
+      const res = await fetch(`${apiUrl()}/api/admin/payouts?type=${type}`)
       if (!res.ok) throw new Error('Failed to load payouts')
       const data = await res.json()
       setPayouts(data || [])
@@ -68,7 +69,7 @@ export function RestaurantPayoutsLedger({ isAdmin = false, type = 'RESTAURANT' }
 
     setCalculating(true)
     try {
-      const res = await fetch('/api/admin/payouts', {
+      const res = await fetch(`${apiUrl()}/api/admin/payouts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startDate, endDate, notes, type })
@@ -98,7 +99,7 @@ export function RestaurantPayoutsLedger({ isAdmin = false, type = 'RESTAURANT' }
 
     setSettling(true)
     try {
-      const res = await fetch('/api/admin/payouts', {
+      const res = await fetch(`${apiUrl()}/api/admin/payouts`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

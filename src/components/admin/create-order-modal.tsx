@@ -33,6 +33,7 @@ import { FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from '@/lib/constants'
 import { STORE_PINCODE, SERVICE_AREA_NAME } from '@/lib/store-config'
 import { getDeliveryRules } from '@/lib/distance'
 import { useUIStore } from '@/stores/ui-store'
+import { apiUrl } from '@/lib/api-url'
 
 interface CreateOrderModalProps {
   isOpen: boolean
@@ -159,7 +160,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     setIsSearchingCustomers(true)
     customerDebounce.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/admin/users?search=${encodeURIComponent(customerSearch)}&limit=8`)
+        const res = await fetch(`${apiUrl()}/api/admin/users?search=${encodeURIComponent(customerSearch)}&limit=8`)
         if (res.ok) {
           const data = await res.json()
           setCustomersList(data.users || [])
@@ -188,7 +189,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     setIsSearchingProducts(true)
     productDebounce.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/products?search=${encodeURIComponent(productSearch)}&limit=8`)
+        const res = await fetch(`${apiUrl()}/api/products?search=${encodeURIComponent(productSearch)}&limit=8`)
         if (res.ok) {
           const data = await res.json()
           setProductsList(data.products || [])
@@ -228,7 +229,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
     const fetchAddressesAndCart = async () => {
       try {
-        const res = await fetch(`/api/admin/users/${selectedCustomer.id}/addresses`)
+        const res = await fetch(`${apiUrl()}/api/admin/users/${selectedCustomer.id}/addresses`)
         if (res.ok) {
           const data = await res.json()
           setAddresses(data || [])
@@ -245,7 +246,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
 
       try {
         setIsLoadingActiveCart(true)
-        const cartRes = await fetch(`/api/admin/users/${selectedCustomer.id}/cart`)
+        const cartRes = await fetch(`${apiUrl()}/api/admin/users/${selectedCustomer.id}/cart`)
         if (cartRes.ok) {
           const cartData = await cartRes.json()
           if (cartData && cartData.items && cartData.items.length > 0) {
@@ -386,7 +387,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     setIsApplyingCoupon(true)
     try {
       const subtotal = calculateSubtotal()
-      const res = await fetch('/api/coupons/validate', {
+      const res = await fetch(`${apiUrl()}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -508,7 +509,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       let resolvedAddressId = selectedAddressId
 
       if (deliveryMethod === 'DELIVERY' && isManualAddress) {
-        const addrRes = await fetch(`/api/admin/users/${selectedCustomer.id}/addresses`, {
+        const addrRes = await fetch(`${apiUrl()}/api/admin/users/${selectedCustomer.id}/addresses`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -557,7 +558,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         })),
       }
 
-      const res = await fetch('/api/admin/orders/create-on-behalf', {
+      const res = await fetch(`${apiUrl()}/api/admin/orders/create-on-behalf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useRef, useCallback } from 'react'
 import Papa from 'papaparse'
@@ -390,7 +391,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
 
     setIsImporting(true)
     try {
-      const res = await fetch('/api/admin/products/bulk-import', {
+      const res = await fetch(`${apiUrl()}/api/admin/products/bulk-import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: parsedProducts }),

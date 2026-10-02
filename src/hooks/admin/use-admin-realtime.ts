@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase-client'
@@ -128,7 +129,7 @@ export function useAdminRealtime({
         selectedHubId && selectedHubId !== 'all'
           ? `&storeId=${encodeURIComponent(selectedHubId)}`
           : ''
-      const res = await fetch(`/api/admin/orders?limit=30&skipStats=true${storeQuery}&t=${Date.now()}`)
+      const res = await fetch(`${apiUrl()}/api/admin/orders?limit=30&skipStats=true${storeQuery}&t=${Date.now()}`)
       if (res.ok) {
         const data = await res.json()
         const fetched = Array.isArray(data?.orders)
@@ -364,7 +365,7 @@ export function useAdminRealtime({
         const headers: Record<string, string> = {}
         if (token) headers['Authorization'] = `Bearer ${token}`
 
-        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`, { headers })
+        const res = await fetch(`${apiUrl()}/api/admin/live-carts?t=${Date.now()}${storeQuery}`, { headers })
         if (res.ok && active) {
           const data = await res.json()
           setActiveCartsCount(data.count || 0)
@@ -399,7 +400,7 @@ export function useAdminRealtime({
         const headers: Record<string, string> = {}
         if (token) headers['Authorization'] = `Bearer ${token}`
 
-        const res = await fetch(`/api/admin/live-carts?t=${Date.now()}${storeQuery}`, { headers })
+        const res = await fetch(`${apiUrl()}/api/admin/live-carts?t=${Date.now()}${storeQuery}`, { headers })
         if (res.ok && active) {
           const data = await res.json()
           setActiveCarts(data.carts || [])

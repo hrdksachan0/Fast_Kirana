@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -139,7 +140,7 @@ export function EditProductPriceModal({
 
     setIsSubmitting(true)
     try {
-      const res = await fetch('/api/picker/products', {
+      const res = await fetch(`${apiUrl()}/api/picker/products`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

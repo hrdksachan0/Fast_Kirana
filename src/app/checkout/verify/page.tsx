@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { Suspense, useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -18,7 +19,7 @@ function CheckoutVerifyContent() {
   const verify = useCallback(async (): Promise<boolean> => {
     if (!orderId && !cfOrderId) return false
     try {
-      const res = await fetch('/api/payment/cashfree/verify', {
+      const res = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, cfOrderId }),

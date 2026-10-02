@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { compressImageClient } from '@/lib/image-compression'
+import { apiUrl } from '@/lib/api-url'
 
 interface PromoBanner {
   id: string
@@ -568,7 +569,7 @@ export function AdminBanners({
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const res = await fetch('/api/settings')
+        const res = await fetch(`${apiUrl()}/api/settings`)
         if (res.ok) {
           const data = await res.json()
           setSettingsMap(data)
@@ -579,7 +580,7 @@ export function AdminBanners({
     }
     async function fetchRestaurants() {
       try {
-        const res = await fetch('/api/restaurants')
+        const res = await fetch(`${apiUrl()}/api/restaurants`)
         if (res.ok) {
           const data = await res.json()
           setRestaurants(Array.isArray(data) ? data : [])
@@ -598,10 +599,10 @@ export function AdminBanners({
       setLoading(true)
       const targetStoreId = (propStoreId && propStoreId !== 'all') ? propStoreId : storeId
       const q = targetStoreId ? `?storeId=${encodeURIComponent(targetStoreId)}` : ''
-      let res = await fetch(`/api/admin/banners${q}`)
+      let res = await fetch(`${apiUrl()}/api/admin/banners${q}`)
       if (!res.ok) {
         // Fallback to public banners endpoint served by FastAPI
-        res = await fetch(`/api/banners${q}`)
+        res = await fetch(`${apiUrl()}/api/banners${q}`)
       }
       if (!res.ok) {
         setBanners([])
@@ -630,7 +631,7 @@ export function AdminBanners({
       const formData = new FormData()
       formData.append('file', compressedFile)
 
-      const res = await fetch('/api/upload', {
+      const res = await fetch(`${apiUrl()}/api/upload`, {
         method: 'POST',
         body: formData,
       })
@@ -672,7 +673,7 @@ export function AdminBanners({
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch('/api/upload', {
+      const res = await fetch(`${apiUrl()}/api/upload`, {
         method: 'POST',
         body: formData,
       })
@@ -820,7 +821,7 @@ export function AdminBanners({
   const handlePublishDesignDirectly = async (tpl: any) => {
     try {
       setSubmitting(true)
-      const res = await fetch('/api/admin/banners', {
+      const res = await fetch(`${apiUrl()}/api/admin/banners`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -871,7 +872,7 @@ export function AdminBanners({
       const targetCat = customCategory || selectedCategory || title || (type === 'food' ? 'Burgers & Fast Food' : 'Fresh Fruits & Vegetables')
       const targetType = type === 'food' ? 'food' : 'grocery'
 
-      const res = await fetch('/api/admin/gemini-cards', {
+      const res = await fetch(`${apiUrl()}/api/admin/gemini-cards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1056,7 +1057,7 @@ export function AdminBanners({
       const compressedFile = await compressImageClient(file)
       const formData = new FormData()
       formData.append('file', compressedFile)
-      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      const res = await fetch(`${apiUrl()}/api/upload`, { method: 'POST', body: formData })
       if (res.ok) {
         const data = await res.json()
         if (data.url) {
@@ -1134,7 +1135,7 @@ export function AdminBanners({
       }
 
       const method = editingId ? 'PUT' : 'POST'
-      const res = await fetch('/api/admin/banners', {
+      const res = await fetch(`${apiUrl()}/api/admin/banners`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1159,7 +1160,7 @@ export function AdminBanners({
   // Toggle banner Active state directly
   const handleToggleActive = async (b: PromoBanner) => {
     try {
-      const res = await fetch('/api/admin/banners', {
+      const res = await fetch(`${apiUrl()}/api/admin/banners`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: b.id, isActive: !b.isActive })
@@ -1179,7 +1180,7 @@ export function AdminBanners({
   const handleOrderChange = async (b: PromoBanner, direction: 'up' | 'down') => {
     const delta = direction === 'up' ? -1 : 1
     try {
-      const res = await fetch('/api/admin/banners', {
+      const res = await fetch(`${apiUrl()}/api/admin/banners`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: b.id, sortOrder: b.sortOrder + delta })
@@ -1198,7 +1199,7 @@ export function AdminBanners({
     if (!confirm('Are you sure you want to delete this promo banner?')) return
 
     try {
-      const res = await fetch(`/api/admin/banners?id=${id}`, {
+      const res = await fetch(`${apiUrl()}/api/admin/banners?id=${id}`, {
         method: 'DELETE'
       })
 

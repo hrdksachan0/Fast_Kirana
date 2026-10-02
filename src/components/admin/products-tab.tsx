@@ -257,7 +257,7 @@ export function ProductsTab({
   const [isCustomNewVendor, setIsCustomNewVendor] = useState(false)
 
   useEffect(() => {
-    fetch('/api/admin/vendors')
+    fetch(`${apiUrl()}/api/admin/vendors`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data.vendors)) {

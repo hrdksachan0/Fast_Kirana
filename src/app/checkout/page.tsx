@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { useCart } from '@/hooks/use-cart'
@@ -109,7 +110,7 @@ export default function CheckoutPage() {
       if (items.length === 0) return
       try {
         const storeParam = activeStoreId && activeStoreId !== 'all' ? `?storeId=${encodeURIComponent(activeStoreId)}` : ''
-        const res = await fetch(`/api/products/validate-cart${storeParam}`, {
+        const res = await fetch(`${apiUrl()}/api/products/validate-cart${storeParam}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items, storeId: activeStoreId || undefined }),

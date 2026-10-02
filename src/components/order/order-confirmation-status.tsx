@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -47,7 +48,7 @@ export function OrderConfirmationStatus({
     const pollInterval = setInterval(async () => {
       if (document.visibilityState !== 'visible') return
       try {
-        const res = await fetch(`/api/orders/${orderId}`)
+        const res = await fetch(`${apiUrl()}/api/orders/${orderId}`)
         if (res.ok) {
           const data = await res.json()
           if (data && data.status && data.status !== status) {

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { X, ShoppingBag, Minus, Plus, ArrowRight, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
@@ -85,7 +86,7 @@ export function CartDrawer() {
         }
       })
 
-      const res = await fetch('/api/coupons/validate', {
+      const res = await fetch(`${apiUrl()}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -154,7 +155,7 @@ export function CartDrawer() {
     }
     
     const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-    fetch(`/api/products/upsell?productIds=${cartProductIdsKey}${storeParam}`)
+    fetch(`${apiUrl()}/api/products/upsell?productIds=${cartProductIdsKey}${storeParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.products) {
@@ -217,7 +218,7 @@ export function CartDrawer() {
         }
       }
 
-      fetch('/api/coupons/validate', {
+      fetch(`${apiUrl()}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -272,7 +273,7 @@ export function CartDrawer() {
           }
 
           try {
-            const valRes = await fetch('/api/coupons/validate', {
+            const valRes = await fetch(`${apiUrl()}/api/coupons/validate`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

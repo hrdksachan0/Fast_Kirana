@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -120,7 +121,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
     setIsUpdatingName(true)
     try {
-      const res = await fetch('/api/profile/update-name', {
+      const res = await fetch(`${apiUrl()}/api/profile/update-name`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName.trim() }),
@@ -157,7 +158,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
     setIsSendingOtp(true)
     try {
-      const res = await fetch('/api/profile/send-email-otp', {
+      const res = await fetch(`${apiUrl()}/api/profile/send-email-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: newEmail }),
@@ -184,7 +185,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
     setIsUpdatingEmail(true)
     try {
-      const res = await fetch('/api/profile/update-email', {
+      const res = await fetch(`${apiUrl()}/api/profile/update-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: newEmail, otp: otpCode }),
@@ -222,7 +223,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true)
     try {
-      const res = await fetch('/api/profile/delete-account', {
+      const res = await fetch(`${apiUrl()}/api/profile/delete-account`, {
         method: 'DELETE',
       })
       const data = await res.json()
@@ -246,7 +247,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
     setIsSendingPhoneOtp(true)
     try {
-      const res = await fetch('/api/profile/send-phone-otp', {
+      const res = await fetch(`${apiUrl()}/api/profile/send-phone-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: newPhone }),
@@ -273,7 +274,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
     }
     setIsUpdatingPhone(true)
     try {
-      const res = await fetch('/api/profile/update-phone', {
+      const res = await fetch(`${apiUrl()}/api/profile/update-phone`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: newPhone, otp: phoneOtpCode }),
@@ -338,7 +339,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   useEffect(() => {
     async function syncOrders() {
       try {
-        const res = await fetch('/api/orders')
+        const res = await fetch(`${apiUrl()}/api/orders`)
         if (res.ok) {
           const freshOrders = await res.json()
           if (Array.isArray(freshOrders) && freshOrders.length > 0) {
@@ -374,7 +375,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
 
   const handleDeleteAddress = async (id: string) => {
     try {
-      const res = await fetch(`/api/addresses`, {
+      const res = await fetch(`${apiUrl()}/api/addresses`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
@@ -464,7 +465,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
         isDefault: !!addressForm.isDefault || addresses.length === 0,
       }
 
-      const res = await fetch('/api/addresses', {
+      const res = await fetch(`${apiUrl()}/api/addresses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -559,7 +560,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
         lng: editingAddress.lng || null,
       }
 
-      const res = await fetch('/api/addresses', {
+      const res = await fetch(`${apiUrl()}/api/addresses`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { formatDate } from '@/lib/date-helpers'
+import { apiUrl } from '@/lib/api-url'
 
 interface AlertItem {
   id: string
@@ -67,7 +68,7 @@ export function AdminAlerts({ onProductUpdated, storeId }: AdminAlertsProps) {
     try {
       setLoading(true)
       const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/alerts${storeParam}`)
+      const res = await fetch(`${apiUrl()}/api/admin/alerts${storeParam}`)
       if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()
       setAlerts(data.alerts || [])
@@ -91,7 +92,7 @@ export function AdminAlerts({ onProductUpdated, storeId }: AdminAlertsProps) {
   const handleRecalculate = async () => {
     try {
       setRefreshing(true)
-      const res = await fetch('/api/admin/alerts', { method: 'POST' })
+      const res = await fetch(`${apiUrl()}/api/admin/alerts`, { method: 'POST' })
       if (!res.ok) throw new Error('Recalculation failed')
       const data = await res.json()
       toast.success(data.message || 'System alerts refreshed')
@@ -118,7 +119,7 @@ export function AdminAlerts({ onProductUpdated, storeId }: AdminAlertsProps) {
       setSubmittingRestock(productId)
       
       // We call the bulk-update API to SET the stock
-      const res = await fetch('/api/admin/bulk-update', {
+      const res = await fetch(`${apiUrl()}/api/admin/bulk-update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,7 +152,7 @@ export function AdminAlerts({ onProductUpdated, storeId }: AdminAlertsProps) {
     const actionKey = `${targetId}:${alertType}`
     try {
       setSubmittingAction(actionKey)
-      const res = await fetch('/api/admin/alerts', {
+      const res = await fetch(`${apiUrl()}/api/admin/alerts`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetId, alertType })

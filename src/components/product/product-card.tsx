@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useCallback, useMemo, useRef, useEffect, memo } from 'react'
 import Link from 'next/link'
@@ -147,7 +148,7 @@ function ProductCardComponent({ product, isCompact = false }: ProductCardProps) 
 
     setWishlistLoading(true)
     try {
-      const res = await fetch('/api/wishlist', {
+      const res = await fetch(`${apiUrl()}/api/wishlist`, {
         method: isWishlisted ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: product.id }),

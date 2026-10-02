@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
+import { apiUrl } from '@/lib/api-url'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -91,7 +92,7 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
       setInternalProducts(products)
     } else {
       const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
-      fetch(`/api/products?limit=1000${storeParam}&t=${Date.now()}`)
+      fetch(`${apiUrl()}/api/products?limit=1000${storeParam}&t=${Date.now()}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           const list = Array.isArray(data?.products)
@@ -111,7 +112,7 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
     try {
       setLoadingForecast(true)
       const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/inventory/forecast${storeParam}`, {
+      const res = await fetch(`${apiUrl()}/api/admin/inventory/forecast${storeParam}`, {
         headers: authHeaders
       })
       if (res.ok) {
@@ -133,7 +134,7 @@ export function AdminAnalytics({ products, orders, categories, stats, storeId }:
     if (product.suggestedRestock <= 0) return
     try {
       setInwardingId(product.id)
-      const res = await fetch('/api/admin/inward', {
+      const res = await fetch(`${apiUrl()}/api/admin/inward`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({

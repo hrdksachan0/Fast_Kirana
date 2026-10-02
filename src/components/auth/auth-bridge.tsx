@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
@@ -42,7 +43,7 @@ export function SupabaseAuthBridge() {
         if (sbSession) return
 
         // 2. Request token_hash from the bridge API
-        const res = await fetch('/api/auth/bridge-session', { method: 'POST' })
+        const res = await fetch(`${apiUrl()}/api/auth/bridge-session`, { method: 'POST' })
         if (res.ok) {
           const { token_hash } = await res.json()
           if (token_hash) {

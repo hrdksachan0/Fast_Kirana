@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import React, { useState } from 'react'
 import { formatPrice } from '@/lib/utils'
@@ -60,7 +61,7 @@ export function RecordRefundModal({
 
     setSubmitting(true)
     try {
-      const res = await fetch(`/api/admin/orders/${order.id}/refund`, {
+      const res = await fetch(`${apiUrl()}/api/admin/orders/${order.id}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

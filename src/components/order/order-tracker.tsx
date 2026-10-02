@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, Camera, Navigation, MapPin } from 'lucide-react'
@@ -136,7 +137,7 @@ export function OrderTracker({
           customerName={(order as any).customerName || (order as any).userName || 'FastKirana Customer'}
           onPaymentSuccess={async () => {
             try {
-              const refetchRes = await fetch(`/api/orders/${order.id}`)
+              const refetchRes = await fetch(`${apiUrl()}/api/orders/${order.id}`)
               if (refetchRes.ok) {
                 const freshData = await refetchRes.json()
                 setOrder((prev: any) => ({

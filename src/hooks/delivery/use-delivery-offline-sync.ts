@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
@@ -40,7 +41,7 @@ export function useDeliveryOfflineSync(onSyncComplete?: () => void) {
 
     for (const item of savedQueue) {
       try {
-        const res = await fetch(`/api/orders/${item.orderId}`, {
+        const res = await fetch(`${apiUrl()}/api/orders/${item.orderId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: item.newStatus, ...item.extraData }),

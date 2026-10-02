@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
@@ -26,7 +27,7 @@ export function RestaurantSettingsTab({ restaurantId }: RestaurantSettingsTabPro
         // If no assigned restaurant (e.g. admin logged in), fetch the first available restaurant
         if (!targetId) {
           const storeParam = (session?.user as any)?.assignedStoreId ? `?storeId=${encodeURIComponent((session?.user as any).assignedStoreId)}` : ''
-          const listRes = await fetch(`/api/restaurants${storeParam}`)
+          const listRes = await fetch(`${apiUrl()}/api/restaurants${storeParam}`)
           if (listRes.ok) {
             const listData = await listRes.json()
             const list = Array.isArray(listData) ? listData : (listData?.restaurants || [])
@@ -41,7 +42,7 @@ export function RestaurantSettingsTab({ restaurantId }: RestaurantSettingsTabPro
           return
         }
 
-        const res = await fetch(`/api/restaurants/${targetId}`)
+        const res = await fetch(`${apiUrl()}/api/restaurants/${targetId}`)
         if (!res.ok) throw new Error('Failed to fetch details')
         const data = await res.json()
         setRestaurant(data)

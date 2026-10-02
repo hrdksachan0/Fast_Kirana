@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import React from 'react'
 import { useSession } from 'next-auth/react'
@@ -71,7 +72,7 @@ export function OrdersTab({
     if (e) e.stopPropagation()
     setSyncingOrderId(order.id)
     try {
-      const res = await fetch('/api/payment/cashfree/verify', {
+      const res = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: order.id }),
@@ -130,7 +131,7 @@ export function OrdersTab({
 
       await Promise.all(
         targetIds.map((tid: string) =>
-          fetch(`/api/orders/${tid}`, {
+          fetch(`${apiUrl()}/api/orders/${tid}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentStatus: targetStatus, paymentMethod: targetMethod }),
@@ -165,7 +166,7 @@ export function OrdersTab({
 
       await Promise.all(
         targetIds.map((tid: string) =>
-          fetch(`/api/orders/${tid}`, {
+          fetch(`${apiUrl()}/api/orders/${tid}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentMethod: 'COD', paymentStatus: 'PENDING', status: 'CONFIRMED' }),
@@ -372,7 +373,7 @@ export function OrdersTab({
         : (targetOrder.subOrders?.find((s: any) => s.type === 'RESTAURANT')?.items) || targetOrder.items || []
       const customerName = targetOrder.userName || targetOrder.user?.name || targetOrder.customerName || 'Customer'
 
-      const res = await fetch('/api/kot-broadcast', {
+      const res = await fetch(`${apiUrl()}/api/kot-broadcast`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

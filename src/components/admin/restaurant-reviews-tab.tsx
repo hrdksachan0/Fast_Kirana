@@ -31,12 +31,12 @@ export function RestaurantReviewsTab({ restaurantId }: RestaurantReviewsTabProps
       // If restaurantId is not provided, fetch from current user session assigned restaurant
       let targetId = restaurantId
       if (!targetId) {
-        const resUser = await fetch('/api/auth/session')
+        const resUser = await fetch(`${apiUrl()}/api/auth/session`)
         const sessionData = await resUser.json()
         targetId = sessionData?.user?.assignedRestaurantId || 'as-restaurant'
       }
 
-      const res = await fetch(`/api/restaurants/${targetId}/reviews?t=${Date.now()}`)
+      const res = await fetch(`${apiUrl()}/api/restaurants/${targetId}/reviews?t=${Date.now()}`)
       if (res.ok) {
         const data = await res.json()
         setReviews(data.reviews || [])

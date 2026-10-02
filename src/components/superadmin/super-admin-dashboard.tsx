@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useCallback } from 'react'
 import {
@@ -38,7 +39,7 @@ export function SuperAdminDashboard({ serverUser }: SuperAdminDashboardProps) {
   const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await fetch('/api/superadmin/stats')
+      const res = await fetch(`${apiUrl()}/api/superadmin/stats`)
       if (!res.ok) throw new Error('Failed to fetch HQ stats')
       const json = await res.json()
       setData(json)
@@ -73,7 +74,7 @@ export function SuperAdminDashboard({ serverUser }: SuperAdminDashboardProps) {
         seedInventory
       }
 
-      const res = await fetch('/api/admin/stores', {
+      const res = await fetch(`${apiUrl()}/api/admin/stores`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useEffect, useRef, useState } from 'react'
 import { useCartStore, CartItem } from '@/stores/cart-store'
@@ -38,7 +39,7 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
 
     const loadServerCart = async () => {
       try {
-        const response = await fetch('/api/cart')
+        const response = await fetch(`${apiUrl()}/api/cart`)
         if (response.ok) {
           const data = await response.json()
           if (data.success && Array.isArray(data.items)) {
@@ -119,7 +120,7 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
         headers['x-guest-id'] = guestId
       }
 
-      await fetch('/api/cart', {
+      await fetch(`${apiUrl()}/api/cart`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ items: mappedItems }),

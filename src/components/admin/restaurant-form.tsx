@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
@@ -181,7 +182,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
   useEffect(() => {
     if (isAdmin) {
       setLoadingUsers(true)
-      fetch('/api/admin/users/assignable')
+      fetch(`${apiUrl()}/api/admin/users/assignable`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
@@ -197,7 +198,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         .catch(console.error)
         .finally(() => setLoadingUsers(false))
 
-      fetch('/api/admin/stores')
+      fetch(`${apiUrl()}/api/admin/stores`)
         .then(res => res.json())
         .then(stores => {
           if (Array.isArray(stores)) {
@@ -237,7 +238,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
       const compressedFile = await compressImageClient(file)
       const data = new FormData()
       data.append('file', compressedFile)
-      const res = await fetch('/api/upload', {
+      const res = await fetch(`${apiUrl()}/api/upload`, {
         method: 'POST',
         headers: {
           ...(session?.user?.id ? { 'x-user-id': session.user.id, 'x-user-role': session.user.role } : {})
@@ -661,7 +662,7 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
                         return
                       }
                       try {
-                        const res = await fetch('/api/admin/users', {
+                        const res = await fetch(`${apiUrl()}/api/admin/users`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ userId: currentOwner.id, password: headPassword })

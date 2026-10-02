@@ -213,7 +213,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
 
   // Load settings on mount
   useEffect(() => {
-    fetch('/api/settings')
+    fetch(`${apiUrl()}/api/settings`)
       .then(res => res.json())
       .then(data => {
         if (data) {
@@ -380,7 +380,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     
     try {
       const restParam = `&restaurantId=${encodeURIComponent(effectiveRestaurantId)}`
-      const res = await fetch(`/api/picker/orders?type=restaurant${restParam}&t=${Date.now()}`, {
+      const res = await fetch(`${apiUrl()}/api/picker/orders?type=restaurant${restParam}&t=${Date.now()}`, {
         cache: 'no-store',
         headers: authHeaders,
       })
@@ -524,7 +524,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
           orderToPrint = ordersRef.current.find((o) => o.id === cleanId || o.id === orderId)
           if (!orderToPrint) {
             try {
-              const res = await fetch(`/api/orders/${cleanId}`, {
+              const res = await fetch(`${apiUrl()}/api/orders/${cleanId}`, {
                 headers: authHeaders,
               })
               if (res.ok) {
@@ -664,7 +664,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     setPrepModalOrder(null)
     setUpdatingId(order.id)
     try {
-      const res = await fetch(`/api/orders/${order.id}`, {
+      const res = await fetch(`${apiUrl()}/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ status: 'CONFIRMED', prepTime: selectedPrepTime }),
@@ -693,7 +693,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
   const handleQuickAccept = async (order: Order) => {
     setUpdatingId(order.id)
     try {
-      const res = await fetch(`/api/orders/${order.id}`, {
+      const res = await fetch(`${apiUrl()}/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ status: 'CONFIRMED', prepTime: 30 }),
@@ -724,7 +724,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     const toastId = toast.loading('👨‍🍳 Quick accepting & packing order...')
     try {
       // 1. Confirm order
-      const confirmRes = await fetch(`/api/orders/${order.id}`, {
+      const confirmRes = await fetch(`${apiUrl()}/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ status: 'CONFIRMED', prepTime: 15 }),
@@ -732,7 +732,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
       if (!confirmRes.ok) throw new Error('Failed to confirm order')
 
       // 2. Pack order
-      const packRes = await fetch(`/api/orders/${order.id}`, {
+      const packRes = await fetch(`${apiUrl()}/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ status: 'PACKED' }),
@@ -759,7 +759,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     setUpdatingId(orderId)
     const toastId = toast.loading('👨‍🍳 All dishes ready! Packing hot order...')
     try {
-      const res = await fetch(`/api/orders/${orderId}`, {
+      const res = await fetch(`${apiUrl()}/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ status: 'PACKED' }),
@@ -986,7 +986,7 @@ export function RestaurantOrdersConsole({ restaurantId, restaurant }: Restaurant
     if (!editingOrder) return
     setIsSavingEdit(true)
     try {
-      const res = await fetch(`/api/orders/${editingOrder.id}/edit`, {
+      const res = await fetch(`${apiUrl()}/api/orders/${editingOrder.id}/edit`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({

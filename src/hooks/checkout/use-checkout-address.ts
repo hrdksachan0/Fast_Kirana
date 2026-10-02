@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
@@ -101,7 +102,7 @@ export function useCheckoutAddress({
     async function loadAddresses() {
       try {
         setIsAddressesLoading(true)
-        const res = await fetch('/api/addresses')
+        const res = await fetch(`${apiUrl()}/api/addresses`)
         if (res.ok) {
           const data = await res.json()
           const deliveryAddrs = Array.isArray(data)
@@ -155,7 +156,7 @@ export function useCheckoutAddress({
           return
         }
 
-        fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`)
+        fetch(`${apiUrl()}/api/geocode?lat=${latitude}&lng=${longitude}`)
           .then((res) => {
             if (!res.ok) throw new Error('Geocoding failed')
             return res.json()
@@ -313,7 +314,7 @@ export function useCheckoutAddress({
           const searchQuery = `${street.trim()}, ${inferredCity}, ${cleanPincode}`
           const controller = new AbortController()
           const timer = setTimeout(() => controller.abort(), 1500)
-          const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(searchQuery)}`, {
+          const geoRes = await fetch(`${apiUrl()}/api/geocode?address=${encodeURIComponent(searchQuery)}`, {
             signal: controller.signal,
           })
           clearTimeout(timer)
@@ -347,7 +348,7 @@ export function useCheckoutAddress({
         payload.id = editingAddressId
       }
 
-      const res = await fetch('/api/addresses', {
+      const res = await fetch(`${apiUrl()}/api/addresses`, {
         method: editingAddressId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

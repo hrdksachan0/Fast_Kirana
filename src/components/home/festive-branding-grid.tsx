@@ -28,7 +28,7 @@ export function FestiveBrandingGrid() {
     async function loadBanners() {
       try {
         setLoading(true)
-        const res = await fetch('/api/banners?placement=brand_card')
+        const res = await fetch(`${apiUrl()}/api/banners?placement=brand_card`)
         if (res.ok) {
           const data = await res.json()
           if (Array.isArray(data) && data.length > 0) {

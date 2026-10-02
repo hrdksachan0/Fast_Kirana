@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -42,7 +43,7 @@ function ProfileSetupForm() {
 
     const checkProfile = async () => {
       try {
-        const res = await fetch('/api/profile/setup')
+        const res = await fetch(`${apiUrl()}/api/profile/setup`)
         if (!res.ok) return
         const data = await res.json()
         if (cancelled) return
@@ -87,7 +88,7 @@ function ProfileSetupForm() {
     setIsLoading(true)
 
     try {
-      const res = await fetch('/api/profile/setup', {
+      const res = await fetch(`${apiUrl()}/api/profile/setup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone }),

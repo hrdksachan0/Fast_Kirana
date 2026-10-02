@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
@@ -62,7 +63,7 @@ export function InventoryImportTab({
 
     try {
       setImporting(true)
-      const res = await fetch('/api/admin/inventory/import', {
+      const res = await fetch(`${apiUrl()}/api/admin/inventory/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: importPreview, storeId: storeId || undefined }),

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
@@ -69,7 +70,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
   // Fetch outlets dynamically scoped by storeId
   useEffect(() => {
     const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-    fetch(`/api/restaurants${storeParam}`, { headers: authHeaders })
+    fetch(`${apiUrl()}/api/restaurants${storeParam}`, { headers: authHeaders })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         const list = Array.isArray(data) ? data : (data?.restaurants || [])
@@ -87,8 +88,8 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
   // Fetch all store products & categories so local media gallery shows ALL photos in system
   useEffect(() => {
     Promise.all([
-      fetch('/api/products?limit=2000', { headers: authHeaders }).then(r => r.ok ? r.json() : null),
-      fetch('/api/categories', { headers: authHeaders }).then(r => r.ok ? r.json() : null)
+      fetch(`${apiUrl()}/api/products?limit=2000`, { headers: authHeaders }).then(r => r.ok ? r.json() : null),
+      fetch(`${apiUrl()}/api/categories`, { headers: authHeaders }).then(r => r.ok ? r.json() : null)
     ]).then(([prodData, catData]) => {
       if (prodData?.products) setGlobalProducts(prodData.products)
       if (catData) {
@@ -199,7 +200,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
     try {
       if (editingDish) {
         // Edit existing dish — use restaurant-dashboard API for proper scoping
-        const res = await fetch(`/api/restaurant-dashboard/products/${editingDish.id}`, {
+        const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${editingDish.id}`, {
           method: 'PATCH',
           headers: authHeaders,
           body: JSON.stringify({
@@ -220,7 +221,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
         toast.success(`Dish "${dishForm.name}" updated successfully! 🎉`)
       } else {
         // Add new dish — use restaurant-dashboard API which handles restaurantId properly
-        const res = await fetch('/api/restaurant-dashboard/products', {
+        const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products`, {
           method: 'POST',
           headers: authHeaders,
           body: JSON.stringify({
@@ -257,7 +258,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
       const compressedFile = await compressImageClient(file)
       const formData = new FormData()
       formData.append('file', compressedFile)
-      const res = await fetch('/api/upload', {
+      const res = await fetch(`${apiUrl()}/api/upload`, {
         method: 'POST',
         body: formData,
       })
@@ -297,7 +298,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
           params.set('storeId', storeId)
         }
       }
-      const res = await fetch(`/api/restaurant-dashboard/products?${params.toString()}`, { 
+      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products?${params.toString()}`, { 
         cache: 'no-store',
         headers: authHeaders,
       })
@@ -325,7 +326,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
     setUpdatingId(product.id)
     const newStatus = !product.isAvailable
     try {
-      const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ isAvailable: newStatus }),
@@ -349,7 +350,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
     const isCurrentlyInStock = product.stock > 0
     const newStock = isCurrentlyInStock ? 0 : 99999
     try {
-      const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ stock: newStock }),
@@ -378,7 +379,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
 
     setUpdatingId(product.id)
     try {
-      const res = await fetch(`/api/restaurant-dashboard/products/${product.id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ price: priceNum, mrp: mrpNum }),

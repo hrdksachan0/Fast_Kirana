@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
@@ -78,8 +79,7 @@ export function useAdminOrders({
         selectedHubId && selectedHubId !== 'all'
           ? `&storeId=${encodeURIComponent(selectedHubId)}`
           : ''
-      const res = await fetch(
-        `/api/admin/orders?page=${orderPage}&limit=10&status=${orderStatusFilter}&search=${encodeURIComponent(
+      const res = await fetch(`${apiUrl()}/api/admin/orders?page=${orderPage}&limit=10&status=${orderStatusFilter}&search=${encodeURIComponent(
           orderSearchQuery
         )}${storeQueryParam}&t=${Date.now()}`,
         { headers: authHeaders }
@@ -169,7 +169,7 @@ export function useAdminOrders({
     setSelectedOrderForTracking(order)
     setIsLoadingOrderItems(true)
     try {
-      const res = await fetch(`/api/orders/${order.id}`, { headers: authHeaders })
+      const res = await fetch(`${apiUrl()}/api/orders/${order.id}`, { headers: authHeaders })
       if (res.ok) {
         const fullData = await res.json()
         setSelectedOrderForTracking((prev: any) => ({ ...prev, ...fullData }))

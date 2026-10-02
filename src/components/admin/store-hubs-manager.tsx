@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import React, { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
@@ -121,7 +122,7 @@ export function StoreHubsManager({
   useEffect(() => {
     if (!isOpen || !activeStore?.id) return
     setLoadingHubVendors(true)
-    fetch(`/api/admin/vendors?storeId=${encodeURIComponent(activeStore.id)}`)
+    fetch(`${apiUrl()}/api/admin/vendors?storeId=${encodeURIComponent(activeStore.id)}`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data.vendors)) setHubVendors(data.vendors)
@@ -140,7 +141,7 @@ export function StoreHubsManager({
 
     setIsSubmitting(true)
     try {
-      const res = await fetch('/api/admin/stores', {
+      const res = await fetch(`${apiUrl()}/api/admin/stores`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
@@ -193,7 +194,7 @@ export function StoreHubsManager({
     }
     setIsSubmitting(true)
     try {
-      const res = await fetch('/api/admin/stores', {
+      const res = await fetch(`${apiUrl()}/api/admin/stores`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({
@@ -234,7 +235,7 @@ export function StoreHubsManager({
       const rawCity = (isHubAdmin ? (activeStore?.name || 'Ghatampur') : (targetStore?.name || newOutletCity || 'Ghatampur'))
       const cleanCity = rawCity.replace(/central|hub|dark\s*store|market|branch/gi, '').trim() || rawCity.trim()
 
-      const res = await fetch('/api/restaurants', {
+      const res = await fetch(`${apiUrl()}/api/restaurants`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
@@ -272,7 +273,7 @@ export function StoreHubsManager({
   const handleToggleGrocery = async (store: StoreHub) => {
     try {
       const newStatus = !store.groceryOpen
-      const res = await fetch('/api/admin/stores', {
+      const res = await fetch(`${apiUrl()}/api/admin/stores`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ id: store.id, groceryOpen: newStatus })
@@ -293,7 +294,7 @@ export function StoreHubsManager({
   const handleToggleRestaurant = async (restaurant: any) => {
     try {
       const newStatus = !restaurant.isOpen
-      const res = await fetch(`/api/restaurants/${restaurant.id}`, {
+      const res = await fetch(`${apiUrl()}/api/restaurants/${restaurant.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ isOpen: newStatus })

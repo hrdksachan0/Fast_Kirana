@@ -38,7 +38,7 @@ export function reportClientError(
       screenHeight: window.innerHeight,
     })
 
-    const endpoint = '/api/telemetry/errors'
+    const endpoint = `${apiUrl()}/api/telemetry/errors`
 
     if (typeof navigator.sendBeacon === 'function') {
       const blob = new Blob([payload], { type: 'application/json' })

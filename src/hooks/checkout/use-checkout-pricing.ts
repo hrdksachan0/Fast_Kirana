@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import type { CartItem } from '@/stores/cart-store'
@@ -86,7 +87,7 @@ export function useCheckoutPricing({
       }
 
       setIsValidatingCoupon(true)
-      fetch('/api/coupons/validate', {
+      fetch(`${apiUrl()}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import {
@@ -121,7 +122,7 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
 
     try {
       setIsSubmitting(true)
-      const res = await fetch('/api/admin/rider-cash', {
+      const res = await fetch(`${apiUrl()}/api/admin/rider-cash`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,7 +152,7 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
 
   const handleDeleteDeposit = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/rider-cash?id=${id}`, {
+      const res = await fetch(`${apiUrl()}/api/admin/rider-cash?id=${id}`, {
         method: 'DELETE'
       })
       const data = await res.json()
@@ -171,7 +172,7 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
     if (!confirm('Are you sure you want to delete all cash deposit logs to clean up data?')) return
     try {
       const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`/api/admin/rider-cash?clearAll=true${storeParam}`, {
+      const res = await fetch(`${apiUrl()}/api/admin/rider-cash?clearAll=true${storeParam}`, {
         method: 'DELETE'
       })
       const data = await res.json()
