@@ -41,11 +41,10 @@ const FASTAPI_DIRECT_URL = (
  *   // → on server this becomes '/api/products?limit=50' (relative, internal)
  */
 export function apiUrl(): string {
-  if (typeof window !== 'undefined') {
-    // Client-side: go directly to Railway, bypass Vercel proxy
-    return FASTAPI_DIRECT_URL
-  }
-  // Server-side: use relative path (internal Vercel routing)
+  // Always return empty string for Web frontend.
+  // Same-origin relative paths ('/api/...') ensure NextAuth session cookies
+  // are automatically included with every request, preventing 401 Unauthorized
+  // errors on checkout addresses, admin panel, bridge-session, and order placement.
   return ''
 }
 
