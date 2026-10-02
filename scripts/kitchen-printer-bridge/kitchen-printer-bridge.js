@@ -199,56 +199,33 @@ function printKOT(order, items, user) {
   return new Promise((resolve) => {
     try {
       const L = LINE_LENGTH || 38;
-      const thick = String.fromCharCode(9552).repeat(L);  // ═
-      const thin  = String.fromCharCode(9472).repeat(L);  // ─
-
+      const dash = '-'.repeat(L);
       const center = (t) => {
         if (t.length >= L) return t;
-        const p = Math.floor((L - t.length) / 2);
-        return ' '.repeat(p) + t;
-      };
-      const rightAlign = (left, right) => {
-        const gap = Math.max(1, L - left.length - right.length);
-        return `${left}${' '.repeat(gap)}${right}`;
+        return ' '.repeat(Math.floor((L - t.length) / 2)) + t;
       };
 
       const orderIdText = order.readableId ? `#${order.readableId}` : `#${order.id.slice(0, 8).toUpperCase()}`;
-      const modeText = (order.deliveryMethod || 'DELIVERY').toUpperCase();
-      const modeIcon = (modeText === 'SELF_PICKUP' || modeText === 'PICKUP') ? 'PICKUP' : 'DELIVERY';
-      const brandOrShop = (order.shopName || order.restaurantName || 'FastKirana').trim();
+      const mode = (order.deliveryMethod || 'DELIVERY').toUpperCase();
+      const modeTag = (mode === 'SELF_PICKUP' || mode === 'PICKUP') ? 'PICKUP' : 'DELIVERY';
       const customerName = (user?.name || order.userName || order.customerName || 'Customer').trim();
-      const dateStr = new Date().toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit', month: 'short',
-        hour: '2-digit', minute: '2-digit', hour12: true,
-      }).replace(',', '');
 
       let lines = [];
 
-      // ═══ HEADER ═══
-      lines.push(thick);
+      // Branding top
+      lines.push(dash);
       lines.push(center('FASTKIRANA'));
-      lines.push(center('KITCHEN ORDER TICKET'));
-      lines.push(thick);
+      lines.push(dash);
+      lines.push(`${orderIdText}  [${modeTag}]`);
+      lines.push(`Customer: ${customerName}`);
+      lines.push(dash);
 
-      // ═══ ORDER INFO ═══
-      lines.push(`TICKET:  ${orderIdText}`);
-      lines.push(rightAlign('Outlet:', ` ${brandOrShop}`));
-      lines.push(rightAlign('Type:', ` ${modeIcon}`));
-      lines.push(rightAlign('Customer:', ` ${customerName}`));
-      lines.push(rightAlign('Time:', ` ${dateStr}`));
-      lines.push(thin);
-
-      // ═══ ORDER NOTE ═══
+      // Order note
       const cleanNote = (order.notes || '').replace(/✨/g, '').replace(/^Note:\s*/i, '').trim();
       if (cleanNote) {
-        lines.push(`NOTE: ${cleanNote}`);
-        lines.push(thin);
+        lines.push(`Note: ${cleanNote}`);
+        lines.push(dash);
       }
-
-      // ═══ DISHES ═══
-      lines.push('PREPARATION DISHES:');
-      lines.push('');
 
       let totalQty = 0;
       const itemList = items || [];
@@ -256,29 +233,20 @@ function printKOT(order, items, user) {
         const qty = parseInt(item.quantity || 1, 10);
         totalQty += qty;
         const name = (item.name || 'Item').trim();
+        const variant = (item.selectedVariant && item.selectedVariant.trim()) ? ` (${item.selectedVariant.trim()})` : '';
 
-        lines.push(` ${qty}x  ${name}`);
-        if (item.selectedVariant && item.selectedVariant.trim()) {
-          lines.push(`      > ${item.selectedVariant.trim()}`);
-        }
+        lines.push(`${idx + 1}. ${qty}x  ${name}${variant}`);
         if (item.notes && item.notes.trim()) {
-          lines.push(`      Note: ${item.notes.trim()}`);
-        }
-        if (idx < itemList.length - 1) {
-          lines.push(thin);
+          lines.push(`      -> ${item.notes.trim()}`);
         }
       });
 
-      // ═══ SUMMARY ═══
-      lines.push(thick);
-      const dishesLabel = `DISHES: ${itemList.length}`;
-      const qtyLabel = `QTY: ${totalQty}`;
-      lines.push(rightAlign(dishesLabel, qtyLabel));
-      lines.push(thick);
-
-      // ═══ FOOTER ═══
-      lines.push(center('*** FASTKIRANA KITCHEN ***'));
-      lines.push(center('Jaldi Banao - Garam Serve'));
+      lines.push(dash);
+      lines.push(`Total: ${itemList.length} items, Qty: ${totalQty}`);
+      lines.push(dash);
+      // Branding bottom
+      lines.push(center('* FASTKIRANA KITCHEN *'));
+      lines.push(center(`Verify ${itemList.length} items packed`));
 
       // Cutter feed buffer
       lines.push('\r\n\r\n\r\n');

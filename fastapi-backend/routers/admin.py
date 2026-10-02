@@ -1299,9 +1299,71 @@ async def admin_set_user_password(
     """
     from routers.auth import hash_password
 
+    action = payload.get("action")
     user_id = payload.get("userId") or payload.get("id")
     password = payload.get("password")
 
+    # 1. Staff / Rider Account Creation / Promotion Flow
+    if action == "create" or payload.get("isCreate") or (not user_id and payload.get("phone")):
+        phone = payload.get("phone")
+        if not phone or not password:
+            raise HTTPException(status_code=400, detail="Phone and password are required")
+        if len(str(password)) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+        clean_phone = re.sub(r"\D", "", str(phone))[-10:]
+        if len(clean_phone) != 10:
+            raise HTTPException(status_code=400, detail="Please enter a valid 10-digit mobile number")
+
+        new_hash = hash_password(str(password))
+        role_str = str(payload.get("role") or "DELIVERY").upper().strip()
+        assigned_store_id = payload.get("assignedStoreId") or None
+        name = (payload.get("name") or "").strip() or f"Rider {clean_phone[-4:]}"
+        email = (payload.get("email") or "").strip().lower() or f"{clean_phone}@users.fastkirana.in"
+
+        patterns = [clean_phone, f"+91{clean_phone}", f"91{clean_phone}", email]
+        stmt = select(User).where(or_(User.phone.in_(patterns), User.email.in_(patterns)))
+        res = await db.execute(stmt)
+        existing_user = res.scalars().first()
+
+        target_role = Role(role_str) if role_str in Role.__members__ else Role.DELIVERY
+
+        if existing_user:
+            existing_user.name = name
+            existing_user.role = target_role
+            existing_user.assignedStoreId = assigned_store_id
+            existing_user.passwordHash = new_hash
+            existing_user.updatedAt = datetime.utcnow()
+            await db.commit()
+            await db.refresh(existing_user)
+            return {
+                "success": True,
+                "message": "Existing account updated to staff/rider successfully!",
+                "userId": existing_user.id
+            }
+        else:
+            new_id = f"c_{uuid.uuid4().hex[:24]}"
+            new_user = User(
+                id=new_id,
+                name=name,
+                phone=clean_phone,
+                email=email,
+                role=target_role,
+                assignedStoreId=assigned_store_id,
+                passwordHash=new_hash,
+                createdAt=datetime.utcnow(),
+                updatedAt=datetime.utcnow()
+            )
+            db.add(new_user)
+            await db.commit()
+            await db.refresh(new_user)
+            return {
+                "success": True,
+                "message": "Staff / Rider created successfully!",
+                "userId": new_user.id
+            }
+
+    # 2. Existing Password Reset Flow
     if not user_id or not password:
         raise HTTPException(status_code=400, detail="userId and password are required")
 

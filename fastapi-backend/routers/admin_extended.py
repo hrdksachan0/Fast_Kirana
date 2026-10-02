@@ -992,9 +992,10 @@ async def admin_set_worker_password(
     Syncs across all linked accounts sharing phone number.
     """
     action = data.get("action")
+    user_id = data.get("userId") or data.get("id")
+    password = data.get("password")
     if action == "create" or data.get("isCreate") or (not user_id and data.get("phone")):
         phone = data.get("phone")
-        password = data.get("password")
         if not phone or not password:
             raise HTTPException(status_code=400, detail="Phone and password are required")
         if len(str(password)) < 6:
