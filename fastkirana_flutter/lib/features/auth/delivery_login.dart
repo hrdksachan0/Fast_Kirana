@@ -9,9 +9,11 @@ import '../../core/network/api_client.dart';
 import 'package:dio/dio.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../data/models/user.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/brand_button.dart';
 import '../delivery/delivery_dashboard.dart';
+import 'otp_screen.dart';
 
 class DeliveryLoginScreen extends ConsumerStatefulWidget {
   const DeliveryLoginScreen({super.key});
@@ -131,6 +133,52 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
       );
 
       Navigator.pushReplacement(context, FadeSlideRoute(page: const DeliveryDashboard()));
+    }
+  }
+
+  Future<void> _handleOtpLogin() async {
+    final rawPhone = _phoneController.text.replaceAll(RegExp(r'\D'), '').trim();
+    final phone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
+
+    if (phone.length != 10) {
+      setState(() => _errorMessage = 'Please enter a valid 10-digit mobile number to get OTP');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authRepo = AuthRepository(ref.read(dioProvider));
+      await authRepo.sendOtp(phone);
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        FadeSlideRoute(page: OtpScreen(identifier: phone)),
+      );
+    } on DioException catch (e) {
+      if (mounted) {
+        final data = e.response?.data;
+        String msg = 'Failed to send OTP. Please check your connection.';
+        if (data is Map) {
+          msg = data['error']?.toString() ??
+              data['detail']?.toString() ??
+              data['message']?.toString() ??
+              'Failed to send OTP. Please check your connection.';
+        }
+        setState(() => _errorMessage = msg);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = 'Network error. Please try again.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -291,6 +339,29 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
                         text: 'Login to Dashboard',
                         onPressed: _handlePasswordLogin,
                         isLoading: _isLoading,
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Or Login via OTP Option
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _isLoading ? null : _handleOtpLogin,
+                          icon: const Icon(Icons.sms_rounded, size: 16, color: brandGreen),
+                          label: Text(
+                            'Or Login via OTP',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 13),
+                              fontWeight: FontWeight.w700,
+                              color: brandGreen,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: brandGreen, width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
                       ),
                     ],
                   ),
