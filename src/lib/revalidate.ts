@@ -26,9 +26,10 @@ export function revalidateStorefront(
       return
     }
 
-    // Default targeted product update
+    // Default: only invalidate the homepage (not every category page + every product cache)
+    // Category-specific pages are invalidated only when categorySlug is provided above
     revalidateTag('products', 'max')
-    revalidatePath('/category/[slug]', 'page')
+    revalidatePath('/', 'page')
   } catch (err) {
     console.error('Failed to trigger targeted revalidation:', err)
   }
@@ -69,9 +70,9 @@ export function revalidateSettings() {
 let lastRevalidateAllTime = 0
 
 export function revalidateAll() {
-  // Debounce global revalidation to at most once per 60 seconds
+  // Debounce global revalidation to at most once per 5 minutes to prevent ISR write storms
   const now = Date.now()
-  if (now - lastRevalidateAllTime < 60000) {
+  if (now - lastRevalidateAllTime < 300000) {
     return
   }
   lastRevalidateAllTime = now

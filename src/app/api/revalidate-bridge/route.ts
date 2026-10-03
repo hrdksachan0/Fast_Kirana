@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { revalidateStorefront } from '@/lib/revalidate'
-import { revalidateTag } from 'next/cache'
 
 export async function POST(request: Request) {
   try {
@@ -12,7 +11,6 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { categorySlug, restaurantSlug } = body
 
-    revalidateTag('categories', 'max')
     revalidateStorefront(categorySlug, restaurantSlug)
 
     return NextResponse.json({ success: true })

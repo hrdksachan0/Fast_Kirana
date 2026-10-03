@@ -115,57 +115,64 @@ export function StorefrontClient({
   const lastFetchedStoreIdRef = useRef<string | null>(null)
   const prevStoreOpenRef = useRef<boolean | null>(null)
 
-  // Real-time polling for store status transitions (every 25s)
+  // Real-time store status transitions — read from Zustand store that navbar already polls (every 180s)
+  // instead of making a duplicate /api/settings fetch every 25s
+  const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   useEffect(() => {
-    let mounted = true
+    // React to store going from closed -> open (navbar updates Zustand)
+    if (prevStoreOpenRef.current === false && groceryMartOpen) {
+      triggerHaptic('medium')
+      setOnlineAlert('FastKirana Store is now ONLINE! Fresh delivery active.')
 
-    const checkStoreStatus = async () => {
-      if (document.visibilityState !== 'visible') return
-      try {
-        const res = await fetch(`${apiUrl()}/api/settings`)
-        if (!res.ok) return
-        const data = await res.json()
-        const isOpen = data.grocery_mart_open !== false && data.grocery_mart_open !== 'false'
+      // Smoothly refresh current products & banners
+      fetch(`${apiUrl()}/api/products?limit=500`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (Array.isArray(d?.products)) {
+            setCurrentGroceryProducts(d.products)
+          }
+        })
+        .catch(() => {})
 
-        if (prevStoreOpenRef.current === false && isOpen && mounted) {
-          triggerHaptic('medium')
-          setOnlineAlert('FastKirana Store is now ONLINE! Fresh delivery active.')
-
-          // Smoothly refresh current products & banners
-          fetch(`${apiUrl()}/api/products?limit=500`)
-            .then((r) => r.json())
-            .then((d) => {
-              if (mounted && Array.isArray(d?.products)) {
-                setCurrentGroceryProducts(d.products)
-              }
-            })
-            .catch(() => {})
-
-          setTimeout(() => {
-            if (mounted) setOnlineAlert(null)
-          }, 5000)
-        }
-
-        prevStoreOpenRef.current = isOpen
-      } catch (_) {}
+      setTimeout(() => {
+        setOnlineAlert(null)
+      }, 5000)
     }
 
-    const interval = setInterval(checkStoreStatus, 25000)
-    return () => {
-      mounted = false
-      clearInterval(interval)
-    }
-  }, [])
+    prevStoreOpenRef.current = groceryMartOpen
+  }, [groceryMartOpen])
 
   // Reactively fetch products, banners, and restaurants when active dark store hub changes
+  // Or lazy-load full catalog (limit=500) for the initial default hub in background
   useEffect(() => {
     // If activeStoreId is null or default initial hub ('hub-209206') and we haven't fetched another hub yet
     if (!activeStoreId || activeStoreId === 'hub-209206') {
-      if (lastFetchedStoreIdRef.current && lastFetchedStoreIdRef.current !== 'hub-209206') {
+      if (lastFetchedStoreIdRef.current && lastFetchedStoreIdRef.current !== 'hub-209206' && lastFetchedStoreIdRef.current !== 'hub-209206-full') {
         setCurrentGroceryProducts(allGroceryProducts)
         setCurrentPromoBanners(promoBanners)
         setCurrentRestaurants(restaurants)
         lastFetchedStoreIdRef.current = 'hub-209206'
+      }
+
+      // Lazy-load complete catalog in background so 100% of products are available
+      // without making initial SSR HTML heavy
+      if (currentGroceryProducts.length < 350 && lastFetchedStoreIdRef.current !== 'hub-209206-full') {
+        let isMounted = true
+        const timer = setTimeout(() => {
+          fetch(`${apiUrl()}/api/products?storeId=hub-209206&limit=500`)
+            .then((r) => r.json())
+            .then((d) => {
+              if (isMounted && Array.isArray(d?.products) && d.products.length > 0) {
+                setCurrentGroceryProducts(d.products)
+                lastFetchedStoreIdRef.current = 'hub-209206-full'
+              }
+            })
+            .catch(() => {})
+        }, 500)
+        return () => {
+          isMounted = false
+          clearTimeout(timer)
+        }
       }
       return
     }
@@ -201,7 +208,7 @@ export function StorefrontClient({
     return () => {
       isMounted = false
     }
-  }, [activeStoreId, allGroceryProducts, promoBanners, restaurants])
+  }, [activeStoreId, allGroceryProducts, promoBanners, restaurants, currentGroceryProducts.length])
 
   // Derive hub-scoped category & curation lists
   const currentFlashDeals = useMemo(() => {

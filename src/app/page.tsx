@@ -152,11 +152,11 @@ const getCachedAllGroceryProducts = unstable_cache(
         { sortOrder: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 500,
+      take: 120,
       select: productSelect,
     })
   },
-  ['storefront-all-grocery-products-v6'],
+  ['storefront-all-grocery-products-v7'],
   { revalidate: 3600, tags: ['products'] }
 )
 
