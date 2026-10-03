@@ -10,7 +10,7 @@ interface CategoryPageProps {
   params: Promise<{ slug: string }>
 }
 
-export const revalidate = 300 // Cache for 5 minutes (saves DB active CPU), purged on-demand when products update
+export const revalidate = 86400 // Cache for 24 hours, purged on-demand when products update
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params

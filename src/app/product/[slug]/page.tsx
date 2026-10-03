@@ -27,7 +27,7 @@ interface ProductPageProps {
   params: Promise<{ slug: string }>
 }
 
-export const revalidate = 60
+export const revalidate = 86400 // Cache product page for 24 hours, purged on-demand when updated
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params

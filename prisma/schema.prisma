@@ -248,6 +248,9 @@ model Product {
   @@index([createdAt])
   @@index([categoryId, isAvailable, sortOrder, createdAt, id])
   @@index([restaurantId, isAvailable])
+  @@index([isAvailable, isTopPick])
+  @@index([isAvailable, isBestSeller])
+  @@index([tags(ops: ArrayOps)], type: Gin)
   @@map("products")
 }
 
@@ -604,6 +607,7 @@ model DarkStore {
   isActive        Boolean  @default(true)
   surgeCharge     Float    @default(0.0)
   deliveryRadiusKm Float   @default(5.0) // Admin controlled nearby radius (km)
+  city            String?
   groceryOpen     Boolean  @default(true)
   pauseUntil      DateTime? // Auto-resume timestamp for Busy Mode
   closeReason     String?   // Reason for closure (e.g., 'HEAVY_RAIN', 'RUSH', 'STOCK_AUDIT', 'MAINTENANCE')
@@ -898,6 +902,24 @@ model VendorPayout {
   @@index([vendorId])
   @@index([createdAt])
   @@map("vendor_payouts")
+}
+
+model KitchenKotQueue {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id      String
+  readable_id   String?
+  restaurant_id String?
+  payload       Json
+  status        String    @default("PENDING")
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  printed_at    DateTime? @db.Timestamptz(6)
+  attempts      Int?      @default(0)
+  last_error    String?
+
+  @@index([status])
+  @@index([order_id])
+  @@index([restaurant_id])
+  @@map("kitchen_kot_queue")
 }
 
 

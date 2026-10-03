@@ -60,7 +60,7 @@ async def get_restaurants(
     now = time.time()
     if not is_admin and not all and not search:
         if cache_key in _restaurants_cache and (now - _restaurants_cache_time) < RESTAURANTS_CACHE_TTL:
-            response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
+            response.headers["Cache-Control"] = "public, s-maxage=300, stale-while-revalidate=86400"
             response.headers["X-FastKirana-Cache"] = "HIT"
             return _restaurants_cache[cache_key]
 
@@ -141,7 +141,7 @@ async def get_restaurants(
         globals()["_restaurants_cache_time"] = now
         response.headers["X-FastKirana-Cache"] = "MISS"
 
-    response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
+    response.headers["Cache-Control"] = "public, s-maxage=300, stale-while-revalidate=86400"
     return result
 
 

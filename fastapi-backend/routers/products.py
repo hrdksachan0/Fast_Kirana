@@ -859,7 +859,7 @@ async def get_products(
         etag = f'"{hashlib.md5(etag_seed.encode()).hexdigest()[:16]}"'
         response.headers["ETag"] = etag
 
-    response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60" if is_cacheable else "no-store, max-age=0, must-revalidate"
+    response.headers["Cache-Control"] = "public, s-maxage=300, stale-while-revalidate=86400" if is_cacheable else "no-store, max-age=0, must-revalidate"
     if is_cacheable:
         response.headers["X-FastKirana-Cache"] = "MISS"
     return response_data

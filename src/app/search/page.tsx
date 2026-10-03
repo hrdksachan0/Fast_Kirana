@@ -41,66 +41,71 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     const filteredWords = rawWords.filter(w => !STOP_WORDS.has(w.toLowerCase()))
     const words = filteredWords.length > 0 ? filteredWords : rawWords
 
-    const restaurantsRaw = await prisma.restaurant.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          {
-            AND: words.map((word) => {
-              const lowerWord = word.toLowerCase()
-              const wordOptions = [word]
-              if (lowerWord === 'as' || lowerWord === 'a.s' || lowerWord === 'a.s.') {
-                wordOptions.push('A.S.', 'as-restaurant')
-              }
-              return {
-                OR: [
-                  ...wordOptions.map(opt => ({ name: { contains: opt, mode: 'insensitive' as const } })),
-                  ...wordOptions.map(opt => ({ slug: { contains: opt, mode: 'insensitive' as const } })),
-                  { description: { contains: word, mode: 'insensitive' as const } },
-                  { cuisineTags: { hasSome: [lowerWord] } },
-                ],
-              }
-            }),
-          },
-          { name: { contains: query, mode: 'insensitive' } },
-          { slug: { contains: query, mode: 'insensitive' } }
-        ]
-      },
-    }).catch(() => [])
+    // Run restaurant and product queries in parallel
+    const [restaurantsRaw, productsRawInitial] = await Promise.all([
+      prisma.restaurant.findMany({
+        where: {
+          isActive: true,
+          OR: [
+            {
+              AND: words.map((word) => {
+                const lowerWord = word.toLowerCase()
+                const wordOptions = [word]
+                if (lowerWord === 'as' || lowerWord === 'a.s' || lowerWord === 'a.s.') {
+                  wordOptions.push('A.S.', 'as-restaurant')
+                }
+                return {
+                  OR: [
+                    ...wordOptions.map(opt => ({ name: { contains: opt, mode: 'insensitive' as const } })),
+                    ...wordOptions.map(opt => ({ slug: { contains: opt, mode: 'insensitive' as const } })),
+                    { description: { contains: word, mode: 'insensitive' as const } },
+                    { cuisineTags: { hasSome: [lowerWord] } },
+                  ],
+                }
+              }),
+            },
+            { name: { contains: query, mode: 'insensitive' } },
+            { slug: { contains: query, mode: 'insensitive' } }
+          ]
+        },
+      }).catch(() => []),
+
+      prisma.product.findMany({
+        where: {
+          isAvailable: true,
+          AND: words.map((word) => {
+            const lowerWord = word.toLowerCase()
+            const wordOptions = [word]
+            if (lowerWord === 'as' || lowerWord === 'a.s' || lowerWord === 'a.s.') {
+              wordOptions.push('as-restaurant', 'as', 'a.s')
+            }
+            return {
+              OR: [
+                ...wordOptions.map(opt => ({ name: { contains: opt, mode: 'insensitive' as const } })),
+                { description: { contains: word, mode: 'insensitive' as const } },
+                { tags: { hasSome: wordOptions.map(w => w.toLowerCase()) } },
+                { category: { name: { contains: word, mode: 'insensitive' as const } } },
+                { restaurant: { name: { contains: word, mode: 'insensitive' as const } } },
+                { restaurant: { slug: { contains: word, mode: 'insensitive' as const } } },
+                ...(lowerWord === 'veg' ? [
+                  { restaurant: { isVeg: true } },
+                  { tags: { has: 'veg' } },
+                  { tags: { has: 'pure-veg' } }
+                ] : [])
+              ],
+            }
+          }),
+        },
+        include: {
+          category: true,
+          restaurant: true,
+        },
+        take: 100,
+      }).catch(() => []),
+    ])
 
     restaurants = restaurantsRaw || []
-
-    let productsRaw = await prisma.product.findMany({
-      where: {
-        isAvailable: true,
-        AND: words.map((word) => {
-          const lowerWord = word.toLowerCase()
-          const wordOptions = [word]
-          if (lowerWord === 'as' || lowerWord === 'a.s' || lowerWord === 'a.s.') {
-            wordOptions.push('as-restaurant', 'as', 'a.s')
-          }
-          return {
-            OR: [
-              ...wordOptions.map(opt => ({ name: { contains: opt, mode: 'insensitive' as const } })),
-              { description: { contains: word, mode: 'insensitive' as const } },
-              { tags: { hasSome: wordOptions.map(w => w.toLowerCase()) } },
-              { category: { name: { contains: word, mode: 'insensitive' as const } } },
-              { restaurant: { name: { contains: word, mode: 'insensitive' as const } } },
-              { restaurant: { slug: { contains: word, mode: 'insensitive' as const } } },
-              ...(lowerWord === 'veg' ? [
-                { restaurant: { isVeg: true } },
-                { tags: { has: 'veg' } },
-                { tags: { has: 'pure-veg' } }
-              ] : [])
-            ],
-          }
-        }),
-      },
-      include: {
-        category: true,
-        restaurant: true,
-      },
-    }).catch(() => [])
+    let productsRaw = productsRawInitial || []
 
     // If AND query returned few/no results, fallback to OR query across words for broader discovery
     if (productsRaw.length < 3 && words.length > 1) {
@@ -162,133 +167,112 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     })))
   }
 
-  // Get dynamic suggestions (trending/popular items in DB)
+  // Get dynamic suggestions (trending/popular items in DB) — only needed when showing empty/no-results state
   let dynamicSuggestions: { label: string; query: string }[] = []
-  try {
-    // 1. Group by order items to find top ordered products
-    const trendingOrderItems = await (prisma.orderItem.groupBy as any)({
-      by: ['productId'],
-      _sum: {
-        quantity: true,
-      },
-      orderBy: {
-        _sum: {
-          quantity: 'desc',
-        },
-      },
-      take: 12,
-    }).catch(() => [])
-
-    const trendingProductIds = trendingOrderItems
-      .map((item: any) => item.productId)
-      .filter((id: any): id is string => id !== null)
-
-    const whereClause = {
-      isAvailable: true,
-      NOT: [
-        { tags: { has: 'cafe' } },
-        { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } }
-      ]
-    }
-
-    const featuredProducts = await prisma.product.findMany({
-      where: {
-        ...whereClause,
-        OR: [
-          { isTopPick: true },
-          { isBestSeller: true },
-          { id: { in: trendingProductIds } }
+  if (products.length === 0) {
+    try {
+      const whereClause = {
+        isAvailable: true,
+        NOT: [
+          { tags: { has: 'cafe' } },
+          { category: { slug: { in: ['cafe', 'fastkirana-cafe'] } } }
         ]
-      },
-      select: {
-        name: true,
-      },
-      take: 10
-    })
+      }
 
-    let finalSuggestions = [...featuredProducts]
+      // Run trending aggregation and featured products in parallel
+      const [trendingOrderItems, featuredProducts, popularProducts] = await Promise.all([
+        (prisma.orderItem.groupBy as any)({
+          by: ['productId'],
+          _sum: { quantity: true },
+          orderBy: { _sum: { quantity: 'desc' } },
+          take: 12,
+        }).catch(() => []),
+        prisma.product.findMany({
+          where: {
+            ...whereClause,
+            OR: [
+              { isTopPick: true },
+              { isBestSeller: true },
+            ]
+          },
+          select: { name: true },
+          take: 10
+        }),
+        prisma.product.findMany({
+          where: {
+            ...whereClause,
+            tags: { has: 'popular' },
+          },
+          select: { name: true },
+          take: 10
+        }),
+      ])
 
-    if (finalSuggestions.length < 10) {
-      const existingNames = finalSuggestions.map(p => p.name)
-      const popularProducts = await prisma.product.findMany({
-        where: {
-          ...whereClause,
-          tags: { has: 'popular' },
-          name: { notIn: existingNames }
-        },
-        select: {
-          name: true,
-        },
-        take: 10 - finalSuggestions.length
-      })
-      finalSuggestions = [...finalSuggestions, ...popularProducts]
-    }
+      const trendingProductIds = trendingOrderItems
+        .map((item: any) => item.productId)
+        .filter((id: any): id is string => id !== null)
 
-    if (finalSuggestions.length < 10) {
-      const existingNames = finalSuggestions.map(p => p.name)
-      const anyProducts = await prisma.product.findMany({
-        where: {
-          ...whereClause,
-          name: { notIn: existingNames }
-        },
-        select: {
-          name: true,
-        },
-        take: 10 - finalSuggestions.length
-      })
-      finalSuggestions = [...finalSuggestions, ...anyProducts]
-    }
+      // Merge trending products with featured if we have IDs
+      let finalSuggestions = [...featuredProducts]
 
-    const emojiMap: Record<string, string> = {
-      milk: '🥛',
-      bread: '🍞',
-      onion: '🧅',
-      potato: '🥔',
-      tomato: '🍅',
-      chips: '🍿',
-      tea: '☕',
-      chai: '☕',
-      atta: '🌾',
-      maggi: '🍜',
-      soap: '🧼',
-      butter: '🧈',
-      egg: '🥚',
-      eggs: '🥚',
-      rice: '🌾',
-      paneer: '🧀',
-      coke: '🥤',
-      cola: '🥤',
-      biscuit: '🍪',
-      biscuits: '🍪',
-      chocolate: '🍫',
-      oil: '🛢️',
-      ghee: '🥛',
-      curd: '🥛',
-      cheese: '🧀',
-      salt: '🧂',
-      sugar: '🍬',
-      coffee: '☕',
-      water: '💧',
-      juice: '🧃',
-      soda: '🥤',
-    }
+      if (trendingProductIds.length > 0 && finalSuggestions.length < 10) {
+        const trendingProducts = await prisma.product.findMany({
+          where: {
+            ...whereClause,
+            id: { in: trendingProductIds },
+            name: { notIn: finalSuggestions.map(p => p.name) }
+          },
+          select: { name: true },
+          take: 10 - finalSuggestions.length
+        })
+        finalSuggestions = [...finalSuggestions, ...trendingProducts]
+      }
 
-    dynamicSuggestions = finalSuggestions.map(p => {
-      const nameLower = p.name.toLowerCase()
-      let emoji = ''
-      for (const [key, value] of Object.entries(emojiMap)) {
-        if (nameLower.includes(key)) {
-          emoji = ` ${value}`
-          break
+      if (finalSuggestions.length < 10) {
+        const existingNames = finalSuggestions.map(p => p.name)
+        const extraPopular = popularProducts.filter(p => !existingNames.includes(p.name)).slice(0, 10 - finalSuggestions.length)
+        finalSuggestions = [...finalSuggestions, ...extraPopular]
+      }
+
+      if (finalSuggestions.length < 10) {
+        const existingNames = finalSuggestions.map(p => p.name)
+        const anyProducts = await prisma.product.findMany({
+          where: {
+            ...whereClause,
+            name: { notIn: existingNames }
+          },
+          select: { name: true },
+          take: 10 - finalSuggestions.length
+        })
+        finalSuggestions = [...finalSuggestions, ...anyProducts]
+      }
+
+      const emojiMap: Record<string, string> = {
+        milk: '🥛', bread: '🍞', onion: '🧅', potato: '🥔', tomato: '🍅',
+        chips: '🍿', tea: '☕', chai: '☕', atta: '🌾', maggi: '🍜',
+        soap: '🧼', butter: '🧈', egg: '🥚', eggs: '🥚', rice: '🌾',
+        paneer: '🧀', coke: '🥤', cola: '🥤', biscuit: '🍪', biscuits: '🍪',
+        chocolate: '🍫', oil: '🛢️', ghee: '🥛', curd: '🥛', cheese: '🧀',
+        salt: '🧂', sugar: '🍬', coffee: '☕', water: '💧', juice: '🧃', soda: '🥤',
+      }
+
+      dynamicSuggestions = finalSuggestions.map(p => {
+        const nameLower = p.name.toLowerCase()
+        let emoji = ''
+        for (const [key, value] of Object.entries(emojiMap)) {
+          if (nameLower.includes(key)) {
+            emoji = ` ${value}`
+            break
+          }
         }
-      }
-      return {
-        label: `${p.name}${emoji}`,
-        query: p.name.trim()
-      }
-    })
-  } catch (err) {
-    console.warn('Failed to load dynamic suggestions on search page:', err)
+        return {
+          label: `${p.name}${emoji}`,
+          query: p.name.trim()
+        }
+      })
+    } catch (err) {
+      console.warn('Failed to load dynamic suggestions on search page:', err)
+    }
   }
 
   const suggestions = dynamicSuggestions.length > 0 ? dynamicSuggestions : [

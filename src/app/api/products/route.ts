@@ -453,11 +453,11 @@ export async function GET(request: NextRequest) {
 
       let matchedProducts = await prisma.product.findMany(queryOptions)
 
-      // If no direct database matches are found, fallback to fetching all products to perform typo-tolerant fuzzy search
+      // If no direct database matches are found, fallback to fetching products to perform typo-tolerant fuzzy search
       if (matchedProducts.length === 0) {
         const fallbackOptions: any = {
           where: searchWhere,
-          take: 500,
+          take: 200,
         }
         if (isWorker) {
           fallbackOptions.include = { category: true }
@@ -592,7 +592,7 @@ export async function GET(request: NextRequest) {
 
     const isCacheable = !isWorker && !includeUnavailable
     if (isCacheable) {
-      await setCache(cacheKey, responseData, 60)
+      await setCache(cacheKey, responseData, 120)
     }
 
     return NextResponse.json(responseData, {

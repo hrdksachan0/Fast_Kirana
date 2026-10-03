@@ -169,7 +169,7 @@ async def get_public_settings(
     now = time.time()
 
     if cache_key in _settings_cache and (now - _settings_cache_time.get(cache_key, 0)) < SETTINGS_CACHE_TTL:
-        response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
+        response.headers["Cache-Control"] = "public, s-maxage=300, stale-while-revalidate=86400"
         response.headers["X-FastKirana-Cache"] = "HIT"
         return _settings_cache[cache_key]
 
@@ -246,7 +246,7 @@ async def get_public_settings(
         _settings_cache[cache_key] = settings_map
         _settings_cache_time[cache_key] = now
 
-        response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
+        response.headers["Cache-Control"] = "public, s-maxage=300, stale-while-revalidate=86400"
         response.headers["X-FastKirana-Cache"] = "MISS"
         return settings_map
     except Exception as e:
@@ -257,7 +257,7 @@ async def get_public_settings(
         settings_map["cafe_open"] = "true" if check_is_store_open(settings_map, "cafe") else "false"
         settings_map["restaurant_open"] = "true" if check_is_store_open(settings_map, "restaurant") else "false"
 
-        response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
+        response.headers["Cache-Control"] = "public, s-maxage=300, stale-while-revalidate=86400"
         return settings_map
 
 

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 export interface DarkStoreInfo {
   id: string
   name: string
-  city?: string
+  city?: string | null
   latitude: number
   longitude: number
   deliveryRadiusKm: number

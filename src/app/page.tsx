@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   }
 }
 
-// Revalidate home page every 180s with ISR for lightning-fast loads and low DB load
-export const revalidate = 180
+// Revalidate home page every 1 hour with ISR, purged on-demand when inventory updates
+export const revalidate = 3600
 
 const productSelect = {
   id: true,
@@ -101,7 +101,7 @@ const getCachedBanners = unstable_cache(
     })
   },
   ['storefront-banners-v15'],
-  { revalidate: 60, tags: ['banners'] }
+  { revalidate: 3600, tags: ['banners'] }
 )
 
 const getCachedCategories = unstable_cache(
@@ -292,7 +292,7 @@ const getCachedStoreSettings = unstable_cache(
     })
   },
   ['storefront-settings-v2'],
-  { revalidate: 60, tags: ['settings'] }
+  { revalidate: 3600, tags: ['settings'] }
 )
 
 const getCachedCategorySortRules = unstable_cache(
