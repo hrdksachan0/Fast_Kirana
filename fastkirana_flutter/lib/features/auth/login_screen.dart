@@ -577,6 +577,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ),
                                     ),
                                   ),
+
+                                  const SizedBox(height: 10),
+
+                                  // Staff Login with Password Quick Action
+                                  Center(
+                                    child: TextButton.icon(
+                                      onPressed: () {
+                                        final rawPhone = _phoneController.text.replaceAll(RegExp(r'\D'), '').trim();
+                                        final phone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/staff/login',
+                                          arguments: {'phone': phone, 'passwordMode': true},
+                                        );
+                                      },
+                                      icon: const Icon(Icons.lock_outline_rounded, size: 14, color: Color(0xFF64748B)),
+                                      label: Text(
+                                        'Staff? Login with Password',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: Responsive.scaledFontSize(context, 12),
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF475569),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -622,7 +648,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             // Staff & Store Partner Portal Link
                             Center(
                               child: GestureDetector(
-                                onTap: () => Navigator.pushNamed(context, '/vendor/login'),
+                                onTap: () {
+                                  final rawPhone = _phoneController.text.replaceAll(RegExp(r'\D'), '').trim();
+                                  final phone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/staff/login',
+                                    arguments: {'phone': phone, 'passwordMode': false},
+                                  );
+                                },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(

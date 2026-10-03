@@ -183,11 +183,13 @@ class LocationService {
     String? storeName,
     int pendingOrders = 0,
     bool isRestaurant = false,
+    DateTime? now,
   }) {
     final dynamicEta = calculateDynamicEta(
       distanceKm: distanceKm,
       pendingOrders: pendingOrders,
       isRestaurant: isRestaurant,
+      now: now,
     );
 
     final radius = maxRadius ?? settings?.deliveryRadiusKm ?? maxDeliveryRadiusKm;

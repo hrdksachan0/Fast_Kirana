@@ -662,7 +662,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
               }
 
               if (newStatus == 'PENDING' || newStatus == 'PLACED') {
-                _playChime();
+                _startPendingAlarm();
               }
             },
           );
@@ -696,7 +696,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
               }
 
               _fetchOrders(silent: true);
-              _playChime();
+              _startPendingAlarm();
             },
           );
       _restaurantBroadcastChannel?.subscribe();

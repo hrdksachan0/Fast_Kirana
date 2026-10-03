@@ -1,4 +1,4 @@
-import { format, addMinutes, parseISO, getHours, getMinutes } from 'date-fns'
+import { format, addMinutes, parseISO, getHours, getMinutes, formatDistanceToNow } from 'date-fns'
 
 // Re-export IST timezone helpers from formatters.ts for convenience
 export { getISTHour, getISTMinute, getISTTotalMinutes, formatISODate, isStoreOpen } from './formatters'
@@ -13,7 +13,20 @@ export function parseDateInput(date?: string | Date | null): Date | null {
   return isNaN(d.getTime()) ? null : d
 }
 
-// --- Time ---
+// --- Indian Rupee Currency Formatter ---
+export function formatINR(amount?: number | string | null): string {
+  if (amount === undefined || amount === null || amount === '') return '₹0'
+  const numericVal = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (isNaN(numericVal)) return '₹0'
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: numericVal % 1 === 0 ? 0 : 2,
+    minimumFractionDigits: 0,
+  }).format(numericVal)
+}
+
+// --- Date Formatting (IST Enforced) ---
 export function formatDate(date?: string | Date | null, _pattern = 'PP'): string {
   const d = parseDateInput(date)
   if (!d) return ''
@@ -45,18 +58,33 @@ export function formatOrderTime(date?: string | Date | null): string {
 }
 
 export function formatTime(date?: string | Date | null): string {
+  return formatOrderTime(date)
+}
+
+export function formatOrderDateTime(date?: string | Date | null): string {
+  const d = parseDateInput(date)
+  if (!d) return ''
+  const datePart = formatDate(d)
+  const timePart = formatOrderTime(d)
+  return datePart && timePart ? `${datePart}, ${timePart}` : datePart || timePart
+}
+
+export function formatRelativeTimestamp(date?: string | Date | null): string {
   const d = parseDateInput(date)
   if (!d) return ''
   try {
-    return d.toLocaleTimeString('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
+    return formatDistanceToNow(d, { addSuffix: true })
   } catch {
-    return ''
+    return formatDate(d)
   }
+}
+
+export function formatDeliveryETA(minutes?: number | string | null): string {
+  if (!minutes) return '10-15 mins'
+  const m = typeof minutes === 'string' ? parseInt(minutes, 10) : minutes
+  if (isNaN(m) || m <= 0) return '10-15 mins'
+  if (m <= 10) return '8-12 mins'
+  return `${Math.max(8, m - 3)}-${m + 3} mins`
 }
 
 // --- Date arithmetic ---
@@ -100,18 +128,18 @@ export function isNearClosing(closeTimeStr: string): boolean {
     timeZone: 'Asia/Kolkata',
     hour: 'numeric',
     minute: 'numeric',
-    hour12: false
+    hour12: false,
   })
   const parts = formatter.formatToParts(new Date())
-  const currentH = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
-  const currentM = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
+  const currentH = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10)
+  const currentM = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10)
   const currentTotal = currentH * 60 + currentM
 
   const closeTotal = closeH * 60 + closeM
   let diff = closeTotal - currentTotal
 
   if (closeTotal < 300 && currentTotal > 1200) {
-    diff = (closeTotal + 1440) - currentTotal
+    diff = closeTotal + 1440 - currentTotal
   }
 
   return diff > 0 && diff <= 30

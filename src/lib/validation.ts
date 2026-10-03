@@ -264,6 +264,58 @@ export const validateCartSchema = z.object({
   storeId: z.string().nullable().optional(),
 })
 
+// ── Admin Catalog Schemas ──────────────────────────────────────────
+
+
+export const updateProductSchema = createProductSchema.partial().extend({
+  id: z.string().min(1, 'Product ID is required'),
+})
+
+export const createCategorySchema = z.object({
+  name: z.string().min(1, 'Category name is required').max(100),
+  slug: z.string().optional(),
+  imageUrl: z.string().optional().default(''),
+  order: z.coerce.number().int().optional().default(0),
+  isActive: z.boolean().optional().default(true),
+})
+
+export const createCouponSchema = z.object({
+  code: z.string().min(1, 'Coupon code is required').transform((c) => c.toUpperCase().trim()),
+  discountType: z.enum(['FLAT', 'PERCENT']),
+  discountValue: z.coerce.number().positive('Discount value must be positive'),
+  minOrder: z.coerce.number().nonnegative().optional().default(0),
+  maxDiscount: z.coerce.number().nonnegative().optional().default(0),
+  startDate: z.string().or(z.date()).optional(),
+  endDate: z.string().or(z.date()).optional(),
+  usageLimit: z.coerce.number().int().positive().nullable().optional(),
+  applicableType: z.enum(['ALL', 'GROCERY', 'RESTAURANT', 'CAFE']).optional().default('ALL'),
+  isActive: z.boolean().optional().default(true),
+})
+
+export const adminCouponPostSchema = z.object({
+  code: z.string().min(1, 'Coupon code is required').transform((c) => c.toUpperCase().trim()),
+  discountType: z.enum(['FLAT', 'PERCENT', 'BOGO', 'FREE_DELIVERY']),
+  bogoType: z.string().nullable().optional(),
+  triggerVariant: z.string().nullable().optional(),
+  rewardVariant: z.string().nullable().optional(),
+  defaultFreeDishId: z.string().nullable().optional(),
+  maxFreeItems: z.coerce.number().optional().default(3),
+  bogoDishId: z.string().nullable().optional(),
+  autoApply: z.boolean().optional().default(false),
+  badgeText: z.string().nullable().optional(),
+  menuSection: z.string().nullable().optional(),
+  value: z.coerce.number().nonnegative().optional().default(0),
+  minOrder: z.coerce.number().nonnegative().optional().default(0),
+  maxDiscount: z.coerce.number().nullable().optional(),
+  maxUses: z.coerce.number().nullable().optional(),
+  isActive: z.boolean().optional().default(true),
+  expiresAt: z.string().or(z.date()).nullable().optional(),
+  categoryId: z.string().nullable().optional(),
+  restaurantId: z.string().nullable().optional(),
+  oncePerCustomer: z.boolean().optional().default(false),
+  syncRestaurantBadge: z.boolean().optional().default(true),
+})
+
 // ── Generic Validation Helper ───────────────────────────────────────
 
 export async function validateBody<T extends z.ZodType>(

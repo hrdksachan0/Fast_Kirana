@@ -88,7 +88,21 @@ class AppRouter {
       case '/vendor/login':
       case '/staff':
       case '/staff/login':
-        return ZeptoSlideRoute(page: const VendorLoginScreen());
+        String? initPhone;
+        bool initPasswordMode = false;
+        if (settings.arguments is String) {
+          initPhone = settings.arguments as String;
+        } else if (settings.arguments is Map<String, dynamic>) {
+          final m = settings.arguments as Map<String, dynamic>;
+          initPhone = m['phone']?.toString();
+          initPasswordMode = m['passwordMode'] == true;
+        }
+        return ZeptoSlideRoute(
+          page: VendorLoginScreen(
+            initialPhone: initPhone,
+            initialPasswordMode: initPasswordMode,
+          ),
+        );
       case '/vendor/console':
       case '/vendor/dashboard':
         final args = settings.arguments as Map<String, dynamic>?;

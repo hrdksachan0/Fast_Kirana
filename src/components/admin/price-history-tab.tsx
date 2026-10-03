@@ -20,6 +20,7 @@ import {
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { formatPrice, cn } from '@/lib/utils'
+import { formatOrderTime } from '@/lib/date-helpers'
 
 interface PriceHistoryRecord {
   id: string
@@ -432,10 +433,7 @@ export function PriceHistoryTab({ storeId }: PriceHistoryTabProps) {
                             {formatTimeAgo(r.createdAt)}
                           </span>
                           <span className="text-[10.5px] text-text-muted font-medium mt-0.5">
-                            {new Date(r.createdAt).toLocaleTimeString('en-IN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {formatOrderTime(r.createdAt)}
                           </span>
                         </div>
                       </td>

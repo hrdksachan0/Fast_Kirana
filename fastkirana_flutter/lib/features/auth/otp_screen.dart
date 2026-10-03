@@ -1127,6 +1127,33 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                           ),
                         ),
                       ),
+
+                      const SizedBox(height: 14),
+
+                      // Staff Password Option
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: () {
+                            Navigator.pushReplacementNamed(
+                              context,
+                              '/staff/login',
+                              arguments: {
+                                'phone': widget.identifier,
+                                'passwordMode': true,
+                              },
+                            );
+                          },
+                          icon: const Icon(Icons.shield_outlined, size: 15, color: Color(0xFF2563EB)),
+                          label: Text(
+                            'Staff Member? Login with Password instead',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 12),
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF2563EB),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ).animate().fadeIn(duration: 400.ms, delay: 150.ms),

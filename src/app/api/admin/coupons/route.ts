@@ -40,12 +40,16 @@ export async function GET(request: Request) {
   }
 }
 
+import { validateBodyLegacy, adminCouponPostSchema } from '@/lib/validation'
+
 export async function POST(request: Request) {
   const adminResult = await requireAdmin()
   if (adminResult.error) return adminResult.error
 
+  const validation = await validateBodyLegacy(request, adminCouponPostSchema)
+  if (!validation.success) return validation.error
+
   try {
-    const body = await request.json()
     const { 
       code, 
       discountType, 
@@ -68,16 +72,7 @@ export async function POST(request: Request) {
       restaurantId,
       oncePerCustomer = false,
       syncRestaurantBadge = true
-    } = body
-
-    if (!code || !discountType) {
-      return NextResponse.json({ error: 'Missing required code or discountType' }, { status: 400 })
-    }
-
-    const validDiscountTypes = ['FLAT', 'PERCENT', 'BOGO', 'FREE_DELIVERY']
-    if (!validDiscountTypes.includes(discountType)) {
-      return NextResponse.json({ error: 'Invalid discount type' }, { status: 400 })
-    }
+    } = validation.data
 
     const cleanCode = code.toUpperCase().trim()
 

@@ -108,40 +108,40 @@ class CategoryVisualHelper {
     String fallbackAsset = 'assets/categories/fruits_vegetables_category.webp';
 
     if (slug == 'fruits-vegetables' || slug.contains('fruit') || slug.contains('veg') || name.contains('fruit') || name.contains('veg')) {
-      webCdnUrl = 'https://www.fastkirana.in/fruits-vegetables.png';
+      webCdnUrl = 'https://www.fastkirana.in/fruits_vegetables_category.webp';
       fallbackAsset = 'assets/categories/fruits_vegetables_category.webp';
     } else if (slug.contains('dry-fruit') || slug.contains('super') || name.contains('dry fruit') || name.contains('nuts')) {
-      webCdnUrl = 'https://www.fastkirana.in/healthy-foods.png';
+      webCdnUrl = 'https://www.fastkirana.in/fruits_vegetables_category.webp';
       fallbackAsset = 'assets/categories/fruits_vegetables_category.webp';
     } else if (slug == 'dairy-breakfast' || slug.contains('dairy') || slug.contains('milk') || name.contains('milk') || name.contains('dairy')) {
-      webCdnUrl = 'https://www.fastkirana.in/dairy-bread-eggs.png';
+      webCdnUrl = 'https://www.fastkirana.in/dairy_breakfast_category.webp';
       fallbackAsset = 'assets/categories/dairy_breakfast_category.webp';
     } else if (slug == 'snacks-munchies' || slug.contains('snack') || slug.contains('munch') || name.contains('snack') || name.contains('munch')) {
-      webCdnUrl = 'https://www.fastkirana.in/snacks-munchies.png';
+      webCdnUrl = 'https://www.fastkirana.in/snacks_munchies_category.webp';
       fallbackAsset = 'assets/categories/snacks_munchies_category.webp';
     } else if (slug == 'beverages' || slug.contains('drink') || slug.contains('cold') || name.contains('beverage') || name.contains('drink')) {
-      webCdnUrl = 'https://www.fastkirana.in/beverages.png';
+      webCdnUrl = 'https://www.fastkirana.in/beverages_category.webp';
       fallbackAsset = 'assets/categories/beverages_category.webp';
     } else if (slug == 'ice-cream' || slug.contains('ice') || slug.contains('dessert') || name.contains('ice cream')) {
-      webCdnUrl = 'https://www.fastkirana.in/ice-cream.png';
+      webCdnUrl = 'https://www.fastkirana.in/ice_cream_category.webp';
       fallbackAsset = 'assets/categories/ice_cream_category.webp';
     } else if (slug == 'atta-rice-dal' || slug.contains('atta') || slug.contains('rice') || slug.contains('kitchen') || slug.contains('ration') || name.contains('kitchen') || name.contains('ration')) {
-      webCdnUrl = 'https://www.fastkirana.in/kitchen-needs.png';
+      webCdnUrl = 'https://www.fastkirana.in/atta_rice_dal_category.webp';
       fallbackAsset = 'assets/categories/atta_rice_dal_category.webp';
     } else if (slug.contains('packaged') || name.contains('packaged')) {
-      webCdnUrl = 'https://www.fastkirana.in/packaged-foods.png';
+      webCdnUrl = 'https://www.fastkirana.in/snacks_munchies_category.webp';
       fallbackAsset = 'assets/categories/snacks_munchies_category.webp';
     } else if (slug == 'personal-care' || slug.contains('care') || slug.contains('hygiene') || name.contains('personal care')) {
-      webCdnUrl = 'https://www.fastkirana.in/personal-care.png';
+      webCdnUrl = 'https://www.fastkirana.in/personal_care_category.webp';
       fallbackAsset = 'assets/categories/personal_care_category.webp';
     } else if (slug == 'home-needs-and-cleaning' || slug == 'household' || slug.contains('clean') || slug.contains('home') || name.contains('cleaning') || name.contains('home needs')) {
-      webCdnUrl = 'https://www.fastkirana.in/home-cleaning.png';
+      webCdnUrl = 'https://www.fastkirana.in/household_category.webp';
       fallbackAsset = 'assets/categories/household_category.webp';
     } else if (slug == 'bakery' || slug.contains('biscuit') || name.contains('bakery')) {
-      webCdnUrl = 'https://www.fastkirana.in/bakery.png';
+      webCdnUrl = 'https://www.fastkirana.in/bakery_biscuits_category.webp';
       fallbackAsset = 'assets/categories/bakery_biscuits_category.webp';
     } else if (slug == 'restaurant-food' || slug.contains('cafe') || slug.contains('food')) {
-      webCdnUrl = 'https://www.fastkirana.in/restaurant-food.png';
+      webCdnUrl = 'https://www.fastkirana.in/cafe_category.webp';
       fallbackAsset = 'assets/categories/cafe_category.webp';
     }
 

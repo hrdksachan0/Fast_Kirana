@@ -13,9 +13,9 @@ import { DashboardHubNav } from '@/components/admin/dashboard/hub-nav'
 import { DashboardStatsCards } from '@/components/admin/dashboard/stats-cards'
 import { BottleneckBanner } from '@/components/admin/dashboard/bottleneck-banner'
 import { StoreControlBar } from '@/components/admin/dashboard/store-control-bar'
-import { AdminLiveOrdersTab } from '@/components/admin/dashboard/AdminLiveOrdersTab'
+import { OrderManagementTab } from '@/components/admin/dashboard/OrderManagementTab'
 import { AdminInventoryHubTab } from '@/components/admin/dashboard/AdminInventoryHubTab'
-import { AdminRidersFleetTab } from '@/components/admin/dashboard/AdminRidersFleetTab'
+import { RiderDispatchPanel } from '@/components/admin/dashboard/RiderDispatchPanel'
 import { AdminReportsTab } from '@/components/admin/dashboard/AdminReportsTab'
 import { AdminDarkStoresTab } from '@/components/admin/dashboard/AdminDarkStoresTab'
 import { UsersTab } from '@/components/admin/users-tab'
@@ -27,7 +27,7 @@ import { FlashDealsTab } from '@/components/admin/flash-deals-tab'
 import { RestaurantConsoleTab } from '@/components/admin/restaurant-console-tab'
 import { VendorConsoleTab } from '@/components/admin/vendor-console-tab'
 import { PriceHistoryTab } from '@/components/admin/price-history-tab'
-import { AdminFinanceTab } from '@/components/admin/finance/admin-finance-tab'
+import { FinancialSummary } from '@/components/admin/dashboard/FinancialSummary'
 import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-modal'
 import { toast } from 'sonner'
 import { PRESET_KITCHEN_PHOTOS } from '@/lib/preset-photos'
@@ -962,7 +962,7 @@ export function AdminDashboard({
           className="w-full"
         >
           {(activeTab === 'orders' || activeTab === 'liveops') && (
-            <AdminLiveOrdersTab
+            <OrderManagementTab
               activeTab={activeTab}
               storeId={selectedHubId}
               orders={orderHook.orders}
@@ -1261,9 +1261,9 @@ export function AdminDashboard({
 
           {activeTab === 'flash-deals' && <FlashDealsTab storeId={selectedHubId} />}
 
-          {activeTab === 'finance' && <AdminFinanceTab storeId={selectedHubId} />}
+          {activeTab === 'finance' && <FinancialSummary storeId={selectedHubId} />}
 
-          {activeTab === 'rider-cash' && <AdminRidersFleetTab storeId={selectedHubId} />}
+          {activeTab === 'rider-cash' && <RiderDispatchPanel storeId={selectedHubId} />}
 
           {activeTab === 'restaurant-console' && (
             <RestaurantConsoleTab storeId={selectedHubId} />

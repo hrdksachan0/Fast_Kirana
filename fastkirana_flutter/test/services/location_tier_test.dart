@@ -96,15 +96,23 @@ void main() {
         'surge_charge': '15',
       });
 
-      // Under free delivery threshold: Base ₹25 + Surge ₹15 = ₹40
-      final tier1Surge = LocationService.getDeliveryTier(1.0, 100.0, settings: surgeSettings);
+      // Off-peak daytime (10:00 AM): 1.0x multiplier -> Base ₹25 + Surge ₹15 = ₹40.0
+      final morningTime = DateTime(2026, 1, 1, 10, 0);
+      final tier1Surge = LocationService.getDeliveryTier(1.0, 100.0, settings: surgeSettings, now: morningTime);
       expect(tier1Surge.deliveryFee, 40.0);
       expect(tier1Surge.baseFee, 25.0);
       expect(tier1Surge.surgeFee, 15.0);
       expect(tier1Surge.feeDescription, contains('15 surge'));
 
+      // Peak Dinner Rush (20:00 / 8:00 PM): 1.25x multiplier -> Surge ₹15 * 1.25 = ₹19 -> ₹25 + ₹19 = ₹44.0
+      final dinnerTime = DateTime(2026, 1, 1, 20, 0);
+      final tier1Rush = LocationService.getDeliveryTier(1.0, 100.0, settings: surgeSettings, now: dinnerTime);
+      expect(tier1Rush.deliveryFee, 44.0);
+      expect(tier1Rush.baseFee, 25.0);
+      expect(tier1Rush.surgeFee, 19.0);
+
       // Above free delivery threshold: Free delivery applies (₹0 delivery fee)
-      final tier1Free = LocationService.getDeliveryTier(1.0, 250.0, settings: surgeSettings);
+      final tier1Free = LocationService.getDeliveryTier(1.0, 250.0, settings: surgeSettings, now: morningTime);
       expect(tier1Free.deliveryFee, 0.0);
     });
   });

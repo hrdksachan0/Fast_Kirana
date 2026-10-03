@@ -424,10 +424,20 @@ const nextConfig: NextConfig = {
           source: '/api/python/:path*',
           destination: `${apiDest}/:path*`,
         },
-        {
-          source: '/ws/:path*',
-          destination: `${apiDest}/ws/:path*`,
-        },
+        // Legacy Category Image Aliases -> High-Performance WebP
+        { source: '/fruits-vegetables.png', destination: '/fruits_vegetables_category.webp' },
+        { source: '/dairy-bread-eggs.png', destination: '/dairy_breakfast_category.webp' },
+        { source: '/snacks-munchies.png', destination: '/snacks_munchies_category.webp' },
+        { source: '/beverages.png', destination: '/beverages_category.webp' },
+        { source: '/ice-cream.png', destination: '/ice_cream_category.webp' },
+        { source: '/kitchen-needs.png', destination: '/atta_rice_dal_category.webp' },
+        { source: '/packaged-foods.png', destination: '/snacks_munchies_category.webp' },
+        { source: '/personal-care.png', destination: '/personal_care_category.webp' },
+        { source: '/home-cleaning.png', destination: '/household_category.webp' },
+        { source: '/bakery.png', destination: '/bakery_biscuits_category.webp' },
+        { source: '/restaurant-food.png', destination: '/cafe_category.webp' },
+        { source: '/healthy-foods.png', destination: '/fruits_vegetables_category.webp' },
+        { source: '/chocolates.png', destination: '/bakery_biscuits_category.webp' },
         ...(useFastApiProxy ? fastApiRewrites : []),
       ],
       afterFiles: [],
@@ -509,6 +519,14 @@ const nextConfig: NextConfig = {
         source: "/(images|icons|fonts)/:path*",
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ]
+      },
+      {
+        source: "/:file((?!api/).*\\.(?:png|jpg|jpeg|webp|svg|gif|ico|avif|woff2|woff|ttf|mp3))",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=2592000, immutable" },
+          { key: "CDN-Cache-Control", value: "public, max-age=2592000, immutable" },
+          { key: "Cloudflare-CDN-Cache-Control", value: "public, max-age=2592000, immutable" },
         ]
       },
       {

@@ -12,11 +12,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email: rawEmail, password, otp, name, phone } = body
 
-    if (!rawEmail) {
+    const rawInput = (rawEmail || phone || body.username || '').toString().trim()
+
+    if (!rawInput) {
       return NextResponse.json({ error: 'Email or phone number is required' }, { status: 400 })
     }
 
-    const trimmed = rawEmail.trim()
+    const trimmed = rawInput
 
     if (otp) {
       const otpLimited = await otpLimiter.check(request, trimmed)
@@ -72,6 +74,19 @@ export async function POST(request: NextRequest) {
       let user = await prisma.user.findUnique({
         where: { email },
       })
+
+      if (!user && phoneForSignup) {
+        user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { phone: phoneForSignup },
+              { phone: getLast10Digits(phoneForSignup) },
+              { phone: `+91${getLast10Digits(phoneForSignup)}` },
+              { phone: `91${getLast10Digits(phoneForSignup)}` },
+            ]
+          }
+        })
+      }
 
       if (isBypass) {
         if (!user) {

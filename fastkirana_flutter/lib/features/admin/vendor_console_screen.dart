@@ -7,6 +7,7 @@ import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
@@ -61,6 +62,9 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
   List<Map<String, dynamic>> _liveOrders = [];
   bool _isLoadingLiveOrders = false;
   Timer? _liveOrdersPollingTimer;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  final Set<String> _knownOrderIds = <String>{};
+  bool _isAlarmEnabled = true;
 
   // Search filter
   final TextEditingController _searchController = TextEditingController();
@@ -108,9 +112,26 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
   @override
   void dispose() {
     _liveOrdersPollingTimer?.cancel();
+    _audioPlayer.dispose();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _triggerOrderAlertSound() async {
+    if (!_isAlarmEnabled) return;
+    try {
+      HapticFeedback.heavyImpact();
+      await _audioPlayer.stop();
+      await _audioPlayer.play(
+        AssetSource('sounds/order_chime.mp3'),
+        volume: 1.0,
+      );
+    } catch (_) {
+      try {
+        await SystemSound.play(SystemSoundType.alert);
+      } catch (_) {}
+    }
   }
 
   Future<void> _fetchLiveOrders(String vendorId, {bool silent = false}) async {
@@ -124,6 +145,23 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
         final list = (res.data['orders'] as List<dynamic>?)
             ?.map((e) => Map<String, dynamic>.from(e))
             .toList() ?? [];
+
+        // Check if there are newly arrived pending orders not seen before
+        final hasNewPending = list.any((o) {
+          final id = (o['id'] ?? '').toString();
+          final st = (o['status'] ?? '').toString().toUpperCase();
+          return (st == 'PENDING' || st == 'PLACED') && !_knownOrderIds.contains(id);
+        });
+
+        for (final o in list) {
+          final id = (o['id'] ?? '').toString();
+          if (id.isNotEmpty) _knownOrderIds.add(id);
+        }
+
+        if (hasNewPending) {
+          _triggerOrderAlertSound();
+        }
+
         if (mounted) {
           setState(() {
             _liveOrders = list;

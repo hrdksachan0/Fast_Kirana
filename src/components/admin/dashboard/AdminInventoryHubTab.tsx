@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ProductsTab } from '@/components/admin/products-tab'
+import { InventoryTable } from '@/components/admin/dashboard/InventoryTable'
 import { CategoriesTab } from '@/components/admin/categories-tab'
 import { AlertsTab } from '@/components/admin/alerts-tab'
 import { InwardTab } from '@/components/admin/inward-tab'
@@ -11,7 +11,7 @@ import { CsvImportTab } from '@/components/admin/csv-import-tab'
 export interface AdminInventoryHubTabProps {
   activeTab: 'products' | 'categories' | 'alerts' | 'inward' | 'bulk-update' | 'csv-import'
   selectedHubId: string
-  // ProductsTab props
+  // InventoryTable props
   productProps: any
   // CategoriesTab props
   categoryProps: any
@@ -28,7 +28,7 @@ export function AdminInventoryHubTab({
 }: AdminInventoryHubTabProps) {
   switch (activeTab) {
     case 'products':
-      return <ProductsTab {...productProps} />
+      return <InventoryTable {...productProps} />
     case 'categories':
       return <CategoriesTab {...categoryProps} />
     case 'alerts':

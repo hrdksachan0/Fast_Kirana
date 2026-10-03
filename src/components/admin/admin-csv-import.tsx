@@ -3,6 +3,7 @@ import { apiUrl } from '@/lib/api-url';
 
 import { useState, useRef, useCallback } from 'react'
 import Papa from 'papaparse'
+import { parseVariantsString, sanitizeCsvField } from '@/lib/csv-importer'
 import { toast } from 'sonner'
 import {
   FileSpreadsheet,
@@ -86,80 +87,7 @@ const CAFE_TEMPLATE_ROWS = [
 
 
 function parseVariantsClient(variantsStr: string, mainCostPrice: number = 0): any[] | null {
-  try {
-    const parts = variantsStr.split('|')
-    const parsed: any[] = []
-    
-    for (const part of parts) {
-      const trimmedPart = part.trim()
-      if (!trimmedPart) continue
-
-      // Try parsing key-value parenthesis format first: Name (price=15, mrp=20, stock=45, cost=10)
-      if (trimmedPart.includes('(') && trimmedPart.endsWith(')')) {
-        const openParenIdx = trimmedPart.indexOf('(')
-        const name = trimmedPart.substring(0, openParenIdx).trim()
-        const paramsStr = trimmedPart.substring(openParenIdx + 1, trimmedPart.length - 1)
-        
-        const params = paramsStr.split(/[,;]/)
-        let price = 0
-        let mrp = 0
-        let stock = 0
-        let costPrice = mainCostPrice
-
-        for (const param of params) {
-          const [key, val] = param.split('=').map((s: string) => s.trim().toLowerCase())
-          if (!key || !val) continue
-          const numVal = parseFloat(val) || 0
-          
-          if (['price', 'selling', 'selling_price'].includes(key)) {
-            price = numVal
-          } else if (['mrp', 'mrp_price'].includes(key)) {
-            mrp = numVal
-          } else if (['stock', 'qty', 'quantity'].includes(key)) {
-            stock = parseInt(val) || 0
-          } else if (['cost', 'cost_price', 'costprice'].includes(key)) {
-            costPrice = numVal
-          }
-        }
-
-        if (name) {
-          parsed.push({
-            name,
-            price,
-            mrp: mrp || price,
-            stock,
-            costPrice
-          })
-          continue
-        }
-      }
-
-      // Fallback to colon-separated format: Name:Price:MRP:Stock:CostPrice
-      const subparts = trimmedPart.split(':')
-      const vName = subparts[0]?.trim()
-      const vPrice = parseFloat(subparts[1]) || 0
-      const vMrp = subparts[2] ? parseFloat(subparts[2]) : vPrice
-      const vStock = subparts[3] ? parseInt(subparts[3]) : 0
-      let vCostPrice = subparts[4] ? parseFloat(subparts[4]) : undefined
-
-      if (vCostPrice === undefined || isNaN(vCostPrice)) {
-        vCostPrice = mainCostPrice
-      }
-
-      if (vName) {
-        parsed.push({
-          name: vName,
-          price: vPrice,
-          mrp: vMrp,
-          stock: vStock,
-          costPrice: vCostPrice
-        })
-      }
-    }
-    return parsed
-  } catch (e) {
-    return null
-  }
+  return parseVariantsString(variantsStr, mainCostPrice)
 }
 
 export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminCsvImportProps) {
@@ -188,19 +116,22 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
     const headers = importType === 'grocery' ? GROCERY_TEMPLATE_HEADERS : CAFE_TEMPLATE_HEADERS
     const rowsData = importType === 'grocery' ? GROCERY_TEMPLATE_ROWS : CAFE_TEMPLATE_ROWS
 
-    const cafeCategory = categories.find(c => c.slug === 'cafe')
+    const cafeCategory = categories.find((c) => c.slug === 'cafe')
     const cafeCategoryName = cafeCategory?.name || 'FastKirana Cafe'
 
-    const rows = rowsData.map(row => {
+    const rows = rowsData.map((row) => {
       const parsedRow = [...row]
       if (importType === 'cafe') {
-        parsedRow[1] = cafeCategoryName
+        parsedRow[2] = cafeCategoryName
       }
-      return parsedRow.map(cell => cell.includes(',') ? `"${cell}"` : cell).join(',')
+      return parsedRow
     })
 
-    const csv = [headers.join(','), ...rows].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
+    const csv = Papa.unparse({
+      fields: headers,
+      data: rows,
+    })
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

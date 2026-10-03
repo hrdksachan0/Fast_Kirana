@@ -23,7 +23,14 @@ import '../delivery/picker_dashboard.dart';
 typedef StaffLoginScreen = VendorLoginScreen;
 
 class VendorLoginScreen extends ConsumerStatefulWidget {
-  const VendorLoginScreen({super.key});
+  final String? initialPhone;
+  final bool initialPasswordMode;
+
+  const VendorLoginScreen({
+    super.key,
+    this.initialPhone,
+    this.initialPasswordMode = false,
+  });
 
   @override
   ConsumerState<VendorLoginScreen> createState() => _VendorLoginScreenState();
@@ -36,11 +43,20 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
 
   bool _isOtpSent = false;
   bool _isLoading = false;
-  bool _usePasswordLogin = false;
+  late bool _usePasswordLogin;
   bool _obscurePassword = true;
   int _resendCooldown = 0;
   String? _errorMessage;
   String? _successMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _usePasswordLogin = widget.initialPasswordMode;
+    if (widget.initialPhone != null && widget.initialPhone!.trim().isNotEmpty) {
+      _phoneController.text = widget.initialPhone!.trim();
+    }
+  }
 
   static const Color slateDark = Color(0xFF0F172A);
   static const Color slateCard = Color(0xFF1E293B);
@@ -309,17 +325,23 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
         if (!mounted) return;
         setState(() => _isLoading = false);
 
-        if (role == 'ADMIN') {
+        final roleUpper = role.toUpperCase();
+        if (roleUpper == 'ADMIN') {
           Navigator.pushReplacement(context, FadeSlideRoute(page: const AdminDashboard()));
-        } else if (role == 'DELIVERY' || role == 'RIDER') {
+        } else if (roleUpper == 'DELIVERY' || roleUpper == 'RIDER' || roleUpper == 'DELIVERY_PARTNER') {
           Navigator.pushReplacement(context, FadeSlideRoute(page: const DeliveryDashboard()));
-        } else if (role == 'RESTAURANT_OWNER' || role == 'CHEF') {
+        } else if (roleUpper == 'RESTAURANT_OWNER' || roleUpper == 'CHEF' || roleUpper == 'RESTAURANT') {
           Navigator.pushReplacement(
             context,
             FadeSlideRoute(page: RestaurantDashboard(initialRestaurantId: user.assignedRestaurantId)),
           );
-        } else if (role == 'PICKER') {
+        } else if (roleUpper == 'PICKER') {
           Navigator.pushReplacement(context, FadeSlideRoute(page: const PickerDashboard()));
+        } else if (roleUpper == 'VENDOR') {
+          Navigator.pushReplacement(
+            context,
+            FadeSlideRoute(page: const VendorConsoleScreen(isVendorSelf: true)),
+          );
         } else {
           Navigator.pushReplacementNamed(context, '/main');
         }
