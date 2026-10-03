@@ -633,6 +633,11 @@ export function DealsCurationHub({
   const groupedProducts = useMemo(() => {
     const groups: Record<string, { categoryName: string; categorySlug: string; sortOrder: number; products: any[] }> = {}
     currentCuration.products.forEach((product) => {
+      // Exclude all restaurant food items from Grocery sections — strictly dark-store grocery only
+      if (product.restaurantId) {
+        return
+      }
+
       // Exclude Classic Cold Coffee and prepared restaurant dishes from Grocery home page sections
       const isClassicColdCoffee = /classic.?cold.?coffee/i.test(product.name || '')
       

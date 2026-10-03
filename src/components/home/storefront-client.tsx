@@ -125,7 +125,7 @@ export function StorefrontClient({
       setOnlineAlert('FastKirana Store is now ONLINE! Fresh delivery active.')
 
       // Smoothly refresh current products & banners
-      fetch(`${apiUrl()}/api/products?limit=500`)
+      fetch(`${apiUrl()}/api/products?limit=500&excludeRestaurant=true`)
         .then((r) => r.json())
         .then((d) => {
           if (Array.isArray(d?.products)) {
@@ -159,7 +159,7 @@ export function StorefrontClient({
       if (currentGroceryProducts.length < 350 && lastFetchedStoreIdRef.current !== 'hub-209206-full') {
         let isMounted = true
         const timer = setTimeout(() => {
-          fetch(`${apiUrl()}/api/products?storeId=hub-209206&limit=500`)
+          fetch(`${apiUrl()}/api/products?storeId=hub-209206&limit=500&excludeRestaurant=true`)
             .then((r) => r.json())
             .then((d) => {
               if (isMounted && Array.isArray(d?.products) && d.products.length > 0) {
@@ -184,7 +184,7 @@ export function StorefrontClient({
     setIsLoadingStoreData(true)
 
     Promise.all([
-      fetch(`${apiUrl()}/api/products?storeId=${encodeURIComponent(activeStoreId)}&limit=500`).then((r) => r.json()).catch(() => ({ products: [] })),
+      fetch(`${apiUrl()}/api/products?storeId=${encodeURIComponent(activeStoreId)}&limit=500&excludeRestaurant=true`).then((r) => r.json()).catch(() => ({ products: [] })),
       fetch(`${apiUrl()}/api/banners?storeId=${encodeURIComponent(activeStoreId)}`).then((r) => r.json()).catch(() => []),
       fetch(`${apiUrl()}/api/restaurants?storeId=${encodeURIComponent(activeStoreId)}`).then((r) => r.json()).catch(() => []),
     ])
