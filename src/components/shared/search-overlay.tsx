@@ -40,6 +40,8 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [isListening, setIsListening] = useState(false)
   const recognitionRef = useRef<any>(null)
+  const searchCacheRef = useRef<Map<string, Product[]>>(new Map())
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Lock body scroll when search overlay is open
   useEffect(() => {
@@ -198,30 +200,58 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     }
   }, [open])
 
-  // Fetch suggestions with debounce
+  // Fetch suggestions with fast 180ms debounce + client-side memory cache + AbortController
   useEffect(() => {
-    if (query.trim().length < 2) {
+    const cleanQuery = query.trim().toLowerCase()
+    if (cleanQuery.length < 2) {
       setSuggestions([])
+      setLoading(false)
       return
     }
+
+    // Instant Cache Hit (0ms)
+    const cacheKey = `${cleanQuery}:${activeStoreId || 'all'}`
+    if (searchCacheRef.current.has(cacheKey)) {
+      setSuggestions(searchCacheRef.current.get(cacheKey)!)
+      setLoading(false)
+      return
+    }
+
+    // Cancel any previous in-flight fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    const controller = new AbortController()
+    abortControllerRef.current = controller
 
     const handler = setTimeout(async () => {
       setLoading(true)
       try {
         const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-        const res = await fetch(`${apiUrl()}/api/products?search=${encodeURIComponent(query)}&limit=20${storeParam}`)
+        const res = await fetch(`${apiUrl()}/api/products?search=${encodeURIComponent(query)}&limit=20${storeParam}`, {
+          signal: controller.signal
+        })
         if (res.ok) {
           const data = await res.json()
-          setSuggestions(data.products || [])
+          const items = data.products || []
+          searchCacheRef.current.set(cacheKey, items)
+          setSuggestions(items)
         }
-      } catch (err) {
-        console.error('Failed to fetch search suggestions:', err)
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.error('Failed to fetch search suggestions:', err)
+        }
       } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
       }
-    }, 400)
+    }, 180)
 
-    return () => clearTimeout(handler)
+    return () => {
+      clearTimeout(handler)
+      controller.abort()
+    }
   }, [query, activeStoreId])
 
   // Close on Escape key

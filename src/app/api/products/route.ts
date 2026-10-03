@@ -415,11 +415,9 @@ export async function GET(request: NextRequest) {
           OR: [
             ...wordOptions.flatMap(opt => [
               { name: { contains: opt, mode: 'insensitive' as const } },
-              { description: { contains: opt, mode: 'insensitive' as const } },
               { tags: { has: opt } },
               { category: { name: { contains: opt, mode: 'insensitive' as const } } },
               { restaurant: { name: { contains: opt, mode: 'insensitive' as const } } },
-              { restaurant: { slug: { contains: opt, mode: 'insensitive' as const } } }
             ]),
             ...(w.toLowerCase() === 'veg' ? [
               { restaurant: { isVeg: true } },
@@ -443,7 +441,8 @@ export async function GET(request: NextRequest) {
         where: {
           ...searchWhere,
           AND: [...existingAnd, ...wordClauses]
-        }
+        },
+        take: 40,
       }
       if (isWorker) {
         queryOptions.include = { category: true }
@@ -457,7 +456,7 @@ export async function GET(request: NextRequest) {
       if (matchedProducts.length === 0) {
         const fallbackOptions: any = {
           where: searchWhere,
-          take: 200,
+          take: 50,
         }
         if (isWorker) {
           fallbackOptions.include = { category: true }
@@ -467,13 +466,12 @@ export async function GET(request: NextRequest) {
         matchedProducts = await prisma.product.findMany(fallbackOptions)
       }
 
-      // 2. Score each product using the fuzzy text matcher & Supabase Semantic AI engine
+      // 2. Score each product using the fuzzy text matcher & Supabase Semantic AI engine (fast: name and tags only)
       const scoredProducts = matchedProducts.map((p) => {
         const nameScore = getFuzzyScore(normalizedSearch, p.name)
-        const tagScore = p.tags.some((t: string) => getFuzzyScore(normalizedSearch, t) > 60) ? 85 : 0
-        const descScore = p.description ? getFuzzyScore(normalizedSearch, p.description) * 0.5 : 0
+        const tagScore = p.tags && Array.isArray(p.tags) && p.tags.some((t: string) => getFuzzyScore(normalizedSearch, t) > 60) ? 85 : 0
         const semanticAiScore = getSemanticAiScore(normalizedSearch, p)
-        const score = Math.max(nameScore, tagScore, descScore, semanticAiScore)
+        const score = Math.max(nameScore, tagScore, semanticAiScore)
         return { product: p, score }
       })
 
