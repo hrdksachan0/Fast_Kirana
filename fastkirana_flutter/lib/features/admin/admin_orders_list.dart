@@ -430,16 +430,25 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       try {
         if (action == 'ASSIGN_RIDER') {
           final riderId = payload['riderId']?.toString();
+          final targetStatus = payload['status']?.toString() ?? 'PACKED';
+          final combinedId = payload['combinedId']?.toString();
           if (sb != null && riderId != null) {
             await sb.from('orders').update({
               'deliveryUserId': riderId,
-              'status': 'SHIPPED',
+              'status': targetStatus,
               'updatedAt': DateTime.now().toIso8601String(),
             }).eq('id', id);
+            if (combinedId != null && combinedId.isNotEmpty) {
+              await sb.from('orders').update({
+                'deliveryUserId': riderId,
+                'status': targetStatus,
+                'updatedAt': DateTime.now().toIso8601String(),
+              }).eq('combinedId', combinedId);
+            }
           }
           await dio.patch('/api/orders/$id', data: {
             if (riderId != null) 'deliveryUserId': riderId,
-            'status': 'SHIPPED',
+            'status': targetStatus,
           });
           return true;
         } else {
@@ -1235,12 +1244,19 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         ? order.subOrders!.map((s) => s.id).toList()
         : [order.id];
 
+    // Status preservation:
+    // If order was ALREADY picked up (SHIPPED), keep it SHIPPED so new rider sees it in "Out for Delivery".
+    // If order was still in store (PENDING/CONFIRMED/PACKED), keep it PACKED so new rider sees it in "Ready for Pickup".
+    final bool wasShipped = order.status == OrderStatus.shipped;
+    final targetStatus = wasShipped ? OrderStatus.shipped : OrderStatus.packed;
+    final targetStatusStr = wasShipped ? 'SHIPPED' : 'PACKED';
+
     // 1. Instant Optimistic UI Update (0ms)
     setState(() {
       _allOrders = _allOrders.map((o) {
         if (o.id == order.id || idsToAssign.contains(o.id) || (order.combinedId != null && o.combinedId == order.combinedId)) {
           return o.copyWith(
-            status: OrderStatus.shipped,
+            status: targetStatus,
             deliveryBoyName: riderName,
             deliveryBoyPhone: riderPhone,
           );
@@ -1250,6 +1266,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     });
 
     if (mounted) {
+      final statusLabel = wasShipped ? 'Out for Delivery' : 'Ready for Pickup';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -1257,7 +1274,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
               const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 18),
               const SizedBox(width: 8),
               Text(
-                'Assigned to $riderName · Status set to Out for Delivery!',
+                'Assigned to $riderName · Status: $statusLabel!',
                 style: GoogleFonts.inter(fontWeight: FontWeight.w700),
               ),
             ],
@@ -1279,6 +1296,9 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           payload: {
             'id': cleanId,
             'riderId': riderId,
+            'status': targetStatusStr,
+            if (order.combinedId != null && order.combinedId!.trim().isNotEmpty)
+              'combinedId': order.combinedId!.trim(),
           },
         );
       }
@@ -1291,9 +1311,17 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
           futures.add(sb.from('orders').update({
             'deliveryUserId': riderId,
-            'status': 'SHIPPED',
+            'status': targetStatusStr,
             'updatedAt': DateTime.now().toIso8601String(),
           }).eq('id', cleanId).catchError((_) {}));
+        }
+
+        if (order.combinedId != null && order.combinedId!.trim().isNotEmpty) {
+          futures.add(sb.from('orders').update({
+            'deliveryUserId': riderId,
+            'status': targetStatusStr,
+            'updatedAt': DateTime.now().toIso8601String(),
+          }).eq('combinedId', order.combinedId!.trim()).catchError((_) {}));
         }
       }
 
@@ -1302,7 +1330,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
         futures.add(ref.read(dioProvider).patch('/api/orders/$cleanId', data: {
           'deliveryUserId': riderId,
-          'status': 'SHIPPED',
+          'status': targetStatusStr,
         }).catchError((_) => Response(requestOptions: RequestOptions())));
       }
 

@@ -58,6 +58,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   final int _refreshCountdown = 30;
   String? _updatingOrderId;
   String? _currentUserId;
+  String? _userPhone;
   String _userName = 'Partner';
   String? _assignedStoreId;
   String? _assignedStoreName;
@@ -438,14 +439,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     }
 
     final currentUser = ref.read(currentUserProvider);
-    if (currentUser != null && currentUser.name != null && currentUser.name!.isNotEmpty) {
-      if (mounted) {
-        setState(() {
-          _userName = currentUser.name!.split(' ').first;
-          _currentUserId = currentUser.id;
-        });
+    if (currentUser != null) {
+      if (currentUser.name != null && currentUser.name!.isNotEmpty) {
+        _userName = currentUser.name!.split(' ').first;
       }
-      return;
+      if (currentUser.id.isNotEmpty) {
+        _currentUserId = currentUser.id;
+      }
+      if (currentUser.phone != null && currentUser.phone!.isNotEmpty) {
+        _userPhone = currentUser.phone;
+      }
     }
 
     final rawUser = prefs.getString('user_data');
@@ -454,25 +457,73 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         final decoded = jsonDecode(rawUser);
         final name = decoded['name'] ?? decoded['fullName'] ?? decoded['user_name'];
         if (name != null && name.toString().trim().isNotEmpty) {
-          if (mounted) setState(() => _userName = name.toString().trim().split(' ').first);
+          _userName = name.toString().trim().split(' ').first;
         }
-        if (decoded['id'] != null) {
+        if (decoded['id'] != null && decoded['id'].toString().isNotEmpty) {
           _currentUserId = decoded['id'].toString();
+        }
+        final p = decoded['phone'] ?? decoded['user_phone'];
+        if (p != null && p.toString().isNotEmpty) {
+          _userPhone = p.toString();
         }
       } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
     } else {
       final name = prefs.getString('user_name');
       if (name != null && name.trim().isNotEmpty) {
-        if (mounted) setState(() => _userName = name.trim().split(' ').first);
+        _userName = name.trim().split(' ').first;
       }
     }
+
+    _userPhone ??= prefs.getString('user_phone');
+    _currentUserId ??= prefs.getString('user_id') ?? prefs.getString('delivery_user_id');
+    _assignedStoreId ??= prefs.getString('rider_store_id');
+    _assignedStoreName ??= prefs.getString('rider_store_name');
+
     if (mounted) {
-      setState(() {
-        _currentUserId ??= prefs.getString('user_id') ?? prefs.getString('delivery_user_id');
-        _assignedStoreId ??= prefs.getString('rider_store_id');
-        _assignedStoreName ??= prefs.getString('rider_store_name');
-      });
+      setState(() {});
     }
+  }
+
+  /// Authoritative check if an order or any companion sub-order is assigned to the current rider
+  bool _isAssignedToMe(Map<String, dynamic> o) {
+    final dId = o['deliveryUserId']?.toString();
+    if (dId != null && dId.isNotEmpty) {
+      if (_currentUserId != null && _currentUserId!.isNotEmpty && dId == _currentUserId) {
+        return true;
+      }
+      if (_userPhone != null && _userPhone!.isNotEmpty) {
+        final cleanUserPhone = _userPhone!.replaceAll(RegExp(r'\D'), '');
+        final cleanDId = dId.replaceAll(RegExp(r'\D'), '');
+        if (dId == _userPhone || dId == 'rider_$_userPhone') return true;
+        if (cleanUserPhone.isNotEmpty && cleanDId.isNotEmpty) {
+          final p10 = cleanUserPhone.length >= 10 ? cleanUserPhone.substring(cleanUserPhone.length - 10) : cleanUserPhone;
+          if (cleanDId.endsWith(p10)) return true;
+        }
+      }
+    }
+
+    // Also match deliveryBoyPhone if populated
+    final rPhone = o['deliveryBoyPhone']?.toString() ??
+        (o['deliveryUser'] is Map ? o['deliveryUser']['phone']?.toString() : null);
+    if (rPhone != null && _userPhone != null && _userPhone!.isNotEmpty) {
+      final cleanRPhone = rPhone.replaceAll(RegExp(r'\D'), '');
+      final cleanUserPhone = _userPhone!.replaceAll(RegExp(r'\D'), '');
+      if (cleanRPhone.isNotEmpty && cleanUserPhone.isNotEmpty) {
+        final p10 = cleanUserPhone.length >= 10 ? cleanUserPhone.substring(cleanUserPhone.length - 10) : cleanUserPhone;
+        if (cleanRPhone.endsWith(p10)) return true;
+      }
+    }
+
+    // Check nested subOrders if this is a merged/composite order
+    if (o['subOrders'] is List) {
+      for (final s in (o['subOrders'] as List)) {
+        if (s is Map && _isAssignedToMe(Map<String, dynamic>.from(s))) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   bool _isSelfPickupOrder(Map<String, dynamic> o) {
@@ -840,6 +891,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       merged['subLabels'] = subLabels;
       merged['shopName'] = subLabels.join(' + ');
 
+      // If ANY companion sub-order is assigned to current rider, adopt it onto the merged card
+      final anySubAssignedToMe = subOrders.any((s) => _isAssignedToMe(s));
+      if (anySubAssignedToMe && _currentUserId != null && _currentUserId!.isNotEmpty) {
+        merged['deliveryUserId'] = _currentUserId;
+      }
+
       // Cleanse batch data if it mistakenly points to one of our own sibling sub-orders
       final batchPartnerId = (merged['batch'] as Map?)?['partnerOrderId']?.toString();
       if (batchPartnerId != null && merged['subOrderIds'].contains(batchPartnerId)) {
@@ -864,10 +921,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final todayStart = DateTime(today.year, today.month, today.day);
 
     final todayCodOrders = ordersList.where((o) {
-      if (_currentUserId != null && _currentUserId!.isNotEmpty) {
-        final dId = o['deliveryUserId']?.toString();
-        if (dId != null && dId.isNotEmpty && dId != _currentUserId) return false;
-      }
+      final dId = o['deliveryUserId']?.toString();
+      if (dId != null && dId.isNotEmpty && !_isAssignedToMe(o)) return false;
       final pm = (o['paymentMethod'] ?? '').toString().toUpperCase().trim();
       final isOnlinePaid = pm == 'UPI' || pm == 'ONLINE' || pm == 'CASHFREE' || pm == 'RAZORPAY';
       final isCod = (pm == 'COD' || pm.isEmpty) && !isOnlinePaid;
@@ -921,7 +976,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               }
             }
             if (rider is Map && rider['id'] != null) {
-              _currentUserId ??= rider['id'].toString();
+              _currentUserId = rider['id'].toString();
+              prefs.setString('user_id', _currentUserId!);
+            }
+            if (rider is Map && rider['phone'] != null && rider['phone'].toString().isNotEmpty) {
+              _userPhone = rider['phone'].toString();
+              prefs.setString('user_phone', _userPhone!);
             }
             if (rider is Map) {
               if (rider['assignedStoreId'] != null && rider['assignedStoreId'].toString().isNotEmpty) {
@@ -945,9 +1005,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   void _manageGpsTrackingLifecycle(List<Map<String, dynamic>> ordersList) {
     final activeShipped = ordersList.where((o) {
       if (o['status'] != 'SHIPPED') return false;
-      if (_currentUserId != null && _currentUserId!.isNotEmpty) {
-        final dId = o['deliveryUserId']?.toString();
-        return dId == null || dId == _currentUserId;
+      final dId = o['deliveryUserId']?.toString();
+      if (dId != null && dId.isNotEmpty) {
+        return _isAssignedToMe(o);
       }
       return true;
     }).toList();
@@ -1281,9 +1341,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final activeDeliveries = _orders
         .where((o) {
           if (o['status'] != 'SHIPPED' || _isSelfPickupOrder(o)) return false;
-          if (_currentUserId != null && _currentUserId!.isNotEmpty) {
-            final dId = o['deliveryUserId']?.toString();
-            return dId == null || dId == _currentUserId;
+          final dId = o['deliveryUserId']?.toString();
+          if (dId != null && dId.isNotEmpty) {
+            return _isAssignedToMe(o);
           }
           return true;
         })
@@ -1299,11 +1359,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           if (!['CONFIRMED', 'PREPARING', 'PACKED', 'PENDING'].contains(o['status']) || _isSelfPickupOrder(o)) {
             return false;
           }
-          if (_currentUserId != null && _currentUserId!.isNotEmpty) {
-            final dId = o['deliveryUserId']?.toString();
-            if (dId != null && dId.isNotEmpty && dId != _currentUserId) {
-              return false;
-            }
+          final dId = o['deliveryUserId']?.toString();
+          if (dId != null && dId.isNotEmpty && !_isAssignedToMe(o)) {
+            return false;
           }
           return true;
         })
@@ -1316,11 +1374,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
     final completedToday = _orders.where((o) {
       if (o['status'] != 'DELIVERED' || _isSelfPickupOrder(o)) return false;
-      if (_currentUserId != null && _currentUserId!.isNotEmpty) {
-        final dId = o['deliveryUserId']?.toString();
-        if (dId != null && dId.isNotEmpty && dId != _currentUserId) {
-          return false;
-        }
+      final dId = o['deliveryUserId']?.toString();
+      if (dId != null && dId.isNotEmpty && !_isAssignedToMe(o)) {
+        return false;
       }
       final dateStr = o['deliveredAt'] ?? o['createdAt'];
       if (dateStr == null) return false;

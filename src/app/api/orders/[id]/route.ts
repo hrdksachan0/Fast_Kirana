@@ -447,10 +447,19 @@ export async function PATCH(
       if (!isAdmin) {
         return NextResponse.json({ error: 'Only admins can assign delivery partners directly' }, { status: 403 })
       }
+
+      // Determine appropriate status: if unpicked (PENDING/CONFIRMED), mark PACKED so rider sees "Ready for Pickup".
+      // If already PACKED or SHIPPED, preserve the existing status!
+      let targetStatus = existingOrder.status
+      if (deliveryUserId && (existingOrder.status === 'PENDING' || existingOrder.status === 'CONFIRMED')) {
+        targetStatus = 'PACKED'
+      }
+
       if (existingOrder.combinedId) {
         await prisma.$executeRaw`
           UPDATE orders 
           SET "deliveryUserId" = ${deliveryUserId},
+              status = ${targetStatus}::"OrderStatus",
               "updatedAt" = NOW()
           WHERE "combinedId" = ${existingOrder.combinedId}
         `
@@ -458,11 +467,63 @@ export async function PATCH(
         await prisma.$executeRaw`
           UPDATE orders 
           SET "deliveryUserId" = ${deliveryUserId},
+              status = ${targetStatus}::"OrderStatus",
               "updatedAt" = NOW()
           WHERE id = ${existingOrder.id}
         `
       }
-      return NextResponse.json({ success: true, deliveryUserId })
+
+      // Realtime SSE broadcast for Web Admin & mobile clients
+      try {
+        sseEmitter.emit('order:update', {
+          id: existingOrder.id,
+          storeId: existingOrder.storeId,
+          deliveryUserId,
+          status: targetStatus,
+          combinedId: existingOrder.combinedId,
+        })
+      } catch (e) {
+        console.warn('SSE emit error on rider assignment:', e)
+      }
+
+      // Notify the assigned rider via Push Notification & FCM
+      if (deliveryUserId) {
+        const readableNo = (existingOrder.readableId || existingOrder.id).slice(-8)
+        try {
+          sendPushNotification(deliveryUserId, {
+            title: 'New Delivery Assigned! 🛵',
+            body: `Order #${readableNo} has been assigned to you for delivery.`,
+            tag: `order-${existingOrder.id}`,
+            data: { orderId: existingOrder.id, type: 'DELIVERY_ASSIGNED' }
+          }).catch(() => {})
+
+          const { fcmMessaging } = await import('@/lib/firebase-admin')
+          if (fcmMessaging) {
+            const riderTokens = await prisma.fcmToken.findMany({
+              where: { userId: deliveryUserId },
+              select: { token: true }
+            })
+            for (const t of riderTokens) {
+              fcmMessaging.send({
+                token: t.token,
+                notification: {
+                  title: 'New Delivery Assigned! 🛵',
+                  body: `Order #${readableNo} has been assigned to you.`,
+                },
+                data: {
+                  orderId: existingOrder.id,
+                  screen: 'delivery-dashboard',
+                  type: 'DELIVERY_ASSIGNED',
+                }
+              }).catch(() => {})
+            }
+          }
+        } catch (notifErr) {
+          console.warn('Error sending rider assignment notification:', notifErr)
+        }
+      }
+
+      return NextResponse.json({ success: true, deliveryUserId, status: targetStatus })
     }
 
     const isRestaurantOrder = Boolean(existingOrder.restaurantId || existingOrder.orderType === 'RESTAURANT')

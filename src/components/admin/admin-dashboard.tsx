@@ -841,7 +841,7 @@ export function AdminDashboard({
       { key: 'reports' as TabType, label: 'Ledger Report', icon: FileText },
       { key: 'price-history' as TabType, label: 'Rate History', icon: History },
       { key: 'users' as TabType, label: 'Staff & Customers', icon: Users, count: userHook.userTotal },
-      { key: 'rider-cash' as TabType, label: 'Rider Cash & Settlement', icon: Wallet },
+      { key: 'rider-cash' as TabType, label: '🛵 Rider Fleet & Cash', icon: Wallet },
       { key: 'reviews' as TabType, label: 'Reviews', icon: Star, count: reviewCouponHook.reviews.length },
       { key: 'coupons' as TabType, label: 'Offers', icon: Ticket, count: reviewCouponHook.coupons.length },
       { key: 'banners' as TabType, label: 'Promo Banners', icon: ImageIcon },
@@ -964,6 +964,7 @@ export function AdminDashboard({
           {(activeTab === 'orders' || activeTab === 'liveops') && (
             <AdminLiveOrdersTab
               activeTab={activeTab}
+              storeId={selectedHubId}
               orders={orderHook.orders}
               orderCounts={orderHook.orderCounts}
               orderStatusFilter={orderHook.orderStatusFilter}
@@ -1086,6 +1087,7 @@ export function AdminDashboard({
                 handleReplenishCsv: productHook.handleReplenishCsv,
                 renderPagination: renderPagination,
                 allProducts: productHook.allProducts,
+                resetNewProductForm: productHook.resetNewProductForm,
               }}
               categoryProps={{
                 categories: categoryHook.categories,

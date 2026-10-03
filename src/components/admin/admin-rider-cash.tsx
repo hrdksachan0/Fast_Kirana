@@ -17,7 +17,12 @@ import {
   ArrowDownRight,
   ShieldCheck,
   Search,
-  Trash2
+  Trash2,
+  MessageSquare,
+  PhoneCall,
+  Package,
+  Bike,
+  IndianRupee,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
@@ -34,6 +39,9 @@ interface RiderCashInfo {
   cashLimit: number
   totalCollected: number
   totalDeposited: number
+  activeOrdersCount?: number
+  todayTotalOrdersCount?: number
+  todayTotalDeliveredMoney?: number
   todayCodOrdersCount: number
   todayCodTotal: number
   todayOnlineOrdersCount?: number
@@ -50,6 +58,8 @@ interface SummaryInfo {
   totalCashDepositedToday: number
   pendingRiderCash: number
   activeRidersCount: number
+  totalDeliveredMoneyToday?: number
+  totalOrdersDeliveredToday?: number
 }
 
 interface DepositLog {
@@ -188,10 +198,41 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
     }
   }
 
-  const filteredRiders = riders.filter(r =>
-    r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.phone.includes(searchQuery)
-  )
+  const [filterTab, setFilterTab] = useState<'all' | 'needs-settle' | 'free' | 'busy'>('all')
+
+  const totalDeliveredOrdersToday = riders.reduce((sum, r) => sum + (r.todayTotalOrdersCount || 0), 0)
+  const totalDeliveredMoneyToday = riders.reduce((sum, r) => sum + (r.todayTotalDeliveredMoney || 0), 0)
+  const busyRidersCount = riders.filter((r) => (r.activeOrdersCount || 0) > 0).length
+  const freeRidersCount = riders.filter((r) => (r.activeOrdersCount || 0) === 0).length
+  const needsSettleCount = riders.filter((r) => r.cashInHand >= r.cashLimit * 0.75 || r.cashInHand >= r.cashLimit).length
+
+  const handleWhatsAppRider = (rider: RiderCashInfo) => {
+    const cleanPhone = (rider.phone || '').replace(/\D/g, '').slice(-10)
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      toast.error('Rider phone number invalid')
+      return
+    }
+    const msg = `Hey ${rider.name}! Please deposit your pending cash of ${formatPrice(rider.cashInHand)} to the Store Admin counter.`
+    window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
+  const filteredRiders = riders.filter((r) => {
+    const matchesSearch =
+      r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.phone.includes(searchQuery)
+    if (!matchesSearch) return false
+
+    if (filterTab === 'needs-settle') {
+      return r.cashInHand >= r.cashLimit * 0.75 || r.cashInHand >= r.cashLimit
+    }
+    if (filterTab === 'free') {
+      return (r.activeOrdersCount || 0) === 0
+    }
+    if (filterTab === 'busy') {
+      return (r.activeOrdersCount || 0) > 0
+    }
+    return true
+  })
 
   return (
     <div className="space-y-6">
@@ -200,12 +241,12 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-text-primary flex items-center gap-2.5">
             <span className="p-2 rounded-2xl bg-primary/10 text-primary">
-              <Wallet className="h-6 w-6" />
+              <Bike className="h-6 w-6" />
             </span>
-            Rider Cash & Daily Settlement
+            Rider Fleet, Work, Money &amp; Cash Ledger
           </h1>
           <p className="text-xs text-text-muted mt-1 font-medium">
-            Real-time COD cash tracking, rider wallet limits, and cash handover audit ledger.
+            Live delivery workload, order fulfillment volume, collected cash reconciliation, and instant settlement.
           </p>
         </div>
         <button
@@ -214,87 +255,160 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
           className="inline-flex items-center justify-center gap-2 bg-muted hover:bg-muted/80 text-text-primary px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>Refresh Financials</span>
+          <span>Refresh Fleet &amp; Cash</span>
         </button>
       </div>
 
-      {/* Financial Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-        {/* Card 1: Online Bank Collection */}
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/10 border border-emerald-200/60 dark:border-emerald-800/30 p-4 rounded-3xl space-y-2">
+      {/* Financial & Operational Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-3.5">
+        {/* Card 1: Active Fleet */}
+        <div className="bg-card border border-border/80 p-3.5 rounded-2xl space-y-1.5 shadow-2xs">
+          <div className="flex items-center justify-between text-indigo-600 dark:text-indigo-400">
+            <span className="text-[10px] font-black uppercase tracking-wider">Active Fleet</span>
+            <Bike className="h-4 w-4" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-text-primary">
+            {riders.length}
+          </p>
+          <p className="text-[10px] text-text-muted font-bold truncate">
+            🟢 {freeRidersCount} Free • 🟡 {busyRidersCount} Busy
+          </p>
+        </div>
+
+        {/* Card 2: Today Deliveries (Work) */}
+        <div className="bg-card border border-border/80 p-3.5 rounded-2xl space-y-1.5 shadow-2xs">
+          <div className="flex items-center justify-between text-blue-600 dark:text-blue-400">
+            <span className="text-[10px] font-black uppercase tracking-wider">Today Orders</span>
+            <Package className="h-4 w-4" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-blue-900 dark:text-blue-100">
+            {totalDeliveredOrdersToday}
+          </p>
+          <p className="text-[10px] text-blue-700/80 dark:text-blue-400 font-bold">
+            Delivered trips today
+          </p>
+        </div>
+
+        {/* Card 3: Total Money Handled */}
+        <div className="bg-card border border-border/80 p-3.5 rounded-2xl space-y-1.5 shadow-2xs">
+          <div className="flex items-center justify-between text-purple-600 dark:text-purple-400">
+            <span className="text-[10px] font-black uppercase tracking-wider">Money Handled</span>
+            <IndianRupee className="h-4 w-4" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-purple-900 dark:text-purple-100">
+            {formatPrice(totalDeliveredMoneyToday)}
+          </p>
+          <p className="text-[10px] text-purple-700/80 dark:text-purple-400 font-bold">
+            Delivered value today
+          </p>
+        </div>
+
+        {/* Card 4: Online Bank Collection */}
+        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/10 border border-emerald-200/60 dark:border-emerald-800/30 p-3.5 rounded-2xl space-y-1.5">
           <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300">
-            <span className="text-xs font-black uppercase tracking-wider">Online Revenue</span>
+            <span className="text-[10px] font-black uppercase tracking-wider">Store Bank</span>
             <TrendingUp className="h-4 w-4" />
           </div>
           <p className="text-xl sm:text-2xl font-black text-emerald-900 dark:text-emerald-100">
             {formatPrice(summary?.onlineRevenueToday || 0)}
           </p>
           <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400 font-bold">
-            Directly in Store Bank (UPI/Cards)
+            Directly in Bank (UPI)
           </p>
         </div>
 
-        {/* Card 2: Cash Deposited Today */}
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/10 border border-blue-200/60 dark:border-blue-800/30 p-4 rounded-3xl space-y-2">
-          <div className="flex items-center justify-between text-blue-700 dark:text-blue-300">
-            <span className="text-xs font-black uppercase tracking-wider">Deposited Cash</span>
-            <ShieldCheck className="h-4 w-4" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-blue-900 dark:text-blue-100">
-            {formatPrice(summary?.totalCashDepositedToday || 0)}
-          </p>
-          <p className="text-[10px] text-blue-700/80 dark:text-blue-400 font-bold">
-            Handed over to Admin today
-          </p>
-        </div>
-
-        {/* Card 3: Counter Direct Cash */}
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-100/50 dark:from-emerald-950/30 dark:to-teal-900/10 border border-emerald-200/60 dark:border-emerald-800/30 p-4 rounded-3xl space-y-2">
-          <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300">
-            <span className="text-xs font-black uppercase tracking-wider">Counter Cash</span>
-            <Store className="h-4 w-4" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-emerald-900 dark:text-emerald-100">
-            {formatPrice(summary?.counterCashToday || 0)}
-          </p>
-          <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400 font-bold">
-            Direct store pickup COD sales
-          </p>
-        </div>
-
-        {/* Card 4: Pending in Rider Pockets */}
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/10 border border-amber-200/60 dark:border-amber-800/30 p-4 rounded-3xl space-y-2">
+        {/* Card 5: Pending in Rider Pockets */}
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/10 border border-amber-200/60 dark:border-amber-800/30 p-3.5 rounded-2xl space-y-1.5">
           <div className="flex items-center justify-between text-amber-700 dark:text-amber-300">
-            <span className="text-xs font-black uppercase tracking-wider">Pending in Pockets</span>
+            <span className="text-[10px] font-black uppercase tracking-wider">Pending Cash</span>
             <DollarSign className="h-4 w-4" />
           </div>
           <p className="text-xl sm:text-2xl font-black text-amber-900 dark:text-amber-100">
             {formatPrice(summary?.pendingRiderCash || 0)}
           </p>
           <p className="text-[10px] text-amber-700/80 dark:text-amber-400 font-bold">
-            Un-deposited cash with riders
+            Rider pockets to collect
+          </p>
+        </div>
+
+        {/* Card 6: Cash Deposited Today */}
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/10 border border-blue-200/60 dark:border-blue-800/30 p-3.5 rounded-2xl space-y-1.5">
+          <div className="flex items-center justify-between text-blue-700 dark:text-blue-300">
+            <span className="text-[10px] font-black uppercase tracking-wider">Deposited</span>
+            <ShieldCheck className="h-4 w-4" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-blue-900 dark:text-blue-100">
+            {formatPrice(summary?.totalCashDepositedToday || 0)}
+          </p>
+          <p className="text-[10px] text-blue-700/80 dark:text-blue-400 font-bold">
+            Settled to Admin today
           </p>
         </div>
       </div>
 
       {/* Rider Cash Table Section */}
       <div className="bg-card border border-border rounded-3xl shadow-xs overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-text-primary flex items-center gap-2">
+        <div className="p-4 sm:p-5 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-base font-bold text-text-primary flex items-center gap-2 mr-2">
               <UserCheck className="h-4 w-4 text-primary" />
-              Delivery Partners Cash Ledger ({riders.length})
+              Delivery Partners ({riders.length})
             </h2>
-            <p className="text-xs text-text-muted">
-              Select a rider to accept cash deposit and reset their cash in hand.
-            </p>
+
+            {/* Quick Filter Tabs */}
+            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl text-xs">
+              <button
+                type="button"
+                onClick={() => setFilterTab('all')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  filterTab === 'all'
+                    ? 'bg-card text-text-primary shadow-2xs font-extrabold'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                All ({riders.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab('needs-settle')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  filterTab === 'needs-settle'
+                    ? 'bg-card text-amber-600 shadow-2xs font-extrabold'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                ⚠️ Settle Cash ({needsSettleCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab('free')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  filterTab === 'free'
+                    ? 'bg-card text-emerald-600 shadow-2xs font-extrabold'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                🟢 Free ({freeRidersCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab('busy')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  filterTab === 'busy'
+                    ? 'bg-card text-indigo-600 shadow-2xs font-extrabold'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                🛵 Busy ({busyRidersCount})
+              </button>
+            </div>
           </div>
 
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
             <input
               type="text"
-              placeholder="Search rider..."
+              placeholder="Search rider name or phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 bg-muted/30 border border-border rounded-xl text-xs font-medium focus:outline-none focus:border-primary"
@@ -305,7 +419,7 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
         {filteredRiders.length === 0 ? (
           <div className="p-12 text-center text-text-muted space-y-2">
             <p className="text-sm font-bold">No delivery riders found</p>
-            <p className="text-xs">Ensure users are assigned the DELIVERY role.</p>
+            <p className="text-xs">Ensure users are assigned the DELIVERY role for this store hub.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -313,12 +427,11 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
               <thead className="bg-muted/40 text-text-secondary uppercase text-[10px] tracking-wider font-extrabold border-b border-border">
                 <tr>
                   <th className="py-3 px-4">Rider Details</th>
-                  <th className="py-3 px-4">Cash to Collect (Pocket)</th>
-                  <th className="py-3 px-4">Online / UPI (Store Bank)</th>
-                  <th className="py-3 px-4">Limit Status</th>
-                  <th className="py-3 px-4">Today Cash Orders</th>
+                  <th className="py-3 px-4">Work &amp; Trips</th>
+                  <th className="py-3 px-4">Money Handled</th>
+                  <th className="py-3 px-4">Cash in Pocket (COD)</th>
                   <th className="py-3 px-4">Today Deposited</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                  <th className="py-3 px-4 text-right">Settlement Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -326,63 +439,99 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
                   const percentUsed = Math.min(100, Math.round((r.cashInHand / r.cashLimit) * 100))
                   const isLocked = r.cashInHand >= r.cashLimit
                   const isWarning = r.cashInHand >= r.cashLimit * 0.75
+                  const activeCount = r.activeOrdersCount || 0
 
                   return (
                     <tr key={r.id} className="hover:bg-muted/20 transition-colors">
-                      {/* Rider Details */}
+                      {/* Rider Details with Call & WhatsApp Actions */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-primary/10 text-primary font-black flex items-center justify-center text-sm border border-primary/20 shrink-0">
                             {r.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <p className="font-bold text-text-primary">{r.name}</p>
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary/10 text-primary border border-primary/20">
                                 🏢 {r.storeName || (r.assignedStoreId ? (r.assignedStoreId.replace(/^hub-/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) + ' Hub') : 'Store Hub')}
                               </span>
                             </div>
-                            <p className="text-[10px] text-text-muted flex items-center gap-1">
-                              <Phone className="h-3 w-3" /> {r.phone}
-                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <a
+                                href={`tel:${r.phone}`}
+                                className="inline-flex items-center gap-1 text-[10px] text-text-secondary hover:text-primary font-bold transition-colors"
+                                title="Call Rider"
+                              >
+                                <Phone className="h-3 w-3 text-primary" /> {r.phone}
+                              </a>
+                              {r.phone && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleWhatsAppRider(r)}
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[9px] font-bold transition-colors cursor-pointer"
+                                  title="WhatsApp Rider"
+                                >
+                                  <MessageSquare className="h-2.5 w-2.5" />
+                                  <span>WhatsApp</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* Cash in Hand */}
+                      {/* Work & Trips Column */}
                       <td className="py-3.5 px-4">
-                        <span className={`text-sm font-black ${
-                          r.cashInHand > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
-                        }`}>
-                          {formatPrice(r.cashInHand)}
-                        </span>
-                        <p className="text-[10px] text-amber-700/80 dark:text-amber-400 font-bold">
-                          💵 Rider Pocket
-                        </p>
-                      </td>
-
-                      {/* Online / UPI in Bank */}
-                      <td className="py-3.5 px-4">
-                        <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                          {formatPrice(r.todayOnlineTotal || 0)}
-                        </span>
-                        <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400 font-bold">
-                          📱 {r.todayOnlineOrdersCount || 0} QR / Bank Orders
-                        </p>
-                      </td>
-
-                      {/* Limit Status Progress Bar */}
-                      <td className="py-3.5 px-4 min-w-[140px]">
                         <div className="space-y-1">
-                          <div className="flex justify-between text-[10px] font-bold">
-                            <span className={isLocked ? 'text-danger font-black' : (isWarning ? 'text-amber-500' : 'text-text-muted')}>
-                              {percentUsed}% ({formatPrice(r.cashLimit)} max)
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                            activeCount === 0
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                          }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${activeCount === 0 ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                            {activeCount === 0 ? '🟢 Free (0 active)' : `🟡 Busy (${activeCount} active)`}
+                          </span>
+                          <p className="text-[11px] font-bold text-text-primary">
+                            {r.todayTotalOrdersCount || 0} Total Deliveries
+                          </p>
+                          <p className="text-[10px] text-text-muted">
+                            {r.todayCodOrdersCount} Cash • {r.todayOnlineOrdersCount || 0} Online
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Money Handled Column */}
+                      <td className="py-3.5 px-4">
+                        <div>
+                          <p className="font-black text-sm text-text-primary">
+                            {formatPrice(r.todayTotalDeliveredMoney || 0)}
+                          </p>
+                          <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">
+                            📱 {formatPrice(r.todayOnlineTotal || 0)} Direct Bank
+                          </p>
+                          <p className="text-[9.5px] text-amber-700 dark:text-amber-400 font-semibold">
+                            💵 {formatPrice(r.todayCodTotal)} COD Collected
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Cash in Pocket (COD) & Limit Status */}
+                      <td className="py-3.5 px-4 min-w-[150px]">
+                        <div className="space-y-1">
+                          <div className="flex items-baseline justify-between">
+                            <span className={`text-sm font-black ${
+                              r.cashInHand > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
+                            }`}>
+                              {formatPrice(r.cashInHand)}
                             </span>
                             {isLocked && (
                               <span className="text-[9px] bg-danger/10 text-danger px-1.5 py-0.2 rounded font-black flex items-center gap-0.5">
                                 <Lock className="h-2.5 w-2.5" /> LOCKED
                               </span>
                             )}
+                          </div>
+                          <div className="flex justify-between text-[10px] font-bold text-text-muted">
+                            <span>{percentUsed}% of {formatPrice(r.cashLimit)} limit</span>
                           </div>
                           <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                             <div
@@ -395,24 +544,19 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
                         </div>
                       </td>
 
-                      {/* Today Delivered COD */}
-                      <td className="py-3.5 px-4">
-                        <div>
-                          <p className="font-bold text-text-primary">{formatPrice(r.todayCodTotal)}</p>
-                          <p className="text-[10px] text-text-muted">{r.todayCodOrdersCount} orders</p>
-                        </div>
-                      </td>
-
                       {/* Today Deposited */}
-                      <td className="py-3.5 px-4 font-bold text-emerald-600 dark:text-emerald-400">
-                        {formatPrice(r.todayDepositedTotal)}
+                      <td className="py-3.5 px-4">
+                        <p className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                          {formatPrice(r.todayDepositedTotal)}
+                        </p>
+                        <p className="text-[10px] text-text-muted">Handed to Admin</p>
                       </td>
 
-                      {/* Action */}
+                      {/* Settlement Action */}
                       <td className="py-3.5 px-4 text-right">
                         <button
                           onClick={() => handleOpenSettleModal(r)}
-                          className="bg-primary text-white hover:bg-primary-dark font-extrabold text-xs px-3.5 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+                          className="bg-primary text-white hover:bg-primary-dark font-extrabold text-xs px-3.5 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-95"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           <span>Settle Cash</span>

@@ -13,6 +13,7 @@ import { MobileOrderCard } from '@/components/admin/dashboard/mobile-order-card'
 import { formatOrderTime, formatDate } from '@/lib/date-helpers'
 
 export interface OrdersTabProps {
+  storeId?: string | null
   orders: any[]
   orderCounts: Record<string, number>
   orderStatusFilter: string
@@ -35,6 +36,7 @@ export interface OrdersTabProps {
 }
 
 export function OrdersTab({
+  storeId,
   orders,
   orderCounts,
   orderStatusFilter,
@@ -61,6 +63,88 @@ export function OrdersTab({
     ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
     ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
   }), [session])
+
+  const [storeRiders, setStoreRiders] = React.useState<any[]>([])
+  const [assigningRiderOrderId, setAssigningRiderOrderId] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    let isMounted = true
+    const fetchRiders = async () => {
+      try {
+        const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
+        const res = await fetch(`${apiUrl()}/api/admin/riders${storeParam}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (isMounted && Array.isArray(data.riders)) {
+            setStoreRiders(data.riders)
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load store riders:', e)
+      }
+    }
+    fetchRiders()
+    const interval = setInterval(fetchRiders, 15000)
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [storeId])
+
+  const handleAssignRider = async (order: any, riderId: string) => {
+    setAssigningRiderOrderId(order.id)
+    try {
+      const selectedRider = storeRiders.find((r) => r.id === riderId)
+      const riderName = selectedRider?.name || 'Rider'
+
+      // Preserve status: if unpicked (PENDING/CONFIRMED), mark PACKED so rider sees Ready for Pickup.
+      // If already PACKED or SHIPPED, preserve the status!
+      const targetStatus = riderId
+        ? (order.status === 'SHIPPED' ? 'SHIPPED' : (order.status === 'PENDING' || order.status === 'CONFIRMED' ? 'PACKED' : order.status))
+        : order.status
+
+      const res = await fetch(`${apiUrl()}/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+        },
+        body: JSON.stringify({
+          deliveryUserId: riderId || null,
+          status: targetStatus,
+        }),
+      })
+
+      if (res.ok) {
+        order.deliveryUserId = riderId || null
+        order.status = targetStatus
+        if (selectedRider) {
+          order.deliveryUser = { name: selectedRider.name, phone: selectedRider.phone }
+        } else {
+          order.deliveryUser = null
+        }
+        if (order.subOrders) {
+          order.subOrders.forEach((s: any) => {
+            s.deliveryUserId = riderId || null
+            s.status = targetStatus
+          })
+        }
+        onUpdateOrderStatus(order.id, targetStatus)
+        toast.success(
+          riderId
+            ? `🛵 ${riderName} assigned to Order #${order.readableId || order.id.slice(0, 8)} (${targetStatus === 'SHIPPED' ? 'Out for Delivery' : 'Ready for Pickup'})!`
+            : `Order #${order.readableId || order.id.slice(0, 8)} unassigned.`
+        )
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Failed to assign rider')
+      }
+    } catch (_) {
+      toast.error('Network error assigning rider')
+    } finally {
+      setAssigningRiderOrderId(null)
+    }
+  }
 
   const [cancelConfirmOrder, setCancelConfirmOrder] = React.useState<any | null>(null)
   const [refundOrder, setRefundOrder] = React.useState<any | null>(null)
@@ -991,6 +1075,8 @@ export function OrdersTab({
                     sendingKotIds={sendingKotIds}
                     printedKotIds={printedKotIds}
                     fifoRank={fifoRank}
+                    storeRiders={storeRiders}
+                    onAssignRider={handleAssignRider}
                   />
                 )
               })
@@ -1150,18 +1236,42 @@ export function OrdersTab({
                               📞 {o.userPhone || o.user?.phone || o.address?.phone}
                             </div>
                           )}
-                          {(o.deliveryUser || o.deliveryBoyName || ((o.status === 'SHIPPED' || o.status === 'DELIVERED') && o.deliveryUserId)) && (
-                            <div className="mt-1.5 inline-flex items-center gap-1 text-[9.5px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                              <span>🛵 {o.deliveryUser?.name || o.deliveryBoyName || 'Rider Assigned'}</span>
-                              {(o.deliveryUser?.phone || o.deliveryBoyPhone) && (
-                                <a
-                                  href={`tel:${o.deliveryUser?.phone || o.deliveryBoyPhone}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="text-emerald-600 dark:text-emerald-400 hover:underline font-mono ml-0.5"
-                                  title="Call Rider"
+                          {/* 1-Click Rider Assignment Dropdown with Workload Status */}
+                          {getOrderMethod(o) !== 'RETAIL' && getOrderMethod(o) !== 'SELF_PICKUP' && (
+                            <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-1">
+                                <select
+                                  value={o.deliveryUserId || ''}
+                                  onChange={(e) => handleAssignRider(o, e.target.value)}
+                                  disabled={assigningRiderOrderId === o.id}
+                                  className={`px-2 py-1 rounded-lg border text-[10px] font-extrabold focus:outline-none cursor-pointer w-full shadow-2xs transition-all ${
+                                    o.deliveryUserId 
+                                      ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/30' 
+                                      : 'bg-zinc-100 dark:bg-zinc-800 text-text-primary border-border hover:border-primary/50'
+                                  }`}
+                                  title="1-click assign or reassign rider"
                                 >
-                                  ({o.deliveryUser?.phone || o.deliveryBoyPhone})
-                                </a>
+                                  <option value="">🛵 Unassigned (Assign Rider...)</option>
+                                  {storeRiders.map((r) => (
+                                    <option key={r.id} value={r.id}>
+                                      🛵 {r.name} ({r.activeOrdersCount || 0} active) · {r.activeOrdersCount === 0 ? '🟢 Free' : '🟡 Busy'}
+                                    </option>
+                                  ))}
+                                </select>
+                                {(o.deliveryUser?.phone || o.deliveryBoyPhone) && (
+                                  <a
+                                    href={`tel:${o.deliveryUser?.phone || o.deliveryBoyPhone}`}
+                                    className="p-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs shrink-0"
+                                    title={`Call ${o.deliveryUser?.name || 'Rider'}`}
+                                  >
+                                    📞
+                                  </a>
+                                )}
+                              </div>
+                              {o.status === 'SHIPPED' && o.deliveryUserId && (
+                                <div className="mt-0.5 text-[8.5px] font-black text-indigo-600 dark:text-indigo-400">
+                                  ⚡ On Road · Live Delivery
+                                </div>
                               )}
                             </div>
                           )}

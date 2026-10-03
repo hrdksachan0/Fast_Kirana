@@ -307,10 +307,10 @@ export const HUB_CONFIG = [
   {
     key: 'orders_hub',
     label: 'Orders & Fulfillment',
-    description: 'Live order queue, dispatch tracking, and real-time ops',
+    description: 'Live order queue, dispatch tracking, rider fleet & real-time ops',
     color: 'from-amber-500/10 to-orange-500/10',
     activeBorder: 'border-amber-500/60 ring-2 ring-amber-500/20',
-    tabs: ['orders', 'finance', 'liveops'] as const
+    tabs: ['orders', 'rider-cash', 'finance', 'liveops'] as const
   },
   {
     key: 'grocery',

@@ -121,6 +121,50 @@ export function useAdminProducts({
   const isNewProductRestaurant = newProductType === 'restaurant'
   const isEditProductRestaurant = editProductType === 'restaurant'
 
+  const resetNewProductForm = useCallback(() => {
+    setNewProduct({
+      name: '',
+      description: '',
+      imageUrl: '',
+      categoryId: categories?.[0]?.id || '',
+      restaurantId: '',
+      mrp: '',
+      price: '',
+      unit: '',
+      stock: '',
+      isAvailable: true,
+      tags: '',
+      minStock: '10',
+      expiryDate: '',
+      costPrice: '0',
+      location: '',
+      isFlashDeal: false,
+      isTopPick: false,
+      isBestSeller: false,
+      sortOrder: '0',
+      barcode: '',
+      vendor: '',
+      vendorId: '',
+    })
+    setNewProductVariants([])
+    setHasVariantsNew(false)
+    setNewCustomTag('')
+    setNewProductType('grocery')
+
+    if (typeof document !== 'undefined') {
+      const vName = document.getElementById('new-var-name') as HTMLInputElement | null
+      if (vName) vName.value = ''
+      const vMrp = document.getElementById('new-var-mrp') as HTMLInputElement | null
+      if (vMrp) vMrp.value = ''
+      const vPrice = document.getElementById('new-var-price') as HTMLInputElement | null
+      if (vPrice) vPrice.value = ''
+      const vCost = document.getElementById('new-var-cost') as HTMLInputElement | null
+      if (vCost) vCost.value = ''
+      const vStock = document.getElementById('new-var-stock') as HTMLInputElement | null
+      if (vStock) vStock.value = ''
+    }
+  }, [categories])
+
   useEffect(() => {
     setProductPage(1)
   }, [selectedCategoryFilter, searchQuery, selectedTypeFilter, selectedHubId])
@@ -329,7 +373,7 @@ export function useAdminProducts({
       isTopPick: p.isTopPick || false,
       isBestSeller: p.isBestSeller || false,
       sortOrder: String(p.sortOrder ?? 0),
-      barcode: p.barcode || '',
+      barcode: '',
       vendor: p.vendor || '',
       vendorId: (p as any).vendorId || '',
     })
@@ -774,7 +818,7 @@ export function useAdminProducts({
     }
   }
 
-  const handleCreateProduct = async (e: React.FormEvent) => {
+  const handleCreateProduct = async (e: React.FormEvent, keepOpen = false) => {
     e.preventDefault()
     const requiresBasePrice = !hasVariantsNew
     const isRestaurant = isNewProductRestaurant || !!newProduct.restaurantId
@@ -822,15 +866,71 @@ export function useAdminProducts({
       const lowestNewVariant = sortedNewVariants[0]
       const lowestNewPrice = lowestNewVariant
         ? parseFloat(lowestNewVariant.price) || 0
-        : parseFloat(newProduct.price)
+        : parseFloat(newProduct.price) || 0
       const lowestNewMrp = lowestNewVariant
         ? parseFloat(lowestNewVariant.mrp) || lowestNewPrice
-        : parseFloat(newProduct.mrp)
+        : parseFloat(newProduct.mrp) || lowestNewPrice || 0
       const resolvedNewUnit =
         lowestNewVariant &&
         (!newProduct.unit || newProduct.unit === '1 pc' || newProduct.unit === '1 unit')
           ? lowestNewVariant.name
           : (newProduct.unit?.trim() || (newProduct.restaurantId ? '1 Serving' : '1 pc'))
+
+      let parsedExpiryISO: string | null = null
+      if (newProduct.expiryDate) {
+        const d = new Date(newProduct.expiryDate)
+        if (!isNaN(d.getTime())) {
+          parsedExpiryISO = d.toISOString()
+        }
+      }
+
+      // Build clean payload — do NOT spread ...newProduct to prevent stale field leaks
+      const createPayload: Record<string, any> = {
+        name: newProduct.name.trim(),
+        description: newProduct.description || '',
+        imageUrl: newProduct.imageUrl || '',
+        categoryId: newProduct.restaurantId ? null : (resolvedCategoryId || newProduct.categoryId || null),
+        restaurantId: newProduct.restaurantId || null,
+        mrp: lowestNewMrp,
+        price: lowestNewPrice,
+        unit: resolvedNewUnit,
+        stock:
+          isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId
+            ? 99999
+            : sortedNewVariants.length > 0
+            ? sortedNewVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
+            : parseInt(newProduct.stock) || 0,
+        isAvailable: newProduct.isAvailable !== false,
+        tags: tagsArray,
+        minStock:
+          isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId
+            ? 0
+            : parseInt(newProduct.minStock) || 10,
+        expiryDate: parsedExpiryISO,
+        costPrice: parseFloat(newProduct.costPrice) || 0,
+        location: newProduct.location?.trim() || null,
+        isFlashDeal: !!newProduct.isFlashDeal,
+        isTopPick: !!newProduct.isTopPick,
+        isBestSeller: !!newProduct.isBestSeller,
+        sortOrder: parseInt(newProduct.sortOrder) || 0,
+        barcode: newProduct.barcode?.trim() || null,
+        vendor: newProduct.vendor?.trim() || null,
+        vendorId: newProduct.vendorId || null,
+        variants:
+          sortedNewVariants.length > 0
+            ? sortedNewVariants.map((v) => ({
+                name: v.name,
+                price: parseFloat(v.price) || 0,
+                mrp: parseFloat(v.mrp) || 0,
+                costPrice: parseFloat(v.costPrice) || 0,
+                stock: parseInt(v.stock) || 0,
+              }))
+            : null,
+      }
+
+      if (selectedHubId && selectedHubId !== 'all') {
+        createPayload.storeId = selectedHubId
+      }
 
       const res = await fetch(`${apiUrl()}/api/products`, {
         method: 'POST',
@@ -841,44 +941,7 @@ export function useAdminProducts({
           ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
           ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
         },
-        body: JSON.stringify({
-          ...newProduct,
-          vendor: newProduct.vendor?.trim() || null,
-          vendorId: newProduct.vendorId || null,
-          restaurantId: newProduct.restaurantId || null,
-          barcode: newProduct.barcode || null,
-          location: newProduct.location || null,
-          storeId: selectedHubId && selectedHubId !== 'all' ? selectedHubId : undefined,
-          categoryId: newProduct.restaurantId ? null : (resolvedCategoryId || newProduct.categoryId),
-          mrp: lowestNewMrp,
-          price: lowestNewPrice,
-          unit: resolvedNewUnit,
-          stock:
-            isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId
-              ? 99999
-              : sortedNewVariants.length > 0
-              ? sortedNewVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
-              : parseInt(newProduct.stock) || 0,
-          minStock:
-            isNewProductCafe || isNewProductRestaurant || newProduct.restaurantId
-              ? 0
-              : parseInt(newProduct.minStock) || 10,
-          expiryDate: newProduct.expiryDate
-            ? new Date(newProduct.expiryDate).toISOString()
-            : null,
-          costPrice: parseFloat(newProduct.costPrice) || 0,
-          tags: tagsArray,
-          variants:
-            sortedNewVariants.length > 0
-              ? sortedNewVariants.map((v) => ({
-                  name: v.name,
-                  price: parseFloat(v.price) || 0,
-                  mrp: parseFloat(v.mrp) || 0,
-                  costPrice: parseFloat(v.costPrice) || 0,
-                  stock: parseInt(v.stock) || 0,
-                }))
-              : null,
-        }),
+        body: JSON.stringify(createPayload),
       })
 
       if (res.ok) {
@@ -886,36 +949,23 @@ export function useAdminProducts({
         setProducts([created, ...products])
         setAllProducts([created, ...allProducts])
         toast.success(`Product "${created.name}" created successfully!`)
-        setShowAddProduct(false)
-        setNewProductVariants([])
-        setHasVariantsNew(false)
-        setNewProduct({
-          name: '',
-          description: '',
-          imageUrl: '',
-          categoryId: categories?.[0]?.id || '',
-          restaurantId: '',
-          mrp: '',
-          price: '',
-          unit: '',
-          stock: '',
-          isAvailable: true,
-          tags: '',
-          minStock: '10',
-          expiryDate: '',
-          costPrice: '0',
-          location: '',
-          isFlashDeal: false,
-          isTopPick: false,
-          isBestSeller: false,
-          sortOrder: '0',
-          barcode: '',
-          vendor: '',
-          vendorId: '',
-        })
+        resetNewProductForm()
+        if (!keepOpen) {
+          setShowAddProduct(false)
+        } else {
+          setTimeout(() => {
+            const formElement = document.getElementById('add-product-form-container')
+            if (formElement) {
+              formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          }, 50)
+        }
+        fetchProducts()
       } else {
         const errData = await res.json().catch(() => ({}))
-        toast.error(errData.error || 'Failed to create product')
+        const errMsg = errData.error || errData.message || 'Failed to create product'
+        console.error('[Product Create Error]', errData)
+        toast.error(errMsg)
       }
     } catch (err: any) {
       console.error('Error creating product:', err)
@@ -1026,5 +1076,6 @@ export function useAdminProducts({
     handleToggleProductAvailability,
     handleCreateProduct,
     handleDeleteProduct,
+    resetNewProductForm,
   }
 }

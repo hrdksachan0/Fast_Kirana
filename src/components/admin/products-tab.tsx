@@ -125,7 +125,7 @@ interface ProductsTabProps {
   applyProductTemplate: (templateId: string) => void
   toggleTag: (form: 'new' | 'edit', tag: string, checked: boolean) => void
   handleCreateCustomTag: (form: 'new' | 'edit', tagText: string) => void
-  handleCreateProduct: (e: React.FormEvent) => void
+  handleCreateProduct: (e: React.FormEvent, keepOpen?: boolean) => void
   handleToggleProductAvailability: (productId: string, currentAvailable: boolean) => void
   handleDeleteProduct: (productId: string) => void
   startEditingProduct: (p: any) => void
@@ -139,6 +139,7 @@ interface ProductsTabProps {
     itemsPerPage: number,
     onPageChange: (p: number) => void
   ) => React.ReactNode
+  resetNewProductForm?: () => void
 }
 
 export function ProductsTab({
@@ -206,6 +207,7 @@ export function ProductsTab({
   handleExportCsv,
   handleReplenishCsv,
   renderPagination,
+  resetNewProductForm,
 }: ProductsTabProps) {
   // Resolve dynamic menu sections for new product strictly based on selected restaurant
   const resolvedNewMenuSections = useMemo(() => {
@@ -346,7 +348,12 @@ export function ProductsTab({
         {/* Row 2: Action Buttons */}
         <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
           <button
-            onClick={() => setShowAddProduct(!showAddProduct)}
+            onClick={() => {
+              if (!showAddProduct && resetNewProductForm) {
+                resetNewProductForm()
+              }
+              setShowAddProduct(!showAddProduct)
+            }}
             className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all cursor-pointer"
           >
             <PlusCircle className="h-4 w-4" />
@@ -1371,14 +1378,34 @@ export function ProductsTab({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-4">
             <button
               type="button"
-              onClick={() => setShowAddProduct(false)}
+              onClick={() => {
+                if (resetNewProductForm) resetNewProductForm()
+                setShowAddProduct(false)
+              }}
               className="px-4 py-2 border border-border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
             >
               Cancel
             </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={isCreatingProduct}
+                onClick={(e) => handleCreateProduct(e, true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all shadow-md cursor-pointer disabled:opacity-50"
+                title="Save product and keep form open with clean blank fields for next entry"
+              >
+                {isCreatingProduct ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  '⚡ Save & Add Next'
+                )}
+              </button>
             <button
               type="submit"
               disabled={isCreatingProduct}
@@ -1390,9 +1417,10 @@ export function ProductsTab({
                   <span>Creating...</span>
                 </>
               ) : (
-                'Add Item'
+                'Add & Close'
               )}
             </button>
+            </div>
           </div>
         </form>
       )}

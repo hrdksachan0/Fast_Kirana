@@ -710,20 +710,23 @@ export async function POST(request: NextRequest) {
 
     const finalUnit = (unit && typeof unit === 'string' && unit.trim().length > 0) ? unit.trim() : (restaurantId ? '1 Serving' : '1 pc')
 
-    // Generate slug from name
+    // Generate slug from name — handles Hindi/non-ASCII names
     const rawSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '')
 
-    // Check slug uniqueness
-    const existing = await prisma.product.findUnique({
-      where: { slug: rawSlug }
-    })
-
-    let finalSlug = rawSlug
-    if (existing) {
-      finalSlug = `${rawSlug}-${Date.now().toString().slice(-4)}`
+    const randomSuffix = Math.random().toString(36).slice(2, 7)
+    let finalSlug = rawSlug || `item-${Date.now().toString(36)}-${randomSuffix}`
+    try {
+      const existingSlug = await prisma.product.findUnique({
+        where: { slug: finalSlug }
+      })
+      if (existingSlug) {
+        finalSlug = `${finalSlug}-${randomSuffix}`
+      }
+    } catch (_) {
+      finalSlug = `${finalSlug}-${randomSuffix}`
     }
 
     let finalMrp = Number(mrp)
@@ -775,18 +778,60 @@ export async function POST(request: NextRequest) {
 
     // Systematically resolve vendorId from name or vice-versa
     if (!cleanVendorId && cleanVendor) {
-      const matchedVendor = await (prisma as any).vendor.findFirst({
-        where: { name: { equals: cleanVendor, mode: 'insensitive' } }
-      })
-      if (matchedVendor) {
-        cleanVendorId = matchedVendor.id
+      try {
+        const matchedVendor = await (prisma as any).vendor.findFirst({
+          where: { name: { equals: cleanVendor, mode: 'insensitive' } }
+        })
+        if (matchedVendor) {
+          cleanVendorId = matchedVendor.id
+        }
+      } catch (_) {}
+    } else if (cleanVendorId) {
+      try {
+        const matchedVendor = await (prisma as any).vendor.findUnique({
+          where: { id: cleanVendorId }
+        })
+        if (matchedVendor) {
+          cleanVendor = cleanVendor || matchedVendor.name
+        } else {
+          // Prevent FK violation P2003
+          cleanVendorId = null
+        }
+      } catch (_) {
+        cleanVendorId = null
       }
-    } else if (cleanVendorId && !cleanVendor) {
-      const matchedVendor = await (prisma as any).vendor.findUnique({
-        where: { id: cleanVendorId }
-      })
-      if (matchedVendor) {
-        cleanVendor = matchedVendor.name
+    }
+
+    // Barcode uniqueness pre-check to prevent P2002 500 error
+    if (cleanBarcode) {
+      try {
+        const existingBarcode = await prisma.product.findUnique({
+          where: { barcode: cleanBarcode },
+          select: { id: true, name: true }
+        })
+        if (existingBarcode) {
+          return NextResponse.json({
+            error: `Barcode "${cleanBarcode}" is already assigned to "${existingBarcode.name}". Leave it blank or enter a unique barcode.`
+          }, { status: 400 })
+        }
+      } catch (bcErr) {
+        console.warn('Barcode uniqueness pre-check:', bcErr)
+      }
+    }
+
+    // Verify category exists to prevent P2003 foreign key violation
+    if (finalCategoryId) {
+      try {
+        const catExists = await prisma.category.findUnique({
+          where: { id: finalCategoryId },
+          select: { id: true }
+        })
+        if (!catExists) {
+          const firstCat = await prisma.category.findFirst({ select: { id: true } })
+          finalCategoryId = firstCat?.id || null
+        }
+      } catch (_) {
+        finalCategoryId = null
       }
     }
 
@@ -873,6 +918,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(product, { status: 201 })
   } catch (error: any) {
     console.error('Failed to create product:', error)
+    if (error?.code === 'P2002') {
+      const target = Array.isArray(error?.meta?.target) ? error.meta.target.join(', ') : (error?.meta?.target || 'field')
+      return NextResponse.json({ 
+        error: `A product with this duplicate ${target} already exists. Please use a unique value or leave barcode empty.`,
+        code: 'P2002' 
+      }, { status: 400 })
+    }
+    if (error?.code === 'P2003') {
+      return NextResponse.json({ 
+        error: 'Database error: The selected category, vendor, or store does not exist.',
+        code: 'P2003' 
+      }, { status: 400 })
+    }
     return NextResponse.json({ 
       error: error?.message || 'Failed to create product in database',
       code: error?.code || null 

@@ -20,6 +20,7 @@ import '../../core/services/supabase_service.dart';
 import 'admin_orders_list.dart';
 import 'admin_products.dart';
 import 'vendor_console_screen.dart';
+import 'admin_riders_screen.dart';
 import '../../core/theme/responsive.dart';
 import '../../widgets/app_confirmation_dialog.dart';
 import '../../widgets/store_serviceability_sheet.dart';
@@ -40,6 +41,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     AdminOrdersScreen(showAppBar: false),
     AdminProductsScreen(showAppBar: false),
     VendorConsoleScreen(showAppBar: false),
+    AdminRidersScreen(showAppBar: false),
   ];
 
   Future<void> _handleLogout() async {
@@ -477,7 +479,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
       // Modern Floating Pill Navigation Dock (Zero Overflow)
       bottomNavigationBar: Container(
         color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         child: SafeArea(
           child: Row(
             children: [
@@ -489,7 +491,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                   icon: Icons.receipt_long_rounded,
                 ),
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 4),
               Expanded(
                 child: _buildDockItem(
                   index: 1,
@@ -498,13 +500,22 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                   icon: Icons.inventory_2_rounded,
                 ),
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 4),
               Expanded(
                 child: _buildDockItem(
                   index: 2,
                   label: 'Vendors',
                   sub: 'Bikri & Ledger',
                   icon: Icons.storefront_rounded,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: _buildDockItem(
+                  index: 3,
+                  label: 'Riders',
+                  sub: 'Fleet & Cash',
+                  icon: Icons.two_wheeler_rounded,
                 ),
               ),
             ],

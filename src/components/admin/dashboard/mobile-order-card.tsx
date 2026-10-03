@@ -24,6 +24,8 @@ interface MobileOrderCardProps {
   sendingKotIds: Set<string>
   printedKotIds: Set<string>
   fifoRank?: number | null
+  storeRiders?: any[]
+  onAssignRider?: (order: any, riderId: string) => void
 }
 
 export function MobileOrderCard({
@@ -46,6 +48,8 @@ export function MobileOrderCard({
   sendingKotIds,
   printedKotIds,
   fifoRank,
+  storeRiders,
+  onAssignRider,
 }: MobileOrderCardProps) {
   const isRest = o.restaurantId || o.orderType === 'RESTAURANT' || o.isCombined
   const isKotPrinted = printedKotIds.has(o.id) || o.subOrders?.some((s: any) => printedKotIds.has(s.id))
@@ -199,6 +203,30 @@ export function MobileOrderCard({
               </a>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Rider Assignment Dropdown ── */}
+      {storeRiders && storeRiders.length > 0 && (
+        <div className="flex items-center gap-2 pt-0.5" onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] font-black uppercase text-text-muted shrink-0">Rider:</span>
+          <select
+            value={o.deliveryUserId || ''}
+            onChange={(e) => onAssignRider && onAssignRider(o, e.target.value)}
+            disabled={isUpdating}
+            className={`flex-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-extrabold focus:outline-none cursor-pointer shadow-2xs ${
+              o.deliveryUserId
+                ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/30'
+                : 'bg-zinc-100 dark:bg-zinc-800 text-text-primary border-border'
+            }`}
+          >
+            <option value="">🛵 Unassigned (Assign Rider...)</option>
+            {storeRiders.map((r) => (
+              <option key={r.id} value={r.id}>
+                🛵 {r.name} ({r.activeOrdersCount || 0} active) · {r.activeOrdersCount === 0 ? '🟢 Free' : '🟡 Busy'}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

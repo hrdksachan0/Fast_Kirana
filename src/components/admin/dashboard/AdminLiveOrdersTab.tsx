@@ -6,6 +6,7 @@ import { LiveOpsTab } from '@/components/admin/live-ops-tab'
 
 export interface AdminLiveOrdersTabProps {
   activeTab: 'orders' | 'liveops'
+  storeId?: string | null
   // OrdersTab props
   orders: any[]
   orderCounts: Record<string, number> | null
@@ -39,6 +40,7 @@ export interface AdminLiveOrdersTabProps {
 
 export function AdminLiveOrdersTab({
   activeTab,
+  storeId,
   orders,
   orderCounts,
   orderStatusFilter,
@@ -84,6 +86,7 @@ export function AdminLiveOrdersTab({
 
   return (
     <OrdersTab
+      storeId={storeId}
       orders={orders}
       orderCounts={orderCounts || {}}
       orderStatusFilter={orderStatusFilter}

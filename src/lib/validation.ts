@@ -121,7 +121,7 @@ export const createProductSchema = z.object({
   isFlashDeal: z.union([z.boolean(), z.string()]).nullable().optional(),
   isTopPick: z.union([z.boolean(), z.string()]).nullable().optional(),
   isBestSeller: z.union([z.boolean(), z.string()]).nullable().optional(),
-  sortOrder: z.coerce.number().int().nonnegative().nullable().optional().default(0),
+  sortOrder: z.coerce.number().int().nullable().optional().default(0),
   barcode: z.string().nullable().optional(),
   vendor: z.string().nullable().optional(),
   vendorId: z.string().nullable().optional(),

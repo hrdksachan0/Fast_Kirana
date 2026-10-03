@@ -52,18 +52,30 @@ export function RestaurantListing({ initialRestaurants }: RestaurantListingProps
   const activeCity = useUIStore((s) => s.activeCity) || 'Ghatampur'
   const userCoords = useUIStore((s) => s.userCoords)
 
-  // Fetch restaurants from API
+  // Fetch restaurants from API (SWR: immediate render from initialRestaurants, then refresh live timings from DB)
   useEffect(() => {
-    if (initialRestaurants) return
-    setIsLoading(true)
-    fetch(`${apiUrl()}/api/restaurants?city=${encodeURIComponent(activeCity)}`)
+    let isCancelled = false
+    if (!initialRestaurants && restaurants.length === 0) {
+      setIsLoading(true)
+    }
+    fetch(`${apiUrl()}/api/restaurants?city=${encodeURIComponent(activeCity)}&_t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
-        setRestaurants(Array.isArray(data) ? data : data.restaurants || [])
+        if (isCancelled) return
+        const list = Array.isArray(data) ? data : data.restaurants || []
+        if (list.length > 0 || !initialRestaurants) {
+          setRestaurants(list)
+        }
       })
       .catch(err => console.error('Failed to load restaurants:', err))
-      .finally(() => setIsLoading(false))
-  }, [initialRestaurants, activeCity])
+      .finally(() => {
+        if (!isCancelled) setIsLoading(false)
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [activeCity])
 
   // Close sort dropdown on outside click
   useEffect(() => {

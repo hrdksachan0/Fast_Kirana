@@ -13,7 +13,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (storeId && storeId !== 'all' && storeId !== 'ALL') {
-      where.assignedStoreId = storeId
+      where.OR = [
+        { assignedStoreId: storeId },
+        { assignedStoreId: null },
+      ]
     }
 
     const riders = await prisma.user.findMany({
@@ -25,6 +28,12 @@ export async function GET(request: NextRequest) {
         email: true,
         role: true,
         assignedStoreId: true,
+        deliveryOrders: {
+          where: {
+            status: { in: ['PACKED', 'SHIPPED'] },
+          },
+          select: { id: true },
+        },
       },
       orderBy: { name: 'asc' },
     })
@@ -37,6 +46,7 @@ export async function GET(request: NextRequest) {
         phone: r.phone || '',
         role: r.role,
         assignedStoreId: r.assignedStoreId,
+        activeOrdersCount: r.deliveryOrders?.length || 0,
       })),
     })
   } catch (error: any) {

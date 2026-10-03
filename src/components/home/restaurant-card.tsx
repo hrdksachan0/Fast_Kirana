@@ -114,7 +114,11 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
                   Closed Now
                 </span>
                 <span className="text-[11px] text-zinc-200 mt-1 font-semibold">
-                  Opens {operatingStatus.formattedScheduleStr || 'Tomorrow'}
+                  {operatingStatus.formattedScheduleStr?.startsWith('Opens')
+                    ? operatingStatus.formattedScheduleStr
+                    : operatingStatus.formattedScheduleStr
+                      ? `Opens ${operatingStatus.formattedScheduleStr}`
+                      : 'Opens Tomorrow'}
                 </span>
               </div>
             )}

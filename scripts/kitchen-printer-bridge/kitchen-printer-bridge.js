@@ -210,6 +210,21 @@ function printKOT(order, items, user) {
       const modeTag = (mode === 'SELF_PICKUP' || mode === 'PICKUP') ? 'PICKUP' : 'DELIVERY';
       const customerName = (user?.name || order.userName || order.customerName || 'Customer').trim();
 
+      // Format Indian Standard Time (IST)
+      let orderDate = new Date();
+      if (order.createdAt) {
+        const parsed = new Date(order.createdAt);
+        if (!isNaN(parsed.getTime())) orderDate = parsed;
+      }
+      const timeStr = orderDate.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      }).replace(',', '');
+
       let lines = [];
 
       // Branding top
@@ -217,6 +232,7 @@ function printKOT(order, items, user) {
       lines.push(center('FASTKIRANA'));
       lines.push(dash);
       lines.push(`${orderIdText}  [${modeTag}]`);
+      lines.push(`Time:     ${timeStr}`);
       lines.push(`Customer: ${customerName}`);
       lines.push(dash);
 

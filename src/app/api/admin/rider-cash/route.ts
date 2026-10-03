@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
 
     const riderWhere: any = { role: 'DELIVERY' }
     if (storeId && storeId !== 'all') {
-      riderWhere.assignedStoreId = storeId
+      riderWhere.OR = [
+        { assignedStoreId: storeId },
+        { assignedStoreId: null },
+      ]
     }
 
     // 1. Fetch delivery riders scoped by store
@@ -57,6 +60,14 @@ export async function GET(request: NextRequest) {
           })
         }
 
+        // Active orders currently assigned and in progress
+        const activeOrders = await prisma.order.count({
+          where: {
+            deliveryUserId: r.id,
+            status: { in: ['PACKED', 'SHIPPED'] },
+          }
+        })
+
         // Today's delivered COD orders for this rider (Cash in Rider's Pocket)
         const todayCodOrders = await prisma.order.aggregate({
           where: {
@@ -90,6 +101,9 @@ export async function GET(request: NextRequest) {
           _sum: { amount: true }
         })
 
+        const codMoney = todayCodOrders._sum.total || 0
+        const onlineMoney = todayOnlineOrders._sum.total || 0
+
         return {
           id: r.id,
           name: r.name || 'Unnamed Rider',
@@ -100,10 +114,13 @@ export async function GET(request: NextRequest) {
           cashLimit: wallet.cashLimit,
           totalCollected: wallet.totalCollected,
           totalDeposited: wallet.totalDeposited,
+          activeOrdersCount: activeOrders,
+          todayTotalOrdersCount: (todayCodOrders._count.id || 0) + (todayOnlineOrders._count.id || 0),
+          todayTotalDeliveredMoney: codMoney + onlineMoney,
           todayCodOrdersCount: todayCodOrders._count.id || 0,
-          todayCodTotal: todayCodOrders._sum.total || 0,
+          todayCodTotal: codMoney,
           todayOnlineOrdersCount: todayOnlineOrders._count.id || 0,
-          todayOnlineTotal: todayOnlineOrders._sum.total || 0,
+          todayOnlineTotal: onlineMoney,
           todayDepositedTotal: todayDeposits._sum.amount || 0,
           assignedStoreId: r.assignedStoreId,
           storeName: r.assignedStore?.name || null,
