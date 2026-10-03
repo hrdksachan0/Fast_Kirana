@@ -84,7 +84,6 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
     redirect_slashes=True,
-    default_response_class=ORJSONResponse,
 )
 
 app.add_middleware(TrailingSlashMiddleware)

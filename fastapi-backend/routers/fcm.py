@@ -19,19 +19,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/fcm", tags=["FCM Push Tokens"])
 
 # ─── FIREBASE ADMIN INITIALIZATION ───
-FIREBASE_INIT_SUCCESS = False
-try:
-    cred_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "firebase-credentials.json")
-    if os.path.exists(cred_path):
-        if not firebase_admin._apps:
-            cred = credentials.Certificate(cred_path)
-            firebase_admin.initialize_app(cred)
-        FIREBASE_INIT_SUCCESS = True
-        logger.info("✅ Firebase Admin SDK initialized successfully in FastAPI.")
-    else:
-        logger.warning(f"⚠️ Firebase credentials file not found at {cred_path}")
-except Exception as e:
-    logger.error(f"❌ Failed to initialize Firebase Admin SDK: {e}")
+from utils.firebase import init_firebase
+
+FIREBASE_INIT_SUCCESS = init_firebase()
 
 
 def generate_id(prefix: str = "fcm_") -> str:
