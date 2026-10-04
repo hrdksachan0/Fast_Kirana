@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   }
 }
 
-// Revalidate home page every 1 hour with ISR, purged on-demand when inventory updates
-export const revalidate = 3600
+// Revalidate home page every 24 hours with ISR, purged on-demand when inventory or catalog updates
+export const revalidate = 86400
 
 const productSelect = {
   id: true,
@@ -101,7 +101,7 @@ const getCachedBanners = unstable_cache(
     })
   },
   ['storefront-banners-v15'],
-  { revalidate: 3600, tags: ['banners'] }
+  { revalidate: 86400, tags: ['banners'] }
 )
 
 const getCachedCategories = unstable_cache(
@@ -119,7 +119,7 @@ const getCachedCategories = unstable_cache(
     })
   },
   ['storefront-categories-v33'],
-  { revalidate: 3600, tags: ['categories'] }
+  { revalidate: 86400, tags: ['categories'] }
 )
 
 const getCachedTrendingOrderItems = unstable_cache(
@@ -138,7 +138,7 @@ const getCachedTrendingOrderItems = unstable_cache(
     })
   },
   ['storefront-trending-order-items-v19'],
-  { revalidate: 3600, tags: ['trending'] }
+  { revalidate: 86400, tags: ['trending'] }
 )
 
 const getCachedAllGroceryProducts = unstable_cache(
@@ -157,7 +157,7 @@ const getCachedAllGroceryProducts = unstable_cache(
     })
   },
   ['storefront-all-grocery-products-v7'],
-  { revalidate: 3600, tags: ['products'] }
+  { revalidate: 86400, tags: ['products'] }
 )
 
 const getCachedFlashDeals = unstable_cache(
@@ -178,7 +178,7 @@ const getCachedFlashDeals = unstable_cache(
     })
   },
   ['storefront-flash-deals-v29'],
-  { revalidate: 3600, tags: ['products', 'flash-deals'] }
+  { revalidate: 86400, tags: ['products', 'flash-deals'] }
 )
 
 const getCachedBestSellers = unstable_cache(
@@ -198,7 +198,7 @@ const getCachedBestSellers = unstable_cache(
     })
   },
   ['storefront-best-sellers-v29'],
-  { revalidate: 3600, tags: ['products', 'best-sellers'] }
+  { revalidate: 86400, tags: ['products', 'best-sellers'] }
 )
 
 const getCachedBreakfastDeals = unstable_cache(
@@ -217,7 +217,7 @@ const getCachedBreakfastDeals = unstable_cache(
     })
   },
   ['storefront-breakfast-deals-v29'],
-  { revalidate: 3600, tags: ['products', 'breakfast-deals'] }
+  { revalidate: 86400, tags: ['products', 'breakfast-deals'] }
 )
 
 const getCachedLunchDeals = unstable_cache(
@@ -236,7 +236,7 @@ const getCachedLunchDeals = unstable_cache(
     })
   },
   ['storefront-lunch-deals-v29'],
-  { revalidate: 3600, tags: ['products', 'lunch-deals'] }
+  { revalidate: 86400, tags: ['products', 'lunch-deals'] }
 )
 
 const getCachedTeaDeals = unstable_cache(
@@ -255,7 +255,7 @@ const getCachedTeaDeals = unstable_cache(
     })
   },
   ['storefront-tea-deals-v29'],
-  { revalidate: 3600, tags: ['products', 'tea-deals'] }
+  { revalidate: 86400, tags: ['products', 'tea-deals'] }
 )
 
 const getCachedNightCravings = unstable_cache(
@@ -278,7 +278,7 @@ const getCachedNightCravings = unstable_cache(
     })
   },
   ['storefront-night-cravings-v29'],
-  { revalidate: 3600, tags: ['products', 'night-cravings'] }
+  { revalidate: 86400, tags: ['products', 'night-cravings'] }
 )
 
 const getCachedStoreSettings = unstable_cache(
@@ -292,7 +292,7 @@ const getCachedStoreSettings = unstable_cache(
     })
   },
   ['storefront-settings-v2'],
-  { revalidate: 3600, tags: ['settings'] }
+  { revalidate: 86400, tags: ['settings'] }
 )
 
 const getCachedCategorySortRules = unstable_cache(
@@ -306,7 +306,7 @@ const getCachedCategorySortRules = unstable_cache(
     })
   },
   ['storefront-category-sort-rules'],
-  { revalidate: 3600, tags: ['settings', 'categories'] }
+  { revalidate: 86400, tags: ['settings', 'categories'] }
 )
 
 
@@ -325,7 +325,7 @@ const getCachedManualTopPicks = unstable_cache(
     })
   },
   ['storefront-manual-top-picks'],
-  { revalidate: 3600, tags: ['products', 'top-picks'] }
+  { revalidate: 86400, tags: ['products', 'top-picks'] }
 )
 
 const getCachedProductsByIds = unstable_cache(
@@ -344,7 +344,7 @@ const getCachedProductsByIds = unstable_cache(
     })
   },
   ['storefront-products-by-ids'],
-  { revalidate: 3600, tags: ['products'] }
+  { revalidate: 86400, tags: ['products'] }
 )
 
 const getCachedPopularProducts = unstable_cache(
@@ -363,7 +363,7 @@ const getCachedPopularProducts = unstable_cache(
     })
   },
   ['storefront-popular-products-v2'],
-  { revalidate: 3600, tags: ['products', 'popular-products'] }
+  { revalidate: 86400, tags: ['products', 'popular-products'] }
 )
 
 const getCachedRestaurants = unstable_cache(
@@ -380,7 +380,7 @@ const getCachedRestaurants = unstable_cache(
     })
   },
   ['storefront-restaurants-v4'],
-  { revalidate: 15, tags: ['restaurants'] }
+  { revalidate: 86400, tags: ['restaurants'] }
 )
 
 export default async function Home() {

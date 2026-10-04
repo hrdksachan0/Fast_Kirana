@@ -40,29 +40,58 @@ const FASTAPI_DIRECT_URL = (
  *   fetch(`${apiUrl()}/api/products?limit=50`)
  *   // → on server this becomes '/api/products?limit=50' (relative, internal)
  */
-export function apiUrl(): string {
-  // Always return empty string for Web frontend.
-  // Same-origin relative paths ('/api/...') ensure NextAuth session cookies
-  // are automatically included with every request, preventing 401 Unauthorized
-  // errors on checkout addresses, admin panel, bridge-session, and order placement.
+export function catalogApiUrl(): string {
+  if (typeof window === 'undefined') return ''
+  return FASTAPI_DIRECT_URL
+}
+
+/**
+ * Returns the correct base URL prefix for an API path.
+ *
+ * - **Public Catalog / Store reads (browser)**: returns direct Railway FastAPI URL
+ *   (`https://api.fastkirana.in`) bypassing Vercel proxy completely (Zero Fast Origin Transfer).
+ * - **Session/Cookie sensitive routes (addresses, orders, auth, admin)**: returns empty string
+ *   so same-origin NextAuth session cookies are preserved.
+ * - **Server-side (SSR/API routes)**: returns empty string.
+ */
+export function apiUrl(path?: string): string {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  if (path) {
+    const cleanPath = path.startsWith('/') ? path : `/${path}`
+    // Routes requiring same-origin NextAuth session cookies or local Next.js route handlers
+    if (
+      cleanPath.startsWith('/api/auth') ||
+      cleanPath.startsWith('/api/addresses') ||
+      cleanPath.startsWith('/api/orders') ||
+      cleanPath.startsWith('/api/payment') ||
+      cleanPath.startsWith('/api/payments') ||
+      cleanPath.startsWith('/api/admin') ||
+      cleanPath.startsWith('/api/revalidate')
+    ) {
+      return ''
+    }
+    // Catalog, category, restaurant, banner, store, settings, search
+    return FASTAPI_DIRECT_URL
+  }
+
+  // Default: return empty string so unspecified routes preserve cookies safely.
+  // Use catalogApiUrl() for explicit high-bandwidth public catalog routes.
   return ''
 }
 
 /**
- * Resolves a relative API path to a full URL for client-side use.
- * Convenience wrapper around apiUrl().
- *
- * @example
- *   const res = await fetch(resolveApiPath('/api/products'))
- *   // Client: 'https://api.fastkirana.in/api/products'
- *   // Server: '/api/products'
+ * Resolves a relative API path to a full URL.
+ * Automatically selects direct FastAPI URL for catalog routes or relative URL for auth routes.
  */
 export function resolveApiPath(path: string): string {
-  const base = apiUrl()
+  const base = apiUrl(path)
   if (!base) return path
-  // Avoid double slashes
   const cleanPath = path.startsWith('/') ? path : `/${path}`
   return `${base}${cleanPath}`
 }
 
 export default apiUrl
+

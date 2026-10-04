@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { Product } from '@/types'
 import type { CartProduct } from '@/stores/cart-store'
-import { apiUrl } from '@/lib/api-url'
+import { apiUrl, catalogApiUrl } from '@/lib/api-url'
 
 interface UserCoords {
   lat: number
@@ -354,7 +354,7 @@ export const useUIStore = create<UIState>((set) => ({
       if (savedShopPhone) set({ shopPhone: savedShopPhone })
       
       // Also fetch hubs list asynchronously for global multi-hub serviceability
-      fetch(`${apiUrl()}/api/stores/hubs`)
+      fetch(`${catalogApiUrl()}/api/stores/hubs`)
         .then(res => res.json())
         .then(data => {
           if (data?.hubs && Array.isArray(data.hubs)) {

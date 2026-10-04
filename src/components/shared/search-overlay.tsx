@@ -1,5 +1,5 @@
 'use client'
-import { apiUrl } from '@/lib/api-url';
+import { apiUrl, catalogApiUrl } from '@/lib/api-url';
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
@@ -61,7 +61,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
   useEffect(() => {
     // Fetch categories
-    fetch(`${apiUrl()}/api/categories`)
+    fetch(`${catalogApiUrl()}/api/categories`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -72,7 +72,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
     // Fetch trending searches (products scoped to active store)
     const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-    fetch(`${apiUrl()}/api/products?trending=true${storeParam}`)
+    fetch(`${catalogApiUrl()}/api/products?trending=true${storeParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (data && Array.isArray(data.products)) {
@@ -228,7 +228,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       setLoading(true)
       try {
         const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-        const res = await fetch(`${apiUrl()}/api/products?search=${encodeURIComponent(query)}&limit=20${storeParam}`, {
+        const res = await fetch(`${catalogApiUrl()}/api/products?search=${encodeURIComponent(query)}&limit=20${storeParam}`, {
           signal: controller.signal
         })
         if (res.ok) {

@@ -1,5 +1,5 @@
 'use client';
-import { apiUrl } from '@/lib/api-url';
+import { apiUrl, catalogApiUrl } from '@/lib/api-url';
 
 import { X, ShoppingBag, Minus, Plus, ArrowRight, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
@@ -155,7 +155,7 @@ export function CartDrawer() {
     }
     
     const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-    fetch(`${apiUrl()}/api/products/upsell?productIds=${cartProductIdsKey}${storeParam}`)
+    fetch(`${catalogApiUrl()}/api/products/upsell?productIds=${cartProductIdsKey}${storeParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.products) {

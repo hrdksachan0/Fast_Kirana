@@ -11,6 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           '/api/',
           '/admin/',
+          '/superadmin/',
           '/delivery/',
           '/chef/',
           '/picker/',
@@ -20,6 +21,7 @@ export default function robots(): MetadataRoute.Robots {
           '/account/',
           '/login',
           '/register',
+          '/search',
         ],
       },
       {

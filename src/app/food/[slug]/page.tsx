@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic'
+export const revalidate = 86400 // Cache for 24 hours, purged on-demand when restaurant or products update
 
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'

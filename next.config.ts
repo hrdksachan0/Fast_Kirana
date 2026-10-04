@@ -470,17 +470,25 @@ const nextConfig: NextConfig = {
       {
         source: "/api/products",
         headers: [
-          { key: "Cache-Control", value: "public, s-maxage=120, stale-while-revalidate=86400" },
-          { key: "CDN-Cache-Control", value: "public, s-maxage=120, stale-while-revalidate=86400" },
-          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=120, stale-while-revalidate=86400" },
+          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+        ]
+      },
+      {
+        source: "/api/products/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
         ]
       },
       {
         source: "/api/categories",
         headers: [
-          { key: "Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
-          { key: "CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
-          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
+          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
         ]
       },
       {
@@ -502,17 +510,33 @@ const nextConfig: NextConfig = {
       {
         source: "/api/restaurants",
         headers: [
-          { key: "Cache-Control", value: "public, s-maxage=180, stale-while-revalidate=86400" },
-          { key: "CDN-Cache-Control", value: "public, s-maxage=180, stale-while-revalidate=86400" },
-          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=180, stale-while-revalidate=86400" },
+          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+        ]
+      },
+      {
+        source: "/api/restaurants/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+        ]
+      },
+      {
+        source: "/api/stores/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
         ]
       },
       {
         source: "/api/settings",
         headers: [
-          { key: "Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
-          { key: "CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
-          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=86400" },
+          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
         ]
       },
       {

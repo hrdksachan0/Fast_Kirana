@@ -1,5 +1,5 @@
 'use client';
-import { apiUrl } from '@/lib/api-url';
+import { apiUrl, catalogApiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
@@ -196,7 +196,7 @@ export function CafeSection({ showProducts = false }: CafeSectionProps) {
     setActiveCategoryTag('all')
     const categoryQuery = (experienceMode as string) === 'restaurant' ? 'restaurant,ice-cream,beverages' : 'cafe,ice-cream,beverages'
     const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-    fetch(`${apiUrl()}/api/products?category=${categoryQuery}&limit=9999${storeParam}`)
+    fetch(`${catalogApiUrl()}/api/products?category=${categoryQuery}&limit=9999${storeParam}`)
       .then(res => res.json())
       .then(productsRes => {
         const dbProducts = productsRes?.products || productsRes || []

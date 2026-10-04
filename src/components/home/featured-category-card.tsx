@@ -7,6 +7,7 @@ import { useCart } from '@/hooks/use-cart';
 import { DEFAULT_CAFE_MENU_SECTIONS, DEFAULT_RESTAURANT_MENU_SECTIONS } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
 import { isProductStoreClosed, getOptimizedImageUrl } from '@/lib/utils';
+import { catalogApiUrl } from '@/lib/api-url';
 import { toast } from 'sonner';
 
 interface Category {
@@ -106,7 +107,7 @@ export default function FeaturedCategoryCard({
           return;
         }
 
-        const res = await fetch(url);
+        const res = await fetch(`${catalogApiUrl()}${url}`);
         const data = await res.json();
         const items = data.products || data || [];
         

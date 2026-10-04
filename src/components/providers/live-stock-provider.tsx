@@ -1,5 +1,5 @@
 'use client';
-import { apiUrl } from '@/lib/api-url';
+import { apiUrl, catalogApiUrl } from '@/lib/api-url';
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { useCartStore, CartProduct } from '@/stores/cart-store'
@@ -60,7 +60,7 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
       })
 
       try {
-        const res = await fetch(`${apiUrl()}/api/products/live-stock`, {
+        const res = await fetch(`${catalogApiUrl()}/api/products/live-stock`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ids: idsToFetch }),
