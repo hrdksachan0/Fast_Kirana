@@ -50,6 +50,7 @@ if is_sqlite:
         async_db_url,
         echo=False,
         future=True,
+        pool_pre_ping=True,
     )
 else:
     connect_args = {

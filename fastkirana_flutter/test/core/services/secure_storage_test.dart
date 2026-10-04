@@ -4,9 +4,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fastkirana_flutter/core/services/secure_storage_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('SecureStorage', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
+      SecureStorage.invalidateCache();
+    });
+
+    tearDown(() {
+      SecureStorage.invalidateCache();
     });
 
     group('readMany', () {
