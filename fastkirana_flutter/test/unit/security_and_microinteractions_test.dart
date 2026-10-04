@@ -9,12 +9,17 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
+    SecureStorage.invalidateCache();
     SharedPreferences.setMockInitialValues({
       'auth_token': 'old_expired_jwt_token',
       'refresh_token': 'valid_refresh_token_123',
       'user_id': 'usr_test_1',
     });
     await SecureStorage.loadCache();
+  });
+
+  tearDown(() {
+    SecureStorage.invalidateCache();
   });
 
   group('Step 3: Security & Token Auto-Refresh', () {

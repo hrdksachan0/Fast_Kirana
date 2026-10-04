@@ -41,11 +41,7 @@ jobs:
           DATABASE_URL: sqlite+aiosqlite:///./test.db
           CASHFREE_ENV: TEST
           INTERNAL_API_SECRET: ci_test_secret_32chars_long_key_00
-        run: |
-          if [ -n "${{ secrets.DATABASE_URL_STAGING }}" ]; then
-            export DATABASE_URL="${{ secrets.DATABASE_URL_STAGING }}"
-          fi
-          pytest tests/ -v
+        run: pytest tests/ -v
 
 
   # ─── 2. Flutter Mobile Quality Gate & APK Artifact ─────────────────

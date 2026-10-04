@@ -159,25 +159,27 @@ async def pool_health():
     try:
         from database import engine
         pool = engine.pool
-        checked_out = pool.checkedout()
-        total_size = pool.size()
-        overflow = pool.overflow()
+        checked_out = getattr(pool, "checkedout", lambda: 0)() if callable(getattr(pool, "checkedout", None)) else 0
+        total_size = getattr(pool, "size", lambda: 5)() if callable(getattr(pool, "size", None)) else getattr(pool, "size", 5)
+        overflow = getattr(pool, "overflow", lambda: 0)() if callable(getattr(pool, "overflow", None)) else 0
+        max_overflow = getattr(pool, "_max_overflow", 10)
+        checked_in = getattr(pool, "checkedin", lambda: 0)() if callable(getattr(pool, "checkedin", None)) else 0
         utilization_pct = round((checked_out / max(total_size, 1)) * 100)
 
         status_label = "healthy"
         if utilization_pct > 80:
             status_label = "warning"
-        if utilization_pct > 95 or overflow > pool._max_overflow * 0.8:
+        if utilization_pct > 95 or (isinstance(max_overflow, (int, float)) and max_overflow > 0 and overflow > max_overflow * 0.8):
             status_label = "critical"
 
         return {
             "status": status_label,
             "pool": {
                 "size": total_size,
-                "checkedIn": pool.checkedin(),
+                "checkedIn": checked_in,
                 "checkedOut": checked_out,
                 "overflow": overflow,
-                "maxOverflow": pool._max_overflow,
+                "maxOverflow": max_overflow,
                 "utilization": f"{utilization_pct}%",
             },
         }

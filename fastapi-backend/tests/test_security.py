@@ -231,7 +231,10 @@ class TestPrometheusAndMonitoring:
         """The /health/pool endpoint must return pool health stats."""
         from routers.health import pool_health
         res = await pool_health()
-        assert "status" in res, "Must return status in pool health"
-        assert "pool" in res, "Must return pool details in pool health"
-        assert "size" in res["pool"], "Must return pool size"
+        if hasattr(res, "body"):
+            import json
+            res = json.loads(res.body.decode("utf-8"))
+        assert "status" in res, f"Must return status in pool health: {res}"
+        assert "pool" in res, f"Must return pool details in pool health: {res}"
+        assert "size" in res["pool"], f"Must return pool size: {res}"
 

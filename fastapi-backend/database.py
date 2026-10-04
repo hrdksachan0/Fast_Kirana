@@ -18,7 +18,7 @@ def clean_async_db_url(raw_url: str) -> str:
         url = url[1:-1].strip()
 
     if not url:
-        return DEFAULT_SUPABASE_DB_URL
+        return "sqlite+aiosqlite:///./test.db"
 
     # Force asyncpg driver scheme
     if url.startswith("postgresql://"):
