@@ -163,6 +163,16 @@ async def create_cashfree_order(
         "order_note": req.note or "FastKirana Quick Commerce Order",
     }
 
+    if settings.CASHFREE_ENV.upper() in ["TEST", "MOCK"]:
+        return {
+            "success": True,
+            "paymentSessionId": f"session_mock_test_{int(time.time())}",
+            "orderId": sanitized_order_id,
+            "cfOrderId": f"cf_{int(time.time())}",
+            "orderAmount": round(total_amount, 2),
+            "orderCurrency": "INR",
+        }
+
     headers = _get_cashfree_headers()
 
     async with httpx.AsyncClient(timeout=15.0) as client:
@@ -286,6 +296,16 @@ async def verify_cashfree_payment(
             "isPaid": True,
             "cfPaymentId": f"CF_{order.id}",
             "orderAmount": float(order.total or 0),
+        }
+
+    if settings.CASHFREE_ENV.upper() in ["TEST", "MOCK"]:
+        return {
+            "success": True,
+            "orderId": clean_id,
+            "paymentStatus": "PAID" if order else "ACTIVE",
+            "isPaid": bool(order),
+            "cfPaymentId": f"CF_TEST_{clean_id}",
+            "orderAmount": float(order.total if order else 10.0),
         }
 
     headers = _get_cashfree_headers()

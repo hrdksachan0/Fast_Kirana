@@ -41,7 +41,7 @@ jobs:
           DATABASE_URL: sqlite+aiosqlite:///./test.db
           CASHFREE_ENV: TEST
           INTERNAL_API_SECRET: ci_test_secret_32chars_long_key_00
-        run: pytest tests/ -v
+        run: pytest tests/ -v --tb=short
 
 
   # ─── 2. Flutter Mobile Quality Gate & APK Artifact ─────────────────
@@ -76,7 +76,7 @@ jobs:
 
       - name: Run Flutter Test Suite
         working-directory: fastkirana_flutter
-        run: flutter test
+        run: flutter test --reporter expanded
 
       - name: Build Android Release APK
         working-directory: fastkirana_flutter

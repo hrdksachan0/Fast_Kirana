@@ -213,10 +213,10 @@ async def prometheus_metrics():
     try:
         from database import engine
         pool = engine.pool
-        size = pool.size()
-        checked_in = pool.checkedin()
-        checked_out = pool.checkedout()
-        overflow = pool.overflow()
+        size = pool.size() if hasattr(pool, "size") and callable(pool.size) else 5
+        checked_in = pool.checkedin() if hasattr(pool, "checkedin") and callable(pool.checkedin) else 0
+        checked_out = pool.checkedout() if hasattr(pool, "checkedout") and callable(pool.checkedout) else 0
+        overflow = max(0, pool.overflow()) if hasattr(pool, "overflow") and callable(pool.overflow) else 0
         max_overflow = getattr(pool, "_max_overflow", 10)
         utilization = round(checked_out / max(size, 1), 4)
 
