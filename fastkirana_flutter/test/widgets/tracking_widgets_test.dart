@@ -6,7 +6,15 @@ import 'package:fastkirana_flutter/features/orders/widgets/tracking_receipt_card
 import 'package:fastkirana_flutter/features/orders/widgets/tracking_payment_card.dart';
 import 'package:fastkirana_flutter/features/delivery/widgets/connectivity_banner.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('Order Tracking & Delivery Widgets', () {
     final sampleOrder = Order(
       id: 'ord-12345',

@@ -8,7 +8,15 @@ import 'package:fastkirana_flutter/features/checkout/widgets/checkout_bottom_bar
 import 'package:fastkirana_flutter/features/checkout/widgets/checkout_trust_badges.dart';
 import 'package:fastkirana_flutter/features/admin/widgets/admin_stats_grid.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('Core Component Widget Tests', () {
     testWidgets('CartBillDetailsCard displays line items and totals accurately', (WidgetTester tester) async {
       await tester.pumpWidget(
