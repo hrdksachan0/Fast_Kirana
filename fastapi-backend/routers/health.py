@@ -273,3 +273,40 @@ async def prometheus_metrics():
     return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4; charset=utf-8")
 
 
+@health_router.get("/health/sentry-status")
+async def sentry_status():
+    """Returns whether Sentry SDK is active and initialized."""
+    try:
+        import sentry_sdk
+        client = sentry_sdk.get_client()
+        is_active = bool(settings.SENTRY_DSN and client.is_active())
+    except Exception:
+        is_active = False
+    return {
+        "sentry_enabled": is_active,
+        "environment": settings.APP_ENV,
+        "dsn_configured": bool(settings.SENTRY_DSN),
+    }
+
+
+@health_router.get("/debug/sentry-test")
+async def trigger_sentry_test():
+    """Triggers a verified test exception to test Sentry dashboard integration."""
+    if not settings.SENTRY_DSN:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "SENTRY_DSN is not configured in environment variables. Add SENTRY_DSN to .env first."}
+        )
+    try:
+        import sentry_sdk
+        _ = 1 / 0
+    except ZeroDivisionError as e:
+        event_id = sentry_sdk.capture_exception(e)
+        return {
+            "success": True,
+            "message": "Test exception captured and dispatched to Sentry!",
+            "sentry_event_id": str(event_id),
+            "environment": settings.APP_ENV
+        }
+
+
