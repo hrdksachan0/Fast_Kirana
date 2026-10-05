@@ -1,14 +1,135 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
-from typing import Dict, List
+import os
 import json
+import uuid
 import asyncio
+import logging
+from typing import Dict, List, Optional
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
+from config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ws", tags=["Real-time WebSockets Engine"])
 
 class ConnectionManager:
+    """
+    High-Performance Multi-Worker WebSocket Connection Manager.
+    - Manages local in-memory connections per Uvicorn worker process.
+    - Synchronizes cross-worker events via Redis Pub/Sub channel 'fastkirana:ws_broadcast'.
+    - Gracefully falls back to local in-memory mode if Redis is not configured or offline.
+    """
+    REDIS_CHANNEL = "fastkirana:ws_broadcast"
+
     def __init__(self):
-        # Active connections mapped by channel/room (e.g. order_id or rider_id)
         self.active_connections: Dict[str, List[WebSocket]] = {}
+        self.worker_id: str = str(uuid.uuid4())[:8]
+        self.redis_client = None
+        self.pubsub = None
+        self.redis_task: Optional[asyncio.Task] = None
+        self._running: bool = False
+
+    async def start(self):
+        """
+        Connects to Redis Pub/Sub for horizontal multi-worker/multi-container scaling.
+        """
+        self._running = True
+        redis_url = settings.REDIS_URL or os.getenv("REDIS_URL")
+        if not redis_url:
+            logger.info(f"[WebSocket] REDIS_URL not configured. Worker {self.worker_id} operating in local in-memory mode.")
+            return
+
+        try:
+            import redis.asyncio as aioredis
+            self.redis_client = aioredis.from_url(
+                redis_url,
+                encoding="utf-8",
+                decode_responses=True,
+                socket_timeout=3.0,
+                socket_connect_timeout=3.0
+            )
+            await self.redis_client.ping()
+            self.pubsub = self.redis_client.pubsub()
+            await self.pubsub.subscribe(self.REDIS_CHANNEL)
+            self.redis_task = asyncio.create_task(self._redis_listener())
+            logger.info(f"[WebSocket] Worker {self.worker_id} subscribed to Redis Pub/Sub '{self.REDIS_CHANNEL}' for cross-worker broadcast.")
+        except Exception as e:
+            logger.warning(f"[WebSocket] Worker {self.worker_id} Redis Pub/Sub initialization skipped ({e}). Operating in local in-memory mode.")
+            self.redis_client = None
+            self.pubsub = None
+
+    async def stop(self):
+        """
+        Gracefully terminates Redis Pub/Sub listener and connection pool.
+        """
+        self._running = False
+        if self.redis_task and not self.redis_task.done():
+            self.redis_task.cancel()
+            try:
+                await self.redis_task
+            except asyncio.CancelledError:
+                pass
+            self.redis_task = None
+
+        if self.pubsub:
+            try:
+                await self.pubsub.unsubscribe(self.REDIS_CHANNEL)
+                await self.pubsub.close()
+            except Exception:
+                pass
+            self.pubsub = None
+
+        if self.redis_client:
+            try:
+                await self.redis_client.close()
+            except Exception:
+                pass
+            self.redis_client = None
+        logger.info(f"[WebSocket] Worker {self.worker_id} connection manager shut down.")
+
+    async def _redis_listener(self):
+        """
+        Background listener task receiving cross-worker messages from Redis Pub/Sub.
+        """
+        try:
+            async for message in self.pubsub.listen():
+                if not self._running:
+                    break
+                if message.get("type") == "message":
+                    try:
+                        raw_data = message.get("data")
+                        if not raw_data:
+                            continue
+                        packet = json.loads(raw_data)
+                        origin_worker = packet.get("worker_id")
+                        # Skip if published by this worker (already delivered to local sockets)
+                        if origin_worker == self.worker_id:
+                            continue
+                        
+                        channel_id = packet.get("channel")
+                        payload = packet.get("payload")
+                        if channel_id and payload is not None:
+                            await self._send_to_local_sockets(channel_id, payload)
+                    except Exception as err:
+                        logger.debug(f"[WebSocket] Error parsing Redis Pub/Sub packet: {err}")
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            if self._running:
+                logger.warning(f"[WebSocket] Redis listener interrupted: {e}")
+
+    async def _send_to_local_sockets(self, channel_id: str, message: dict):
+        """
+        Deliver message directly to local sockets attached to this worker process.
+        """
+        if channel_id in self.active_connections:
+            disconnected = []
+            for connection in list(self.active_connections[channel_id]):
+                try:
+                    await connection.send_text(json.dumps(message))
+                except Exception:
+                    disconnected.append(connection)
+            for conn in disconnected:
+                self.disconnect(conn, channel_id)
 
     async def connect(self, websocket: WebSocket, channel_id: str):
         await websocket.accept()
@@ -24,15 +145,20 @@ class ConnectionManager:
                 del self.active_connections[channel_id]
 
     async def broadcast_to_channel(self, channel_id: str, message: dict):
-        if channel_id in self.active_connections:
-            disconnected = []
-            for connection in self.active_connections[channel_id]:
-                try:
-                    await connection.send_text(json.dumps(message))
-                except Exception:
-                    disconnected.append(connection)
-            for conn in disconnected:
-                self.disconnect(conn, channel_id)
+        # 1. Local delivery: Immediate zero-latency broadcast to sockets on this worker
+        await self._send_to_local_sockets(channel_id, message)
+
+        # 2. Redis Pub/Sub: Cross-worker broadcast to other Uvicorn workers & server instances
+        if self.redis_client:
+            try:
+                packet = {
+                    "worker_id": self.worker_id,
+                    "channel": channel_id,
+                    "payload": message
+                }
+                await self.redis_client.publish(self.REDIS_CHANNEL, json.dumps(packet))
+            except Exception as e:
+                logger.warning(f"[WebSocket] Redis Pub/Sub broadcast failed for channel '{channel_id}': {e}")
 
     async def broadcast(self, message: dict):
         """Broadcast to the general channel."""

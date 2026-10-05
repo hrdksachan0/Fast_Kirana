@@ -1,0 +1,45 @@
+appId: com.fastkirana.app
+---
+# ==============================================================================
+# FastKirana End-to-End Checkout Flow (Maestro Mobile Automation)
+# Journey: Catalog -> Add to Cart -> Apply Coupon -> Cashfree / COD -> Live Tracking
+# ==============================================================================
+
+- launchApp:
+    clearState: true
+
+# 1. Verify App Launch & Catalog Discovery
+- assertVisible: "FastKirana"
+- tapOn: "Dairy"
+- assertVisible: "Amul Taaza Milk 500ml"
+
+# 2. Add Grocery Item to Cart
+- tapOn:
+    id: "add_item_button"
+    optional: true
+- tapOn: "ADD"
+
+# 3. Open Shopping Cart
+- tapOn:
+    id: "view_cart_button"
+    optional: true
+- tapOn: "View Cart"
+- assertVisible: "Bill Details"
+
+# 4. Apply Discount Coupon
+- tapOn: "Apply Coupon"
+- inputText: "WELCOME50"
+- tapOn: "APPLY"
+- assertVisible: "WELCOME50 applied"
+
+# 5. Delivery Instructions
+- tapOn: "Ring Bell"
+- tapOn: "Leave at Door"
+
+# 6. Place Order (Online Cashfree or COD)
+- tapOn: "Place Order"
+
+# 7. Live Order Tracking Verification
+- assertVisible: "Live Order Status"
+- assertVisible: "On the Way"
+- assertVisible: "mins"

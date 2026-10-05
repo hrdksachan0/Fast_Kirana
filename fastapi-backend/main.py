@@ -55,9 +55,22 @@ async def lifespan(app: FastAPI):
     else:
         FastAPICache.init(InMemoryBackend(), prefix="fastkirana-cache")
 
+    # 3. Initialize WebSocket Redis Pub/Sub for multi-worker scaling
+    try:
+        from routers.websockets import manager as ws_manager
+        await ws_manager.start()
+    except Exception as e:
+        logger.warning(f"[Lifespan] WebSocket Redis Pub/Sub initialization skipped: {e}")
+
     yield
 
-    # 3. Graceful Shutdown: Dispose DB connection pool cleanly
+    # 4. Graceful Shutdown: Stop WebSocket Pub/Sub & Dispose DB connection pool cleanly
+    try:
+        from routers.websockets import manager as ws_manager
+        await ws_manager.stop()
+    except Exception:
+        pass
+
     try:
         from database import engine
         await engine.dispose()

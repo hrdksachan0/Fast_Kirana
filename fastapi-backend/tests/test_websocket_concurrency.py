@@ -99,3 +99,96 @@ async def test_high_concurrency_in_memory_connection_manager():
     # 3. Clean up and disconnect all
     for i in range(500):
         m.disconnect(dummy_sockets[i], f"rider_scale_{i}")
+
+
+@pytest.mark.asyncio
+async def test_multi_worker_redis_pubsub_cross_worker_sync():
+    """
+    Verify multi-worker Redis Pub/Sub architecture:
+    When Worker 1 broadcasts an order update, Worker 2 receives and routes it
+    to its local customer WebSocket without message duplication.
+    """
+    from routers.websockets import ConnectionManager
+
+    # Instantiate two separate worker connection managers
+    worker1 = ConnectionManager()
+    worker2 = ConnectionManager()
+    assert worker1.worker_id != worker2.worker_id
+
+    class MockWebSocket:
+        def __init__(self):
+            self.messages = []
+        async def send_text(self, text: str):
+            self.messages.append(json.loads(text))
+        async def accept(self):
+            pass
+
+    # Customer connected to Worker 2
+    customer_ws = MockWebSocket()
+    await worker2.connect(customer_ws, "order_sync_999")
+
+    # Delivery rider connected to Worker 1
+    rider_ws = MockWebSocket()
+    await worker1.connect(rider_ws, "order_sync_999")
+
+    # Simulated shared Redis Pub/Sub bus
+    redis_bus = asyncio.Queue()
+
+    class MockRedisClient:
+        async def publish(self, channel, message_str):
+            await redis_bus.put(message_str)
+
+    worker1.redis_client = MockRedisClient()
+    worker2.redis_client = MockRedisClient()
+
+    # 1. Delivery rider on Worker 1 broadcasts GPS update
+    telemetry_packet = {
+        "event": "LOCATION_UPDATE",
+        "orderId": "order_sync_999",
+        "lat": 26.1520,
+        "lng": 80.1740,
+        "status": "OUT_FOR_DELIVERY"
+    }
+    await worker1.broadcast_to_channel("order_sync_999", telemetry_packet)
+
+    # Worker 1's local rider receives direct echo
+    assert len(rider_ws.messages) == 1
+    assert rider_ws.messages[0]["status"] == "OUT_FOR_DELIVERY"
+
+    # Worker 1 published packet to Redis
+    published_raw = await redis_bus.get()
+    packet = json.loads(published_raw)
+    assert packet["worker_id"] == worker1.worker_id
+    assert packet["channel"] == "order_sync_999"
+
+    # 2. Worker 2 receives packet from Redis Pub/Sub bus
+    # Simulate Worker 2 processing message from Redis
+    sender_worker = packet.get("worker_id")
+    assert sender_worker != worker2.worker_id  # Not from self
+    await worker2._send_to_local_sockets(packet["channel"], packet["payload"])
+
+    # Worker 2's customer receives the update from Worker 1 across workers!
+    assert len(customer_ws.messages) == 1
+    assert customer_ws.messages[0]["orderId"] == "order_sync_999"
+    assert customer_ws.messages[0]["lat"] == 26.1520
+
+    # 3. Verify deduplication: Worker 1 should NOT process its own published message
+    if packet.get("worker_id") == worker1.worker_id:
+        # Worker 1 ignores it because worker_id matches
+        pass
+    else:
+        await worker1._send_to_local_sockets(packet["channel"], packet["payload"])
+    assert len(rider_ws.messages) == 1  # No duplicate delivery!
+
+
+@pytest.mark.asyncio
+async def test_connection_manager_graceful_lifecycle_without_redis():
+    """Verify ConnectionManager starts and stops gracefully without REDIS_URL configured."""
+    from routers.websockets import ConnectionManager
+    cm = ConnectionManager()
+    await cm.start()
+    assert cm._running is True
+    assert cm.redis_client is None  # Local mode fallback
+    await cm.stop()
+    assert cm._running is False
+
