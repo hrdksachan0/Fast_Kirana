@@ -1394,13 +1394,23 @@ async def validate_checkout_cart(
 @router.get("/{id}")
 async def get_product_details(
     id: str,
+    response: Response,
     storeId: Optional[str] = Query(None),
     x_store_id: Optional[str] = Header(None, alias="x-store-id"),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get detailed product info by ID or Slug, including reviews and category metadata.
+    Uses ultra-fast multi-tier caching (60s TTL).
     """
+    target_store = storeId or x_store_id
+    cache_key = f"product_detail:{id}:{target_store or 'all'}"
+    cached = await get_cached(cache_key)
+    if cached is not None:
+        response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
+        response.headers["X-FastKirana-Cache"] = "HIT"
+        return cached
+
     stmt = select(Product).options(
         selectinload(Product.category),
         selectinload(Product.restaurant)
@@ -1411,12 +1421,16 @@ async def get_product_details(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    target_store = storeId or x_store_id
     local_stock = None
+    local_price = None
     if target_store:
         if product.restaurantId:
             if product.restaurant and product.restaurant.storeId and product.restaurant.storeId != target_store:
-                return serialize_product(product, local_stock=0)
+                serialized = serialize_product(product, local_stock=0)
+                await set_cached(cache_key, serialized, 60)
+                response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
+                response.headers["X-FastKirana-Cache"] = "MISS"
+                return serialized
             local_stock = product.stock or 99999
         else:
             inv_stmt = select(StoreInventory).where(
@@ -1428,7 +1442,11 @@ async def get_product_details(
             local_stock = inv.stock if inv else 0
             local_price = inv.priceOverride if inv else None
 
-    return serialize_product(product, local_stock=local_stock, local_price=local_price)
+    serialized = serialize_product(product, local_stock=local_stock, local_price=local_price)
+    await set_cached(cache_key, serialized, 60)
+    response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
+    response.headers["X-FastKirana-Cache"] = "MISS"
+    return serialized
 
 
 @router.post("")

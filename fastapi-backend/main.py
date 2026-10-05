@@ -104,6 +104,10 @@ app.add_middleware(TrailingSlashMiddleware)
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
+# High-Performance Response Compression: Compress all HTTP responses >= 1000 bytes by ~75%
+from starlette.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 import uuid
 
 # Configure SlowAPI Route Rate Limiter (with fallback if dependency pending)

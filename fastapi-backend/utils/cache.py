@@ -162,7 +162,9 @@ async def invalidate_catalog_cache():
     """
     await invalidate_cache_pattern("catalog:*")
     await invalidate_cache_pattern("products:*")
+    await invalidate_cache_pattern("product_detail:*")
     await invalidate_cache_pattern("categories:*")
+    await invalidate_cache_pattern("banners:*")
     await invalidate_cache_pattern("search:*")
     logger.info("[Cache] Catalog cache invalidated across Redis & Memory.")
 
