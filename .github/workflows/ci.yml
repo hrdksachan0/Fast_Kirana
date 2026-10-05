@@ -39,8 +39,9 @@ jobs:
         env:
           PYTHONPATH: .
           DATABASE_URL: sqlite+aiosqlite:///./test.db
-          CASHFREE_ENV: TEST
+          AUTH_SECRET: ci_test_auth_secret_key_32chars_long_000
           INTERNAL_API_SECRET: ci_test_secret_32chars_long_key_00
+          CASHFREE_ENV: TEST
         run: pytest tests/ -v --tb=short
 
 

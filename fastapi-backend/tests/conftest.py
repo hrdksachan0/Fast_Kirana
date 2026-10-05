@@ -1,5 +1,11 @@
 import sys
 import os
+
+# Set hermetic defaults for testing before application modules load
+os.environ.setdefault("AUTH_SECRET", "ci_test_auth_secret_key_32chars_long_000")
+os.environ.setdefault("INTERNAL_API_SECRET", "ci_test_secret_32chars_long_key_00")
+os.environ.setdefault("CASHFREE_ENV", "TEST")
+
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
