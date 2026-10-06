@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import desc, func, and_, or_, text
 from typing import List, Dict, Any, Optional
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 import urllib.parse
 import math
 from pydantic import BaseModel, Field
@@ -52,7 +52,7 @@ async def get_rider_wallet(
     require_delivery_or_admin(current_user)
     user_id = current_user.get("id") or current_user.get("sub")
 
-    today_start = datetime.combine(datetime.utcnow().date(), time.min)
+    today_start = datetime.combine(datetime.now(timezone.utc).date(), time.min)
 
     # Ensure wallet exists
     wallet_stmt = select(RiderWallet).where(RiderWallet.userId == user_id)
@@ -148,7 +148,7 @@ async def get_delivery_orders(
     else:
         effective_store_id = storeId or assigned_store_id
 
-    today_start = datetime.combine(datetime.utcnow().date(), time.min)
+    today_start = datetime.combine(datetime.now(timezone.utc).date(), time.min)
 
     # Filter matching status criteria
     status_filters = [

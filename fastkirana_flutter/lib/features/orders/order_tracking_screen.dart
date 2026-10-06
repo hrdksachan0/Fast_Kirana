@@ -93,6 +93,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   // Animation controller for smooth rider marker movement
   late AnimationController _riderAnimController;
+  // Animation controller for flowing/pulsing animated Polyline tween
+  late AnimationController _polyTweenController;
+  final List<LatLng> _coveredPolylinePoints = [];
   LatLng? _prevRiderPosition;
   LatLng? _targetRiderPosition;
   DateTime? _lastLocationUpdateTime;
@@ -127,6 +130,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       duration: const Duration(milliseconds: 1500),
     )..addListener(_interpolateRiderMarker);
 
+    _polyTweenController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..addListener(_onPolyTweenTick);
+
     _initCustomMarkers();
     _checkAndRequestLocationPermission();
     _initCashfree();
@@ -156,6 +164,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _etaUpdateTimer?.cancel();
     _sseLineSubscription?.cancel();
     _riderAnimController.dispose();
+    _polyTweenController.dispose();
     _confettiController.dispose();
     _mapController?.dispose();
     _audioPlayer.dispose();
@@ -760,6 +769,17 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       }
     }
 
+    // Manage animated Polyline tween lifecycle during active delivery
+    if (order.status == OrderStatus.shipped) {
+      if (!_polyTweenController.isAnimating) {
+        _polyTweenController.repeat();
+      }
+    } else if (order.status == OrderStatus.delivered || order.status == OrderStatus.cancelled) {
+      if (_polyTweenController.isAnimating) {
+        _polyTweenController.stop();
+      }
+    }
+
     _refreshMapElements();
     _calculateETA();
   }
@@ -875,6 +895,31 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
+  /// Polyline tween animation tick: modulates dash and gap lengths dynamically during active delivery
+  void _onPolyTweenTick() {
+    if (!mounted || _polylines.isEmpty) return;
+    if (_order?.status != OrderStatus.shipped && _order?.status != OrderStatus.packed) return;
+
+    final t = _polyTweenController.value;
+    final dashLen = 8.0 + 6.0 * math.sin(t * 2 * math.pi);
+    final gapLen = 6.0 + 3.0 * math.cos(t * 2 * math.pi);
+
+    final activeRoute = _polylines.firstWhereOrNull((p) => p.polylineId.value == 'delivery_route');
+    if (activeRoute != null) {
+      setState(() {
+        _polylines.removeWhere((p) => p.polylineId.value == 'delivery_route');
+        _polylines.add(
+          activeRoute.copyWith(
+            patternsParam: [
+              PatternItem.dash(dashLen.clamp(6.0, 16.0)),
+              PatternItem.gap(gapLen.clamp(4.0, 10.0)),
+            ],
+          ),
+        );
+      });
+    }
+  }
+
   /// Truncates the route polyline ahead of the rider using local Haversine geometry.
   /// Zero external API calls, pure device math like Blinkit/Swiggy.
   void _trimPolylineBehindRider(LatLng riderPos) {
@@ -894,25 +939,56 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     // Only truncate if rider is within reasonable road tolerance (< 150 meters)
     if (minDistance < 0.15 && closestIdx < _roadPolylinePoints.length - 1) {
+      _coveredPolylinePoints.clear();
+      _coveredPolylinePoints.addAll([
+        ..._roadPolylinePoints.sublist(0, closestIdx),
+        riderPos,
+      ]);
       final remainingPoints = <LatLng>[riderPos, ..._roadPolylinePoints.sublist(closestIdx + 1)];
-      _polylines.removeWhere((p) => p.polylineId.value == 'delivery_route' || p.polylineId.value == 'delivery_route_shadow');
+
+      _polylines.removeWhere((p) =>
+          p.polylineId.value == 'delivery_route' ||
+          p.polylineId.value == 'delivery_route_shadow' ||
+          p.polylineId.value == 'delivery_route_covered');
+
+      if (_coveredPolylinePoints.length >= 2) {
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('delivery_route_covered'),
+            points: _coveredPolylinePoints,
+            color: const Color(0xFF94A3B8), // Slate 400 for covered path
+            width: 3,
+            jointType: JointType.round,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+          ),
+        );
+      }
+
+      final t = _polyTweenController.value;
+      final dashLen = 8.0 + 6.0 * math.sin(t * 2 * math.pi);
+      final gapLen = 6.0 + 3.0 * math.cos(t * 2 * math.pi);
+
       _polylines.add(
         Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: remainingPoints,
-          color: const Color(0xFF3B82F6),
+          color: const Color(0xFF2563EB),
           width: 4,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
-          patterns: [PatternItem.dash(12), PatternItem.gap(8)],
+          patterns: [
+            PatternItem.dash(dashLen.clamp(6.0, 16.0)),
+            PatternItem.gap(gapLen.clamp(4.0, 10.0)),
+          ],
         ),
       );
       _polylines.add(
         Polyline(
           polylineId: const PolylineId('delivery_route_shadow'),
           points: remainingPoints,
-          color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+          color: const Color(0xFF2563EB).withValues(alpha: 0.20),
           width: 8,
           jointType: JointType.round,
           startCap: Cap.roundCap,
@@ -1375,12 +1451,25 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     final polylines = <Polyline>{};
     if (polylineCoords.length >= 2) {
+      if (_coveredPolylinePoints.length >= 2) {
+        polylines.add(
+          Polyline(
+            polylineId: const PolylineId('delivery_route_covered'),
+            points: _coveredPolylinePoints,
+            color: const Color(0xFF94A3B8),
+            width: 3,
+            jointType: JointType.round,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+          ),
+        );
+      }
       // Main route line
       polylines.add(
         Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: polylineCoords,
-          color: const Color(0xFF3B82F6),
+          color: const Color(0xFF2563EB),
           width: 4,
           jointType: JointType.round,
           startCap: Cap.roundCap,
@@ -1388,12 +1477,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           patterns: [PatternItem.dash(12), PatternItem.gap(8)],
         ),
       );
-      // Subtle shadow line underneath
+      // Subtle ambient shadow line underneath
       polylines.add(
         Polyline(
           polylineId: const PolylineId('delivery_route_shadow'),
           points: polylineCoords,
-          color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+          color: const Color(0xFF2563EB).withValues(alpha: 0.20),
           width: 8,
           jointType: JointType.round,
           startCap: Cap.roundCap,
@@ -1457,7 +1546,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   void _followRiderWithCamera() {
     if (_mapController == null || _riderPosition == null || !mounted) return;
     _mapController!.animateCamera(
-      CameraUpdate.newLatLngZoom(_riderPosition!, 16.0),
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: _riderPosition!,
+          zoom: 16.5,
+          bearing: _riderHeading,
+          tilt: 25.0,
+        ),
+      ),
     );
   }
 

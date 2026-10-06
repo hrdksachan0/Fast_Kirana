@@ -939,7 +939,7 @@ export async function POST(request: NextRequest) {
 
     const taxPercent = parseFloat(settingsMap['tax_rate'] || '5')
     const serverTaxRate = 0.00
-    const serverMiscFee = parseFloat(settingsMap['misc_fee'] || '0')
+    const serverMiscFee = parseFloat(settingsMap['misc_fee'] || '5')
 
     // Calculate details for each order to create
     const ordersToCreate: any[] = []
@@ -998,8 +998,9 @@ export async function POST(request: NextRequest) {
       rData.deliveryFee = deliveryResult.restaurantFees[rData.rId] ?? 0
     }
 
-    const isPremiumPackaging = packagingOption === 'PREMIUM' || packagingFee === 15
-    const resolvedPackagingFee = isPremiumPackaging ? 15 : 0
+    const requestedPackagingFee = typeof body.packagingFee === 'number' ? body.packagingFee : (parseFloat(body.packagingFee || '0') || 0)
+    const isPremiumPackaging = packagingOption === 'PREMIUM' || requestedPackagingFee === 15 || packagingFee === 15
+    const resolvedPackagingFee = isPremiumPackaging ? 15 : (requestedPackagingFee > 0 ? requestedPackagingFee : serverMiscFee)
 
     let hasChargedMiscFee = false
 
@@ -1007,8 +1008,8 @@ export async function POST(request: NextRequest) {
       const groceryDiscount = combinedSubtotal > 0 ? (grocerySubtotal / combinedSubtotal) * combinedDiscount : 0
       const groceryTaxes = (grocerySubtotal - groceryDiscount) * serverTaxRate
       
-      // When Premium Packaging (+₹15) is selected, standard handling fee (₹5) is completely waived
-      const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee && !isPremiumPackaging) ? serverMiscFee : 0
+      // Standard packaging charge (₹5) or Premium packaging (₹15) on delivery orders
+      const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee) ? resolvedPackagingFee : 0
       if (appliedMiscFee > 0) hasChargedMiscFee = true
 
       const groceryTotal = Math.max(0, Math.round((grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + appliedMiscFee) * 100) / 100)
@@ -1037,10 +1038,10 @@ export async function POST(request: NextRequest) {
       const isFirstRestOrder = restaurantData.indexOf(rData) === 0
       const rPackagingFee = isFirstRestOrder ? resolvedPackagingFee : 0
 
-      // If Premium Packaging (₹15) is selected, it covers packaging/handling, so standard serverMiscFee (₹5) is waived
-      const appliedMiscFee = (rPackagingFee > 0)
-        ? rPackagingFee 
-        : ((deliveryMethod !== 'PICKUP' && !hasChargedMiscFee && !isPremiumPackaging) ? serverMiscFee : 0)
+      // If packaging/handling fee hasn't been charged on grocery, charge on restaurant order
+      const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee)
+        ? (rPackagingFee > 0 ? rPackagingFee : resolvedPackagingFee)
+        : 0
       if (appliedMiscFee > 0) hasChargedMiscFee = true
 
       const rTotal = Math.max(0, Math.round((rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee) * 100) / 100)
@@ -1574,6 +1575,51 @@ export async function POST(request: NextRequest) {
     orderCreatedSuccessfully = true
     if (idempotencyKey) {
       await saveIdempotencyResponse(idempotencyKey, responsePayload)
+    }
+
+    // 🔄 Auto-reconcile orphan payments — if webhook arrived before order creation,
+    // the orphan_payments table will have a record. Match it and mark order as PAID.
+    if (!isOnlinePaid && isOnlineRequested) {
+      try {
+        for (const order of createdOrders) {
+          const orphan = await prisma.orphanPayment.findFirst({
+            where: {
+              cfOrderId: order.id,
+              status: 'UNRESOLVED',
+            },
+          })
+          if (orphan) {
+            // Mark order(s) as PAID
+            await prisma.order.updateMany({
+              where: { id: { in: createdOrders.map((o: any) => o.id) } },
+              data: {
+                paymentStatus: PaymentStatus.PAID,
+                paymentMethod: PaymentMethod.UPI,
+                status: OrderStatus.CONFIRMED,
+                confirmedAt: new Date(),
+              },
+            })
+            // Resolve the orphan record
+            await prisma.orphanPayment.update({
+              where: { id: orphan.id },
+              data: {
+                status: 'RESOLVED',
+                resolvedOrderId: order.id,
+                resolvedAt: new Date(),
+                notes: (orphan.notes || '') + ` | Auto-reconciled at ${new Date().toISOString()}`,
+              },
+            })
+            console.log(`✅ Orphan payment auto-reconciled! CF Order ${orphan.cfOrderId} → DB Order ${order.id}`)
+
+            // Update response to reflect PAID status
+            responsePayload.paymentStatus = 'PAID'
+            if (responsePayload.order) responsePayload.order.paymentStatus = 'PAID'
+            break
+          }
+        }
+      } catch (reconcileErr) {
+        console.warn('Orphan payment reconciliation note:', reconcileErr)
+      }
     }
 
     return NextResponse.json(responsePayload)

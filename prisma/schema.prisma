@@ -922,4 +922,27 @@ model KitchenKotQueue {
   @@map("kitchen_kot_queue")
 }
 
+// Tracks payments received via Cashfree webhook that had no matching order in DB.
+// Prevents silent loss of paid orders — admin gets alerted and reconciliation can retry.
+model OrphanPayment {
+  id              String    @id @default(cuid())
+  cfOrderId       String                          // Cashfree order ID from the webhook
+  cfPaymentId     String?                         // Cashfree payment ID
+  amount          Float     @default(0)           // Payment amount
+  customerPhone   String?                         // Phone if available from Cashfree payload
+  customerName    String?                         // Name if available
+  customerEmail   String?                         // Email if available
+  rawPayload      Json?                           // Full webhook payload for debugging
+  status          String    @default("UNRESOLVED") // UNRESOLVED, RESOLVED, IGNORED
+  resolvedOrderId String?                         // If later matched to an order
+  resolvedAt      DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  @@unique([cfOrderId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([customerPhone])
+  @@map("orphan_payments")
+}
 

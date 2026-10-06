@@ -17,6 +17,7 @@ import '../../core/network/api_client.dart';
 import '../../core/services/rider_location_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import '../../core/services/supabase_service.dart';
+import '../../core/services/tracer_service.dart';
 import '../../core/services/offline_sync_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../core/utils/order_item_helper.dart';
@@ -123,7 +124,19 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           if (!mounted) return;
           final orderId = record['id']?.toString() ?? '';
           final newStatus = record['status']?.toString() ?? '';
-          debugPrint('[DeliveryDashboard] Realtime order change detected: order=$orderId status=$newStatus');
+          final traceId = record['traceId']?.toString() ?? record['trace_id']?.toString();
+          if (traceId != null && traceId.isNotEmpty) {
+            TracerService.recordSpan(
+              'rider_device_receipt',
+              traceId: traceId,
+              attributes: {
+                'order_id': orderId,
+                'status': newStatus,
+                'received_at': DateTime.now().toIso8601String(),
+              },
+            );
+          }
+          debugPrint('[DeliveryDashboard] Realtime order change detected: order=$orderId status=$newStatus trace=$traceId');
           _fetchOrders(silent: true);
         },
       );

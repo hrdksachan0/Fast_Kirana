@@ -25,6 +25,18 @@ from routers.websockets import manager
 from utils.firebase import send_fcm_notification, send_fcm_topic_notification
 from routers.orders_service import generate_id, get_last_10_digits, get_distance_km, validate_order_status_transition
 from utils.idempotency import generate_order_cart_signature, acquire_idempotency_lock, save_idempotency_response, release_idempotency_lock
+from services.order_calculation_service import (
+    get_delivery_rules,
+    get_product_type,
+    get_product_limit,
+    evaluate_surge_fee,
+    geocode_address,
+    calculate_coupon_discount,
+    calculate_delivery_fee,
+    calculate_surge_fee,
+    resolve_verified_addon_price,
+    calculate_item_addons,
+)
 
 logger = logging.getLogger("orders")
 
@@ -48,106 +60,6 @@ def clear_order_cache(order_id: Optional[str] = None):
         _order_details_cache.clear()
         _order_details_cache_time.clear()
 
-
-def get_delivery_rules(distance_km: float, max_radius_km: float = 5.0, surge_fee: float = 0.0, settings_map: dict = None) -> dict:
-    if settings_map is None:
-        settings_map = {}
-
-    tier1_fee = float(settings_map.get("delivery_fee_tier1", settings_map.get("delivery_fee", 25.0)))
-    tier2_fee = float(settings_map.get("delivery_fee_tier2", 35.0))
-    tier3_fee = float(settings_map.get("delivery_fee_tier3", 50.0))
-    per_km_beyond_5km = float(settings_map.get("delivery_fee_per_km_beyond_5km", 10.0))
-
-    tier1_threshold = float(settings_map.get("delivery_threshold_tier1", settings_map.get("grocery_free_delivery_threshold", 149.0)))
-    tier2_threshold = float(settings_map.get("delivery_threshold_tier2", 249.0))
-    tier3_threshold = float(settings_map.get("delivery_threshold_tier3", 349.0))
-
-    # 1. Strictly check if distance exceeds max allowed radius
-    if distance_km > max_radius_km:
-        return {
-            "distanceKm": distance_km,
-            "minOrder": 0.0,
-            "deliveryFee": 0.0,
-            "freeDeliveryThreshold": tier3_threshold + 100.0,
-            "isServiceable": False,
-            "zoneName": f"Outside Delivery Zone (> {max_radius_km:.1f} km)",
-            "surgeFee": surge_fee,
-            "maxRadiusKm": max_radius_km,
-        }
-
-    # Zone 1: 0 - 2.0 km
-    if distance_km <= 2.0:
-        return {
-            "distanceKm": distance_km,
-            "minOrder": 0.0,
-            "deliveryFee": tier1_fee + surge_fee,
-            "freeDeliveryThreshold": tier1_threshold,
-            "isServiceable": True,
-            "zoneName": "0 - 2 km (Local Zone)",
-            "surgeFee": surge_fee,
-            "maxRadiusKm": max_radius_km,
-        }
-
-    # Zone 2: 2.0 - 3.0 km
-    if distance_km <= 3.0:
-        return {
-            "distanceKm": distance_km,
-            "minOrder": 0.0,
-            "deliveryFee": tier2_fee + surge_fee,
-            "freeDeliveryThreshold": tier2_threshold,
-            "isServiceable": True,
-            "zoneName": "2 - 3 km (Suburban Zone)",
-            "surgeFee": surge_fee,
-            "maxRadiusKm": max_radius_km,
-        }
-
-    # Zone 3: 3.0 - 5.0 km
-    if distance_km <= 5.0:
-        return {
-            "distanceKm": distance_km,
-            "minOrder": 0.0,
-            "deliveryFee": tier3_fee + surge_fee,
-            "freeDeliveryThreshold": tier3_threshold,
-            "isServiceable": True,
-            "zoneName": "3 - 5 km (Extended Zone)",
-            "surgeFee": surge_fee,
-            "maxRadiusKm": max_radius_km,
-        }
-
-    # Zone 4: Long Distance Beyond 5 km (up to max_radius_km, e.g. when manually increased)
-    extra_km = math.ceil(distance_km - 5.0)
-    long_distance_fee = tier3_fee + (extra_km * per_km_beyond_5km)
-    long_distance_threshold = tier3_threshold + (extra_km * 50.0)
-
-    return {
-        "distanceKm": distance_km,
-        "minOrder": 0.0,
-        "deliveryFee": long_distance_fee + surge_fee,
-        "freeDeliveryThreshold": long_distance_threshold,
-        "isServiceable": True,
-        "zoneName": f"5 - {max_radius_km:.0f} km (Long Distance Zone)",
-        "surgeFee": surge_fee,
-        "maxRadiusKm": max_radius_km,
-    }
-
-
-def get_product_type(p: Product) -> str:
-    if p.restaurantId:
-        return "RESTAURANT"
-    category_slug = getattr(p.category, "slug", "") if p.category else ""
-    tags_list = p.tags or []
-    if category_slug == "cafe" or "cafe" in tags_list:
-        return "CAFE"
-    return "GROCERY"
-
-
-def get_product_limit(p: Product) -> int:
-    ptype = get_product_type(p)
-    if ptype == "RESTAURANT":
-        return 20
-    if ptype == "CAFE":
-        return 10
-    return 10
 
 
 def to_iso_utc(dt: Optional[datetime]) -> Optional[str]:
@@ -174,95 +86,6 @@ def safe_float(val: Any, default: float = 0.0) -> float:
     except (ValueError, TypeError):
         return default
 
-
-# ── Weather-based Surge Evaluation (mirrors surge-manager.ts AUTO mode) ──
-_weather_cache: Dict[str, dict] = {}
-_weather_cache_ts: Dict[str, float] = {}
-WEATHER_CACHE_TTL = 300  # 5 minutes
-
-
-async def fetch_live_weather(lat: float = 26.1534, lng: float = 80.1714) -> dict:
-    """Fetch current weather from Open-Meteo. Returns {temperature, condition, isRaining}."""
-    import time as _time
-    key = f"{lat:.2f},{lng:.2f}"
-    now = _time.time()
-    if key in _weather_cache and (now - _weather_cache_ts.get(key, 0)) < WEATHER_CACHE_TTL:
-        return _weather_cache[key]
-
-    try:
-        async with httpx.AsyncClient(timeout=3) as client:
-            resp = await client.get(
-                f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=temperature_2m,rain,showers,weather_code"
-            )
-            if resp.status_code != 200:
-                return _weather_cache.get(key, {"temperature": 30, "condition": "Clear", "isRaining": False})
-            data = resp.json()
-            current = data.get("current", {})
-            code = int(current.get("weather_code", 0))
-            rain = float(current.get("rain", 0))
-            showers = float(current.get("showers", 0))
-            temp = float(current.get("temperature_2m", 30))
-
-            heavy_rain_codes = [63, 65, 81, 82, 95, 96, 99]
-            is_raining = (rain >= 1.5 or showers >= 1.5) or (rain >= 0.5 and code in heavy_rain_codes)
-
-            condition = "Clear"
-            if is_raining:
-                condition = "Thunderstorm" if code in [95, 96, 99] else "Rain"
-            elif code in [1, 2, 3]:
-                condition = "Cloudy"
-
-            result = {"temperature": temp, "condition": condition, "isRaining": is_raining}
-            _weather_cache[key] = result
-            _weather_cache_ts[key] = now
-            return result
-    except Exception as e:
-        logger.warning(f"Weather fetch error: {e}")
-        return _weather_cache.get(key, {"temperature": 30, "condition": "Clear", "isRaining": False})
-
-
-async def evaluate_surge_fee(settings_map: dict, hub_lat: float = 26.1534, hub_lng: float = 80.1714, hub_surge_charge: float = 0.0) -> float:
-    """Evaluate effective surge fee based on mode (AUTO/MANUAL_ON/MANUAL_OFF)."""
-    mode = (settings_map.get("surge_mode") or "MANUAL_OFF").upper()
-    max_cap = float(settings_map.get("surge_max_cap", 25))
-
-    if mode == "MANUAL_OFF":
-        return 0.0
-    if mode == "MANUAL_ON":
-        manual_amt = float(settings_map.get("surge_manual_amount", 20))
-        return min(manual_amt, max_cap)
-
-    # AUTO mode: check hub-level surgeCharge first, then weather, then demand
-    if hub_surge_charge > 0:
-        return min(hub_surge_charge, max_cap)
-
-    weather = await fetch_live_weather(hub_lat, hub_lng)
-    if weather.get("isRaining"):
-        rain_amt = float(settings_map.get("surge_rain_amount", 20))
-        logger.info(f"[Surge] Rain detected at ({hub_lat:.2f},{hub_lng:.2f}): {weather}. Applying rain surge Rs.{rain_amt}")
-        return min(rain_amt, max_cap)
-
-    # Demand-based surge would require DB query; skip for checkout speed (handled by settings pre-evaluation)
-    demand_fee = float(settings_map.get("surge_charge", 0))
-    return min(demand_fee, max_cap) if demand_fee > 0 else 0.0
-
-async def geocode_address(address_str: str) -> Optional[dict]:
-    api_key = os.getenv("GOOGLE_MAPS_API_KEY") or os.getenv("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY")
-    if not api_key:
-        return None
-    url = "https://maps.googleapis.com/maps/api/geocode/json"
-    params = {"address": address_str, "key": api_key.strip()}
-    try:
-        async with httpx.AsyncClient(timeout=2) as client:
-            resp = await client.get(url, params=params)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("results") and data["results"][0].get("geometry", {}).get("location"):
-                    loc = data["results"][0]["geometry"]["location"]
-                    return {"lat": float(loc["lat"]), "lng": float(loc["lng"])}
-    except Exception as e:
-        logger.error(f"Google Maps geocode exception: {str(e)}")
-    return None
 
 
 async def send_whatsapp_alert(phone: str, text: str, dedupe_key: Optional[str] = None) -> bool:
@@ -662,6 +485,9 @@ async def create_order(
     """
     user_id = current_user.get("id") or current_user.get("sub") if current_user else payload.get("userId")
     
+    from services.tracer_service import TracerService
+    trace_id = getattr(request.state, "trace_id", None) or payload.get("traceId") or payload.get("trace_id") or TracerService.generate_trace_id()
+
     # ── RESILIENT USER RESOLUTION (Supports Web, Flutter, Guests) ──
     user_obj = None
     if user_id:
@@ -1156,6 +982,12 @@ async def create_order(
     if grocery_items and not is_store_open("grocery"):
         raise HTTPException(status_code=400, detail="Grocery Mart is temporarily closed.")
     
+    calc_span = TracerService.start_span(
+        "fastapi_order_calculation_engine",
+        trace_id=trace_id,
+        attributes={"user_id": user_id, "item_count": len(items), "delivery_method": delivery_method}
+    )
+
     # Check overall subtotal
     combined_subtotal = 0.0
     for item in items:
@@ -1173,9 +1005,9 @@ async def create_order(
             if variant:
                 item_price = float(variant.get("price", item_price))
 
-        # Include food addons in subtotal (C2 fix)
+        # Include verified food addons in subtotal (looked up strictly from DB)
         selected_addons_sub = item.get("selectedAddons") or item.get("product", {}).get("selectedAddons") or []
-        addon_total_sub = sum(float(a.get("price", 0)) for a in selected_addons_sub if isinstance(a, dict))
+        addon_total_sub, _ = calculate_item_addons(db_prod, selected_addons_sub)
         combined_subtotal += (item_price + addon_total_sub) * int(item["quantity"])
 
     if combined_subtotal < 20.0:
@@ -1681,15 +1513,15 @@ async def create_order(
                         if variant.get("costPrice") is not None:
                             cost_price = float(variant.get("costPrice"))
 
-                # Food Addons Calculation & Storage
-                selected_addons = item.get("selectedAddons") or []
-                addon_total = sum(float(a.get("price", 0)) for a in selected_addons if isinstance(a, dict))
+                # Food Addons Calculation & Storage (verified from DB)
+                selected_addons_raw = item.get("selectedAddons") or []
+                addon_total, verified_addons = calculate_item_addons(prod, selected_addons_raw)
                 final_item_price = item_price + addon_total
 
                 order_item_variants = {
                     "productVariants": prod.variants,
-                    "selectedAddons": selected_addons
-                } if selected_addons else prod.variants
+                    "selectedAddons": verified_addons
+                } if verified_addons else prod.variants
 
                 order_item = OrderItem(
                     id=generate_id("oi_"),
@@ -1757,6 +1589,13 @@ async def create_order(
 
             created_orders.append(ord_obj)
 
+        if "calc_span" in locals():
+            calc_span.end(extra_attributes={
+                "order_count": len(created_orders),
+                "total": float(sum(o.total for o in created_orders)),
+                "order_ids": [o.id for o in created_orders]
+            })
+
         # Update coupon usage
         if coupon_id:
             c_stmt = select(Coupon).where(Coupon.id == coupon_id)
@@ -1787,11 +1626,13 @@ async def create_order(
                 "total": float(order.total),
                 "createdAt": order.createdAt.isoformat(),
                 "restaurantId": order.restaurantId,
+                "traceId": trace_id,
             })
             await manager.broadcast_to_channel("general", {
                 "event": "CART_UPDATE",
                 "type": "cart-updated",
                 "userId": user_id,
+                "traceId": trace_id,
             })
             await manager.broadcast_to_channel(f"order_{order.id}", {
                 "event": "NEW_ORDER",
@@ -1800,6 +1641,7 @@ async def create_order(
                 "readableId": order.readableId,
                 "status": order.status.value,
                 "total": float(order.total),
+                "traceId": trace_id,
             })
 
             # 1. FCM Push Notification directly to Customer
@@ -2002,6 +1844,7 @@ async def create_order(
         result_payload = {
             "id": main_order.id,
             "readableId": main_order.readableId,
+            "traceId": trace_id,
             "userId": main_order.userId,
             "addressId": main_order.addressId,
             "restaurantId": main_order.restaurantId,
@@ -3009,16 +2852,19 @@ async def update_order(
         clear_order_cache(companion.id)
         if companion.combinedId:
             clear_order_cache(companion.combinedId)
+        status_trace_id = getattr(request.state, "trace_id", None) or payload.get("traceId") or payload.get("trace_id")
         try:
             await manager.broadcast_to_channel("general", {
                 "event": "STATUS_UPDATE",
                 "orderId": companion.id,
                 "status": companion.status.value,
+                "traceId": status_trace_id,
                 "order": {
                     "id": companion.id,
                     "status": companion.status.value,
                     "total": float(companion.total),
-                    "updatedAt": companion.updatedAt.isoformat()
+                    "updatedAt": companion.updatedAt.isoformat(),
+                    "traceId": status_trace_id,
                 }
             })
             await manager.broadcast_to_channel(f"order_{companion.id}", {
@@ -3027,7 +2873,8 @@ async def update_order(
                 "restaurantId": companion.restaurantId,
                 "status": companion.status.value,
                 "lat": companion.deliveryLat,
-                "lng": companion.deliveryLng
+                "lng": companion.deliveryLng,
+                "traceId": status_trace_id,
             })
             if companion.readableId:
                 await manager.broadcast_to_channel(f"order_{companion.readableId}", {
@@ -3037,7 +2884,8 @@ async def update_order(
                     "restaurantId": companion.restaurantId,
                     "status": companion.status.value,
                     "lat": companion.deliveryLat,
-                    "lng": companion.deliveryLng
+                    "lng": companion.deliveryLng,
+                    "traceId": status_trace_id,
                 })
             if companion.restaurantId:
                 await manager.broadcast_to_channel(f"restaurant_{companion.restaurantId}", {
@@ -3045,20 +2893,24 @@ async def update_order(
                     "orderId": companion.id,
                     "restaurantId": companion.restaurantId,
                     "status": companion.status.value,
+                    "traceId": status_trace_id,
                 })
         except Exception as comp_err:
             logger.warning(f"Failed companion broadcast for {companion.id}: {comp_err}")
 
     # Dispatch real-time WebSocket alerts
+    status_trace_id = getattr(request.state, "trace_id", None) or payload.get("traceId") or payload.get("trace_id")
     await manager.broadcast_to_channel("general", {
         "event": "STATUS_UPDATE",
         "orderId": order.id,
         "status": order.status.value,
+        "traceId": status_trace_id,
         "order": {
             "id": order.id,
             "status": order.status.value,
             "total": float(order.total),
-            "updatedAt": order.updatedAt.isoformat()
+            "updatedAt": order.updatedAt.isoformat(),
+            "traceId": status_trace_id,
         }
     })
     
@@ -3068,7 +2920,8 @@ async def update_order(
         "restaurantId": order.restaurantId,
         "status": order.status.value,
         "lat": order.deliveryLat,
-        "lng": order.deliveryLng
+        "lng": order.deliveryLng,
+        "traceId": status_trace_id,
     })
 
     if order.readableId:
@@ -3080,7 +2933,8 @@ async def update_order(
                 "restaurantId": order.restaurantId,
                 "status": order.status.value,
                 "lat": order.deliveryLat,
-                "lng": order.deliveryLng
+                "lng": order.deliveryLng,
+                "traceId": status_trace_id,
             })
         except Exception:
             pass

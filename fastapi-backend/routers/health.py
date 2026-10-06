@@ -7,14 +7,112 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import text
 from datetime import datetime, timezone
 import time
+import asyncio
+import os
 
+from config import settings
 from database import get_db
 
 health_router = APIRouter(tags=["Health"])
 
 SERVER_BOOT_TIME = time.time()
+
+
+@health_router.get("/healthz", status_code=status.HTTP_200_OK)
+@health_router.get("/api/healthz", status_code=status.HTTP_200_OK)
+async def liveness_check():
+    """
+    Kubernetes / Docker Liveness Probe.
+    Fast 200 OK verifying the Python process and event loop are alive.
+    Does NOT query database or cache to avoid cascading restart loops during transient network drops.
+    """
+    uptime_seconds = int(time.time() - SERVER_BOOT_TIME)
+    return {
+        "status": "healthy",
+        "probe": "liveness",
+        "service": settings.APP_NAME,
+        "uptimeSeconds": uptime_seconds,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@health_router.get("/readyz", status_code=status.HTTP_200_OK)
+@health_router.get("/api/readyz", status_code=status.HTTP_200_OK)
+async def readiness_check(db: AsyncSession = Depends(get_db)):
+    """
+    Kubernetes / Docker Readiness Probe.
+    Verifies that the pod/instance is ready to serve live user traffic:
+    1. PostgreSQL database pool connectivity (SELECT 1).
+    2. Redis cache & Pub/Sub responsiveness (redis.ping()) if configured.
+    Returns HTTP 200 when ready; returns HTTP 503 if database or configured cache fails.
+    """
+    # 1. Database Pool Ping with strict 2.0s timeout
+    db_connected = False
+    db_latency_ms = None
+    db_error = None
+    db_start = time.perf_counter()
+    try:
+        await asyncio.wait_for(db.execute(select(1)), timeout=2.0)
+        db_latency_ms = round((time.perf_counter() - db_start) * 1000, 2)
+        db_connected = True
+    except Exception as e:
+        db_error = str(e)
+        db_connected = False
+
+    # 2. Redis Cache & Pub/Sub Ping with strict 2.0s timeout
+    redis_connected = False
+    redis_latency_ms = None
+    redis_error = None
+    is_redis_configured = bool(settings.REDIS_URL or os.getenv("REDIS_URL", ""))
+
+    if is_redis_configured:
+        try:
+            from utils.cache import get_redis_connection
+            r_start = time.perf_counter()
+            redis_client = await asyncio.wait_for(get_redis_connection(), timeout=2.0)
+            if redis_client:
+                await asyncio.wait_for(redis_client.ping(), timeout=2.0)
+                redis_latency_ms = round((time.perf_counter() - r_start) * 1000, 2)
+                redis_connected = True
+            else:
+                redis_error = "Redis client is None"
+        except Exception as e:
+            redis_error = str(e)
+            redis_connected = False
+    else:
+        # In-memory fallback is active and healthy
+        redis_connected = True
+
+    is_ready = db_connected and (redis_connected if is_redis_configured else True)
+
+    payload = {
+        "status": "ready" if is_ready else "not_ready",
+        "probe": "readiness",
+        "service": settings.APP_NAME,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "checks": {
+            "database": {
+                "status": "connected" if db_connected else "disconnected",
+                "latencyMs": db_latency_ms,
+                "error": db_error
+            },
+            "redis": {
+                "status": "connected" if (is_redis_configured and redis_connected) else ("in-memory-fallback" if not is_redis_configured else "disconnected"),
+                "configured": is_redis_configured,
+                "latencyMs": redis_latency_ms,
+                "error": redis_error
+            }
+        }
+    }
+
+    if not is_ready:
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=payload)
+
+    return payload
+
 
 
 @health_router.get("/health", status_code=status.HTTP_200_OK)

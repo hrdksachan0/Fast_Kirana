@@ -3,7 +3,7 @@ Pydantic schemas for FastAPI request/response validation.
 Provides type-safe, self-documenting API contracts.
 """
 
-from pydantic import BaseModel, Field, EmailStr, field_validator, ValidationInfo, constr
+from pydantic import BaseModel, Field, EmailStr, field_validator, ValidationInfo, constr, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -37,8 +37,7 @@ class UserOut(BaseModel):
     image: Optional[str]
     assignedRestaurantId: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================================
@@ -128,8 +127,7 @@ class CategoryOut(BaseModel):
     parentId: Optional[str] = None
     sortOrder: int = 0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RestaurantOut(BaseModel):
@@ -143,8 +141,7 @@ class RestaurantOut(BaseModel):
     deliveryTime: str = "30-40 mins"
     isOpen: bool = True
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProductOut(BaseModel):
@@ -182,8 +179,7 @@ class ProductOut(BaseModel):
     category: Optional[CategoryOut] = None
     restaurant: Optional[RestaurantOut] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================================
@@ -236,8 +232,7 @@ class OrderItemOut(BaseModel):
     variants: Optional[Dict[str, Any]] = None
     notes: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrderOut(BaseModel):
@@ -281,8 +276,7 @@ class OrderOut(BaseModel):
     cashSettledAt: Optional[datetime] = None
     items: List[OrderItemOut] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CashDepositRequest(BaseModel):
@@ -299,8 +293,7 @@ class FinancialSummaryOut(BaseModel):
     cashInHand: float = 0.0
     cashDeposited: float = 0.0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================================

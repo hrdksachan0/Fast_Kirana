@@ -308,7 +308,9 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                         const SizedBox(width: 6),
                         Text(
                           _isServiceable
-                              ? 'Delivering to this point'
+                              ? (_distanceKm > 0.0 && _distanceKm.isFinite
+                                  ? 'Delivering here • ${_distanceKm.toStringAsFixed(1)} km from hub'
+                                  : 'Delivering to this point')
                               : 'Location outside delivery area',
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11.5),

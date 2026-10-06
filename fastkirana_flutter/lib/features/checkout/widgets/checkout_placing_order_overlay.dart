@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../core/theme/design_system.dart';
 
 /// Full-Screen Ultra-Smooth Zepto & Blinkit Style Order Placement Overlay
 class CheckoutPlacingOrderOverlay extends StatefulWidget {

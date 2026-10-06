@@ -66,11 +66,11 @@ class AppDesignSystem {
   static const Color borderLight = Color(0xFFF3F4F6);
   static const Color divider = Color(0xFFF3F4F6);
 
-  // Text Hierarchy (Matching Web)
+  // Text Hierarchy (Matching Web with WCAG AA Outdoor Sunlight Contrast)
   static const Color textPrimary = Color(0xFF1A1A2E);
   static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textTertiary = Color(0xFF9CA3AF);
-  static const Color textMuted = Color(0xFF9CA3AF);
+  static const Color textTertiary = Color(0xFF64748B); // Slate 500 (4.6:1 WCAG AA contrast against white surfaces)
+  static const Color textMuted = Color(0xFF64748B); // Slate 500
   static const Color textInverse = Color(0xFFFFFFFF);
 
   // Gradients

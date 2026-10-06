@@ -116,8 +116,8 @@ void main() {
       final orderPayload = {
         'items': cart.items.map((item) => {
           'productId': item.productId,
-          'name': item.product?.name ?? '',
-          'price': item.product?.price ?? 0.0,
+          'name': item.product.name,
+          'price': item.product.price,
           'quantity': item.quantity,
         }).toList(),
         'paymentMethod': state.selectedPayment.toUpperCase(), // 'COD'

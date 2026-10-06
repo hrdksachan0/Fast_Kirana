@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, ORJSONResponse
 import os
@@ -145,6 +145,8 @@ if settings.APP_ENV != "production":
 
 _cors_allow_all = os.getenv("CORS_ALLOW_ALL", "false").lower() == "true"
 
+from services.tracer_service import TracerService
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"] if _cors_allow_all else _cors_origins,
@@ -160,53 +162,79 @@ app.add_middleware(
         "x-internal-secret",
         "x-store-id",
         "x-request-id",
+        "x-trace-id",
+        "traceparent",
     ],
-    expose_headers=["x-process-time", "x-request-id"],
+    expose_headers=["x-process-time", "x-request-id", "x-trace-id", "traceparent"],
 )
-
-# GZip Compression Middleware (Reduces payload size by ~80% for fast mobile load)
-from fastapi.middleware.gzip import GZipMiddleware
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # In-memory sliding window rate limiter for public scraper protection
 _ip_request_history: dict = {}
 _MAX_REQUESTS_PER_MINUTE = 200
 
-# Middleware for Request Correlation ID, Enterprise Security Headers & Rate Limiting
+# Middleware for Request Correlation ID, Enterprise Security Headers, Rate Limiting & Distributed Tracing
 @app.middleware("http")
 async def enterprise_security_and_tracing_middleware(request: Request, call_next):
-    # 1. Request Correlation ID
+    # 1. Request Correlation ID & W3C Distributed Tracing
     request_id = request.headers.get("x-request-id") or f"req-{uuid.uuid4().hex[:10]}"
     request.state.request_id = request_id
 
-    # 2. Public Scraper & Abuse Rate Limiting (exclude health, docs, webhooks)
+    trace_info = TracerService.parse_trace_headers(dict(request.headers))
+    trace_id = trace_info["trace_id"]
+    parent_span_id = trace_info.get("parent_span_id")
+    request.state.trace_id = trace_id
+
+    span = TracerService.start_span(
+        name="fastapi_http_request",
+        trace_id=trace_id,
+        parent_span_id=parent_span_id,
+        attributes={"path": request.url.path, "method": request.method},
+    )
+    request.state.trace_span = span
+
+    # 2. Public Scraper & Abuse Rate Limiting (exclude health, probes, docs, webhooks)
     path = request.url.path
-    if not (path.startswith("/health") or path.startswith("/docs") or path.startswith("/openapi") or path.startswith("/ws") or "webhook" in path):
+    if not (path.startswith("/health") or path.startswith("/readyz") or path.startswith("/api/readyz") or path.startswith("/api/healthz") or path.startswith("/docs") or path.startswith("/openapi") or path.startswith("/ws") or "webhook" in path):
         client_ip = request.client.host if request.client else "unknown"
         now_ts = time.time()
         history = [ts for ts in _ip_request_history.get(client_ip, []) if now_ts - ts < 60]
         if len(history) >= _MAX_REQUESTS_PER_MINUTE:
+            span.end(extra_attributes={"rate_limited": True})
             return JSONResponse(
                 status_code=429,
                 content={
                     "success": False,
                     "error": "Too Many Requests",
                     "message": "Rate limit exceeded. Please try again in a few seconds.",
-                    "requestId": request_id
+                    "requestId": request_id,
+                    "traceId": trace_id,
                 },
-                headers={"Retry-After": "30", "X-Request-ID": request_id}
+                headers={
+                    "Retry-After": "30",
+                    "X-Request-ID": request_id,
+                    "X-Trace-Id": trace_id,
+                    "traceparent": span.traceparent,
+                }
             )
         history.append(now_ts)
         _ip_request_history[client_ip] = history
 
     # 3. Execution Timing
     start_time = time.perf_counter()
-    response = await call_next(request)
-    process_time = time.perf_counter() - start_time
+    try:
+        response = await call_next(request)
+        process_time = time.perf_counter() - start_time
+        span.end(extra_attributes={"status_code": response.status_code, "duration_ms": process_time * 1000})
+    except Exception as exc:
+        process_time = time.perf_counter() - start_time
+        span.end(extra_attributes={"duration_ms": process_time * 1000}, error=str(exc))
+        raise exc
 
     # 4. Observability & Tracing Headers
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Process-Time"] = f"{process_time:.4f}s"
+    response.headers["X-Trace-Id"] = trace_id
+    response.headers["traceparent"] = span.traceparent
 
     # 5. Enterprise Security Headers (Clickjacking, MIME-sniffing, XSS protection)
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -308,7 +336,7 @@ def custom_openapi():
 
 app.openapi = custom_openapi
 
-# Include API Routers
+# Include API Routers (Standardized on /api prefix)
 app.include_router(products.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
 app.include_router(delivery.router, prefix="/api")
@@ -323,49 +351,35 @@ app.include_router(cart.router, prefix="/api")
 app.include_router(addresses.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
 app.include_router(restaurants.router, prefix="/api")
-app.include_router(restaurant.router)
+app.include_router(restaurant.router)  # Already defines prefix="/api"
 app.include_router(restaurant.restaurant_router, prefix="/api")
-app.include_router(restaurant.restaurant_router)
 app.include_router(restaurant.cafe_router, prefix="/api")
-app.include_router(restaurant.cafe_router)
 app.include_router(restaurant.restaurant_report_router, prefix="/api")
-app.include_router(restaurant.restaurant_report_router)
 app.include_router(picker.picker_router, prefix="/api")
-app.include_router(picker.picker_router)
 app.include_router(profile.router, prefix="/api")
 app.include_router(banners.router, prefix="/api")
-app.include_router(store_settings_router.router)
 app.include_router(store_settings_router.router, prefix="/api")
+app.include_router(store_settings_router.router)
 app.include_router(store_settings_router.location_router, prefix="/api")
 app.include_router(orders_helper.helper_router, prefix="/api")
 app.include_router(products_helper.helper_router, prefix="/api")
 app.include_router(products_helper.search_router, prefix="/api")
-app.include_router(products_helper.search_router)
-app.include_router(public.router)
-app.include_router(paytm.router)
+app.include_router(public.router)  # Already defines prefix="/api"
+app.include_router(paytm.router)   # Already defines prefix="/api/payment/paytm"
 app.include_router(fcm.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
 
 from routers import cashfree_router, kot, vendors, stores_service, wishlist, push
 app.include_router(vendors.vendors_router, prefix="/api")
-app.include_router(vendors.vendors_router, prefix="/api/admin")
 app.include_router(stores_service.router, prefix="/api")
-app.include_router(stores_service.router)
 app.include_router(wishlist.router, prefix="/api")
-app.include_router(wishlist.router)
 app.include_router(push.router, prefix="/api")
-app.include_router(push.router)
 app.include_router(websockets.sse_router, prefix="/api")
-app.include_router(websockets.sse_router)
 app.include_router(admin.superadmin_router, prefix="/api")
-# Production Payment Gateway: Cashfree PG (Direct Integration)
 app.include_router(cashfree_router.router, prefix="/api")
-app.include_router(cashfree_router.router)
 app.include_router(kot.router, prefix="/api")
-app.include_router(kot.router)
 app.include_router(upload.router, prefix="/api")
 app.include_router(cron.router, prefix="/api")
-app.include_router(cron.router)
 app.include_router(health.health_router)
 
 @app.get("/")
@@ -387,6 +401,29 @@ async def health_check():
         "sentry": bool(settings.SENTRY_DSN),
         "redis": bool(settings.REDIS_URL)
     }
+
+@app.get("/healthz", tags=["Health"], summary="Kubernetes / Docker Liveness Probe")
+async def liveness_probe():
+    """
+    Kubernetes / Docker Liveness Probe.
+    Returns HTTP 200 immediately if Python process and ASGI event loop are responsive.
+    Does not touch database or external services to avoid cascading restart loops.
+    """
+    return await health.liveness_check()
+
+from database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+
+@app.get("/readyz", tags=["Health"], summary="Kubernetes / Docker Readiness Probe")
+async def readiness_probe(db: AsyncSession = Depends(get_db)):
+    """
+    Kubernetes / Docker Readiness Probe.
+    Verifies active connectivity to:
+    1. PostgreSQL database pool (SELECT 1).
+    2. Redis cache & Pub/Sub (redis.ping()) if configured.
+    Returns HTTP 200 if ready; HTTP 503 if DB or configured cache is disconnected.
+    """
+    return await health.readiness_check(db=db)
 
 if __name__ == "__main__":
     import uvicorn

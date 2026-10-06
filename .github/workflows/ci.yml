@@ -81,7 +81,7 @@ jobs:
 
       - name: Run Flutter E2E Integration Tests (Headless)
         working-directory: fastkirana_flutter
-        run: flutter test integration_test/checkout_e2e_integration_test.dart
+        run: flutter test test/e2e/checkout_e2e_integration_test.dart
 
       - name: Build Android Release APK
         working-directory: fastkirana_flutter

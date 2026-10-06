@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, and_, or_, not_
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 import re
 
 from database import get_db
@@ -42,7 +42,7 @@ async def validate_coupon(
         raise HTTPException(status_code=400, detail="Invalid or inactive coupon code")
 
     # Expiry Check
-    if coupon.expiresAt and coupon.expiresAt < datetime.utcnow():
+    if coupon.expiresAt and coupon.expiresAt < datetime.now(timezone.utc).replace(tzinfo=None):
         raise HTTPException(status_code=400, detail="Coupon code has expired")
 
     # Usage Count Check
@@ -370,7 +370,7 @@ async def get_active_coupons(
     """
     List all active, unexpired coupons for storefront / checkout display.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     conditions = [
         Coupon.isActive == True,
         or_(Coupon.expiresAt == None, Coupon.expiresAt > now)

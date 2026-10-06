@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/widgets/app_cached_image.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/restaurant_utils.dart';

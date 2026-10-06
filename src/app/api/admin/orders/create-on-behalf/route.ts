@@ -179,7 +179,8 @@ export async function POST(request: Request) {
     }
 
     const deliveryFee = customDeliveryFee !== null ? Number(customDeliveryFee) : (deliveryMethod === 'PICKUP' ? 0 : (subtotal >= 199 ? 0 : 25))
-    const total = Math.max(0, subtotal - discount + deliveryFee)
+    const miscFee = deliveryMethod === 'PICKUP' ? 0 : 5
+    const total = Math.max(0, subtotal - discount + deliveryFee + miscFee)
 
     // Generate unique IDs
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -203,7 +204,7 @@ export async function POST(request: Request) {
           discount,
           deliveryFee,
           taxes: 0,
-          miscFee: 0,
+          miscFee,
           total,
           notes: notes || 'Admin Manual Order',
           couponCode: couponCode ? couponCode.toUpperCase() : null,

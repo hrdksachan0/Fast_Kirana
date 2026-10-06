@@ -74,9 +74,7 @@ async def get_current_user(
 
         trust_headers = False
         if internal_secret and x_internal_secret == internal_secret:
-            trust_headers = True  # Secure mode
-        elif not internal_secret:
-            trust_headers = True  # Grace period: secret not configured yet
+            trust_headers = True  # Secure mode: only trust if configured and matched
 
         if trust_headers and (x_user_id or x_user_email or x_user_phone):
             try:

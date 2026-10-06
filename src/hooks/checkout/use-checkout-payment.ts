@@ -316,7 +316,9 @@ export function useCheckoutPayment({
       // Use grandTotal from caller (checkout page) if available, otherwise estimate from cart
       let paymentAmount = grandTotal || 0
       if (!paymentAmount || paymentAmount <= 0) {
-        paymentAmount = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0) + packagingFee
+        const sub = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+        const effectivePackFee = deliveryMethod === 'PICKUP' ? 0 : (packagingFee > 0 ? packagingFee : (packagingOption === 'PREMIUM' ? 15 : 5))
+        paymentAmount = sub + effectivePackFee
       }
 
       // Free order edge case: skip Cashfree entirely, place order directly

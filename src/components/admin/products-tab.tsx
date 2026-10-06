@@ -660,7 +660,7 @@ export function ProductsTab({
                 const currentCat = categories.find(c => c.id === newProduct.categoryId)
                 const activeParentId = currentCat ? (currentCat.parentId || currentCat.id) : ''
                 const activeSubId = currentCat && currentCat.parentId ? currentCat.id : ''
-                const parentCategories = categories.filter((c) => !c.parentId)
+                const parentCategories = categories.filter((c) => !c.parentId).length > 0 ? categories.filter((c) => !c.parentId) : categories
                 const availableSubcategories = activeParentId
                   ? categories.filter((c) => c.parentId === activeParentId)
                   : []

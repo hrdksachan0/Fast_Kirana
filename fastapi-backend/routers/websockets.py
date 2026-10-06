@@ -145,6 +145,14 @@ class ConnectionManager:
                 del self.active_connections[channel_id]
 
     async def broadcast_to_channel(self, channel_id: str, message: dict):
+        # Ensure traceId is present in message for distributed end-to-end tracing
+        if isinstance(message, dict) and "traceId" not in message and "trace_id" not in message:
+            try:
+                from services.tracer_service import TracerService
+                message["traceId"] = TracerService.generate_trace_id()
+            except Exception:
+                pass
+
         # 1. Local delivery: Immediate zero-latency broadcast to sockets on this worker
         await self._send_to_local_sockets(channel_id, message)
 

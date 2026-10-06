@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, desc, and_, text
 from typing import List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import numpy as np
 from database import get_db
@@ -21,7 +21,7 @@ async def get_ai_demand_forecast(
     """
     Native Python AI Demand Forecasting Engine for Inventory & Stock Optimization
     """
-    start_date = datetime.utcnow() - timedelta(days=30)
+    start_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
 
     # Fetch last 30 days completed order items using standard SQLAlchemy enum comparison
     stmt = select(

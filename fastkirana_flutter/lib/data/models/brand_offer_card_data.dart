@@ -1,5 +1,4 @@
 import 'dart:convert';
-import '../../core/constants/api_endpoints.dart';
 
 /// Fully dynamic model for Category, Cuisine & Outlet Offer Cards across FastKirana
 /// 100% editable from the Admin Web App with zero hardcoding.

@@ -240,6 +240,68 @@ export async function POST(req: NextRequest) {
               console.warn('Cashfree webhook notification notice:', notifErr)
             }
           }
+        } else {
+          // ⚠️ ORPHAN PAYMENT SAFETY NET — Order not found in DB but payment was successful!
+          // This is the scenario that caused missed orders (e.g. Ankita Sachan's Khajoor order).
+          // Save the payment details so it's never silently lost.
+          const cfPayId = paymentData?.cf_payment_id || paymentData?.payment_id || ''
+          const paymentAmount = Number(orderData?.order_amount || paymentData?.payment_amount || 0)
+          const customerPhone = orderData?.customer_details?.customer_phone || paymentData?.customer_phone || null
+          const customerName = orderData?.customer_details?.customer_name || null
+          const customerEmail = orderData?.customer_details?.customer_email || null
+
+          console.error(`🚨 ORPHAN PAYMENT DETECTED! Cashfree payment SUCCESS for order ${cleanId} (₹${paymentAmount}) but NO matching order in DB! Customer: ${customerName || 'Unknown'} (${customerPhone || 'N/A'})`)
+
+          // Save to orphan_payments table
+          try {
+            await prisma.orphanPayment.upsert({
+              where: { cfOrderId: cleanId },
+              update: {
+                cfPaymentId: cfPayId ? String(cfPayId) : null,
+                amount: paymentAmount,
+                customerPhone,
+                customerName,
+                customerEmail,
+                rawPayload: event,
+                notes: `Webhook received at ${new Date().toISOString()}. Order ID from Cashfree: ${rawId}`,
+              },
+              create: {
+                cfOrderId: cleanId,
+                cfPaymentId: cfPayId ? String(cfPayId) : null,
+                amount: paymentAmount,
+                customerPhone,
+                customerName,
+                customerEmail,
+                rawPayload: event,
+                status: 'UNRESOLVED',
+                notes: `Webhook received at ${new Date().toISOString()}. Order ID from Cashfree: ${rawId}`,
+              },
+            })
+          } catch (orphanErr) {
+            console.error('Failed to save orphan payment record:', orphanErr)
+          }
+
+          // 🚨 Send URGENT admin alerts — WhatsApp + Push
+          try {
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'
+            const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
+
+            const urgentMsg = `🚨 *ORPHAN PAYMENT ALERT!*\n\nPayment of ₹${paymentAmount} received via Cashfree but NO ORDER FOUND in system!\n\nCashfree Order: ${rawId}\nCF Payment ID: ${cfPayId || 'N/A'}\nCustomer: ${customerName || 'Unknown'}\nPhone: ${customerPhone || 'N/A'}\n\n⚡ *Action Required:* Create manual order for this customer in Admin → Orders → Create On Behalf.\n\nManage: ${cleanAppUrl}/admin`
+
+            const adminPhones = ['7054470303', '8112849854']
+            for (const phone of adminPhones) {
+              sendWhatsAppOrderAlert(phone, urgentMsg).catch(() => {})
+            }
+
+            sendPushNotificationToRoles([Role.ADMIN], {
+              title: '🚨 ORPHAN PAYMENT! Order Missing!',
+              body: `₹${paymentAmount} received from ${customerName || customerPhone || 'Unknown'} but NO order found! Create order manually ASAP.`,
+              tag: `orphan-payment-${cleanId}`,
+              data: { type: 'orphan-payment', cfOrderId: cleanId, amount: String(paymentAmount) }
+            }).catch(() => {})
+          } catch (alertErr) {
+            console.error('Failed to send orphan payment alert:', alertErr)
+          }
         }
       }
     } else if (

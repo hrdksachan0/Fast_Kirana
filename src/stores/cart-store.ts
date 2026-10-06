@@ -71,9 +71,9 @@ export const useCartStore = create<CartState>()(
       setAppliedCouponCode: (code) => set({ appliedCouponCode: code }),
 
       addItem: (product: CartProduct, hubId?: string | null) => {
-        if (!product || product.stock <= 0 || product.isAvailable === false) return
+        if (!product || !product.id || product.stock <= 0 || product.isAvailable === false) return
         set((state) => {
-          let items = state.items
+          let items = (state.items || []).filter((item) => item && item.product && item.product.id)
           const currentHubId = state.hubId
           let effectiveHubId = hubId
           if (!effectiveHubId) {
@@ -108,18 +108,38 @@ export const useCartStore = create<CartState>()(
 
       removeItem: (productId: string) => {
         set((state) => ({
-          items: state.items.filter((item) => item?.product?.id !== productId),
+          items: (state.items || []).filter(
+            (item) => item?.product?.id !== productId && !item?.product?.id?.startsWith(`${productId}_`)
+          ),
         }))
       },
 
       updateQuantity: (productId: string, quantity: number) => {
         set((state) => {
+          const items = (state.items || []).filter((item) => item && item.product && item.product.id)
           if (quantity <= 0) {
-            return { items: state.items.filter((item) => item?.product?.id !== productId) }
+            return {
+              items: items.filter(
+                (item) => item.product.id !== productId && !item.product.id.startsWith(`${productId}_`)
+              ),
+            }
           }
+          const hasExact = items.some((item) => item.product.id === productId)
+          if (hasExact) {
+            return {
+              items: items.map((item) => {
+                if (item.product.id === productId) {
+                  const maxAllowed = item.product.stock > 0 ? item.product.stock : 9999
+                  return { ...item, quantity: Math.min(quantity, maxAllowed) }
+                }
+                return item
+              }),
+            }
+          }
+          // If base ID passed for a variant item in cart
           return {
-            items: state.items.map((item) => {
-              if (item?.product?.id === productId) {
+            items: items.map((item) => {
+              if (item.product.id.startsWith(`${productId}_`)) {
                 const maxAllowed = item.product.stock > 0 ? item.product.stock : 9999
                 return { ...item, quantity: Math.min(quantity, maxAllowed) }
               }
@@ -133,13 +153,19 @@ export const useCartStore = create<CartState>()(
 
       clearRestaurantItems: () => {
         set((state) => ({
-          items: state.items.filter((item) => item?.product && !isCafeProduct(item.product)),
+          items: (state.items || []).filter((item) => item?.product && !isCafeProduct(item.product)),
         }))
       },
 
       getItemQuantity: (productId: string) => {
-        const item = get().items.find((i) => i?.product?.id === productId)
-        return item?.quantity || 0
+        if (!productId) return 0
+        const cleanId = String(productId)
+        const items = get().items || []
+        const exact = items.find((i) => i?.product?.id === cleanId)
+        if (exact) return exact.quantity
+        return items
+          .filter((i) => i?.product?.id && (i.product.id === cleanId || i.product.id.startsWith(`${cleanId}_`)))
+          .reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0)
       },
 
       getTotalItems: () => {

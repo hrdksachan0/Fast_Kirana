@@ -14,6 +14,7 @@ import '../../../core/routes/page_transitions.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/logger_service.dart';
+import '../../../core/services/tracer_service.dart';
 import '../../../core/services/customer_sound_service.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../data/models/cart.dart';
@@ -32,6 +33,8 @@ import '../widgets/payment_failed_cod_sheet.dart';
 import '../widgets/checkout_delivery_instructions.dart';
 
 // ─── State ──────────────────────────────────────────────────────────────────
+
+const _sentinel = Object();
 
 class CheckoutState {
   final bool isPlacingOrder;
@@ -74,10 +77,10 @@ class CheckoutState {
     Set<String>? selectedDeliveryInstructions,
     String? customReceiverName,
     String? customReceiverPhone,
-    String? pendingOrderId,
-    String? pendingCashfreeOrderId,
-    Cart? pendingCart,
-    double? pendingGrandTotal,
+    Object? pendingOrderId = _sentinel,
+    Object? pendingCashfreeOrderId = _sentinel,
+    Object? pendingCart = _sentinel,
+    Object? pendingGrandTotal = _sentinel,
     bool clearReceiverDetails = false,
   }) {
     return CheckoutState(
@@ -90,10 +93,10 @@ class CheckoutState {
       selectedDeliveryInstructions: selectedDeliveryInstructions ?? this.selectedDeliveryInstructions,
       customReceiverName: clearReceiverDetails ? null : (customReceiverName ?? this.customReceiverName),
       customReceiverPhone: clearReceiverDetails ? null : (customReceiverPhone ?? this.customReceiverPhone),
-      pendingOrderId: pendingOrderId ?? this.pendingOrderId,
-      pendingCashfreeOrderId: pendingCashfreeOrderId ?? this.pendingCashfreeOrderId,
-      pendingCart: pendingCart ?? this.pendingCart,
-      pendingGrandTotal: pendingGrandTotal ?? this.pendingGrandTotal,
+      pendingOrderId: identical(pendingOrderId, _sentinel) ? this.pendingOrderId : pendingOrderId as String?,
+      pendingCashfreeOrderId: identical(pendingCashfreeOrderId, _sentinel) ? this.pendingCashfreeOrderId : pendingCashfreeOrderId as String?,
+      pendingCart: identical(pendingCart, _sentinel) ? this.pendingCart : pendingCart as Cart?,
+      pendingGrandTotal: identical(pendingGrandTotal, _sentinel) ? this.pendingGrandTotal : pendingGrandTotal as double?,
     );
   }
 }
@@ -245,7 +248,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     // Always complete order placement to backend API even if UI context was detached/unmounted during UPI app switch
     await completeOrderPlacement(
-      context,
+      _currentContext,
       cart: cart,
       paymentId: resolvedPaymentId,
     );
@@ -341,6 +344,12 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     String? customDeliveryNotes,
   }) async {
     if (state.isPlacingOrder) return;
+    TracerService.startTrace('customer_checkout_tap', attributes: {
+      'cart_subtotal': cart.subtotal,
+      'items_count': cart.items.length,
+      'payment_method': state.selectedPayment,
+      'delivery_method': state.deliveryMethod,
+    });
     state = state.copyWith(isPlacingOrder: true);
     HapticFeedback.heavyImpact();
     _currentContext = context;
@@ -646,7 +655,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     }
 
     final deliveryFee = state.deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
-    final packagingFee = state.selectedPackaging == 'PREMIUM' ? 15.0 : 0.0;
+    final packagingFee = state.selectedPackaging == 'PREMIUM' ? 15.0 : (state.deliveryMethod == 'PICKUP' ? 0.0 : 5.0);
     final grandTotal = (subtotal + deliveryFee + packagingFee - _discountAmount).clamp(0.0, 999999.0);
 
     final selectedAddr = state.deliveryMethod == 'PICKUP'
@@ -801,6 +810,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         'paymentStatus': isOnlinePaid ? 'PAID' : 'PENDING',
         'paymentId': paymentId,
         'cfOrderId': state.pendingCashfreeOrderId,
+        'traceId': TracerService.activeTraceId,
+        'spanId': TracerService.activeSpanId,
         'deliveryMethod': state.deliveryMethod,
         'notes': orderNotes,
         'couponCode': _couponCode,

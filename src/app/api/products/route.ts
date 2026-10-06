@@ -875,35 +875,25 @@ export async function POST(request: NextRequest) {
       const initialStockNum = finalRestaurantId ? 99999 : (parseInt(String(stock), 10) || 0)
       const targetStoreId = (storeId && storeId !== 'all') ? String(storeId).trim() : ((session?.user as any)?.assignedStoreId || null)
 
-      if (targetStoreId && targetStoreId !== 'all') {
-        // Only seed inventory for the specific store console where product was added
-        await prisma.storeInventory.upsert({
-          where: {
-            productId_storeId: {
+      const allStores = await prisma.darkStore.findMany({ select: { id: true } })
+      if (allStores.length > 0) {
+        for (const store of allStores) {
+          const storeStock = (!targetStoreId || targetStoreId === 'all' || store.id === targetStoreId) ? initialStockNum : initialStockNum
+          await prisma.storeInventory.upsert({
+            where: {
+              productId_storeId: {
+                productId: product.id,
+                storeId: store.id,
+              }
+            },
+            create: {
               productId: product.id,
-              storeId: targetStoreId,
+              storeId: store.id,
+              stock: storeStock,
+            },
+            update: {
+              stock: storeStock,
             }
-          },
-          create: {
-            productId: product.id,
-            storeId: targetStoreId,
-            stock: initialStockNum,
-          },
-          update: {
-            stock: initialStockNum,
-          }
-        })
-      } else {
-        // Global creation (superadmin with no specific store selected)
-        const allStores = await prisma.darkStore.findMany({ select: { id: true } })
-        if (allStores.length > 0) {
-          await prisma.storeInventory.createMany({
-            data: allStores.map((s) => ({
-              storeId: s.id,
-              productId: product.id,
-              stock: initialStockNum,
-            })),
-            skipDuplicates: true,
           })
         }
       }

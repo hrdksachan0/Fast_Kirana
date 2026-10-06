@@ -407,8 +407,19 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                           categoryStatus
                         )
 
-                        const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0
-                        const totalVariantStock = hasVariants ? (product.variants as any[]).reduce((sum, v) => sum + (v.stock || 0), 0) : product.stock
+                        const normalizedVariants = (() => {
+                          if (!product.variants) return []
+                          if (Array.isArray(product.variants)) return product.variants
+                          if (typeof product.variants === 'string') {
+                            try {
+                              const parsed = JSON.parse(product.variants)
+                              if (Array.isArray(parsed)) return parsed
+                            } catch {}
+                          }
+                          return []
+                        })()
+                        const hasVariants = normalizedVariants.length > 0
+                        const totalVariantStock = hasVariants ? normalizedVariants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0) : product.stock
                         const isProductSoldOut = product.isAvailable === false || (hasVariants ? totalVariantStock <= 0 : product.stock <= 0)
 
                         return (
@@ -504,7 +515,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                                   onClick={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
-                                    setActiveVariantProduct(product)
+                                    setActiveVariantProduct({ ...product, variants: normalizedVariants })
                                   }}
                                   className="w-full h-full border border-primary/60 bg-white dark:bg-zinc-900 text-primary hover:bg-primary hover:text-white text-[10px] sm:text-xs font-black rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer shadow-xs animate-pulse-gentle"
                                 >

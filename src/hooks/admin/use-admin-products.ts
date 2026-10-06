@@ -116,6 +116,16 @@ export function useAdminProducts({
   const [hasVariantsNew, setHasVariantsNew] = useState(false)
   const [hasVariantsEdit, setHasVariantsEdit] = useState(false)
 
+  // Auto-sync initial categoryId when categories finish loading
+  useEffect(() => {
+    if (!newProduct.categoryId && Array.isArray(categories) && categories.length > 0) {
+      setNewProduct((prev) => ({
+        ...prev,
+        categoryId: prev.categoryId || categories[0].id,
+      }))
+    }
+  }, [categories, newProduct.categoryId])
+
   const isNewProductCafe = newProductType === 'cafe'
   const isEditProductCafe = editProductType === 'cafe'
   const isNewProductRestaurant = newProductType === 'restaurant'
@@ -823,21 +833,32 @@ export function useAdminProducts({
     const requiresBasePrice = !hasVariantsNew
     const isRestaurant = isNewProductRestaurant || !!newProduct.restaurantId
     const isSpecialProduct = isNewProductCafe || isRestaurant
-    const hasCategory = newProduct.categoryId || isSpecialProduct
+
+    if (!newProduct.name?.trim()) {
+      toast.error('Please enter product name *')
+      return
+    }
 
     if (isRestaurant && !newProduct.restaurantId) {
       toast.error('Please select a Restaurant Outlet for this dish *')
       return
     }
 
-    if (
-      !newProduct.name ||
-      !hasCategory ||
-      (requiresBasePrice && (!newProduct.price || !newProduct.mrp))
-    ) {
-      toast.error('Please fill in all required fields')
+    let resolvedCategoryId = newProduct.categoryId
+    if (!resolvedCategoryId && !isSpecialProduct && Array.isArray(categories) && categories.length > 0) {
+      resolvedCategoryId = categories[0].id
+    }
+
+    if (!isSpecialProduct && !resolvedCategoryId) {
+      toast.error('Please select a product category *')
       return
     }
+
+    if (requiresBasePrice && (!newProduct.price || !newProduct.mrp)) {
+      toast.error('Please enter valid MRP and Selling Price *')
+      return
+    }
+
     if (hasVariantsNew && newProductVariants.length === 0) {
       toast.error('Please add at least one variant option')
       return
@@ -852,9 +873,8 @@ export function useAdminProducts({
             .filter((t) => t.length > 0)
         : []
 
-      let resolvedCategoryId = newProduct.categoryId
       if (newProduct.restaurantId) {
-        resolvedCategoryId = newProduct.categoryId || categories[0]?.id || ''
+        resolvedCategoryId = newProduct.categoryId || categories?.[0]?.id || ''
       }
 
       const sortedNewVariants =
@@ -932,7 +952,7 @@ export function useAdminProducts({
         createPayload.storeId = selectedHubId
       }
 
-      const res = await fetch(`${apiUrl()}/api/products`, {
+      const res = await fetch(`/api/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -941,14 +961,20 @@ export function useAdminProducts({
           ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
           ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
         },
+        credentials: 'same-origin',
         body: JSON.stringify(createPayload),
       })
 
       if (res.ok) {
         const created = await res.json()
-        setProducts([created, ...products])
-        setAllProducts([created, ...allProducts])
-        toast.success(`Product "${created.name}" created successfully!`)
+        setProducts((prev) => [created, ...prev])
+        setAllProducts((prev) => [created, ...prev])
+        setProductTotal((prev) => prev + 1)
+        toast.dismiss()
+        toast.success(`Product "${created.name}" created successfully!`, {
+          id: `product-created-${created.id || Date.now()}`,
+          duration: 3000,
+        })
         resetNewProductForm()
         if (!keepOpen) {
           setShowAddProduct(false)

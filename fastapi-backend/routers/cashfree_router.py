@@ -913,24 +913,27 @@ async def cashfree_webhook(
     except Exception:
         return Response(status_code=400, content="Invalid JSON")
 
-    # Verify Cashfree webhook signature if secret configured
+    # Verify Cashfree webhook signature if secret configured (Fail Closed)
     webhook_secret = os.environ.get("CASHFREE_WEBHOOK_SECRET") or settings.CASHFREE_SECRET_KEY or ""
     if webhook_secret:
         signature = request.headers.get("x-webhook-signature", "")
         timestamp = request.headers.get("x-webhook-timestamp", "")
-        if signature and timestamp:
-            import hmac, hashlib, base64
-            sign_payload = timestamp + raw_body.decode("utf-8")
-            digest = hmac.new(
-                webhook_secret.encode("utf-8"),
-                sign_payload.encode("utf-8"),
-                hashlib.sha256
-            ).digest()
-            expected_b64 = base64.b64encode(digest).decode("utf-8")
-            expected_hex = digest.hex()
-            if not (hmac.compare_digest(expected_b64, signature) or hmac.compare_digest(expected_hex, signature)):
-                logger.warning("[Cashfree Webhook] Invalid webhook signature received")
-                return Response(status_code=401, content="Invalid webhook signature")
+        if not signature or not timestamp:
+            logger.warning("[Cashfree Webhook] Missing x-webhook-signature or x-webhook-timestamp headers")
+            return Response(status_code=401, content="Missing webhook signature headers")
+
+        import hmac, hashlib, base64
+        sign_payload = timestamp + raw_body.decode("utf-8")
+        digest = hmac.new(
+            webhook_secret.encode("utf-8"),
+            sign_payload.encode("utf-8"),
+            hashlib.sha256
+        ).digest()
+        expected_b64 = base64.b64encode(digest).decode("utf-8")
+        expected_hex = digest.hex()
+        if not (hmac.compare_digest(expected_b64, signature) or hmac.compare_digest(expected_hex, signature)):
+            logger.warning("[Cashfree Webhook] Invalid webhook signature received")
+            return Response(status_code=401, content="Invalid webhook signature")
 
     event_type = payload.get("type", "")
     data = payload.get("data", {})

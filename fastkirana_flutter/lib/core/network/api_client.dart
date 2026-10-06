@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../services/secure_storage_service.dart';
+import '../services/tracer_service.dart';
 import '../../data/models/user_session.dart';
 
 final dioProvider = Provider<Dio>((ref) {
@@ -105,9 +106,24 @@ final dioProvider = Provider<Dio>((ref) {
             options.headers['X-Idempotency-Key'] = key.toString();
           }
         }
+
+        // ─── Distributed Tracing (W3C traceparent & X-Trace-Id) ───────────
+        if (!options.headers.containsKey('X-Trace-Id')) {
+          final traceHeaders = TracerService.traceHeaders();
+          options.headers.addAll(traceHeaders);
+        }
       } catch (e, _) { LoggerService.error('ApiClient: request interceptor', e); }
 
       return handler.next(options);
+    },
+    onResponse: (response, handler) {
+      final traceId = response.requestOptions.headers['X-Trace-Id'] as String?;
+      if (traceId != null) {
+        LoggerService.debug(
+          '📡 [Tracer] [HTTP_RESPONSE] path=${response.requestOptions.path} trace_id=$traceId status=${response.statusCode}',
+        );
+      }
+      return handler.next(response);
     },
     onError: (DioException error, ErrorInterceptorHandler handler) async {
       // ─── 1. Automatic 401 Token Refresh & Request Replay ───────────────

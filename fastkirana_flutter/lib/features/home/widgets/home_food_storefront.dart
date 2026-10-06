@@ -2,15 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/design_system.dart';
-import '../../../../core/routes/page_transitions.dart';
-import '../../../../data/models/brand_offer_card_data.dart';
-import '../../../../data/models/restaurant.dart';
-import '../../../../providers/banner_provider.dart';
 import '../../../../providers/restaurant_provider.dart';
-import '../../../../widgets/curated_brand_offer_card.dart';
 import '../../../../widgets/restaurant_card.dart';
 import '../../../../providers/store_hub_provider.dart';
-import '../../cafe/cafe_menu_screen.dart';
 
 class HomeFoodStorefront extends ConsumerWidget {
   const HomeFoodStorefront({super.key});

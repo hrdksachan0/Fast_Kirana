@@ -117,7 +117,7 @@ void main() {
     ];
 
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
           body: CategoryOffersCarousel(
             sectionTitle: 'Top Category Offers',

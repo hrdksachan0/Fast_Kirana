@@ -120,11 +120,12 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   int getQuantity(String productId) {
     final cart = _cart;
     if (cart == null) return 0;
-    final item = cart.items.cast<CartItem?>().firstWhere(
-      (i) => i?.productId == productId || i?.product.id == productId,
-      orElse: () => null,
-    );
-    return item?.quantity ?? 0;
+    return cart.items.where((i) {
+      return i.productId == productId ||
+          i.product.id == productId ||
+          i.productId.startsWith('${productId}_') ||
+          i.product.id.startsWith('${productId}_');
+    }).fold(0, (sum, i) => sum + i.quantity);
   }
 
   String? checkRestaurantConflict(Product product) {
@@ -193,7 +194,13 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     HapticFeedback.lightImpact();
     final cart = _cart ?? _emptyCart();
     final items = List<CartItem>.from(cart.items);
-    final idx = items.indexWhere((i) => i.productId == product.id || i.product.id == product.id);
+    final targetVariantKey = selectedVariant != null && selectedVariant.isNotEmpty ? selectedVariant : null;
+    final idx = items.indexWhere((i) {
+      final sameBase = i.productId == product.id || i.product.id == product.id;
+      final sameVariant = (i.selectedVariant == null && targetVariantKey == null) ||
+          (i.selectedVariant == targetVariantKey);
+      return sameBase && sameVariant;
+    });
 
     final maxStock = product.stock > 0 ? product.stock : 999;
     final currentQty = idx >= 0 ? items[idx].quantity : 0;
@@ -206,13 +213,13 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       items[idx] = CartItem(
         id: item.id,
         cartId: item.cartId,
-        productId: product.id,
+        productId: item.productId,
         product: product,
         quantity: targetQty,
-        selectedVariant: selectedVariant ?? item.selectedVariant,
+        selectedVariant: targetVariantKey ?? item.selectedVariant,
       );
     } else {
-      items.add(_newCartItem(product, quantity, selectedVariant));
+      items.add(_newCartItem(product, quantity, targetVariantKey));
     }
 
     _setState(items, cart);
