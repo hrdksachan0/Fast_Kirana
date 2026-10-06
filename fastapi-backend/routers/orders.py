@@ -1325,6 +1325,118 @@ async def create_order(
             elif incoming_payment_id.startswith("cf_"):
                 incoming_cf_order_id = incoming_payment_id
 
+        # 🛡️ [DATABASE IDEMPOTENCY CHECK] Prevent duplicate order creation if Cashfree order was already placed
+        if incoming_cf_order_id:
+            try:
+                cf_match_pat = f"%{incoming_cf_order_id}%"
+                exist_res = await db.execute(
+                    select(Order).where(
+                        or_(
+                            Order.id == incoming_cf_order_id,
+                            Order.readableId == incoming_cf_order_id,
+                            Order.notes.ilike(cf_match_pat),
+                        )
+                    ).options(selectinload(Order.items), selectinload(Order.address), selectinload(Order.user)).order_by(Order.createdAt.asc())
+                )
+                existing_matched = exist_res.scalars().all()
+                if existing_matched:
+                    first_match = existing_matched[0]
+                    all_matches = list(existing_matched)
+                    if first_match.combinedId:
+                        comb_res = await db.execute(
+                            select(Order).where(Order.combinedId == first_match.combinedId)
+                            .options(selectinload(Order.items), selectinload(Order.address), selectinload(Order.user))
+                            .order_by(Order.createdAt.asc())
+                        )
+                        all_matches = comb_res.scalars().all()
+                    main_match = next((o for o in all_matches if not o.restaurantId), all_matches[0])
+                    logger.info(f"🛡️ [IDEMPOTENCY] FastAPI returning existing order #{main_match.readableId} for CF ID {incoming_cf_order_id}")
+                    
+                    matched_user = main_match.user
+                    matched_addr = main_match.address
+                    matched_items = [
+                        {
+                            "id": item.id,
+                            "productId": item.productId,
+                            "name": item.name,
+                            "price": float(item.price),
+                            "quantity": item.quantity,
+                            "imageUrl": item.imageUrl,
+                            "selectedVariant": item.selectedVariant,
+                            "costPrice": float(item.costPrice or 0),
+                            "variants": item.variants,
+                            "notes": item.notes,
+                        }
+                        for item in main_match.items
+                    ]
+                    
+                    replayed_payload = {
+                        "id": main_match.id,
+                        "readableId": main_match.readableId,
+                        "userId": main_match.userId,
+                        "type": main_match.type.value if hasattr(main_match.type, "value") else str(main_match.type),
+                        "restaurantId": main_match.restaurantId,
+                        "status": main_match.status.value if hasattr(main_match.status, "value") else str(main_match.status),
+                        "subtotal": float(main_match.subtotal or 0),
+                        "discount": float(main_match.discount or 0),
+                        "deliveryFee": float(main_match.deliveryFee or 0),
+                        "taxes": float(main_match.taxes or 0),
+                        "miscFee": float(main_match.miscFee or 0),
+                        "packagingFee": float(main_match.miscFee or 0),
+                        "total": float(main_match.total or 0),
+                        "paymentMethod": main_match.paymentMethod.value if hasattr(main_match.paymentMethod, "value") else str(main_match.paymentMethod),
+                        "paymentStatus": main_match.paymentStatus.value if hasattr(main_match.paymentStatus, "value") else str(main_match.paymentStatus),
+                        "estimatedDelivery": to_iso_utc(main_match.estimatedDelivery),
+                        "deliveryMethod": main_match.deliveryMethod,
+                        "isB2B": main_match.isB2B,
+                        "shopName": main_match.shopName,
+                        "shopPhone": main_match.shopPhone,
+                        "notes": main_match.notes,
+                        "couponCode": main_match.couponCode,
+                        "customerName": matched_user.name if matched_user else None,
+                        "customerPhone": (matched_user.phone if matched_user else None) or (matched_addr.phone if matched_addr else None),
+                        "customerAddress": f"{matched_addr.houseNo or ''}, {matched_addr.street or ''}, {matched_addr.area or ''}, {matched_addr.city or ''}, {matched_addr.pincode or ''}" if matched_addr else None,
+                        "createdAt": to_iso_utc(main_match.createdAt),
+                        "updatedAt": to_iso_utc(main_match.updatedAt),
+                        "confirmedAt": to_iso_utc(main_match.confirmedAt),
+                        "packedAt": to_iso_utc(main_match.packedAt),
+                        "shippedAt": to_iso_utc(main_match.shippedAt),
+                        "deliveredAt": to_iso_utc(main_match.deliveredAt),
+                        "items": matched_items,
+                        "address": {
+                            "id": matched_addr.id,
+                            "houseNo": matched_addr.houseNo,
+                            "street": matched_addr.street,
+                            "area": matched_addr.area,
+                            "city": matched_addr.city,
+                            "pincode": matched_addr.pincode,
+                            "phone": matched_addr.phone,
+                            "label": matched_addr.label,
+                        } if matched_addr else None,
+                        "order": {
+                            "id": main_match.id,
+                            "readableId": main_match.readableId,
+                            "status": main_match.status.value if hasattr(main_match.status, "value") else str(main_match.status),
+                            "total": float(main_match.total or 0),
+                            "restaurantId": main_match.restaurantId,
+                            "shopName": main_match.shopName,
+                        },
+                        "orders": [{
+                            "id": o.id,
+                            "readableId": o.readableId,
+                            "status": o.status.value if hasattr(o.status, "value") else str(o.status),
+                            "total": float(o.total or 0),
+                            "restaurantId": o.restaurantId,
+                            "shopName": o.shopName,
+                        } for o in all_matches],
+                        "idempotencyReplayed": True,
+                    }
+                    if idempotency_key:
+                        save_idempotency_response(idempotency_key, replayed_payload)
+                    return replayed_payload
+            except Exception as idemp_err:
+                logger.warning(f"FastAPI idempotency check error: {idemp_err}")
+
         if payment_method != "COD":
             if incoming_payment_status == "PAID" or bool(incoming_payment_id):
                 is_online_paid = True

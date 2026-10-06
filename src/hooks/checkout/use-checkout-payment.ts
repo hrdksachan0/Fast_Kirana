@@ -404,13 +404,15 @@ export function useCheckoutPayment({
       }
 
       let paymentSuccess = false
+      let isVerifyingOrCreating = false
 
       // ═══════════════════════════════════════════════════════════════════════
       // POST-PAYMENT: Verify & create order in DB only after PAID
       // ═══════════════════════════════════════════════════════════════════════
       let pollCount = 0
       const checkVerificationAndCreateOrder = async () => {
-        if (paymentSuccess) return true
+        if (paymentSuccess || isVerifyingOrCreating) return true
+        isVerifyingOrCreating = true
         try {
           const verifyRes = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
             method: 'POST',
@@ -491,7 +493,12 @@ export function useCheckoutPayment({
             }
             return true
           }
-        } catch (_) {}
+        } catch (_) {
+        } finally {
+          if (!paymentSuccess) {
+            isVerifyingOrCreating = false
+          }
+        }
         return false
       }
 

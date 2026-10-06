@@ -1077,6 +1077,48 @@ export async function POST(request: NextRequest) {
     const notesCfMatch = typeof body.notes === 'string' ? body.notes.match(/\[CF_ORDER:([^\]]+)\]/)?.[1] : null
     const cfCheckId = body.cfOrderId || notesCfMatch || (paymentId.startsWith('CF_') ? paymentId.replace(/^CF_/, '') : (paymentId.startsWith('cf_') ? paymentId : null))
 
+    // 🛡️ [DATABASE IDEMPOTENCY CHECK] Prevent duplicate order creation if Cashfree order was already recorded
+    if (cfCheckId) {
+      try {
+        const existingOrders = await prisma.order.findMany({
+          where: {
+            OR: [
+              { id: cfCheckId },
+              { readableId: cfCheckId },
+              { notes: { contains: `[CF_ORDER:${cfCheckId}]` } },
+              { notes: { contains: cfCheckId } },
+            ],
+          },
+          include: { items: true, address: true },
+          orderBy: { createdAt: 'asc' },
+        })
+
+        if (existingOrders.length > 0) {
+          const firstOrder = existingOrders[0]
+          let allOrders = existingOrders
+          if (firstOrder.combinedId) {
+            allOrders = await prisma.order.findMany({
+              where: { combinedId: firstOrder.combinedId },
+              include: { items: true, address: true },
+              orderBy: { createdAt: 'asc' },
+            })
+          }
+          const mainOrder = allOrders.find((o) => !o.restaurantId) || allOrders[0]
+          console.log(`🛡️ [IDEMPOTENCY] Replaying existing order #${mainOrder.readableId} for CF ID: ${cfCheckId}`)
+          return NextResponse.json({
+            ...mainOrder,
+            order: mainOrder,
+            orders: allOrders,
+            readableId: mainOrder.readableId,
+            id: mainOrder.id,
+            idempotencyReplayed: true,
+          }, { status: 200 })
+        }
+      } catch (idempErr) {
+        console.warn('Idempotency check warning:', idempErr)
+      }
+    }
+
     if (isFreePromo) {
       isOnlinePaid = true
     } else if (isStaffSession && body.paymentStatus === 'PAID') {
