@@ -673,15 +673,39 @@ async def record_vendor_payout(
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Payout amount must be greater than 0")
 
+    now = datetime.utcnow()
+    raw_start = payload.get("startDate")
+    raw_end = payload.get("endDate")
+
+    start_dt = None
+    if raw_start:
+        try:
+            start_dt = datetime.fromisoformat(str(raw_start).replace("Z", "+00:00")).replace(tzinfo=None)
+        except Exception:
+            start_dt = None
+    if not start_dt:
+        start_dt = now - timedelta(days=30)
+
+    end_dt = None
+    if raw_end:
+        try:
+            end_dt = datetime.fromisoformat(str(raw_end).replace("Z", "+00:00")).replace(tzinfo=None)
+        except Exception:
+            end_dt = None
+    if not end_dt:
+        end_dt = now
+
     payout = VendorPayout(
         id=str(uuid.uuid4()),
         vendorId=vendor_id,
         amount=amount,
+        startDate=start_dt,
+        endDate=end_dt,
         paymentMethod=str(payload.get("paymentMethod") or "UPI").upper(),
         transactionId=str(payload.get("transactionId") or "").strip() or None,
         notes=str(payload.get("notes") or "").strip() or None,
         status="PAID",
-        paidAt=datetime.utcnow(),
+        paidAt=now,
         storeId=vendor.storeId,
     )
 
