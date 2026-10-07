@@ -55,27 +55,34 @@ class ProfileOperationsSuite extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppDesignSystem.statusPending,
-                          borderRadius: BorderRadius.circular(8),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppDesignSystem.statusPending,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.bolt_rounded, size: 16, color: AppDesignSystem.amber600),
                         ),
-                        child: const Icon(Icons.bolt_rounded, size: 16, color: AppDesignSystem.amber600),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Operations Command Suite',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13.5),
-                          fontWeight: FontWeight.w900,
-                          color: AppDesignSystem.slate900,
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Operations Command Suite',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 13.5),
+                              fontWeight: FontWeight.w900,
+                              color: AppDesignSystem.slate900,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                     decoration: BoxDecoration(
@@ -186,7 +193,7 @@ class ProfileOperationsSuite extends StatelessWidget {
 
     if (isVendorOnly) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
         child: Bounceable(
           onTap: () {
             HapticFeedback.lightImpact();
@@ -201,7 +208,7 @@ class ProfileOperationsSuite extends StatelessWidget {
             );
           },
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF334155)],
@@ -211,7 +218,7 @@ class ProfileOperationsSuite extends StatelessWidget {
               borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.3),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.28),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -229,34 +236,71 @@ class ProfileOperationsSuite extends StatelessWidget {
                   ),
                   child: Center(child: Text('🏪', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            'Supplier Partner Portal',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: Colors.white),
+                          Flexible(
+                            child: Text(
+                              'Supplier Partner Portal',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 14),
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: -0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: const Color(0xFFEA580C), borderRadius: BorderRadius.circular(6)),
-                            child: Text('SUPPLIER', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: Colors.white)),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEA580C),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'SUPPLIER',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 8.5),
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'Live store orders, products, rates & sales payouts ➔',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
+                        'Live store orders, products, rates & sales payouts',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          height: 1.25,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+                const SizedBox(width: 8),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.arrow_forward_rounded, size: 15, color: Colors.white),
+                ),
               ],
             ),
           ),
@@ -266,24 +310,28 @@ class ProfileOperationsSuite extends StatelessWidget {
 
     if (isRiderOnly) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
         child: Bounceable(
           onTap: () {
             HapticFeedback.lightImpact();
             Navigator.push(context, FadeSlideRoute(page: const DeliveryDashboard()));
           },
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [AppDesignSystem.statusDeliveredText, AppDesignSystem.emerald600, AppDesignSystem.success],
+                colors: [
+                  Color(0xFF047857), // emerald 700
+                  Color(0xFF059669), // emerald 600
+                  Color(0xFF10B981), // emerald 500
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
-                  color: AppDesignSystem.emerald600.withValues(alpha: 0.3),
+                  color: const Color(0xFF059669).withValues(alpha: 0.28),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -297,41 +345,92 @@ class ProfileOperationsSuite extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.5),
                   ),
-                  child: Center(child: Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
+                  child: Center(
+                    child: Text('🛵', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
+                  ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            'Delivery Partner Dashboard',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: Colors.white),
+                          Flexible(
+                            child: Text(
+                              'Delivery Partner Dashboard',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 14),
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: -0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(6),
+                              color: Colors.white.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 0.8),
                             ),
-                            child: Text('ACTIVE', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: AppDesignSystem.emerald700)),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF6EE7B7),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'ACTIVE',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'Tap to open GPS routes & active order pickups ➔',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
+                        'Open GPS navigation & active order pickups',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.92),
+                          height: 1.25,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+                const SizedBox(width: 8),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.arrow_forward_rounded, size: 15, color: Colors.white),
+                ),
               ],
             ),
           ),
@@ -341,7 +440,7 @@ class ProfileOperationsSuite extends StatelessWidget {
 
     if (isChefOrOwnerOnly) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
         child: Bounceable(
           onTap: () {
             HapticFeedback.lightImpact();
@@ -353,17 +452,17 @@ class ProfileOperationsSuite extends StatelessWidget {
             );
           },
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [AppDesignSystem.rose900, AppDesignSystem.rose600, AppDesignSystem.rose600],
+                colors: [AppDesignSystem.rose900, AppDesignSystem.rose600, Color(0xFFBE123C)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
-                  color: AppDesignSystem.rose600.withValues(alpha: 0.3),
+                  color: AppDesignSystem.rose600.withValues(alpha: 0.28),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -377,38 +476,75 @@ class ProfileOperationsSuite extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.5),
                   ),
                   child: Center(child: Text('👨‍🍳', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            'Restaurant Kitchen Console',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: Colors.white),
+                          Flexible(
+                            child: Text(
+                              'Restaurant Kitchen Console',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 14),
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: -0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-                            child: Text('KITCHEN', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: AppDesignSystem.rose600)),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'KITCHEN',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 8.5),
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'Manage live cooking orders, KOT slips & menu ➔',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
+                        'Manage live cooking orders, KOT slips & menu',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.92),
+                          height: 1.25,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+                const SizedBox(width: 8),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.arrow_forward_rounded, size: 15, color: Colors.white),
+                ),
               ],
             ),
           ),
@@ -418,24 +554,24 @@ class ProfileOperationsSuite extends StatelessWidget {
 
     if (isPickerOnly) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
         child: Bounceable(
           onTap: () {
             HapticFeedback.lightImpact();
             Navigator.push(context, FadeSlideRoute(page: const PickerDashboard()));
           },
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [AppDesignSystem.indigo900, AppDesignSystem.indigo500, AppDesignSystem.indigo400],
+                colors: [Color(0xFF312E81), Color(0xFF4F46E5), Color(0xFF6366F1)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
-                  color: AppDesignSystem.indigo500.withValues(alpha: 0.3),
+                  color: const Color(0xFF4F46E5).withValues(alpha: 0.28),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -449,38 +585,75 @@ class ProfileOperationsSuite extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.5),
                   ),
                   child: Center(child: Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)))),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            'Picker Hub Console',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: Colors.white),
+                          Flexible(
+                            child: Text(
+                              'Picker Hub Console',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 14),
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: -0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-                            child: Text('PICKER', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 8.5), fontWeight: FontWeight.w900, color: AppDesignSystem.indigo900)),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'PICKER',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 8.5),
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'Pack orders, scan barcodes & assign riders ➔',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
+                        'Pack orders, scan barcodes & assign riders',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.92),
+                          height: 1.25,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+                const SizedBox(width: 8),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.arrow_forward_rounded, size: 15, color: Colors.white),
+                ),
               ],
             ),
           ),

@@ -37,7 +37,7 @@ class AppUpdateDialog extends StatelessWidget {
     if (settings == null) return;
     final activeSettings = settings;
 
-    const currentVer = AppConfig.appVersion;
+    final currentVer = AppConfig.appVersion;
     final minVer = activeSettings.minAppVersion;
     final latestVer = activeSettings.latestAppVersion;
 

@@ -151,6 +151,7 @@ export async function GET(request: Request) {
 
       return {
         id: p.id,
+        readableId: p.readableId,
         name: p.name,
         slug: p.slug,
         description: p.description,

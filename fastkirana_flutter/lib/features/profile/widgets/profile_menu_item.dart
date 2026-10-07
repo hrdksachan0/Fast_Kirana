@@ -34,14 +34,17 @@ class ProfileMenuItem extends StatelessWidget {
           HapticFeedback.lightImpact();
           onTap();
         },
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
         leading: Container(
-          padding: const EdgeInsets.all(8),
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
             color: iconBg,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: iconColor, size: 20),
+          child: Center(
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
         ),
         title: Row(
           children: [
@@ -52,6 +55,7 @@ class ProfileMenuItem extends StatelessWidget {
                   fontSize: Responsive.scaledFontSize(context, 13.5),
                   fontWeight: FontWeight.w800,
                   color: AppDesignSystem.slate900,
+                  letterSpacing: -0.2,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -60,7 +64,7 @@ class ProfileMenuItem extends StatelessWidget {
             if (badge != null) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: badgeColor != null ? badgeColor!.withValues(alpha: 0.12) : AppDesignSystem.slate100,
                   borderRadius: BorderRadius.circular(6),
@@ -77,15 +81,25 @@ class ProfileMenuItem extends StatelessWidget {
             ],
           ],
         ),
-        subtitle: Text(
-          subtitle,
-          style: GoogleFonts.inter(
-            fontSize: Responsive.scaledFontSize(context, 11),
-            fontWeight: FontWeight.w500,
-            color: AppDesignSystem.slate500,
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(
+            subtitle,
+            style: GoogleFonts.inter(
+              fontSize: Responsive.scaledFontSize(context, 11),
+              fontWeight: FontWeight.w500,
+              color: AppDesignSystem.slate500,
+              height: 1.25,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.slate400),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          size: 20,
+          color: AppDesignSystem.slate400,
+        ),
       ),
     );
   }

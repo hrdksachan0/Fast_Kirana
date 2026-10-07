@@ -291,12 +291,13 @@ class RiderBatchRoadmapCard extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   formattedAddr1,
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 11),
                                     color: slateMuted,
                                     fontWeight: FontWeight.w500,
+                                    height: 1.2,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
@@ -409,12 +410,13 @@ class RiderBatchRoadmapCard extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   formattedAddr2,
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 11),
                                     color: slateMuted,
                                     fontWeight: FontWeight.w500,
+                                    height: 1.2,
                                   ),
                                 ),
                               ],

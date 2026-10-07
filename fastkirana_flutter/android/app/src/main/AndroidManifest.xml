@@ -23,10 +23,10 @@
         android:hardwareAccelerated="true"
         android:networkSecurityConfig="@xml/network_security_config">
 
-        <!-- Google Maps API Key -->
+        <!-- Google Maps API Key (Injected via Gradle manifestPlaceholders) -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBA-OzFRbcw89zAZeELDWOiRl_Ce0uQYrc" />
+            android:value="${MAPS_API_KEY}" />
 
         <activity
             android:name=".MainActivity"

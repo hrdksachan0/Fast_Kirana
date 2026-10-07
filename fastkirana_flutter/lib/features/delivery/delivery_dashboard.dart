@@ -1338,12 +1338,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
   void _handleBackPress() {
     HapticFeedback.lightImpact();
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    } else {
-      ref.read(staffCustomerModeProvider.notifier).setCustomerMode(true);
-      Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
-    }
+    ref.read(staffCustomerModeProvider.notifier).setCustomerMode(true);
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
   @override

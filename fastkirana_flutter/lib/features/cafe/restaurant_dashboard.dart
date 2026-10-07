@@ -1263,11 +1263,8 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
 
   void _handleBackPress() {
     HapticFeedback.lightImpact();
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    } else {
-      SystemNavigator.pop();
-    }
+    ref.read(staffCustomerModeProvider.notifier).setCustomerMode(true);
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
   @override

@@ -12,6 +12,7 @@
 // from environment variables so they never appear in the repo or build logs.
 
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class AppConfig {
   // ─── API Endpoints ──────────────────────────────────────────────
@@ -96,8 +97,15 @@ class AppConfig {
 
   // ─── Build Information ──────────────────────────────────────────
   static const String appName = 'FastKirana';
-  static const String appVersion = '1.0.0';
-  static const int buildNumber = 1;
+  static String _runtimeAppVersion = '2.0.23';
+  static int _runtimeBuildNumber = 2023;
+
+  /// Dynamic app version (e.g. "2.0.23"), initialized from PackageInfo or defaulted from pubspec
+  static String get appVersion => _runtimeAppVersion;
+
+  /// Dynamic build number (e.g. 2023), initialized from PackageInfo or defaulted from pubspec
+  static int get buildNumber => _runtimeBuildNumber;
+
   static const String buildFlavor = String.fromEnvironment(
     'BUILD_FLAVOR',
     defaultValue: 'prod',
@@ -105,6 +113,23 @@ class AppConfig {
 
   static bool get isProduction => buildFlavor == 'prod';
   static bool get isDebug => !isProduction;
+
+  /// Load actual app version and build number from device OS Package Manager
+  static Future<void> initPackageInfo() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (info.version.isNotEmpty) {
+        _runtimeAppVersion = info.version;
+      }
+      final parsedBuild = int.tryParse(info.buildNumber);
+      if (parsedBuild != null) {
+        _runtimeBuildNumber = parsedBuild;
+      }
+      debugPrint('AppConfig: Loaded package version $appVersion+$buildNumber');
+    } catch (e) {
+      debugPrint('AppConfig: PackageInfo notice (using defaults): $e');
+    }
+  }
 
   // ─── Configuration Validation ───────────────────────────────────
   /// Checks that required secrets are present in the current build.

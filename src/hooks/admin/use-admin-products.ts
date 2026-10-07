@@ -86,12 +86,12 @@ export function useAdminProducts({
     name: '',
     description: '',
     imageUrl: '',
-    categoryId: categories?.[0]?.id || '',
+    categoryId: categories?.find((c: any) => !c.parentId)?.id || categories?.[0]?.id || '',
     restaurantId: '',
     mrp: '',
     price: '',
-    unit: '',
-    stock: '',
+    unit: '1 pc',
+    stock: '10',
     isAvailable: true,
     tags: '',
     minStock: '10',
@@ -119,9 +119,10 @@ export function useAdminProducts({
   // Auto-sync initial categoryId when categories finish loading
   useEffect(() => {
     if (!newProduct.categoryId && Array.isArray(categories) && categories.length > 0) {
+      const rootCat = categories.find((c: any) => !c.parentId)?.id || categories[0].id
       setNewProduct((prev) => ({
         ...prev,
-        categoryId: prev.categoryId || categories[0].id,
+        categoryId: prev.categoryId || rootCat,
       }))
     }
   }, [categories, newProduct.categoryId])
@@ -131,35 +132,38 @@ export function useAdminProducts({
   const isNewProductRestaurant = newProductType === 'restaurant'
   const isEditProductRestaurant = editProductType === 'restaurant'
 
-  const resetNewProductForm = useCallback(() => {
-    setNewProduct({
+  const resetNewProductForm = useCallback((preserveContext: boolean = false) => {
+    const rootCategory = categories?.find((c: any) => !c.parentId)?.id || categories?.[0]?.id || ''
+    setNewProduct((prev) => ({
       name: '',
       description: '',
       imageUrl: '',
-      categoryId: categories?.[0]?.id || '',
-      restaurantId: '',
+      categoryId: preserveContext ? (prev.categoryId || rootCategory) : rootCategory,
+      restaurantId: preserveContext ? prev.restaurantId : '',
       mrp: '',
       price: '',
-      unit: '',
-      stock: '',
+      unit: preserveContext ? (prev.unit || '1 pc') : '1 pc',
+      stock: '10',
       isAvailable: true,
       tags: '',
       minStock: '10',
       expiryDate: '',
       costPrice: '0',
-      location: '',
+      location: preserveContext ? prev.location : '',
       isFlashDeal: false,
       isTopPick: false,
       isBestSeller: false,
       sortOrder: '0',
       barcode: '',
-      vendor: '',
-      vendorId: '',
-    })
+      vendor: preserveContext ? prev.vendor : '',
+      vendorId: preserveContext ? prev.vendorId : '',
+    }))
     setNewProductVariants([])
     setHasVariantsNew(false)
     setNewCustomTag('')
-    setNewProductType('grocery')
+    if (!preserveContext) {
+      setNewProductType('grocery')
+    }
 
     if (typeof document !== 'undefined') {
       const vName = document.getElementById('new-var-name') as HTMLInputElement | null
@@ -402,7 +406,8 @@ export function useAdminProducts({
   const handleExportCsv = async (type: 'all' | 'grocery' | 'cafe') => {
     setIsExporting(true)
     try {
-      const url = `${apiUrl()}/api/admin/products?limit=5000${type !== 'all' ? `&type=${type}` : ''}`
+      const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+      const url = `${apiUrl()}/api/admin/products?limit=10000${type !== 'all' ? `&type=${type}` : ''}${storeQuery}`
       const res = await fetch(url, { headers: authHeaders })
       const data = await res.json()
 
@@ -419,9 +424,11 @@ export function useAdminProducts({
       }
 
       const headers = [
-        'ID',
+        'Item ID',
         'Name',
-        'Category',
+        'Type',
+        'Category / Section',
+        'Outlet / Restaurant',
         'Vendor',
         'Unit',
         'MRP',
@@ -436,15 +443,22 @@ export function useAdminProducts({
         'Barcode',
         'Display Order',
         'Variants',
+        'System ID',
       ]
 
       const csvRows = [headers.join(',')]
 
       exportProducts.forEach((p: any) => {
+        const itemType = p.restaurantId ? 'Restaurant Dish' : 'Grocery'
+        const categoryOrSection = p.category?.name || (p.restaurantId ? (p.restaurant?.name ? `${p.restaurant.name} Menu` : 'Restaurant Menu') : '')
+        const outletName = p.restaurant?.name || 'FastKirana'
+
         const row = [
-          p.id || '',
+          p.readableId?.toString() || p.id || '',
           p.name || '',
-          p.category?.name || '',
+          itemType,
+          categoryOrSection,
+          outletName,
           p.vendor || '',
           p.unit || '',
           p.mrp?.toString() || '0',
@@ -478,6 +492,7 @@ export function useAdminProducts({
               ? p.variants
               : ''
             : '',
+          p.id || '',
         ]
 
         const escapedRow = row.map((cell) => {
@@ -491,7 +506,8 @@ export function useAdminProducts({
         csvRows.push(escapedRow.join(','))
       })
 
-      const csvContent = csvRows.join('\n')
+      // \uFEFF BOM ensures Microsoft Excel on Windows parses UTF-8 encoding cleanly
+      const csvContent = '\uFEFF' + csvRows.join('\n')
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const urlBlob = URL.createObjectURL(blob)
 
@@ -505,7 +521,7 @@ export function useAdminProducts({
       link.click()
       URL.revokeObjectURL(urlBlob)
 
-      toast.success(`Successfully exported ${exportProducts.length} items!`)
+      toast.success(`Successfully exported ${exportProducts.length} items to Excel/CSV!`)
       setShowExportModal(false)
     } catch (err: any) {
       console.error(err)
@@ -846,7 +862,7 @@ export function useAdminProducts({
 
     let resolvedCategoryId = newProduct.categoryId
     if (!resolvedCategoryId && !isSpecialProduct && Array.isArray(categories) && categories.length > 0) {
-      resolvedCategoryId = categories[0].id
+      resolvedCategoryId = categories.find((c: any) => !c.parentId)?.id || categories[0].id
     }
 
     if (!isSpecialProduct && !resolvedCategoryId) {
@@ -856,6 +872,11 @@ export function useAdminProducts({
 
     if (requiresBasePrice && (!newProduct.price || !newProduct.mrp)) {
       toast.error('Please enter valid MRP and Selling Price *')
+      return
+    }
+
+    if (!isSpecialProduct && !hasVariantsNew && (newProduct.stock === '' || newProduct.stock === undefined || newProduct.stock === null)) {
+      toast.error('Please enter initial stock quantity (e.g. 10) *')
       return
     }
 
@@ -975,7 +996,7 @@ export function useAdminProducts({
           id: `product-created-${created.id || Date.now()}`,
           duration: 3000,
         })
-        resetNewProductForm()
+        resetNewProductForm(keepOpen)
         if (!keepOpen) {
           setShowAddProduct(false)
         } else {

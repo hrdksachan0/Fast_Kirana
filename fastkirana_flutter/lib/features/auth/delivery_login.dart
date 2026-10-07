@@ -131,9 +131,18 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
-
-      Navigator.pushReplacement(context, FadeSlideRoute(page: const DeliveryDashboard()));
+      await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(false);
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        FadeSlideRoute(page: const DeliveryDashboard()),
+        (route) => false,
+      );
     }
+  }
+
+  void _navigateBackToStore() {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
   Future<void> _handleOtpLogin() async {
@@ -184,23 +193,29 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppDesignSystem.slate50,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _navigateBackToStore();
+      },
+      child: Scaffold(
+        backgroundColor: AppDesignSystem.slate50,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
             ),
-            child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
+            onPressed: _navigateBackToStore,
           ),
-          onPressed: () => Navigator.pop(context),
         ),
-      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -371,6 +386,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

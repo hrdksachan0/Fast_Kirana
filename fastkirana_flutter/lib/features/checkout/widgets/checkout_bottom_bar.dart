@@ -45,10 +45,10 @@ class CheckoutBottomBar extends StatelessWidget {
                   Text(
                     'TOTAL BILL',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 9),
+                      fontSize: 10,
                       fontWeight: FontWeight.w800,
                       color: slateMuted,
-                      letterSpacing: 0.5,
+                      letterSpacing: 0,
                     ),
                   ),
                   Text(
@@ -57,55 +57,76 @@ class CheckoutBottomBar extends StatelessWidget {
                       fontSize: Responsive.scaledFontSize(context, 19),
                       fontWeight: FontWeight.w900,
                       color: slateDark,
-                      letterSpacing: -0.4,
+                      letterSpacing: 0,
                     ),
                   ),
                 ],
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: GestureDetector(
-                  onTap: isPlacingOrder ? null : onProceedToPay,
-                  child: Container(
-                    height: 44,
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  child: Ink(
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppDesignSystem.green700, AppDesignSystem.accentDark],
+                        colors: [
+                          AppDesignSystem.green700,
+                          AppDesignSystem.accentDark
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: AppDesignSystem.green700.withValues(alpha: 0.3),
+                          color:
+                              AppDesignSystem.green700.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
                       ],
                     ),
-                    child: Center(
-                      child: isPlacingOrder
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Proceed to Pay',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 13.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    letterSpacing: 0.2,
+                    child: InkWell(
+                      onTap: isPlacingOrder ? null : onProceedToPay,
+                      borderRadius: BorderRadius.circular(12),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
+                          child: Center(
+                            child: isPlacingOrder
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white, strokeWidth: 2),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          'Proceed to Pay',
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(
+                                                context, 13.5),
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                            letterSpacing: 0,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Icon(Icons.arrow_forward_rounded,
+                                          size: 16, color: Colors.white),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
-                              ],
-                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

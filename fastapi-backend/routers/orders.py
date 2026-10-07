@@ -594,9 +594,13 @@ async def create_order(
         else:
             continue
 
+        qty = int(raw_item.get("quantity", 1))
+        if qty <= 0:
+            raise HTTPException(status_code=400, detail="Item quantity must be a positive integer")
+
         normalized_items.append({
             "product": {
-                "id": str(prod_id) if prod_id else "",
+                "id": str(prod_id).split("_")[0] if prod_id else "",
                 "name": prod_name,
                 "slug": prod_slug,
                 "price": prod_price,
@@ -604,7 +608,7 @@ async def create_order(
                 "selectedAddons": addons_payload,
             },
             "productId": str(prod_id).split("_")[0] if prod_id else None,
-            "quantity": int(raw_item.get("quantity", 1)),
+            "quantity": qty,
             "price": prod_price,
             "selectedVariant": raw_item.get("selectedVariant"),
             "restaurantId": rest_id_payload,
@@ -1438,9 +1442,7 @@ async def create_order(
                 logger.warning(f"FastAPI idempotency check error: {idemp_err}")
 
         if payment_method != "COD":
-            if incoming_payment_status == "PAID" or bool(incoming_payment_id):
-                is_online_paid = True
-            elif incoming_cf_order_id:
+            if incoming_cf_order_id:
                 # 1. Check Redis cache first (in case webhook fired before client checkout completed)
                 try:
                     from utils.cache import get_cache

@@ -14,6 +14,7 @@ import '../../core/network/api_client.dart';
 import '../../core/utils/order_item_helper.dart';
 import '../../core/services/secure_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/store_serviceability_sheet.dart';
 import 'widgets/admin_console_skeletons.dart';
 
@@ -936,15 +937,32 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     );
   }
 
+  void _handleBackPress() {
+    HapticFeedback.lightImpact();
+    ref.read(staffCustomerModeProvider.notifier).setCustomerMode(true);
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: widget.showAppBar
-          ? AppBar(
-              backgroundColor: slateDark,
-              elevation: 0,
-              title: Column(
+    return PopScope(
+      canPop: !widget.showAppBar,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBackPress();
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: widget.showAppBar
+            ? AppBar(
+                backgroundColor: slateDark,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+                  tooltip: 'Back to Store',
+                  onPressed: _handleBackPress,
+                ),
+                title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -1158,6 +1176,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                     ),
                   ],
                 ),
+      ),
     );
   }
 

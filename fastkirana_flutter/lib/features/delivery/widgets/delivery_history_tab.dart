@@ -337,8 +337,8 @@ class DeliveryHistoryTab extends StatelessWidget {
                                       ),
                                       Text(
                                         addr,
-                                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: slateMuted),
-                                        maxLines: 1,
+                                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: slateMuted, height: 1.25),
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ],

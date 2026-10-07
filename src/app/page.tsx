@@ -286,7 +286,12 @@ const getCachedStoreSettings = unstable_cache(
     return prisma.storeSetting.findMany({
       where: {
         key: {
-          in: ['avg_delivery_time', 'delivered_today', 'fresh_stock_loaded', 'happy_families', 'grocery_mart_open', 'grocery_auto_timing', 'grocery_open_time', 'grocery_close_time']
+          in: [
+            'avg_delivery_time', 'delivered_today', 'fresh_stock_loaded', 'happy_families',
+            'grocery_mart_open', 'grocery_auto_timing', 'grocery_open_time', 'grocery_close_time',
+            'restaurant_open', 'restaurant_auto_timing', 'restaurant_open_time', 'restaurant_close_time',
+            'cafe_open', 'cafe_auto_timing', 'cafe_open_time', 'cafe_close_time'
+          ]
         }
       }
     })

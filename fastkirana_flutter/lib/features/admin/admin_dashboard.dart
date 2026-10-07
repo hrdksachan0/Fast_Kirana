@@ -54,8 +54,10 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     );
 
     if (shouldLogout == true && mounted) {
-      Navigator.pop(context);
-      unawaited(ref.read(authProvider.notifier).clear());
+      await ref.read(authProvider.notifier).clear();
+      await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(false);
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     }
   }
 
@@ -232,11 +234,12 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
 
   void _handleBackPress() {
     HapticFeedback.lightImpact();
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    } else {
-      Navigator.pushReplacementNamed(context, '/home');
+    if (_currentIndex != 0) {
+      setState(() => _currentIndex = 0);
+      return;
     }
+    ref.read(staffCustomerModeProvider.notifier).setCustomerMode(true);
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
   @override
@@ -476,11 +479,12 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
         ),
       ),
 
-      // Modern Floating Pill Navigation Dock (Zero Overflow)
+      // Modern Floating Pill Navigation Dock (Guaranteed Zero Truncation)
       bottomNavigationBar: Container(
         color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         child: SafeArea(
+          top: false,
           child: Row(
             children: [
               Expanded(
@@ -540,10 +544,10 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 5),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 3),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(13),
           border: Border.all(
             color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
             width: 1.2,
@@ -551,57 +555,57 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.18),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ]
               : null,
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(4.5),
               decoration: BoxDecoration(
                 color: isSelected ? primaryRed : const Color(0xFFE2E8F0),
                 borderRadius: BorderRadius.circular(7),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? Colors.white : const Color(0xFF64748B),
-                size: 15,
+                color: isSelected ? Colors.white : const Color(0xFF475569),
+                size: 16,
               ),
             ),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 11),
-                      fontWeight: FontWeight.w900,
-                      color: isSelected ? Colors.white : const Color(0xFF0F172A),
-                      height: 1.1,
-                    ),
-                  ),
-                  Text(
-                    sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 8.5),
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                      height: 1.1,
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 3.5),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 11),
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w800,
+                  color: isSelected ? Colors.white : const Color(0xFF0F172A),
+                  letterSpacing: -0.2,
+                  height: 1.1,
+                ),
+              ),
+            ),
+            const SizedBox(height: 1.5),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                sub,
+                maxLines: 1,
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 8.5),
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  letterSpacing: -0.1,
+                  height: 1.1,
+                ),
               ),
             ),
           ],

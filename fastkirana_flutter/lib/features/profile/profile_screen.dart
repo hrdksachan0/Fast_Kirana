@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/routes/page_transitions.dart';
+import '../../core/config/app_config.dart';
 import '../../core/theme/design_system.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -285,15 +286,28 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        title,
-        style: GoogleFonts.inter(
-          fontSize: Responsive.scaledFontSize(context, 10.5),
-          fontWeight: FontWeight.w800,
-          color: AppDesignSystem.slate400,
-          letterSpacing: 0.8,
-        ),
+      padding: const EdgeInsets.only(left: 4, bottom: 9, top: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 3.5,
+            height: 12,
+            decoration: BoxDecoration(
+              color: AppDesignSystem.red600.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: Responsive.scaledFontSize(context, 11),
+              fontWeight: FontWeight.w800,
+              color: AppDesignSystem.slate500,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -346,231 +360,234 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppDesignSystem.slate50,
-      body: SafeArea(
-        bottom: false,
-        child: ResponsiveContainer(
-          maxWidth: Responsive.wideMaxContentWidth,
-          fillHeight: true,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // ─── 1. Luxury Glassmorphic Header ─────────────────────────────
-              SliverToBoxAdapter(
-                child: ProfileHeaderCard(
-                  user: user,
-                  name: name,
-                  phoneDisplay: phoneDisplay,
-                  onEditProfile: () {
-                    if (user != null) {
-                      ProfileEditModal.show(context, ref, user);
-                    }
-                  },
-                ),
+      body: ResponsiveContainer(
+        maxWidth: Responsive.wideMaxContentWidth,
+        fillHeight: true,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // ─── 1. Luxury Glassmorphic Header ─────────────────────────────
+            SliverToBoxAdapter(
+              child: ProfileHeaderCard(
+                user: user,
+                name: name,
+                phoneDisplay: phoneDisplay,
+                onEditProfile: () {
+                  if (user != null) {
+                    ProfileEditModal.show(context, ref, user);
+                  }
+                },
               ),
+            ),
 
-              // ─── 2. Operations Suite (Admin, Rider, Chef, Picker, Vendor) ──────────
-              SliverToBoxAdapter(
-                child: ProfileOperationsSuite(
-                  isAdmin: isAdmin,
-                  isRiderOnly: isRiderOnly,
-                  isChefOrOwnerOnly: isChefOrOwnerOnly,
-                  isPickerOnly: isPickerOnly,
-                  isVendorOnly: isVendorOnly,
-                  assignedRestaurantId: user?.assignedRestaurantId,
-                ),
+            // ─── 2. Operations Suite (Admin, Rider, Chef, Picker, Vendor) ──────────
+            SliverToBoxAdapter(
+              child: ProfileOperationsSuite(
+                isAdmin: isAdmin,
+                isRiderOnly: isRiderOnly,
+                isChefOrOwnerOnly: isChefOrOwnerOnly,
+                isPickerOnly: isPickerOnly,
+                isVendorOnly: isVendorOnly,
+                assignedRestaurantId: user?.assignedRestaurantId,
               ),
+            ),
 
-              // ─── 3. Quick Stats Grid ────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: ProfileQuickStats(
-                  ordersCount: ordersCount,
-                  wishlistCount: wishlist.length,
-                  addressesCount: addresses.length,
-                  isLoggedIn: user != null,
-                  onOrdersTap: () {
-                    if (user == null) {
-                      Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
-                    } else {
-                      Navigator.push(context, FadeSlideRoute(page: const OrdersScreen()));
-                    }
-                  },
-                  onWishlistTap: () => Navigator.push(context, FadeSlideRoute(page: const WishlistScreen())),
-                  onAddressesTap: () => Navigator.push(context, FadeSlideRoute(page: const AddressBookScreen())),
-                ),
+            // ─── 3. Quick Stats Grid ────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: ProfileQuickStats(
+                ordersCount: ordersCount,
+                wishlistCount: wishlist.length,
+                addressesCount: addresses.length,
+                isLoggedIn: user != null,
+                onOrdersTap: () {
+                  if (user == null) {
+                    Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
+                  } else {
+                    Navigator.push(context, FadeSlideRoute(page: const OrdersScreen()));
+                  }
+                },
+                onWishlistTap: () => Navigator.push(context, FadeSlideRoute(page: const WishlistScreen())),
+                onAddressesTap: () => Navigator.push(context, FadeSlideRoute(page: const AddressBookScreen())),
               ),
+            ),
 
-              // ─── 4. Structured Clean Settings Groups ───────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Section 1: Account & Preferences
-                      _buildSectionHeader(context, 'ACCOUNT & ADDRESSES'),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppDesignSystem.slate900.withValues(alpha: 0.03),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+            // ─── 4. Structured Clean Settings Groups ───────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Section 1: Account & Preferences
+                    _buildSectionHeader(context, 'ACCOUNT & ADDRESSES'),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: AppDesignSystem.slate200.withValues(alpha: 0.7),
+                          width: 1.1,
                         ),
-                        child: Column(
-                          children: [
-                            ProfileMenuItem(
-                              icon: Icons.location_on_rounded,
-                              iconBg: AppDesignSystem.green50,
-                              iconColor: AppDesignSystem.emerald600,
-                              title: 'Saved Addresses',
-                              subtitle: addresses.isNotEmpty ? '${addresses.length} locations saved in Ghatampur' : 'Add home, office or shop location',
-                              badge: addresses.isNotEmpty ? '${addresses.length}' : null,
-                              onTap: () => Navigator.push(context, FadeSlideRoute(page: const AddressBookScreen())),
-                            ),
-                            const Divider(height: 1, color: AppDesignSystem.slate100),
-                            ProfileMenuItem(
-                              icon: Icons.notifications_active_rounded,
-                              iconBg: AppDesignSystem.indigo50,
-                              iconColor: AppDesignSystem.indigo700,
-                              title: 'Notifications & Alerts',
-                              subtitle: 'Order tracking, offers & dispatch updates',
-                              onTap: () {
-                                if (user == null) {
-                                  Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
-                                } else {
-                                  Navigator.push(context, FadeSlideRoute(page: const NotificationsScreen()));
-                                }
-                              },
-                            ),
-                            if (user != null) ...[
-                              const Divider(height: 1, color: AppDesignSystem.slate100),
-                              ProfileMenuItem(
-                                icon: Icons.edit_note_rounded,
-                                iconBg: AppDesignSystem.slate50,
-                                iconColor: AppDesignSystem.slate600,
-                                title: 'Personal Information',
-                                subtitle: 'Edit your name, phone & email',
-                                onTap: () => ProfileEditModal.show(context, ref, user),
-                              ),
-                            ],
-                          ],
-                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppDesignSystem.slate900.withValues(alpha: 0.03),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-
-                      const SizedBox(height: 16),
-
-                      // Section 2: Help & Support
-                      _buildSectionHeader(context, 'SUPPORT & FASTKIRANA'),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppDesignSystem.slate100, width: 1.2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppDesignSystem.slate900.withValues(alpha: 0.03),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            ProfileMenuItem(
-                              icon: Icons.headset_mic_rounded,
-                              iconBg: AppDesignSystem.violet50,
-                              iconColor: AppDesignSystem.fuchsia700,
-                              title: '24x7 Customer Support',
-                              subtitle: 'Direct WhatsApp & phone assistance',
-                              onTap: () => _showSupportModal(context),
-                            ),
+                      child: Column(
+                        children: [
+                          ProfileMenuItem(
+                            icon: Icons.location_on_rounded,
+                            iconBg: AppDesignSystem.green50,
+                            iconColor: AppDesignSystem.emerald600,
+                            title: 'Saved Addresses',
+                            subtitle: addresses.isNotEmpty ? '${addresses.length} locations saved in Ghatampur' : 'Add home, office or shop location',
+                            badge: addresses.isNotEmpty ? '${addresses.length}' : null,
+                            onTap: () => Navigator.push(context, FadeSlideRoute(page: const AddressBookScreen())),
+                          ),
+                          const Divider(height: 1, color: AppDesignSystem.slate100),
+                          ProfileMenuItem(
+                            icon: Icons.notifications_active_rounded,
+                            iconBg: AppDesignSystem.indigo50,
+                            iconColor: AppDesignSystem.indigo700,
+                            title: 'Notifications & Alerts',
+                            subtitle: 'Order tracking, offers & dispatch updates',
+                            onTap: () {
+                              if (user == null) {
+                                Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
+                              } else {
+                                Navigator.push(context, FadeSlideRoute(page: const NotificationsScreen()));
+                              }
+                            },
+                          ),
+                          if (user != null) ...[
                             const Divider(height: 1, color: AppDesignSystem.slate100),
                             ProfileMenuItem(
-                              icon: Icons.star_rounded,
-                              iconBg: AppDesignSystem.amber50,
-                              iconColor: AppDesignSystem.amber600,
-                              title: 'Rate FastKirana App',
-                              subtitle: 'Love 10-min delivery? Rate us on Play Store',
-                              badge: '5.0 ★',
-                              onTap: () => _showRateAppDialog(context),
+                              icon: Icons.edit_note_rounded,
+                              iconBg: AppDesignSystem.slate50,
+                              iconColor: AppDesignSystem.slate600,
+                              title: 'Personal Information',
+                              subtitle: 'Edit your name, phone & email',
+                              onTap: () => ProfileEditModal.show(context, ref, user),
                             ),
-                            const Divider(height: 1, color: AppDesignSystem.slate100),
-                            ProfileMenuItem(
-                              icon: Icons.share_rounded,
-                              iconBg: AppDesignSystem.blue50,
-                              iconColor: AppDesignSystem.blue600,
-                              title: 'Share with Friends & Family',
-                              subtitle: 'Invite neighbours to 10-min delivery',
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                Share.share(
-                                  '⚡ FastKirana Express: Order Groceries & Food in 10-15 mins!\n\nDownload app: https://www.fastkirana.in',
-                                  subject: 'FastKirana Express',
-                                );
-                              },
-                            ),
-                            if (user != null) ...[
-                              const Divider(height: 1, color: AppDesignSystem.slate100),
-                              ProfileMenuItem(
-                                icon: Icons.logout_rounded,
-                                iconBg: AppDesignSystem.statusCancelled,
-                                iconColor: primaryRed,
-                                title: 'Log Out',
-                                subtitle: 'Sign out from this phone',
-                                onTap: () => _showLogoutDialog(context, ref),
-                              ),
-                            ],
                           ],
-                        ),
+                        ],
                       ),
+                    ),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
-                      // Version & Ghatampur Stamp
-                      Center(
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppDesignSystem.success, shape: BoxShape.circle)),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'FastKirana Express v1.0.0',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 11),
-                                    fontWeight: FontWeight.w700,
-                                    color: AppDesignSystem.slate400,
-                                  ),
+                    // Section 2: Help & Support
+                    _buildSectionHeader(context, 'SUPPORT & FASTKIRANA'),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: AppDesignSystem.slate200.withValues(alpha: 0.7),
+                          width: 1.1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppDesignSystem.slate900.withValues(alpha: 0.03),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          ProfileMenuItem(
+                            icon: Icons.headset_mic_rounded,
+                            iconBg: AppDesignSystem.violet50,
+                            iconColor: AppDesignSystem.fuchsia700,
+                            title: '24x7 Customer Support',
+                            subtitle: 'Direct WhatsApp & phone assistance',
+                            onTap: () => _showSupportModal(context),
+                          ),
+                          const Divider(height: 1, color: AppDesignSystem.slate100),
+                          ProfileMenuItem(
+                            icon: Icons.star_rounded,
+                            iconBg: AppDesignSystem.amber50,
+                            iconColor: AppDesignSystem.amber600,
+                            title: 'Rate FastKirana App',
+                            subtitle: 'Love 10-min delivery? Rate us on Play Store',
+                            badge: '5.0 ★',
+                            onTap: () => _showRateAppDialog(context),
+                          ),
+                          const Divider(height: 1, color: AppDesignSystem.slate100),
+                          ProfileMenuItem(
+                            icon: Icons.share_rounded,
+                            iconBg: AppDesignSystem.blue50,
+                            iconColor: AppDesignSystem.blue600,
+                            title: 'Share with Friends & Family',
+                            subtitle: 'Invite neighbours to 10-min delivery',
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              Share.share(
+                                '⚡ FastKirana Express: Order Groceries & Food in 10-15 mins!\n\nDownload app: https://www.fastkirana.in',
+                                subject: 'FastKirana Express',
+                              );
+                            },
+                          ),
+                          if (user != null) ...[
+                            const Divider(height: 1, color: AppDesignSystem.slate100),
+                            ProfileMenuItem(
+                              icon: Icons.logout_rounded,
+                              iconBg: AppDesignSystem.statusCancelled,
+                              iconColor: primaryRed,
+                              title: 'Log Out',
+                              subtitle: 'Sign out from this phone',
+                              onTap: () => _showLogoutDialog(context, ref),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Version & Ghatampur Stamp
+                    Center(
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppDesignSystem.success, shape: BoxShape.circle)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'FastKirana Express v${AppConfig.appVersion}',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w700,
+                                  color: AppDesignSystem.slate400,
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Proudly Serving Ghatampur, Kanpur Nagar ❤️',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 10.5),
-                                fontWeight: FontWeight.w600,
-                                color: AppDesignSystem.slate300,
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Proudly Serving Ghatampur, Kanpur Nagar ❤️',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w600,
+                              color: AppDesignSystem.slate300,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 120),
-              ),
-            ],
-          ),
+            ),
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 96),
+            ),
+          ],
         ),
       ),
     );

@@ -75,14 +75,15 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       await SecureStorage.write('user_role', 'ADMIN');
 
       ref.read(authProvider.notifier).setUser(adminUser);
+      await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(false);
 
       HapticFeedback.heavyImpact();
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      Navigator.pushReplacement(
-        context,
+      Navigator.of(context).pushAndRemoveUntil(
         FadeSlideRoute(page: const AdminDashboard()),
+        (route) => false,
       );
     } catch (e) {
       // Admin login requires online authentication. No offline fallback.
@@ -95,6 +96,11 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     }
   }
 
+  void _navigateBackToStore() {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -104,16 +110,22 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppDesignSystem.gray50,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppDesignSystem.gray900),
-          onPressed: () => Navigator.pop(context),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _navigateBackToStore();
+      },
+      child: Scaffold(
+        backgroundColor: AppDesignSystem.gray50,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppDesignSystem.gray900),
+            onPressed: _navigateBackToStore,
+          ),
         ),
-      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -335,6 +347,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

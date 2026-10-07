@@ -228,11 +228,6 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     offset: Offset(0, s(2.5)),
                     spreadRadius: 0,
                   ),
-                  BoxShadow(
-                    color: primaryColor.withValues(alpha: 0.02),
-                    blurRadius: s(4),
-                    offset: Offset(0, s(1)),
-                  ),
                 ],
               ),
               child: Column(
@@ -273,7 +268,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF0F172A),
                               height: 1.24,
-                              letterSpacing: -0.2,
+                              letterSpacing: 0,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,

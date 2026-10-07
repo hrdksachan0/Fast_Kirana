@@ -57,6 +57,8 @@ __pycache__/
 scratch/
 scratch-db-test.ts
 restaurant-card.html
+audit-*.png
+.impeccable/
 
 # scripts run once during development
 scripts/

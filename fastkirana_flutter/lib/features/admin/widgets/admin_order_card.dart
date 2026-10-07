@@ -617,7 +617,7 @@ class AdminOrderCard extends ConsumerWidget {
                               child: Text(
                                 custAddr,
                                 style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: AppDesignSystem.slate500, height: 1.3),
-                                maxLines: 2,
+                                maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),

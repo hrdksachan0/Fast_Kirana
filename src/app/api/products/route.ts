@@ -665,9 +665,6 @@ function getFuzzyScore(query: string, target: string): number {
 }
 
 export async function POST(request: NextRequest) {
-  const limited = await apiWriteLimiter.check(request)
-  if (limited) return limited
-
   const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session

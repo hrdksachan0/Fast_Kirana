@@ -586,7 +586,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       onPressed: () {
                                         final rawPhone = _phoneController.text.replaceAll(RegExp(r'\D'), '').trim();
                                         final phone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
-                                        Navigator.pushNamed(
+                                        Navigator.pushReplacementNamed(
                                           context,
                                           '/staff/login',
                                           arguments: {'phone': phone, 'passwordMode': true},
@@ -651,7 +651,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 onTap: () {
                                   final rawPhone = _phoneController.text.replaceAll(RegExp(r'\D'), '').trim();
                                   final phone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
-                                  Navigator.pushNamed(
+                                  Navigator.pushReplacementNamed(
                                     context,
                                     '/staff/login',
                                     arguments: {'phone': phone, 'passwordMode': false},

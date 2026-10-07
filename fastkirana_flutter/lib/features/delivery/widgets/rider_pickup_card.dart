@@ -310,8 +310,8 @@ class RiderPickupCard extends StatelessWidget {
                             ),
                             Text(
                               outlet.address,
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), color: AppDesignSystem.slate500),
-                              maxLines: 1,
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), color: AppDesignSystem.slate500, height: 1.25),
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
@@ -622,14 +622,21 @@ class RiderPickupCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppDesignSystem.info, shape: BoxShape.circle)),
+                          Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(color: AppDesignSystem.info, shape: BoxShape.circle),
+                          ),
                           const SizedBox(width: 6),
                           Text('DELIVER: ', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w800, color: slateMuted)),
                           Expanded(
                             child: Text(
                               deliverAddress,
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: slateDark),
+                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: slateDark, height: 1.25),
+                              maxLines: 3,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),

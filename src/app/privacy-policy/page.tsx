@@ -10,20 +10,20 @@ export default function PrivacyPolicyPage() {
     <div className="bg-background min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto bg-card p-8 rounded-2xl shadow-sm border border-border">
         <h1 className="text-3xl font-extrabold text-foreground tracking-tight mb-6">
-          Privacy Policy
+          Privacy Policy — FastKirana
         </h1>
         <p className="text-muted-foreground text-sm mb-8">
-          Last Updated: July 14, 2026
+          Last Updated: October 7, 2026 | Applicable to: FastKirana Android App (com.fastkirana.app) and fastkirana.in
         </p>
 
         <div className="space-y-8 text-foreground/90 leading-relaxed">
           <section>
             <h2 className="text-xl font-bold text-foreground mb-3">1. Introduction</h2>
             <p className="text-muted-foreground">
-              Fast Kirana ("we", "us", or "our") built the Fast Kirana app and website as a commercial service. This service is provided at no cost for app downloads and is intended for use "as is".
+              FastKirana ("we", "us", or "our") operates the FastKirana mobile application (Package ID: <strong>com.fastkirana.app</strong>) and the official website (<a href="https://www.fastkirana.in" className="text-primary hover:underline">www.fastkirana.in</a>). This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service.
             </p>
             <p className="text-muted-foreground mt-2">
-              If you choose to use our Service, then you agree to the collection and use of information in relation to this policy. The personal information that we collect is used for providing and improving the Service. We will not use or share your information with anyone except as described in this Privacy Policy.
+              By using FastKirana, you agree to the collection and use of information in accordance with this policy. We do not sell your personal data to any third party.
             </p>
           </section>
 
@@ -36,8 +36,9 @@ export default function PrivacyPolicyPage() {
               <li><strong>Name:</strong> To address you and personalize your account.</li>
               <li><strong>Email Address:</strong> For login authentication, transaction invoices, and customer support.</li>
               <li><strong>Phone Number:</strong> For secure OTP authentication and coordination of delivery.</li>
-              <li><strong>Location Data:</strong> To check service availability in your area (e.g. Ghatampur) and navigate delivery partners to your exact address.</li>
-              <li><strong>Purchase & Payment History:</strong> To track order status, process refunds, and show previous checkout histories.</li>
+              <li><strong>Location Data (Foreground and Background):</strong> FastKirana collects location data to determine service availability in your area (e.g. Ghatampur), calculate delivery fees, navigate delivery personnel to your selected drop-off address, and provide live delivery tracking while an order is active.</li>
+              <li><strong>Purchase & Payment Information:</strong> To track order status, process refunds via authorized payment gateways (e.g. Cashfree), and show previous checkout histories. We do not store sensitive payment card or bank PIN credentials.</li>
+              <li><strong>Device & Push Notification Tokens:</strong> Firebase Cloud Messaging (FCM) tokens to deliver transactional order updates and delivery alerts.</li>
             </ul>
           </section>
 
@@ -47,7 +48,7 @@ export default function PrivacyPolicyPage() {
               You have the right to request the deletion of your account and all associated personal data at any time.
             </p>
             <p className="text-muted-foreground mt-2">
-              To request account and data deletion, please contact our support team directly at: <a href="mailto:iamuv2609@gmail.com" className="text-rose-600 hover:underline font-medium">iamuv2609@gmail.com</a>. We will process your request and securely purge all your personal identity records from our production databases within 7 business days.
+              Users can delete their account directly inside the FastKirana App via <strong>Settings &gt; Delete Account</strong>, or submit a data deletion request by emailing us at <a href="mailto:fastkiranadelivery@gmail.com" className="text-primary hover:underline font-medium">fastkiranadelivery@gmail.com</a>. Upon receipt, all personal identity records, saved addresses, and profile data will be permanently purged from our active databases within 7 business days.
             </p>
           </section>
 
@@ -64,9 +65,10 @@ export default function PrivacyPolicyPage() {
               We may employ third-party companies and individuals due to the following reasons:
             </p>
             <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
-              <li>To facilitate our Service (e.g. database services, image hosting).</li>
-              <li>To process transactions securely (e.g. Cashfree payment integration).</li>
-              <li>To send transactional SMS notifications (OTP) and push notifications.</li>
+              <li><strong>Google Maps Platform:</strong> For geocoding delivery addresses, calculating distance, and optimizing delivery routes.</li>
+              <li><strong>Firebase (Google LLC):</strong> For Cloud Messaging push notifications (FCM) and delivery status alerts.</li>
+              <li><strong>Cashfree Payments India:</strong> To process digital payments, UPI, and refunds securely complying with RBI security protocols.</li>
+              <li><strong>Supabase / Cloud Infrastructure:</strong> For encrypted database hosting and authentication services.</li>
             </ul>
           </section>
 

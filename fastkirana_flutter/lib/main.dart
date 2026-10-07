@@ -13,6 +13,7 @@ import 'core/services/notification_service.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/secure_storage_service.dart';
 import 'core/services/deep_link_service.dart';
+import 'core/config/app_config.dart';
 import 'data/repositories/product_repository.dart';
 import 'firebase_options.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -197,6 +198,14 @@ Future<void> _initializeBackgroundServices() async {
             debugPrint("DeepLink background initialization notice: $e");
           }
         })(),
+
+      (() async {
+        try {
+          await AppConfig.initPackageInfo();
+        } catch (e) {
+          debugPrint("AppConfig package info notice: $e");
+        }
+      })(),
     ]);
   } catch (e) {
     debugPrint("Background services batch notice: $e");

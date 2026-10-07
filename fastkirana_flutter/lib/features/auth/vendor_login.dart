@@ -224,32 +224,34 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
         if (!mounted) return;
         setState(() => _isLoading = false);
 
-        // Direct Console Navigation for Staff Login
+        // Direct Console Navigation for Staff Login (Clear auth backstack so back press doesn't show login page)
+        await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(false);
+        if (!mounted) return;
+
+        Widget targetConsole;
         if (roleUpper == 'ADMIN') {
-          Navigator.pushReplacement(context, FadeSlideRoute(page: const AdminDashboard()));
+          targetConsole = const AdminDashboard();
         } else if (roleUpper == 'DELIVERY' || roleUpper == 'RIDER' || roleUpper == 'DELIVERY_PARTNER') {
-          Navigator.pushReplacement(context, FadeSlideRoute(page: const DeliveryDashboard()));
+          targetConsole = const DeliveryDashboard();
         } else if (roleUpper == 'RESTAURANT_OWNER' || roleUpper == 'CHEF' || roleUpper == 'RESTAURANT') {
-          Navigator.pushReplacement(
-            context,
-            FadeSlideRoute(page: RestaurantDashboard(initialRestaurantId: user.assignedRestaurantId)),
-          );
+          targetConsole = RestaurantDashboard(initialRestaurantId: user.assignedRestaurantId);
         } else if (roleUpper == 'PICKER') {
-          Navigator.pushReplacement(context, FadeSlideRoute(page: const PickerDashboard()));
+          targetConsole = const PickerDashboard();
         } else if (roleUpper == 'VENDOR' || activeVendorId != null) {
-          Navigator.pushReplacement(
-            context,
-            FadeSlideRoute(
-              page: VendorConsoleScreen(
-                initialVendorId: activeVendorId,
-                isVendorSelf: true,
-              ),
-            ),
+          targetConsole = VendorConsoleScreen(
+            initialVendorId: activeVendorId,
+            isVendorSelf: true,
           );
         } else {
           // Standard customer without staff role
           _showNonStaffDialog();
+          return;
         }
+
+        Navigator.of(context).pushAndRemoveUntil(
+          FadeSlideRoute(page: targetConsole),
+          (route) => false,
+        );
       } else {
         setState(() => _errorMessage = 'Invalid OTP code. Please try again.');
         HapticFeedback.vibrate();
@@ -326,25 +328,29 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
         setState(() => _isLoading = false);
 
         final roleUpper = role.toUpperCase();
+        await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(false);
+        if (!mounted) return;
+
+        Widget targetConsole;
         if (roleUpper == 'ADMIN') {
-          Navigator.pushReplacement(context, FadeSlideRoute(page: const AdminDashboard()));
+          targetConsole = const AdminDashboard();
         } else if (roleUpper == 'DELIVERY' || roleUpper == 'RIDER' || roleUpper == 'DELIVERY_PARTNER') {
-          Navigator.pushReplacement(context, FadeSlideRoute(page: const DeliveryDashboard()));
+          targetConsole = const DeliveryDashboard();
         } else if (roleUpper == 'RESTAURANT_OWNER' || roleUpper == 'CHEF' || roleUpper == 'RESTAURANT') {
-          Navigator.pushReplacement(
-            context,
-            FadeSlideRoute(page: RestaurantDashboard(initialRestaurantId: user.assignedRestaurantId)),
-          );
+          targetConsole = RestaurantDashboard(initialRestaurantId: user.assignedRestaurantId);
         } else if (roleUpper == 'PICKER') {
-          Navigator.pushReplacement(context, FadeSlideRoute(page: const PickerDashboard()));
+          targetConsole = const PickerDashboard();
         } else if (roleUpper == 'VENDOR') {
-          Navigator.pushReplacement(
-            context,
-            FadeSlideRoute(page: const VendorConsoleScreen(isVendorSelf: true)),
-          );
+          targetConsole = const VendorConsoleScreen(isVendorSelf: true);
         } else {
-          Navigator.pushReplacementNamed(context, '/main');
+          Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+          return;
         }
+
+        Navigator.of(context).pushAndRemoveUntil(
+          FadeSlideRoute(page: targetConsole),
+          (route) => false,
+        );
       } else {
         throw Exception('Login failed');
       }
@@ -356,6 +362,11 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
       });
       HapticFeedback.vibrate();
     }
+  }
+
+  void _navigateBackToStore() {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
   void _showNonStaffDialog() {
@@ -382,7 +393,7 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
             ),
             onPressed: () {
               Navigator.pop(ctx);
-              Navigator.pushReplacementNamed(context, '/main');
+              Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
             },
             child: const Text('Shop as Customer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
@@ -393,17 +404,34 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: slateDark,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _navigateBackToStore();
+      },
+      child: Scaffold(
+        backgroundColor: slateDark,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Positioned(
+                top: 8,
+                left: 12,
+                child: IconButton(
+                  onPressed: _navigateBackToStore,
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70),
+                  tooltip: 'Back to Store',
+                ),
+              ),
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                   // App Icon Container
                   Container(
                     width: 76,
@@ -797,13 +825,7 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
                   const SizedBox(height: 24),
                   // Back to store
                   TextButton.icon(
-                    onPressed: () {
-                      if (Navigator.canPop(context)) {
-                        Navigator.pop(context);
-                      } else {
-                        Navigator.pushReplacementNamed(context, '/main');
-                      }
-                    },
+                    onPressed: _navigateBackToStore,
                     icon: const Icon(Icons.arrow_back_rounded, size: 15, color: Color(0xFF94A3B8)),
                     label: Text(
                       'Back to Store (Customer App)',
@@ -813,6 +835,9 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
                 ],
               ),
             ),
+          ),
+              ),
+            ],
           ),
         ),
       ),

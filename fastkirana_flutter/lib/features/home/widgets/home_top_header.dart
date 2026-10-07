@@ -137,7 +137,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                     fontWeight: FontWeight.w900,
                                     color: AppDesignSystem.textPrimary,
                                     height: 1.15,
-                                    letterSpacing: -0.3,
+                                    letterSpacing: 0,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -154,13 +154,15 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                 ),
               ),
 
-              // Notification Icon with sleek double-bezel ambient container
-              GestureDetector(
-                onTap: () {
+              IconButton(
+                tooltip: 'Notifications',
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                onPressed: () {
                   HapticFeedback.selectionClick();
                   Navigator.push(context, FadeSlideRoute(page: const NotificationsScreen()));
                 },
-                child: Container(
+                icon: Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
@@ -220,11 +222,6 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                     color: const Color(0xFF0F172A).withValues(alpha: 0.05),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
-                  ),
-                  BoxShadow(
-                    color: AppDesignSystem.primary.withValues(alpha: 0.05),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
                   ),
                 ],
               ),

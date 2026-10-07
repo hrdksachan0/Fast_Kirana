@@ -549,7 +549,7 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                               color: AppDesignSystem.statusCancelledText,
                               height: 1.3,
                             ),
-                            maxLines: 2,
+                            maxLines: 4,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),

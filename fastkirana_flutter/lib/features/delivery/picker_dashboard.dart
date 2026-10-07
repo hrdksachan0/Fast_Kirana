@@ -313,40 +313,51 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
     }
   }
 
+  void _handleBackPress() {
+    HapticFeedback.lightImpact();
+    ref.read(staffCustomerModeProvider.notifier).setCustomerMode(true);
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final pendingCount = _orders.where((o) => o['status'] == 'PENDING' || o['status'] == 'CONFIRMED' || o['status'] == 'PREPARING').length;
     final packedCount = _orders.where((o) => o['status'] == 'PACKED').length;
 
-    return Scaffold(
-      backgroundColor: bgMain,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 6,
-        leadingWidth: Navigator.canPop(context) ? 44 : 12,
-        leading: Navigator.canPop(context)
-            ? Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: IconButton(
-                  icon: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: const Icon(Icons.arrow_back_ios_new_rounded, size: 13, color: slateDark),
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBackPress();
+      },
+      child: Scaffold(
+        backgroundColor: bgMain,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          titleSpacing: 6,
+          leadingWidth: 44,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: IconButton(
+              icon: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-              )
-            : const SizedBox(width: 12),
+                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 13, color: slateDark),
+              ),
+              onPressed: _handleBackPress,
+              tooltip: 'Back to Store',
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+            ),
+          ),
         title: Row(
           children: [
             Container(
@@ -643,6 +654,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                 ),
               ),
             ),
+      ),
     );
   }
 

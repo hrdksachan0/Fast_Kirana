@@ -416,23 +416,26 @@ export function ProductsTab({
               <button
                 disabled={isExporting}
                 onClick={() => handleExportCsv('all')}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-border bg-muted/20 hover:bg-muted text-text-primary text-xs font-black rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 flex flex-col items-center justify-center p-3 border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded-xl transition-all cursor-pointer disabled:opacity-50"
               >
-                All Catalog Items (All)
+                <span className="text-xs font-black">🌐 Complete Catalog (All Items)</span>
+                <span className="text-[10px] opacity-80 mt-0.5">Every product: Grocery + Restaurant dishes</span>
               </button>
               <button
                 disabled={isExporting}
                 onClick={() => handleExportCsv('grocery')}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-black rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 flex flex-col items-center justify-center p-3 border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-xl transition-all cursor-pointer disabled:opacity-50"
               >
-                📦 Grocery Items Only
+                <span className="text-xs font-black">📦 Grocery Mart Items Only</span>
+                <span className="text-[10px] opacity-80 mt-0.5">Kirana, staples, snacks & household</span>
               </button>
               <button
                 disabled={isExporting}
                 onClick={() => handleExportCsv('cafe')}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-black rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 flex flex-col items-center justify-center p-3 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/15 text-amber-600 dark:text-amber-400 rounded-xl transition-all cursor-pointer disabled:opacity-50"
               >
-                ☕ Cafe Items Only
+                <span className="text-xs font-black">🍽️ Restaurant Dishes Only</span>
+                <span className="text-[10px] opacity-80 mt-0.5">Kitchen menu, meals & cafe items</span>
               </button>
             </div>
           </motion.div>
@@ -630,7 +633,7 @@ export function ProductsTab({
                       const file = e.target.files?.[0]
                       if (file) {
                         handleCloudinaryUpload(file, (url) => {
-                          setNewProduct({ ...newProduct, imageUrl: url })
+                          setNewProduct((prev: any) => ({ ...prev, imageUrl: url }))
                         })
                       }
                       e.target.value = ''
@@ -674,7 +677,7 @@ export function ProductsTab({
                         value={activeParentId}
                         onChange={(e) => {
                           const newParentId = e.target.value
-                          setNewProduct({ ...newProduct, categoryId: newParentId })
+                          setNewProduct((prev: any) => ({ ...prev, categoryId: newParentId }))
                         }}
                         className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
                       >
@@ -694,7 +697,7 @@ export function ProductsTab({
                         disabled={!activeParentId || availableSubcategories.length === 0}
                         onChange={(e) => {
                           const subId = e.target.value
-                          setNewProduct({ ...newProduct, categoryId: subId || activeParentId })
+                          setNewProduct((prev: any) => ({ ...prev, categoryId: subId || activeParentId }))
                         }}
                         className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer disabled:opacity-50"
                       >
