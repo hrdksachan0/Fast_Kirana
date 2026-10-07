@@ -45,9 +45,26 @@ async def get_restaurants(
     result = await db.execute(stmt)
     restaurants = result.scalars().all()
     return {"restaurants": [
-        {"id": r.id, "name": r.name, "slug": r.slug, "cuisine": ", ".join(r.cuisineTags) if r.cuisineTags else "",
-         "imageUrl": r.logoUrl, "rating": r.rating, "deliveryTime": r.deliveryTime,
-         "minOrder": 0.0, "isActive": r.isActive}
+        {
+            "id": r.id,
+            "name": r.name,
+            "slug": r.slug,
+            "cuisine": ", ".join(r.cuisineTags) if r.cuisineTags else "",
+            "cuisineTags": r.cuisineTags or [],
+            "imageUrl": r.logoUrl,
+            "logoUrl": r.logoUrl,
+            "bannerUrl": r.bannerUrl,
+            "rating": r.rating or 4.3,
+            "deliveryTime": r.deliveryTime or "25-35 mins",
+            "minOrder": 0.0,
+            "isOpen": r.isOpen if r.isOpen is not None else True,
+            "openTime": r.openTime,
+            "closeTime": r.closeTime,
+            "isActive": r.isActive,
+            "isPureVeg": r.isPureVeg or False,
+            "address": r.address,
+            "city": r.city or "Ghatampur"
+        }
         for r in restaurants
     ]}
 

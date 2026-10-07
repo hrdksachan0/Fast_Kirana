@@ -371,6 +371,7 @@ app.include_router(categories.router, prefix="/api")
 
 from routers import cashfree_router, kot, vendors, stores_service, wishlist, push
 app.include_router(vendors.vendors_router, prefix="/api")
+app.include_router(vendors.vendors_router, prefix="/api/admin")
 app.include_router(stores_service.router, prefix="/api")
 app.include_router(wishlist.router, prefix="/api")
 app.include_router(push.router, prefix="/api")

@@ -57,3 +57,12 @@ async def test_all_api_routes():
         fc_data = res_forecast.json()
         assert "status" in fc_data
         print("[OK] /api/forecast/demand PASSED:", fc_data["status"])
+
+        # 7. Admin Vendors (Protected - requires admin auth)
+        res_vendors = await ac.get("/api/admin/vendors", headers=auth_headers)
+        assert res_vendors.status_code == 200
+        vendors_data = res_vendors.json()
+        assert vendors_data.get("success") is True
+        assert "vendors" in vendors_data
+        assert isinstance(vendors_data["vendors"], list)
+        print(f"[OK] /api/admin/vendors PASSED: {len(vendors_data['vendors'])} vendors found")

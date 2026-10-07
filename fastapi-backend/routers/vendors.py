@@ -20,7 +20,7 @@ vendors_router = APIRouter(prefix="/vendors", tags=["Vendor Operations & Ledger"
 
 def require_admin(current_user: dict) -> dict:
     role = current_user.get("role")
-    if role not in ["ADMIN", "RESTAURANT_OWNER"]:
+    if role not in ["ADMIN", "SUPER_ADMIN", "RESTAURANT_OWNER"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return current_user
 
