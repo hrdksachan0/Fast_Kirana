@@ -605,7 +605,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         try {
           var query = sb
               .from('orders')
-              .select('*, order_items(*), addresses(*), restaurant:restaurants(*), user:users!orders_userId_fkey(name,phone)');
+              .select('*, order_items(*), addresses(*), restaurant:restaurants(*)');
           
           if (_assignedStoreId != null && _assignedStoreId!.isNotEmpty) {
             query = query.or('storeId.eq.$_assignedStoreId,storeId.is.null');
@@ -618,7 +618,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           debugPrint('[DeliveryDashboard] Supabase orders with restaurant join failed: $queryErr');
           var fallbackQuery = sb
               .from('orders')
-              .select('*, order_items(*), addresses(*), user:users!orders_userId_fkey(name,phone)');
+              .select('*, order_items(*), addresses(*)');
           if (_assignedStoreId != null && _assignedStoreId!.isNotEmpty) {
             fallbackQuery = fallbackQuery.or('storeId.eq.$_assignedStoreId,storeId.is.null');
           }

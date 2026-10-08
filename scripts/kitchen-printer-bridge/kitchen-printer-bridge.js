@@ -454,17 +454,10 @@ async function handlePrintRequest(orderId, isForceReprint = false, broadcastPayl
       let user = null;
       if (broadcastPayload.customerName) {
         user = { name: broadcastPayload.customerName };
+      } else if (order.customerName) {
+        user = { name: order.customerName };
       } else if (order.userName) {
         user = { name: order.userName };
-      } else if (order.userId) {
-        try {
-          const { data: userData } = await supabase
-            .from('users')
-            .select('name')
-            .eq('id', order.userId)
-            .maybeSingle();
-          if (userData) user = userData;
-        } catch (_) {}
       }
 
       const isExplicitRestaurantOrder = Boolean(

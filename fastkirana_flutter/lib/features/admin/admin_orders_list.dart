@@ -634,7 +634,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
             final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
             var query = sb
                 .from('orders')
-                .select('*, order_items(*), customer:users!orders_userId_fkey(name,phone)');
+                .select('*, order_items(*)');
             if (storeId != null && storeId.isNotEmpty) {
               query = query.eq('storeId', storeId);
             }
@@ -915,7 +915,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
             final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
             var query = sb
                 .from('orders')
-                .select('*, order_items(*), customer:users!orders_userId_fkey(name,phone)');
+                .select('*, order_items(*)');
             if (storeId != null && storeId.isNotEmpty) {
               query = query.eq('storeId', storeId);
             }
