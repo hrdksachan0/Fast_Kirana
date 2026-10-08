@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     const appUrl = (rawAppUrl.includes('fastkirana.in') && !rawAppUrl.includes('www.') && !rawAppUrl.includes('api.'))
       ? rawAppUrl.replace('fastkirana.in', 'www.fastkirana.in')
       : rawAppUrl
-    const apiUrl = (process.env.API_BASE_URL || 'https://api.fastkirana.in').replace(/\/+$/, '')
+    const webhookUrl = (process.env.WEBHOOK_BASE_URL || appUrl).replace(/\/+$/, '')
 
     const cfOrder = await createCashfreeOrder({
       orderId: resolvedOrderId,
@@ -103,9 +103,43 @@ export async function POST(request: NextRequest) {
       customerPhone: cleanPhone,
       customerEmail: cleanEmail,
       returnUrl: `${appUrl}/checkout/verify?order_id=${resolvedOrderId}&cf_order_id={order_id}`,
-      notifyUrl: `${apiUrl}/api/payment/cashfree/webhook`,
+      notifyUrl: `${webhookUrl}/api/payment/cashfree/webhook`,
       note: `FastKirana Order #${readableId || resolvedOrderId}`
     })
+
+    // 🛡️ PERMANENT FIX: Save draft order payload in Redis cache with 24-hr TTL
+    // If user's browser/app drops or disconnects while in UPI app, the webhook
+    // retrieves this draft and auto-creates the exact order in database!
+    const draftPayload = body.orderPayload || {
+      items: body.items,
+      addressId: body.addressId,
+      customerAddress: body.customerAddress,
+      userId: customerId !== 'guest_customer' ? customerId : (body.userId || undefined),
+      deliveryMethod: body.deliveryMethod || 'DELIVERY',
+      notes: body.note || body.notes,
+      couponCode: body.couponCode,
+      packagingOption: body.packagingOption,
+      packagingFee: body.packagingFee,
+      phone: cleanPhone,
+      userName: cleanName,
+      customerPhone: cleanPhone,
+      customerName: cleanName,
+      customerEmail: cleanEmail,
+    }
+
+    if (draftPayload && (draftPayload.items?.length || body.items?.length || body.orderPayload)) {
+      try {
+        const { cache } = await import('@/lib/redis-client')
+        await cache.set(`draft_cf_order:${cfOrder.order_id}`, JSON.stringify({
+          ...draftPayload,
+          amount: cfOrder.order_amount,
+          cfOrderId: cfOrder.order_id,
+          createdAt: new Date().toISOString(),
+        }), { ex: 86400 })
+      } catch (cacheErr) {
+        console.warn('Draft order caching note:', cacheErr)
+      }
+    }
 
     return NextResponse.json({
       success: true,

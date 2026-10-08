@@ -241,15 +241,52 @@ export async function POST(req: NextRequest) {
             }
           }
         } else {
-          // ⚠️ ORPHAN PAYMENT SAFETY NET — Order not found in DB but payment was successful!
-          // This is the scenario that caused missed orders (e.g. Ankita Sachan's Khajoor order).
-          // Save the payment details so it's never silently lost.
           const cfPayId = paymentData?.cf_payment_id || paymentData?.payment_id || ''
           const paymentAmount = Number(orderData?.order_amount || paymentData?.payment_amount || 0)
           const customerPhone = orderData?.customer_details?.customer_phone || paymentData?.customer_phone || null
           const customerName = orderData?.customer_details?.customer_name || null
           const customerEmail = orderData?.customer_details?.customer_email || null
 
+          // 🛡️ PERMANENT AUTONOMOUS RECOVERY: Check if draft order payload exists in Redis!
+          // If customer completed UPI payment but app/tab was closed, auto-construct & create the order in DB!
+          let autoCreatedOrder = false
+          try {
+            const draftRaw = await cache.get<string>(`draft_cf_order:${cleanId}`) ||
+                             (rawId !== cleanId ? await cache.get<string>(`draft_cf_order:${rawId}`) : null)
+            if (draftRaw) {
+              const draft = typeof draftRaw === 'string' ? JSON.parse(draftRaw) : draftRaw
+              const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in').replace(/\/+$/, '')
+
+              const autoOrderRes = await fetch(`${appUrl}/api/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...draft,
+                  paymentStatus: 'PAID',
+                  paymentMethod: 'UPI',
+                  paymentId: cfPayId ? `CF_${cfPayId}` : `CF_${cleanId}`,
+                  cfOrderId: cleanId,
+                }),
+              })
+
+              if (autoOrderRes.ok) {
+                const autoOrderData = await autoOrderRes.json()
+                autoCreatedOrder = true
+                console.log(`✅ [CashfreeWebhook] Automatically created order #${autoOrderData.readableId || autoOrderData.id} from draft payload!`)
+              } else {
+                const errBody = await autoOrderRes.text()
+                console.error('[CashfreeWebhook] Auto order creation returned non-200:', errBody)
+              }
+            }
+          } catch (autoOrderErr) {
+            console.error('[CashfreeWebhook] Error attempting auto order creation:', autoOrderErr)
+          }
+
+          if (autoCreatedOrder) {
+            return NextResponse.json({ received: true, status: 'auto_created_order' })
+          }
+
+          // ⚠️ ORPHAN PAYMENT SAFETY NET — If draft was missing, record orphan payment so it's never lost!
           console.error(`🚨 ORPHAN PAYMENT DETECTED! Cashfree payment SUCCESS for order ${cleanId} (₹${paymentAmount}) but NO matching order in DB! Customer: ${customerName || 'Unknown'} (${customerPhone || 'N/A'})`)
 
           // Save to orphan_payments table

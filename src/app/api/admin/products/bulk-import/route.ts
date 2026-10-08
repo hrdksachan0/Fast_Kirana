@@ -48,12 +48,16 @@ export async function POST(request: NextRequest) {
 
     // Fetch current max readableId for bulk insert numbering
     const lastProduct = await prisma.product.findFirst({
+      where: { readableId: { not: null } },
       orderBy: { readableId: 'desc' },
       select: { readableId: true }
     })
     let nextReadableId = lastProduct && lastProduct.readableId 
       ? lastProduct.readableId 
       : 200000
+    while (await prisma.product.findUnique({ where: { readableId: nextReadableId + 1 } })) {
+      nextReadableId++
+    }
 
     for (let i = 0; i < products.length; i++) {
       const item = products[i]

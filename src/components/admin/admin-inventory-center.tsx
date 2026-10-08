@@ -320,6 +320,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
         const createRes = await fetch(`${apiUrl()}/api/admin/products`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
           body: JSON.stringify({
             name: scannedProduct.name,
             categoryId: scannedProduct.categoryId,
@@ -356,6 +357,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
           const updateRes = await fetch(`${apiUrl()}/api/products/${scannedProduct.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({
               mrp: parseFloat(scannedProduct.mrp),
               price: parseFloat(scannedProduct.price)
@@ -375,6 +377,7 @@ export function AdminInventoryCenter({ onInventoryUpdated, storeId }: AdminInven
       const res = await fetch(`${apiUrl()}/api/admin/inward`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
           productId: scannedProduct.id,
           batchCode: inwardBatchCode.trim(),

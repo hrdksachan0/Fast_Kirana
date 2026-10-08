@@ -17,7 +17,7 @@ function getAppUrl(): string {
 }
 
 function getApiUrl(): string {
-  return (process.env.API_BASE_URL || 'https://api.fastkirana.in').replace(/\/+$/, '')
+  return (process.env.WEBHOOK_BASE_URL || getAppUrl()).replace(/\/+$/, '')
 }
 
 export interface CreateCashfreeOrderParams {

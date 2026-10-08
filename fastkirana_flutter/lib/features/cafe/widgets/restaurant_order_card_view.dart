@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/design_system.dart';
+import '../../../core/utils/order_item_helper.dart';
+import '../../../core/widgets/app_cached_image.dart';
+import '../../delivery/widgets/rider_cart_modal.dart';
 
 class RestaurantOrderCardView extends StatelessWidget {
   final Map<String, dynamic> order;
@@ -232,47 +235,153 @@ class RestaurantOrderCardView extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Items List
+            // 1. Photo Preview Strip with "View Cart" modal (Identical to Rider & Admin)
+            if (items.isNotEmpty) ...[
+              RiderCartPreviewWidget(
+                order: order,
+                onViewCart: () => showRiderCartModal(context, order),
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            // 2. Detailed Dish Items List with Photos, High-Visibility Quantities, and Portion Badges
             ...items.map((item) {
-              final String name = (item['name'] ?? 'Dish').toString();
+              final String name = (item['name'] ?? item['title'] ?? 'Dish').toString();
               final int qty = (item['quantity'] is num)
                   ? (item['quantity'] as num).toInt()
                   : (int.tryParse(item['quantity']?.toString() ?? '1') ?? 1);
               final String? notes = item['notes']?.toString();
-              final String? variant = item['selectedVariant']?.toString();
+              final String variant = OrderItemHelper.resolveWeightOrVariant(item, name);
+              final String imgUrl = OrderItemHelper.resolveImageUrl(item);
+              final num itemPrice = (item['price'] is num)
+                  ? (item['price'] as num)
+                  : (num.tryParse(item['price']?.toString() ?? '0') ?? 0);
+              final num lineTotal = itemPrice * qty;
 
               return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6.0),
+                padding: const EdgeInsets.symmetric(vertical: 5.0),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    // Dish Thumbnail (40x40)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: primaryRed, borderRadius: BorderRadius.circular(4)),
-                      child: Text('${qty}x', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w900, color: Colors.white)),
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppDesignSystem.slate50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: qty > 1 ? const Color(0xFFFED7AA) : AppDesignSystem.slate200,
+                          width: qty > 1 ? 1.4 : 1.0,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(9),
+                        child: Center(
+                          child: imgUrl.isNotEmpty
+                              ? AppCachedImage(
+                                  imageUrl: imgUrl,
+                                  width: 36,
+                                  height: 36,
+                                  fit: BoxFit.contain,
+                                  memCacheWidth: 100,
+                                  memCacheHeight: 100,
+                                  errorWidget: Center(
+                                    child: Text(
+                                      OrderItemHelper.resolveFallbackEmoji(name),
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  ),
+                                )
+                              : Center(
+                                  child: Text(
+                                    OrderItemHelper.resolveFallbackEmoji(name),
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // High-Visibility Quantity Pill (e.g. 2x in orange/red, 1x in neutral)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: qty > 1 ? const Color(0xFFFFF7ED) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: qty > 1 ? const Color(0xFFEA580C) : const Color(0xFFCBD5E1),
+                          width: qty > 1 ? 1.4 : 1.0,
+                        ),
+                      ),
+                      child: Text(
+                        '${qty}x',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                          fontWeight: FontWeight.w900,
+                          color: qty > 1 ? const Color(0xFFEA580C) : const Color(0xFF0F172A),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 10),
+
+                    // Dish Name + Size/Portion Badge + Notes
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             name,
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800, color: slateDark),
-                          ),
-                          if (variant != null && variant.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Text(variant, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w600, color: brandAmber)),
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 13.5),
+                              fontWeight: FontWeight.w800,
+                              color: slateDark,
                             ),
-                          if (notes != null && notes.isNotEmpty)
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (variant.isNotEmpty)
                             Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Text('📝 $notes', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: brandAmber)),
+                              padding: const EdgeInsets.only(top: 2.5),
+                              child: OrderItemHelper.buildWeightBadge(context, variant),
+                            ),
+                          if (notes != null && notes.isNotEmpty && notes.toLowerCase() != 'null')
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2.5),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '📝 $notes',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                                    fontWeight: FontWeight.w600,
+                                    fontStyle: FontStyle.italic,
+                                    color: const Color(0xFF92400E),
+                                  ),
+                                ),
+                              ),
                             ),
                         ],
                       ),
                     ),
+
+                    if (lineTotal > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Text(
+                          '₹${lineTotal.toInt()}',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 13),
+                            fontWeight: FontWeight.w800,
+                            color: slateDark,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               );

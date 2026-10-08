@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/design_system.dart';
 
 class OrderItemHelper {
-  /// Extracts the weight, pack size, unit, or variant from an order item map.
-  /// Checks explicit variant fields, product unit fields, and falls back to regex matching from the title.
+  /// Extracts the weight, pack size, unit, or variant from an order item map or object.
+  /// Checks explicit variant fields, product unit fields, portion/size, and falls back to regex matching from the title.
   static String resolveWeightOrVariant(dynamic item, [String? fallbackName]) {
     String? explicit;
     String name = fallbackName ?? '';
@@ -15,41 +15,101 @@ class OrderItemHelper {
       }
 
       final val = item['selectedVariant'] ??
+          item['selected_variant'] ??
           item['variant'] ??
+          item['variant_name'] ??
+          item['size'] ??
+          item['portion'] ??
           item['unit'] ??
           item['weight'] ??
-          item['size'] ??
           item['pack_size'] ??
           item['quantity_unit'];
 
-      if (val != null && val.toString().trim().isNotEmpty) {
+      if (val != null &&
+          val.toString().trim().isNotEmpty &&
+          val.toString().trim().toLowerCase() != 'null' &&
+          val.toString().trim().toLowerCase() != 'standard') {
         explicit = val.toString().trim();
       } else if (item['product'] is Map) {
         final p = item['product'];
-        final pVal = p['unit'] ??
-            p['selectedVariant'] ??
+        final pVal = p['selectedVariant'] ??
+            p['selected_variant'] ??
             p['variant'] ??
-            p['weight'] ??
+            p['variant_name'] ??
             p['size'] ??
+            p['portion'] ??
+            p['unit'] ??
+            p['weight'] ??
             p['pack_size'];
-        if (pVal != null && pVal.toString().trim().isNotEmpty) {
+        if (pVal != null &&
+            pVal.toString().trim().isNotEmpty &&
+            pVal.toString().trim().toLowerCase() != 'null' &&
+            pVal.toString().trim().toLowerCase() != 'standard') {
           explicit = pVal.toString().trim();
         }
       }
+    } else if (item != null) {
+      try {
+        final dyn = item as dynamic;
+        final val = dyn.selectedVariant ??
+            dyn.variant ??
+            dyn.size ??
+            dyn.portion ??
+            dyn.unit ??
+            dyn.weight;
+        if (val != null &&
+            val.toString().trim().isNotEmpty &&
+            val.toString().trim().toLowerCase() != 'null' &&
+            val.toString().trim().toLowerCase() != 'standard') {
+          explicit = val.toString().trim();
+        }
+        if (name.isEmpty) {
+          name = dyn.name?.toString() ?? dyn.title?.toString() ?? '';
+        }
+      } catch (_) {}
     }
 
     if (explicit != null && explicit.isNotEmpty) {
       return explicit;
     }
 
-    // Fallback: Extract weight/unit from product title (e.g. "Sugar 500 gm", "Tata Salt 1 kg", "Fortune Oil 5 L")
+    // Fallback 1: Extract size keywords from brackets/parentheses in title (e.g. "Paneer Tikka (Half)")
     if (name.isNotEmpty) {
+      final sizeBracketMatch = RegExp(
+        r'[\(\[]\s*(half|full|quarter|small|medium|large|regular|single|double|plate|piece|serving)\s*[\)\]]',
+        caseSensitive: false,
+      ).firstMatch(name);
+      if (sizeBracketMatch != null) {
+        final s = sizeBracketMatch.group(1)!.trim();
+        return s[0].toUpperCase() + s.substring(1).toLowerCase();
+      }
+
+      final sizeDashMatch = RegExp(
+        r'-\s*(half|full|quarter|small|medium|large|regular|single|double)\b',
+        caseSensitive: false,
+      ).firstMatch(name);
+      if (sizeDashMatch != null) {
+        final s = sizeDashMatch.group(1)!.trim();
+        return s[0].toUpperCase() + s.substring(1).toLowerCase();
+      }
+
+      // Fallback 2: Extract weight/unit from product title (e.g. "Sugar 500 gm", "Tata Salt 1 kg", "Fortune Oil 5 L")
       final match = RegExp(
         r'(\d+(?:\.\d+)?\s*(?:kg|kgs|gm|gms|g|ltr|ltrs|lt|l|ml|pc|pcs|pack|katta|dozen|plate|piece|serving))\b',
         caseSensitive: false,
       ).firstMatch(name);
       if (match != null) {
         return match.group(1)!.trim();
+      }
+
+      // Fallback 3: standalone size word
+      final standaloneSize = RegExp(
+        r'\b(half|full|quarter|small|medium|large|regular)\b',
+        caseSensitive: false,
+      ).firstMatch(name);
+      if (standaloneSize != null) {
+        final s = standaloneSize.group(1)!.trim();
+        return s[0].toUpperCase() + s.substring(1).toLowerCase();
       }
     }
 
@@ -159,7 +219,7 @@ class OrderItemHelper {
     return '🍽️';
   }
 
-  /// Builds a prominent, high-visibility weight/pack-size badge.
+  /// Builds a prominent, high-visibility weight/pack-size/portion badge.
   static Widget buildWeightBadge(
     BuildContext context,
     String weightVariant, {
@@ -167,13 +227,22 @@ class OrderItemHelper {
   }) {
     if (weightVariant.isEmpty) return const SizedBox.shrink();
 
+    final isPortion = RegExp(
+      r'^(half|full|regular|small|medium|large|quarter|single|double|plate|piece|serving)',
+      caseSensitive: false,
+    ).hasMatch(weightVariant.trim());
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isPicked ? const Color(0xFFD1FAE5) : const Color(0xFFF1F5F9),
+        color: isPicked
+            ? const Color(0xFFD1FAE5)
+            : (isPortion ? const Color(0xFFFEF3C7) : const Color(0xFFF1F5F9)),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: isPicked ? const Color(0xFFA7F3D0) : const Color(0xFFCBD5E1),
+          color: isPicked
+              ? const Color(0xFFA7F3D0)
+              : (isPortion ? const Color(0xFFFDE68A) : const Color(0xFFCBD5E1)),
           width: 1.0,
         ),
       ),
@@ -181,9 +250,11 @@ class OrderItemHelper {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.scale_outlined,
+            isPortion ? Icons.restaurant_menu_rounded : Icons.scale_outlined,
             size: 11,
-            color: isPicked ? const Color(0xFF047857) : const Color(0xFF475569),
+            color: isPicked
+                ? const Color(0xFF047857)
+                : (isPortion ? const Color(0xFFB45309) : const Color(0xFF475569)),
           ),
           const SizedBox(width: 3.5),
           Text(
@@ -191,7 +262,9 @@ class OrderItemHelper {
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 10.5),
               fontWeight: FontWeight.w800,
-              color: isPicked ? const Color(0xFF047857) : const Color(0xFF0F172A),
+              color: isPicked
+                  ? const Color(0xFF047857)
+                  : (isPortion ? const Color(0xFF92400E) : const Color(0xFF0F172A)),
               letterSpacing: 0.2,
             ),
           ),

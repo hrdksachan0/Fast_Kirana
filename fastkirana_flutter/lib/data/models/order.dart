@@ -606,7 +606,21 @@ class OrderItem {
   final String? restaurantId;
   final String? shopName;
 
-  String? get variant => selectedVariant;
+  final String? unit;
+  final String? weight;
+  final String? size;
+
+  String? get variant => selectedVariant ?? size ?? weight ?? unit;
+
+  String? get displayVariantOrWeight {
+    if (selectedVariant != null && selectedVariant!.trim().isNotEmpty && selectedVariant != 'null') {
+      return selectedVariant!.trim();
+    }
+    if (size != null && size!.trim().isNotEmpty && size != 'null') return size!.trim();
+    if (weight != null && weight!.trim().isNotEmpty && weight != 'null') return weight!.trim();
+    if (unit != null && unit!.trim().isNotEmpty && unit != 'null') return unit!.trim();
+    return null;
+  }
 
   OrderItem({
     required this.id,
@@ -621,6 +635,9 @@ class OrderItem {
     this.isRefunded = false,
     this.restaurantId,
     this.shopName,
+    this.unit,
+    this.weight,
+    this.size,
   });
 
   bool get isRestaurantItem {
@@ -660,6 +677,9 @@ class OrderItem {
     bool? isRefunded,
     String? restaurantId,
     String? shopName,
+    String? unit,
+    String? weight,
+    String? size,
   }) {
     return OrderItem(
       id: id ?? this.id,
@@ -674,6 +694,9 @@ class OrderItem {
       isRefunded: isRefunded ?? this.isRefunded,
       restaurantId: restaurantId ?? this.restaurantId,
       shopName: shopName ?? this.shopName,
+      unit: unit ?? this.unit,
+      weight: weight ?? this.weight,
+      size: size ?? this.size,
     );
   }
 
@@ -688,6 +711,36 @@ class OrderItem {
         json['shop_name']?.toString() ??
         (json['restaurant'] is Map ? json['restaurant']['name']?.toString() : null);
 
+    final rawVariant = json['selectedVariant']?.toString() ??
+        json['selected_variant']?.toString() ??
+        json['variant']?.toString() ??
+        json['variant_name']?.toString() ??
+        json['size']?.toString() ??
+        json['portion']?.toString() ??
+        json['unit']?.toString() ??
+        json['weight']?.toString() ??
+        json['pack_size']?.toString() ??
+        (json['product'] is Map
+            ? (json['product']['selectedVariant'] ??
+                    json['product']['selected_variant'] ??
+                    json['product']['variant'] ??
+                    json['product']['variant_name'] ??
+                    json['product']['size'] ??
+                    json['product']['portion'] ??
+                    json['product']['unit'] ??
+                    json['product']['weight'] ??
+                    json['product']['pack_size'])
+                ?.toString()
+            : null);
+
+    final rawUnit = json['unit']?.toString() ??
+        (json['product'] is Map ? json['product']['unit']?.toString() : null);
+    final rawWeight = json['weight']?.toString() ??
+        (json['product'] is Map ? json['product']['weight']?.toString() : null);
+    final rawSize = json['size']?.toString() ??
+        json['portion']?.toString() ??
+        (json['product'] is Map ? (json['product']['size'] ?? json['product']['portion'])?.toString() : null);
+
     return OrderItem(
       id: json['id']?.toString() ?? '',
       productId: json['productId']?.toString() ?? json['product_id']?.toString(),
@@ -695,12 +748,15 @@ class OrderItem {
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
       imageUrl: json['imageUrl']?.toString() ?? json['image_url']?.toString(),
-      selectedVariant: json['selectedVariant']?.toString() ?? json['variant']?.toString(),
+      selectedVariant: rawVariant,
       notes: json['notes']?.toString(),
       refundAmount: itemRefund,
       isRefunded: json['isRefunded'] == true || hasRefundInNotes || itemRefund > 0,
       restaurantId: rawRestId,
       shopName: rawShopName,
+      unit: rawUnit,
+      weight: rawWeight,
+      size: rawSize,
     );
   }
 
@@ -712,6 +768,11 @@ class OrderItem {
     'quantity': quantity,
     'imageUrl': imageUrl,
     'selectedVariant': selectedVariant,
+    'selected_variant': selectedVariant,
+    'variant': selectedVariant,
+    'unit': unit ?? selectedVariant,
+    'weight': weight ?? selectedVariant,
+    'size': size ?? selectedVariant,
     'notes': notes,
     'refundAmount': refundAmount,
     'isRefunded': isRefunded,

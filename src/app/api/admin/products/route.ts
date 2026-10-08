@@ -197,7 +197,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
@@ -221,23 +221,43 @@ export async function POST(request: Request) {
       if (firstCat) finalCategoryId = firstCat.id
     }
 
-    const slug = name
+    const rawSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '')
 
-    const existingSlug = await prisma.product.findUnique({ where: { slug } })
-    const finalSlug = existingSlug ? `${slug}-${Date.now().toString().slice(-4)}` : slug
+    let finalSlug = rawSlug || `item-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+    while (await prisma.product.findUnique({ where: { slug: finalSlug } })) {
+      finalSlug = `${rawSlug || 'item'}-${Date.now().toString().slice(-4)}-${Math.random().toString(36).slice(2, 6)}`
+    }
 
     const parsedMrp = parseFloat(String(mrp)) || 0
     const parsedPrice = parseFloat(String(price)) || parsedMrp
     const discount = parsedMrp > parsedPrice ? Math.max(0, Math.round(((parsedMrp - parsedPrice) / parsedMrp) * 100)) : 0
 
     const lastProduct = await prisma.product.findFirst({
+      where: { readableId: { not: null } },
       orderBy: { readableId: 'desc' },
       select: { readableId: true }
     })
-    const nextReadableId = lastProduct?.readableId ? lastProduct.readableId + 1 : 200001
+    let nextReadableId = lastProduct?.readableId ? lastProduct.readableId + 1 : 200001
+    while (await prisma.product.findUnique({ where: { readableId: nextReadableId } })) {
+      nextReadableId++
+    }
+
+    const cleanBarcode = barcode && typeof barcode === 'string' && barcode.trim().length > 0 ? barcode.trim() : null
+
+    if (cleanBarcode) {
+      const existingBarcode = await prisma.product.findUnique({
+        where: { barcode: cleanBarcode },
+        select: { id: true, name: true }
+      })
+      if (existingBarcode) {
+        return NextResponse.json({
+          error: `Barcode "${cleanBarcode}" is already assigned to "${existingBarcode.name}".`
+        }, { status: 400 })
+      }
+    }
 
     const product = await prisma.product.create({
       data: {
@@ -246,12 +266,12 @@ export async function POST(request: Request) {
         readableId: nextReadableId,
         categoryId: finalCategoryId,
         restaurantId: finalRestaurantId,
-        barcode: barcode && typeof barcode === 'string' ? barcode.trim() : null,
+        barcode: cleanBarcode,
         mrp: parsedMrp,
         price: parsedPrice,
         discount,
         stock: parseInt(String(stock), 10) || 0,
-        unit: (unit && typeof unit === 'string') ? unit.trim() : (finalRestaurantId ? '1 Serving' : '1 pc'),
+        unit: (unit && typeof unit === 'string' && unit.trim().length > 0) ? unit.trim() : (finalRestaurantId ? '1 Serving' : '1 pc'),
         imageUrl: imageUrl || null,
         isAvailable: isAvailable !== undefined ? !!isAvailable : true,
       },
@@ -286,6 +306,19 @@ export async function POST(request: Request) {
     return NextResponse.json(product, { status: 201 })
   } catch (err: any) {
     console.error('Failed to create product in admin API:', err)
+    if (err?.code === 'P2002') {
+      const target = Array.isArray(err?.meta?.target) ? err.meta.target.join(', ') : (err?.meta?.target || 'field')
+      return NextResponse.json({ 
+        error: `A product with this duplicate ${target} already exists. Please choose a unique name or barcode.`,
+        code: 'P2002' 
+      }, { status: 400 })
+    }
+    if (err?.code === 'P2003') {
+      return NextResponse.json({ 
+        error: 'Database error: The selected category, restaurant, or store does not exist.',
+        code: 'P2003' 
+      }, { status: 400 })
+    }
     return NextResponse.json({ error: err.message || 'Failed to create product' }, { status: 500 })
   }
 }

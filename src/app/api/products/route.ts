@@ -715,15 +715,10 @@ export async function POST(request: NextRequest) {
 
     const randomSuffix = Math.random().toString(36).slice(2, 7)
     let finalSlug = rawSlug || `item-${Date.now().toString(36)}-${randomSuffix}`
-    try {
-      const existingSlug = await prisma.product.findUnique({
-        where: { slug: finalSlug }
-      })
-      if (existingSlug) {
-        finalSlug = `${finalSlug}-${randomSuffix}`
-      }
-    } catch (_) {
-      finalSlug = `${finalSlug}-${randomSuffix}`
+    let slugExists = await prisma.product.findUnique({ where: { slug: finalSlug } })
+    while (slugExists) {
+      finalSlug = `${rawSlug || 'item'}-${Date.now().toString().slice(-4)}-${Math.random().toString(36).slice(2, 6)}`
+      slugExists = await prisma.product.findUnique({ where: { slug: finalSlug } })
     }
 
     let finalMrp = Number(mrp)
@@ -757,6 +752,11 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) {
       console.warn('Could not query last readableId:', e)
+    }
+
+    // Unbreakable readableId collision guard
+    while (await prisma.product.findUnique({ where: { readableId: nextReadableId } })) {
+      nextReadableId++
     }
 
     // Parse expiry date if provided

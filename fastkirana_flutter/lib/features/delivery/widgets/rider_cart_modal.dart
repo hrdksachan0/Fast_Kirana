@@ -182,8 +182,10 @@ class RiderCartPreviewWidget extends StatelessWidget {
                     ...displayItems.map((item) {
                       final itemName = (item is Map ? (item['name'] ?? item['title']) : null)?.toString() ?? 'Item';
                       final imgUrl = OrderItemHelper.resolveImageUrl(item);
-                      final qty = item['quantity'] ?? 1;
-                      final weight = OrderItemHelper.resolveWeightOrVariant(item);
+                      final int qty = (item is Map && item['quantity'] is num)
+                          ? (item['quantity'] as num).toInt()
+                          : (int.tryParse(item is Map ? item['quantity']?.toString() ?? '1' : '1') ?? 1);
+                      final weight = OrderItemHelper.resolveWeightOrVariant(item, itemName);
 
                       return Container(
                         width: thumbSize,
@@ -193,8 +195,8 @@ class RiderCartPreviewWidget extends StatelessWidget {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: (qty is num && qty > 1) ? const Color(0xFFF97316) : AppDesignSystem.slate200,
-                            width: (qty is num && qty > 1) ? 1.5 : 1.0,
+                            color: qty > 1 ? const Color(0xFFF97316) : AppDesignSystem.slate200,
+                            width: qty > 1 ? 1.5 : 1.0,
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -232,33 +234,33 @@ class RiderCartPreviewWidget extends StatelessWidget {
                                       ),
                               ),
                             ),
-                            if (qty is num && qty > 1)
-                              Positioned(
-                                top: 2,
-                                right: 2,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEA580C),
-                                    borderRadius: BorderRadius.circular(6),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.25),
-                                        blurRadius: 3,
-                                        offset: const Offset(0, 1),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Text(
-                                    '${qty}x',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 8.5,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
+                            // Always Visible Quantity Pill: Bold Orange for >1, Neat Slate for 1
+                            Positioned(
+                              top: 2,
+                              right: 2,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: qty > 1 ? const Color(0xFFEA580C) : const Color(0xFF334155),
+                                  borderRadius: BorderRadius.circular(6),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.25),
+                                      blurRadius: 3,
+                                      offset: const Offset(0, 1),
                                     ),
+                                  ],
+                                ),
+                                child: Text(
+                                  '${qty}x',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),
+                            ),
                             if (weight.isNotEmpty)
                               Positioned(
                                 bottom: 2,
@@ -267,7 +269,7 @@ class RiderCartPreviewWidget extends StatelessWidget {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.75),
+                                    color: Colors.black.withValues(alpha: 0.8),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -712,12 +714,17 @@ class RiderCartModal extends StatelessWidget {
               final isLast = idx == sortedGroupItems.length - 1;
 
               final title = item['title'] ?? item['name'] ?? 'Item';
-              final qty = (item['quantity'] as num?)?.toInt() ?? 1;
-              final unitPrice = (item['price'] as num?)?.toDouble() ?? 0.0;
+              final int qty = (item['quantity'] is num)
+                  ? (item['quantity'] as num).toInt()
+                  : (int.tryParse(item['quantity']?.toString() ?? '1') ?? 1);
+              final unitPrice = (item['price'] is num)
+                  ? (item['price'] as num).toDouble()
+                  : (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0);
               final lineTotal = unitPrice * qty;
               final weightVariant = OrderItemHelper.resolveWeightOrVariant(item, title);
               final imgUrl = OrderItemHelper.resolveImageUrl(item);
               final isRefunded = item['isRefunded'] == true || (item['refundAmount'] as num? ?? 0) > 0;
+              final notes = (item['notes']?.toString() ?? '').trim();
 
               return Column(
                 children: [
@@ -767,14 +774,14 @@ class RiderCartModal extends StatelessWidget {
                         ),
                         const SizedBox(width: 10),
 
-                        // High-Visibility Quantity Pill (Rider Attention Box)
+                        // High-Visibility Quantity Pill (Attention Box)
                         Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: qty > 1 ? 7 : 6,
-                            vertical: qty > 1 ? 3 : 2,
+                            vertical: qty > 1 ? 3 : 2.5,
                           ),
                           decoration: BoxDecoration(
-                            color: qty > 1 ? const Color(0xFFFFF7ED) : const Color(0xFFF1F5F9),
+                            color: qty > 1 ? const Color(0xFFFFF7ED) : const Color(0xFFF8FAFC),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: qty > 1 ? const Color(0xFFEA580C) : const Color(0xFFCBD5E1),
@@ -802,22 +809,21 @@ class RiderCartModal extends StatelessWidget {
                                   height: 1.1,
                                 ),
                               ),
-                              if (qty > 1)
-                                Text(
-                                  'QTY',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 7.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: const Color(0xFFEA580C),
-                                    letterSpacing: 0.3,
-                                  ),
+                              Text(
+                                'QTY',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 7.5),
+                                  fontWeight: FontWeight.w900,
+                                  color: qty > 1 ? const Color(0xFFEA580C) : const Color(0xFF64748B),
+                                  letterSpacing: 0.3,
                                 ),
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(width: 10),
 
-                        // Product Title + Variant
+                        // Product Title + Variant + Notes
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -846,7 +852,7 @@ class RiderCartModal extends StatelessWidget {
                                     ),
                                   ),
                                   child: Text(
-                                    '⚠️ DELIVER $qty PIECES',
+                                    group.isRestaurant ? '⚠️ PREPARE $qty PORTIONS' : '⚠️ DELIVER / PACK $qty PIECES',
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 8.5),
                                       fontWeight: FontWeight.w900,
@@ -859,6 +865,27 @@ class RiderCartModal extends StatelessWidget {
                               if (weightVariant.isNotEmpty) ...[
                                 const SizedBox(height: 3),
                                 OrderItemHelper.buildWeightBadge(context, weightVariant),
+                              ],
+                              if (notes.isNotEmpty && notes.toLowerCase() != 'null') ...[
+                                const SizedBox(height: 3),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '📝 $notes',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 9),
+                                      fontWeight: FontWeight.w600,
+                                      fontStyle: FontStyle.italic,
+                                      color: const Color(0xFF92400E),
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ],
                               if (isRefunded) ...[
                                 const SizedBox(height: 3),

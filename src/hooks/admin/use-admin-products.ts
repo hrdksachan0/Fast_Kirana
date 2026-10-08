@@ -176,6 +176,8 @@ export function useAdminProducts({
       if (vCost) vCost.value = ''
       const vStock = document.getElementById('new-var-stock') as HTMLInputElement | null
       if (vStock) vStock.value = ''
+      const fileInput = document.getElementById('new-product-image-file') as HTMLInputElement | null
+      if (fileInput) fileInput.value = ''
     }
   }, [categories])
 
