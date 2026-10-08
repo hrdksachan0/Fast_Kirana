@@ -141,10 +141,10 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
     } : { 'x-user-role': 'ADMIN' })
   }), [sessionUserId, sessionUserRole, sessionUserEmail, sessionUserPhone])
 
-  const [rangePreset, setRangePreset] = useState<'today' | 'yesterday' | '7days' | '30days' | 'custom'>('30days')
+  const [rangePreset, setRangePreset] = useState<'today' | 'yesterday' | '7days' | '30days' | 'all' | 'custom'>('7days')
   const [startDate, setStartDate] = useState(() => {
     const d = new Date()
-    d.setDate(d.getDate() - 30)
+    d.setDate(d.getDate() - 7)
     return d.toISOString().split('T')[0]
   })
   const [endDate, setEndDate] = useState(() => {
@@ -191,6 +191,8 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       start.setDate(now.getDate() - 7)
     } else if (preset === '30days') {
       start.setDate(now.getDate() - 30)
+    } else if (preset === 'all') {
+      start = new Date('2024-01-01')
     }
 
     setStartDate(start.toISOString().split('T')[0])
@@ -495,7 +497,8 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       setOrderExportLoading(true)
       toast.loading('Fetching order-wise data...', { id: 'order-excel' })
 
-      const res = await fetch(`${apiUrl()}/api/admin/reports/orders?startDate=${startDate}&endDate=${endDate}&t=${Date.now()}`)
+      const storeParam = storeId ? `&storeId=${encodeURIComponent(storeId)}` : ''
+      const res = await fetch(`${apiUrl()}/api/admin/reports/orders?startDate=${startDate}&endDate=${endDate}${storeParam}&t=${Date.now()}`)
       if (!res.ok) throw new Error('Failed to fetch order data')
       const data = await res.json()
       const orders = data.orders || []
@@ -776,7 +779,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Quick Date Presets */}
           <div className="flex bg-muted/60 p-1 rounded-2xl border border-border/80 text-xs font-bold">
-            {(['today', 'yesterday', '7days', '30days', 'custom'] as const).map((r) => (
+            {(['today', 'yesterday', '7days', '30days', 'all', 'custom'] as const).map((r) => (
               <button
                 key={r}
                 onClick={() => handlePresetChange(r)}
@@ -784,7 +787,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                   rangePreset === r ? 'bg-card text-primary font-black shadow-xs' : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
-                {r === 'today' ? 'Today' : r === 'yesterday' ? 'Yesterday' : r === '7days' ? '7 Days' : r === '30days' ? '30 Days' : 'Custom'}
+                {r === 'today' ? 'Today' : r === 'yesterday' ? 'Yesterday' : r === '7days' ? '7 Days' : r === '30days' ? '30 Days' : r === 'all' ? 'All Time' : 'Custom'}
               </button>
             ))}
           </div>

@@ -406,7 +406,8 @@ export function useAdminProducts({
   const handleExportCsv = async (type: 'all' | 'grocery' | 'cafe') => {
     setIsExporting(true)
     try {
-      const storeQuery = selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
+      // For full catalog export ('all'), omit storeId so all products across all categories and outlets are exported
+      const storeQuery = type !== 'all' && selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
       const url = `${apiUrl()}/api/admin/products?limit=10000${type !== 'all' ? `&type=${type}` : ''}${storeQuery}`
       const res = await fetch(url, { headers: authHeaders })
       const data = await res.json()
@@ -427,12 +428,14 @@ export function useAdminProducts({
         'Item ID',
         'Name',
         'Type',
+        'Status',
         'Category / Section',
         'Outlet / Restaurant',
         'Vendor',
         'Unit',
         'MRP',
         'Price',
+        'Discount %',
         'Stock',
         'Tags',
         'Description',
@@ -457,12 +460,14 @@ export function useAdminProducts({
           p.readableId?.toString() || p.id || '',
           p.name || '',
           itemType,
+          p.isAvailable !== false ? 'Active' : 'Inactive',
           categoryOrSection,
           outletName,
           p.vendor || '',
           p.unit || '',
           p.mrp?.toString() || '0',
           p.price?.toString() || '0',
+          p.discount?.toString() || '0',
           p.stock?.toString() || '0',
           Array.isArray(p.tags) ? p.tags.join(', ') : p.tags || '',
           p.description || '',

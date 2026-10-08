@@ -117,7 +117,10 @@ export async function GET(request: NextRequest) {
       LEFT JOIN products p ON oi."productId" = p.id
       LEFT JOIN categories c ON p."categoryId" = c.id
       LEFT JOIN restaurants r ON COALESCE(p."restaurantId", o."restaurantId") = r.id
-      WHERE oi."orderId" = ANY(${orderIds}::text[])
+      WHERE o.status::text = 'DELIVERED'
+        AND o."createdAt" >= ${start}
+        AND o."createdAt" <= ${end}
+        ${storeWhere}
     ` : []
 
     // Group items by order
