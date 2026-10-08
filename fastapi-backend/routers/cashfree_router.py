@@ -561,10 +561,12 @@ async def auto_recover_unplaced_cashfree_order(
         from sqlalchemy import text
         import uuid
 
-        # 1. Check pending checkout cache
+        # 1. Check pending checkout cache (supports both FastAPI cf_pending and Next.js draft_cf_order)
         pending_data = await get_cache(f"cf_pending:{clean_id}")
+        if not pending_data:
+            pending_data = await get_cache(f"draft_cf_order:{clean_id}")
         if not pending_data and cf_order_id != clean_id:
-            pending_data = await get_cache(f"cf_pending:{cf_order_id}")
+            pending_data = (await get_cache(f"cf_pending:{cf_order_id}")) or (await get_cache(f"draft_cf_order:{cf_order_id}"))
 
         # 2. Extract customer details
         cust_details = order_data.get("customer_details") or {}

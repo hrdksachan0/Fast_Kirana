@@ -130,12 +130,14 @@ export async function POST(request: NextRequest) {
     if (draftPayload && (draftPayload.items?.length || body.items?.length || body.orderPayload)) {
       try {
         const { cache } = await import('@/lib/redis-client')
-        await cache.set(`draft_cf_order:${cfOrder.order_id}`, JSON.stringify({
+        const cachePayload = JSON.stringify({
           ...draftPayload,
           amount: cfOrder.order_amount,
           cfOrderId: cfOrder.order_id,
           createdAt: new Date().toISOString(),
-        }), { ex: 86400 })
+        })
+        await cache.set(`draft_cf_order:${cfOrder.order_id}`, cachePayload, { ex: 86400 })
+        await cache.set(`cf_pending:${cfOrder.order_id}`, cachePayload, { ex: 86400 })
       } catch (cacheErr) {
         console.warn('Draft order caching note:', cacheErr)
       }
