@@ -429,12 +429,64 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Convert grouped records to arrays
+    // Merge full grocery catalog to ensure 100% complete grocery coverage (including unsold items with qty=0)
+    try {
+      const allGroceryProducts = await prisma.product.findMany({
+        where: {
+          restaurantId: null,
+          isAvailable: true,
+        },
+        select: {
+          id: true,
+          readableId: true,
+          name: true,
+          mrp: true,
+          price: true,
+          costPrice: true,
+          stock: true,
+          vendor: true,
+          category: {
+            select: {
+              name: true,
+            }
+          }
+        }
+      })
+
+      for (const gp of allGroceryProducts) {
+        if (productData[gp.id]) {
+          (productData[gp.id] as any).stock = gp.stock
+          if (gp.readableId) (productData[gp.id] as any).readableId = gp.readableId
+        } else {
+          // Present in catalog but not sold in this period: include with 0 qty sold
+          productData[gp.id] = {
+            productId: gp.id,
+            name: gp.name,
+            mrp: gp.mrp || gp.price || 0,
+            price: gp.price || 0,
+            costPrice: gp.costPrice || 0,
+            quantity: 0,
+            sales: 0,
+            profit: 0,
+            categoryName: gp.category?.name || 'Grocery Essentials',
+            vendor: gp.vendor || 'Direct / FastKirana',
+            type: 'grocery',
+            stock: gp.stock ?? 0,
+            readableId: gp.readableId,
+          } as any
+        }
+      }
+    } catch (catErr) {
+      console.warn('Failed to merge grocery catalog into reports:', catErr)
+    }
+
+    // Convert grouped records to arrays without arbitrary slice limits (100% complete data)
     const dailyList = Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date))
     const categoryList = Object.values(categoryData).sort((a, b) => b.sales - a.sales)
-    const productList = Object.values(productData)
-      .sort((a, b) => b.sales - a.sales)
-      .slice(0, 200) // All sold products in date range (up to 200 items)
+    const productList = Object.values(productData).sort((a, b) => {
+      if (b.sales !== a.sales) return b.sales - a.sales
+      return (b.quantity || 0) - (a.quantity || 0)
+    })
 
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0

@@ -55,6 +55,8 @@ interface TopProduct {
   categoryName?: string
   vendor?: string
   type?: 'restaurant' | 'grocery'
+  stock?: number
+  readableId?: string | number
 }
 
 interface ChannelMetrics {
@@ -382,11 +384,13 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
       const wsCategory = XLSX.utils.aoa_to_sheet([catHeader, ...catRows])
 
-      // 3. Tab 3: Product Sales Sheet (With Vendor & Payable Amount)
+      // 3. Tab 3: Product Sales Sheet (With Vendor, Stock & Payable Amount)
       const prodHeader = [
+        'Item ID',
         'Product / Dish Name',
         'Vendor / Supplier',
         'Category / Outlet',
+        'Current Stock',
         'Selling Price (INR)',
         'Cost / Purchase Rate (INR)',
         'Qty Sold',
@@ -398,10 +402,14 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       const prodRows = targetProducts.map((prod: TopProduct) => {
         const margin = prod.sales > 0 ? ((prod.profit / prod.sales) * 100) : 0
         const vendorPayable = Math.round((prod.costPrice || 0) * prod.quantity * 100) / 100
+        const itemId = prod.readableId ? `#${prod.readableId}` : prod.productId
+        const stockVal = prod.stock !== undefined ? prod.stock : '-'
         return [
+          itemId,
           prod.name,
           prod.vendor || 'Direct / FastKirana',
           prod.categoryName || '-',
+          stockVal,
           prod.price || 0,
           prod.costPrice || 0,
           prod.quantity,
@@ -427,6 +435,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       > = {}
 
       targetProducts.forEach((prod: TopProduct) => {
+        if (!prod.quantity || prod.quantity <= 0) return // Skip unsold items from vendor payable ledger
         const vName = (prod.vendor && prod.vendor.trim()) || 'Direct / FastKirana'
         if (!vendorSummaryMap[vName]) {
           vendorSummaryMap[vName] = {
@@ -732,10 +741,12 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
       // 3. Itemized Product Performance
       csv += `--- ITEMIZED ${scopeLabel} SALES PERFORMANCE ---\n`
-      csv += 'Product / Dish Name,Category / Outlet,Selling Price (INR),Cost / Payout (INR),Qty Sold,Total Sales (INR),Net Profit (INR),Margin (%)\n'
+      csv += 'Item ID,Product / Dish Name,Category / Outlet,Current Stock,Selling Price (INR),Cost / Payout (INR),Qty Sold,Total Sales (INR),Net Profit (INR),Margin (%)\n'
       targetProducts.forEach((prod: TopProduct) => {
         const margin = prod.sales > 0 ? ((prod.profit / prod.sales) * 100).toFixed(1) : '0'
-        csv += `"${prod.name}","${prod.categoryName || '-'}",₹${(prod.price || 0).toFixed(2)},₹${(prod.costPrice || 0).toFixed(2)},${prod.quantity},₹${prod.sales.toFixed(2)},₹${prod.profit.toFixed(2)},${margin}%\n`
+        const itemId = prod.readableId ? `#${prod.readableId}` : prod.productId
+        const stockVal = prod.stock !== undefined ? prod.stock : '-'
+        csv += `"${itemId}","${prod.name}","${prod.categoryName || '-'}",${stockVal},₹${(prod.price || 0).toFixed(2)},₹${(prod.costPrice || 0).toFixed(2)},${prod.quantity},₹${prod.sales.toFixed(2)},₹${prod.profit.toFixed(2)},${margin}%\n`
       })
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
