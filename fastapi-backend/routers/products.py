@@ -1087,12 +1087,14 @@ async def get_upsell_recommendations(
 @router.post("/validate-cart")
 async def validate_checkout_cart(
     payload: Dict[str, Any] = Body(...),
+    storeId: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Validate checkout cart items, updating client on stock shortages, caps, and price changes.
     """
     items = payload.get("items", [])
+    target_store = payload.get("storeId") or storeId or "hub-209206"
     if not isinstance(items, list):
         raise HTTPException(status_code=400, detail="Invalid cart items")
 
@@ -1110,6 +1112,16 @@ async def validate_checkout_cart(
     res = await db.execute(stmt)
     db_products = res.scalars().all()
 
+    # Fetch store inventory overlay for target hub (e.g. Ghatampur hub-209206)
+    store_inv_map = {}
+    if target_store and target_store != "all":
+        inv_stmt = select(StoreInventory).where(
+            StoreInventory.storeId == target_store,
+            StoreInventory.productId.in_(product_ids)
+        )
+        inv_res = await db.execute(inv_stmt)
+        store_inv_map = {inv.productId: inv for inv in inv_res.scalars().all()}
+
     updates = []
     for item in items:
         client_product = item.get("product", {})
@@ -1122,9 +1134,15 @@ async def validate_checkout_cart(
         product_id, variant_name = client_pid.split("_") if is_variant else (client_pid, None)
 
         db_product = next((p for p in db_products if p.id == product_id), None)
+        local_inv = store_inv_map.get(product_id)
 
         # Availability Check
-        if not db_product or not db_product.isAvailable:
+        is_restaurant = bool(db_product.restaurantId if db_product else False)
+        is_available = db_product.isAvailable if db_product else False
+        if not is_restaurant and local_inv is not None:
+            is_available = is_available and local_inv.isAvailable
+
+        if not db_product or not is_available:
             updates.append({
                 "type": "OUT_OF_STOCK",
                 "productId": client_pid,
@@ -1132,10 +1150,10 @@ async def validate_checkout_cart(
             })
             continue
 
-        # Resolve variant details
-        db_price = db_product.price
+        # Resolve variant and local inventory details
+        db_price = (local_inv.priceOverride if (local_inv and local_inv.priceOverride is not None) else db_product.price)
         db_mrp = db_product.mrp
-        db_stock = db_product.stock
+        db_stock = db_product.stock if is_restaurant else (local_inv.stock if local_inv else db_product.stock)
 
         if is_variant and db_product.variants and isinstance(db_product.variants, list):
             variant = next((v for v in db_product.variants if v.get("name") == variant_name), None)
@@ -1360,7 +1378,7 @@ async def create_product(
         db.add(product)
         await db.flush()
 
-        # C9 FIX: Multi-Hub Store Inventory Seeding
+        # Multi-Hub Store Inventory Seeding
         initial_stock_num = 99999 if final_rest_id else int(payload.get("stock", 0))
         target_store_id = (payload.get("storeId") if payload.get("storeId") != "all" else None) or admin_user.get("assignedStoreId")
 
@@ -1373,15 +1391,29 @@ async def create_product(
                 db.add(StoreInventory(
                     productId=product.id,
                     storeId=sid,
-                    stock=store_stock
+                    stock=store_stock,
+                    isAvailable=True
                 ))
         except Exception as seed_err:
             logger.warning(f"Could not seed store_inventories for product {product.id}: {seed_err}")
 
         await db.commit()
+        await db.refresh(product)
         clear_products_cache()
         await invalidate_catalog_cache()
-        return product
+
+        # Trigger Next.js storefront ISR revalidation
+        try:
+            from routers.categories import trigger_revalidation
+            cat_slug = None
+            if product.categoryId:
+                cat_res = await db.execute(select(Category.slug).where(Category.id == product.categoryId))
+                cat_slug = cat_res.scalar_one_or_none()
+            await trigger_revalidation(cat_slug)
+        except Exception as rev_err:
+            logger.warning(f"Failed to trigger revalidation on product create: {rev_err}")
+
+        return serialize_product(product, local_stock=initial_stock_num, is_admin=True)
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create product: {str(e)}")

@@ -250,7 +250,10 @@ export async function GET(request: Request) {
         ? prisma.address.findMany({ where: { id: { in: addressIds as string[] } } })
         : [],
       orderIds.length > 0
-        ? prisma.orderItem.findMany({ where: { orderId: { in: orderIds } } })
+        ? prisma.orderItem.findMany({
+            where: { orderId: { in: orderIds } },
+            include: { product: { select: { unit: true, variants: true } } },
+          })
         : [],
       restaurantIds.length > 0
         ? prisma.restaurant.findMany({ where: { id: { in: restaurantIds as string[] } }, select: { id: true, name: true, slug: true, address: true, logoUrl: true } })
@@ -406,14 +409,24 @@ export async function GET(request: Request) {
       const address = allAddresses.find(a => a.id === o.addressId) || null
       const restaurant = o.restaurantId ? allRestaurants.find(r => r.id === o.restaurantId) : null
       const deliveryUser = o.deliveryUserId ? allDeliveryUsers.find(d => d.id === o.deliveryUserId) : null
-      const items = allOrderItems.filter(item => item.orderId === o.id).map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        imageUrl: item.imageUrl,
-        selectedVariant: item.selectedVariant,
-      }))
+      const items = allOrderItems.filter(item => item.orderId === o.id).map(item => {
+        const prod = (item as any).product
+        const variant = item.selectedVariant || prod?.unit || null
+        return {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          imageUrl: item.imageUrl,
+          selectedVariant: variant,
+          selected_variant: variant,
+          variant: variant,
+          unit: variant,
+          size: variant,
+          weight: variant,
+          notes: item.notes || null,
+        }
+      })
 
       return {
         id: o.id,

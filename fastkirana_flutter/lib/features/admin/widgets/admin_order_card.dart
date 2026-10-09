@@ -9,6 +9,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/routes/page_transitions.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/restaurant_utils.dart';
+import '../../../core/utils/order_item_helper.dart';
 import '../../../data/models/order.dart';
 import '../../../providers/store_settings_provider.dart';
 import '../../orders/order_detail_screen.dart';
@@ -825,12 +826,15 @@ class AdminOrderCard extends ConsumerWidget {
                       child: Row(
                         children: itemsList.map((item) {
                           final isItemRefunded = item.isRefunded || item.refundAmount > 0;
+                          final variant = (item.displayVariantOrWeight ??
+                                  OrderItemHelper.resolveWeightOrVariant(item.toJson(), item.name))
+                              .trim();
                           return Padding(
                             padding: const EdgeInsets.only(right: 6),
                             child: GestureDetector(
                               onTap: () => onShowSubstitution!(order, item),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: isItemRefunded ? const Color(0xFFFFE4E6) : AppDesignSystem.slate50,
                                   borderRadius: BorderRadius.circular(6),
@@ -844,12 +848,34 @@ class AdminOrderCard extends ConsumerWidget {
                                     Text(
                                       '${item.quantity}x ${item.name}',
                                       style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 10),
-                                        fontWeight: FontWeight.w600,
-                                        color: isItemRefunded ? const Color(0xFFBE123C) : AppDesignSystem.slate700,
+                                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                                        fontWeight: FontWeight.w700,
+                                        color: isItemRefunded ? const Color(0xFFBE123C) : AppDesignSystem.slate800,
                                         decoration: isItemRefunded ? TextDecoration.lineThrough : null,
                                       ),
                                     ),
+                                    if (variant.isNotEmpty) ...[
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: isItemRefunded
+                                              ? const Color(0xFFFECDD3)
+                                              : (item.isRestaurantItem ? const Color(0xFFFEF3C7) : const Color(0xFFE2E8F0)),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          variant,
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 9),
+                                            fontWeight: FontWeight.w800,
+                                            color: isItemRefunded
+                                                ? const Color(0xFFBE123C)
+                                                : (item.isRestaurantItem ? const Color(0xFF92400E) : const Color(0xFF0F172A)),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(width: 3),
                                     const Icon(Icons.swap_horiz_rounded, size: 11, color: AppDesignSystem.slate400),
                                   ],

@@ -9,6 +9,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/utils/app_toast.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../core/utils/order_item_helper.dart';
 import '../../core/services/admin_notification_service.dart';
 import '../../core/services/admin_authorization.dart';
 import '../../core/services/location_service.dart';
@@ -575,7 +576,7 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                     itemBuilder: (context, idx) {
                       final it = _items[idx];
                       final name = (it['name'] ?? 'Item').toString();
-                      final variant = it['selectedVariant']?.toString();
+                      final variant = OrderItemHelper.resolveWeightOrVariant(it, name).trim();
                       final notes = it['notes']?.toString();
                       final isCustom = it['isCustom'] == true || (it['productId']?.toString().startsWith('custom_') ?? false);
                       final price = (it['price'] is num)
@@ -690,16 +691,9 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                                   ),
                               ],
                             ),
-                            if (variant != null && variant.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                'Variant: $variant',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11),
-                                  fontWeight: FontWeight.w600,
-                                  color: brandAmber,
-                                ),
-                              ),
+                            if (variant.isNotEmpty) ...[
+                              const SizedBox(height: 3),
+                              OrderItemHelper.buildWeightBadge(context, variant),
                             ],
                             if (notes != null && notes.isNotEmpty) ...[
                               const SizedBox(height: 2),

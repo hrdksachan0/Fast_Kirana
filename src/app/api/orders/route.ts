@@ -460,8 +460,16 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const groceryItems: any[] = []
+    const effectiveStoreId = resolvedStoreId || 'hub-209206'
+    const storeInventories = await prisma.storeInventory.findMany({
+      where: {
+        storeId: effectiveStoreId,
+        productId: { in: productIds }
+      }
+    })
+    const invMap = new Map(storeInventories.map((inv) => [inv.productId, inv]))
     const restaurantGroups: Record<string, { restaurant: any; items: any[] }> = {}
+    const groceryItems: any[] = []
 
     for (const item of normalizedItems) {
       const rawId = item.product.id
@@ -511,7 +519,11 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      let dbStock = dbProduct.stock
+      const localInv = invMap.get(productId)
+      let dbStock = dbProduct.restaurantId
+        ? dbProduct.stock
+        : (localInv ? localInv.stock : dbProduct.stock)
+
       if (isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
         const variant = (dbProduct.variants as any[]).find((v) => v.name === variantName)
         if (variant) {

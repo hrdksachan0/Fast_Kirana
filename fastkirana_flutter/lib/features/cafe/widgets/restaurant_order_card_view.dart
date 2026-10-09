@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/order_item_helper.dart';
 import '../../../core/widgets/app_cached_image.dart';
+import '../../../data/models/order.dart';
 import '../../delivery/widgets/rider_cart_modal.dart';
 
 class RestaurantOrderCardView extends StatelessWidget {
@@ -42,7 +43,9 @@ class RestaurantOrderCardView extends StatelessWidget {
         ? rawReadable.toString()
         : (orderId.length > 4 ? orderId.substring(orderId.length - 4) : orderId);
 
-    final dynamic rawItems = order['items'];
+    final dynamic rawItems = order['items'] ??
+        order['order_items'] ??
+        (order['order'] is Map ? (order['order']['items'] ?? order['order']['order_items']) : null);
     final List items = (rawItems is List) ? rawItems : [];
 
     final num total = (order['total'] is num)
@@ -246,16 +249,29 @@ class RestaurantOrderCardView extends StatelessWidget {
 
             // 2. Detailed Dish Items List with Photos, High-Visibility Quantities, and Portion Badges
             ...items.map((item) {
-              final String name = (item['name'] ?? item['title'] ?? 'Dish').toString();
-              final int qty = (item['quantity'] is num)
+              final String name = (item is Map
+                      ? (item['name'] ?? item['title'])
+                      : (item is OrderItem ? item.name : null))
+                  ?.toString() ?? 'Dish';
+              final int qty = (item is Map && item['quantity'] is num)
                   ? (item['quantity'] as num).toInt()
-                  : (int.tryParse(item['quantity']?.toString() ?? '1') ?? 1);
-              final String? notes = item['notes']?.toString();
-              final String variant = OrderItemHelper.resolveWeightOrVariant(item, name);
-              final String imgUrl = OrderItemHelper.resolveImageUrl(item);
-              final num itemPrice = (item['price'] is num)
+                  : (item is OrderItem
+                      ? item.quantity
+                      : (int.tryParse(item is Map ? item['quantity']?.toString() ?? '1' : '1') ?? 1));
+              final String? notes = item is Map
+                  ? item['notes']?.toString()
+                  : (item is OrderItem ? item.notes : null);
+              final String variant = item is OrderItem
+                  ? (item.displayVariantOrWeight ?? OrderItemHelper.resolveWeightOrVariant(item.toJson(), item.name))
+                  : OrderItemHelper.resolveWeightOrVariant(item, name);
+              final String imgUrl = item is OrderItem
+                  ? (item.imageUrl ?? '')
+                  : OrderItemHelper.resolveImageUrl(item);
+              final num itemPrice = (item is Map && item['price'] is num)
                   ? (item['price'] as num)
-                  : (num.tryParse(item['price']?.toString() ?? '0') ?? 0);
+                  : (item is OrderItem
+                      ? item.price
+                      : (num.tryParse(item is Map ? item['price']?.toString() ?? '0' : '0') ?? 0));
               final num lineTotal = itemPrice * qty;
 
               return Padding(

@@ -7,6 +7,7 @@ import '../../../../core/services/kot_print_service.dart';
 import '../../../../core/services/logger_service.dart';
 import '../../../../core/theme/design_system.dart';
 import '../../../../core/utils/app_toast.dart';
+import '../../../../core/utils/order_item_helper.dart';
 
 /// Modal bottom sheet for viewing, printing, broadcasting, and sharing Kitchen Order Tickets (KOT)
 class RestaurantKotModal {
@@ -57,9 +58,8 @@ class RestaurantKotModal {
       final name = (i['name'] ?? 'Food Item').toString();
       final qty = (i['quantity'] is num) ? (i['quantity'] as num).toInt() : (int.tryParse(i['quantity']?.toString() ?? '1') ?? 1);
       totalQty += qty;
-      final variant = (i['selectedVariant'] != null && i['selectedVariant'].toString().isNotEmpty)
-          ? ' (${i['selectedVariant']})'
-          : '';
+      final vStr = OrderItemHelper.resolveWeightOrVariant(i, name).trim();
+      final variant = vStr.isNotEmpty ? ' ($vStr)' : '';
       final itemNote = (i['notes'] != null && i['notes'].toString().isNotEmpty)
           ? ' [Note: ${i['notes']}]'
           : '';
@@ -101,9 +101,8 @@ class RestaurantKotModal {
         ? items.map((i) {
             final name = (i['name'] ?? 'Food Item').toString();
             final qty = (i['quantity'] is num) ? (i['quantity'] as num).toInt() : (int.tryParse(i['quantity']?.toString() ?? '1') ?? 1);
-            final variant = (i['selectedVariant'] != null && i['selectedVariant'].toString().isNotEmpty)
-                ? ' (${i['selectedVariant']})'
-                : '';
+            final vStr = OrderItemHelper.resolveWeightOrVariant(i, name).trim();
+            final variant = vStr.isNotEmpty ? ' ($vStr)' : '';
             final note = (i['notes'] != null && i['notes'].toString().isNotEmpty)
                 ? '\n      * Note: ${i['notes']}'
                 : '';

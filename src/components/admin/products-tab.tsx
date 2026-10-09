@@ -349,10 +349,14 @@ export function ProductsTab({
         <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
           <button
             onClick={() => {
-              if (!showAddProduct && resetNewProductForm) {
-                resetNewProductForm()
+              if (showAddProduct) {
+                if (resetNewProductForm) resetNewProductForm()
+                const formEl = document.getElementById('add-product-form-container')
+                if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              } else {
+                if (resetNewProductForm) resetNewProductForm()
+                setShowAddProduct(true)
               }
-              setShowAddProduct(!showAddProduct)
             }}
             className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all cursor-pointer"
           >
@@ -465,17 +469,41 @@ export function ProductsTab({
         >
           {/* Header */}
           <div className="border-b border-border/60 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <h4 className="font-black text-text-primary text-base">
-                Add New {isNewRestaurantMode ? 'Restaurant Dish' : 'Grocery Product'}
-              </h4>
-              <p className="text-[11px] text-text-secondary mt-0.5">
-                {isNewRestaurantMode ? `Outlet: ${selectedNewRestaurant?.name || 'Restaurant'}` : 'Define your inventory item specs, MRP and FastKirana pricing.'}
-              </p>
+            <div className="flex items-start justify-between w-full md:w-auto">
+              <div>
+                <h4 className="font-black text-text-primary text-base">
+                  Add New {isNewRestaurantMode ? 'Restaurant Dish' : 'Grocery Product'}
+                </h4>
+                <p className="text-[11px] text-text-secondary mt-0.5">
+                  {isNewRestaurantMode ? `Outlet: ${selectedNewRestaurant?.name || 'Restaurant'}` : 'Define your inventory item specs, MRP and FastKirana pricing.'}
+                </p>
+              </div>
+              <div className="flex md:hidden items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (resetNewProductForm) {
+                      resetNewProductForm()
+                      toast.info('Form cleared — ready for new product!')
+                    }
+                  }}
+                  className="px-2 py-1 text-[11px] text-text-muted hover:text-text-primary border border-border rounded-lg"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddProduct(false)}
+                  className="p-1 text-text-muted hover:text-text-primary rounded-lg"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Store / Outlet Selection */}
-            <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 min-w-[280px] space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Store / Outlet Selection */}
+              <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 min-w-[280px] space-y-2">
               <div>
                 <label className="text-[10px] font-black text-primary uppercase tracking-wider block mb-1">
                   Store / Restaurant Outlet Assignment *
@@ -540,7 +568,33 @@ export function ProductsTab({
                 </div>
               )}
             </div>
+
+            {/* Desktop Clear & Close Actions */}
+            <div className="hidden md:flex items-center gap-2 self-center">
+              <button
+                type="button"
+                onClick={() => {
+                  if (resetNewProductForm) {
+                    resetNewProductForm()
+                    toast.info('Form cleared — ready for new product!')
+                  }
+                }}
+                className="px-3 py-2 text-xs text-text-muted hover:text-text-primary border border-border/80 rounded-xl hover:bg-muted/50 font-bold transition-all cursor-pointer shadow-2xs"
+                title="Reset all fields to blank"
+              >
+                Clear Form
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddProduct(false)}
+                className="p-2 text-text-muted hover:text-text-primary rounded-xl hover:bg-muted/50 border border-border/40 transition-all cursor-pointer"
+                title="Close Form"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
+        </div>
 
           {/* Preset Product Templates (for Grocery) */}
           {!isNewRestaurantMode && (
@@ -1382,16 +1436,31 @@ export function ProductsTab({
 
           {/* Actions */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                if (resetNewProductForm) resetNewProductForm()
-                setShowAddProduct(false)
-              }}
-              className="px-4 py-2 border border-border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
-            >
-              Cancel
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (resetNewProductForm) resetNewProductForm()
+                  setShowAddProduct(false)
+                }}
+                className="px-4 py-2 border border-border rounded-xl text-xs font-bold hover:bg-muted/50 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (resetNewProductForm) {
+                    resetNewProductForm()
+                    toast.info('Form cleared — ready for new product!')
+                  }
+                }}
+                className="px-3.5 py-2 border border-border/70 rounded-xl text-xs font-bold text-text-muted hover:text-text-primary hover:bg-muted/50 transition-all cursor-pointer"
+                title="Reset all inputs to blank"
+              >
+                Clear / Blank Form
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"

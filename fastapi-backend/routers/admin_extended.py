@@ -136,7 +136,7 @@ async def admin_get_products(
     """Admin product listing with filters."""
     skip = (page - 1) * limit
 
-    stmt = select(Product).options(selectinload(Product.category))
+    stmt = select(Product).options(selectinload(Product.category), selectinload(Product.restaurant))
 
     and_clauses = []
     if categoryId and categoryId not in ('ALL', 'undefined', 'null'):
@@ -215,11 +215,13 @@ async def admin_get_products(
 
         product_list.append(ProductOut(
             id=p.id,
+            readableId=p.readableId,
             name=p.name,
             slug=p.slug,
             description=p.description,
             imageUrl=p.imageUrl,
             categoryId=p.categoryId,
+            restaurantId=p.restaurantId,
             mrp=p.mrp,
             price=p.price,
             discount=p.discount,
@@ -238,11 +240,20 @@ async def admin_get_products(
             isBestSeller=p.isBestSeller,
             availableStartTime=p.availableStartTime,
             availableEndTime=p.availableEndTime,
+            vendor=p.vendor,
+            vendorId=p.vendorId,
+            createdAt=p.createdAt,
+            updatedAt=p.updatedAt,
             category={
                 "id": p.category.id if p.category else "",
                 "name": p.category.name if p.category else "",
                 "slug": p.category.slug if p.category else "",
             } if p.category else None,
+            restaurant={
+                "id": p.restaurant.id if p.restaurant else "",
+                "name": p.restaurant.name if p.restaurant else "",
+                "slug": p.restaurant.slug if p.restaurant else "",
+            } if p.restaurant else None,
         ))
 
     return {"products": product_list, "total": total, "page": page, "limit": limit}
@@ -336,25 +347,36 @@ async def admin_create_product(
     target_store_id = data.get("storeId") if data.get("storeId") != "all" else None
     from models import StoreInventory, DarkStore
     try:
-        if target_store_id:
+        stores_res = await db.execute(select(DarkStore.id))
+        all_store_ids = stores_res.scalars().all()
+        for sid in all_store_ids:
+            store_stock = initial_stock_num if (not target_store_id or sid == target_store_id) else 0
             db.add(StoreInventory(
                 productId=product.id,
-                storeId=target_store_id,
-                stock=initial_stock_num
+                storeId=sid,
+                stock=store_stock,
+                isAvailable=True
             ))
-        else:
-            stores_res = await db.execute(select(DarkStore.id))
-            for sid in stores_res.scalars().all():
-                db.add(StoreInventory(
-                    productId=product.id,
-                    storeId=sid,
-                    stock=initial_stock_num
-                ))
     except Exception as e:
         logger.warning(f"StoreInventory seed error in admin_create_product: {e}")
 
     await db.commit()
     await db.refresh(product)
+    from utils.cache import invalidate_catalog_cache
+    from routers.products import clear_products_cache
+    clear_products_cache()
+    await invalidate_catalog_cache()
+
+    try:
+        from routers.categories import trigger_revalidation
+        cat_slug = None
+        if product.categoryId:
+            cat_res = await db.execute(select(Category.slug).where(Category.id == product.categoryId))
+            cat_slug = cat_res.scalar_one_or_none()
+        await trigger_revalidation(cat_slug)
+    except Exception as rev_err:
+        logger.warning(f"Failed to trigger revalidation on admin create product: {rev_err}")
+
     return {"product": serialize_product(product)}
 
 

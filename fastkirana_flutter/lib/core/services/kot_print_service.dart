@@ -8,7 +8,7 @@ import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
 import '../utils/app_toast.dart';
-import '../utils/restaurant_utils.dart';
+import '../utils/order_item_helper.dart';
 import 'supabase_service.dart';
 
 /// Exact 1:1 Port of Web App's KOT & POS Printing Engine (src/lib/kot-print.ts)
@@ -506,7 +506,7 @@ class KotPrintService {
           ...targetItems.map((item) {
             final String name = (item['name'] ?? (item['product'] is Map ? item['product']['name'] : 'Item')).toString();
             final int qty = (item['quantity'] as num?)?.toInt() ?? 1;
-            final String? variant = (item['selectedVariant'] ?? item['variant'])?.toString();
+            final String variant = OrderItemHelper.resolveWeightOrVariant(item, name).trim();
             final String? note = item['notes']?.toString();
 
             return pw.Container(
@@ -529,7 +529,7 @@ class KotPrintService {
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text(
-                          name + (variant != null && variant.isNotEmpty ? ' ($variant)' : ''),
+                          name + (variant.isNotEmpty ? ' ($variant)' : ''),
                           style: pw.TextStyle(font: monoFont, fontSize: 11.5, fontWeight: pw.FontWeight.bold),
                         ),
                         if (note != null && note.trim().isNotEmpty)

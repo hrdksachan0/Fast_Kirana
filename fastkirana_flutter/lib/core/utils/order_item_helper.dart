@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/design_system.dart';
+import 'restaurant_utils.dart';
 
 class OrderItemHelper {
   /// Extracts the weight, pack size, unit, or variant from an order item map or object.
@@ -73,17 +74,37 @@ class OrderItemHelper {
       return explicit;
     }
 
-    // Fallback 1: Extract size keywords from brackets/parentheses in title (e.g. "Paneer Tikka (Half)")
     if (name.isNotEmpty) {
-      final sizeBracketMatch = RegExp(
-        r'[\(\[]\s*(half|full|quarter|small|medium|large|regular|single|double|plate|piece|serving)\s*[\)\]]',
+      // Fallback 1: Extract variant inside brackets/parentheses in title (e.g. "Chole Bhature (2Pc)", "Paneer Tikka (Half)", "Aloo Paratha (2 Pc)", "Chili Potato (Gravy)")
+      final generalBracketMatch = RegExp(
+        r'[\(\[]\s*([^()\[\]]{1,25})\s*[\)\]]',
         caseSensitive: false,
       ).firstMatch(name);
-      if (sizeBracketMatch != null) {
-        final s = sizeBracketMatch.group(1)!.trim();
-        return s[0].toUpperCase() + s.substring(1).toLowerCase();
+      if (generalBracketMatch != null) {
+        final rawContent = generalBracketMatch.group(1)!.trim();
+        final lower = rawContent.toLowerCase();
+        // Ignore pure veg/non-veg tags
+        if (lower != 'veg' && lower != 'pure veg' && lower != 'non-veg' && lower != 'egg') {
+          final cleaned = rawContent.replaceAllMapped(
+            RegExp(r'(\d+)\s*(pc|pcs|gm|g|kg|ml|l)\b', caseSensitive: false),
+            (m) {
+              final numPart = m[1];
+              final unitPart = m[2]!.toLowerCase();
+              if (unitPart.startsWith('pc')) return '$numPart Pc';
+              if (unitPart == 'gm' || unitPart == 'g') return '$numPart gm';
+              if (unitPart == 'kg') return '$numPart kg';
+              if (unitPart == 'ml') return '$numPart ml';
+              if (unitPart == 'l') return '$numPart L';
+              return '${m[0]}';
+            },
+          );
+          if (cleaned.isNotEmpty) {
+            return cleaned[0].toUpperCase() + (cleaned.length > 1 ? cleaned.substring(1) : '');
+          }
+        }
       }
 
+      // Fallback 2: Size with leading hyphen (e.g. "Veg Chowmein - Half")
       final sizeDashMatch = RegExp(
         r'-\s*(half|full|quarter|small|medium|large|regular|single|double)\b',
         caseSensitive: false,
@@ -93,7 +114,7 @@ class OrderItemHelper {
         return s[0].toUpperCase() + s.substring(1).toLowerCase();
       }
 
-      // Fallback 2: Extract weight/unit from product title (e.g. "Sugar 500 gm", "Tata Salt 1 kg", "Fortune Oil 5 L")
+      // Fallback 3: Extract weight/unit from product title (e.g. "Sugar 500 gm", "Tata Salt 1 kg", "Fortune Oil 5 L")
       final match = RegExp(
         r'(\d+(?:\.\d+)?\s*(?:kg|kgs|gm|gms|g|ltr|ltrs|lt|l|ml|pc|pcs|pack|katta|dozen|plate|piece|serving))\b',
         caseSensitive: false,
@@ -102,7 +123,7 @@ class OrderItemHelper {
         return match.group(1)!.trim();
       }
 
-      // Fallback 3: standalone size word
+      // Fallback 4: standalone size word
       final standaloneSize = RegExp(
         r'\b(half|full|quarter|small|medium|large|regular)\b',
         caseSensitive: false,
@@ -110,6 +131,32 @@ class OrderItemHelper {
       if (standaloneSize != null) {
         final s = standaloneSize.group(1)!.trim();
         return s[0].toUpperCase() + s.substring(1).toLowerCase();
+      }
+
+      // Fallback 5: Context-aware defaults for cooked restaurant food items
+      if (RestaurantRegistry.isFoodDishName(name)) {
+        final lower = name.toLowerCase();
+        if (lower.contains('burger') ||
+            lower.contains('sandwich') ||
+            lower.contains('roll') ||
+            lower.contains('patty') ||
+            lower.contains('roti') ||
+            lower.contains('naan') ||
+            lower.contains('paratha')) {
+          return '1 Pc';
+        }
+        if (lower.contains('shake') ||
+            lower.contains('coffee') ||
+            lower.contains('tea') ||
+            lower.contains('chai') ||
+            lower.contains('juice') ||
+            lower.contains('lassi')) {
+          return '1 Glass';
+        }
+        if (lower.contains('pizza')) {
+          return 'Regular';
+        }
+        return '1 Portion';
       }
     }
 

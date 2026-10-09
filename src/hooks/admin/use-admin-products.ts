@@ -994,12 +994,13 @@ export function useAdminProducts({
       })
 
       if (res.ok) {
-        const created = await res.json()
+        const createdRaw = await res.json()
+        const created = createdRaw?.product || createdRaw
         setProducts((prev) => [created, ...prev])
         setAllProducts((prev) => [created, ...prev])
         setProductTotal((prev) => prev + 1)
         toast.dismiss()
-        toast.success(`Product "${created.name}" created successfully!`, {
+        toast.success(`Product "${created.name || 'Item'}" created successfully!`, {
           id: `product-created-${created.id || Date.now()}`,
           duration: 3000,
         })
@@ -1014,6 +1015,7 @@ export function useAdminProducts({
             }
           }, 50)
         }
+        setProductPage(1)
         fetchProducts()
       } else {
         const errData = await res.json().catch(() => ({}))

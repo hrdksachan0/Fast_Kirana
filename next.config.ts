@@ -404,10 +404,6 @@ const nextConfig: NextConfig = {
         destination: `${apiDest}/api/diagnostics`,
       },
       {
-        source: '/api/revalidate-bridge',
-        destination: `${apiDest}/api/revalidate-bridge`,
-      },
-      {
         source: '/api/cron/:path*',
         destination: `${apiDest}/api/cron/:path*`,
       },
@@ -470,17 +466,17 @@ const nextConfig: NextConfig = {
       {
         source: "/api/products",
         headers: [
-          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
-          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
-          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Cache-Control", value: "public, s-maxage=15, stale-while-revalidate=60" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=15, stale-while-revalidate=60" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=15, stale-while-revalidate=60" },
         ]
       },
       {
         source: "/api/products/:path*",
         headers: [
-          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
-          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
-          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Cache-Control", value: "public, s-maxage=15, stale-while-revalidate=60" },
+          { key: "CDN-Cache-Control", value: "public, s-maxage=15, stale-while-revalidate=60" },
+          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=15, stale-while-revalidate=60" },
         ]
       },
       {

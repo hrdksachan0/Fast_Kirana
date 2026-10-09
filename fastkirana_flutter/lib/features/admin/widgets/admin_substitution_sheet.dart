@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/design_system.dart';
 import '../../../../data/models/order.dart';
 import '../../../../core/services/admin_notification_service.dart';
+import '../../../../core/utils/order_item_helper.dart';
 
 /// Out-of-Stock Replacement Modal for Admin Orders Console
 class AdminSubstitutionSheet {
@@ -11,6 +12,7 @@ class AdminSubstitutionSheet {
     final custPhone = order.customerPhone ?? '';
     final custName = order.customerName ?? 'Customer';
     final orderId = order.readableId ?? order.id;
+    final variant = (item.displayVariantOrWeight ?? OrderItemHelper.resolveWeightOrVariant(item.toJson(), item.name)).trim();
 
     showModalBottomSheet(
       context: context,
@@ -76,7 +78,7 @@ class AdminSubstitutionSheet {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Unavailable Item: ${item.name} (${item.quantity}x)',
+                      'Unavailable Item: ${item.quantity}x ${item.name}${variant.isNotEmpty ? " • $variant" : ""}',
                       style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: AppDesignSystem.rose800),
                     ),
                   ),

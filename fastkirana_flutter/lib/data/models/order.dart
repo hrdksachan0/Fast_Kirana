@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../core/utils/order_item_helper.dart';
 
 part 'order.g.dart';
 
@@ -368,17 +369,19 @@ class Order {
     List<OrderItem> itemsList = [];
     final rawItems = json['items'] ?? json['order_items'];
     if (rawItems is List) {
-      itemsList = rawItems.whereType<Map<String, dynamic>>().map((itemJson) {
+      for (final raw in rawItems) {
+        if (raw is! Map) continue;
+        final itemJson = Map<String, dynamic>.from(raw);
         final it = OrderItem.fromJson(itemJson);
         final joinedRestId = itemJson['product'] is Map ? itemJson['product']['restaurantId']?.toString() : null;
         final effectiveRestId = it.restaurantId ?? joinedRestId ?? (isParentRestOrder ? parsedRestId : null);
         final effectiveShop = it.shopName ??
             (effectiveRestId != null ? (RestaurantRegistry.getName(effectiveRestId) ?? resolvedShopName) : resolvedShopName);
-        return it.copyWith(
+        itemsList.add(it.copyWith(
           restaurantId: effectiveRestId,
           shopName: effectiveShop,
-        );
-      }).toList();
+        ));
+      }
     }
 
     return Order(
@@ -619,7 +622,8 @@ class OrderItem {
     if (size != null && size!.trim().isNotEmpty && size != 'null') return size!.trim();
     if (weight != null && weight!.trim().isNotEmpty && weight != 'null') return weight!.trim();
     if (unit != null && unit!.trim().isNotEmpty && unit != 'null') return unit!.trim();
-    return null;
+    final fallback = OrderItemHelper.resolveWeightOrVariant({'name': name}, name);
+    return fallback.isNotEmpty ? fallback : null;
   }
 
   OrderItem({
@@ -741,6 +745,13 @@ class OrderItem {
         json['portion']?.toString() ??
         (json['product'] is Map ? (json['product']['size'] ?? json['product']['portion'])?.toString() : null);
 
+    final resolvedVariant = (rawVariant != null &&
+            rawVariant.trim().isNotEmpty &&
+            rawVariant.trim().toLowerCase() != 'null' &&
+            rawVariant.trim().toLowerCase() != 'standard')
+        ? rawVariant.trim()
+        : OrderItemHelper.resolveWeightOrVariant(json, json['name']?.toString());
+
     return OrderItem(
       id: json['id']?.toString() ?? '',
       productId: json['productId']?.toString() ?? json['product_id']?.toString(),
@@ -748,37 +759,40 @@ class OrderItem {
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
       imageUrl: json['imageUrl']?.toString() ?? json['image_url']?.toString(),
-      selectedVariant: rawVariant,
+      selectedVariant: resolvedVariant.isNotEmpty ? resolvedVariant : null,
       notes: json['notes']?.toString(),
       refundAmount: itemRefund,
       isRefunded: json['isRefunded'] == true || hasRefundInNotes || itemRefund > 0,
       restaurantId: rawRestId,
       shopName: rawShopName,
-      unit: rawUnit,
-      weight: rawWeight,
-      size: rawSize,
+      unit: rawUnit ?? (resolvedVariant.isNotEmpty ? resolvedVariant : null),
+      weight: rawWeight ?? (resolvedVariant.isNotEmpty ? resolvedVariant : null),
+      size: rawSize ?? (resolvedVariant.isNotEmpty ? resolvedVariant : null),
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'productId': productId,
-    'name': name,
-    'price': price,
-    'quantity': quantity,
-    'imageUrl': imageUrl,
-    'selectedVariant': selectedVariant,
-    'selected_variant': selectedVariant,
-    'variant': selectedVariant,
-    'unit': unit ?? selectedVariant,
-    'weight': weight ?? selectedVariant,
-    'size': size ?? selectedVariant,
-    'notes': notes,
-    'refundAmount': refundAmount,
-    'isRefunded': isRefunded,
-    'restaurantId': restaurantId,
-    'shopName': shopName,
-  };
+  Map<String, dynamic> toJson() {
+    final v = displayVariantOrWeight ?? selectedVariant;
+    return {
+      'id': id,
+      'productId': productId,
+      'name': name,
+      'price': price,
+      'quantity': quantity,
+      'imageUrl': imageUrl,
+      'selectedVariant': v,
+      'selected_variant': v,
+      'variant': v,
+      'unit': unit ?? v,
+      'weight': weight ?? v,
+      'size': size ?? v,
+      'notes': notes,
+      'refundAmount': refundAmount,
+      'isRefunded': isRefunded,
+      'restaurantId': restaurantId,
+      'shopName': shopName,
+    };
+  }
 
   double get lineTotal => price * quantity;
 }

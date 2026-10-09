@@ -598,19 +598,20 @@ async def create_order(
         if qty <= 0:
             raise HTTPException(status_code=400, detail="Item quantity must be a positive integer")
 
+        raw_pid_str = str(prod_id) if prod_id else ""
         normalized_items.append({
             "product": {
-                "id": str(prod_id).split("_")[0] if prod_id else "",
+                "id": raw_pid_str,
                 "name": prod_name,
                 "slug": prod_slug,
                 "price": prod_price,
                 "restaurantId": rest_id_payload,
                 "selectedAddons": addons_payload,
             },
-            "productId": str(prod_id).split("_")[0] if prod_id else None,
+            "productId": raw_pid_str.split("_")[0] if raw_pid_str else None,
             "quantity": qty,
             "price": prod_price,
-            "selectedVariant": raw_item.get("selectedVariant"),
+            "selectedVariant": raw_item.get("selectedVariant") or (raw_pid_str.split("_")[1] if "_" in raw_pid_str and raw_pid_str.split("_")[1] != "addons" else None),
             "restaurantId": rest_id_payload,
             "selectedAddons": addons_payload,
             "notes": raw_item.get("notes"),
@@ -871,8 +872,8 @@ async def create_order(
         return True
 
     # Load products and validate quantities
-    product_ids = [i["product"]["id"].split("_")[0] for i in items]
-    product_slugs = [i["product"]["slug"] for i in items if i["product"].get("slug")]
+    product_ids = [i["product"]["id"].split("_")[0] for i in items if i.get("product", {}).get("id")]
+    product_slugs = [i["product"]["slug"] for i in items if i.get("product", {}).get("slug")]
 
     p_stmt = select(Product).options(selectinload(Product.category)).where(
         or_(Product.id.in_(product_ids), Product.slug.in_(product_slugs))
@@ -880,13 +881,37 @@ async def create_order(
     p_res = await db.execute(p_stmt)
     db_products = p_res.scalars().all()
 
+    # Query localized store inventory (e.g. Ghatampur hub-209206)
+    effective_store_id = store_id or "hub-209206"
+    store_inv_map = {}
+    if effective_store_id and effective_store_id != "all":
+        from models import StoreInventory
+        store_inv_stmt = select(StoreInventory).where(
+            StoreInventory.storeId == effective_store_id,
+            StoreInventory.productId.in_(product_ids)
+        )
+        store_inv_res = await db.execute(store_inv_stmt)
+        store_inv_map = {inv.productId: inv for inv in store_inv_res.scalars().all()}
+
     grocery_items = []
     restaurant_groups = {}
 
     for item in items:
         prod_payload = item["product"]
-        is_variant = "_" in prod_payload["id"]
-        product_id, variant_name = prod_payload["id"].split("_") if is_variant else (prod_payload["id"], None)
+        raw_id = str(prod_payload.get("id") or item.get("productId") or "")
+        is_variant = "_" in raw_id
+        if is_variant:
+            parts = raw_id.split("_")
+            product_id = parts[0]
+            variant_name = parts[1] if len(parts) > 1 and parts[1] != "addons" else None
+        else:
+            product_id = raw_id
+            variant_name = item.get("selectedVariant") or prod_payload.get("selectedVariant")
+            is_variant = bool(variant_name)
+
+        if not variant_name and item.get("selectedVariant"):
+            variant_name = item.get("selectedVariant")
+            is_variant = True
 
         db_prod = next((p for p in db_products if p.id == product_id), None)
         if not db_prod and prod_payload.get("slug"):
@@ -895,12 +920,17 @@ async def create_order(
         if not db_prod or not db_prod.isAvailable:
             raise HTTPException(status_code=400, detail=f"Product \"{prod_payload.get('name')}\" is no longer available")
 
-        # Stock check
-        db_stock = db_prod.stock
+        local_inv = store_inv_map.get(db_prod.id)
+
+        # Stock check: Check variant stock if variant item, else check localized store inventory (or fallback db_prod.stock)
         if is_variant and db_prod.variants:
             variant = next((v for v in db_prod.variants if v.get("name") == variant_name), None)
             if variant:
                 db_stock = variant.get("stock", 0)
+            else:
+                db_stock = local_inv.stock if local_inv else db_prod.stock
+        else:
+            db_stock = local_inv.stock if local_inv else db_prod.stock
 
         resolved_rest_id = (
             db_prod.restaurantId

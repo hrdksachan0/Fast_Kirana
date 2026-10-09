@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   const { items, storeId } = validation.data
   const queryStoreId = new URL(request.url).searchParams.get('storeId')
-  const effectiveStoreId = storeId || queryStoreId || null
+  const effectiveStoreId = storeId || queryStoreId || 'hub-209206'
 
   try {
     const productIds = items.map((item: any) => item.product?.id ? item.product.id.split('_')[0] : null).filter(Boolean)
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       let dbMrp = dbProduct.mrp
       let dbStock = dbProduct.restaurantId
         ? dbProduct.stock
-        : (localInv ? localInv.stock : (effectiveStoreId ? 0 : dbProduct.stock))
+        : (localInv ? localInv.stock : dbProduct.stock)
 
       if (variantName && dbProduct.variants && Array.isArray(dbProduct.variants)) {
         const variant = (dbProduct.variants as any[]).find((v: any) => v.name === variantName)

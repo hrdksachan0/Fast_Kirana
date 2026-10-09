@@ -6,6 +6,7 @@ import 'package:fastkirana_flutter/core/theme/design_system.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../core/utils/order_item_helper.dart';
 import '../../../core/widgets/app_cached_image.dart';
+import '../../../data/models/order.dart';
 
 /// Opens the high-end "Photo View" Cart Modal for riders.
 void showRiderCartModal(BuildContext context, Map<String, dynamic> order) {
@@ -713,18 +714,32 @@ class RiderCartModal extends StatelessWidget {
               final item = entry.value;
               final isLast = idx == sortedGroupItems.length - 1;
 
-              final title = item['title'] ?? item['name'] ?? 'Item';
-              final int qty = (item['quantity'] is num)
+              final title = (item is Map
+                      ? (item['title'] ?? item['name'])
+                      : (item is OrderItem ? item.name : null))
+                  ?.toString() ?? 'Item';
+              final int qty = (item is Map && item['quantity'] is num)
                   ? (item['quantity'] as num).toInt()
-                  : (int.tryParse(item['quantity']?.toString() ?? '1') ?? 1);
-              final unitPrice = (item['price'] is num)
+                  : (item is OrderItem
+                      ? item.quantity
+                      : (int.tryParse(item is Map ? item['quantity']?.toString() ?? '1' : '1') ?? 1));
+              final unitPrice = (item is Map && item['price'] is num)
                   ? (item['price'] as num).toDouble()
-                  : (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0);
+                  : (item is OrderItem
+                      ? item.price
+                      : (double.tryParse(item is Map ? item['price']?.toString() ?? '0' : '0') ?? 0.0));
               final lineTotal = unitPrice * qty;
-              final weightVariant = OrderItemHelper.resolveWeightOrVariant(item, title);
-              final imgUrl = OrderItemHelper.resolveImageUrl(item);
-              final isRefunded = item['isRefunded'] == true || (item['refundAmount'] as num? ?? 0) > 0;
-              final notes = (item['notes']?.toString() ?? '').trim();
+              final weightVariant = item is OrderItem
+                  ? (item.displayVariantOrWeight ?? OrderItemHelper.resolveWeightOrVariant(item.toJson(), title))
+                  : OrderItemHelper.resolveWeightOrVariant(item, title);
+              final imgUrl = item is OrderItem ? (item.imageUrl ?? '') : OrderItemHelper.resolveImageUrl(item);
+              final isRefunded = (item is Map && item['isRefunded'] == true) ||
+                  (item is OrderItem && item.isRefunded) ||
+                  (item is Map ? (item['refundAmount'] as num? ?? 0) > 0 : false);
+              final notes = (item is Map
+                      ? item['notes']?.toString()
+                      : (item is OrderItem ? item.notes : ''))
+                  ?.trim() ?? '';
 
               return Column(
                 children: [

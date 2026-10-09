@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/order.dart';
+import '../../core/utils/order_item_helper.dart';
 import 'order_tracking_screen.dart';
 
 class OrderDetailScreen extends StatelessWidget {
@@ -569,6 +570,13 @@ class OrderDetailScreen extends StatelessWidget {
                                       decoration: isRefunded ? TextDecoration.lineThrough : null,
                                     ),
                                   ),
+                                  if ((item.displayVariantOrWeight ?? OrderItemHelper.resolveWeightOrVariant(item.toJson(), item.name)).isNotEmpty) ...[
+                                    const SizedBox(height: 3),
+                                    OrderItemHelper.buildWeightBadge(
+                                      context,
+                                      item.displayVariantOrWeight ?? OrderItemHelper.resolveWeightOrVariant(item.toJson(), item.name),
+                                    ),
+                                  ],
                                   if (isRefunded)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 2),
