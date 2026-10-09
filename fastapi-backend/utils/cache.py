@@ -1,9 +1,21 @@
 import os
-import json
 import time
 import logging
 from typing import Any, Optional, Union
 from config import settings
+
+try:
+    import orjson
+    def _json_dumps(obj: Any) -> str:
+        return orjson.dumps(obj).decode("utf-8")
+    def _json_loads(s: str) -> Any:
+        return orjson.loads(s)
+except ImportError:
+    import json
+    def _json_dumps(obj: Any) -> str:
+        return json.dumps(obj, default=str)
+    def _json_loads(s: str) -> Any:
+        return json.loads(s)
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +72,7 @@ async def get_cached(key: str) -> Optional[Any]:
         try:
             val = await redis.get(key)
             if val is not None:
-                return json.loads(val)
+                return _json_loads(val)
         except Exception as e:
             logger.debug(f"[Cache] Redis get error: {e}")
 
@@ -82,7 +94,7 @@ async def set_cached(key: str, value: Any, ttl_seconds: int = 60) -> bool:
     """
     serialized = None
     try:
-        serialized = json.dumps(value, default=str)
+        serialized = _json_dumps(value)
     except Exception as e:
         logger.debug(f"[Cache] JSON serialization failed: {e}")
         return False

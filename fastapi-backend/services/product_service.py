@@ -74,34 +74,37 @@ def serialize_product(
         effective_mrp = effective_price
     effective_discount = round(((effective_mrp - effective_price) / effective_mrp) * 100) if effective_mrp > effective_price else 0.0
 
+    p_dict = p.__dict__ if hasattr(p, '__dict__') else {}
     cat_dict = None
-    if getattr(p, 'category', None):
+    c_obj = p_dict.get("category")
+    if c_obj:
         cat_dict = {
-            "id": p.category.id,
-            "name": p.category.name,
-            "slug": p.category.slug,
-            "imageUrl": getattr(p.category, "imageUrl", None),
-            "parentId": getattr(p.category, "parentId", None),
-            "sortOrder": getattr(p.category, "sortOrder", 0) or 0
+            "id": getattr(c_obj, "id", None),
+            "name": getattr(c_obj, "name", None),
+            "slug": getattr(c_obj, "slug", None),
+            "imageUrl": getattr(c_obj, "imageUrl", None),
+            "parentId": getattr(c_obj, "parentId", None),
+            "sortOrder": getattr(c_obj, "sortOrder", 0) or 0
         }
 
     rest_dict = None
-    if getattr(p, 'restaurant', None):
+    r_obj = p_dict.get("restaurant")
+    if r_obj:
         rest_dict = {
-            "id": p.restaurant.id,
-            "name": p.restaurant.name,
-            "slug": p.restaurant.slug,
-            "logoUrl": getattr(p.restaurant, "logoUrl", None),
-            "bannerUrl": getattr(p.restaurant, "bannerUrl", None),
-            "rating": float(getattr(p.restaurant, "rating", 0.0) or 0.0),
-            "deliveryTime": getattr(p.restaurant, "deliveryTime", None),
-            "isOpen": bool(getattr(p.restaurant, "isOpen", True)),
-            "openTime": getattr(p.restaurant, "openTime", None),
-            "closeTime": getattr(p.restaurant, "closeTime", None),
-            "lat": float(p.restaurant.lat) if getattr(p.restaurant, "lat", None) is not None else None,
-            "lng": float(p.restaurant.lng) if getattr(p.restaurant, "lng", None) is not None else None,
-            "deliveryRadiusKm": float(getattr(p.restaurant, "deliveryRadiusKm", 5.0) or 5.0),
-            "address": getattr(p.restaurant, "address", None)
+            "id": getattr(r_obj, "id", None),
+            "name": getattr(r_obj, "name", None),
+            "slug": getattr(r_obj, "slug", None),
+            "logoUrl": getattr(r_obj, "logoUrl", None),
+            "bannerUrl": getattr(r_obj, "bannerUrl", None),
+            "rating": float(getattr(r_obj, "rating", 0.0) or 0.0),
+            "deliveryTime": getattr(r_obj, "deliveryTime", None),
+            "isOpen": bool(getattr(r_obj, "isOpen", True)),
+            "openTime": getattr(r_obj, "openTime", None),
+            "closeTime": getattr(r_obj, "closeTime", None),
+            "lat": float(r_obj.lat) if getattr(r_obj, "lat", None) is not None else None,
+            "lng": float(r_obj.lng) if getattr(r_obj, "lng", None) is not None else None,
+            "deliveryRadiusKm": float(getattr(r_obj, "deliveryRadiusKm", 5.0) or 5.0),
+            "address": getattr(r_obj, "address", None)
         }
 
     p_type = get_product_type(p)
@@ -126,19 +129,19 @@ def serialize_product(
         "tags": getattr(p, "tags", []) or [],
         "variants": getattr(p, "variants", []) or [],
         "addons": getattr(p, "addons", []) or [],
-        "minStock": getattr(p, "minStock", 0) or 0,
+        "minStock": getattr(p, "minStock", 0) if is_admin else 0,
         "expiryDate": p.expiryDate.isoformat() if getattr(p, "expiryDate", None) else None,
-        "costPrice": float(getattr(p, "costPrice", 0.0) or 0.0),
-        "location": getattr(p, "location", None),
+        "costPrice": float(getattr(p, "costPrice", 0.0) or 0.0) if is_admin else 0.0,
+        "location": getattr(p, "location", None) if is_admin else None,
         "isFlashDeal": bool(getattr(p, "isFlashDeal", False)),
         "isTopPick": bool(getattr(p, "isTopPick", False)),
         "isBestSeller": bool(getattr(p, "isBestSeller", False)),
         "sortOrder": getattr(p, "sortOrder", 0) or 0,
         "availableStartTime": getattr(p, "availableStartTime", None),
         "availableEndTime": getattr(p, "availableEndTime", None),
-        "barcode": getattr(p, "barcode", None),
-        "vendor": getattr(p, "vendor", None),
-        "vendorId": getattr(p, "vendorId", None),
+        "barcode": getattr(p, "barcode", None) if is_admin else None,
+        "vendor": getattr(p, "vendor", None) if is_admin else None,
+        "vendorId": getattr(p, "vendorId", None) if is_admin else None,
         "createdAt": p.createdAt.isoformat() if getattr(p, "createdAt", None) else None,
         "updatedAt": p.updatedAt.isoformat() if getattr(p, "updatedAt", None) else None,
         "category": cat_dict,

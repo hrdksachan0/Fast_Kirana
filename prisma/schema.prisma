@@ -359,6 +359,7 @@ model Order {
   assignedChef     User?      @relation("ChefOrders", fields: [assignedChefId], references: [id])
 
   @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
   @@index([status])
   @@index([userId, status])
   @@index([restaurantId, status])
@@ -397,6 +398,7 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+  @@index([orderId, productId])
   @@map("order_items")
 }
 
@@ -641,6 +643,7 @@ model StoreInventory {
   @@id([productId, storeId])
   @@index([storeId, isAvailable])
   @@index([storeId, stock])
+  @@index([storeId, productId])
   @@map("store_inventories")
 }
 

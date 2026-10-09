@@ -37,6 +37,7 @@ class CheckoutBottomBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Column(
                 mainAxisSize: MainAxisSize.min,
@@ -69,6 +70,7 @@ class CheckoutBottomBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   clipBehavior: Clip.antiAlias,
                   child: Ink(
+                    height: 48,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [
@@ -91,11 +93,11 @@ class CheckoutBottomBar extends StatelessWidget {
                     child: InkWell(
                       onTap: isPlacingOrder ? null : onProceedToPay,
                       borderRadius: BorderRadius.circular(12),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 48),
+                      child: SizedBox(
+                        height: 48,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12),
+                              horizontal: 12, vertical: 8),
                           child: Center(
                             child: isPlacingOrder
                                 ? const SizedBox(
@@ -106,6 +108,7 @@ class CheckoutBottomBar extends StatelessWidget {
                                   )
                                 : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Flexible(
                                         child: Text(

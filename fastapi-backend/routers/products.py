@@ -1398,7 +1398,15 @@ async def create_product(
             logger.warning(f"Could not seed store_inventories for product {product.id}: {seed_err}")
 
         await db.commit()
-        await db.refresh(product)
+
+        # Eagerly reload product with relations to prevent greenlet IO errors
+        stmt_reload = select(Product).options(
+            selectinload(Product.category),
+            selectinload(Product.restaurant)
+        ).where(Product.id == product.id)
+        reload_res = await db.execute(stmt_reload)
+        loaded_product = reload_res.scalar_one_or_none() or product
+
         clear_products_cache()
         await invalidate_catalog_cache()
 
@@ -1406,14 +1414,14 @@ async def create_product(
         try:
             from routers.categories import trigger_revalidation
             cat_slug = None
-            if product.categoryId:
-                cat_res = await db.execute(select(Category.slug).where(Category.id == product.categoryId))
+            if loaded_product.categoryId:
+                cat_res = await db.execute(select(Category.slug).where(Category.id == loaded_product.categoryId))
                 cat_slug = cat_res.scalar_one_or_none()
             await trigger_revalidation(cat_slug)
         except Exception as rev_err:
             logger.warning(f"Failed to trigger revalidation on product create: {rev_err}")
 
-        return serialize_product(product, local_stock=initial_stock_num, is_admin=True)
+        return serialize_product(loaded_product, local_stock=initial_stock_num, is_admin=True)
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create product: {str(e)}")
@@ -1685,12 +1693,15 @@ async def update_product(
         except Exception as ws_err:
             logger.warning(f"Could not broadcast product update: {ws_err}")
 
-        # If local stock was updated for a store, return product dict with local stock
-        if local_stock_val is not None:
-            prod_dict = {c.name: getattr(product, c.name) for c in product.__table__.columns}
-            prod_dict["stock"] = local_stock_val
-            return prod_dict
-        return product
+        # Eagerly reload product with relations to prevent greenlet IO errors
+        stmt_reload = select(Product).options(
+            selectinload(Product.category),
+            selectinload(Product.restaurant)
+        ).where(Product.id == product.id)
+        reload_res = await db.execute(stmt_reload)
+        loaded_product = reload_res.scalar_one_or_none() or product
+
+        return serialize_product(loaded_product, local_stock=local_stock_val, is_admin=True)
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update product: {str(e)}")

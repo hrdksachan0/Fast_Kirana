@@ -361,7 +361,15 @@ async def admin_create_product(
         logger.warning(f"StoreInventory seed error in admin_create_product: {e}")
 
     await db.commit()
-    await db.refresh(product)
+
+    # Eagerly reload product with relations to prevent greenlet IO errors
+    stmt_reload = select(Product).options(
+        selectinload(Product.category),
+        selectinload(Product.restaurant)
+    ).where(Product.id == product.id)
+    reload_res = await db.execute(stmt_reload)
+    loaded_product = reload_res.scalar_one_or_none() or product
+
     from utils.cache import invalidate_catalog_cache
     from routers.products import clear_products_cache
     clear_products_cache()
@@ -370,14 +378,14 @@ async def admin_create_product(
     try:
         from routers.categories import trigger_revalidation
         cat_slug = None
-        if product.categoryId:
-            cat_res = await db.execute(select(Category.slug).where(Category.id == product.categoryId))
+        if loaded_product.categoryId:
+            cat_res = await db.execute(select(Category.slug).where(Category.id == loaded_product.categoryId))
             cat_slug = cat_res.scalar_one_or_none()
         await trigger_revalidation(cat_slug)
     except Exception as rev_err:
         logger.warning(f"Failed to trigger revalidation on admin create product: {rev_err}")
 
-    return {"product": serialize_product(product)}
+    return {"product": serialize_product(loaded_product)}
 
 
 @router.patch("/products/{product_id}")
@@ -495,8 +503,15 @@ async def admin_update_product(
         product.tags = data["tags"]
 
     await db.commit()
-    await db.refresh(product)
-    return {"product": serialize_product(product)}
+
+    stmt_reload = select(Product).options(
+        selectinload(Product.category),
+        selectinload(Product.restaurant)
+    ).where(Product.id == product.id)
+    reload_res = await db.execute(stmt_reload)
+    loaded_product = reload_res.scalar_one_or_none() or product
+
+    return {"product": serialize_product(loaded_product)}
 
 
 @router.delete("/products/{product_id}")
