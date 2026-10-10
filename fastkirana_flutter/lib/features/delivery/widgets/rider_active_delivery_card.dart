@@ -142,77 +142,84 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: effectiveStop == 1 ? AppDesignSystem.green100 : const Color(0xFFDBEAFE),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            effectiveTotal > 1
-                                ? 'STOP #$effectiveStop OF $effectiveTotal • ${effectiveStop == 1 ? 'ACTIVE DROP' : 'NEXT DROP'}'
-                                : 'STOP #$effectiveStop • ACTIVE DROP',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 9.5),
-                              fontWeight: FontWeight.w900,
-                              color: effectiveStop == 1 ? AppDesignSystem.green700 : const Color(0xFF1E40AF),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: effectiveStop == 1 ? AppDesignSystem.green100 : const Color(0xFFDBEAFE),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                effectiveTotal > 1
+                                    ? 'STOP #$effectiveStop OF $effectiveTotal • ${effectiveStop == 1 ? 'ACTIVE DROP' : 'NEXT DROP'}'
+                                    : 'STOP #$effectiveStop • ACTIVE DROP',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 9.5),
+                                  fontWeight: FontWeight.w900,
+                                  color: effectiveStop == 1 ? AppDesignSystem.green700 : const Color(0xFF1E40AF),
+                                ),
+                              ),
                             ),
-                          ),
+                            if (isBatch || effectiveTotal > 1) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Text('⚡', style: TextStyle(fontSize: 9.5)),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '+₹${bonusEarning.toInt()} Batch Bonus',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 9),
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFF047857),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            if (isFood) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppDesignSystem.violet50,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppDesignSystem.violet200, width: 0.8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      outlet.name,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 9.5),
+                                        fontWeight: FontWeight.w800,
+                                        color: AppDesignSystem.statusShippedText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        if (isBatch || effectiveTotal > 1) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFECFDF5),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Text('⚡', style: TextStyle(fontSize: 9.5)),
-                                const SizedBox(width: 3),
-                                Text(
-                                  '+₹${bonusEarning.toInt()} Batch Bonus',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9),
-                                    fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF047857),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        if (isFood) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppDesignSystem.violet50,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppDesignSystem.violet200, width: 0.8),
-                            ),
-                            child: Row(
-                              children: [
-                                Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
-                                const SizedBox(width: 3),
-                                Text(
-                                  outlet.name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.statusShippedText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       '#$orderNum',
                       style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: slateDark),
@@ -309,7 +316,7 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                Flexible(
+                                Expanded(
                                   child: Text(
                                     customerName,
                                     style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: slateDark),

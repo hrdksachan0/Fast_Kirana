@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:collection/collection.dart';
 import '../../../core/theme/design_system.dart';
@@ -66,28 +67,39 @@ class DeliveryOrdersTab extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          if (activeDeliveries.isEmpty)
-            const EmptyOutForDeliveryCard()
-          else ...[
-            if (activeDeliveries.length >= 2)
-              RiderBatchRoadmapCard(
-                stop1Order: activeDeliveries[0],
-                stop2Order: activeDeliveries[1],
-                distanceBetweenMeters: activeDeliveries[0]['batch']?['distanceBetweenDropsMeters'] ??
-                    activeDeliveries[1]['batch']?['distanceBetweenDropsMeters'],
-                onOpenNavigation: onOpenNavigation,
-              ),
-            ...activeDeliveries.mapIndexed((idx, o) => RiderActiveDeliveryCard(
-                  key: ValueKey(o['id']),
-                  order: o,
-                  stopIndex: idx + 1,
-                  totalStops: activeDeliveries.length,
-                  isUpdating: updatingOrderId == o['id']?.toString(),
-                  onOpenNavigation: onOpenNavigation,
-                  onShowDoorstepQr: onShowDoorstepQr,
-                  onShowConfirmation: onShowConfirmation,
-                )),
-          ],
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: activeDeliveries.isEmpty
+                ? const EmptyOutForDeliveryCard(key: ValueKey('empty_out_for_delivery'))
+                : Column(
+                    key: const ValueKey('active_deliveries_list'),
+                    children: [
+                      if (activeDeliveries.length >= 2)
+                        RiderBatchRoadmapCard(
+                          stop1Order: activeDeliveries[0],
+                          stop2Order: activeDeliveries[1],
+                          distanceBetweenMeters: activeDeliveries[0]['batch']?['distanceBetweenDropsMeters'] ??
+                              activeDeliveries[1]['batch']?['distanceBetweenDropsMeters'],
+                          onOpenNavigation: onOpenNavigation,
+                        ),
+                      ...activeDeliveries.mapIndexed((idx, o) => RiderActiveDeliveryCard(
+                            key: ValueKey('active_del_${o['id']}'),
+                            order: o,
+                            stopIndex: idx + 1,
+                            totalStops: activeDeliveries.length,
+                            isUpdating: updatingOrderId == o['id']?.toString(),
+                            onOpenNavigation: onOpenNavigation,
+                            onShowDoorstepQr: onShowDoorstepQr,
+                            onShowConfirmation: onShowConfirmation,
+                          )
+                              .animate()
+                              .fadeIn(duration: 350.ms, curve: Curves.easeOutCubic)
+                              .slideY(begin: 0.04, end: 0, duration: 300.ms, curve: Curves.easeOutCubic)),
+                    ],
+                  ),
+          ),
 
           const SizedBox(height: 22),
 
@@ -139,16 +151,28 @@ class DeliveryOrdersTab extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          if (pendingPickups.isEmpty)
-            const EmptyPendingPickupCard()
-          else
-            ...pendingPickups.map((o) => RiderPickupCard(
-                  key: ValueKey(o['id']),
-                  order: o,
-                  isUpdating: updatingOrderId == o['id']?.toString(),
-                  onOpenNavigation: onOpenNavigation,
-                  onUpdateStatus: onUpdateStatus,
-                )),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: pendingPickups.isEmpty
+                ? const EmptyPendingPickupCard(key: ValueKey('empty_pending_pickup'))
+                : Column(
+                    key: const ValueKey('pending_pickups_list'),
+                    children: pendingPickups
+                        .map((o) => RiderPickupCard(
+                              key: ValueKey('pickup_${o['id']}'),
+                              order: o,
+                              isUpdating: updatingOrderId == o['id']?.toString(),
+                              onOpenNavigation: onOpenNavigation,
+                              onUpdateStatus: onUpdateStatus,
+                            )
+                                .animate()
+                                .fadeIn(duration: 350.ms, curve: Curves.easeOutCubic)
+                                .slideY(begin: 0.04, end: 0, duration: 300.ms, curve: Curves.easeOutCubic))
+                        .toList(),
+                  ),
+          ),
         ],
       ),
     );

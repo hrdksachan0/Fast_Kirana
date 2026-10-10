@@ -361,20 +361,20 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
         title: Row(
           children: [
             Container(
-              width: 32,
-              height: 32,
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: const Color(0xFFFED7AA), width: 1.1),
               ),
-              child: const Icon(Icons.inventory_2_rounded, size: 16, color: brandOrange),
+              child: const Icon(Icons.inventory_2_rounded, size: 15, color: brandOrange),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 7),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,42 +384,44 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Flexible(
-                        child: Text(
-                          'Packing Station',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.outfit(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w800,
-                            color: slateDark,
-                            letterSpacing: -0.3,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Packing Station',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w800,
+                              color: slateDark,
+                              letterSpacing: -0.3,
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
                         decoration: BoxDecoration(
                           color: const Color(0xFFECFDF5),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: const Color(0xFFA7F3D0)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 5,
-                              height: 5,
+                              width: 4.5,
+                              height: 4.5,
                               decoration: const BoxDecoration(
                                 color: brandGreen,
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            const SizedBox(width: 3),
+                            const SizedBox(width: 2.5),
                             Text(
                               'LIVE',
                               style: GoogleFonts.inter(
-                                fontSize: 8,
+                                fontSize: 7.5,
                                 fontWeight: FontWeight.w900,
                                 color: const Color(0xFF047857),
                               ),
@@ -434,7 +436,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                      fontSize: 10,
+                      fontSize: 9.5,
                       fontWeight: FontWeight.w500,
                       color: slateMuted,
                     ),
@@ -596,22 +598,38 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
 
           // Orders List or Empty State
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: brandOrange))
-                : _orders.isEmpty
-                    ? _buildEmptyState()
-                    : RefreshIndicator(
-                        onRefresh: () => _fetchPickerOrders(),
-                        color: brandOrange,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 90),
-                          itemCount: _orders.length,
-                          itemBuilder: (context, idx) {
-                            final order = _orders[idx];
-                            return _buildPickerOrderCard(order);
-                          },
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 380),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: _isLoading
+                  ? const Center(
+                      key: ValueKey('picker_loading'),
+                      child: CircularProgressIndicator(color: brandOrange),
+                    )
+                  : _orders.isEmpty
+                      ? KeyedSubtree(
+                          key: const ValueKey('picker_empty'),
+                          child: _buildEmptyState(),
+                        )
+                      : RefreshIndicator(
+                          key: const ValueKey('picker_orders_list'),
+                          onRefresh: () => _fetchPickerOrders(),
+                          color: brandOrange,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(14, 14, 14, 90),
+                            itemCount: _orders.length,
+                            itemBuilder: (context, idx) {
+                              final order = _orders[idx];
+                              final String orderId = (order['id'] ?? '').toString();
+                              return KeyedSubtree(
+                                key: ValueKey('picker_order_$orderId'),
+                                child: _buildPickerOrderCard(order),
+                              );
+                            },
+                          ),
                         ),
-                      ),
+            ),
           ),
         ],
       ),
@@ -1785,6 +1803,6 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
           ],
         ),
       ),
-    );
+    ).animate().fadeIn(duration: 350.ms, curve: Curves.easeOutCubic).slideY(begin: 0.04, end: 0, duration: 300.ms, curve: Curves.easeOutCubic);
   }
 }

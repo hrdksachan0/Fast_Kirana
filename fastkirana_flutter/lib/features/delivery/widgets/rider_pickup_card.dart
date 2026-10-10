@@ -466,8 +466,9 @@ class RiderPickupCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Flexible(
+                                Expanded(
                                   child: Text(
                                     customerName,
                                     style: GoogleFonts.inter(
@@ -498,9 +499,9 @@ class RiderPickupCard extends StatelessWidget {
                                     ),
                                   ),
                                 ],
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 4),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                                   decoration: BoxDecoration(
                                     color: AppDesignSystem.blue50,
                                     borderRadius: BorderRadius.circular(6),

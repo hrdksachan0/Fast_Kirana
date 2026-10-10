@@ -277,12 +277,16 @@ class DeliveryHeader extends StatelessWidget {
                     children: [
                       const Icon(Icons.storefront_rounded, size: 10, color: Colors.white),
                       const SizedBox(width: 4),
-                      Text(
-                        'Store Hub: $storeName',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9.5),
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                      Flexible(
+                        child: Text(
+                          'Store Hub: $storeName',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 9.5),
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
