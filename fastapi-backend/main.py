@@ -253,7 +253,7 @@ from fastapi.exceptions import RequestValidationError
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     detail_str = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
     req_id = getattr(request.state, "request_id", None)
-    return JSONResponse(
+    return ORJSONResponse(
         status_code=exc.status_code,
         content={
             "success": False,
@@ -277,7 +277,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     summary = "; ".join(error_messages) if error_messages else "Invalid request data"
     req_id = getattr(request.state, "request_id", None)
     
-    return JSONResponse(
+    return ORJSONResponse(
         status_code=422,
         content={
             "success": False,
@@ -297,7 +297,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     if settings.SENTRY_DSN:
         sentry_sdk.capture_exception(exc)
     err_str = str(exc) or "An internal server error occurred. Please contact support."
-    return JSONResponse(
+    return ORJSONResponse(
         status_code=500,
         content={
             "success": False,
