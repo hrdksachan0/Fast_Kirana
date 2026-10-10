@@ -155,7 +155,9 @@ export function StorefrontClient({
       }
 
       // Silently sync latest banners on client mount to guarantee real-time deactivation/updates
-      fetch(`${catalogApiUrl()}/api/banners?storeId=hub-209206`)
+      fetch(`${catalogApiUrl()}/api/banners?storeId=hub-209206&_t=${Date.now()}`, {
+        cache: 'no-store',
+      })
         .then((r) => r.json())
         .then((banners) => {
           if (Array.isArray(banners)) {

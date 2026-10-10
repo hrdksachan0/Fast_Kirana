@@ -599,10 +599,19 @@ export function AdminBanners({
       setLoading(true)
       const targetStoreId = (propStoreId && propStoreId !== 'all') ? propStoreId : storeId
       const q = targetStoreId ? `?storeId=${encodeURIComponent(targetStoreId)}` : ''
-      let res = await fetch(`${apiUrl()}/api/admin/banners${q}`)
+      const cacheBuster = q ? `${q}&_t=${Date.now()}` : `?_t=${Date.now()}`
+      let res = await fetch(`${apiUrl()}/api/admin/banners${cacheBuster}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        }
+      })
       if (!res.ok) {
         // Fallback to public banners endpoint served by FastAPI
-        res = await fetch(`${apiUrl()}/api/banners${q}`)
+        res = await fetch(`${apiUrl()}/api/banners${cacheBuster}`, {
+          cache: 'no-store',
+        })
       }
       if (!res.ok) {
         setBanners([])
@@ -1170,8 +1179,16 @@ export function AdminBanners({
         body: JSON.stringify({ id: b.id, isActive: nextState })
       })
 
-      if (!res.ok) throw new Error('Failed to update active state')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.error || 'Failed to update active state')
+      }
       
+      const resData = await res.json().catch(() => null)
+      if (resData?.banner) {
+        setBanners((prev) => prev.map((item) => item.id === b.id ? { ...item, ...resData.banner, isActive: resData.banner.isActive } : item))
+      }
+
       toast.success(`Banner ${nextState ? 'activated' : 'deactivated'} successfully!`)
       fetchBanners()
     } catch (err: any) {

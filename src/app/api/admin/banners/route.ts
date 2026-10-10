@@ -4,6 +4,9 @@ import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 import { revalidateTag } from 'next/cache'
 import { revalidateStorefront } from '@/lib/revalidate'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET: Retrieve banners scoped by store hub
 export async function GET(request: NextRequest) {
   try {
@@ -37,8 +40,9 @@ export async function GET(request: NextRequest) {
         } catch (_) {}
       }
       return {
-        ...b,
         ...extra,
+        ...b,
+        isActive: b.isActive,
         rawCode: b.code,
         code: extra.couponCode !== undefined ? extra.couponCode : b.code,
         cardType: extra.cardType || b.type || 'standard',
@@ -46,7 +50,13 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(parsedBanners)
+    return NextResponse.json(parsedBanners, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    })
   } catch (error: any) {
     console.error('Error fetching admin banners from Prisma, attempting FastAPI proxy fallback:', error)
     try {
@@ -237,6 +247,10 @@ export async function PUT(request: NextRequest) {
     }
     const serializedCode = JSON.stringify(cardMeta)
 
+    const resolvedIsActive = isActive !== undefined
+      ? (typeof isActive === 'boolean' ? isActive : (isActive === 'true' || isActive === '1' || isActive === 1))
+      : existing.isActive
+
     const updated = await prisma.promoBanner.update({
       where: { id },
       data: {
@@ -248,7 +262,7 @@ export async function PUT(request: NextRequest) {
         imageUrl: imageUrl !== undefined ? imageUrl : existing.imageUrl,
         linkUrl: linkUrl !== undefined ? linkUrl : existing.linkUrl,
         storeId: validStoreId,
-        isActive: isActive !== undefined ? isActive : existing.isActive,
+        isActive: resolvedIsActive,
         sortOrder: sortOrder !== undefined ? parseInt(String(sortOrder), 10) : existing.sortOrder,
       }
     })

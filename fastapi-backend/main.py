@@ -404,6 +404,28 @@ async def health_check():
         "redis": bool(settings.REDIS_URL)
     }
 
+@app.get("/.well-known/assetlinks.json")
+async def assetlinks_json():
+    return JSONResponse(
+        content=[
+            {
+                "relation": [
+                    "delegate_permission/common.handle_all_urls",
+                    "delegate_permission/common.get_login_creds"
+                ],
+                "target": {
+                    "namespace": "android_app",
+                    "package_name": "com.fastkirana.app",
+                    "sha256_cert_fingerprints": [
+                        "B3:B2:A0:3C:12:F4:F4:E3:A3:8F:75:F5:4E:BA:87:6D:DF:F0:FC:29:5F:74:7C:83:E1:D4:0C:FA:FB:C6:38",
+                        "40:B5:6F:D0:DA:61:0A:31:75:2C:6E:24:5B:D6:15:0B:5A:68:B8:E1:3D:92:94:1F:17:34:A5:2D:3D:5A:08"
+                    ]
+                }
+            }
+        ],
+        media_type="application/json"
+    )
+
 @app.get("/healthz", tags=["Health"], summary="Kubernetes / Docker Liveness Probe")
 async def liveness_probe():
     """
