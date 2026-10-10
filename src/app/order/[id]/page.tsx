@@ -35,7 +35,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
                o."combinedId", o."restaurantId", o."orderType"::text as "orderType",
                o.notes, COALESCE(o."refundAmount", 0)::float as "refundAmount"
-        FROM orders o WHERE o.id = ${id} OR o."readableId" = ${id} LIMIT 1
+        FROM orders o WHERE o.id = ${id} OR o."readableId" = ${id} OR (o.notes IS NOT NULL AND o.notes ILIKE '%' || ${id} || '%') LIMIT 1
       `
 
       if (orders.length > 0) {

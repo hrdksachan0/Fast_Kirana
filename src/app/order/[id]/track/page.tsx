@@ -23,7 +23,7 @@ async function getOrderDetails(id: string) {
              o."deliveryPhoto", o."deliveryLat", o."deliveryLng",
              o."combinedId", o."restaurantId", o."orderType"::text as "orderType",
              o.notes, o."couponCode"
-      FROM orders o WHERE o.id = ${id} OR o."readableId" = ${id} LIMIT 1
+      FROM orders o WHERE o.id = ${id} OR o."readableId" = ${id} OR (o.notes IS NOT NULL AND o.notes ILIKE '%' || ${id} || '%') LIMIT 1
     `
 
     if (orders.length === 0) return null

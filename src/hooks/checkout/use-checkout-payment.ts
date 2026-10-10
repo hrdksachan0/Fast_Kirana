@@ -413,6 +413,19 @@ export function useCheckoutPayment({
         notes: notesWithCf,
       }
 
+      // 🛡️ Pre-save draft order in localStorage before opening Cashfree modal
+      // If customer gets redirected to /checkout/verify?cf_order_id=..., verify page can instantly build & place the DB order!
+      try {
+        const draftStorage = {
+          payload: pendingPayload,
+          cfOrderId: cfData.orderId,
+          amount: paymentAmount,
+          timestamp: Date.now(),
+        }
+        localStorage.setItem(`fk_draft_order_${cfData.orderId}`, JSON.stringify(draftStorage))
+        localStorage.setItem('fk_latest_cashfree_draft', JSON.stringify(draftStorage))
+      } catch (_) {}
+
       let paymentSuccess = false
       let isVerifyingOrCreating = false
 

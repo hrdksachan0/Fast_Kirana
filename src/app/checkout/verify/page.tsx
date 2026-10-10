@@ -16,20 +16,24 @@ function CheckoutVerifyContent() {
   const clearCart = useCartStore((s) => s.clearCart)
   const hasRedirected = useRef(false)
 
-  const verify = useCallback(async (): Promise<boolean> => {
-    if (!orderId && !cfOrderId) return false
+  const verify = useCallback(async (): Promise<{ isPaid: boolean; realOrderId?: string; cfPaymentId?: string }> => {
+    if (!orderId && !cfOrderId) return { isPaid: false }
     try {
-      const res = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
+      const res = await fetch(${apiUrl()}/api/payment/cashfree/verify, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, cfOrderId }),
       })
       const data = await res.json()
       if (res.ok && (data.paymentStatus === 'PAID' || data.isPaid === true)) {
-        return true
+        return {
+          isPaid: true,
+          realOrderId: data.orderId || data.id,
+          cfPaymentId: data.cfPaymentId || data.paymentId,
+        }
       }
     } catch (_) {}
-    return false
+    return { isPaid: false }
   }, [orderId, cfOrderId])
 
   useEffect(() => {
@@ -47,11 +51,51 @@ function CheckoutVerifyContent() {
       attempts++
       setPollCount(attempts)
 
-      const isPaid = await verify()
-      if (isPaid && active && !hasRedirected.current) {
+      const verifyResult = await verify()
+      if (verifyResult.isPaid && active && !hasRedirected.current) {
         hasRedirected.current = true
         setStatus('success')
         clearCart()
+
+        const activeCfId = cfOrderId || orderId
+        let finalRedirectId = verifyResult.realOrderId || activeCfId
+
+        // 🛡️ CRITICAL RECOVERY: If order was NOT yet created in DB (realOrderId is just cf_ session ID),
+        // auto-create the order right now using the draft payload stored in localStorage!
+        const isPreflightCfId = finalRedirectId.startsWith('cf_') || !finalRedirectId.startsWith('ord_')
+        if (isPreflightCfId) {
+          try {
+            let draftData: any = null
+            const rawDraft = localStorage.getItem(k_draft_order_) ||
+                             localStorage.getItem('fk_latest_cashfree_draft')
+            if (rawDraft) {
+              draftData = JSON.parse(rawDraft)
+            }
+
+            if (draftData?.payload) {
+              const createRes = await fetch(${apiUrl()}/api/orders, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...draftData.payload,
+                  paymentStatus: 'PAID',
+                  paymentMethod: 'UPI',
+                  paymentId: verifyResult.cfPaymentId || CF_,
+                  cfOrderId: activeCfId,
+                }),
+              })
+
+              if (createRes.ok) {
+                const createdOrder = await createRes.json()
+                if (createdOrder?.id) {
+                  finalRedirectId = createdOrder.id
+                }
+              }
+            }
+          } catch (autoCreateErr) {
+            console.warn('Verify page auto-create order note:', autoCreateErr)
+          }
+        }
 
         // Play success chime
         try {
@@ -73,10 +117,10 @@ function CheckoutVerifyContent() {
         } catch (_) {}
 
         setTimeout(() => {
-          const targetId = orderId || cfOrderId
-          window.location.replace(`/order/${targetId}/success`)
+          window.location.replace(/order//success)
         }, 1200)
         return
+
       }
 
       if (attempts >= maxAttempts && active) {
