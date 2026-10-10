@@ -7,6 +7,24 @@ import { revalidateStorefront } from '@/lib/revalidate'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+function formatPromoBanner(b: any) {
+  let extra: any = {}
+  if (b.code && b.code.startsWith('{') && b.code.endsWith('}')) {
+    try {
+      extra = JSON.parse(b.code)
+    } catch (_) {}
+  }
+  return {
+    ...extra,
+    ...b,
+    isActive: b.isActive,
+    rawCode: b.code,
+    code: extra.couponCode !== undefined ? extra.couponCode : b.code,
+    cardType: extra.cardType || b.type || 'standard',
+    storeId: b.storeId || extra.storeId || null,
+  }
+}
+
 // GET: Retrieve banners scoped by store hub
 export async function GET(request: NextRequest) {
   try {
@@ -32,23 +50,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const parsedBanners = banners.map(b => {
-      let extra: any = {}
-      if (b.code && b.code.startsWith('{') && b.code.endsWith('}')) {
-        try {
-          extra = JSON.parse(b.code)
-        } catch (_) {}
-      }
-      return {
-        ...extra,
-        ...b,
-        isActive: b.isActive,
-        rawCode: b.code,
-        code: extra.couponCode !== undefined ? extra.couponCode : b.code,
-        cardType: extra.cardType || b.type || 'standard',
-        storeId: b.storeId || extra.storeId || null,
-      }
-    })
+    const parsedBanners = banners.map(formatPromoBanner)
 
     return NextResponse.json(parsedBanners, {
       headers: {
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest) {
 
     await purgeBannersCacheEverywhere()
 
-    return NextResponse.json({ success: true, banner })
+    return NextResponse.json({ success: true, banner: formatPromoBanner(banner) })
   } catch (error: any) {
     console.error('Error creating banner:', error)
     return NextResponse.json({ error: error.message || 'Failed to create banner' }, { status: 500 })
@@ -167,7 +169,7 @@ async function purgeBannersCacheEverywhere() {
   // Ping FastAPI on both primary domain and Railway domain to invalidate in-memory & Redis cache
   const fastApiUrls = [
     process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in',
-    'https://fastkiran-backend-production.up.railway.app'
+    'https://fastkirana-production-a4b8.up.railway.app'
   ]
 
   for (const url of fastApiUrls) {
@@ -269,7 +271,7 @@ export async function PUT(request: NextRequest) {
 
     await purgeBannersCacheEverywhere()
 
-    return NextResponse.json({ success: true, banner: updated })
+    return NextResponse.json({ success: true, banner: formatPromoBanner(updated) })
   } catch (error: any) {
     console.error('Error updating banner:', error)
     return NextResponse.json({ error: error.message || 'Failed to update banner' }, { status: 500 })

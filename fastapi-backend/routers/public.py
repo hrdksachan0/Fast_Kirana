@@ -11,34 +11,9 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 
 from database import get_db
-from models import Banner, StoreSetting, User, Order, OrderStatus, Coupon
+from models import StoreSetting, User, Order, OrderStatus, Coupon
 
 router = APIRouter(prefix="/api", tags=["Public"])
-
-
-# ============================================================
-# BANNERS (Public)
-# ============================================================
-
-@router.get("/banners")
-async def get_public_banners(
-    type: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get active banners for public storefront."""
-    stmt = select(Banner).where(Banner.isActive == True)
-    if type == "cafe":
-        stmt = stmt.where(Banner.title.ilike("%cafe%"))
-    elif type == "grocery":
-        stmt = stmt.where(or_(Banner.title.is_(None), ~Banner.title.ilike("%cafe%")))
-    stmt = stmt.order_by(Banner.sortOrder)
-    result = await db.execute(stmt)
-    banners = result.scalars().all()
-    return {"banners": [
-        {"id": b.id, "title": b.title, "subtitle": b.subtitle,
-         "imageUrl": b.imageUrl, "link": b.link}
-        for b in banners
-    ]}
 
 
 # ============================================================
