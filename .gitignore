@@ -44,6 +44,7 @@ next-env.d.ts
 
 # mobile binaries and deleted wrappers
 *.apk
+*.aab
 /fastkirana-app
 /fastkirana-rn
 /fastkirana-android
