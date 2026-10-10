@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/theme/design_system.dart';
 import '../../providers/auth_provider.dart';
 
@@ -133,7 +134,13 @@ class ReferEarnScreen extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Share.share(
+                    '⚡ Join FastKirana Express! Use my referral code "$referralCode" to get special discounts on your grocery & food orders.\n\n📲 Download FastKirana App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Or Order Online: https://www.fastkirana.in',
+                    subject: 'FastKirana Referral Code: $referralCode',
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppDesignSystem.primary,
                   padding: const EdgeInsets.symmetric(vertical: 16),

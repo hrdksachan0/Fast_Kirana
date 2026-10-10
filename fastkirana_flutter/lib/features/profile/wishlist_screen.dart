@@ -21,14 +21,14 @@ class WishlistScreen extends ConsumerWidget {
     if (wishlist.isEmpty) return;
 
     final itemNames = wishlist.map((p) => '• ${p.name} - ₹${p.price.toStringAsFixed(0)}').join('\n');
-    final shareText = '''🛒 My FastKirana Wishlist:\n\n$itemNames\n\nOrder fresh groceries & food delivered in 10 mins on FastKirana Ghatampur!\nDownload the app: https://www.fastkirana.in''';
+    final shareText = '''🛒 My FastKirana Wishlist:\n\n$itemNames\n\nOrder fresh groceries & food delivered directly to your doorstep on FastKirana!\n📲 Download App on Play Store: https://play.google.com/store/apps/details?id=com.fastkirana.app\n🌐 Or Order Online: https://www.fastkirana.in''';
 
     Share.share(shareText, subject: 'My FastKirana Wishlist');
   }
 
   void _shareApp(BuildContext context) {
     HapticFeedback.lightImpact();
-    const shareText = '''⚡ Order Groceries, Daily Essentials & Restaurant Food in Ghatampur delivered in 10-15 mins with FastKirana!\n\nDownload FastKirana app now: https://www.fastkirana.in''';
+    const shareText = '''⚡ Order Groceries, Daily Essentials & Restaurant Food in Ghatampur with FastKirana!\n\n📲 Download FastKirana App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Website: https://www.fastkirana.in''';
     Share.share(shareText, subject: 'Download FastKirana App');
   }
 

@@ -183,7 +183,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     HapticFeedback.lightImpact();
     final priceStr = '₹${activePrice.toStringAsFixed(0)}';
     final productSlug = p.slug.isNotEmpty ? p.slug : p.id;
-    final shareText = '''🛒 Check out ${p.name} ($priceStr) on FastKirana!\n\n⚡ Instant 10-Min Delivery in Ghatampur!\nOrder now: https://www.fastkirana.in/products/$productSlug''';
+    final shareText = '''🛒 Check out ${p.name} ($priceStr) on FastKirana!\n\n⚡ Fast Express Delivery in Ghatampur!\nOrder now: https://www.fastkirana.in/products/$productSlug''';
     Share.share(shareText, subject: 'Buy ${p.name} on FastKirana');
   }
 

@@ -186,7 +186,7 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 6),
                 Text(
                   selectedStars >= 4
-                      ? 'Your 5-star review motivates our 10-minute delivery fleet to serve you better!'
+                      ? 'Your 5-star review motivates our delivery fleet to serve you better!'
                       : 'We are sorry to disappoint. How can we make your experience better?',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
@@ -513,7 +513,7 @@ class ProfileScreen extends ConsumerWidget {
                             iconBg: AppDesignSystem.amber50,
                             iconColor: AppDesignSystem.amber600,
                             title: 'Rate FastKirana App',
-                            subtitle: 'Love 10-min delivery? Rate us on Play Store',
+                            subtitle: 'Love FastKirana? Rate us on Play Store',
                             badge: '5.0 ★',
                             onTap: () => _showRateAppDialog(context),
                           ),
@@ -523,12 +523,12 @@ class ProfileScreen extends ConsumerWidget {
                             iconBg: AppDesignSystem.blue50,
                             iconColor: AppDesignSystem.blue600,
                             title: 'Share with Friends & Family',
-                            subtitle: 'Invite neighbours to 10-min delivery',
+                            subtitle: 'Invite friends & family to FastKirana',
                             onTap: () {
                               HapticFeedback.lightImpact();
                               Share.share(
-                                '⚡ FastKirana Express: Order Groceries & Food in 10-15 mins!\n\nDownload app: https://www.fastkirana.in',
-                                subject: 'FastKirana Express',
+                                '⚡ FastKirana Express: Order Groceries, Daily Essentials & Food delivered right to your doorstep!\n\n📲 Download FastKirana App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Or Order Online: https://www.fastkirana.in',
+                                subject: 'FastKirana Express App',
                               );
                             },
                           ),
