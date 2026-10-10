@@ -33,8 +33,20 @@ class TrackingReceiptCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: slateBorder),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,21 +56,23 @@ class TrackingReceiptCard extends StatelessWidget {
             children: [
               Text(
                 'Bill Details',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 14.5),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: Responsive.scaledFontSize(context, 15),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
+                  letterSpacing: -0.3,
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
                 ),
                 child: Text(
                   '${items.length} ${items.length == 1 ? 'ITEM' : 'ITEMS'}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w800,
                     color: slateMuted,
@@ -73,22 +87,22 @@ class TrackingReceiptCard extends StatelessWidget {
             final isItemRefunded = item.isRefunded || item.refundAmount > 0;
             final itemTotal = (item.price * item.quantity).toInt();
             return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
+              padding: const EdgeInsets.only(bottom: 9.0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                     decoration: BoxDecoration(
                       color: isItemRefunded ? const Color(0xFFFFE4E6) : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(5),
+                      borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: isItemRefunded ? const Color(0xFFFDA4AF) : slateBorder),
                     ),
                     child: Center(
                       child: Text(
                         '${item.quantity}x',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 10),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w800,
                           color: isItemRefunded ? const Color(0xFFE11D48) : slateDark,
                         ),
@@ -102,8 +116,8 @@ class TrackingReceiptCard extends StatelessWidget {
                       children: [
                         Text(
                           item.name,
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12.5),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: Responsive.scaledFontSize(context, 13),
                             fontWeight: FontWeight.w700,
                             color: isItemRefunded ? slateMuted : slateDark,
                             decoration: isItemRefunded ? TextDecoration.lineThrough : null,
@@ -114,7 +128,7 @@ class TrackingReceiptCard extends StatelessWidget {
                         if (isItemRefunded)
                           Text(
                             'Item Unavailable - Refunded',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFFE11D48),
@@ -126,8 +140,8 @@ class TrackingReceiptCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     isItemRefunded ? '₹0' : '₹$itemTotal',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 13),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: Responsive.scaledFontSize(context, 13.5),
                       fontWeight: FontWeight.w800,
                       color: isItemRefunded ? slateMuted : slateDark,
                       decoration: isItemRefunded ? TextDecoration.lineThrough : null,
@@ -143,20 +157,20 @@ class TrackingReceiptCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Items Subtotal', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
-              Text('₹${subtotal.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateDark)),
+              Text('Items Subtotal', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+              Text('₹${subtotal.toInt()}', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: slateDark)),
             ],
           ),
           const SizedBox(height: 5),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Delivery Partner Fee', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
+              Text('Delivery Partner Fee', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
               Text(
                 deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: Responsive.scaledFontSize(context, 12),
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   color: deliveryFee == 0 ? brandGreen : slateDark,
                 ),
               ),
@@ -167,8 +181,8 @@ class TrackingReceiptCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Packaging Charge', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
-                Text('₹${miscFee.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateDark)),
+                Text('Packaging Charge', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+                Text('₹${miscFee.toInt()}', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: slateDark)),
               ],
             ),
           ],
@@ -177,8 +191,8 @@ class TrackingReceiptCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Handling & Taxes', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: slateMuted)),
-                Text('₹${taxes.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: slateDark)),
+                Text('Handling & Taxes', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+                Text('₹${taxes.toInt()}', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: slateDark)),
               ],
             ),
           ],
@@ -187,8 +201,8 @@ class TrackingReceiptCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Discount Savings', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: brandGreen)),
-                Text('-₹${discount.toInt()}', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w800, color: brandGreen)),
+                Text('Discount Savings', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: brandGreen)),
+                Text('-₹${discount.toInt()}', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: brandGreen)),
               ],
             ),
           ],
@@ -199,7 +213,7 @@ class TrackingReceiptCard extends StatelessWidget {
               children: [
                 Text(
                   'Refund Credited',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: Responsive.scaledFontSize(context, 12),
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFFE11D48),
@@ -207,8 +221,8 @@ class TrackingReceiptCard extends StatelessWidget {
                 ),
                 Text(
                   '-₹${order!.refundAmount.toInt()}',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 12),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: Responsive.scaledFontSize(context, 12.5),
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFFE11D48),
                   ),
@@ -227,19 +241,19 @@ class TrackingReceiptCard extends StatelessWidget {
                 children: [
                   Text(
                     (order?.refundAmount ?? 0) > 0 ? 'Net Paid Total' : 'Total Paid',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w900, color: slateDark),
+                    style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 14.5), fontWeight: FontWeight.w900, color: slateDark),
                   ),
                   Text(
                     (order?.refundAmount ?? 0) > 0
                         ? 'Original: ₹${total.toInt()} • ${order?.paymentMethod.displayName ?? "COD"}'
                         : (order?.paymentMethod.displayName ?? 'COD'),
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10), fontWeight: FontWeight.w600, color: slateMuted),
+                    style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: slateMuted),
                   ),
                 ],
               ),
               Text(
                 '₹${((total - (order?.refundAmount ?? 0.0)).clamp(0.0, double.infinity)).toInt()}',
-                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: primaryRed),
+                style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: primaryRed),
               ),
             ],
           ),
@@ -296,22 +310,30 @@ class TrackingDestinationCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: slateBorder),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: slateBorder, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
               color: const Color(0xFFFEF2F2),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFECACA), width: 0.8),
             ),
-            child: const Icon(Icons.location_on_rounded, color: primaryRed, size: 18),
+            child: const Icon(Icons.location_on_rounded, color: primaryRed, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -320,12 +342,12 @@ class TrackingDestinationCard extends StatelessWidget {
               children: [
                 Text(
                   labelText,
-                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w800, color: slateDark),
+                  style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w800, color: slateDark),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   fullAddress,
-                  style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, height: 1.4),
+                  style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, height: 1.4),
                 ),
               ],
             ),

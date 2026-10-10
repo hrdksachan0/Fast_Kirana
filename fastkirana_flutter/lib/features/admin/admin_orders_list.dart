@@ -26,6 +26,7 @@ import '../common/order_edit_modal.dart';
 import 'widgets/admin_order_card.dart';
 import 'widgets/admin_stats_grid.dart';
 import 'widgets/admin_filter_header.dart';
+import 'widgets/admin_auto_approve_banner.dart';
 import 'widgets/admin_substitution_sheet.dart';
 import 'widgets/admin_refund_sheet.dart';
 import 'widgets/admin_share_sheet.dart';
@@ -1898,125 +1899,157 @@ $formattedItems
               ],
             )
           : null,
-      body: Column(
-        children: [
-          if (_isDeviceOffline)
-            ConnectivityBanner(
-              onRetry: () => _fetchAdminOrders(),
+      body: RefreshIndicator(
+        color: primaryRed,
+        onRefresh: _fetchAdminOrders,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          slivers: [
+            // 1. Scrollable Dashboard Top Section (Stats & Auto-Approve switch banner)
+            SliverToBoxAdapter(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_isDeviceOffline)
+                    ConnectivityBanner(
+                      onRetry: () => _fetchAdminOrders(),
+                    ),
+
+                  AdminStatsGrid(
+                    displayTodaySales: displayTodaySales,
+                    displayTodayNetSales: displayTodayNetSales,
+                    displayTodayOrdersCount: displayTodayOrdersCount,
+                    displayActiveOrderCount: displayActiveOrderCount,
+                    displayTodayDeliveryFee: displayTodayDeliveryFee,
+                    displayTodayPackagingFee: displayTodayPackagingFee,
+                  ),
+
+                  AdminAutoApproveBanner(
+                    isAutoApprove: _isAutoApprove,
+                    onToggleAutoApprove: _toggleAutoApprove,
+                  ),
+                ],
+              ),
             ),
 
-          // 1. Dashboard Stats Cards
-          AdminStatsGrid(
-            displayTodaySales: displayTodaySales,
-            displayTodayNetSales: displayTodayNetSales,
-            displayTodayOrdersCount: displayTodayOrdersCount,
-            displayActiveOrderCount: displayActiveOrderCount,
-            displayTodayDeliveryFee: displayTodayDeliveryFee,
-            displayTodayPackagingFee: displayTodayPackagingFee,
-          ),
+            // 2. Pinned Sticky Filter Header (Live/History tabs + On-Demand Search + Sub-filters)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickyAdminFilterHeaderDelegate(
+                height: 92.0,
+                child: AdminFilterHeader(
+                  selectedTab: _selectedTab,
+                  displayLiveCount: displayLiveCount,
+                  displayHistoryCount: displayHistoryCount,
+                  displayPendingPaymentCount: displayPendingPaymentCount,
+                  searchQuery: _searchQuery,
+                  liveStatusFilters: _liveStatusFilters,
+                  historyStatusFilters: _historyStatusFilters,
+                  currentSubFilter: _selectedTab == 0 ? _liveSubFilter : _historySubFilter,
+                  onTabChanged: (index) {
+                    setState(() {
+                      _selectedTab = index;
+                      _searchQuery = '';
+                    });
+                  },
+                  onSearchChanged: (q) {
+                    if (mounted) setState(() => _searchQuery = q);
+                  },
+                  onSearchCleared: () {
+                    if (mounted) setState(() => _searchQuery = '');
+                  },
+                  onFilterSelected: (status) {
+                    setState(() {
+                      if (_selectedTab == 0) {
+                        _liveSubFilter = status;
+                      } else {
+                        _historySubFilter = status;
+                      }
+                    });
+                  },
+                ),
+              ),
+            ),
 
-          // 2. Filter & Controls Header
-          AdminFilterHeader(
-            selectedTab: _selectedTab,
-            displayLiveCount: displayLiveCount,
-            displayHistoryCount: displayHistoryCount,
-            displayPendingPaymentCount: displayPendingPaymentCount,
-            searchQuery: _searchQuery,
-            isAutoApprove: _isAutoApprove,
-            liveStatusFilters: _liveStatusFilters,
-            historyStatusFilters: _historyStatusFilters,
-            currentSubFilter: _selectedTab == 0 ? _liveSubFilter : _historySubFilter,
-            onTabChanged: (index) {
-              setState(() {
-                _selectedTab = index;
-                _searchQuery = '';
-              });
-            },
-            onSearchChanged: (q) {
-              if (mounted) setState(() => _searchQuery = q);
-            },
-            onSearchCleared: () {
-              if (mounted) setState(() => _searchQuery = '');
-            },
-            onToggleAutoApprove: _toggleAutoApprove,
-            onFilterSelected: (status) {
-              setState(() {
-                if (_selectedTab == 0) {
-                  _liveSubFilter = status;
-                } else {
-                  _historySubFilter = status;
-                }
-              });
-            },
-          ),
-
-          const Divider(height: 1, color: AppDesignSystem.slate200),
-
-          // 4. Orders List
-          Expanded(
-            child: _isLoading
-                ? const AdminOrdersListSkeleton(itemCount: 4)
-                : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline_rounded, size: 40, color: AppDesignSystem.danger),
-                            const SizedBox(height: 10),
-                            Text(_error!, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.slate500)),
-                            const SizedBox(height: 12),
-                            ElevatedButton(
-                              onPressed: _fetchAdminOrders,
-                              style: ElevatedButton.styleFrom(backgroundColor: primaryRed),
-                              child: const Text('Retry'),
-                            ),
-                          ],
+            // 3. Orders List or Loading Skeleton or Empty / Error Views
+            if (_isLoading)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(14, 12, 14, 100),
+                  child: AdminOrdersListSkeleton(itemCount: 4),
+                ),
+              )
+            else if (_error != null)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline_rounded, size: 40, color: AppDesignSystem.danger),
+                      const SizedBox(height: 10),
+                      Text(
+                        _error!,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 13),
+                          color: AppDesignSystem.slate500,
                         ),
-                      )
-                    : displayOrders.isEmpty
-                        ? AdminOrdersEmptyView(
-                            isLive: _selectedTab == 0,
-                            onRefresh: _fetchAdminOrders,
-                          )
-                        : RefreshIndicator(
-                            color: primaryRed,
-                            onRefresh: _fetchAdminOrders,
-                            child: ListView.builder(
-                              // ignore: deprecated_member_use
-                              cacheExtent: 600,
-                              padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
-                              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                              itemCount: displayOrders.length,
-                              itemBuilder: (context, index) {
-                                final order = displayOrders[index];
-                                return AdminOrderCard(
-                                  key: ValueKey(order.id),
-                                  order: order,
-                                  isLive: _isLiveOrder(order),
-                                  isKOTPrinted: _printedKOTOrders.contains(order.id) ||
-                                      (order.readableId != null && _printedKOTOrders.contains(order.readableId)),
-                                  isKOTSending: _sendingKOTOrderIds.contains(order.id) ||
-                                      (order.readableId != null && _sendingKOTOrderIds.contains(order.readableId)),
-                                  availableRiders: _availableRiders,
-                                  onUpdateStatus: _updateOrderStatus,
-                                  onUpdateSubOrderStatus: _updateSubOrderStatus,
-                                  onAssignRider: _assignRider,
-                                  onWhatsappCustomer: _whatsappCustomer,
-                                  onCallCustomer: _callCustomer,
-                                  onShowSubstitution: _showSubstitutionModal,
-                                  onVerifyPayment: _verifyOnlinePayment,
-                                  onConvertToCOD: _convertToCOD,
-                                  onSendWhatsAppPaymentReminder: _sendWhatsAppPaymentReminder,
-                                  onOpenSuperOrderEdit: _openSuperOrderEditModal,
-                                  onShowRecordRefund: _showRecordRefundModal,
-                                  onSendRemoteKOT: _sendRemoteKOT,
-                                  onSendWhatsAppKOT: _sendWhatsAppKOT,
-                                );
-                              },
-                            ),
-                          ),
-          ),
-        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _fetchAdminOrders,
+                        style: ElevatedButton.styleFrom(backgroundColor: primaryRed),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (displayOrders.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: AdminOrdersEmptyView(
+                  isLive: _selectedTab == 0,
+                  onRefresh: _fetchAdminOrders,
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final order = displayOrders[index];
+                      return AdminOrderCard(
+                        key: ValueKey(order.id),
+                        order: order,
+                        isLive: _isLiveOrder(order),
+                        isKOTPrinted: _printedKOTOrders.contains(order.id) ||
+                            (order.readableId != null && _printedKOTOrders.contains(order.readableId)),
+                        isKOTSending: _sendingKOTOrderIds.contains(order.id) ||
+                            (order.readableId != null && _sendingKOTOrderIds.contains(order.readableId)),
+                        availableRiders: _availableRiders,
+                        onUpdateStatus: _updateOrderStatus,
+                        onUpdateSubOrderStatus: _updateSubOrderStatus,
+                        onAssignRider: _assignRider,
+                        onWhatsappCustomer: _whatsappCustomer,
+                        onCallCustomer: _callCustomer,
+                        onShowSubstitution: _showSubstitutionModal,
+                        onVerifyPayment: _verifyOnlinePayment,
+                        onConvertToCOD: _convertToCOD,
+                        onSendWhatsAppPaymentReminder: _sendWhatsAppPaymentReminder,
+                        onOpenSuperOrderEdit: _openSuperOrderEditModal,
+                        onShowRecordRefund: _showRecordRefundModal,
+                        onSendRemoteKOT: _sendRemoteKOT,
+                        onSendWhatsAppKOT: _sendWhatsAppKOT,
+                      );
+                    },
+                    childCount: displayOrders.length,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -2026,5 +2059,35 @@ $formattedItems
     final period = dt.hour >= 12 ? 'PM' : 'AM';
     final min = dt.minute.toString().padLeft(2, '0');
     return '$hour:$min $period';
+  }
+}
+
+/// Sticky delegate to pin AdminFilterHeader (Tabs & Filters) at the top of scroll
+class _StickyAdminFilterHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double height;
+
+  _StickyAdminFilterHeaderDelegate({
+    required this.child,
+    this.height = 92.0,
+  });
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox(
+      height: height,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyAdminFilterHeaderDelegate oldDelegate) {
+    return oldDelegate.height != height || oldDelegate.child != child;
   }
 }

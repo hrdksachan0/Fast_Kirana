@@ -103,6 +103,21 @@ class StoreSettings with _$StoreSettings {
   bool get appForceUpdate => (raw['app_force_update']?.toString().toLowerCase() == 'true');
   String get storeUpiVpa => raw['store_upi_vpa']?.toString() ?? '7054470303-2@ibl';
 
+  double get combinedMiscFee {
+    final val = raw['combined_misc_fee'] ?? raw['combined_packaging_fee'];
+    if (val == null) return miscFee;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString()) ?? miscFee;
+  }
+
+  String get combinedMiscFeeLabel {
+    final val = raw['combined_misc_fee_label'] ?? raw['combined_packaging_fee_label'];
+    if (val != null && val.toString().trim().isNotEmpty) {
+      return val.toString().trim();
+    }
+    return 'Combined Packaging Charge';
+  }
+
   static double _parseDoubleVal(dynamic val, double fallback) {
     if (val == null) return fallback;
     if (val is num) return val.toDouble();

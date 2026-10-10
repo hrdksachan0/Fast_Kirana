@@ -952,6 +952,7 @@ export async function POST(request: NextRequest) {
     const taxPercent = parseFloat(settingsMap['tax_rate'] || '5')
     const serverTaxRate = 0.00
     const serverMiscFee = parseFloat(settingsMap['misc_fee'] || '5')
+    const serverCombinedMiscFee = parseFloat(settingsMap['combined_misc_fee'] || settingsMap['misc_fee'] || '5')
 
     // Calculate details for each order to create
     const ordersToCreate: any[] = []
@@ -1010,9 +1011,11 @@ export async function POST(request: NextRequest) {
       rData.deliveryFee = deliveryResult.restaurantFees[rData.rId] ?? 0
     }
 
+    const isCombinedOrder = groceryItems.length > 0 && restaurantData.length > 0
+    const applicableMiscFee = isCombinedOrder ? serverCombinedMiscFee : serverMiscFee
     const requestedPackagingFee = typeof body.packagingFee === 'number' ? body.packagingFee : (parseFloat(body.packagingFee || '0') || 0)
-    const isPremiumPackaging = packagingOption === 'PREMIUM' || requestedPackagingFee === 15 || packagingFee === 15
-    const resolvedPackagingFee = isPremiumPackaging ? 15 : (requestedPackagingFee > 0 ? requestedPackagingFee : serverMiscFee)
+    const isPremiumPackaging = packagingOption === 'PREMIUM' || requestedPackagingFee >= 15 || packagingFee === 15
+    const resolvedPackagingFee = isPremiumPackaging ? 15 : (requestedPackagingFee > 0 ? requestedPackagingFee : applicableMiscFee)
 
     let hasChargedMiscFee = false
 

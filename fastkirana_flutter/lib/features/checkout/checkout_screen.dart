@@ -116,9 +116,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       settings: storeSettings,
       storeName: cartRestaurant?.name ?? nearestHub.name,
     );
+    final hasGrocery = items.any((i) => i.product.restaurant == null && i.product.restaurantId == null);
+    final hasRestaurant = items.any((i) => i.product.restaurant != null || i.product.restaurantId != null);
+    final isCombined = hasGrocery && hasRestaurant;
+
     final deliveryFee = checkoutState.deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
-    final packagingFee = checkoutState.selectedPackaging == 'PREMIUM' ? 15.0 : 5.0;
-    final packagingLabel = checkoutState.selectedPackaging == 'PREMIUM' ? 'Premium Thermal Packaging' : 'Standard Packaging';
+    final basePackagingFee = checkoutState.deliveryMethod == 'PICKUP'
+        ? 0.0
+        : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
+    final packagingFee = checkoutState.selectedPackaging == 'PREMIUM' ? 15.0 : basePackagingFee;
+    final packagingLabel = checkoutState.selectedPackaging == 'PREMIUM'
+        ? 'Premium Thermal Packaging'
+        : (isCombined
+            ? (storeSettings?.combinedMiscFeeLabel ?? 'Combined Packaging Charge')
+            : (storeSettings?.miscFeeLabel ?? 'Packaging Charge'));
     final grandTotal = (subtotal + deliveryFee + packagingFee - widget.discountAmount).clamp(0.0, 999999.0);
 
     final user = ref.watch(authProvider).value;

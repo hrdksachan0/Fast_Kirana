@@ -387,7 +387,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
             left: 10,
             right: 10,
             bottom: widget.ctaText != null ? 70 : 42,
-            height: 180,
+            height: (widget.height * 0.46).clamp(140.0, 200.0),
             child: _buildHeroVisualWithShadow(),
           ),
 
@@ -729,7 +729,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
   Widget _buildBentoTiles2x2() {
     final images = widget.gridImages ?? [];
     return SizedBox(
-      height: 188,
+      height: (widget.height * 0.48).clamp(140.0, 200.0),
       child: Column(
         children: [
           Expanded(
@@ -910,7 +910,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
             left: 0,
             right: 0,
             bottom: widget.cashbackTitle != null ? 70 : 40,
-            height: 200,
+            height: (widget.height * 0.50).clamp(150.0, 220.0),
             child: _buildHeroVisualWithShadow(),
           ),
 

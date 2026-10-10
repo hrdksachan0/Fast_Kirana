@@ -331,8 +331,13 @@ export function CartDrawer() {
     ? deliveryRules.deliveryFee
     : (settings.delivery_fee ? parseFloat(settings.delivery_fee) : (settings.delivery_fee_tier1 ? parseFloat(settings.delivery_fee_tier1) : DELIVERY_FEE))
 
-  const miscFee = settings.misc_fee ? parseFloat(settings.misc_fee) : 0
-  const miscFeeLabel = settings.misc_fee_label || 'Handling & Packaging Charge'
+  const isCombinedCart = groceryItems.length > 0 && cafeItems.length > 0
+  const miscFee = isCombinedCart
+    ? (settings.combined_misc_fee ? parseFloat(settings.combined_misc_fee) : (settings.misc_fee ? parseFloat(settings.misc_fee) : 5))
+    : (settings.misc_fee ? parseFloat(settings.misc_fee) : 0)
+  const miscFeeLabel = isCombinedCart
+    ? (settings.combined_misc_fee_label || 'Combined Packaging Charge')
+    : (settings.misc_fee_label || 'Handling & Packaging Charge')
 
   const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
   const activeSubtotal = Math.max(0, combinedAdjustedSubtotal - couponDiscount)

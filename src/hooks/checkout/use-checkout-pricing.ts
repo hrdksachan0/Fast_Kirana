@@ -56,6 +56,9 @@ export function useCheckoutPricing({
     storeLng,
     taxRate,
     miscFee,
+    miscFeeLabel,
+    combinedMiscFee,
+    combinedMiscFeeLabel,
     groceryThreshold,
     cafeThreshold,
     combinedThreshold,
@@ -291,12 +294,17 @@ export function useCheckoutPricing({
     (hasCafeItems || cafeCartItems.length > 0) && packagingOption === 'PREMIUM'
   const packagingFee = isPremiumPackagingSelected ? 15 : 0
 
+  const applicablePackagingFee = isCombinedOrder ? (combinedMiscFee || miscFee) : miscFee
+  const activePackagingLabel = isCombinedOrder
+    ? (combinedMiscFeeLabel || 'Combined Packaging Charge')
+    : (miscFeeLabel || 'Packaging Charge')
+
   const groceryChargedMisc =
     groceryCartItems.length > 0 && deliveryMethod !== 'PICKUP' && !isPremiumPackagingSelected
-  const effectiveGroceryMiscFee = groceryChargedMisc ? miscFee : 0
+  const effectiveGroceryMiscFee = groceryChargedMisc ? applicablePackagingFee : 0
   const cafeChargedMisc =
     cafeCartItems.length > 0 && !groceryChargedMisc && !isPremiumPackagingSelected
-  const effectiveCafeMiscFee = cafeChargedMisc ? miscFee : 0
+  const effectiveCafeMiscFee = cafeChargedMisc ? applicablePackagingFee : 0
   const effectiveMiscFee = effectiveGroceryMiscFee + effectiveCafeMiscFee
 
   const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0
@@ -355,6 +363,7 @@ export function useCheckoutPricing({
     packagingFee,
     isPremiumPackagingSelected,
     effectiveMiscFee,
+    activePackagingLabel,
     couponDiscount,
     taxes,
     grandTotal,

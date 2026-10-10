@@ -219,35 +219,46 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
             rawName.toLowerCase() != 'customer' &&
             rawName != 'FastKirana Customer';
 
-        // If new customer -> Prompt Full Name (Skip for Staff)
+        // 1. Immediately persist auth token & credentials FIRST so Dio interceptor
+        // has valid Authorization header for subsequent API calls.
+        if (response.token != null && response.token!.isNotEmpty) {
+          await prefs.setString('auth_token', response.token!);
+          await SecureStorage.write('auth_token', response.token!);
+        }
+        await prefs.setString('user_id', user.id);
+        await prefs.setString('user_phone', widget.identifier);
+        await prefs.setString('user_data', jsonEncode(user.toJson()));
+
+        await SecureStorage.write('user_id', user.id);
+        await SecureStorage.write('user_phone', widget.identifier);
+        await SecureStorage.write('user_data', jsonEncode(user.toJson()));
+        await SecureStorage.loadCache();
+        await ref.read(authProvider.notifier).setUser(user);
+
+        // 2. If new customer -> Prompt Full Name (Skip for Staff)
         if (!isExistingUser && !isStaffRole) {
           if (!mounted) return;
           final enteredName = await _showNameBottomSheet(context);
           if (enteredName != null && enteredName.trim().isNotEmpty) {
             final validName = enteredName.trim();
             user = user.copyWith(name: validName);
+
+            // Immediately persist updated name locally in storage & Riverpod state
+            await prefs.setString('user_name', validName);
+            await prefs.setString('user_data', jsonEncode(user.toJson()));
+            await SecureStorage.write('user_name', validName);
+            await SecureStorage.write('user_data', jsonEncode(user.toJson()));
+            await ref.read(authProvider.notifier).setUser(user);
+
+            // Send to backend (now equipped with valid Auth header!)
             try {
               await authRepo.updateName(validName);
+              debugPrint('Name saved on backend successfully: ');
             } catch (e) {
-              debugPrint('Profile update failed: $e');
+              debugPrint('Profile update failed on backend: ');
             }
           }
         }
-
-        await prefs.setString('user_id', user.id);
-        await prefs.setString('user_phone', widget.identifier);
-        await prefs.setString('user_data', jsonEncode(user.toJson()));
-        if (response.token != null && response.token!.isNotEmpty) {
-          await prefs.setString('auth_token', response.token!);
-        }
-
-        // Mirror auth data to secure storage (tokens & credentials).
-        // The Dio interceptor reads these from SecureStorage first, then falls
-        // back to SharedPreferences for legacy users.
-        await SecureStorage.write('user_id', user.id);
-        await SecureStorage.write('user_phone', widget.identifier);
-        await SecureStorage.write('user_data', jsonEncode(user.toJson()));
-        await ref.read(authProvider.notifier).setUser(user);
         HapticFeedback.heavyImpact();
 
         if (!mounted) return;

@@ -85,31 +85,29 @@ class TrackingMapView extends StatelessWidget {
     required Color color,
     required BuildContext context,
   }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 26,
-          height: 26,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.20), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 12.5)),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: Responsive.scaledFontSize(context, 10.5),
+              fontWeight: FontWeight.w800,
+              color: color,
+              letterSpacing: -0.1,
+            ),
           ),
-          child: Center(
-            child: Text(emoji, style: const TextStyle(fontSize: 13)),
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: Responsive.scaledFontSize(context, 10.5),
-            fontWeight: FontWeight.w700,
-            color: color,
-            letterSpacing: -0.1,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

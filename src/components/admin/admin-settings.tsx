@@ -135,8 +135,10 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
   const [deliveredToday, setDeliveredToday] = useState('1,231+')
   const [freshStockLoaded, setFreshStockLoaded] = useState('2 hrs ago')
   const [taxRate, setTaxRate] = useState('5')
-  const [miscFee, setMiscFee] = useState('0')
-  const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
+  const [miscFee, setMiscFee] = useState('5')
+  const [miscFeeLabel, setMiscFeeLabel] = useState('Packaging Charge')
+  const [combinedMiscFee, setCombinedMiscFee] = useState('5')
+  const [combinedMiscFeeLabel, setCombinedMiscFeeLabel] = useState('Combined Packaging Charge')
   const [contactPhone, setContactPhone] = useState(STORE_PHONE)
   const [contactEmail, setContactEmail] = useState('help@fastkirana.com')
   const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
@@ -253,6 +255,8 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
         if (data.tax_rate !== undefined) setTaxRate(data.tax_rate)
         if (data.misc_fee !== undefined) setMiscFee(data.misc_fee)
         if (data.misc_fee_label !== undefined) setMiscFeeLabel(data.misc_fee_label)
+        if (data.combined_misc_fee !== undefined) setCombinedMiscFee(data.combined_misc_fee)
+        if (data.combined_misc_fee_label !== undefined) setCombinedMiscFeeLabel(data.combined_misc_fee_label)
         if (data.contact_phone) setContactPhone(data.contact_phone)
         if (data.contact_email) setContactEmail(data.contact_email)
         if (data.contact_timings) setContactTimings(data.contact_timings)
@@ -398,6 +402,8 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
           min_order_value: minOrderValue.trim(),
           misc_fee: miscFee.trim(),
           misc_fee_label: miscFeeLabel.trim(),
+          combined_misc_fee: combinedMiscFee.trim(),
+          combined_misc_fee_label: combinedMiscFeeLabel.trim(),
           grocery_free_delivery_threshold: groceryFreeDeliveryThreshold.trim(),
           combined_free_delivery_threshold: combinedFreeDeliveryThreshold.trim(),
           delivery_fee: deliveryFee.trim(),
@@ -855,6 +861,10 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
                 setMiscFee={setMiscFee}
                 miscFeeLabel={miscFeeLabel}
                 setMiscFeeLabel={setMiscFeeLabel}
+                combinedMiscFee={combinedMiscFee}
+                setCombinedMiscFee={setCombinedMiscFee}
+                combinedMiscFeeLabel={combinedMiscFeeLabel}
+                setCombinedMiscFeeLabel={setCombinedMiscFeeLabel}
                 storeUpiVpa={storeUpiVpa}
                 setStoreUpiVpa={setStoreUpiVpa}
                 storeHubName={storeHubName}

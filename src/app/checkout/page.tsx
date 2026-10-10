@@ -351,7 +351,7 @@ export default function CheckoutPage() {
           taxRate={taxRate}
           taxes={pricing.taxes}
           effectiveMiscFee={pricing.effectiveMiscFee}
-          miscFeeLabel={miscFeeLabel}
+          miscFeeLabel={pricing.activePackagingLabel || miscFeeLabel}
           selectedAddress={selectedAddress}
           distanceKm={pricing.distanceKm}
           grandTotal={pricing.grandTotal}

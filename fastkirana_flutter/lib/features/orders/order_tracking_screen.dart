@@ -1765,7 +1765,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                   if (_etaText.isNotEmpty && _etaText != 'Delivered 🎉') {
                                     heroTitle = 'Arriving in $_etaText';
                                     heroSubtitle = _distanceText.isNotEmpty
-                                        ? '$_distanceText away • Live GPS Tracking'
+                                        ? (_distanceText.toLowerCase().contains('away') ? '$_distanceText • Live GPS Tracking' : '$_distanceText away • Live GPS Tracking')
                                         : 'Rider is on the way to your doorstep';
                                   } else if (_order?.estimatedDelivery != null && _order!.estimatedDelivery!.isAfter(DateTime.now())) {
                                     final est = _order!.estimatedDelivery!;
@@ -1775,7 +1775,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                   } else {
                                     heroTitle = 'Out for Delivery';
                                     heroSubtitle = _distanceText.isNotEmpty
-                                        ? '$_distanceText away • On the way'
+                                        ? (_distanceText.toLowerCase().contains('away') ? '$_distanceText • On the way' : '$_distanceText away • On the way')
                                         : 'Rider is heading to your doorstep';
                                   }
                                 } else if (statusStep == 2) {
@@ -1838,7 +1838,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                                 color: Colors.white,
                                                 letterSpacing: -0.2,
                                               ),
-                                              maxLines: 1,
+                                              maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             const SizedBox(height: 2),
@@ -1861,7 +1861,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                                       fontWeight: FontWeight.w600,
                                                       color: const Color(0xFF94A3B8),
                                                     ),
-                                                    maxLines: 1,
+                                                    maxLines: 2,
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),

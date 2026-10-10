@@ -25,6 +25,8 @@ export interface CheckoutSettings {
   taxRate: number
   miscFee: number
   miscFeeLabel: string
+  combinedMiscFee: number
+  combinedMiscFeeLabel: string
   contactPhone: string
   groceryMartOpen: boolean
   cafeOpen: boolean
@@ -49,7 +51,9 @@ export function useCheckoutSettings(explicitStoreId?: string | null): CheckoutSe
   const [onlyCod, setOnlyCod] = useState(false)
   const [taxRate, setTaxRate] = useState(0.0)
   const [miscFee, setMiscFee] = useState(0.0)
-  const [miscFeeLabel, setMiscFeeLabel] = useState('Miscellaneous Additions')
+  const [miscFeeLabel, setMiscFeeLabel] = useState('Packaging Charge')
+  const [combinedMiscFee, setCombinedMiscFee] = useState(5.0)
+  const [combinedMiscFeeLabel, setCombinedMiscFeeLabel] = useState('Combined Packaging Charge')
   const [contactPhone, setContactPhone] = useState(DEFAULT_CONTACT_PHONE)
   const [groceryMartOpen, setGroceryMartOpen] = useState(true)
   const [cafeOpen, setCafeOpen] = useState(true)
@@ -101,6 +105,14 @@ export function useCheckoutSettings(explicitStoreId?: string | null): CheckoutSe
           if (data.misc_fee_label !== undefined) {
             setMiscFeeLabel(data.misc_fee_label)
           }
+          if (data.combined_misc_fee !== undefined) {
+            setCombinedMiscFee(parseFloat(data.combined_misc_fee))
+          } else if (data.misc_fee !== undefined) {
+            setCombinedMiscFee(parseFloat(data.misc_fee))
+          }
+          if (data.combined_misc_fee_label !== undefined) {
+            setCombinedMiscFeeLabel(data.combined_misc_fee_label)
+          }
           if (data.contact_phone) {
             setContactPhone(data.contact_phone)
           }
@@ -141,6 +153,8 @@ export function useCheckoutSettings(explicitStoreId?: string | null): CheckoutSe
     taxRate,
     miscFee,
     miscFeeLabel,
+    combinedMiscFee,
+    combinedMiscFeeLabel,
     contactPhone,
     groceryMartOpen,
     cafeOpen,

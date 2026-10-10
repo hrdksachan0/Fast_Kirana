@@ -4,22 +4,25 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/design_system.dart';
 
-/// Top control header for Admin Orders: segmented tabs, search box, auto-approve toggle, and sub-filter chips
+/// Pinned Sticky Header for Admin Orders:
+/// - Segmented Tab Switcher (Live Orders vs History)
+/// - On-Demand Search (Icon tap expands sleek full-width search input)
+/// - Sub-filter status chips
 class AdminFilterHeader extends StatefulWidget {
   final int selectedTab;
   final int displayLiveCount;
   final int displayHistoryCount;
   final int displayPendingPaymentCount;
   final String searchQuery;
-  final bool isAutoApprove;
   final List<String> liveStatusFilters;
   final List<String> historyStatusFilters;
   final String currentSubFilter;
   final ValueChanged<int> onTabChanged;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onSearchCleared;
-  final ValueChanged<bool> onToggleAutoApprove;
   final ValueChanged<String> onFilterSelected;
+  final bool? isAutoApprove;
+  final ValueChanged<bool>? onToggleAutoApprove;
 
   const AdminFilterHeader({
     super.key,
@@ -28,15 +31,15 @@ class AdminFilterHeader extends StatefulWidget {
     required this.displayHistoryCount,
     required this.displayPendingPaymentCount,
     required this.searchQuery,
-    required this.isAutoApprove,
     required this.liveStatusFilters,
     required this.historyStatusFilters,
     required this.currentSubFilter,
     required this.onTabChanged,
     required this.onSearchChanged,
     required this.onSearchCleared,
-    required this.onToggleAutoApprove,
     required this.onFilterSelected,
+    this.isAutoApprove,
+    this.onToggleAutoApprove,
   });
 
   @override
@@ -46,6 +49,8 @@ class AdminFilterHeader extends StatefulWidget {
 class _AdminFilterHeaderState extends State<AdminFilterHeader> {
   Timer? _searchDebounce;
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isSearchOpen = false;
 
   static const Color primaryRed = AppDesignSystem.primary;
 
@@ -53,6 +58,9 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
   void initState() {
     super.initState();
     _searchController.text = widget.searchQuery;
+    if (widget.searchQuery.isNotEmpty) {
+      _isSearchOpen = true;
+    }
   }
 
   @override
@@ -61,13 +69,36 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
     if (widget.searchQuery.isEmpty && _searchController.text.isNotEmpty) {
       _searchController.clear();
     }
+    if (widget.searchQuery.isNotEmpty && !_isSearchOpen) {
+      _isSearchOpen = true;
+    }
   }
 
   @override
   void dispose() {
     _searchDebounce?.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _closeSearch() {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _isSearchOpen = false;
+    });
+    _searchController.clear();
+    widget.onSearchCleared();
+  }
+
+  void _openSearch() {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _isSearchOpen = true;
+    });
+    Future.microtask(() {
+      if (mounted) _searchFocusNode.requestFocus();
+    });
   }
 
   String _formatStatusLabel(String status) {
@@ -89,17 +120,105 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final activeFilters = widget.selectedTab == 0 ? widget.liveStatusFilters : widget.historyStatusFilters;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(
+          bottom: BorderSide(color: AppDesignSystem.slate200, width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Row 1: Segmented Tabs OR Active Search Input Bar
+          SizedBox(
+            height: 40,
+            child: _isSearchOpen ? _buildSearchInputRow() : _buildTabsWithSearchButtonRow(),
+          ),
+
+          const SizedBox(height: 6),
+
+          // Row 2: Status Sub-filter Chips (Horizontal scroll)
+          SizedBox(
+            height: 34,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: activeFilters.length,
+              itemBuilder: (context, index) {
+                final status = activeFilters[index];
+                final isSelected = widget.currentSubFilter == status;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        HapticFeedback.selectionClick();
+                        widget.onFilterSelected(status);
+                      }
+                    },
+                    label: Text(
+                      _formatStatusLabel(status),
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white
+                            : (status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
+                                ? const Color(0xFFE11D48)
+                                : AppDesignSystem.slate600),
+                      ),
+                    ),
+                    selectedColor: status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900,
+                    backgroundColor: status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
+                        ? const Color(0xFFFFF1F2)
+                        : AppDesignSystem.slate100,
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(
+                        color: isSelected
+                            ? (status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900)
+                            : (status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
+                                ? const Color(0xFFFDA4AF)
+                                : AppDesignSystem.slate200),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds the normal Row 1: Segmented Tabs (Live vs History) + On-Demand 🔍 Search Button
+  Widget _buildTabsWithSearchButtonRow() {
+    return Row(
       children: [
-        // 1. Primary Tab Switcher (Live vs History with modern iOS-style segmented control)
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+        // Segmented Control
+        Expanded(
           child: Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               color: AppDesignSystem.slate100,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppDesignSystem.slate200, width: 1),
             ),
             child: Row(
@@ -128,217 +247,117 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
           ),
         ),
 
-        // 2. Search Field with Instant Clear
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-          child: Container(
-            height: 46,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: AppDesignSystem.slate50,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppDesignSystem.slate300, width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.search_rounded, size: 20, color: AppDesignSystem.slate600),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (val) {
-                      _searchDebounce?.cancel();
-                      _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-                        widget.onSearchChanged(val.toLowerCase().trim());
-                      });
-                    },
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 13.5),
-                      fontWeight: FontWeight.w600,
-                      color: AppDesignSystem.slate900,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Search by Order ID, customer, phone...',
-                      hintStyle: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12.5),
-                        fontWeight: FontWeight.w500,
-                        color: AppDesignSystem.slate400,
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-                if (widget.searchQuery.isNotEmpty)
-                  GestureDetector(
-                    onTap: () {
-                      _searchController.clear();
-                      widget.onSearchCleared();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: AppDesignSystem.slate200,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.close_rounded, size: 14, color: AppDesignSystem.slate600),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
+        const SizedBox(width: 8),
 
-        // 3. Auto-Approve Fast Switch Banner
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+        // On-Demand Search Icon Button
+        GestureDetector(
+          onTap: _openSearch,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: widget.isAutoApprove ? const Color(0xFFF0FDF4) : const Color(0xFFFFF7ED),
+              color: widget.searchQuery.isNotEmpty ? primaryRed.withValues(alpha: 0.1) : AppDesignSystem.slate100,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: widget.isAutoApprove ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
-                width: 1.2,
+                color: widget.searchQuery.isNotEmpty ? primaryRed : AppDesignSystem.slate200,
+                width: 1,
               ),
             ),
-            child: Row(
+            child: Stack(
+              alignment: Alignment.center,
               children: [
                 Icon(
-                  widget.isAutoApprove ? Icons.bolt_rounded : Icons.admin_panel_settings_rounded,
+                  Icons.search_rounded,
                   size: 20,
-                  color: widget.isAutoApprove ? AppDesignSystem.green600 : const Color(0xFFEA580C),
+                  color: widget.searchQuery.isNotEmpty ? primaryRed : AppDesignSystem.slate700,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            widget.isAutoApprove ? 'AUTO-APPROVE: ON' : 'MANUAL APPROVAL: ON',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
-                              fontWeight: FontWeight.w900,
-                              color: widget.isAutoApprove ? const Color(0xFF15803D) : const Color(0xFFC2410C),
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: widget.isAutoApprove ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              widget.isAutoApprove ? 'Direct to Kitchen' : 'Admin Call Gate',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 9),
-                                fontWeight: FontWeight.w800,
-                                color: widget.isAutoApprove ? const Color(0xFF166534) : const Color(0xFF9A3412),
-                              ),
-                            ),
-                          ),
-                        ],
+                if (widget.searchQuery.isNotEmpty)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: primaryRed,
+                        shape: BoxShape.circle,
                       ),
-                      Text(
-                        widget.isAutoApprove
-                            ? 'Incoming orders reach restaurant console immediately'
-                            : 'Orders pause for call verification before restaurant sees them',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 10),
-                          fontWeight: FontWeight.w500,
-                          color: widget.isAutoApprove ? const Color(0xFF166534) : const Color(0xFF9A3412),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: 28,
-                  child: FittedBox(
-                    child: Switch(
-                      value: widget.isAutoApprove,
-                      activeThumbColor: AppDesignSystem.green600,
-                      activeTrackColor: const Color(0xFFBBF7D0),
-                      inactiveThumbColor: const Color(0xFFEA580C),
-                      inactiveTrackColor: const Color(0xFFFED7AA),
-                      onChanged: widget.onToggleAutoApprove,
                     ),
                   ),
-                ),
               ],
-            ),
-          ),
-        ),
-
-        // 4. Status Sub-filter Chips
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.only(bottom: 12),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
-              children: (widget.selectedTab == 0 ? widget.liveStatusFilters : widget.historyStatusFilters).map((status) {
-                final isSelected = widget.currentSubFilter == status;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      if (selected) {
-                        HapticFeedback.selectionClick();
-                        widget.onFilterSelected(status);
-                      }
-                    },
-                    label: Text(
-                      _formatStatusLabel(status),
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11.5),
-                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                        color: isSelected
-                            ? Colors.white
-                            : (status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
-                                ? const Color(0xFFE11D48)
-                                : AppDesignSystem.slate600),
-                      ),
-                    ),
-                    selectedColor: status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900,
-                    backgroundColor: status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
-                        ? const Color(0xFFFFF1F2)
-                        : AppDesignSystem.slate100,
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: isSelected
-                            ? (status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900)
-                            : (status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
-                                ? const Color(0xFFFDA4AF)
-                                : AppDesignSystem.slate200),
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  /// Builds the active Search Input Row when user taps Search icon
+  Widget _buildSearchInputRow() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppDesignSystem.slate50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: primaryRed.withValues(alpha: 0.5), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          // Back button to close search
+          GestureDetector(
+            onTap: _closeSearch,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10),
+              child: Icon(Icons.arrow_back_rounded, size: 20, color: AppDesignSystem.slate700),
+            ),
+          ),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              onChanged: (val) {
+                _searchDebounce?.cancel();
+                _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                  widget.onSearchChanged(val.toLowerCase().trim());
+                });
+              },
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 13),
+                fontWeight: FontWeight.w600,
+                color: AppDesignSystem.slate900,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search order #, customer, phone...',
+                hintStyle: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 12),
+                  fontWeight: FontWeight.w500,
+                  color: AppDesignSystem.slate400,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+            ),
+          ),
+          if (widget.searchQuery.isNotEmpty || _searchController.text.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+                widget.onSearchCleared();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    color: AppDesignSystem.slate200,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded, size: 14, color: AppDesignSystem.slate600),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -356,16 +375,16 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(9),
           boxShadow: isSelected
               ? [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1.5),
                   ),
                 ]
               : null,
@@ -375,35 +394,35 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
           children: [
             Icon(
               icon,
-              size: 15,
+              size: 14,
               color: isSelected
                   ? (index == 0 ? primaryRed : AppDesignSystem.slate900)
                   : AppDesignSystem.slate500,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 5),
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 12.5),
+                fontSize: Responsive.scaledFontSize(context, 11.5),
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                 color: isSelected
                     ? (index == 0 ? primaryRed : AppDesignSystem.slate900)
                     : AppDesignSystem.slate500,
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 5),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               decoration: BoxDecoration(
                 color: isSelected
                     ? (index == 0 ? primaryRed.withValues(alpha: 0.12) : AppDesignSystem.slate200)
                     : AppDesignSystem.slate200,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 '$count',
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 10),
+                  fontSize: Responsive.scaledFontSize(context, 9.5),
                   fontWeight: FontWeight.w900,
                   color: isSelected
                       ? (index == 0 ? primaryRed : AppDesignSystem.slate900)

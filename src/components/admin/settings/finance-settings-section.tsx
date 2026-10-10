@@ -53,6 +53,10 @@ interface FinanceSettingsSectionProps {
   setMiscFee: (v: string) => void
   miscFeeLabel: string
   setMiscFeeLabel: (v: string) => void
+  combinedMiscFee: string
+  setCombinedMiscFee: (v: string) => void
+  combinedMiscFeeLabel: string
+  setCombinedMiscFeeLabel: (v: string) => void
 
   // UPI VPA
   storeUpiVpa: string
@@ -90,6 +94,10 @@ export function FinanceSettingsSection({
   setMiscFee,
   miscFeeLabel,
   setMiscFeeLabel,
+  combinedMiscFee,
+  setCombinedMiscFee,
+  combinedMiscFeeLabel,
+  setCombinedMiscFeeLabel,
   storeUpiVpa,
   setStoreUpiVpa,
   storeHubName,
@@ -529,40 +537,95 @@ export function FinanceSettingsSection({
 
           {/* ─ Right Column: Packaging & UPI ─ */}
           <div className="space-y-3">
-            {/* Packaging / Misc Fee */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary">
-                  Packaging Fee (₹) *
-                </label>
-                <div className="relative">
-                  <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
+            {/* Standard Packaging / Misc Fee */}
+            <div className="p-3 bg-muted/20 border border-border/60 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-text-primary">
+                  Standard Packaging (Single Outlet)
+                </span>
+                <span className="text-[9px] text-text-muted font-bold">Only Grocery or Cafe</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9.5px] font-bold text-text-secondary">
+                    Fee (₹) *
+                  </label>
+                  <div className="relative">
+                    <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      value={miscFee}
+                      onChange={(e) => setMiscFee(e.target.value)}
+                      className="w-full bg-muted/40 border border-border pl-9 pr-3 py-2 rounded-xl text-xs font-black focus:outline-none focus:border-primary"
+                      placeholder="5"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9.5px] font-bold text-text-secondary">
+                    Display Label *
+                  </label>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
                     required
-                    value={miscFee}
-                    onChange={(e) => setMiscFee(e.target.value)}
-                    className="w-full bg-muted/40 border border-border pl-9 pr-3 py-2 rounded-xl text-xs font-black focus:outline-none focus:border-primary"
-                    placeholder="0"
+                    value={miscFeeLabel}
+                    onChange={(e) => setMiscFeeLabel(e.target.value)}
+                    className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs font-bold focus:outline-none focus:border-primary"
+                    placeholder="Packaging Charge"
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary">
-                  Display Label *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={miscFeeLabel}
-                  onChange={(e) => setMiscFeeLabel(e.target.value)}
-                  className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs font-bold focus:outline-none focus:border-primary"
-                  placeholder="Packaging Fee"
-                />
+            {/* Combined Packaging (Multi-Vendor / Mart + Food) */}
+            <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                  Combined Order Packaging (Grocery + Food)
+                </span>
+                <span className="text-[9px] text-amber-600/80 dark:text-amber-400/80 font-bold">Mixed cart</span>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9.5px] font-bold text-text-secondary">
+                    Combined Fee (₹) *
+                  </label>
+                  <div className="relative">
+                    <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      value={combinedMiscFee}
+                      onChange={(e) => setCombinedMiscFee(e.target.value)}
+                      className="w-full bg-muted/40 border border-border pl-9 pr-3 py-2 rounded-xl text-xs font-black focus:outline-none focus:border-primary"
+                      placeholder="5"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9.5px] font-bold text-text-secondary">
+                    Combined Display Label *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={combinedMiscFeeLabel}
+                    onChange={(e) => setCombinedMiscFeeLabel(e.target.value)}
+                    className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs font-bold focus:outline-none focus:border-primary"
+                    placeholder="Combined Packaging Charge"
+                  />
+                </div>
+              </div>
+              <p className="text-[9px] text-text-muted">
+                Applied when customer orders both Grocery & Restaurant dishes in a single checkout.
+              </p>
             </div>
 
             {/* Store UPI VPA */}

@@ -618,7 +618,8 @@ class OrderDetailScreen extends StatelessWidget {
                   ),
                   _buildBillRow(
                     'Packaging Charge',
-                    order.miscFee > 0 ? '₹${order.miscFee.toInt()}' : '₹5',
+                    order.miscFee > 0 ? '₹${order.miscFee.toInt()}' : (isPickupOrder ? 'FREE' : '₹0'),
+                    isGreen: order.miscFee == 0 || isPickupOrder,
                   ),
                   _buildBillRow('Handling & Taxes', '₹0', isGreen: true),
                   if (order.refundAmount > 0)

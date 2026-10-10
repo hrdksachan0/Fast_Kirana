@@ -126,15 +126,15 @@ class PaymentGatewayHandler {
   Future<PaymentVerificationResult> verifyPayment(String cfOrderId, {int maxAttempts = 3}) async {
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
       if (attempt > 0) {
-        await Future.delayed(const Duration(milliseconds: 1500));
+        await Future.delayed(const Duration(milliseconds: 400));
       }
       try {
         final verifyRes = await dio.post(
           '/api/payment/cashfree/verify',
           data: {'orderId': cfOrderId, 'cfOrderId': cfOrderId},
           options: Options(
-            sendTimeout: const Duration(seconds: 6),
-            receiveTimeout: const Duration(seconds: 6),
+            sendTimeout: const Duration(seconds: 4),
+            receiveTimeout: const Duration(seconds: 4),
           ),
         );
         if (verifyRes.statusCode == 200 && verifyRes.data != null) {

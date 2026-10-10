@@ -451,8 +451,13 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return;
     }
 
+    final isCombined = hasGrocery && hasRestaurant;
+
     final deliveryFee = state.deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
-    final packagingFee = state.selectedPackaging == 'PREMIUM' ? 15.0 : 5.0;
+    final basePackagingFee = state.deliveryMethod == 'PICKUP'
+        ? 0.0
+        : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
+    final packagingFee = state.selectedPackaging == 'PREMIUM' ? 15.0 : basePackagingFee;
     final grandTotal = (subtotal + deliveryFee + packagingFee - _discountAmount).clamp(0.0, 999999.0);
 
     // 4. Online Payment Gateway Trigger
@@ -654,8 +659,15 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return;
     }
 
+    final hasGrocery = cart.items.any((i) => !isRestaurantProduct(i.product));
+    final hasRestaurant = cart.items.any((i) => isRestaurantProduct(i.product));
+    final isCombined = hasGrocery && hasRestaurant;
+
     final deliveryFee = state.deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
-    final packagingFee = state.selectedPackaging == 'PREMIUM' ? 15.0 : (state.deliveryMethod == 'PICKUP' ? 0.0 : 5.0);
+    final basePackagingFee = state.deliveryMethod == 'PICKUP'
+        ? 0.0
+        : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
+    final packagingFee = state.selectedPackaging == 'PREMIUM' ? 15.0 : basePackagingFee;
     final grandTotal = (subtotal + deliveryFee + packagingFee - _discountAmount).clamp(0.0, 999999.0);
 
     final selectedAddr = state.deliveryMethod == 'PICKUP'
@@ -717,8 +729,6 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       }
     }
 
-    final hasRestaurant = cart.items.any((i) => isRestaurantProduct(i.product));
-    final hasGrocery = cart.items.any((i) => !isRestaurantProduct(i.product));
     String shopName = 'FastKirana Dark Store';
     String? restaurantId;
     for (final item in cart.items) {

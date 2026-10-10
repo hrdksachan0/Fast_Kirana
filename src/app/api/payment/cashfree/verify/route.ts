@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     // Strip retry suffix if any to locate original DB order
     const cleanId = rawId.replace(/_r\d+$/, '')
 
-    const orders: any[] = await prisma.$queryRaw`
+    let orders: any[] = await prisma.$queryRaw`
       SELECT o.id, o."userId", o."combinedId", o."readableId",
              o.status::text as status,
              o.total, o."paymentStatus"::text as "paymentStatus",
@@ -33,9 +33,24 @@ export async function POST(req: NextRequest) {
       FROM orders o
       LEFT JOIN users u ON o."userId" = u.id
       WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId}
-         OR (o.notes IS NOT NULL AND o.notes ILIKE ${'%' + cleanId + '%'})
       LIMIT 1
     `
+
+    if (!orders || orders.length === 0) {
+      orders = await prisma.$queryRaw`
+        SELECT o.id, o."userId", o."combinedId", o."readableId",
+               o.status::text as status,
+               o.total, o."paymentStatus"::text as "paymentStatus",
+               o."paymentMethod"::text as "paymentMethod",
+               o."shopName", o."restaurantId",
+               o."createdAt", o.notes,
+               u.name as "userName", u.phone as "userPhone", u.email as "userEmail"
+        FROM orders o
+        LEFT JOIN users u ON o."userId" = u.id
+        WHERE o.notes IS NOT NULL AND o.notes ILIKE ${'%' + cleanId + '%'}
+        LIMIT 1
+      `
+    }
 
     if (!orders || orders.length === 0) {
       // Check if this is a preflight Cashfree order before DB record creation (e.g. Flutter mobile checkout)
@@ -86,6 +101,18 @@ export async function POST(req: NextRequest) {
     }
 
     const order = orders[0]
+
+    // FAST PATH: If order in database is ALREADY marked PAID (by webhook or previous check), return in ~2ms!
+    if (order.paymentStatus === 'PAID') {
+      return NextResponse.json({
+        success: true,
+        orderId: order.id,
+        paymentStatus: 'PAID',
+        isPaid: true,
+        cfPaymentId: `CF_${order.id}`,
+        orderAmount: order.total,
+      })
+    }
 
     // Verify status with Cashfree Server directly
     let isPaid = false

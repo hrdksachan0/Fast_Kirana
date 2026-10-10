@@ -1283,11 +1283,17 @@ async def create_order(
     final_shop_name = restaurant_obj["name"] if restaurant_obj else "FastKirana Grocery"
     final_shop_phone = restaurant_obj.get("ownerPhone", default_support_phone) if restaurant_obj else default_support_phone
 
-    # Packaging and handling charge
+    has_grocery_items = len(grocery_items) > 0
+    has_restaurant_items = len(restaurant_data) > 0
+    is_combined = has_grocery_items and has_restaurant_items
+
+    # Packaging and handling charge (customizable by admin)
     server_misc_fee = float(settings_map.get("misc_fee", 5.0))
+    server_combined_misc_fee = float(settings_map.get("combined_misc_fee", server_misc_fee))
     packaging_fee_input = float(payload.get("packagingFee", payload.get("packaging_fee", 0.0)))
-    is_premium_packaging = packaging_option == "PREMIUM" or packaging_fee == 15.0 or packaging_fee_input > 0
-    resolved_packaging_fee = packaging_fee_input if packaging_fee_input > 0 else (15.0 if is_premium_packaging else (server_misc_fee if restaurant_id else 5.0))
+    is_premium_packaging = packaging_option == "PREMIUM" or packaging_fee == 15.0 or packaging_fee_input >= 15.0
+    applicable_misc_fee = server_combined_misc_fee if is_combined else server_misc_fee
+    resolved_packaging_fee = 15.0 if is_premium_packaging else (packaging_fee_input if packaging_fee_input > 0 else (applicable_misc_fee if (restaurant_id or is_combined) else 5.0))
 
     # Calculate unified order amounts
     subtotal = combined_subtotal
@@ -1301,7 +1307,7 @@ async def create_order(
         if subtotal < free_delivery_threshold:
             delivery_fee_charge = delivery_rules["deliveryFee"] if delivery_rules else delivery_fee_val
 
-    misc_fee_charge = resolved_packaging_fee if is_premium_packaging else (server_misc_fee if delivery_method != "PICKUP" else 0.0)
+    misc_fee_charge = resolved_packaging_fee if delivery_method != "PICKUP" else 0.0
     final_total = max(0.0, subtotal - discount + delivery_fee_charge + misc_fee_charge)
 
     # 6. Create Orders (ID-wise splitting for Combined Orders)
@@ -1310,9 +1316,6 @@ async def create_order(
         seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')::int as nextval"))
         readable_id = str(seq_res.scalar())
 
-        has_grocery_items = len(grocery_items) > 0
-        has_restaurant_items = len(restaurant_data) > 0
-        is_combined = has_grocery_items and has_restaurant_items
         combined_id = f"combined_{uuid.uuid4().hex[:9]}_{int(datetime.utcnow().timestamp())}" if is_combined else None
 
         est_mins = 30 if has_restaurant_items else 10
@@ -1552,8 +1555,8 @@ async def create_order(
         # Plan sub-order specifications
         order_specs = []
         if is_combined:
-            # 1. Grocery Companion Order
-            grocery_misc = server_misc_fee if delivery_method != "PICKUP" else 0.0
+            # 1. Grocery Companion Order (takes the combined packaging fee configured by admin)
+            grocery_misc = misc_fee_charge
             order_specs.append({
                 "type": OrderType.GROCERY,
                 "readableId": f"{readable_id}-G",
@@ -1567,7 +1570,7 @@ async def create_order(
                 "total": max(0.0, round(grocery_subtotal - grocery_disc + delivery_fee_charge + grocery_misc, 2)),
                 "items": grocery_items
             })
-            # 2. Restaurant Companion Order
+            # 2. Restaurant Companion Order (miscFee 0.0 so combined packaging charge is strictly charged once)
             order_specs.append({
                 "type": OrderType.RESTAURANT,
                 "readableId": f"{readable_id}-R",
@@ -1577,8 +1580,8 @@ async def create_order(
                 "subtotal": round(restaurant_data[0]["subtotal"], 2),
                 "discount": round(restaurant_disc, 2),
                 "deliveryFee": 0.0,
-                "miscFee": round(resolved_packaging_fee, 2),
-                "total": max(0.0, round(restaurant_data[0]["subtotal"] - restaurant_disc + resolved_packaging_fee, 2)),
+                "miscFee": 0.0,
+                "total": max(0.0, round(restaurant_data[0]["subtotal"] - restaurant_disc, 2)),
                 "items": restaurant_data[0]["items"]
             })
         elif has_restaurant_items:

@@ -266,14 +266,18 @@ async def verify_cashfree_payment(
     raw_id = (req.orderId or req.cfOrderId or "").strip()
     clean_id = re.sub(r"_r\d+$", "", raw_id)
 
-    # 1. FAST PATH: Check PostgreSQL first before making slow external gateway calls!
-    # If already verified & marked PAID, return instantly in ~2ms.
+    # 1. FAST PATH: Check indexed primary keys first in ~2ms!
     stmt = select(Order).where(
-        (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == raw_id) |
-        (Order.notes.ilike(f"%{clean_id}%"))
+        (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == raw_id)
     )
     res = await db.execute(stmt)
     order = res.scalars().first()
+
+    if not order:
+        # Fallback to ILIKE notes search only if indexed lookup missed
+        stmt_notes = select(Order).where(Order.notes.ilike(f"%{clean_id}%"))
+        res_notes = await db.execute(stmt_notes)
+        order = res_notes.scalars().first()
 
     if order and order.paymentStatus == PaymentStatus.PAID:
         # Also ensure companion orders are synced to PAID
@@ -354,7 +358,7 @@ async def verify_cashfree_payment(
     checked_ids = set()
     sanitized_check_id = clean_id
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=4.0) as client:
         for cid in candidate_ids:
             if not cid:
                 continue
@@ -375,16 +379,17 @@ async def verify_cashfree_payment(
             except Exception as e:
                 logger.warning(f"Failed to fetch Cashfree order {sanitized_check_id}: {e}")
 
-            try:
-                pay_res = await client.get(f"{CASHFREE_BASE_URL}/orders/{sanitized_check_id}/payments", headers=headers)
-                if pay_res.status_code == 200:
-                    payments = pay_res.json()
-                    sp = next((p for p in payments if p.get("payment_status") == "SUCCESS"), None)
-                    if sp:
-                        successful_payment = sp
-                        break
-            except Exception as e:
-                logger.warning(f"Failed to fetch Cashfree order payments {sanitized_check_id}: {e}")
+            if not cf_order or cf_order.get("order_status") != "PAID":
+                try:
+                    pay_res = await client.get(f"{CASHFREE_BASE_URL}/orders/{sanitized_check_id}/payments", headers=headers)
+                    if pay_res.status_code == 200:
+                        payments = pay_res.json()
+                        sp = next((p for p in payments if p.get("payment_status") == "SUCCESS"), None)
+                        if sp:
+                            successful_payment = sp
+                            break
+                except Exception as e:
+                    logger.warning(f"Failed to fetch Cashfree order payments {sanitized_check_id}: {e}")
 
     is_paid = (cf_order and cf_order.get("order_status") == "PAID") or (successful_payment is not None)
 
