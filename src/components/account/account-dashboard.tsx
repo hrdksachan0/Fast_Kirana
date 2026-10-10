@@ -861,22 +861,25 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                 orderSubTab === 'HISTORY' ? 'bg-white/25 text-white' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
               }`}>
-                {orders.filter((o) => ['DELIVERED', 'CANCELLED'].includes(o.status)).length}
+                {orders.filter((o) => {
+                  const s = String(o.status || '').toUpperCase();
+                  return s === 'DELIVERED' || s === 'CANCELLED';
+                }).length}
               </span>
             </button>
           </div>
 
           {/* Render Orders Based on Sub-Tab */}
           {(() => {
-            let filteredOrders = orders.filter((ord) =>
-              orderSubTab === 'LIVE'
-                ? !['DELIVERED', 'CANCELLED'].includes(ord.status)
-                : ['DELIVERED', 'CANCELLED'].includes(ord.status)
-            )
+            let filteredOrders = orders.filter((ord) => {
+              const s = String(ord.status || '').toUpperCase();
+              const isTerminal = s === 'DELIVERED' || s === 'CANCELLED';
+              return orderSubTab === 'LIVE' ? !isTerminal : isTerminal;
+            })
 
             // Apply status filter
             if (orderStatusFilter !== 'ALL') {
-              filteredOrders = filteredOrders.filter((ord) => ord.status === orderStatusFilter)
+              filteredOrders = filteredOrders.filter((ord) => String(ord.status || '').toUpperCase() === orderStatusFilter.toUpperCase())
             }
 
             // Apply search filter
@@ -936,19 +939,17 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                       Track
                       <ArrowRight className="h-3 w-3 stroke-[2.8]" />
                     </Link>
-                    {['DELIVERED', 'CANCELLED'].includes(ord.status) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          triggerHaptic('light')
-                          setReorderOrderModal(ord)
-                        }}
-                        className="text-[11px] font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-3.5 py-1.5 rounded-2xl shadow-sm shadow-emerald-600/20 hover:shadow active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer select-none"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5 stroke-[2.5]" />
-                        Reorder
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light')
+                        setReorderOrderModal(ord)
+                      }}
+                      className="text-[11px] font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-3.5 py-1.5 rounded-2xl shadow-sm shadow-emerald-600/20 hover:shadow active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer select-none"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 stroke-[2.5]" />
+                      Reorder
+                    </button>
                   </div>
                 </div>
                 <div className="text-xs font-bold text-text-secondary flex flex-wrap gap-x-2 gap-y-1.5">
