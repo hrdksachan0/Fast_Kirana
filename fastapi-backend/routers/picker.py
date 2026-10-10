@@ -498,9 +498,11 @@ async def get_picker_orders(
     is_admin = user_role in ["ADMIN", "SUPER_ADMIN", "SUPERADMIN"]
     assigned_restaurant_id = current_user.get("assignedRestaurantId")
     assigned_store_id = current_user.get("assignedStoreId")
-
-    # Dark store hub fallback: picker assignedStoreId -> x-store-id header -> query storeId -> default Ghatampur hub
-    effective_store_id = assigned_store_id or request.headers.get("x-store-id") or storeId or "hub-209206"
+    # Fully dynamic store resolution:
+    # 1. Staff/Picker assignedStoreId from database
+    # 2. Or explicit x-store-id request header
+    # 3. Or query param storeId
+    effective_store_id = assigned_store_id or request.headers.get("x-store-id") or storeId
 
     # Resolve target restaurant: if admin, allow restaurantId query param; otherwise lock to assigned restaurant
     target_rest_id = (
@@ -531,10 +533,7 @@ async def get_picker_orders(
     filters.append(or_(Order.paymentMethod == PaymentMethod.COD, Order.paymentStatus == PaymentStatus.PAID))
 
     if effective_store_id and effective_store_id != "all":
-        if effective_store_id == "hub-209206":
-            filters.append(or_(Order.storeId == effective_store_id, Order.storeId.is_(None)))
-        else:
-            filters.append(Order.storeId == effective_store_id)
+        filters.append(Order.storeId == effective_store_id)
 
     if type in ["cafe", "restaurant"]:
         if target_rest_id and target_rest_id != "all":
