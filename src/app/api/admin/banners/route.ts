@@ -137,24 +137,37 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Safe cache purge
-    try {
-      revalidateTag('banners', 'max')
-      revalidateStorefront()
-    } catch (revalErr) {
-      console.warn('[CacheRevalidation] non-fatal revalidate error:', revalErr)
-    }
-
-    // Ping FastAPI to invalidate its in-memory banner cache
-    try {
-      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in'
-      fetch(`${fastApiUrl}/api/banners/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {})
-    } catch (_) {}
+    await purgeBannersCacheEverywhere()
 
     return NextResponse.json({ success: true, banner })
   } catch (error: any) {
     console.error('Error creating banner:', error)
     return NextResponse.json({ error: error.message || 'Failed to create banner' }, { status: 500 })
+  }
+}
+
+async function purgeBannersCacheEverywhere() {
+  try {
+    revalidateTag('banners', 'max')
+    revalidateStorefront()
+  } catch (revalErr) {
+    console.warn('[CacheRevalidation] non-fatal revalidate error:', revalErr)
+  }
+
+  // Ping FastAPI on both primary domain and Railway domain to invalidate in-memory & Redis cache
+  const fastApiUrls = [
+    process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in',
+    'https://fastkiran-backend-production.up.railway.app'
+  ]
+
+  for (const url of fastApiUrls) {
+    try {
+      fetch(`${url}/api/banners/clear-cache`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(3000),
+      }).catch(() => {})
+    } catch (_) {}
   }
 }
 
@@ -201,24 +214,26 @@ export async function PUT(request: NextRequest) {
     }
 
     const cardMeta = {
-      cardType: body.cardType || type || existing.type || 'standard',
+      ...existingMeta,
+      ...(body.cardMeta || {}),
+      cardType: body.cardType || type || existingMeta.cardType || existing.type || 'standard',
       placement: body.placement !== undefined ? body.placement : (existingMeta.placement || 'hero'),
       platform: body.platform !== undefined ? body.platform : (existingMeta.platform || 'all'),
-      storeId: validStoreId,
-      eyebrowTag: body.eyebrowTag !== undefined ? body.eyebrowTag : null,
-      primaryBrand: body.primaryBrand !== undefined ? body.primaryBrand : null,
-      secondaryBrand: body.secondaryBrand !== undefined ? body.secondaryBrand : null,
-      cashbackTitle: body.cashbackTitle !== undefined ? body.cashbackTitle : null,
-      cashbackSubtitle: body.cashbackSubtitle !== undefined ? body.cashbackSubtitle : null,
-      disclaimerText: body.disclaimerText !== undefined ? body.disclaimerText : null,
-      ctaText: body.ctaText !== undefined ? body.ctaText : null,
-      ctaUrl: body.ctaUrl !== undefined ? body.ctaUrl : null,
-      ctaBgColorHex: body.ctaBgColorHex !== undefined ? body.ctaBgColorHex : null,
-      ctaTextColorHex: body.ctaTextColorHex !== undefined ? body.ctaTextColorHex : null,
-      gridImages: body.gridImages !== undefined ? body.gridImages : null,
-      hasWireframeGrid: body.hasWireframeGrid !== undefined ? body.hasWireframeGrid : false,
-      videoUrl: body.videoUrl !== undefined ? body.videoUrl : null,
-      couponCode: code || null,
+      storeId: validStoreId !== null ? validStoreId : (existingMeta.storeId || existing.storeId),
+      eyebrowTag: body.eyebrowTag !== undefined ? body.eyebrowTag : (existingMeta.eyebrowTag || null),
+      primaryBrand: body.primaryBrand !== undefined ? body.primaryBrand : (existingMeta.primaryBrand || null),
+      secondaryBrand: body.secondaryBrand !== undefined ? body.secondaryBrand : (existingMeta.secondaryBrand || null),
+      cashbackTitle: body.cashbackTitle !== undefined ? body.cashbackTitle : (existingMeta.cashbackTitle || null),
+      cashbackSubtitle: body.cashbackSubtitle !== undefined ? body.cashbackSubtitle : (existingMeta.cashbackSubtitle || null),
+      disclaimerText: body.disclaimerText !== undefined ? body.disclaimerText : (existingMeta.disclaimerText || null),
+      ctaText: body.ctaText !== undefined ? body.ctaText : (existingMeta.ctaText || null),
+      ctaUrl: body.ctaUrl !== undefined ? body.ctaUrl : (existingMeta.ctaUrl || null),
+      ctaBgColorHex: body.ctaBgColorHex !== undefined ? body.ctaBgColorHex : (existingMeta.ctaBgColorHex || null),
+      ctaTextColorHex: body.ctaTextColorHex !== undefined ? body.ctaTextColorHex : (existingMeta.ctaTextColorHex || null),
+      gridImages: body.gridImages !== undefined ? body.gridImages : (existingMeta.gridImages || null),
+      hasWireframeGrid: body.hasWireframeGrid !== undefined ? body.hasWireframeGrid : (existingMeta.hasWireframeGrid || false),
+      videoUrl: body.videoUrl !== undefined ? body.videoUrl : (existingMeta.videoUrl || null),
+      couponCode: code !== undefined ? code : (existingMeta.couponCode || null),
     }
     const serializedCode = JSON.stringify(cardMeta)
 
@@ -238,19 +253,7 @@ export async function PUT(request: NextRequest) {
       }
     })
 
-    // Safe cache purge
-    try {
-      revalidateTag('banners', 'max')
-      revalidateStorefront()
-    } catch (revalErr) {
-      console.warn('[CacheRevalidation] non-fatal revalidate error:', revalErr)
-    }
-
-    // Ping FastAPI to invalidate its in-memory banner cache
-    try {
-      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in'
-      fetch(`${fastApiUrl}/api/banners/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {})
-    } catch (_) {}
+    await purgeBannersCacheEverywhere()
 
     return NextResponse.json({ success: true, banner: updated })
   } catch (error: any) {
@@ -286,19 +289,7 @@ export async function DELETE(request: NextRequest) {
       where: { id }
     })
 
-    // Safe cache purge
-    try {
-      revalidateTag('banners', 'max')
-      revalidateStorefront()
-    } catch (revalErr) {
-      console.warn('[CacheRevalidation] non-fatal revalidate error:', revalErr)
-    }
-
-    // Ping FastAPI to invalidate its in-memory banner cache
-    try {
-      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://api.fastkirana.in'
-      fetch(`${fastApiUrl}/api/banners/clear-cache`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {})
-    } catch (_) {}
+    await purgeBannersCacheEverywhere()
 
     return NextResponse.json({ success: true, message: 'Banner deleted successfully' })
   } catch (error: any) {

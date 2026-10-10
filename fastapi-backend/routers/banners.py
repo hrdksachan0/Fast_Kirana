@@ -16,7 +16,7 @@ router = APIRouter(prefix="/banners", tags=["Promotional Banners"])
 
 _banners_cache: Dict[str, Any] = {}
 _banners_cache_time: float = 0
-BANNERS_CACHE_TTL: int = 180 # 3 minutes (Zero DB load during high customer concurrency)
+BANNERS_CACHE_TTL: int = 60 # 60s TTL for real-time reactivity
 
 def clear_banners_cache():
     global _banners_cache, _banners_cache_time
@@ -40,7 +40,7 @@ async def get_banners(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get active promotional banners with high-speed Redis & in-memory multi-tier caching (3-min TTL).
+    Get active promotional banners with high-speed Redis & in-memory multi-tier caching (60s TTL).
     """
     cache_key = f"banners:{type or 'all'}:{placement or 'all'}:{platform or 'all'}:{storeId or 'all'}"
     now = time.time()
@@ -48,12 +48,12 @@ async def get_banners(
     # 1. Check Redis / Memory cache
     cached_val = await get_cached(cache_key)
     if cached_val is not None:
-        response.headers["Cache-Control"] = "public, s-maxage=180, stale-while-revalidate=360"
+        response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
         response.headers["X-FastKirana-Cache"] = "HIT"
         return cached_val
 
     if cache_key in _banners_cache and (now - _banners_cache_time) < BANNERS_CACHE_TTL:
-        response.headers["Cache-Control"] = "public, s-maxage=180, stale-while-revalidate=360"
+        response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
         response.headers["X-FastKirana-Cache"] = "HIT"
         return _banners_cache[cache_key]
     try:
@@ -105,10 +105,13 @@ async def get_banners(
                 if b_store_id and b_store_id != "all" and b_store_id != storeId:
                     continue
 
-            parsed_banners.append({
+            banner_data = {
                 "id": b.id,
                 "title": b.title,
+                "description": b.description or "",
+                "gradient": b.gradient or "from-primary via-rose-500 to-orange-400",
                 "imageUrl": b.imageUrl,
+                "videoUrl": getattr(b, "videoUrl", None) or extra.get("videoUrl"),
                 "linkUrl": b.linkUrl,
                 "type": b.type,
                 "isActive": b.isActive,
@@ -120,16 +123,28 @@ async def get_banners(
                 "cardType": b_card_type,
                 "placement": b_placement,
                 "platform": b_platform,
-                "tag": extra.get("tag"),
-                "subtitle": extra.get("subtitle"),
-                "accentColor": extra.get("accentColor"),
-            })
+            }
+            # Merge rich extra fields (eyebrowTag, primaryBrand, secondaryBrand, ctaText, ctaUrl, etc.)
+            banner_data.update(extra)
+            # Ensure critical resolved fields are intact
+            banner_data["id"] = b.id
+            banner_data["title"] = b.title
+            banner_data["imageUrl"] = b.imageUrl
+            banner_data["linkUrl"] = b.linkUrl
+            banner_data["type"] = b.type
+            banner_data["isActive"] = b.isActive
+            banner_data["sortOrder"] = b.sortOrder
+            banner_data["storeId"] = b_store_id
+            banner_data["cardType"] = b_card_type
+            banner_data["placement"] = b_placement
+            banner_data["platform"] = b_platform
+            parsed_banners.append(banner_data)
 
         _banners_cache[cache_key] = parsed_banners
         globals()["_banners_cache_time"] = now
         await set_cached(cache_key, parsed_banners, BANNERS_CACHE_TTL)
 
-        response.headers["Cache-Control"] = "public, s-maxage=180, stale-while-revalidate=360"
+        response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
         response.headers["X-FastKirana-Cache"] = "MISS"
         return parsed_banners
     except Exception as e:

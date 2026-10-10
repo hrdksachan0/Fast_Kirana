@@ -10,7 +10,6 @@ final bannerRepositoryProvider = Provider<BannerRepository>((ref) {
 });
 
 final bannersProvider = FutureProvider.family<List<Banner>, String?>((ref, type) async {
-  ref.keepAlive();
   final repo = ref.watch(bannerRepositoryProvider);
   final currentHub = ref.watch(currentStoreHubProvider);
   return repo.getBanners(type: type, storeId: currentHub.id);
@@ -18,10 +17,7 @@ final bannersProvider = FutureProvider.family<List<Banner>, String?>((ref, type)
 
 /// Dynamic Category Offer Cards Provider (Zero hardcoding - 100% model driven from Admin App)
 final categoryOfferCardsProvider = FutureProvider.family<List<CategoryCardData>, String?>((ref, type) async {
-  ref.keepAlive();
-  final repo = ref.watch(bannerRepositoryProvider);
-  final currentHub = ref.watch(currentStoreHubProvider);
-  final banners = await repo.getBanners(type: type, storeId: currentHub.id);
+  final banners = await ref.watch(bannersProvider(type).future);
 
   // 1. If backend returned banners, map each banner to a dynamic CategoryCardData
   if (banners.isNotEmpty) {

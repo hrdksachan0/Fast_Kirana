@@ -1159,19 +1159,25 @@ export function AdminBanners({
 
   // Toggle banner Active state directly
   const handleToggleActive = async (b: PromoBanner) => {
+    const nextState = !b.isActive
+    // Optimistic UI update for immediate toggle feedback
+    setBanners((prev) => prev.map((item) => item.id === b.id ? { ...item, isActive: nextState } : item))
+
     try {
       const res = await fetch(`${apiUrl()}/api/admin/banners`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: b.id, isActive: !b.isActive })
+        body: JSON.stringify({ id: b.id, isActive: nextState })
       })
 
       if (!res.ok) throw new Error('Failed to update active state')
       
-      toast.success(`Banner ${!b.isActive ? 'activated' : 'deactivated'} successfully!`)
+      toast.success(`Banner ${nextState ? 'activated' : 'deactivated'} successfully!`)
       fetchBanners()
     } catch (err: any) {
       console.error(err)
+      // Revert optimistic update on failure
+      setBanners((prev) => prev.map((item) => item.id === b.id ? { ...item, isActive: b.isActive } : item))
       toast.error(err.message || 'Error toggling active state')
     }
   }
@@ -1179,11 +1185,17 @@ export function AdminBanners({
   // Change order priority
   const handleOrderChange = async (b: PromoBanner, direction: 'up' | 'down') => {
     const delta = direction === 'up' ? -1 : 1
+    const newOrder = b.sortOrder + delta
+    setBanners((prev) => {
+      const next = prev.map((item) => item.id === b.id ? { ...item, sortOrder: newOrder } : item)
+      return next.sort((a, b) => a.sortOrder - b.sortOrder)
+    })
+
     try {
       const res = await fetch(`${apiUrl()}/api/admin/banners`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: b.id, sortOrder: b.sortOrder + delta })
+        body: JSON.stringify({ id: b.id, sortOrder: newOrder })
       })
 
       if (!res.ok) throw new Error('Failed to update ordering priority')
@@ -1191,12 +1203,17 @@ export function AdminBanners({
     } catch (err: any) {
       console.error(err)
       toast.error(err.message || 'Error changing banner order')
+      fetchBanners()
     }
   }
 
   // Delete banner
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this promo banner?')) return
+
+    const previousBanners = [...banners]
+    // Optimistic removal
+    setBanners((prev) => prev.filter((item) => item.id !== id))
 
     try {
       const res = await fetch(`${apiUrl()}/api/admin/banners?id=${id}`, {
@@ -1212,6 +1229,7 @@ export function AdminBanners({
       fetchBanners()
     } catch (err: any) {
       console.error(err)
+      setBanners(previousBanners)
       toast.error(err.message || 'Error deleting banner')
     }
   }

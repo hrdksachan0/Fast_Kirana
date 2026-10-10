@@ -154,6 +154,16 @@ export function StorefrontClient({
         lastFetchedStoreIdRef.current = 'hub-209206'
       }
 
+      // Silently sync latest banners on client mount to guarantee real-time deactivation/updates
+      fetch(`${catalogApiUrl()}/api/banners?storeId=hub-209206`)
+        .then((r) => r.json())
+        .then((banners) => {
+          if (Array.isArray(banners)) {
+            setCurrentPromoBanners(banners)
+          }
+        })
+        .catch(() => {})
+
       // Lazy-load complete catalog in background so 100% of products are available
       // without making initial SSR HTML heavy
       if (currentGroceryProducts.length < 350 && lastFetchedStoreIdRef.current !== 'hub-209206-full') {

@@ -47,9 +47,11 @@ export function PWARegistration() {
     const ios = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream
     setIsIOS(ios)
 
-    // Check if dismissed in this session
-    const isDismissed = sessionStorage.getItem('pwa-prompt-dismissed')
-    if (isDismissed) return
+    // Check if dismissed in this session or previously
+    try {
+      const isDismissed = sessionStorage.getItem('pwa-prompt-dismissed') || localStorage.getItem('pwa-prompt-dismissed')
+      if (isDismissed) return
+    } catch (_) {}
 
     if (ios) {
       setShowBanner(true)
@@ -85,10 +87,14 @@ export function PWARegistration() {
     setDeferredPrompt(null)
   }
 
-  const handleDismiss = () => {
+  const handleDismiss = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
     setShowBanner(false)
     setShowIOSInstructions(false)
-    sessionStorage.setItem('pwa-prompt-dismissed', 'true')
+    try {
+      sessionStorage.setItem('pwa-prompt-dismissed', 'true')
+      localStorage.setItem('pwa-prompt-dismissed', 'true')
+    } catch (_) {}
   }
 
   if (
@@ -112,11 +118,12 @@ export function PWARegistration() {
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-black text-zinc-900 dark:text-zinc-100">Install on iOS</h4>
             <button 
+              type="button"
               onClick={handleDismiss}
-              className="h-7 w-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-700"
+              className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-700 cursor-pointer active:scale-95"
               aria-label="Close"
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           </div>
           <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400 space-y-3">
@@ -159,8 +166,9 @@ export function PWARegistration() {
 
         {/* Install Button */}
         <button
+          type="button"
           onClick={handleInstallClick}
-          className="h-7 px-3 rounded-lg bg-[#00b140] hover:bg-[#009935] text-white font-extrabold text-[10px] flex items-center gap-1 transition-all shrink-0 active:scale-95 shadow-sm"
+          className="h-7 px-3 rounded-lg bg-[#00b140] hover:bg-[#009935] text-white font-extrabold text-[10px] flex items-center gap-1 transition-all shrink-0 active:scale-95 shadow-sm cursor-pointer"
         >
           <Download size={10} className="stroke-[2.5]" />
           Install
@@ -168,11 +176,12 @@ export function PWARegistration() {
         
         {/* Dismiss */}
         <button 
+          type="button"
           onClick={handleDismiss}
-          className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-600 shrink-0"
-          aria-label="Dismiss"
+          className="h-8 w-8 min-w-[32px] rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 shrink-0 cursor-pointer active:scale-90 transition-transform"
+          aria-label="Dismiss banner"
         >
-          <X size={11} />
+          <X size={14} className="stroke-[2.5]" />
         </button>
       </div>
     </div>

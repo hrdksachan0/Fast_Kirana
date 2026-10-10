@@ -143,6 +143,13 @@ export function HeroBanner({ initialBanners, mode = 'grocery' }: { initialBanner
     setProgressKey((prev) => prev + 1)
   }, [displayBanners.length])
 
+  // Clamp index when banners count changes (e.g. deactivated banner)
+  useEffect(() => {
+    if (current >= displayBanners.length && displayBanners.length > 0) {
+      setCurrentAndDirection([0, 0])
+    }
+  }, [displayBanners.length, current])
+
   // Auto-slide effect (slows down to 5.5s on hover, never freezes)
   useEffect(() => {
     if (displayBanners.length <= 1 || isDragging) return

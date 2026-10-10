@@ -29,9 +29,21 @@ export function revalidateStorefront(
     // Default: only invalidate the homepage (not every category page + every product cache)
     // Category-specific pages are invalidated only when categorySlug is provided above
     revalidateTag('products', 'max')
+    revalidateTag('banners', 'max')
     revalidatePath('/', 'page')
   } catch (err) {
     console.error('Failed to trigger targeted revalidation:', err)
+  }
+}
+
+export function revalidateBanners() {
+  try {
+    revalidateTag('banners', 'max')
+    revalidatePath('/', 'page')
+    revalidatePath('/food', 'page')
+    revalidatePath('/cafe', 'page')
+  } catch (err) {
+    console.error('Failed to revalidate banners tag:', err)
   }
 }
 
@@ -80,6 +92,7 @@ export function revalidateAll() {
   try {
     revalidateTag('products', 'max')
     revalidateTag('categories', 'max')
+    revalidateTag('banners', 'max')
     revalidateTag('settings', 'max')
 
     // CRITICAL: Revalidate page ONLY, NEVER 'layout' (layout forces full-site rebuild causing 1M+ ISR writes)
