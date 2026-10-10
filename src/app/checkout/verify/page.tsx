@@ -1,6 +1,6 @@
-'use client';
-import { apiUrl } from '@/lib/api-url';
+'use client'
 
+import { apiUrl } from '@/lib/api-url'
 import { Suspense, useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useCartStore } from '@/stores/cart-store'
@@ -19,7 +19,7 @@ function CheckoutVerifyContent() {
   const verify = useCallback(async (): Promise<{ isPaid: boolean; realOrderId?: string; cfPaymentId?: string }> => {
     if (!orderId && !cfOrderId) return { isPaid: false }
     try {
-      const res = await fetch(${apiUrl()}/api/payment/cashfree/verify, {
+      const res = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, cfOrderId }),
@@ -60,27 +60,28 @@ function CheckoutVerifyContent() {
         const activeCfId = cfOrderId || orderId
         let finalRedirectId = verifyResult.realOrderId || activeCfId
 
-        // 🛡️ CRITICAL RECOVERY: If order was NOT yet created in DB (realOrderId is just cf_ session ID),
-        // auto-create the order right now using the draft payload stored in localStorage!
+        // 🛡️ EDGE CASE 1: If order was NOT yet created in DB (realOrderId is just the cf_ session ID),
+        // we must auto-create the order right now using the draft payload stored in localStorage!
         const isPreflightCfId = finalRedirectId.startsWith('cf_') || !finalRedirectId.startsWith('ord_')
         if (isPreflightCfId) {
           try {
             let draftData: any = null
-            const rawDraft = localStorage.getItem(k_draft_order_) ||
-                             localStorage.getItem('fk_latest_cashfree_draft')
+            const rawDraft =
+              localStorage.getItem(`fk_draft_order_${activeCfId}`) ||
+              localStorage.getItem('fk_latest_cashfree_draft')
             if (rawDraft) {
               draftData = JSON.parse(rawDraft)
             }
 
             if (draftData?.payload) {
-              const createRes = await fetch(${apiUrl()}/api/orders, {
+              const createRes = await fetch(`${apiUrl()}/api/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   ...draftData.payload,
                   paymentStatus: 'PAID',
                   paymentMethod: 'UPI',
-                  paymentId: verifyResult.cfPaymentId || CF_,
+                  paymentId: verifyResult.cfPaymentId || `CF_${activeCfId}`,
                   cfOrderId: activeCfId,
                 }),
               })
@@ -117,10 +118,9 @@ function CheckoutVerifyContent() {
         } catch (_) {}
 
         setTimeout(() => {
-          window.location.replace(/order//success)
+          window.location.replace(`/order/${finalRedirectId}/success`)
         }, 1200)
         return
-
       }
 
       if (attempts >= maxAttempts && active) {
@@ -153,7 +153,6 @@ function CheckoutVerifyContent() {
     setStatus('verifying')
     setPollCount(0)
     hasRedirected.current = false
-    // Re-trigger by navigating to self
     window.location.reload()
   }
 
@@ -215,9 +214,9 @@ function CheckoutVerifyContent() {
               : 'No order ID was found. Please try again from the checkout page.'}
           </p>
           <div className="flex gap-3 mt-2">
-            {status === 'timeout' && orderId && (
+            {status === 'timeout' && (orderId || cfOrderId) && (
               <a
-                href={`/order/${orderId}`}
+                href={`/order/${orderId || cfOrderId}`}
                 className="px-5 py-2.5 bg-primary text-white font-black text-sm rounded-xl hover:bg-primary/90 transition-all"
               >
                 Check Order Status
