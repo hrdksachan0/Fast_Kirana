@@ -65,7 +65,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
   Timer? _liveOrdersPollingTimer;
   final AudioPlayer _audioPlayer = AudioPlayer();
   final Set<String> _knownOrderIds = <String>{};
-  bool _isAlarmEnabled = true;
+  final bool _isAlarmEnabled = true;
 
   // Search filter
   final TextEditingController _searchController = TextEditingController();

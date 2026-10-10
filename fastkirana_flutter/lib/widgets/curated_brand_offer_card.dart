@@ -200,23 +200,23 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                palette.accent.withOpacity(0.25),
-                palette.accent.withOpacity(0.08),
-                Colors.black.withOpacity(0.04),
-                palette.accent.withOpacity(0.12),
+                palette.accent.withValues(alpha: 0.25),
+                palette.accent.withValues(alpha: 0.08),
+                Colors.black.withValues(alpha: 0.04),
+                palette.accent.withValues(alpha: 0.12),
               ],
               stops: const [0.0, 0.40, 0.75, 1.0],
             ),
             boxShadow: [
               // Soft warm diffused ambient shadow
               BoxShadow(
-                color: palette.accent.withOpacity(0.08),
+                color: palette.accent.withValues(alpha: 0.08),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
               // Crisp elevation lift shadow
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -327,7 +327,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    Colors.white.withOpacity(0.04),
+                    Colors.white.withValues(alpha: 0.04),
                     Colors.transparent,
                   ],
                 ),
@@ -429,9 +429,9 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
       constraints: BoxConstraints(maxWidth: widget.width - 36),
       padding: const EdgeInsets.symmetric(horizontal: 8.5, vertical: 3.5),
       decoration: BoxDecoration(
-        color: glowColor.withOpacity(0.12),
+        color: glowColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: glowColor.withOpacity(0.28), width: 0.8),
+        border: Border.all(color: glowColor.withValues(alpha: 0.28), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -474,9 +474,9 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
       constraints: BoxConstraints(maxWidth: widget.width - 36),
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.04),
+        color: Colors.black.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.8),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -533,7 +533,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
               borderRadius: BorderRadius.circular(100),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.55),
+                  color: Colors.black.withValues(alpha: 0.55),
                   blurRadius: 18,
                   spreadRadius: 2,
                   offset: const Offset(0, 4),
@@ -579,7 +579,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: bgColor.withOpacity(0.40),
+            color: bgColor.withValues(alpha: 0.40),
             blurRadius: 14,
             offset: const Offset(0, 5),
           ),
@@ -608,7 +608,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
             height: 26,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.24),
+              color: Colors.white.withValues(alpha: 0.24),
             ),
             child: Center(
               child: Icon(
@@ -689,7 +689,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: (widget.ctaBgColor ?? glowColor).withOpacity(0.35),
+                    color: (widget.ctaBgColor ?? glowColor).withValues(alpha: 0.35),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -763,12 +763,12 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
         ],
-        border: Border.all(color: Colors.black.withOpacity(0.06), width: 1.0),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06), width: 1.0),
       ),
       padding: const EdgeInsets.all(5),
       child: ClipRRect(
@@ -843,7 +843,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    glowColor.withOpacity(0.24),
+                    glowColor.withValues(alpha: 0.24),
                     Colors.transparent,
                   ],
                 ),
@@ -950,7 +950,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),

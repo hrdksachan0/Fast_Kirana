@@ -226,6 +226,7 @@ class SupabaseService {
     try {
       if (sb.realtime.isConnected != true) {
         debugPrint('[SupabaseService] Realtime socket disconnected on resume. Reconnecting...');
+        // ignore: invalid_use_of_internal_member
         sb.realtime.connect();
       }
     } catch (e) {

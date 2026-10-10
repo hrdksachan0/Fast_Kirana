@@ -146,9 +146,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              const Color(0xFFF8F9FA).withOpacity(0.0),
-                              const Color(0xFFFFF1F2).withOpacity(0.55),
-                              const Color(0xFFFFE4E6).withOpacity(0.70),
+                              const Color(0xFFF8F9FA).withValues(alpha: 0.0),
+                              const Color(0xFFFFF1F2).withValues(alpha: 0.55),
+                              const Color(0xFFFFE4E6).withValues(alpha: 0.70),
                             ],
                             stops: const [0.0, 0.45, 1.0],
                           ),
@@ -320,7 +320,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF0F172A).withOpacity(0.04),
+                                    color: const Color(0xFF0F172A).withValues(alpha: 0.04),
                                     blurRadius: 24,
                                     offset: const Offset(0, 8),
                                     spreadRadius: 2,
@@ -367,7 +367,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       boxShadow: [
                                         if (_isFocused)
                                           BoxShadow(
-                                            color: brandRed.withOpacity(0.08),
+                                            color: brandRed.withValues(alpha: 0.08),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
@@ -538,7 +538,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         borderRadius: BorderRadius.circular(16),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: brandRed.withOpacity(0.35),
+                                            color: brandRed.withValues(alpha: 0.35),
                                             blurRadius: 16,
                                             offset: const Offset(0, 6),
                                           ),
@@ -948,7 +948,7 @@ class _GroceryBasketPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final stroke = Paint()
-      ..color = const Color(0xFFF43F5E).withOpacity(0.38)
+      ..color = const Color(0xFFF43F5E).withValues(alpha: 0.38)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.round
@@ -1049,7 +1049,7 @@ class _GoodFoodNearbyStamp extends StatelessWidget {
             style: GoogleFonts.caveat(
               fontSize: 27,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFFF43F5E).withOpacity(0.55),
+              color: const Color(0xFFF43F5E).withValues(alpha: 0.55),
               height: 0.90,
               letterSpacing: 0.4,
             ),
@@ -1059,7 +1059,7 @@ class _GoodFoodNearbyStamp extends StatelessWidget {
             width: 58,
             height: 2.2,
             decoration: BoxDecoration(
-              color: const Color(0xFFF43F5E).withOpacity(0.55),
+              color: const Color(0xFFF43F5E).withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(2),
             ),
           ),

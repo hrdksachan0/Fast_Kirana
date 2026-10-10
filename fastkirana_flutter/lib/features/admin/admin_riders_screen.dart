@@ -223,8 +223,10 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
                                   options: await AdminAuthorization.optionsAsync(),
                                 );
                                 if (res.statusCode == 200) {
-                                  if (mounted) {
+                                  if (ctx.mounted) {
                                     Navigator.of(ctx).pop();
+                                  }
+                                  if (mounted) {
                                     AppToast.showSuccess(
                                       context,
                                       'Cash Settled Successfully! ✅',

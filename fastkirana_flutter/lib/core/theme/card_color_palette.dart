@@ -57,31 +57,31 @@ class CardColorPalette {
   // ─── Derived convenience colors (computed from accent) ─────────────
 
   /// Eyebrow pill background (accent @ 10% opacity)
-  Color get eyebrowBg => accent.withOpacity(0.10);
+  Color get eyebrowBg => accent.withValues(alpha: 0.10);
 
   /// Eyebrow pill border (accent @ 25% opacity)
-  Color get eyebrowBorder => accent.withOpacity(0.25);
+  Color get eyebrowBorder => accent.withValues(alpha: 0.25);
 
   /// Radial ambient glow center (accent @ 18% opacity - soft and warm, not harsh)
-  Color get glowCenter => accent.withOpacity(0.18);
+  Color get glowCenter => accent.withValues(alpha: 0.18);
 
   /// Radial ambient glow mid (accent @ 06% opacity)
-  Color get glowMid => accent.withOpacity(0.06);
+  Color get glowMid => accent.withValues(alpha: 0.06);
 
   /// Outer bezel gradient highlight (accent @ 18% opacity)
-  Color get bezelHighlight => accent.withOpacity(0.18);
+  Color get bezelHighlight => accent.withValues(alpha: 0.18);
 
   /// Shadow aura color (soft ambient warm shadow)
-  Color get shadowAura => accent.withOpacity(0.12);
+  Color get shadowAura => accent.withValues(alpha: 0.12);
 
   /// CTA button glow shadow
-  Color get ctaShadow => accent.withOpacity(0.35);
+  Color get ctaShadow => accent.withValues(alpha: 0.35);
 
   /// Offer capsule border tint
-  Color get capsuleBorder => accentLight.withOpacity(0.40);
+  Color get capsuleBorder => accentLight.withValues(alpha: 0.40);
 
   /// Offer capsule icon background
-  Color get capsuleIconBg => accentLight.withOpacity(0.18);
+  Color get capsuleIconBg => accentLight.withValues(alpha: 0.18);
 
   // ═══════════════════════════════════════════════════════════════════════
   // STANDARD PALETTES (Option A: Appetizing Warm & Fresh Light Themes)
@@ -212,18 +212,18 @@ class CardColorPalette {
   /// Maps common hex values to their named palette; falls back to building
   /// a custom palette around the provided color.
   static CardColorPalette fromAccentColor(Color color) {
-    final v = color.value;
+    final v = color.toARGB32();
 
     // Exact matches to standard palettes
-    if (v == const Color(0xFF10B981).value || v == const Color(0xFF34D399).value) return groceryFresh;
-    if (v == const Color(0xFF3B82F6).value || v == const Color(0xFF60A5FA).value) return groceryPantry;
-    if (v == const Color(0xFF8B5CF6).value || v == const Color(0xFFA78BFA).value) return grocerySnacks;
-    if (v == const Color(0xFF6366F1).value) return grocerySnacks; // Indigo → Violet family
-    if (v == const Color(0xFFF59E0B).value || v == const Color(0xFFFBBF24).value) return groceryDeals;
-    if (v == const Color(0xFFEF4444).value || v == const Color(0xFFF87171).value) return foodHot;
-    if (v == const Color(0xFFEA580C).value) return foodCuisine;
-    if (v == const Color(0xFFB91C1C).value || v == const Color(0xFFDC2626).value) return foodPremium;
-    if (v == const Color(0xFFF97316).value || v == const Color(0xFFFB923C).value) return foodCafe;
+    if (v == const Color(0xFF10B981).toARGB32() || v == const Color(0xFF34D399).toARGB32()) return groceryFresh;
+    if (v == const Color(0xFF3B82F6).toARGB32() || v == const Color(0xFF60A5FA).toARGB32()) return groceryPantry;
+    if (v == const Color(0xFF8B5CF6).toARGB32() || v == const Color(0xFFA78BFA).toARGB32()) return grocerySnacks;
+    if (v == const Color(0xFF6366F1).toARGB32()) return grocerySnacks; // Indigo → Violet family
+    if (v == const Color(0xFFF59E0B).toARGB32() || v == const Color(0xFFFBBF24).toARGB32()) return groceryDeals;
+    if (v == const Color(0xFFEF4444).toARGB32() || v == const Color(0xFFF87171).toARGB32()) return foodHot;
+    if (v == const Color(0xFFEA580C).toARGB32()) return foodCuisine;
+    if (v == const Color(0xFFB91C1C).toARGB32() || v == const Color(0xFFDC2626).toARGB32()) return foodPremium;
+    if (v == const Color(0xFFF97316).toARGB32() || v == const Color(0xFFFB923C).toARGB32()) return foodCafe;
 
     // Build a custom palette from the arbitrary color
     final hsl = HSLColor.fromColor(color);
