@@ -110,6 +110,7 @@ async def get_current_user(
                         "role": effective_role,
                         "phone": db_user.phone,
                         "assignedRestaurantId": db_user.assignedRestaurantId,
+                        "assignedStoreId": db_user.assignedStoreId,
                     }
             except Exception as e:
                 logger.error(f"Error querying db_user in get_current_user: {e}")

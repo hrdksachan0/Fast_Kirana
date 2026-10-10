@@ -499,13 +499,8 @@ async def get_picker_orders(
     assigned_restaurant_id = current_user.get("assignedRestaurantId")
     assigned_store_id = current_user.get("assignedStoreId")
 
-    # Pickers are strictly restricted to their assigned dark store hub
-    if user_role == "PICKER" and not is_admin:
-        if not assigned_store_id:
-            return []
-        effective_store_id = assigned_store_id
-    else:
-        effective_store_id = storeId or assigned_store_id
+    # Dark store hub fallback: picker assignedStoreId -> x-store-id header -> query storeId -> default Ghatampur hub
+    effective_store_id = assigned_store_id or request.headers.get("x-store-id") or storeId or "hub-209206"
 
     # Resolve target restaurant: if admin, allow restaurantId query param; otherwise lock to assigned restaurant
     target_rest_id = (
@@ -611,8 +606,8 @@ async def get_picker_orders(
             p_unit = (p_obj.unit or "").strip() if p_obj and p_obj.unit else None
             effective_variant = i.selectedVariant or p_unit
 
-            is_rest_item = bool(o.restaurantId or (p_obj and (p_obj.restaurantId or p_obj.isRestaurantItem)))
-            rest_id = (p_obj.restaurantId if p_obj else None) or o.restaurantId
+            is_rest_item = bool(o.restaurantId or (p_obj and (getattr(p_obj, "restaurantId", None) or getattr(p_obj, "isRestaurantItem", False))))
+            rest_id = (getattr(p_obj, "restaurantId", None) if p_obj else None) or o.restaurantId
 
             order_items.append({
                 "id": i.id,
@@ -632,8 +627,8 @@ async def get_picker_orders(
                     "name": p_obj.name,
                     "imageUrl": p_obj.imageUrl,
                     "unit": p_unit,
-                    "restaurantId": p_obj.restaurantId if p_obj else None,
-                    "isRestaurantItem": bool(p_obj.restaurantId) if p_obj else False,
+                    "restaurantId": getattr(p_obj, "restaurantId", None) if p_obj else None,
+                    "isRestaurantItem": bool(getattr(p_obj, "restaurantId", None)) if p_obj else False,
                     "variants": p_obj.variants,
                     "category": {
                         "id": p_obj.category.id,
@@ -654,6 +649,7 @@ async def get_picker_orders(
         if assigned_picker:
             picker_phone = str(assigned_picker.get("phone") or "")
             picker_email = str(assigned_picker.get("email") or "").lower()
+            picker_role = str(assigned_picker.get("role") or "").upper()
             if picker_role in ["ADMIN", "SUPER_ADMIN"]:
                 assigned_picker = None
         assigned_chef = workers.get(o.assignedChefId)
