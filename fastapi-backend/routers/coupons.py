@@ -68,8 +68,36 @@ async def validate_coupon(
 
     eligible_subtotal = subtotal
 
+    # Resolve restaurant items pool early if restaurant restriction applies
+    restaurant_items = []
+    if coupon.restaurantId:
+        restaurant_items = [
+            i for i in items
+            if (i.get("restaurantId") or (i.get("product") or {}).get("restaurantId")) == coupon.restaurantId
+        ]
+
+    # Specific Product/Dish ID Restriction (ID-wise)
+    if coupon.bogoDishId:
+        if not items:
+            raise HTTPException(status_code=400, detail="Cart items are required for this coupon.")
+        target_id = coupon.bogoDishId.strip()
+        pool = restaurant_items if coupon.restaurantId else items
+        id_items = [
+            i for i in pool
+            if (i.get("productId") or i.get("id") or (i.get("product") or {}).get("id") or "").split("_")[0].strip() == target_id
+        ]
+        id_subtotal = sum(float(i.get("price", 0.0)) * int(i.get("quantity", 1)) for i in id_items)
+        if id_subtotal == 0:
+            raise HTTPException(status_code=400, detail="This coupon is only valid for the specific selected item.")
+        if id_subtotal < coupon.minOrder:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Minimum order of ₹{coupon.minOrder:.2f} for this item is required."
+            )
+        eligible_subtotal = id_subtotal
+
     # Category Restriction
-    if coupon.categoryId:
+    elif coupon.categoryId:
         if not items:
             raise HTTPException(status_code=400, detail="This coupon is restricted to a category. Cart items are required.")
 
@@ -86,7 +114,7 @@ async def validate_coupon(
             )
         eligible_subtotal = category_subtotal
 
-    # Restaurant Restriction
+    # Restaurant Restriction (without specific dish restriction)
     elif coupon.restaurantId:
         if not items:
             raise HTTPException(status_code=400, detail="This coupon is restricted to a restaurant. Cart items are required.")
@@ -95,12 +123,6 @@ async def validate_coupon(
         res_stmt = select(Restaurant.name).where(Restaurant.id == coupon.restaurantId)
         res_res = await db.execute(res_stmt)
         restaurant_name = res_res.scalars().first() or "the restricted restaurant"
-
-        restaurant_items = []
-        for i in items:
-            item_res_id = i.get("restaurantId") or (i.get("product") or {}).get("restaurantId")
-            if item_res_id == coupon.restaurantId:
-                restaurant_items.append(i)
 
         restaurant_subtotal = sum(float(i.get("price", 0.0)) * int(i.get("quantity", 1)) for i in restaurant_items)
 
@@ -309,20 +331,29 @@ async def validate_coupon(
         elif coupon.bogoType == "SAME_ITEM" or not coupon.bogoType:
             eligible = bogo_items
             if coupon.bogoDishId:
-                eligible = [it for it in bogo_items if (it.get("productId") or it.get("id") or (it.get("product") or {}).get("id") or "").split("_")[0] == coupon.bogoDishId]
+                target_dish = coupon.bogoDishId.strip()
+                eligible = [
+                    it for it in bogo_items
+                    if (it.get("productId") or it.get("id") or (it.get("product") or {}).get("id") or "").split("_")[0].strip() == target_dish
+                ]
             max_free_cap = getattr(coupon, "maxFreeItems", 3) or 3
+            rem_cap = max_free_cap
             for it in eligible:
                 qty = int(it.get("quantity", 1))
                 if qty >= 2:
-                    free_count = min(qty // 2, max_free_cap)
-                    discount_amount += free_count * float(it.get("price", 0.0))
-                    free_items.append({
-                        "id": it.get("id"),
-                        "productId": it.get("productId") or it.get("id"),
-                        "name": it.get("name"),
-                        "freeQty": free_count,
-                        "price": float(it.get("price", 0.0))
-                    })
+                    free_count = min(qty // 2, rem_cap)
+                    if free_count > 0:
+                        discount_amount += free_count * float(it.get("price", 0.0))
+                        free_items.append({
+                            "id": it.get("id"),
+                            "productId": it.get("productId") or it.get("id"),
+                            "name": it.get("name"),
+                            "freeQty": free_count,
+                            "price": float(it.get("price", 0.0))
+                        })
+                        rem_cap -= free_count
+                        if rem_cap <= 0:
+                            break
             if discount_amount == 0:
                 raise HTTPException(
                     status_code=400,

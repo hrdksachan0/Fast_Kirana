@@ -1,0 +1,215 @@
+{
+  "version": 1,
+  "demo": true,
+  "enabled": true,
+  "autoplay": true,
+  "layout": "banner",
+  "searchPrefix": "Search for",
+  "decorationImage": null,
+  "labels": {
+    "sectionLabel": "Hello, summer",
+    "specialsHeading": "Summer Picks",
+    "curvedTabLabel": "Top Picks",
+    "loadingText": "Loading this store’s summer collection…",
+    "emptyText": "No matching products in this collection yet. Try another tab or search the catalogue.",
+    "demoLabel": "Demo prices",
+    "resultsDemoLabel": "Demo collection · illustrative prices"
+  },
+  "appearance": {
+    "background": "#5FBFBD",
+    "card": "#FFF8DF",
+    "text": "#21595A",
+    "smallText": "#17474A",
+    "headerText": "#FFF8DF",
+    "headerOutline": "#21595A",
+    "underline": "#237F81",
+    "tabSurface": "#FFF8DF"
+  },
+  "timings": {
+    "headerMs": 4000,
+    "productMs": 3100,
+    "searchMs": 3300,
+    "crossfadeMs": 380
+  },
+  "searchSuggestions": [
+    "Mangoes",
+    "Tender coconut",
+    "Lemons",
+    "Fruit juice"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "summer-header-1",
+      "kind": "illustration",
+      "eyebrow": "",
+      "title": "A basket full of summer",
+      "subtitle": "Mangoes, coconuts and bright flavours",
+      "image": "summer-refresh.svg"
+    },
+    {
+      "id": "summer-header-2",
+      "kind": "title",
+      "eyebrow": "",
+      "title": "Refresh your kitchen shelf",
+      "subtitle": "Fruit and drinks for warmer days",
+      "image": null
+    },
+    {
+      "id": "summer-header-3",
+      "kind": "brand",
+      "eyebrow": "",
+      "title": "Summer days with FastKirana",
+      "subtitle": "Put your seasonal favourites together",
+      "image": "summer-refresh.svg"
+    }
+  ],
+  "products": [
+    {
+      "id": "summer-mango",
+      "name": "Mangoes",
+      "image": "summer-mango.svg",
+      "originalPrice": 120,
+      "price": 120,
+      "currency": "INR",
+      "categoryId": "summer-mango-category",
+      "destinationId": "search-summer-mango"
+    },
+    {
+      "id": "summer-coconut",
+      "name": "Tender Coconut",
+      "image": "summer-coconut.svg",
+      "originalPrice": 50,
+      "price": 50,
+      "currency": "INR",
+      "categoryId": "summer-coconut-category",
+      "destinationId": "search-summer-coconut"
+    },
+    {
+      "id": "summer-lemon",
+      "name": "Lemons",
+      "image": "summer-lemon.svg",
+      "originalPrice": 35,
+      "price": 35,
+      "currency": "INR",
+      "categoryId": "summer-lemon-category",
+      "destinationId": "search-summer-lemon"
+    },
+    {
+      "id": "summer-juice",
+      "name": "Fruit Juice",
+      "image": "summer-juice.svg",
+      "originalPrice": 90,
+      "price": 90,
+      "currency": "INR",
+      "categoryId": "summer-juice-category",
+      "destinationId": "search-summer-juice"
+    }
+  ],
+  "categories": [
+    {
+      "id": "summer-mango-category",
+      "label": "Seasonal Fruit",
+      "image": "summer-mango.svg",
+      "destinationId": "search-summer-mango",
+      "keywords": [
+        "mango",
+        "fruit",
+        "seasonal"
+      ]
+    },
+    {
+      "id": "summer-coconut-category",
+      "label": "Coconuts & Drinks",
+      "image": "summer-coconut.svg",
+      "destinationId": "search-summer-coconut",
+      "keywords": [
+        "coconut",
+        "drink"
+      ]
+    },
+    {
+      "id": "summer-lemon-category",
+      "label": "Lemons & Citrus",
+      "image": "summer-lemon.svg",
+      "destinationId": "search-summer-lemon",
+      "keywords": [
+        "lemon",
+        "citrus",
+        "fruit"
+      ]
+    },
+    {
+      "id": "summer-juice-category",
+      "label": "Juices & Mixes",
+      "image": "summer-juice.svg",
+      "destinationId": "search-summer-juice",
+      "keywords": [
+        "juice",
+        "drink",
+        "mix"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "top-picks",
+      "label": "Top Picks",
+      "image": "summer-refresh.svg",
+      "keywords": []
+    },
+    {
+      "id": "summer-fruit",
+      "label": "Seasonal Fruit",
+      "image": "summer-mango.svg",
+      "keywords": [
+        "mango",
+        "lemon",
+        "fruit"
+      ]
+    },
+    {
+      "id": "summer-drinks",
+      "label": "Drinks",
+      "image": "summer-coconut.svg",
+      "keywords": [
+        "coconut",
+        "juice",
+        "drink"
+      ]
+    },
+    {
+      "id": "summer-mixes",
+      "label": "Citrus & Mixes",
+      "image": "summer-lemon.svg",
+      "keywords": [
+        "lemon",
+        "citrus",
+        "juice",
+        "mix"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "search-summer-mango",
+      "kind": "search",
+      "query": "mango"
+    },
+    {
+      "id": "search-summer-coconut",
+      "kind": "search",
+      "query": "tender coconut"
+    },
+    {
+      "id": "search-summer-lemon",
+      "kind": "search",
+      "query": "lemon"
+    },
+    {
+      "id": "search-summer-juice",
+      "kind": "search",
+      "query": "fruit juice"
+    }
+  ]
+}

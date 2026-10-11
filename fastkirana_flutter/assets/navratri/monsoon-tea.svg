@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Masala Tea</title>
+<ellipse cx="120" cy="141" rx="90" ry="8" fill="#273B5B" opacity=".12"/>
+<path d="M31 37h71l8 96H24Z" fill="#547B88"/><path d="M31 24h71v17H31Z" fill="#C39758"/><rect x="38" y="63" width="58" height="39" rx="7" fill="#FFF8DF"/><path d="M51 84h30c-1 10-8 15-15 15s-14-5-15-15Z" fill="#9F603B"/>
+<path d="M128 80h60v32c0 13-13 22-30 22s-30-9-30-22Z" fill="#C39758"/><path d="M188 89h9c17 0 17 26 0 26h-9" stroke="#9F603B" stroke-width="7"/><ellipse cx="158" cy="80" rx="30" ry="7" fill="#7D4C30"/>
+<path d="M143 65c-13-11 12-18 0-31m26 31c-13-11 12-18 0-31" stroke="#547B88" stroke-width="3" stroke-linecap="round"/>
+</svg>

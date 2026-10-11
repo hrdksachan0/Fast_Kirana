@@ -4,7 +4,7 @@ Migrated from Next.js API routes to FastAPI.
 Covers: dashboard, products, orders, users, coupons, inventory, reports, etc.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, BackgroundTasks, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, BackgroundTasks, Request, Response, Header
 from utils.push import send_push_notification
 import logging
 import hashlib
@@ -48,7 +48,7 @@ def generate_readable_id(prefix: str, db: AsyncSession, model_class) -> str:
     return f"{prefix}-{today}-{random.randint(1000, 9999)}"
 
 
-def serialize_product(p: Product) -> Dict[str, Any]:
+def serialize_product(p: Product, local_stock: Optional[int] = None, local_is_available: Optional[bool] = None) -> Dict[str, Any]:
     return {
         "id": p.id,
         "name": p.name,
@@ -57,12 +57,12 @@ def serialize_product(p: Product) -> Dict[str, Any]:
         "price": float(p.price) if p.price is not None else 0.0,
         "mrp": float(p.mrp) if p.mrp is not None else 0.0,
         "discount": float(p.discount) if p.discount is not None else 0.0,
-        "stock": int(p.stock) if p.stock is not None else 0,
+        "stock": int(local_stock if local_stock is not None else (p.stock if p.stock is not None else 0)),
         "unit": p.unit,
         "imageUrl": p.imageUrl,
         "categoryId": p.categoryId,
         "restaurantId": p.restaurantId,
-        "isAvailable": bool(p.isAvailable),
+        "isAvailable": bool(local_is_available if local_is_available is not None else p.isAvailable),
         "tags": p.tags,
         "variants": p.variants,
     }
@@ -393,6 +393,8 @@ async def admin_update_product(
     product_id: str,
     data: Dict[str, Any] = Body(...),
     current_admin: dict = Depends(require_admin),
+    storeId: Optional[str] = Query(None),
+    x_store_id: Optional[str] = Header(None, alias="x-store-id"),
     db: AsyncSession = Depends(get_db)
 ):
     """Update a product."""
@@ -462,47 +464,87 @@ async def admin_update_product(
     if "costPrice" in data and data["costPrice"] is not None:
         product.costPrice = float(data["costPrice"])
 
-    target_store_id = data.get("storeId")
-    if "stock" in data and data["stock"] is not None:
-        parsed_stock = int(data["stock"])
-        if target_store_id and target_store_id != 'all' and target_store_id != 'hub-209206':
-            pass
-        else:
+    admin_assigned_store = current_admin.get("assignedStoreId") if isinstance(current_admin, dict) else getattr(current_admin, "assignedStoreId", None)
+    if admin_assigned_store:
+        target_store_id = str(admin_assigned_store).strip()
+    else:
+        target_store_id = data.get("storeId") or storeId or x_store_id
+        if target_store_id:
+            target_store_id = str(target_store_id).strip()
+
+    has_stock = "stock" in data and data["stock"] is not None
+    parsed_stock = int(data["stock"]) if has_stock else None
+
+    if not target_store_id or target_store_id == 'all' or target_store_id == 'hub-209206':
+        if has_stock:
             product.stock = parsed_stock
 
-    if target_store_id and target_store_id != 'all' and "stock" in data and data["stock"] is not None:
-        val = int(data["stock"])
-        try:
-            inv_stmt = select(StoreInventory).where(
-                StoreInventory.productId == product.id,
-                StoreInventory.storeId == target_store_id
-            )
-            inv_res = await db.execute(inv_stmt)
-            existing_inv = inv_res.scalars().first()
-            if existing_inv:
-                existing_inv.stock = val
-            else:
-                new_inv = StoreInventory(
-                    productId=product.id,
-                    storeId=target_store_id,
-                    stock=val
+    local_stock_val = None
+    local_avail_val = None
+
+    if target_store_id and target_store_id != 'all':
+        has_avail = "isAvailable" in data and data["isAvailable"] is not None
+        has_price_override = "priceOverride" in data or ("price" in data and target_store_id != "hub-209206")
+        price_ovr = float(data.get("priceOverride") or data.get("price")) if has_price_override else None
+        avail_val = bool(data["isAvailable"]) if has_avail else None
+        local_avail_val = avail_val
+        local_stock_val = parsed_stock
+
+        if has_stock or has_avail or has_price_override:
+            try:
+                inv_stmt = select(StoreInventory).where(
+                    StoreInventory.productId == product.id,
+                    StoreInventory.storeId == target_store_id
                 )
-                db.add(new_inv)
-        except Exception as inv_err:
-            print(f"Warning: Failed to update StoreInventory: {inv_err}")
+                inv_res = await db.execute(inv_stmt)
+                existing_inv = inv_res.scalars().first()
+                if existing_inv:
+                    if has_stock:
+                        existing_inv.stock = parsed_stock
+                    if has_price_override and price_ovr is not None:
+                        existing_inv.priceOverride = price_ovr
+                    if has_avail:
+                        existing_inv.isAvailable = avail_val
+                    elif has_stock and parsed_stock > 0 and not existing_inv.isAvailable:
+                        existing_inv.isAvailable = True
+                        local_avail_val = True
+                    else:
+                        local_avail_val = existing_inv.isAvailable
+                else:
+                    new_avail = avail_val if has_avail else (parsed_stock > 0 if has_stock else True)
+                    new_inv = StoreInventory(
+                        productId=product.id,
+                        storeId=target_store_id,
+                        stock=parsed_stock if has_stock else (product.stock or 0),
+                        isAvailable=new_avail,
+                        priceOverride=price_ovr
+                    )
+                    local_avail_val = new_avail
+                    db.add(new_inv)
+            except Exception as inv_err:
+                logger.warning(f"Failed to update StoreInventory in admin update: {inv_err}")
 
     for field in ["minStock", "sortOrder"]:
         if field in data and data[field] is not None:
             setattr(product, field, int(data[field]))
 
-    for field in ["isAvailable", "isFlashDeal", "isTopPick", "isBestSeller"]:
+    for field in ["isFlashDeal", "isTopPick", "isBestSeller"]:
         if field in data and data[field] is not None:
             setattr(product, field, bool(data[field]))
+
+    if "isAvailable" in data and data["isAvailable"] is not None:
+        if not target_store_id or target_store_id == 'all' or target_store_id == 'hub-209206':
+            product.isAvailable = bool(data["isAvailable"])
 
     if "tags" in data:
         product.tags = data["tags"]
 
     await db.commit()
+
+    from utils.cache import invalidate_catalog_cache
+    from routers.products import clear_products_cache
+    clear_products_cache()
+    await invalidate_catalog_cache()
 
     stmt_reload = select(Product).options(
         selectinload(Product.category),
@@ -511,7 +553,17 @@ async def admin_update_product(
     reload_res = await db.execute(stmt_reload)
     loaded_product = reload_res.scalar_one_or_none() or product
 
-    return {"product": serialize_product(loaded_product)}
+    try:
+        from routers.categories import trigger_revalidation
+        cat_slug = None
+        if loaded_product.categoryId:
+            cat_res = await db.execute(select(Category.slug).where(Category.id == loaded_product.categoryId))
+            cat_slug = cat_res.scalar_one_or_none()
+        await trigger_revalidation(cat_slug)
+    except Exception as rev_err:
+        logger.warning(f"Failed to trigger revalidation on admin update product: {rev_err}")
+
+    return {"product": serialize_product(loaded_product, local_stock=local_stock_val, local_is_available=local_avail_val)}
 
 
 @router.delete("/products/{product_id}")
@@ -1169,17 +1221,56 @@ async def admin_get_coupons(
 ):
     result = await db.execute(select(Coupon).order_by(desc(Coupon.createdAt)))
     coupons = result.scalars().all()
-    return {"coupons": [
-        {"id": c.id, "code": c.code, "discountType": c.discountType, "value": float(c.value),
-         "minOrder": float(c.minOrder) if c.minOrder else 0, "maxDiscount": float(c.maxDiscount) if c.maxDiscount else None,
-         "maxUses": c.maxUses, "usedCount": c.usedCount, "isActive": c.isActive,
-         "expiresAt": c.expiresAt.isoformat() if c.expiresAt else None,
-         "categoryId": c.categoryId, "restaurantId": c.restaurantId, "oncePerCustomer": c.oncePerCustomer,
-         "bogoType": c.bogoType, "triggerVariant": c.triggerVariant, "rewardVariant": c.rewardVariant,
-         "defaultFreeDishId": c.defaultFreeDishId, "bogoDishId": c.bogoDishId, "maxFreeItems": c.maxFreeItems,
-         "badgeText": c.badgeText, "menuSection": c.menuSection, "autoApply": c.autoApply}
-        for c in coupons
-    ]}
+def serialize_coupon(c: Coupon) -> Dict[str, Any]:
+    return {
+        "id": c.id,
+        "code": c.code,
+        "discountType": safe_enum_str(c.discountType),
+        "value": float(c.value) if c.value is not None else 0.0,
+        "minOrder": float(c.minOrder) if c.minOrder else 0.0,
+        "maxDiscount": float(c.maxDiscount) if c.maxDiscount else None,
+        "maxUses": c.maxUses,
+        "usedCount": c.usedCount,
+        "isActive": c.isActive,
+        "expiresAt": c.expiresAt.isoformat() if c.expiresAt else None,
+        "categoryId": c.categoryId,
+        "restaurantId": c.restaurantId,
+        "oncePerCustomer": c.oncePerCustomer,
+        "bogoType": safe_enum_str(c.bogoType) if c.bogoType else None,
+        "triggerVariant": c.triggerVariant,
+        "rewardVariant": c.rewardVariant,
+        "defaultFreeDishId": c.defaultFreeDishId,
+        "bogoDishId": c.bogoDishId,
+        "maxFreeItems": c.maxFreeItems,
+        "badgeText": c.badgeText,
+        "menuSection": c.menuSection,
+        "autoApply": c.autoApply,
+    }
+
+
+def parse_safe_iso_datetime(val: Any) -> Optional[datetime]:
+    if not val:
+        return None
+    val_str = str(val).strip()
+    if not val_str:
+        return None
+    try:
+        val_str = val_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(val_str)
+        return dt.replace(tzinfo=None)
+    except Exception:
+        return None
+
+
+@router.get("/coupons")
+async def admin_get_coupons(
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Coupon).order_by(desc(Coupon.createdAt)))
+    coupons = result.scalars().all()
+    serialized = [serialize_coupon(c) for c in coupons]
+    return {"coupons": serialized}
 
 
 @router.post("/coupons")
@@ -1195,8 +1286,15 @@ async def admin_create_coupon(
     if discount_type not in ('FLAT', 'PERCENT', 'BOGO', 'FREE_DELIVERY'):
         raise HTTPException(status_code=400, detail="Invalid discount type")
 
+    def clean_fk(key: str) -> Optional[str]:
+        v = data.get(key)
+        if v is None:
+            return None
+        v_str = str(v).strip()
+        return v_str if v_str else None
+
     raw_val = data.get("value")
-    val = float(raw_val) if raw_val is not None else (0.0 if discount_type in ('BOGO', 'FREE_DELIVERY') else 0.0)
+    val = float(raw_val) if raw_val is not None and str(raw_val).strip() != "" else (0.0 if discount_type in ('BOGO', 'FREE_DELIVERY') else 0.0)
 
     coupon = Coupon(
         id=f"cpn_{uuid.uuid4().hex[:12]}",
@@ -1204,38 +1302,38 @@ async def admin_create_coupon(
         discountType=discount_type,
         value=val,
         minOrder=float(data.get("minOrder", 0) or 0),
-        maxDiscount=float(data["maxDiscount"]) if data.get("maxDiscount") else None,
-        maxUses=int(data["maxUses"]) if data.get("maxUses") else None,
+        maxDiscount=float(data["maxDiscount"]) if data.get("maxDiscount") and str(data["maxDiscount"]).strip() != "" else None,
+        maxUses=int(data["maxUses"]) if data.get("maxUses") and str(data["maxUses"]).strip() != "" else None,
         usedCount=0,
-        isActive=data.get("isActive", True),
-        expiresAt=datetime.fromisoformat(data["expiresAt"]) if data.get("expiresAt") else None,
-        categoryId=data.get("categoryId"),
-        restaurantId=data.get("restaurantId"),
-        oncePerCustomer=data.get("oncePerCustomer", False),
-        bogoType=data.get("bogoType"),
-        triggerVariant=data.get("triggerVariant"),
-        rewardVariant=data.get("rewardVariant"),
-        defaultFreeDishId=data.get("defaultFreeDishId"),
-        bogoDishId=data.get("bogoDishId"),
-        maxFreeItems=int(data["maxFreeItems"]) if data.get("maxFreeItems") else 1,
-        badgeText=data.get("badgeText"),
-        menuSection=data.get("menuSection"),
-        autoApply=data.get("autoApply", False),
+        isActive=data.get("isActive", True) is not False,
+        expiresAt=parse_safe_iso_datetime(data.get("expiresAt")),
+        categoryId=clean_fk("categoryId"),
+        restaurantId=clean_fk("restaurantId"),
+        oncePerCustomer=bool(data.get("oncePerCustomer", False)),
+        bogoType=clean_fk("bogoType"),
+        triggerVariant=clean_fk("triggerVariant"),
+        rewardVariant=clean_fk("rewardVariant"),
+        defaultFreeDishId=clean_fk("defaultFreeDishId"),
+        bogoDishId=clean_fk("bogoDishId"),
+        maxFreeItems=int(data["maxFreeItems"]) if data.get("maxFreeItems") and str(data["maxFreeItems"]).strip() != "" else 1,
+        badgeText=clean_fk("badgeText"),
+        menuSection=clean_fk("menuSection"),
+        autoApply=bool(data.get("autoApply", False)),
     )
     db.add(coupon)
     await db.commit()
     await db.refresh(coupon)
-    return {"coupon": {"id": coupon.id, "code": coupon.code}}
+    res_dict = serialize_coupon(coupon)
+    # Return both flat dictionary and nested coupon object for universal frontend compatibility
+    return {**res_dict, "coupon": res_dict}
 
 
-@router.patch("/coupons/{coupon_id}")
-async def admin_update_coupon(
-    coupon_id: str,
-    data: Dict[str, Any] = Body(...),
-    current_admin: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Coupon).where(Coupon.id == coupon_id))
+async def _handle_update_coupon(
+    target_id: str,
+    data: Dict[str, Any],
+    db: AsyncSession
+) -> Dict[str, Any]:
+    result = await db.execute(select(Coupon).where(Coupon.id == target_id))
     coupon = result.scalars().first()
     if not coupon:
         raise HTTPException(status_code=404, detail="Coupon not found")
@@ -1251,18 +1349,68 @@ async def admin_update_coupon(
             val = data[field]
             if field == "code" and val:
                 val = str(val).upper().strip()
-            elif field in ("value", "minOrder", "maxDiscount") and val is not None:
-                val = float(val)
-            elif field in ("maxUses", "maxFreeItems") and val is not None:
-                val = int(val)
+            elif field in ("value", "minOrder", "maxDiscount"):
+                val = float(val) if val is not None and str(val).strip() != "" else None
+            elif field in ("maxUses", "maxFreeItems"):
+                val = int(val) if val is not None and str(val).strip() != "" else None
+            elif field in ("categoryId", "restaurantId", "bogoDishId", "defaultFreeDishId", "menuSection", "triggerVariant", "rewardVariant", "badgeText", "bogoType"):
+                val = str(val).strip() if val is not None and str(val).strip() != "" else None
+            elif field in ("isActive", "oncePerCustomer", "autoApply"):
+                val = bool(val)
             setattr(coupon, field, val)
 
     if "expiresAt" in data:
-        coupon.expiresAt = datetime.fromisoformat(data["expiresAt"]) if data["expiresAt"] else None
+        coupon.expiresAt = parse_safe_iso_datetime(data.get("expiresAt"))
 
     await db.commit()
     await db.refresh(coupon)
-    return {"coupon": {"id": coupon.id, "code": coupon.code, "isActive": coupon.isActive}}
+    res_dict = serialize_coupon(coupon)
+    return {**res_dict, "coupon": res_dict}
+
+
+@router.patch("/coupons")
+async def admin_patch_coupon_body(
+    data: Dict[str, Any] = Body(...),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    target_id = data.get("couponId") or data.get("id")
+    if not target_id:
+        raise HTTPException(status_code=400, detail="Missing couponId in request body")
+    return await _handle_update_coupon(str(target_id), data, db)
+
+
+@router.patch("/coupons/{coupon_id}")
+async def admin_update_coupon(
+    coupon_id: str,
+    data: Dict[str, Any] = Body(...),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    return await _handle_update_coupon(coupon_id, data, db)
+
+
+async def _handle_delete_coupon(target_id: str, db: AsyncSession) -> Dict[str, Any]:
+    result = await db.execute(select(Coupon).where(Coupon.id == target_id))
+    coupon = result.scalars().first()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+    await db.delete(coupon)
+    await db.commit()
+    return {"success": True, "message": "Coupon deleted successfully"}
+
+
+@router.delete("/coupons")
+async def admin_delete_coupon_body(
+    data: Optional[Dict[str, Any]] = Body(None),
+    couponId: Optional[str] = Query(None),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    target_id = (data or {}).get("couponId") or (data or {}).get("id") or couponId
+    if not target_id:
+        raise HTTPException(status_code=400, detail="Missing couponId in request")
+    return await _handle_delete_coupon(str(target_id), db)
 
 
 @router.delete("/coupons/{coupon_id}")
@@ -1271,13 +1419,7 @@ async def admin_delete_coupon(
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(Coupon).where(Coupon.id == coupon_id))
-    coupon = result.scalars().first()
-    if not coupon:
-        raise HTTPException(status_code=404, detail="Coupon not found")
-    await db.delete(coupon)
-    await db.commit()
-    return {"success": True}
+    return await _handle_delete_coupon(coupon_id, db)
 
 
 # ============================================================
@@ -3546,19 +3688,23 @@ async def create_admin_coupon(
         "BUY 1 GET 1 FREE" if discount_type == "BOGO" else "FREE DELIVERY"
     )
 
+    bogo_type = payload.get("bogoType")
+    if bogo_type:
+        bogo_type = str(bogo_type).strip() or None
+
     new_coupon = Coupon(
-        id=str(uuid.uuid4()),
+        id=f"cpn_{uuid.uuid4().hex[:12]}",
         code=code,
         discountType=discount_type,
-        bogoType=payload.get("bogoType"),
-        triggerVariant=payload.get("triggerVariant"),
-        rewardVariant=payload.get("rewardVariant"),
-        defaultFreeDishId=payload.get("defaultFreeDishId"),
+        bogoType=bogo_type,
+        triggerVariant=payload.get("triggerVariant") or None,
+        rewardVariant=payload.get("rewardVariant") or None,
+        defaultFreeDishId=payload.get("defaultFreeDishId") or None,
         maxFreeItems=int(payload.get("maxFreeItems") or 3),
-        bogoDishId=payload.get("bogoDishId"),
+        bogoDishId=payload.get("bogoDishId") or None,
         autoApply=bool(payload.get("autoApply", False)),
-        badgeText=badge,
-        menuSection=payload.get("menuSection"),
+        badgeText=badge or None,
+        menuSection=payload.get("menuSection") or None,
         value=float(payload.get("value") or 0.0),
         minOrder=float(payload.get("minOrder") or 0.0),
         maxDiscount=float(payload["maxDiscount"]) if payload.get("maxDiscount") is not None else None,
@@ -3567,8 +3713,8 @@ async def create_admin_coupon(
         isActive=bool(payload.get("isActive", True)),
         expiresAt=datetime.fromisoformat(payload["expiresAt"]) if payload.get("expiresAt") else None,
         createdAt=datetime.utcnow(),
-        categoryId=payload.get("categoryId"),
-        restaurantId=payload.get("restaurantId"),
+        categoryId=payload.get("categoryId") or None,
+        restaurantId=payload.get("restaurantId") or None,
         oncePerCustomer=bool(payload.get("oncePerCustomer", False))
     )
     db.add(new_coupon)

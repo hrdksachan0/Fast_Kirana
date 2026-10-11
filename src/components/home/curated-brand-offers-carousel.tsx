@@ -35,6 +35,7 @@ function BrandCardMedia({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isPlaying, setIsPlaying] = useState(true)
+  const [progress, setProgress] = useState(0)
 
   const isVideo = Boolean(
     videoUrl ||
@@ -46,6 +47,29 @@ function BrandCardMedia({
   )
 
   const resolvedVideo = videoUrl || (isVideo ? imageUrl : null)
+
+  // IntersectionObserver: Auto-play when visible, pause when scrolled away
+  useEffect(() => {
+    if (!resolvedVideo || !videoRef.current) return
+    const el = videoRef.current
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            el.play().then(() => setIsPlaying(true)).catch(() => {})
+          } else {
+            el.pause()
+            setIsPlaying(false)
+          }
+        })
+      },
+      { threshold: 0.3 }
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [resolvedVideo])
 
   const togglePlayPause = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -60,9 +84,25 @@ function BrandCardMedia({
     }
   }
 
+  const handleTimeUpdate = () => {
+    if (videoRef.current && videoRef.current.duration) {
+      const pct = (videoRef.current.currentTime / videoRef.current.duration) * 100
+      setProgress(pct)
+    }
+  }
+
   if (resolvedVideo) {
     return (
       <div className="relative w-full h-full overflow-hidden bg-black select-none group">
+        {/* Instant Poster Fallback for 0ms black flicker */}
+        {imageUrl && !imageUrl.toLowerCase().endsWith('.mp4') && (
+          <img
+            src={imageUrl}
+            alt={alt}
+            className="absolute inset-0 w-full h-full object-cover -z-10"
+          />
+        )}
+
         <video
           ref={videoRef}
           src={resolvedVideo}
@@ -70,16 +110,39 @@ function BrandCardMedia({
           loop
           muted
           playsInline
-          className="w-full h-full object-cover pointer-events-none"
+          onTimeUpdate={handleTimeUpdate}
+          className="w-full h-full object-cover pointer-events-none transition-transform duration-700 ease-out group-hover:scale-[1.03]"
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
         />
 
-        {/* Floating Pause/Play Corner Pill */}
+        {/* 1. Instagram / Story Style Looping Progress Bar */}
+        <div className="absolute top-2.5 inset-x-3.5 h-[2.5px] rounded-full bg-white/20 backdrop-blur-xs overflow-hidden z-20 pointer-events-none">
+          <div
+            className="h-full bg-gradient-to-r from-amber-300 via-rose-400 to-white rounded-full transition-all duration-75 shadow-[0_0_8px_rgba(255,255,255,0.85)]"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        {/* 2. Live Motion Luxury Spotlight Badge */}
+        <div className="absolute top-4 left-3.5 z-20 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white shadow-md pointer-events-none select-none">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+          </span>
+          <span className="text-[7.5px] font-black uppercase tracking-widest text-white/95">
+            SPOTLIGHT
+          </span>
+        </div>
+
+        {/* 3. Subtle bottom vignette for razor-sharp button contrast */}
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent pointer-events-none z-10" />
+
+        {/* 4. Floating Tactile Pause/Play Corner Pill */}
         <button
           type="button"
           onClick={togglePlayPause}
-          className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/25 text-white shadow-lg cursor-pointer hover:bg-black/85 hover:scale-105 active:scale-95 transition-all text-[9px] font-extrabold tracking-wider pointer-events-auto"
+          className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/65 hover:bg-black/85 backdrop-blur-md border border-white/25 hover:border-white/40 text-white shadow-[0_4px_16px_rgba(0,0,0,0.45)] cursor-pointer hover:scale-105 active:scale-95 transition-all text-[9px] font-black tracking-wider pointer-events-auto"
           aria-label={isPlaying ? 'Pause video' : 'Play video'}
         >
           {isPlaying ? (
@@ -95,12 +158,12 @@ function BrandCardMedia({
           )}
         </button>
 
-        {/* Centered Big Play Indicator when paused */}
+        {/* 5. Centered Big Play Indicator when paused */}
         {!isPlaying && (
           <button
             type="button"
             onClick={togglePlayPause}
-            className="absolute inset-0 m-auto w-12 h-12 rounded-full bg-black/70 backdrop-blur-md border border-white/35 flex items-center justify-center text-white shadow-2xl cursor-pointer hover:scale-110 transition-transform z-30 pointer-events-auto"
+            className="absolute inset-0 m-auto w-12 h-12 rounded-full bg-black/75 backdrop-blur-md border border-white/35 flex items-center justify-center text-white shadow-[0_8px_32px_rgba(0,0,0,0.6)] cursor-pointer hover:scale-110 active:scale-95 transition-all z-30 pointer-events-auto"
             aria-label="Play video"
           >
             <Play className="h-6 w-6 fill-white text-white ml-0.5" />
@@ -136,7 +199,7 @@ function BrandCardMedia({
 export function CuratedBrandOffersCarousel({
   initialBanners,
   mode = 'grocery',
-  sectionTitle = 'Daily Fresh Inspiration',
+  sectionTitle = 'Top Brands & Exclusive Spotlights',
 }: {
   initialBanners?: any[]
   mode?: 'grocery' | 'food' | 'all'

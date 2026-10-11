@@ -23,6 +23,8 @@ import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/providers/theme-provider'
 import { TopProgressBar } from '@/components/shared/top-progress-bar'
+import { NavratriSearch } from '@/components/home/navratri/navratri-search'
+import { useCampaign } from '@/components/home/navratri/use-campaign'
 import { toast } from 'sonner'
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -47,6 +49,8 @@ const SEARCH_PLACEHOLDERS = [
 
 export function Navbar() {
   const pathname = usePathname()
+  const campaignStoreId = useUIStore(s => s.activeStoreId)
+  const campaign = useCampaign(campaignStoreId, pathname === '/')
   const isCategoryPage = pathname?.startsWith('/category/')
   const isStorefrontPage = pathname?.startsWith('/food/') || pathname?.startsWith('/restaurant') || pathname?.startsWith('/cafe') || pathname?.startsWith('/cart') || pathname?.startsWith('/checkout') || isCategoryPage
   const [isScrolled, setIsScrolled] = useState(false)
@@ -284,11 +288,12 @@ export function Navbar() {
   }, [handleScroll])
 
   useEffect(() => {
+    if (pathname === '/') return
     const interval = setInterval(() => {
       setPlaceholderIndex((prev) => (prev + 1) % SEARCH_PLACEHOLDERS.length)
     }, 3000)
     return () => clearInterval(interval)
-  }, [])
+  }, [pathname])
 
   if (pathname?.startsWith('/food/')) {
     return null
@@ -297,6 +302,7 @@ export function Navbar() {
   return (
     <>
       <nav
+        data-site-navbar
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b backdrop-blur-xl",
           isScrolled
@@ -354,6 +360,7 @@ export function Navbar() {
 
             {/* Bottom Row: Full-width Search Trigger */}
             {!isStorefrontPage && (
+              pathname === '/' ? <NavratriSearch data={campaign} onSearch={() => setSearchOpen(true)} /> :
               <div
                 onClick={() => setSearchOpen(true)}
                 className="w-full relative cursor-pointer group mt-0.5"
@@ -400,6 +407,9 @@ export function Navbar() {
             </div>
 
             {/* Center: Search bar Trigger */}
+            {pathname === '/' ? (
+              <div className="flex-1 max-w-xl"><NavratriSearch data={campaign} onSearch={() => setSearchOpen(true)} /></div>
+            ) : (
             <div
               onClick={() => setSearchOpen(true)}
               className="flex-1 max-w-xl cursor-pointer group relative"
@@ -417,6 +427,7 @@ export function Navbar() {
                 </span>
               </div>
             </div>
+            )}
 
             <div className="flex items-center gap-6 shrink-0">
               <Link

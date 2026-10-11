@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Roasted Vermicelli</title>
+<ellipse cx="120" cy="141" rx="80" ry="8" fill="#184E46" opacity=".12"/>
+<path d="M69 20h98l10 112H59Z" fill="#D5AD5D"/><path d="M69 20h98l2 14H68Z" fill="#236F61"/><path d="M60 120h116l1 12H59Z" fill="#236F61"/>
+<rect x="80" y="46" width="77" height="58" rx="9" fill="#FFF8DF"/>
+<path d="M89 84h59c-3 14-14 20-29 20s-27-6-30-20Z" fill="#A4492C"/>
+<g stroke="#B98744" stroke-width="2" stroke-linecap="round"><path d="M96 77q11-12 23 0t22 0M97 71q10-12 20 0t22 0m-38-8q10-9 21 0t13 0"/></g>
+<path d="M89 114h61" stroke="#A4793C" stroke-width="2" stroke-linecap="round"/>
+</svg>

@@ -6,6 +6,7 @@ import '../core/services/supabase_service.dart';
 import '../core/network/api_client.dart';
 import '../core/config/app_config.dart';
 import 'address_provider.dart';
+import 'auth_provider.dart';
 
 /// Fetches all active store hubs from Supabase / REST API
 final activeStoreHubsProvider = FutureProvider<List<StoreHub>>((ref) async {
@@ -133,5 +134,19 @@ final nearestHubResultProvider = Provider<NearestHubResult>((ref) {
 
 /// Current active Store Hub the user is browsing
 final currentStoreHubProvider = Provider<StoreHub>((ref) {
+  // If user is a logged-in store manager (and not browsing in customer mode), lock to their assigned store hub
+  final user = ref.watch(currentUserProvider);
+  final isCustomerMode = ref.watch(staffCustomerModeProvider);
+  if (!isCustomerMode && user != null && user.assignedStoreId != null && user.assignedStoreId!.isNotEmpty) {
+    final hubsAsync = ref.watch(activeStoreHubsProvider);
+    final hubs = hubsAsync.valueOrNull ?? StoreHub.defaultHubs;
+    final assignedHub = hubs.cast<StoreHub?>().firstWhere(
+      (h) => h?.id == user.assignedStoreId,
+      orElse: () => null,
+    );
+    if (assignedHub != null) {
+      return assignedHub;
+    }
+  }
   return ref.watch(nearestHubResultProvider).hub;
 });

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "navratri",
+    "name": "Navratri",
+    "type": "Festival",
+    "description": "Puja, dandiya and festive essentials in the original Navratri composition.",
+    "manifest": "navratri.json",
+    "thumbnail": "navratri-festive.svg"
+  },
+  {
+    "id": "diwali",
+    "name": "Diwali",
+    "type": "Festival",
+    "description": "Warm lamps, sweets and home decorations for a Diwali collection.",
+    "manifest": "templates/diwali.json",
+    "thumbnail": "diwali-celebration.svg"
+  },
+  {
+    "id": "holi",
+    "name": "Holi",
+    "type": "Festival",
+    "description": "Bright colours, festive snacks and drinks in a playful split composition.",
+    "manifest": "templates/holi.json",
+    "thumbnail": "holi-colour-play.svg"
+  },
+  {
+    "id": "ramadan",
+    "name": "Ramadan",
+    "type": "Festival",
+    "description": "Dates, tea and pantry ingredients for shared Ramadan meals.",
+    "manifest": "templates/ramadan.json",
+    "thumbnail": "ramadan-evening.svg"
+  },
+  {
+    "id": "daily-essentials",
+    "name": "Daily Essentials",
+    "type": "Everyday",
+    "description": "Milk, bread, vegetables and pantry staples for everyday shopping.",
+    "manifest": "templates/daily-essentials.json",
+    "thumbnail": "daily-grocery-basket.svg"
+  },
+  {
+    "id": "value-picks",
+    "name": "Value Picks",
+    "type": "Value",
+    "description": "A pantry-focused collection for comparing everyday staples; example prices only.",
+    "manifest": "templates/value-picks.json",
+    "thumbnail": "value-pantry-bag.svg"
+  },
+  {
+    "id": "summer",
+    "name": "Summer",
+    "type": "Seasonal",
+    "description": "Mangoes, coconuts, lemons and fruit drinks in a sunny seasonal collection.",
+    "manifest": "templates/summer.json",
+    "thumbnail": "summer-refresh.svg"
+  },
+  {
+    "id": "monsoon",
+    "name": "Monsoon",
+    "type": "Seasonal",
+    "description": "Tea, cooking ingredients, warm bowls and home care for rainy days.",
+    "manifest": "templates/monsoon.json",
+    "thumbnail": "monsoon-comfort.svg"
+  }
+]

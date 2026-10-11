@@ -1,0 +1,279 @@
+{
+  "version": 1,
+  "demo": true,
+  "enabled": true,
+  "autoplay": true,
+  "searchPrefix": "Search for",
+  "decorationImage": "string-lights.svg",
+  "labels": {
+    "sectionLabel": "Celebrate Navratri",
+    "specialsHeading": "Navratri Specials",
+    "curvedTabLabel": "Top Picks",
+    "loadingText": "Loading this store’s festive picks…",
+    "emptyText": "No matching products in this collection yet. Try another tab or search the catalogue.",
+    "demoLabel": "Demo prices",
+    "resultsDemoLabel": "Demo collection · illustrative prices"
+  },
+  "appearance": {
+    "background": "#FF831F",
+    "card": "#FFF8DF",
+    "text": "#985F39",
+    "smallText": "#5E2E16",
+    "headerText": "#FFF8DF",
+    "headerOutline": "#713D21",
+    "underline": "#832F27",
+    "tabSurface": "#FFF8DF"
+  },
+  "timings": {
+    "headerMs": 4000,
+    "productMs": 2500,
+    "searchMs": 3000,
+    "crossfadeMs": 400
+  },
+  "searchSuggestions": [
+    "Milk",
+    "Puja essentials",
+    "Dandiya",
+    "Fruits"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "festive-illustration",
+      "kind": "illustration",
+      "eyebrow": "Nine nights of togetherness",
+      "title": "A little joy, every day",
+      "subtitle": "Bring home the festive feeling",
+      "image": "navratri-festive.svg"
+    },
+    {
+      "id": "navratri-title",
+      "kind": "title",
+      "eyebrow": "Celebrate Navratri",
+      "title": "Navratri",
+      "subtitle": "Puja essentials, delivered",
+      "image": null
+    },
+    {
+      "id": "fastkirana-celebration",
+      "kind": "brand",
+      "eyebrow": "From our neighbourhood to yours",
+      "title": "Celebrate with FastKirana",
+      "subtitle": "Everyday essentials. Festive moments.",
+      "image": "fastkirana-basket.svg"
+    }
+  ],
+  "products": [
+    {
+      "id": "dandiya-sticks",
+      "name": "Dandiya Sticks",
+      "image": "dandiya.svg",
+      "originalPrice": 149,
+      "price": 99,
+      "currency": "INR",
+      "categoryId": "dandiya-ready",
+      "destinationId": "search-dandiya-sticks"
+    },
+    {
+      "id": "mata-chunri",
+      "name": "Mata Chunri",
+      "image": "chunri.svg",
+      "originalPrice": 129,
+      "price": 89,
+      "currency": "INR",
+      "categoryId": "puja-needs",
+      "destinationId": "search-mata-chunri"
+    },
+    {
+      "id": "garba-jacket",
+      "name": "Garba Jacket",
+      "image": "garba-jacket.svg",
+      "originalPrice": 599,
+      "price": 449,
+      "currency": "INR",
+      "categoryId": "dandiya-ready",
+      "destinationId": "search-garba-jacket"
+    },
+    {
+      "id": "vrat-chips",
+      "name": "Vrat Chips",
+      "image": "vrat-chips.svg",
+      "originalPrice": 60,
+      "price": 45,
+      "currency": "INR",
+      "categoryId": "vrat-snacks",
+      "destinationId": "search-vrat-chips"
+    }
+  ],
+  "categories": [
+    {
+      "id": "puja-needs",
+      "label": "Puja Needs",
+      "image": "puja-thali.svg",
+      "destinationId": "search-puja",
+      "keywords": [
+        "puja",
+        "pooja",
+        "diya",
+        "agarbatti",
+        "incense",
+        "chunri",
+        "camphor"
+      ]
+    },
+    {
+      "id": "vrat-cooking",
+      "label": "Vrat Cooking & Hosting",
+      "image": "fasting-food.svg",
+      "destinationId": "search-vrat-cooking",
+      "keywords": [
+        "vrat",
+        "sabudana",
+        "sendha",
+        "kuttu",
+        "singhara",
+        "ghee"
+      ]
+    },
+    {
+      "id": "dandiya-ready",
+      "label": "Dandiya Ready",
+      "image": "dandiya-ready.svg",
+      "destinationId": "search-dandiya",
+      "keywords": [
+        "dandiya",
+        "garba",
+        "jacket",
+        "kurta"
+      ]
+    },
+    {
+      "id": "vrat-snacks",
+      "label": "Vrat Snacks & Beverages",
+      "image": "vrat-snacks.svg",
+      "destinationId": "search-vrat-snacks",
+      "keywords": [
+        "vrat",
+        "chips",
+        "makhana",
+        "juice",
+        "coconut",
+        "snack"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "top-picks",
+      "label": "Top Picks",
+      "image": "top-picks.svg",
+      "keywords": []
+    },
+    {
+      "id": "pooja-decor",
+      "label": "Pooja & Decor",
+      "image": "pooja-decor.svg",
+      "keywords": [
+        "puja",
+        "pooja",
+        "diya",
+        "incense",
+        "agarbatti",
+        "camphor",
+        "decor"
+      ]
+    },
+    {
+      "id": "flowers-leaves",
+      "label": "Flowers & Leaves",
+      "image": "flowers-leaves.svg",
+      "keywords": [
+        "flower",
+        "marigold",
+        "rose",
+        "leaf",
+        "leaves",
+        "tulsi",
+        "mango"
+      ]
+    },
+    {
+      "id": "chunri-idols",
+      "label": "Chunri & Idols",
+      "image": "chunri-idols.svg",
+      "keywords": [
+        "chunri",
+        "idol",
+        "murti",
+        "mata"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "search-all",
+      "kind": "search",
+      "query": ""
+    },
+    {
+      "id": "search-fresh",
+      "kind": "search",
+      "query": "fruits"
+    },
+    {
+      "id": "search-fashion",
+      "kind": "search",
+      "query": "clothing"
+    },
+    {
+      "id": "search-mobiles",
+      "kind": "search",
+      "query": "mobile"
+    },
+    {
+      "id": "search-pharmacy",
+      "kind": "search",
+      "query": "health"
+    },
+    {
+      "id": "search-dandiya-sticks",
+      "kind": "search",
+      "query": "Dandiya Sticks"
+    },
+    {
+      "id": "search-mata-chunri",
+      "kind": "search",
+      "query": "Mata Chunri"
+    },
+    {
+      "id": "search-garba-jacket",
+      "kind": "search",
+      "query": "Garba Jacket"
+    },
+    {
+      "id": "search-vrat-chips",
+      "kind": "search",
+      "query": "Vrat Chips"
+    },
+    {
+      "id": "search-puja",
+      "kind": "search",
+      "query": "puja"
+    },
+    {
+      "id": "search-vrat-cooking",
+      "kind": "search",
+      "query": "sabudana"
+    },
+    {
+      "id": "search-dandiya",
+      "kind": "search",
+      "query": "dandiya"
+    },
+    {
+      "id": "search-vrat-snacks",
+      "kind": "search",
+      "query": "makhana"
+    }
+  ]
+}

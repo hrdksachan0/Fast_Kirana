@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" fill="none">
+  <ellipse cx="122" cy="209" rx="70" ry="10" fill="#985F39" opacity=".12"/>
+  <g transform="rotate(-31 120 120)">
+    <rect x="80" y="28" width="17" height="175" rx="8.5" fill="#A32928"/>
+    <path d="M80 50h17M80 60h17M80 87h17M80 97h17M80 124h17M80 134h17M80 161h17M80 171h17" stroke="#FFC85B" stroke-width="8"/>
+    <rect x="82" y="30" width="4" height="169" rx="2" fill="#FFF8DF" opacity=".28"/>
+    <path d="M84 204l-7 17m13-17v20m6-20 6 15" stroke="#FFC85B" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g transform="rotate(31 120 120)">
+    <rect x="140" y="24" width="17" height="175" rx="8.5" fill="#6D7949"/>
+    <path d="M140 46h17M140 56h17M140 83h17M140 93h17M140 120h17M140 130h17M140 157h17M140 167h17" stroke="#FFC85B" stroke-width="8"/>
+    <rect x="142" y="26" width="4" height="169" rx="2" fill="#FFF8DF" opacity=".28"/>
+    <path d="M145 200l-7 17m13-17v20m6-20 6 15" stroke="#A32928" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <path d="m52 61 3-8 3 8 8 3-8 3-3 8-3-8-8-3Zm140 89 3-8 3 8 8 3-8 3-3 8-3-8-8-3Z" fill="#FFC85B"/>
+</svg>

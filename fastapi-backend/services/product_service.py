@@ -52,7 +52,8 @@ def serialize_product(
     p, 
     local_stock: Optional[int] = None, 
     is_admin: bool = False,
-    local_price: Optional[float] = None
+    local_price: Optional[float] = None,
+    local_is_available: Optional[bool] = None
 ) -> Dict[str, Any]:
     """
     Serializes a Product ORM model to API JSON dictionary.
@@ -62,10 +63,11 @@ def serialize_product(
         return {}
 
     stock_val = local_stock if local_stock is not None else (getattr(p, "stock", 0) or 0)
+    base_avail = local_is_available if local_is_available is not None else bool(getattr(p, "isAvailable", True))
     if is_admin:
-        is_avail = bool(getattr(p, "isAvailable", True))
+        is_avail = base_avail
     else:
-        is_avail = bool(getattr(p, "isAvailable", True)) if local_stock is None else (bool(getattr(p, "isAvailable", True)) and local_stock > 0)
+        is_avail = base_avail if local_stock is None else (base_avail and stock_val > 0)
 
     # Localized price override support
     effective_mrp = float(getattr(p, "mrp", 0.0) or 0.0)

@@ -17,6 +17,7 @@ class User with _$User {
     @Default(false) bool isBlocked,
     String? blockReason,
     String? assignedRestaurantId,
+    String? assignedStoreId,
     DateTime? createdAt,
   }) = _User;
 
@@ -31,6 +32,7 @@ class User with _$User {
       isBlocked: json['isBlocked'] == true,
       blockReason: json['blockReason']?.toString(),
       assignedRestaurantId: json['assignedRestaurantId']?.toString(),
+      assignedStoreId: json['assignedStoreId']?.toString() ?? json['assigned_store_id']?.toString(),
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
     );
   }
@@ -45,11 +47,14 @@ class User with _$User {
         'isBlocked': isBlocked,
         'blockReason': blockReason,
         'assignedRestaurantId': assignedRestaurantId,
+        'assignedStoreId': assignedStoreId,
         'createdAt': createdAt?.toIso8601String(),
       };
 
   bool get isWorker => role != 'USER';
   bool get isAdmin => role == 'ADMIN';
+  bool get isStoreManager => (role == 'ADMIN' || role == 'MANAGER' || role == 'STAFF' || role == 'PICKER') && (assignedStoreId != null && assignedStoreId!.isNotEmpty);
+  bool get isSuperAdmin => role == 'ADMIN' && (assignedStoreId == null || assignedStoreId!.isEmpty);
 }
 
 @JsonSerializable()

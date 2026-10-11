@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" fill="none">
+<title>Diwali lights and lamps</title>
+<path d="M24 19q136 44 272 0" stroke="#F3D386" stroke-width="3"/>
+<g fill="#E8AF38"><circle cx="48" cy="26" r="6"/><circle cx="77" cy="33" r="6"/><circle cx="107" cy="38" r="6"/><circle cx="137" cy="40" r="6"/><circle cx="168" cy="40" r="6"/><circle cx="199" cy="38" r="6"/><circle cx="230" cy="33" r="6"/><circle cx="261" cy="26" r="6"/></g>
+<path d="M72 132h176c-8 37-37 54-88 54s-80-17-88-54Z" fill="#E8AF38"/><ellipse cx="160" cy="132" rx="88" ry="16" fill="#7D351F"/><ellipse cx="160" cy="129" rx="69" ry="10" fill="#F5BE58"/>
+<path d="M160 47c-34 36-30 64 0 80 30-16 34-44 0-80Z" fill="#FFF4D8"/><path d="M160 79c-17 22-15 33 0 43 15-10 17-21 0-43Z" fill="#F3D386"/>
+<path d="M100 155q60 31 120 0" stroke="#FFF4D8" stroke-width="4" stroke-linecap="round"/>
+<g stroke="#FFF4D8" stroke-width="3" stroke-linecap="round"><path d="M47 71v16m-8-8h16m223-7v16m-8-8h16M36 138v12m-6-6h12m243 6v12m-6-6h12"/></g>
+</svg>

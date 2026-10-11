@@ -152,6 +152,7 @@ export async function buildSettingsMap(storeId?: string | null): Promise<Record<
   const settingsMap = { ...DEFAULT_SETTINGS }
   // 1. Populate global base settings
   settings.forEach((s) => {
+    if (s.key === 'homepage_campaign_draft' || s.key.endsWith(':homepage_campaign_draft')) return
     if (!s.key.startsWith('store:')) {
       settingsMap[s.key] = s.value
     }
@@ -161,6 +162,7 @@ export async function buildSettingsMap(storeId?: string | null): Promise<Record<
   if (storeId && storeId !== 'all') {
     const storePrefix = `store:${storeId}:`
     settings.forEach((s) => {
+      if (s.key === 'homepage_campaign_draft' || s.key.endsWith(':homepage_campaign_draft')) return
       if (s.key.startsWith(storePrefix)) {
         const subKey = s.key.slice(storePrefix.length)
         settingsMap[subKey] = s.value

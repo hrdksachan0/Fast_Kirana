@@ -183,23 +183,23 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 320),
                       curve: const Cubic(0.25, 1.0, 0.4, 1.0), // Smooth Apple-like spring
-                      left: !isGrocery ? innerPadding : (innerPadding + pillWidth),
+                      left: isGrocery ? innerPadding : (innerPadding + pillWidth),
                       top: innerPadding,
                       bottom: innerPadding,
                       width: pillWidth,
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: !isGrocery
-                                ? const [Color(0xFFEA580C), Color(0xFFF97316)]
-                                : const [Color(0xFFE20A22), Color(0xFFF43F5E)],
+                            colors: isGrocery
+                                ? const [Color(0xFFE20A22), Color(0xFFF43F5E)]
+                                : const [Color(0xFFEA580C), Color(0xFFF97316)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(26),
                           boxShadow: [
                             BoxShadow(
-                              color: (!isGrocery ? const Color(0xFFEA580C) : const Color(0xFFE20A22))
+                              color: (isGrocery ? const Color(0xFFE20A22) : const Color(0xFFEA580C))
                                   .withValues(alpha: 0.22),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
@@ -231,94 +231,10 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                       ),
                     ),
 
-                    // ── Two Tap Targets (Food & Cafe vs Grocery) ──
+                    // ── Two Tap Targets (Grocery First vs Food & Cafe Next) ──
                     Row(
                       children: [
-                        // 1. Food Tab Target (Left - First)
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () {
-                              if (!isGrocery) return;
-                              HapticFeedback.mediumImpact();
-                              widget.onModeChanged(false);
-                            },
-                            child: Center(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      // 3D Burger with gentle float animation when inactive
-                                      Transform.scale(
-                                        scale: isGrocery ? nudgeScale : 1.0,
-                                        child: Transform.translate(
-                                          offset: Offset(0, isGrocery ? (-2 * glowVal) : 0),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withValues(alpha: 0.12),
-                                                  blurRadius: 6,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            child: SvgPicture.string(
-                                              _burgerSvg,
-                                              width: 32,
-                                              height: 32,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 9),
-                                      // 2-Line Typography
-                                      Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          AnimatedDefaultTextStyle(
-                                            duration: const Duration(milliseconds: 220),
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 16.5,
-                                              fontWeight: FontWeight.w900,
-                                              color: !isGrocery
-                                                  ? Colors.white
-                                                  : const Color(0xFF0F172A),
-                                              letterSpacing: -0.3,
-                                            ),
-                                            child: const Text('Food'),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          AnimatedDefaultTextStyle(
-                                            duration: const Duration(milliseconds: 220),
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 8.5,
-                                              fontWeight: FontWeight.w800,
-                                              color: !isGrocery
-                                                  ? Colors.white.withValues(alpha: 0.9)
-                                                  : const Color(0xFF94A3B8),
-                                              letterSpacing: 1.4,
-                                            ),
-                                            child: const Text('RESTAURANTS'),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // 2. Grocery Tab Target (Right - Second)
+                        // 1. Grocery Tab Target (Left - First)
                         Expanded(
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
@@ -391,6 +307,90 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                               letterSpacing: 1.4,
                                             ),
                                             child: const Text('FAST DELIVERY'),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // 2. Food Tab Target (Right - Next)
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              if (!isGrocery) return;
+                              HapticFeedback.mediumImpact();
+                              widget.onModeChanged(false);
+                            },
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      // 3D Burger with gentle float animation when inactive
+                                      Transform.scale(
+                                        scale: isGrocery ? nudgeScale : 1.0,
+                                        child: Transform.translate(
+                                          offset: Offset(0, isGrocery ? (-2 * glowVal) : 0),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.12),
+                                                  blurRadius: 6,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: SvgPicture.string(
+                                              _burgerSvg,
+                                              width: 32,
+                                              height: 32,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 9),
+                                      // 2-Line Typography
+                                      Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          AnimatedDefaultTextStyle(
+                                            duration: const Duration(milliseconds: 220),
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 16.5,
+                                              fontWeight: FontWeight.w900,
+                                              color: !isGrocery
+                                                  ? Colors.white
+                                                  : const Color(0xFF0F172A),
+                                              letterSpacing: -0.3,
+                                            ),
+                                            child: const Text('Food'),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          AnimatedDefaultTextStyle(
+                                            duration: const Duration(milliseconds: 220),
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: !isGrocery
+                                                  ? Colors.white.withValues(alpha: 0.9)
+                                                  : const Color(0xFF94A3B8),
+                                              letterSpacing: 1.4,
+                                            ),
+                                            child: const Text('RESTAURANTS'),
                                           ),
                                         ],
                                       ),

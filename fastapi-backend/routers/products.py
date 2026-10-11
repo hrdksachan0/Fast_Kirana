@@ -379,7 +379,8 @@ async def get_products(
 
     # Worker check or includeUnavailable check
     if not is_worker and not includeUnavailable and not admin:
-        filters.append(Product.isAvailable == True)
+        if not target_store or target_store == "all":
+            filters.append(Product.isAvailable == True)
 
     # Restaurant separation rules
     if restaurantId:
@@ -434,18 +435,23 @@ async def get_products(
     # Admins/Workers see the entire catalog so they can manage, toggle availability, and replenish stock.
     if admin or is_worker or includeUnavailable:
         grocery_scope = Product.restaurantId.is_(None)
+        rest_scope = Product.restaurant.has(Restaurant.storeId == target_store)
     else:
         inv_sub_conditions = [
             StoreInventory.productId == Product.id,
             StoreInventory.storeId == target_store,
-            StoreInventory.stock > 0
+            StoreInventory.stock > 0,
+            StoreInventory.isAvailable == True
         ]
         grocery_scope = and_(
             Product.restaurantId.is_(None),
             exists().where(and_(*inv_sub_conditions))
         )
+        rest_scope = and_(
+            Product.restaurant.has(Restaurant.storeId == target_store),
+            Product.isAvailable == True
+        )
 
-    rest_scope = Product.restaurant.has(Restaurant.storeId == target_store)
     filters.append(or_(grocery_scope, rest_scope))
 
     # Store-wise category status check (hide closed categories for customers)
@@ -715,7 +721,7 @@ async def get_products(
         )
         inv_res = await db.execute(inv_stmt)
         inv_list = inv_res.scalars().all()
-        inv_map = {inv.productId: (inv.stock, inv.priceOverride) for inv in inv_list}
+        inv_map = {inv.productId: (inv.stock, inv.priceOverride, inv.isAvailable) for inv in inv_list}
 
     serialized_products = []
     is_admin_mode = bool(admin or is_worker or includeUnavailable)
@@ -723,15 +729,18 @@ async def get_products(
         if p.restaurantId:
             local_stk = p.stock or 99999
             local_prc = None
+            local_avail = p.isAvailable
         else:
             inv_info = inv_map.get(p.id)
             if inv_info:
                 local_stk = inv_info[0]
                 local_prc = inv_info[1]
+                local_avail = inv_info[2]
             else:
                 local_stk = (p.stock or 0) if is_admin_mode else 0
                 local_prc = None
-        serialized_products.append(serialize_product(p, local_stock=local_stk, is_admin=is_admin_mode, local_price=local_prc))
+                local_avail = p.isAvailable
+        serialized_products.append(serialize_product(p, local_stock=local_stk, is_admin=is_admin_mode, local_price=local_prc, local_is_available=local_avail))
 
     response_data = {
         "products": serialized_products,
@@ -1259,15 +1268,17 @@ async def get_product_details(
 
     local_stock = None
     local_price = None
+    local_avail = None
     if target_store:
         if product.restaurantId:
             if product.restaurant and product.restaurant.storeId and product.restaurant.storeId != target_store:
-                serialized = serialize_product(product, local_stock=0)
+                serialized = serialize_product(product, local_stock=0, local_is_available=False)
                 await set_cached(cache_key, serialized, 60)
                 response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
                 response.headers["X-FastKirana-Cache"] = "MISS"
                 return serialized
             local_stock = product.stock or 99999
+            local_avail = product.isAvailable
         else:
             inv_stmt = select(StoreInventory).where(
                 StoreInventory.storeId == target_store,
@@ -1277,8 +1288,9 @@ async def get_product_details(
             inv = inv_res.scalars().first()
             local_stock = inv.stock if inv else 0
             local_price = inv.priceOverride if inv else None
+            local_avail = inv.isAvailable if inv else False
 
-    serialized = serialize_product(product, local_stock=local_stock, local_price=local_price)
+    serialized = serialize_product(product, local_stock=local_stock, local_price=local_price, local_is_available=local_avail)
     await set_cached(cache_key, serialized, 60)
     response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
     response.headers["X-FastKirana-Cache"] = "MISS"
@@ -1539,8 +1551,12 @@ async def update_product(
         'availableStartTime', 'availableEndTime', 'vendor', 'vendorId'
     ]
 
+    target_store_id = payload.get("storeId") or current_user.get("assignedStoreId")
+
     for key in updatable_fields:
         if key in payload:
+            if key == 'isAvailable' and target_store_id and target_store_id != 'all' and target_store_id != 'hub-209206':
+                continue
             val = payload[key]
             if isinstance(val, str):
                 val = val.strip()
@@ -1629,7 +1645,11 @@ async def update_product(
             product.addons = None
 
     # Multi-hub store localized inventory handling
-    target_store_id = payload.get("storeId") or current_user.get("assignedStoreId")
+    user_assigned_store = current_user.get("assignedStoreId") if isinstance(current_user, dict) else getattr(current_user, "assignedStoreId", None)
+    if user_assigned_store:
+        target_store_id = str(user_assigned_store).strip()
+    else:
+        target_store_id = payload.get("storeId")
     local_stock_val = None
 
     if "stock" in payload:
@@ -1640,12 +1660,17 @@ async def update_product(
         else:
             product.stock = parsed_stock
 
+    local_avail_val = None
     if target_store_id and target_store_id != 'all':
         has_stock = "stock" in payload
         has_price_override = "priceOverride" in payload or ("price" in payload and target_store_id != "hub-209206")
+        has_avail = "isAvailable" in payload
         val = parse_int(payload['stock'], 0) if has_stock else None
         price_ovr = parse_float(payload.get('priceOverride') or payload.get('price'), None) if has_price_override else None
-        if has_stock or has_price_override:
+        avail_val = bool(payload['isAvailable']) if has_avail else None
+        local_avail_val = avail_val
+
+        if has_stock or has_price_override or has_avail:
             try:
                 inv_stmt = select(StoreInventory).where(
                     StoreInventory.productId == product.id,
@@ -1658,13 +1683,23 @@ async def update_product(
                         existing_inv.stock = val
                     if price_ovr is not None:
                         existing_inv.priceOverride = price_ovr
+                    if avail_val is not None:
+                        existing_inv.isAvailable = avail_val
+                    elif val is not None and val > 0 and not existing_inv.isAvailable:
+                        existing_inv.isAvailable = True
+                        local_avail_val = True
+                    else:
+                        local_avail_val = existing_inv.isAvailable
                 else:
+                    new_avail = avail_val if avail_val is not None else (val > 0 if val is not None else True)
                     new_inv = StoreInventory(
                         productId=product.id,
                         storeId=target_store_id,
                         stock=val if val is not None else (product.stock or 0),
+                        isAvailable=new_avail,
                         priceOverride=price_ovr
                     )
+                    local_avail_val = new_avail
                     db.add(new_inv)
             except Exception as inv_err:
                 print(f"Warning: Failed to update StoreInventory in product update: {inv_err}")
@@ -1675,17 +1710,28 @@ async def update_product(
         clear_products_cache()
         await invalidate_catalog_cache()
 
+        try:
+            from routers.categories import trigger_revalidation
+            cat_slug = None
+            if product.categoryId:
+                cat_res = await db.execute(select(Category.slug).where(Category.id == product.categoryId))
+                cat_slug = cat_res.scalar_one_or_none()
+            await trigger_revalidation(cat_slug)
+        except Exception as rev_err:
+            logger.warning(f"Failed to trigger revalidation on product update: {rev_err}")
+
         # Real-time WebSocket event dispatch with strict restaurant channel isolation
         try:
             evt_payload = {
                 "event": "PRODUCT_UPDATED",
                 "productId": product.id,
                 "name": product.name,
-                "isAvailable": product.isAvailable,
-                "stock": product.stock,
+                "isAvailable": local_avail_val if local_avail_val is not None else product.isAvailable,
+                "stock": local_stock_val if local_stock_val is not None else product.stock,
                 "price": float(product.price or 0.0),
                 "mrp": float(product.mrp or 0.0),
                 "restaurantId": product.restaurantId,
+                "storeId": target_store_id,
             }
             if product.restaurantId:
                 await manager.broadcast_to_channel(f"restaurant_{product.restaurantId}", evt_payload)
@@ -1701,7 +1747,12 @@ async def update_product(
         reload_res = await db.execute(stmt_reload)
         loaded_product = reload_res.scalar_one_or_none() or product
 
-        return serialize_product(loaded_product, local_stock=local_stock_val, is_admin=True)
+        return serialize_product(
+            loaded_product, 
+            local_stock=local_stock_val, 
+            is_admin=True,
+            local_is_available=local_avail_val
+        )
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update product: {str(e)}")

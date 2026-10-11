@@ -118,218 +118,7 @@ function formatTriggerVariant(qty: number | string, size: string) {
   return String(q)
 }
 
-function getRestaurantMenuSections(rest: any): Array<{ tag: string; title: string }> {
-  if (!rest || !rest.menuSections) return []
-  try {
-    const raw = typeof rest.menuSections === 'string' ? JSON.parse(rest.menuSections) : rest.menuSections
-    if (Array.isArray(raw)) {
-      return raw
-        .map((s: any) => ({
-          tag: s.tag || s.title?.toLowerCase().replace(/[^a-z0-9]/g, '') || '',
-          title: s.title || s.tag || '',
-        }))
-        .filter((s: any) => !!s.tag)
-    }
-  } catch {}
-  return []
-}
 
-function MenuSectionMultiSelect({
-  value,
-  onChange,
-  restaurant,
-}: {
-  value: string | null | undefined
-  onChange: (val: string) => void
-  restaurant: any
-}) {
-  const [customTag, setCustomTag] = useState('')
-  const [showAddCustom, setShowAddCustom] = useState(false)
-
-  const selectedTags = useMemo(() => {
-    if (!value) return []
-    return value
-      .split(',')
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean)
-  }, [value])
-
-  const availableSections = useMemo(() => {
-    const fromRest = getRestaurantMenuSections(restaurant)
-    const defaults = [
-      { tag: 'pizza', title: 'Pizza' },
-      { tag: 'burger', title: 'Burger' },
-      { tag: 'sandwich', title: 'Sandwich' },
-      { tag: 'pasta', title: 'Pasta' },
-      { tag: 'beverages', title: 'Beverages' },
-      { tag: 'chinese', title: 'Chinese' },
-      { tag: 'biryani', title: 'Biryani' },
-      { tag: 'desserts', title: 'Desserts' },
-    ]
-    const map = new Map<string, { tag: string; title: string }>()
-    fromRest.forEach((s) => {
-      if (s.tag) map.set(s.tag.toLowerCase(), s)
-    })
-    defaults.forEach((d) => {
-      if (!map.has(d.tag.toLowerCase())) {
-        map.set(d.tag.toLowerCase(), d)
-      }
-    })
-    selectedTags.forEach((t) => {
-      if (!map.has(t)) {
-        map.set(t, { tag: t, title: t.charAt(0).toUpperCase() + t.slice(1) })
-      }
-    })
-    return Array.from(map.values())
-  }, [restaurant, selectedTags])
-
-  const toggleTag = (tag: string) => {
-    const clean = tag.toLowerCase()
-    let next: string[]
-    if (selectedTags.includes(clean)) {
-      next = selectedTags.filter((t) => t !== clean)
-    } else {
-      next = [...selectedTags, clean]
-    }
-    onChange(next.join(','))
-  }
-
-  const selectAll = () => {
-    onChange('')
-  }
-
-  const handleAddCustom = (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    const clean = customTag.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '')
-    if (!clean) return
-    if (!selectedTags.includes(clean)) {
-      onChange([...selectedTags, clean].join(','))
-    }
-    setCustomTag('')
-    setShowAddCustom(false)
-  }
-
-  return (
-    <div className="space-y-2 p-2.5 rounded-xl bg-muted/20 border border-border">
-      <div className="flex items-center justify-between gap-2">
-        <label className="text-[10px] font-bold text-text-secondary flex items-center gap-1.5">
-          <span>Restricted Menu Tags / Sections (Optional)</span>
-          {selectedTags.length > 0 ? (
-            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-orange-500 text-white">
-              {selectedTags.length} active
-            </span>
-          ) : (
-            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-green-500/15 text-green-700 dark:text-green-400">
-              All Sections (Whole Restaurant)
-            </span>
-          )}
-        </label>
-        {selectedTags.length > 0 && (
-          <button
-            type="button"
-            onClick={selectAll}
-            className="text-[10px] font-bold text-orange-600 hover:underline"
-          >
-            Clear (Apply to All)
-          </button>
-        )}
-      </div>
-
-      {/* Badges / Chips */}
-      <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
-        <button
-          type="button"
-          onClick={selectAll}
-          className={cn(
-            'px-2.5 py-1 text-xs rounded-lg border font-bold transition-all flex items-center gap-1',
-            selectedTags.length === 0
-              ? 'bg-primary text-white border-primary shadow-sm'
-              : 'bg-background hover:bg-muted/40 text-text-secondary border-border'
-          )}
-        >
-          {selectedTags.length === 0 && <span>✓</span>}
-          <span>All Menu Sections</span>
-        </button>
-
-        {availableSections.map((sec) => {
-          const isSelected = selectedTags.includes(sec.tag.toLowerCase())
-          return (
-            <button
-              key={sec.tag}
-              type="button"
-              onClick={() => toggleTag(sec.tag)}
-              className={cn(
-                'px-2.5 py-1 text-xs rounded-lg border transition-all flex items-center gap-1',
-                isSelected
-                  ? 'bg-orange-500 text-white border-orange-600 font-bold shadow-sm ring-1 ring-orange-500/40'
-                  : 'bg-background hover:bg-muted/40 text-text-secondary border-border font-medium'
-              )}
-            >
-              <span>{isSelected ? '✓' : '+'}</span>
-              <span>{sec.title}</span>
-            </button>
-          )
-        })}
-
-        {!showAddCustom ? (
-          <button
-            type="button"
-            onClick={() => setShowAddCustom(true)}
-            className="px-2 py-1 text-xs rounded-lg border border-dashed border-border text-text-muted hover:text-text-primary hover:border-text-secondary transition-all"
-          >
-            + Custom Tag
-          </button>
-        ) : (
-          <div className="flex items-center gap-1">
-            <input
-              type="text"
-              placeholder="tag name..."
-              value={customTag}
-              onChange={(e) => setCustomTag(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  handleAddCustom()
-                }
-              }}
-              className="px-2 py-1 text-xs w-24 rounded-lg border bg-background text-text-primary font-medium focus:outline-none focus:ring-1 focus:ring-orange-500"
-              autoFocus
-            />
-            <button
-              type="button"
-              onClick={() => handleAddCustom()}
-              className="px-2 py-1 text-xs rounded-lg bg-orange-500 text-white font-bold"
-            >
-              Add
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAddCustom(false)}
-              className="px-1.5 py-1 text-xs text-text-muted hover:text-text-primary"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="text-[9.5px] text-text-muted">
-        {selectedTags.length === 0 ? (
-          <span className="text-green-700 dark:text-green-400 font-medium">
-            ✓ Offer &amp; badges will apply to all dishes matching this restaurant.
-          </span>
-        ) : (
-          <span>
-            Offer &amp; badges will <strong className="text-text-primary">ONLY</strong> apply to dishes matching:{' '}
-            <span className="font-bold text-orange-600">
-              {selectedTags.join(', ')}
-            </span>
-          </span>
-        )}
-      </div>
-    </div>
-  )
-}
 
 export function CouponsTab({
   coupons,
@@ -355,6 +144,7 @@ export function CouponsTab({
   const [restaurants, setRestaurants] = useState<Array<{ id: string; name: string; slug: string; menuSections?: any }>>([])
   const [previewTab, setPreviewTab] = useState<'card' | 'menu' | 'cart'>('card')
   const [restaurantDishes, setRestaurantDishes] = useState<Array<{ id: string; name: string; price: number; imageUrl?: string | null }>>([])
+  const [martProducts, setMartProducts] = useState<Array<{ id: string; name: string; price: number; imageUrl?: string | null }>>([])
 
   useEffect(() => {
     fetch(`${apiUrl()}/api/restaurants?all=true`)
@@ -365,6 +155,17 @@ export function CouponsTab({
         }
       })
       .catch((err) => console.warn('Failed to load restaurants for coupons tab:', err))
+  }, [])
+
+  // Load mart / grocery products for universal ID selection
+  useEffect(() => {
+    fetch(`${apiUrl()}/api/products?limit=500&admin=true&excludeRestaurant=true`)
+      .then((res) => res.json())
+      .then((data) => {
+        const prods = Array.isArray(data) ? data : (data?.products || [])
+        setMartProducts(prods)
+      })
+      .catch((err) => console.warn('Failed to load mart products for coupons tab:', err))
   }, [])
 
   // Load dishes for active restaurant (for Free Gift Dish selector)
@@ -387,11 +188,17 @@ export function CouponsTab({
       .catch((err) => console.warn('Failed to load restaurant dishes:', err))
   }, [newCoupon.restaurantId, couponEditForm.restaurantId, editingCoupon])
 
+  const currentRestId = editingCoupon ? couponEditForm.restaurantId : newCoupon.restaurantId
+  const availableItems = useMemo(() => {
+    if (currentRestId) return restaurantDishes
+    return martProducts
+  }, [currentRestId, restaurantDishes, martProducts])
+
   // Auto-generate suggested badge text based on inputs
   const autoGeneratedBadge = useMemo(() => {
     if (newCoupon.discountType === 'BOGO') {
-      const triggerDish = restaurantDishes.find((d) => d.id === newCoupon.bogoDishId)
-      const giftDish = restaurantDishes.find((d) => d.id === newCoupon.defaultFreeDishId)
+      const triggerDish = availableItems.find((d) => d.id === newCoupon.bogoDishId)
+      const giftDish = availableItems.find((d) => d.id === newCoupon.defaultFreeDishId)
       const triggerName = triggerDish ? triggerDish.name.toUpperCase() : ''
       const giftName = giftDish
         ? giftDish.name.toUpperCase()
@@ -402,45 +209,38 @@ export function CouponsTab({
         const sizeText = parsed.size ? ` ${parsed.size.toUpperCase()}` : ''
         const qty = parsed.qty || 1
 
-        const targetLabel = triggerName || (newCoupon.menuSection
-          ? newCoupon.menuSection.split(',').map((s: string) => s.trim().toUpperCase()).filter(Boolean).join(' & ')
-          : 'DISH')
+        const targetLabel = triggerName || 'ITEM'
 
         return `BUY ${qty}${sizeText} ${targetLabel} GET ${giftName} FREE`
       }
       if (newCoupon.bogoType === 'BUY_LARGE_GET_SMALL') {
         const trig = (newCoupon.triggerVariant || 'Large').toUpperCase()
         const rew = (newCoupon.rewardVariant || 'Small').toUpperCase()
-        const targetLabel = triggerName || (newCoupon.menuSection
-          ? newCoupon.menuSection.split(',').map((s: string) => s.trim().toUpperCase()).filter(Boolean).join(' & ')
-          : 'PIZZA')
+        const targetLabel = triggerName || 'ITEM'
         return `BUY ${trig} ${targetLabel} GET ${rew} FREE`
       }
       if (newCoupon.bogoType === 'CHEAPEST_FREE') {
-        const targetLabel = triggerName || (newCoupon.menuSection
-          ? newCoupon.menuSection.split(',').map((s: string) => s.trim().toUpperCase()).filter(Boolean).join(' & ')
-          : '')
+        const targetLabel = triggerName || ''
         return targetLabel ? `BUY 2 ${targetLabel}, CHEAPEST FREE` : 'BUY ANY 2, CHEAPEST FREE'
       }
       if (triggerName) {
         return `BUY 1 GET 1 FREE ON ${triggerName}`
       }
-      const sec = newCoupon.menuSection
-        ? ` ${newCoupon.menuSection.split(',').map((s: string) => s.trim().toUpperCase()).filter(Boolean).join(' & ')}`
-        : ''
-      return sec ? `BUY 1 GET 1 FREE ON${sec}` : 'BUY 1 GET 1 FREE'
+      return 'BUY 1 GET 1 FREE'
     }
     if (newCoupon.discountType === 'FREE_DELIVERY') {
       return 'FREE DELIVERY'
     }
     if (newCoupon.discountType === 'PERCENT') {
-      return `${newCoupon.value || '20'}% OFF`
+      const triggerDish = availableItems.find((d) => d.id === newCoupon.bogoDishId)
+      return triggerDish ? `${newCoupon.value || '20'}% OFF ON ${triggerDish.name.toUpperCase()}` : `${newCoupon.value || '20'}% OFF`
     }
     if (newCoupon.discountType === 'FLAT') {
-      return `FLAT ₹${newCoupon.value || '50'} OFF`
+      const triggerDish = availableItems.find((d) => d.id === newCoupon.bogoDishId)
+      return triggerDish ? `FLAT ₹${newCoupon.value || '50'} OFF ON ${triggerDish.name.toUpperCase()}` : `FLAT ₹${newCoupon.value || '50'} OFF`
     }
     return 'EXCLUSIVE OFFER'
-  }, [newCoupon.discountType, newCoupon.bogoType, newCoupon.bogoDishId, newCoupon.triggerVariant, newCoupon.rewardVariant, newCoupon.defaultFreeDishId, newCoupon.menuSection, newCoupon.value, restaurantDishes])
+  }, [newCoupon.discountType, newCoupon.bogoType, newCoupon.bogoDishId, newCoupon.triggerVariant, newCoupon.rewardVariant, newCoupon.defaultFreeDishId, newCoupon.value, availableItems])
 
   const selectedRestaurant = restaurants.find((r) => r.id === newCoupon.restaurantId)
   const effectiveBadge = newCoupon.badgeText?.trim() || autoGeneratedBadge
@@ -558,7 +358,7 @@ export function CouponsTab({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <button
                     type="button"
-                    onClick={() => setNewCoupon({ ...newCoupon, restaurantId: '' })}
+                    onClick={() => setNewCoupon({ ...newCoupon, restaurantId: '', bogoDishId: '' })}
                     className={cn(
                       "p-3 rounded-2xl border text-left transition-all cursor-pointer",
                       !newCoupon.restaurantId
@@ -580,7 +380,7 @@ export function CouponsTab({
                   <div className="space-y-1">
                     <select
                       value={newCoupon.restaurantId || ''}
-                      onChange={(e) => setNewCoupon({ ...newCoupon, restaurantId: e.target.value })}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, restaurantId: e.target.value, bogoDishId: '' })}
                       className={cn(
                         "w-full px-3 py-3 text-xs rounded-2xl border bg-muted/10 focus:outline-none font-bold transition-all",
                         newCoupon.restaurantId
@@ -596,20 +396,66 @@ export function CouponsTab({
                       ))}
                     </select>
                     {newCoupon.restaurantId && (
-                      <div className="space-y-1 pt-1">
-                        <span className="text-[10px] font-bold text-orange-600 block px-1">
-                          ✓ Scoped to {selectedRestaurant?.name}
-                        </span>
-                        <div className="pt-1">
-                          <MenuSectionMultiSelect
-                            value={newCoupon.menuSection}
-                            onChange={(val) => setNewCoupon({ ...newCoupon, menuSection: val })}
-                            restaurant={selectedRestaurant}
-                          />
-                        </div>
-                      </div>
+                      <span className="text-[10px] font-bold text-orange-600 block px-1">
+                        ✓ Scoped to {selectedRestaurant?.name}
+                      </span>
                     )}
                   </div>
+                </div>
+
+                {/* ID-wise Item Selector (Strict ID-wise, NO tag-wise) */}
+                <div className="mt-3 p-3 rounded-2xl bg-muted/20 border border-border space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-black text-text-primary flex items-center gap-1.5">
+                      <span>🎯 Target Item / Dish (ID-wise Restriction)</span>
+                      {newCoupon.bogoDishId ? (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-500 text-white font-mono">
+                          ID: {newCoupon.bogoDishId}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-muted text-text-muted">
+                          Entire Outlet (All Items)
+                        </span>
+                      )}
+                    </label>
+                    {newCoupon.bogoDishId && (
+                      <button
+                        type="button"
+                        onClick={() => setNewCoupon({ ...newCoupon, bogoDishId: '', menuSection: '' })}
+                        className="text-[10px] font-bold text-orange-600 hover:underline"
+                      >
+                        Reset to All Items
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <select
+                      value={newCoupon.bogoDishId || ''}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value, menuSection: '' })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="">-- Apply to All Items in Outlet --</option>
+                      {availableItems.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          [ID: {item.id}] {item.name} — ₹{item.price}
+                        </option>
+                      ))}
+                    </select>
+
+                    <input
+                      type="text"
+                      placeholder="Or enter Item / Dish ID manually..."
+                      value={newCoupon.bogoDishId || ''}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value.trim(), menuSection: '' })}
+                      className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-mono font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <p className="text-[9.5px] text-text-muted">
+                    {newCoupon.bogoDishId
+                      ? `Offer will strictly apply ONLY to Item ID: "${newCoupon.bogoDishId}" (ID-wise, no tag matching).`
+                      : "Offer applies across all products/dishes from this outlet."}
+                  </p>
                 </div>
               </div>
 
@@ -662,8 +508,8 @@ export function CouponsTab({
                     {[
                       {
                         key: 'FREE_GIFT',
-                        title: '🎁 Free Gift Dish',
-                        desc: 'Buy 2, Get Specific Dish (e.g. Cake/Sandwich) Free',
+                        title: '🎁 Free Gift Item',
+                        desc: 'Buy specific Item ID, Get specific Gift Item ID Free',
                       },
                       {
                         key: 'CHEAPEST_FREE',
@@ -703,32 +549,39 @@ export function CouponsTab({
                     })}
                   </div>
 
-                  {/* Free Gift Configuration */}
+                  {/* Free Gift Configuration (100% ID-wise) */}
                   {newCoupon.bogoType === 'FREE_GIFT' && (
                     <div className="space-y-3.5 p-4 rounded-2xl bg-background/90 border border-orange-500/20 animate-slide-down">
                       {/* Step A: Qualifying Trigger Dish */}
-                      {newCoupon.restaurantId && (
-                        <div>
-                          <label className="text-[10px] font-black text-text-secondary block mb-1">
-                            1. Qualifying Trigger Dish (Optional - Specific Dish or Any in Section)
-                          </label>
+                      <div>
+                        <label className="text-[10px] font-black text-text-secondary block mb-1">
+                          1. Qualifying Trigger Item (Specific Dish / Product ID) *
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <select
                             value={newCoupon.bogoDishId || ''}
-                            onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value })}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value, menuSection: '' })}
                             className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold text-text-primary"
                           >
-                            <option value="">Any Dish from Selected Section(s) (e.g. Any Pizza)</option>
-                            {restaurantDishes.map((d) => (
+                            <option value="">Select Trigger Dish / Product...</option>
+                            {availableItems.map((d) => (
                               <option key={d.id} value={d.id}>
-                                Specific Dish: {d.name} — ₹{d.price}
+                                [ID: {d.id}] {d.name} — ₹{d.price}
                               </option>
                             ))}
                           </select>
-                          <span className="text-[9px] text-text-muted mt-0.5 block">
-                            Choose a specific dish (e.g. &quot;Crush Veggie&quot;) or leave as &quot;Any Dish&quot; to apply to whole category.
-                          </span>
+                          <input
+                            type="text"
+                            placeholder="Or enter Trigger ID manually..."
+                            value={newCoupon.bogoDishId || ''}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value.trim(), menuSection: '' })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-mono font-bold"
+                          />
                         </div>
-                      )}
+                        <span className="text-[9px] text-text-muted mt-0.5 block">
+                          Customer must add this specific Item ID to unlock the free gift reward.
+                        </span>
+                      </div>
 
                       {/* Step B: Trigger Quantity & Trigger Size */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -815,44 +668,35 @@ export function CouponsTab({
                         </div>
                       </div>
 
-                      {/* Step C: Free Reward Dish */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border/60">
-                        <div>
-                          <label className="text-[10px] font-black text-text-secondary block mb-1">
-                            4. Select Free Gift Dish (100% Free 🎁)
-                          </label>
+                      {/* Step C: Free Reward Dish (ID-wise, no tags) */}
+                      <div className="pt-2 border-t border-border/60">
+                        <label className="text-[10px] font-black text-text-secondary block mb-1">
+                          4. 🎁 Free Reward Item (Specific Dish / Product ID) *
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <select
                             value={newCoupon.defaultFreeDishId || ''}
                             onChange={(e) => setNewCoupon({ ...newCoupon, defaultFreeDishId: e.target.value })}
                             className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold text-text-primary"
                           >
-                            <option value="">Choose Restaurant Dish (e.g. Veg Burger, Cake)...</option>
-                            {restaurantDishes.map((d) => (
+                            <option value="">Select Free Reward Item...</option>
+                            {availableItems.map((d) => (
                               <option key={d.id} value={d.id}>
-                                {d.name} — ₹{d.price}
+                                [ID: {d.id}] {d.name} — ₹{d.price}
                               </option>
                             ))}
                           </select>
-                          <span className="text-[9px] text-text-muted mt-0.5 block">
-                            This specific dish will be 100% Free when condition is met.
-                          </span>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-black text-text-secondary block mb-1">
-                            Or Free Dish Section / Keyword (Optional)
-                          </label>
                           <input
                             type="text"
-                            placeholder="e.g. burger, sandwich, chocolava"
-                            value={newCoupon.rewardVariant || ''}
-                            onChange={(e) => setNewCoupon({ ...newCoupon, rewardVariant: e.target.value })}
-                            className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold"
+                            placeholder="Or enter Reward ID manually..."
+                            value={newCoupon.defaultFreeDishId || ''}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, defaultFreeDishId: e.target.value.trim() })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-mono font-bold"
                           />
-                          <span className="text-[9px] text-text-muted mt-0.5 block">
-                            If set, any dish matching this section/tag added by customer will be Free.
-                          </span>
                         </div>
+                        <span className="text-[9px] text-text-muted mt-0.5 block">
+                          This specific Item ID will be given 100% Free when qualifying condition is met.
+                        </span>
                       </div>
                     </div>
                   )}
@@ -860,28 +704,32 @@ export function CouponsTab({
                   {/* Variant match inputs if BUY_LARGE_GET_SMALL */}
                   {newCoupon.bogoType === 'BUY_LARGE_GET_SMALL' && (
                     <div className="space-y-3.5 p-4 rounded-2xl bg-background/90 border border-orange-500/20 animate-slide-down">
-                      {newCoupon.restaurantId && (
-                        <div>
-                          <label className="text-[10px] font-black text-text-secondary block mb-1">
-                            1. Trigger Dish (Optional - Specific Dish or Any in Section)
-                          </label>
+                      <div>
+                        <label className="text-[10px] font-black text-text-secondary block mb-1">
+                          1. Trigger Dish (Specific Dish ID)
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <select
                             value={newCoupon.bogoDishId || ''}
-                            onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value })}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value, menuSection: '' })}
                             className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold text-text-primary"
                           >
-                            <option value="">Any Dish from Selected Section(s) (e.g. Any Pizza)</option>
-                            {restaurantDishes.map((d) => (
+                            <option value="">All Qualifying Dishes</option>
+                            {availableItems.map((d) => (
                               <option key={d.id} value={d.id}>
-                                Specific Dish: {d.name} — ₹{d.price}
+                                [ID: {d.id}] {d.name} — ₹{d.price}
                               </option>
                             ))}
                           </select>
-                          <span className="text-[9px] text-text-muted mt-0.5 block">
-                            e.g. Select &quot;Hot Pizza Lover&apos;s Special&quot; or leave empty for all pizzas.
-                          </span>
+                          <input
+                            type="text"
+                            placeholder="Or enter Dish ID manually..."
+                            value={newCoupon.bogoDishId || ''}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value.trim(), menuSection: '' })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-mono font-bold"
+                          />
                         </div>
-                      )}
+                      </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -945,46 +793,62 @@ export function CouponsTab({
                         </div>
                       </div>
 
-                      {newCoupon.restaurantId && (
-                        <div>
-                          <label className="text-[10px] font-black text-text-secondary block mb-1">
-                            Specific Free Reward Dish (Optional)
-                          </label>
+                      <div>
+                        <label className="text-[10px] font-black text-text-secondary block mb-1">
+                          4. Specific Free Reward Dish ID (Optional)
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <select
                             value={newCoupon.defaultFreeDishId || ''}
                             onChange={(e) => setNewCoupon({ ...newCoupon, defaultFreeDishId: e.target.value })}
                             className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold text-text-primary"
                           >
-                            <option value="">Any qualifying small dish in section</option>
-                            {restaurantDishes.map((d) => (
+                            <option value="">Any qualifying small dish</option>
+                            {availableItems.map((d) => (
                               <option key={d.id} value={d.id}>
-                                {d.name} — ₹{d.price}
+                                [ID: {d.id}] {d.name} — ₹{d.price}
                               </option>
                             ))}
                           </select>
+                          <input
+                            type="text"
+                            placeholder="Or enter Reward ID manually..."
+                            value={newCoupon.defaultFreeDishId || ''}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, defaultFreeDishId: e.target.value.trim() })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-mono font-bold"
+                          />
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
 
                   {/* Target Dish if SAME_ITEM */}
-                  {newCoupon.bogoType === 'SAME_ITEM' && newCoupon.restaurantId && (
+                  {newCoupon.bogoType === 'SAME_ITEM' && (
                     <div className="space-y-2 p-3.5 rounded-2xl bg-background/90 border border-orange-500/20 animate-slide-down">
                       <label className="text-[10px] font-black text-text-secondary block mb-1">
-                        Target Dish (Optional - Specific Dish or Any)
+                        Target Dish (Specific Dish ID * ID-wise)
                       </label>
-                      <select
-                        value={newCoupon.bogoDishId || ''}
-                        onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value })}
-                        className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold text-text-primary"
-                      >
-                        <option value="">Any Dish in Restaurant / Selected Sections</option>
-                        {restaurantDishes.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name} — ₹{d.price}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <select
+                          value={newCoupon.bogoDishId || ''}
+                          onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value, menuSection: '' })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold text-text-primary"
+                        >
+                          <option value="">Any item from this outlet</option>
+                          {availableItems.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              [ID: {d.id}] {d.name} — ₹{d.price}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Or enter Dish ID manually..."
+                          value={newCoupon.bogoDishId || ''}
+                          onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value.trim(), menuSection: '' })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-mono font-bold"
+                        />
+                      </div>
                       <span className="text-[9px] text-text-muted mt-0.5 block">
                         Customer gets a second quantity of this exact item for ₹0.
                       </span>
@@ -1360,33 +1224,53 @@ export function CouponsTab({
 
                       {/* Outlet / Target */}
                       <td className="py-3 px-4">
-                        {targetRest ? (
-                          <div className="flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 w-fit">
-                            <Store className="h-3 w-3" />
-                            {targetRest}
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-text-secondary font-medium">
-                            🛒 All Grocery
-                          </span>
-                        )}
+                        <div className="space-y-1">
+                          {targetRest ? (
+                            <div className="flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 w-fit">
+                              <Store className="h-3 w-3" />
+                              {targetRest}
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-text-secondary font-medium">
+                              🛒 All Grocery
+                            </span>
+                          )}
+
+                          {c.bogoDishId ? (
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              <span>🎯 Item ID:</span>
+                              <span className="font-extrabold">{c.bogoDishId}</span>
+                            </div>
+                          ) : (
+                            <span className="block text-[9px] text-text-muted">
+                              (Store-wide)
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Deal Structure */}
                       <td className="py-3 px-4">
                         {c.discountType === 'BOGO' ? (
-                          <div className="space-y-0.5">
+                          <div className="space-y-1">
                             <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30">
                               <Gift className="h-3 w-3" />
                               BOGO DEAL
                             </div>
                             <div className="text-[11px] font-bold text-text-primary">
-                              {c.bogoType === 'BUY_LARGE_GET_SMALL'
+                              {c.bogoType === 'FREE_GIFT'
+                                ? `Buy ${c.triggerVariant || 1} ➔ Get Free Gift Item`
+                                : c.bogoType === 'BUY_LARGE_GET_SMALL'
                                 ? `Buy ${c.triggerVariant || 'Large'} ➔ ${c.rewardVariant || 'Small'} FREE`
                                 : c.bogoType === 'SAME_ITEM'
                                 ? 'Buy 1 Get Same 1 FREE'
                                 : 'Buy 2+, Cheapest Item FREE'}
                             </div>
+                            {c.defaultFreeDishId && (
+                              <div className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                                🎁 Gift ID: {c.defaultFreeDishId}
+                              </div>
+                            )}
                             {c.autoApply && (
                               <span className="inline-block text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
                                 ⚡ Auto-Applies in Cart
@@ -1398,11 +1282,18 @@ export function CouponsTab({
                             <Truck className="h-3 w-3" /> Free Delivery
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1 text-[12px] font-black text-accent">
-                            {c.discountType === 'PERCENT' ? (
-                              <><Percent className="h-3 w-3 text-blue-500" /> {c.value}% OFF</>
-                            ) : (
-                              <><IndianRupee className="h-3 w-3 text-emerald-500" /> ₹{c.value} FLAT</>
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1 text-[12px] font-black text-accent">
+                              {c.discountType === 'PERCENT' ? (
+                                <><Percent className="h-3 w-3 text-blue-500" /> {c.value}% OFF</>
+                              ) : (
+                                <><IndianRupee className="h-3 w-3 text-emerald-500" /> ₹{c.value} FLAT</>
+                              )}
+                            </div>
+                            {c.bogoDishId && (
+                              <div className="text-[9.5px] text-text-muted">
+                                Item ID: <span className="font-mono font-bold text-text-primary">{c.bogoDishId}</span>
+                              </div>
                             )}
                           </div>
                         )}
@@ -1536,6 +1427,59 @@ export function CouponsTab({
                   </select>
                 </div>
 
+                {/* Specific Item / Dish ID restriction (ID-wise) */}
+                <div className="md:col-span-2 p-3 rounded-xl bg-muted/20 border border-border space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-text-primary flex items-center gap-1.5">
+                      <span>🎯 Target Item / Dish (ID-wise Restriction)</span>
+                      {couponEditForm.bogoDishId ? (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-500 text-white font-mono">
+                          ID: {couponEditForm.bogoDishId}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-muted text-text-muted">
+                          Entire Outlet (All Items)
+                        </span>
+                      )}
+                    </label>
+                    {couponEditForm.bogoDishId && (
+                      <button
+                        type="button"
+                        onClick={() => setCouponEditForm({ ...couponEditForm, bogoDishId: '', menuSection: '' })}
+                        className="text-[10px] font-bold text-orange-600 hover:underline"
+                      >
+                        Reset to All Items
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <select
+                      value={couponEditForm.bogoDishId || ''}
+                      onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value, menuSection: '' })}
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
+                    >
+                      <option value="">-- Apply to All Items in Outlet --</option>
+                      {availableItems.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          [ID: {item.id}] {item.name} — ₹{item.price}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Or enter Item / Dish ID manually..."
+                      value={couponEditForm.bogoDishId || ''}
+                      onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value.trim(), menuSection: '' })}
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-mono font-bold"
+                    />
+                  </div>
+                  <p className="text-[9.5px] text-text-muted">
+                    {couponEditForm.bogoDishId
+                      ? `Offer applies strictly to Item ID: "${couponEditForm.bogoDishId}".`
+                      : "Offer applies across all products/dishes from this outlet."}
+                  </p>
+                </div>
+
                 {/* Discount Type */}
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Campaign Type *</label>
@@ -1590,25 +1534,32 @@ export function CouponsTab({
 
                       {couponEditForm.bogoType === 'FREE_GIFT' && (
                         <div className="space-y-3 pt-1">
-                          {couponEditForm.restaurantId && (
-                            <div>
-                              <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                                1. Qualifying Trigger Dish (Optional - Specific Dish or Any in Section)
-                              </label>
+                          <div>
+                            <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                              1. Qualifying Trigger Item (Specific Dish / Product ID) *
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <select
                                 value={couponEditForm.bogoDishId || ''}
-                                onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value })}
+                                onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value, menuSection: '' })}
                                 className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
                               >
-                                <option value="">Any Dish in Selected Section(s) (e.g. Any Pizza)</option>
-                                {restaurantDishes.map((d) => (
+                                <option value="">Select Trigger Item...</option>
+                                {availableItems.map((d) => (
                                   <option key={d.id} value={d.id}>
-                                    Specific Dish: {d.name} — ₹{d.price}
+                                    [ID: {d.id}] {d.name} — ₹{d.price}
                                   </option>
                                 ))}
                               </select>
+                              <input
+                                type="text"
+                                placeholder="Or enter Trigger ID manually..."
+                                value={couponEditForm.bogoDishId || ''}
+                                onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value.trim(), menuSection: '' })}
+                                className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-mono font-bold"
+                              />
                             </div>
-                          )}
+                          </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
@@ -1690,35 +1641,29 @@ export function CouponsTab({
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-border/60">
-                            <div>
-                              <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                                4. Select Free Gift Dish (100% Free 🎁)
-                              </label>
+                          <div className="pt-1 border-t border-border/60">
+                            <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                              4. 🎁 Free Reward Item (Specific Dish / Product ID) *
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <select
                                 value={couponEditForm.defaultFreeDishId || ''}
                                 onChange={(e) => setCouponEditForm({ ...couponEditForm, defaultFreeDishId: e.target.value })}
                                 className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
                               >
-                                <option value="">Choose Restaurant Dish (e.g. Choco Lava Cake)...</option>
-                                {restaurantDishes.map((d) => (
+                                <option value="">Select Free Reward Item...</option>
+                                {availableItems.map((d) => (
                                   <option key={d.id} value={d.id}>
-                                    {d.name} — ₹{d.price}
+                                    [ID: {d.id}] {d.name} — ₹{d.price}
                                   </option>
                                 ))}
                               </select>
-                            </div>
-
-                            <div>
-                              <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                                Or Free Gift Tag / Section (Optional)
-                              </label>
                               <input
                                 type="text"
-                                value={couponEditForm.rewardVariant || ''}
-                                onChange={(e) => setCouponEditForm({ ...couponEditForm, rewardVariant: e.target.value })}
-                                placeholder="e.g. sandwich, chocolava, beverage"
-                                className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
+                                placeholder="Or enter Reward ID manually..."
+                                value={couponEditForm.defaultFreeDishId || ''}
+                                onChange={(e) => setCouponEditForm({ ...couponEditForm, defaultFreeDishId: e.target.value.trim() })}
+                                className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-mono font-bold"
                               />
                             </div>
                           </div>
@@ -1727,25 +1672,32 @@ export function CouponsTab({
 
                       {couponEditForm.bogoType === 'BUY_LARGE_GET_SMALL' && (
                         <div className="space-y-3 pt-1">
-                          {couponEditForm.restaurantId && (
-                            <div>
-                              <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                                1. Trigger Dish (Optional - Specific Dish or Any in Section)
-                              </label>
+                          <div>
+                            <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                              1. Trigger Dish (Specific Dish ID)
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <select
                                 value={couponEditForm.bogoDishId || ''}
-                                onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value })}
+                                onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value, menuSection: '' })}
                                 className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
                               >
-                                <option value="">Any Dish in Selected Section(s) (e.g. Any Pizza)</option>
-                                {restaurantDishes.map((d) => (
+                                <option value="">All Qualifying Dishes</option>
+                                {availableItems.map((d) => (
                                   <option key={d.id} value={d.id}>
-                                    Specific Dish: {d.name} — ₹{d.price}
+                                    [ID: {d.id}] {d.name} — ₹{d.price}
                                   </option>
                                 ))}
                               </select>
+                              <input
+                                type="text"
+                                placeholder="Or enter Dish ID manually..."
+                                value={couponEditForm.bogoDishId || ''}
+                                onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value.trim(), menuSection: '' })}
+                                className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-mono font-bold"
+                              />
                             </div>
-                          )}
+                          </div>
 
                           <div className="grid grid-cols-2 gap-3">
                             <div>
@@ -1770,45 +1722,61 @@ export function CouponsTab({
                             </div>
                           </div>
 
-                          {couponEditForm.restaurantId && (
-                            <div>
-                              <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                                Specific Free Reward Dish (Optional)
-                              </label>
+                          <div>
+                            <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                              4. Specific Free Reward Dish ID (Optional)
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <select
                                 value={couponEditForm.defaultFreeDishId || ''}
                                 onChange={(e) => setCouponEditForm({ ...couponEditForm, defaultFreeDishId: e.target.value })}
                                 className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
                               >
-                                <option value="">Any qualifying small dish in section</option>
-                                {restaurantDishes.map((d) => (
+                                <option value="">Any qualifying small dish</option>
+                                {availableItems.map((d) => (
                                   <option key={d.id} value={d.id}>
-                                    {d.name} — ₹{d.price}
+                                    [ID: {d.id}] {d.name} — ₹{d.price}
                                   </option>
                                 ))}
                               </select>
+                              <input
+                                type="text"
+                                placeholder="Or enter Reward ID manually..."
+                                value={couponEditForm.defaultFreeDishId || ''}
+                                onChange={(e) => setCouponEditForm({ ...couponEditForm, defaultFreeDishId: e.target.value.trim() })}
+                                className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-mono font-bold"
+                              />
                             </div>
-                          )}
+                          </div>
                         </div>
                       )}
 
-                      {couponEditForm.bogoType === 'SAME_ITEM' && couponEditForm.restaurantId && (
+                      {couponEditForm.bogoType === 'SAME_ITEM' && (
                         <div className="space-y-1.5 pt-1">
                           <label className="text-[10px] font-bold text-text-secondary block mb-1">
-                            Target Dish (Optional - Specific Dish or Any)
+                            Target Dish (Specific Dish ID * ID-wise)
                           </label>
-                          <select
-                            value={couponEditForm.bogoDishId || ''}
-                            onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value })}
-                            className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
-                          >
-                            <option value="">Any Dish in Restaurant / Selected Sections</option>
-                            {restaurantDishes.map((d) => (
-                              <option key={d.id} value={d.id}>
-                                {d.name} — ₹{d.price}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select
+                              value={couponEditForm.bogoDishId || ''}
+                              onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value, menuSection: '' })}
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
+                            >
+                              <option value="">Any item from this outlet</option>
+                              {availableItems.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  [ID: {d.id}] {d.name} — ₹{d.price}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              type="text"
+                              placeholder="Or enter Dish ID manually..."
+                              value={couponEditForm.bogoDishId || ''}
+                              onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value.trim(), menuSection: '' })}
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-mono font-bold"
+                            />
+                          </div>
                         </div>
                       )}
 
@@ -1905,16 +1873,6 @@ export function CouponsTab({
                   </select>
                 </div>
 
-                {/* Restricted Restaurant Menu Tag / Section */}
-                {couponEditForm.restaurantId && (
-                  <div className="md:col-span-2">
-                    <MenuSectionMultiSelect
-                      value={couponEditForm.menuSection}
-                      onChange={(val) => setCouponEditForm({ ...couponEditForm, menuSection: val })}
-                      restaurant={restaurants.find((r) => r.id === couponEditForm.restaurantId)}
-                    />
-                  </div>
-                )}
 
                 {/* Restaurant Sync Ribbon Toggle */}
                 {couponEditForm.restaurantId && (

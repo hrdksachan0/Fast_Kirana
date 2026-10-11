@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Dates Box</title>
+<ellipse cx="120" cy="142" rx="92" ry="8" fill="#184E46" opacity=".12"/>
+<path d="M35 73h170l-13 59H48Z" fill="#236F61"/><path d="M35 73h170l-5 17H39Z" fill="#4B9984"/><path d="M49 59h142l11 17H37Z" fill="#D9BA78"/>
+<g fill="#88482A" stroke="#68351F" stroke-width="2"><ellipse cx="69" cy="71" rx="13" ry="20" transform="rotate(-20 69 71)"/><ellipse cx="105" cy="67" rx="14" ry="21" transform="rotate(15 105 67)"/><ellipse cx="142" cy="66" rx="14" ry="21" transform="rotate(-15 142 66)"/><ellipse cx="176" cy="70" rx="12" ry="20" transform="rotate(18 176 70)"/></g>
+<g stroke="#C5834C" stroke-width="2" stroke-linecap="round"><path d="m63 60 10 23m35-30-7 27m35-26 10 24m35-20-7 21"/></g>
+<path d="M67 111h107" stroke="#D9BA78" stroke-width="3" stroke-linecap="round"/>
+</svg>

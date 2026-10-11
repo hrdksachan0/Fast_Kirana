@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Tea Leaves</title>
+<ellipse cx="120" cy="141" rx="92" ry="8" fill="#184E46" opacity=".12"/>
+<rect x="31" y="39" width="77" height="94" rx="8" fill="#236F61"/><rect x="29" y="28" width="81" height="15" rx="4" fill="#D9BA78"/><rect x="45" y="65" width="49" height="45" rx="7" fill="#FFF8DF"/><path d="M56 88c18-26 30-19 25-1-7 16-17 16-25 1Z" fill="#4B9984"/><path d="m59 97 24-24" stroke="#184E46" stroke-width="2"/>
+<path d="M133 82h56v31c0 13-13 21-28 21s-28-8-28-21Z" fill="#E6D3AE"/><path d="M189 91h11c16 0 16 25 0 25h-11" stroke="#B98744" stroke-width="7"/><ellipse cx="161" cy="82" rx="28" ry="7" fill="#88482A"/>
+<path d="M148 68c-12-12 10-18 0-30m22 30c-12-12 10-18 0-30" stroke="#B98744" stroke-width="3" stroke-linecap="round" opacity=".65"/>
+</svg>

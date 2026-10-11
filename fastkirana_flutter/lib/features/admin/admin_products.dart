@@ -519,29 +519,44 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
 
   Future<void> _updateProductStock(Product p, int newStock) async {
     final clampedStock = math.max(0, newStock);
+    final currentHub = ref.read(currentStoreHubProvider);
+    final targetAvail = clampedStock > 0 ? (_localAvailability[p.id] ?? p.isAvailable) : false;
+
     HapticFeedback.selectionClick();
     setState(() {
       _localStock[p.id] = clampedStock;
+      if (clampedStock == 0) {
+        _localAvailability[p.id] = false;
+      }
     });
 
     final sb = SupabaseService.client;
     if (sb != null) {
       try {
-        await sb.from('products').update({
+        if (currentHub.id == 'hub-209206') {
+          await sb.from('products').update({
+            'stock': clampedStock,
+            'isAvailable': targetAvail,
+            'updatedAt': DateTime.now().toIso8601String(),
+          }).eq('id', p.id);
+        }
+        await sb.from('store_inventories').upsert({
+          'productId': p.id,
+          'storeId': currentHub.id,
           'stock': clampedStock,
-          'isAvailable': clampedStock > 0 ? (_localAvailability[p.id] ?? p.isAvailable) : false,
+          'isAvailable': targetAvail,
           'updatedAt': DateTime.now().toIso8601String(),
-        }).eq('id', p.id);
+        }, onConflict: 'productId,storeId');
       } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
     }
 
-    final currentHub = ref.read(currentStoreHubProvider);
     try {
       await ref.read(dioProvider).patch(
         '/api/products/${p.id}',
         data: {
           'stock': clampedStock,
           'storeId': currentHub.id,
+          'isAvailable': targetAvail,
         },
         options: AdminAuthorization.withStaffAuth(Options()),
       );
@@ -979,17 +994,29 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                           _localAvailability[p.id] = val;
                         });
 
+                        final currentHub = ref.read(currentStoreHubProvider);
                         final sb = SupabaseService.client;
                         if (sb != null) {
                           try {
-                            await sb.from('products').update({'isAvailable': val}).eq('id', p.id);
+                            if (currentHub.id == 'hub-209206') {
+                              await sb.from('products').update({'isAvailable': val}).eq('id', p.id);
+                            }
+                            await sb.from('store_inventories').upsert({
+                              'productId': p.id,
+                              'storeId': currentHub.id,
+                              'isAvailable': val,
+                              'updatedAt': DateTime.now().toIso8601String(),
+                            }, onConflict: 'productId,storeId');
                           } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
                         }
 
                         try {
                           await ref.read(dioProvider).patch(
                             '/api/products/${p.id}',
-                            data: {'isAvailable': val},
+                            data: {
+                              'isAvailable': val,
+                              'storeId': currentHub.id,
+                            },
                             options: AdminAuthorization.withStaffAuth(Options()),
                           );
                         } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
@@ -1231,6 +1258,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
     setState(() => _isSaving = true);
     HapticFeedback.heavyImpact();
 
+    final currentHub = ref.read(currentStoreHubProvider);
     try {
       final payload = {
         'name': name,
@@ -1239,6 +1267,7 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
         'mrp': mrp > price ? mrp : price,
         'stock': stock,
         'isAvailable': _isAvailable,
+        'storeId': currentHub.id,
         'is_flash_deal': _isFlashDeal,
         'is_best_seller': _isBestSeller,
         'is_top_pick': _isTopPick,
@@ -1250,10 +1279,29 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
       final sb = SupabaseService.client;
       if (sb != null) {
         try {
-          await sb.from('products').update({
-            ...payload,
-            'updatedAt': DateTime.now().toIso8601String(),
-          }).eq('id', widget.product.id);
+          if (currentHub.id == 'hub-209206') {
+            await sb.from('products').update({
+              ...payload,
+              'updatedAt': DateTime.now().toIso8601String(),
+            }).eq('id', widget.product.id);
+          } else {
+            await sb.from('products').update({
+              'name': name,
+              'unit': unit,
+              'price': price,
+              'mrp': mrp > price ? mrp : price,
+              'tags': tagsList,
+              'variants': variantsJson.isNotEmpty ? variantsJson : null,
+              'updatedAt': DateTime.now().toIso8601String(),
+            }).eq('id', widget.product.id);
+            await sb.from('store_inventories').upsert({
+              'productId': widget.product.id,
+              'storeId': currentHub.id,
+              'stock': stock,
+              'isAvailable': _isAvailable,
+              'updatedAt': DateTime.now().toIso8601String(),
+            }, onConflict: 'productId,storeId');
+          }
         } catch (e, _) { LoggerService.error('AdminProducts: product parse', e); }
       }
 

@@ -37,7 +37,8 @@ class MainShell extends ConsumerStatefulWidget {
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserver {
+class _MainShellState extends ConsumerState<MainShell>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -47,7 +48,9 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       if (!kIsWeb) {
         try {
           NotificationService().registerDeviceToken(ref.read(dioProvider));
-        } catch (e, _) { LoggerService.error('MainShell: _reRegisterPendingToken', e); }
+        } catch (e, _) {
+          LoggerService.error('MainShell: _reRegisterPendingToken', e);
+        }
 
         // Automatically detect device GPS and set nearest store hub on launch
         LocationService.bootstrapUserLocation(ref);
@@ -70,7 +73,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
 
       // Auto-refresh banners & catalog silently if app has been in background for > 30s
       final now = DateTime.now();
-      if (_lastResumeRefresh == null || now.difference(_lastResumeRefresh!).inSeconds > 30) {
+      if (_lastResumeRefresh == null ||
+          now.difference(_lastResumeRefresh!).inSeconds > 30) {
         _lastResumeRefresh = now;
         BannerRepository.invalidateCache();
         ref.invalidate(bannersProvider('grocery'));
@@ -93,7 +97,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       if (authToken == null) return;
 
       final dio = ref.read(dioProvider);
-      final deviceType = Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'web');
+      final deviceType =
+          Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'web');
       final response = await dio.post(
         '/api/fcm/register',
         data: {'token': pending, 'deviceType': deviceType},
@@ -101,7 +106,9 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       if (response.statusCode == 200) {
         await prefs.remove('pending_fcm_token');
       }
-    } catch (e, _) { LoggerService.error('MainShell: _reRegisterPendingToken', e); }
+    } catch (e, _) {
+      LoggerService.error('MainShell: _reRegisterPendingToken', e);
+    }
   }
 
   @override
@@ -123,16 +130,12 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
         (user?.phone ?? '').contains('9170942500') ||
         role == 'ADMIN');
     final isAdmin = isMasterAdmin;
-    final isRiderOnly = !isAdmin && !isCustomerMode && (
-      role == 'RIDER' ||
-      role == 'DELIVERY' ||
-      role == 'DELIVERY_PARTNER'
-    );
-    final isChefOrOwnerOnly = !isAdmin && !isCustomerMode && (
-      role == 'CHEF' ||
-      role == 'RESTAURANT_OWNER' ||
-      role == 'RESTAURANT'
-    );
+    final isRiderOnly = !isAdmin &&
+        !isCustomerMode &&
+        (role == 'RIDER' || role == 'DELIVERY' || role == 'DELIVERY_PARTNER');
+    final isChefOrOwnerOnly = !isAdmin &&
+        !isCustomerMode &&
+        (role == 'CHEF' || role == 'RESTAURANT_OWNER' || role == 'RESTAURANT');
     final isPickerOnly = !isAdmin && !isCustomerMode && (role == 'PICKER');
 
     // ─── STAFF DEDICATED CONSOLES ───────────────────────────
@@ -160,11 +163,13 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     ];
 
     final cart = ref.watch(cartProvider).valueOrNull;
-    final cartCount = cart?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0;
+    final cartCount =
+        cart?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0;
 
     final showCart = selectedIndex != 3 && cartCount > 0;
     const cartBottomOffset = 10.0;
-    final trackingBottomOffset = showCart ? (cartBottomOffset + 76.0) : cartBottomOffset;
+    final trackingBottomOffset =
+        showCart ? (cartBottomOffset + 76.0) : cartBottomOffset;
 
     return PopScope(
       canPop: false,
@@ -181,19 +186,22 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
 
         // On Home tab -> require double back press to exit app
         final now = DateTime.now();
-        if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+        if (_lastBackPressTime == null ||
+            now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
           _lastBackPressTime = now;
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text(
                 'Press back again to exit FastKirana',
-                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                style:
+                    TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
               ),
               duration: const Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
               backgroundColor: AppDesignSystem.slate800,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
           );
           return;
@@ -211,7 +219,13 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
             children: [
               IndexedStack(
                 index: selectedIndex,
-                children: screens,
+                children: [
+                  for (var index = 0; index < screens.length; index++)
+                    TickerMode(
+                      enabled: index == selectedIndex,
+                      child: screens[index],
+                    ),
+                ],
               ),
 
               // Floating Order Tracking Pill (Stacked cleanly above Floating Cart)
@@ -228,7 +242,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildLiquidBottomNav(BuildContext context, WidgetRef ref, int selectedIndex) {
+  Widget _buildLiquidBottomNav(
+      BuildContext context, WidgetRef ref, int selectedIndex) {
     final navItems = [
       {
         'label': 'Home',
@@ -307,7 +322,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                         child: InkWell(
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            ref.read(selectedTabProvider.notifier).state = index;
+                            ref.read(selectedTabProvider.notifier).state =
+                                index;
                           },
                           splashColor: Colors.transparent,
                           highlightColor: Colors.transparent,
@@ -320,18 +336,27 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                                   scale: isSelected ? 1.08 : 1.0,
                                   duration: const Duration(milliseconds: 200),
                                   child: Icon(
-                                    (isSelected ? item['activeIcon'] : item['inactiveIcon']) as IconData,
+                                    (isSelected
+                                        ? item['activeIcon']
+                                        : item['inactiveIcon']) as IconData,
                                     size: 21,
-                                    color: isSelected ? AppDesignSystem.red600 : AppDesignSystem.slate400,
+                                    color: isSelected
+                                        ? AppDesignSystem.red600
+                                        : AppDesignSystem.slate400,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   item['label'] as String,
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                                    color: isSelected ? AppDesignSystem.red600 : AppDesignSystem.slate400,
+                                    fontSize:
+                                        Responsive.scaledFontSize(context, 9.5),
+                                    fontWeight: isSelected
+                                        ? FontWeight.w900
+                                        : FontWeight.w600,
+                                    color: isSelected
+                                        ? AppDesignSystem.red600
+                                        : AppDesignSystem.slate400,
                                     letterSpacing: -0.2,
                                   ),
                                 ),

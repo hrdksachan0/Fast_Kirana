@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Rice Bag</title>
+<ellipse cx="120" cy="141" rx="76" ry="8" fill="#264D37" opacity=".12"/>
+<path d="M75 27h91l13 99c1 10-119 10-118 0Z" fill="#D9B575"/><path d="M75 27h91l2 14H73Z" fill="#4E8060"/><path d="M63 117h114l2 10c1 10-119 10-118 0Z" fill="#4E8060"/>
+<rect x="83" y="54" width="76" height="51" rx="9" fill="#FFF8DF"/><path d="M94 89h54c-3 12-14 17-27 17s-24-5-27-17Z" fill="#64876B"/>
+<g stroke="#D9B575" stroke-width="3" stroke-linecap="round"><path d="m101 79 6-3m10 4 5-3m11 3 6-3m-29-6 5-3m10 2 5-3"/></g>
+</svg>

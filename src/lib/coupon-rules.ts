@@ -35,15 +35,15 @@ export function isProductEligibleForCoupon(product: any, coupon: CouponRuleTarge
   // Check restaurant match
   if (coupon.restaurantId) {
     const pRestId = product.restaurantId || product.restaurant?.id || (product as any).restaurant_id
-    if (pRestId && pRestId !== coupon.restaurantId) {
+    if (pRestId !== coupon.restaurantId) {
       return false
     }
   }
 
   // 1. Specific Dish ID restriction
   if (coupon.bogoDishId) {
-    const pId = String(product.id || product.productId || '').split('_')[0]
-    return pId === coupon.bogoDishId
+    const pId = String(product.id || product.productId || '').split('_')[0].trim()
+    return pId === coupon.bogoDishId.trim()
   }
 
   // 2. Specific Category ID restriction

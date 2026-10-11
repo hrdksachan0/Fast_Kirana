@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" fill="none">
+<title>Ramadan crescent, lantern and dates</title>
+<path d="M82 32a46 46 0 1 0 45 63A40 40 0 0 1 82 32Z" fill="#E6C989"/>
+<path d="M206 15v22" stroke="#E6C989" stroke-width="3"/><path d="M196 38h20l17 24h-54Z" fill="#E6C989"/><path d="M179 65h54v74h-54Z" fill="#D9BA78"/><path d="M190 69h32v64h-32Z" fill="#FFF6DD"/><path d="M206 74v54m-17-31h34" stroke="#D9BA78" stroke-width="3"/><path d="M176 141h60l-17 15h-26Z" fill="#E6C989"/>
+<path d="M97 151h121c-7 29-25 37-60 37s-54-8-61-37Z" fill="#D9BA78"/><ellipse cx="158" cy="151" rx="61" ry="12" fill="#FFF6DD"/>
+<g fill="#88482A"><ellipse cx="125" cy="149" rx="10" ry="15" transform="rotate(-20 125 149)"/><ellipse cx="153" cy="147" rx="10" ry="16" transform="rotate(15 153 147)"/><ellipse cx="183" cy="149" rx="10" ry="15" transform="rotate(-15 183 149)"/></g>
+<g fill="#E6C989"><path d="m160 35 3 8 8 3-8 3-3 8-3-8-8-3 8-3Zm115 51 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"/><circle cx="52" cy="145" r="3"/><circle cx="261" cy="161" r="3"/><circle cx="147" cy="20" r="3"/></g>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Lemons</title>
+<ellipse cx="120" cy="141" rx="89" ry="8" fill="#21595A" opacity=".12"/>
+<path d="M40 76c2-24 43-45 65-18l10 11-9 11c-3 28-48 37-63 17l-10-7Z" fill="#E7BC39"/><path d="M62 47c12-28 24-22 32-6-12 15-23 17-32 6Z" fill="#647A41"/>
+<circle cx="156" cy="95" r="40" fill="#E7BC39"/><circle cx="156" cy="95" r="33" fill="#FFF8DF"/><circle cx="156" cy="95" r="28" fill="#F2D874"/>
+<path d="M156 66v58m-28-29h56m-48-20 40 40m-40 0 40-40" stroke="#FFF8DF" stroke-width="3"/><circle cx="156" cy="95" r="5" fill="#FFF8DF"/>
+</svg>

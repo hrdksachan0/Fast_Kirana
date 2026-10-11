@@ -44,6 +44,74 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     AdminRidersScreen(showAppBar: false),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _bindAssignedHubIfStoreManager();
+    });
+  }
+
+  void _bindAssignedHubIfStoreManager() {
+    final user = ref.read(currentUserProvider);
+    if (user != null && user.isStoreManager) {
+      final hubs = ref.read(activeStoreHubsProvider).valueOrNull ?? StoreHub.defaultHubs;
+      final assignedHub = hubs.cast<StoreHub?>().firstWhere(
+        (h) => h?.id == user.assignedStoreId,
+        orElse: () => null,
+      );
+      if (assignedHub != null) {
+        _switchToHub(assignedHub, showToast: false);
+      }
+    }
+  }
+
+  void _switchToHub(StoreHub hub, {bool showToast = true}) {
+    ref.read(selectedAddressProvider.notifier).state = Address(
+      id: 'admin_hub_${hub.id}',
+      userId: 'admin',
+      label: hub.name,
+      houseNo: 'Store Hub',
+      street: hub.name,
+      area: hub.city,
+      city: hub.city,
+      pincode: hub.id.contains('224122') ? '224122' : (hub.id.contains('816107') ? '816107' : '209206'),
+      latitude: hub.latitude,
+      longitude: hub.longitude,
+      isDefault: true,
+    );
+    AppConfig.updateDarkstore(
+      lat: hub.latitude,
+      lng: hub.longitude,
+      address: '${hub.name}, ${hub.city}',
+      id: hub.id,
+    );
+    ProductRepository.invalidateHubCache(hub.id);
+    ref.invalidate(homeProductCatalogProvider);
+    ref.invalidate(productsProvider(null));
+    ref.invalidate(hubAvailabilityProvider);
+
+    if (showToast && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF10B981),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Switched to ${hub.name} (${hub.city})',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   Future<void> _handleLogout() async {
     final shouldLogout = await AppConfirmationDialog.showLogout(
       context: context,
@@ -72,6 +140,31 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
   }
 
   void _openStoreHubPickerModal(BuildContext context, List<StoreHub> hubs, StoreHub currentHub) {
+    final user = ref.read(currentUserProvider);
+    if (user != null && user.isStoreManager) {
+      HapticFeedback.lightImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF1E293B),
+          content: Row(
+            children: [
+              const Icon(Icons.lock_rounded, color: Color(0xFF38BDF8), size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Store managers are restricted to their assigned hub: ${currentHub.name} (${currentHub.city})',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
@@ -126,47 +219,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                   onTap: () {
                     HapticFeedback.selectionClick();
                     Navigator.pop(ctx);
-                    ref.read(selectedAddressProvider.notifier).state = Address(
-                      id: 'admin_hub_${hub.id}',
-                      userId: 'admin',
-                      label: hub.name,
-                      houseNo: 'Store Hub',
-                      street: hub.name,
-                      area: hub.city,
-                      city: hub.city,
-                      pincode: hub.id.contains('224122') ? '224122' : (hub.id.contains('816107') ? '816107' : '209206'),
-                      latitude: hub.latitude,
-                      longitude: hub.longitude,
-                      isDefault: true,
-                    );
-                    AppConfig.updateDarkstore(
-                      lat: hub.latitude,
-                      lng: hub.longitude,
-                      address: '${hub.name}, ${hub.city}',
-                      id: hub.id,
-                    );
-                    ProductRepository.invalidateHubCache(hub.id);
-                    ref.invalidate(homeProductCatalogProvider);
-                    ref.invalidate(productsProvider(null));
-                    ref.invalidate(hubAvailabilityProvider);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: const Color(0xFF10B981),
-                        content: Row(
-                          children: [
-                            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Switched to ${hub.name} (${hub.city})',
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ),
-                        behavior: SnackBarBehavior.floating,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
+                    _switchToHub(hub);
                   },
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
@@ -247,6 +300,8 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     final hubsAsync = ref.watch(activeStoreHubsProvider);
     final activeHubs = hubsAsync.valueOrNull ?? StoreHub.defaultHubs;
     final currentHub = ref.watch(currentStoreHubProvider);
+    final user = ref.watch(currentUserProvider);
+    final isStoreManager = user?.isStoreManager ?? false;
     final storeSettings = ref.watch(storeSettingsProvider).valueOrNull;
     final isStoreOpen = storeSettings != null ? (storeSettings.groceryMartOpen || storeSettings.restaurantOpen) : true;
 
@@ -327,13 +382,41 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                         const SizedBox(height: 2),
                         // Interactive Store Hub Selector
                         GestureDetector(
-                          onTap: () => _openStoreHubPickerModal(context, activeHubs, currentHub),
+                          onTap: () {
+                            if (isStoreManager) {
+                              HapticFeedback.lightImpact();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: const Color(0xFF1E293B),
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.lock_rounded, color: Color(0xFF38BDF8), size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Store managers are locked to assigned hub: ${currentHub.name} (${currentHub.city})',
+                                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 12),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                              return;
+                            }
+                            _openStoreHubPickerModal(context, activeHubs, currentHub);
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: const Color(0xFF1E293B),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFF334155), width: 0.8),
+                              border: Border.all(
+                                color: isStoreManager ? const Color(0xFF38BDF8).withValues(alpha: 0.5) : const Color(0xFF334155),
+                                width: 0.8,
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -351,7 +434,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
-                                  '${currentHub.city} · Live',
+                                  isStoreManager ? '${currentHub.city} · Assigned' : '${currentHub.city} · Live',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 10),
                                     fontWeight: FontWeight.w700,
@@ -359,7 +442,11 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                                   ),
                                 ),
                                 const SizedBox(width: 3),
-                                const Icon(Icons.arrow_drop_down_rounded, size: 14, color: Color(0xFF94A3B8)),
+                                Icon(
+                                  isStoreManager ? Icons.lock_rounded : Icons.arrow_drop_down_rounded,
+                                  size: isStoreManager ? 11 : 14,
+                                  color: isStoreManager ? const Color(0xFF38BDF8) : const Color(0xFF94A3B8),
+                                ),
                               ],
                             ),
                           ),
@@ -645,20 +732,32 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
     HapticFeedback.selectionClick();
     setState(() => _martOpen = val);
 
+    final currentHub = ref.read(currentStoreHubProvider);
     final sb = SupabaseService.client;
     if (sb != null) {
       try {
         await sb.from('store_settings').upsert({
-          'key': 'grocery_mart_open',
+          'key': 'store:${currentHub.id}:grocery_mart_open',
           'value': val.toString(),
           'updated_at': DateTime.now().toIso8601String(),
         });
+        if (currentHub.id == 'hub-209206') {
+          await sb.from('store_settings').upsert({
+            'key': 'grocery_mart_open',
+            'value': val.toString(),
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        }
+        await sb.from('dark_stores').update({
+          'groceryOpen': val,
+        }).eq('id', currentHub.id);
       } catch (_) {}
     }
 
     try {
-      await ref.read(dioProvider).post('/api/admin/store-status', data: {
-        'groceryMartOpen': val,
+      await ref.read(dioProvider).post('/api/admin/settings', data: {
+        'storeId': currentHub.id,
+        'grocery_mart_open': val.toString(),
       });
     } catch (_) {}
 
@@ -696,7 +795,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
         'isOpen': val,
       });
       if (val) {
-        await ref.read(dioProvider).post('/api/admin/store-status', data: {
+        await ref.read(dioProvider).post('/api/admin/settings', data: {
           'restaurantOpen': true,
           'cafeOpen': true,
         });
@@ -708,12 +807,25 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
   }
 
   Future<void> _updateMaster(bool val) async {
+    final user = ref.read(currentUserProvider);
+    if (user != null && user.isStoreManager) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Only Super Admin HQ can toggle the emergency master switch across all hubs.'),
+          backgroundColor: Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     HapticFeedback.heavyImpact();
     setState(() {
       _masterOpen = val;
       _martOpen = val;
     });
 
+    final currentHub = ref.read(currentStoreHubProvider);
     final sb = SupabaseService.client;
     if (sb != null) {
       try {
@@ -727,13 +839,22 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
           'value': val.toString(),
           'updated_at': DateTime.now().toIso8601String(),
         });
+        await sb.from('store_settings').upsert({
+          'key': 'store:${currentHub.id}:grocery_mart_open',
+          'value': val.toString(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+        await sb.from('dark_stores').update({
+          'groceryOpen': val,
+        }).eq('id', currentHub.id);
       } catch (_) {}
     }
 
     try {
-      await ref.read(dioProvider).post('/api/admin/store-status', data: {
-        'isOpen': val,
-        'groceryMartOpen': val,
+      await ref.read(dioProvider).post('/api/admin/settings', data: {
+        'storeId': currentHub.id,
+        'global_store_open': val.toString(),
+        'grocery_mart_open': val.toString(),
       });
     } catch (_) {}
 
@@ -744,6 +865,9 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
   @override
   Widget build(BuildContext context) {
     final restaurantsAsync = ref.watch(restaurantsProvider);
+    final currentHub = ref.watch(currentStoreHubProvider);
+    final user = ref.watch(currentUserProvider);
+    final isStoreManager = user?.isStoreManager ?? false;
 
     return Container(
       padding: EdgeInsets.only(
@@ -823,10 +947,14 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: _masterOpen ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                      color: isStoreManager
+                          ? const Color(0xFFF1F5F9)
+                          : (_masterOpen ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2)),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: _masterOpen ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
+                        color: isStoreManager
+                            ? const Color(0xFFCBD5E1)
+                            : (_masterOpen ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA)),
                         width: 1.2,
                       ),
                     ),
@@ -835,12 +963,18 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _masterOpen ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                            color: isStoreManager
+                                ? const Color(0xFFE2E8F0)
+                                : (_masterOpen ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2)),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            _masterOpen ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                            color: _masterOpen ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                            isStoreManager
+                                ? Icons.lock_rounded
+                                : (_masterOpen ? Icons.check_circle_rounded : Icons.cancel_rounded),
+                            color: isStoreManager
+                                ? const Color(0xFF64748B)
+                                : (_masterOpen ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
                             size: 22,
                           ),
                         ),
@@ -849,33 +983,61 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                '🚨 Master Hub Switch',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 14),
-                                  fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF0F172A),
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    '🚨 Master Hub Switch',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 14),
+                                      fontWeight: FontWeight.w900,
+                                      color: isStoreManager ? const Color(0xFF64748B) : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  if (isStoreManager) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE2E8F0),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        'Super Admin 🔒',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF475569),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _masterOpen
-                                    ? 'All customer ordering is active'
-                                    : 'Emergency: Entire store & all outlets paused',
+                                isStoreManager
+                                    ? 'Platform-wide emergency switch is restricted to Super Admin HQ'
+                                    : (_masterOpen
+                                        ? 'All customer ordering is active'
+                                        : 'Emergency: Entire store & all outlets paused'),
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w600,
-                                  color: _masterOpen ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
+                                  color: isStoreManager
+                                      ? const Color(0xFF64748B)
+                                      : (_masterOpen ? const Color(0xFF15803D) : const Color(0xFFB91C1C)),
                                 ),
                               ),
                             ],
                           ),
                         ),
                         Switch(
-                          value: _masterOpen,
+                          value: isStoreManager ? false : _masterOpen,
                           activeThumbColor: const Color(0xFF16A34A),
                           activeTrackColor: const Color(0xFFDCFCE7),
-                          onChanged: _updateMaster,
+                          inactiveThumbColor: const Color(0xFF94A3B8),
+                          inactiveTrackColor: const Color(0xFFE2E8F0),
+                          onChanged: isStoreManager ? null : _updateMaster,
                         ),
                       ],
                     ),
@@ -897,8 +1059,8 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
 
                   // 2. FastKirana Grocery Mart
                   _buildOutletTile(
-                    title: 'FastKirana Mart',
-                    subtitle: 'Kirana, dairy, daily essentials delivery',
+                    title: 'FastKirana Mart (${currentHub.city})',
+                    subtitle: 'Kirana, dairy, daily essentials delivery · ${currentHub.name}',
                     icon: Icons.shopping_basket_rounded,
                     iconColor: const Color(0xFF0284C7),
                     bgColor: const Color(0xFFF0F9FF),
@@ -909,8 +1071,8 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                       StoreServiceabilitySheet.show(
                         context,
                         targetType: 'HUB',
-                        targetId: 'default',
-                        storeName: 'FastKirana Mart',
+                        targetId: currentHub.id,
+                        storeName: 'FastKirana Mart (${currentHub.city})',
                         currentIsOpen: _martOpen,
                         dio: ref.read(dioProvider),
                         onStatusChanged: (isOpen, pauseUntil) {
@@ -934,20 +1096,29 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                   ),
                   const SizedBox(height: 8),
 
-                  // 4. Dynamic Restaurant Outlets (Wedson, A.S., Bal Udyan, etc.)
+                  // 4. Dynamic Restaurant Outlets
                   restaurantsAsync.when(
                     data: (restaurants) {
-                      if (restaurants.isEmpty) {
+                      final hubRestaurants = restaurants.where((r) {
+                        if (r.city != null && r.city!.isNotEmpty) {
+                          final c = r.city!.toLowerCase().trim();
+                          final hc = currentHub.city.toLowerCase().trim();
+                          return c.contains(hc) || hc.contains(c);
+                        }
+                        return currentHub.id == 'hub-209206';
+                      }).toList();
+
+                      if (hubRestaurants.isEmpty) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Text(
-                            'No restaurants configured',
+                            'No restaurants configured for ${currentHub.name}',
                             style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: const Color(0xFF94A3B8)),
                           ),
                         );
                       }
                       return Column(
-                        children: restaurants.map((rest) {
+                        children: hubRestaurants.map((rest) {
                           final isOpen = _outletsOpen[rest.id] ?? rest.isOpen;
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),

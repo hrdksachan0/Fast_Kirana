@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Rangoli Colour Kit</title>
+<ellipse cx="120" cy="139" rx="92" ry="8" fill="#713D21" opacity=".12"/>
+<g stroke="#A36A38" stroke-width="2"><path d="M35 36h51l7 82H28Z" fill="#E9B745"/><path d="M97 24h50l8 94H89Z" fill="#CE5552"/><path d="M158 37h50l8 81h-66Z" fill="#648568"/></g>
+<g fill="#FFF8DF"><rect x="41" y="62" width="39" height="27" rx="6"/><rect x="103" y="56" width="38" height="28" rx="6"/><rect x="164" y="62" width="38" height="27" rx="6"/></g>
+<circle cx="61" cy="76" r="8" fill="#E9B745"/><circle cx="122" cy="70" r="8" fill="#CE5552"/><circle cx="183" cy="76" r="8" fill="#648568"/>
+<path d="m79 138 16-12 25 10 25-10 16 12" fill="#CE5552"/><path d="M120 136c-21-14-15-26 0-32 15 6 21 18 0 32Z" fill="#E9B745"/><circle cx="120" cy="135" r="5" fill="#648568"/>
+</svg>

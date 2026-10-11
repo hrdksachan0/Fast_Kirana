@@ -1075,15 +1075,30 @@ async def create_order(
                     eligible_subtotal = combined_subtotal
                     meets_min_order = True
 
-                    if coupon.categoryId:
-                        cat_items = [i for i in items if next((p.categoryId for p in db_products if p.id == i["product"]["id"].split("_")[0]), None) == coupon.categoryId]
+                    rest_items = []
+                    if coupon.restaurantId:
+                        rest_items = [
+                            i for i in items
+                            if next((p.restaurantId for p in db_products if p.id == (i.get("product") or {}).get("id", "").split("_")[0]), None) == coupon.restaurantId
+                        ]
+
+                    if coupon.bogoDishId:
+                        target_dish = coupon.bogoDishId.strip()
+                        pool = rest_items if coupon.restaurantId else items
+                        id_items = [i for i in pool if (i.get("product") or {}).get("id", "").split("_")[0].strip() == target_dish]
+                        id_subtotal = sum(float(i.get("price", 0.0)) * int(i.get("quantity", 1)) for i in id_items)
+                        if id_subtotal == 0 or id_subtotal < coupon.minOrder:
+                            meets_min_order = False
+                        eligible_subtotal = id_subtotal
+
+                    elif coupon.categoryId:
+                        cat_items = [i for i in items if next((p.categoryId for p in db_products if p.id == (i.get("product") or {}).get("id", "").split("_")[0]), None) == coupon.categoryId]
                         cat_subtotal = sum(float(i.get("price", 0.0)) * int(i.get("quantity", 1)) for i in cat_items)
                         if cat_subtotal == 0 or cat_subtotal < coupon.minOrder:
                             meets_min_order = False
                         eligible_subtotal = cat_subtotal
                     
                     elif coupon.restaurantId:
-                        rest_items = [i for i in items if next((p.restaurantId for p in db_products if p.id == i["product"]["id"].split("_")[0]), None) == coupon.restaurantId]
                         rest_subtotal = sum(float(i.get("price", 0.0)) * int(i.get("quantity", 1)) for i in rest_items)
                         if rest_subtotal == 0 or rest_subtotal < coupon.minOrder:
                             meets_min_order = False
@@ -1098,9 +1113,10 @@ async def create_order(
                         if coupon.discountType == "BOGO":
                             bogo_items = rest_items if coupon.restaurantId else items
                             if coupon.bogoDishId:
+                                target_dish = coupon.bogoDishId.strip()
                                 bogo_items = [
                                     it for it in bogo_items
-                                    if it["product"]["id"].split("_")[0] == coupon.bogoDishId
+                                    if (it.get("product") or {}).get("id", "").split("_")[0].strip() == target_dish
                                 ]
                             elif coupon.menuSection:
                                 sec_filters = [s.strip().lower() for s in coupon.menuSection.split(",") if s.strip()]
@@ -1231,15 +1247,24 @@ async def create_order(
                             elif coupon.bogoType == "SAME_ITEM" or not coupon.bogoType:
                                 eligible = bogo_items
                                 if coupon.bogoDishId:
-                                    eligible = [it for it in bogo_items if it["product"]["id"].split("_")[0] == coupon.bogoDishId]
+                                    target_dish = coupon.bogoDishId.strip()
+                                    eligible = [
+                                        it for it in bogo_items
+                                        if (it.get("product") or {}).get("id", "").split("_")[0].strip() == target_dish
+                                    ]
                                 max_free_cap = getattr(coupon, "maxFreeItems", 3) or 3
+                                rem_free_cap = max_free_cap
                                 for it in eligible:
                                     qty = int(it.get("quantity", 1))
                                     if qty >= 2:
-                                        pairs = min(qty // 2, max_free_cap)
-                                        base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
-                                        price = float(it.get("price", base_p.price if base_p else 0.0))
-                                        combined_discount += pairs * price
+                                        pairs = min(qty // 2, rem_free_cap)
+                                        if pairs > 0:
+                                            base_p = next((p for p in db_products if p.id == (it.get("product") or {}).get("id", "").split("_")[0]), None)
+                                            price = float(it.get("price", base_p.price if base_p else 0.0))
+                                            combined_discount += pairs * price
+                                            rem_free_cap -= pairs
+                                            if rem_free_cap <= 0:
+                                                break
                                 if coupon.maxDiscount and combined_discount > coupon.maxDiscount:
                                     combined_discount = coupon.maxDiscount
                         elif coupon.discountType == "FREE_DELIVERY":

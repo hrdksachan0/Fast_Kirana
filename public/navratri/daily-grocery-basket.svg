@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" fill="none">
+<title>An everyday grocery basket</title>
+<path d="M91 96V62c0-54 138-54 138 0v34" stroke="#FFF8DF" stroke-width="8" stroke-linecap="round"/>
+<path d="M65 103h203l-24 78H89Z" fill="#C8934D"/><path d="M65 103h203" stroke="#E6BD7B" stroke-width="9" stroke-linecap="round"/>
+<path d="M106 74 118 40h37l14 34v41h-63Z" fill="#DAEEE3"/><path d="M107 78h62v24h-62Z" fill="#4E8060"/><path d="M118 40v34h-12m12 0h51" stroke="#4E8060" stroke-width="2"/>
+<path d="m174 100 29-63 24 70Z" fill="#E89532"/><path d="m204 39-2-21m3 21 14-18m-16 18-13-16" stroke="#264D37" stroke-width="4" stroke-linecap="round"/>
+<path d="M66 84c-9-22 15-48 39-34l-7 50H72Z" fill="#E8BB78"/><path d="m74 67 18 4m-21 9 18 4" stroke="#C98D44" stroke-width="4" stroke-linecap="round"/>
+<circle cx="217" cy="107" r="24" fill="#C95D43"/><path d="m212 80 5 12 13-9-7 13 8 7-15-1-6 11-1-14-12-5 14-3Z" fill="#264D37"/>
+<path d="M95 126h141m-134 18h127m-118 18h107" stroke="#E6BD7B" stroke-width="4" stroke-linecap="round"/>
+</svg>

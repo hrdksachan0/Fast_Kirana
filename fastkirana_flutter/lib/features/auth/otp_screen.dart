@@ -40,10 +40,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
   String? _clipboardOtp;
 
   static const Color primaryRed = Color(0xFFE20A22);
-  static const Color primaryRedLight = Color(0xFFDC2626);
   static const Color slateDark = Color(0xFF0F172A);
   static const Color slateMuted = Color(0xFF64748B);
-  static const Color slateLight = Color(0xFF94A3B8);
 
   @override
   void initState() {
@@ -250,13 +248,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
             await SecureStorage.write('user_data', jsonEncode(user.toJson()));
             await ref.read(authProvider.notifier).setUser(user);
 
-            // Send to backend (now equipped with valid Auth header!)
-            try {
-              await authRepo.updateName(validName);
-              debugPrint('Name saved on backend successfully: ');
-            } catch (e) {
-              debugPrint('Profile update failed on backend: ');
-            }
+            // Sync name to backend in background (non-blocking for instant speed)
+            authRepo.updateName(validName).catchError((e) {
+              debugPrint('Profile update background error: $e');
+            });
           }
         }
         HapticFeedback.heavyImpact();
@@ -357,104 +352,208 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
       isDismissible: false,
       enableDrag: false,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
-            return Padding(
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x1F0F172A),
+                    blurRadius: 32,
+                    offset: Offset(0, -8),
+                  ),
+                ],
+              ),
               padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 16,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                left: 22,
+                right: 22,
+                top: 14,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Elegant drag pill
                   Center(
                     child: Container(
-                      width: 40,
-                      height: 4,
+                      width: 44,
+                      height: 4.5,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE2E8F0),
-                        borderRadius: BorderRadius.circular(2),
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(3),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF1F2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text('👋', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22))),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'What should we call you?',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 16),
-                                fontWeight: FontWeight.w800,
-                                color: slateDark,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                            Text(
-                              'Enter your name to personalize your orders',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 12),
-                                color: slateMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 18),
+
+                  // Eyebrow pill
                   Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(14),
+                      color: const Color(0xFFFFF1F2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFFFE4E6), width: 1.1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('👋', style: TextStyle(fontSize: 12)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'WELCOME TO FASTKIRANA',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: primaryRed,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Text(
+                    'What should we call you?',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: Responsive.scaledFontSize(context, 19),
+                      fontWeight: FontWeight.w900,
+                      color: slateDark,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Your name personalizes your orders & helps delivery riders find you.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                      fontWeight: FontWeight.w500,
+                      color: slateMuted,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Doppelrand (Double-Bezel) input architecture
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: errorText != null ? primaryRed : const Color(0xFFE2E8F0),
-                        width: 1.2,
+                        width: errorText != null ? 1.6 : 1.2,
                       ),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: TextField(
-                      controller: nameCtrl,
-                      autofocus: true,
-                      textCapitalization: TextCapitalization.words,
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: slateDark),
-                      decoration: InputDecoration(
-                        icon: const Icon(Icons.person_outline_rounded, size: 18, color: slateLight),
-                        hintText: 'Enter your full name',
-                        hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: slateLight),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
                       ),
-                      onSubmitted: (val) {
-                        if (val.trim().isEmpty) {
-                          setModalState(() => errorText = 'Please enter your name');
-                        } else {
-                          Navigator.pop(ctx, val.trim());
-                        }
-                      },
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF1F2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.person_outline_rounded, size: 18, color: primaryRed),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: nameCtrl,
+                              autofocus: true,
+                              textCapitalization: TextCapitalization.words,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: Responsive.scaledFontSize(context, 14.5),
+                                fontWeight: FontWeight.w800,
+                                color: slateDark,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Enter your first & last name',
+                                hintStyle: GoogleFonts.plusJakartaSans(
+                                  fontSize: Responsive.scaledFontSize(context, 13),
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onChanged: (_) {
+                                if (errorText != null) {
+                                  setModalState(() => errorText = null);
+                                } else {
+                                  setModalState(() {});
+                                }
+                              },
+                              onSubmitted: (val) {
+                                if (val.trim().isEmpty) {
+                                  setModalState(() => errorText = 'Please enter your name');
+                                } else {
+                                  Navigator.pop(ctx, val.trim());
+                                }
+                              },
+                            ),
+                          ),
+                          if (nameCtrl.text.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                nameCtrl.clear();
+                                setModalState(() {});
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFE2E8F0),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close_rounded, size: 14, color: slateMuted),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+
+                  if (errorText != null) ...[
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, size: 14, color: primaryRed),
+                          const SizedBox(width: 6),
+                          Text(
+                            errorText!,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: primaryRed,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  // Island Button Architecture with nested circle trailing arrow
                   Bounceable(
                     onTap: () {
                       final val = nameCtrl.text.trim();
@@ -466,32 +565,68 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                     },
                     child: Container(
                       width: double.infinity,
-                      height: 48,
+                      height: 52,
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [primaryRed, primaryRedLight],
+                          colors: [Color(0xFFE11D48), Color(0xFFF43F5E)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: primaryRed.withValues(alpha: 0.32),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                            color: const Color(0xFFE11D48).withValues(alpha: 0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
-                      child: Center(
-                        child: Text(
-                          'Let\'s Get Started ➔',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 14),
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const SizedBox(width: 28),
+                          Text(
+                            'Continue to Delivery Address',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: Responsive.scaledFontSize(context, 14),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.22),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.lock_outline_rounded, size: 12, color: Color(0xFF94A3B8)),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Your details are securely encrypted and private',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF94A3B8),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ],

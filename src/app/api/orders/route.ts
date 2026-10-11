@@ -637,8 +637,9 @@ export async function POST(request: NextRequest) {
     let couponId = null
 
     if (couponCode) {
+      const cleanCouponCode = couponCode.trim().toUpperCase()
       const coupon = await prisma.coupon.findUnique({
-        where: { code: couponCode.toUpperCase(), isActive: true },
+        where: { code: cleanCouponCode, isActive: true },
       })
 
       if (coupon) {
@@ -665,7 +666,30 @@ export async function POST(request: NextRequest) {
             let eligibleSubtotal = combinedSubtotal
             let meetsMinOrder = true
 
-            if (coupon.categoryId) {
+            if (coupon.bogoDishId) {
+              // Specific Dish/Product ID restriction (ID-wise)
+              const targetDish = coupon.bogoDishId.trim()
+              const idItems = items.filter((item: any) => {
+                const baseId = (item.product?.id || item.productId || item.id || '').split('_')[0].trim()
+                return baseId === targetDish
+              })
+              const idSubtotal = idItems.reduce((sum: number, item: any) => {
+                const baseId = (item.product?.id || item.productId || item.id || '').split('_')[0].trim()
+                const dbProduct = dbProducts.find((p) => p.id === baseId)
+                let itemPrice = dbProduct ? dbProduct.price : 0
+                const isVariant = (item.product?.id || '').includes('_')
+                if (dbProduct && isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
+                  const [_, variantName] = (item.product?.id || '').split('_')
+                  const variant = (dbProduct.variants as any[]).find((v) => v.name === variantName)
+                  if (variant) itemPrice = variant.price
+                }
+                return sum + itemPrice * (item.quantity || 1)
+              }, 0)
+              if (idSubtotal === 0 || idSubtotal < coupon.minOrder) {
+                meetsMinOrder = false
+              }
+              eligibleSubtotal = idSubtotal
+            } else if (coupon.categoryId) {
               // Calculate category-specific subtotal
               const categoryItems = items.filter((item: any) => {
                 const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
@@ -722,15 +746,20 @@ export async function POST(request: NextRequest) {
               couponId = coupon.id
               if (coupon.discountType === 'BOGO') {
                 const maxFreeCap = coupon.maxFreeItems || 3
-                let allRestaurantItems = items.filter((item: any) => {
-                  const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
-                  return dbProduct && dbProduct.restaurantId === coupon.restaurantId
-                })
+                let allRestaurantItems = coupon.restaurantId
+                  ? items.filter((item: any) => {
+                      const baseId = (item.product?.id || item.productId || item.id || '').split('_')[0].trim()
+                      const dbProduct = dbProducts.find((p) => p.id === baseId)
+                      return dbProduct && dbProduct.restaurantId === coupon.restaurantId
+                    })
+                  : items
 
                 let bogoItems = allRestaurantItems
                 if (coupon.bogoDishId) {
+                  const targetDish = coupon.bogoDishId.trim()
                   bogoItems = bogoItems.filter((item: any) => {
-                    return item.product.id.split('_')[0] === coupon.bogoDishId
+                    const baseId = (item.product?.id || item.productId || item.id || '').split('_')[0].trim()
+                    return baseId === targetDish
                   })
                 } else if (coupon.menuSection) {
                   const secFilters = coupon.menuSection
@@ -740,7 +769,8 @@ export async function POST(request: NextRequest) {
 
                   if (secFilters.length > 0) {
                     bogoItems = bogoItems.filter((item: any) => {
-                      const dbProduct = dbProducts.find((p) => p.id === item.product.id.split('_')[0])
+                      const baseId = (item.product?.id || item.productId || item.id || '').split('_')[0].trim()
+                      const dbProduct = dbProducts.find((p) => p.id === baseId)
                       const name = `${dbProduct?.name || ''} ${item.product?.name || ''}`.toLowerCase().replace(/[^a-z0-9]/g, '')
                       const tags = (dbProduct?.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
                       const mSec = String((dbProduct as any)?.menuSection || (item.product as any)?.menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -750,8 +780,9 @@ export async function POST(request: NextRequest) {
                 }
 
                 const getItemVarText = (it: any) => {
-                  const name = (it.product.name || '').toLowerCase()
-                  const varName = (it.selectedVariant || it.variant || it.unit || it.product.unit || it.product.id.split('_')[1] || '').toLowerCase()
+                  const name = (it.product?.name || '').toLowerCase()
+                  const baseId = (it.product?.id || it.productId || it.id || '')
+                  const varName = (it.selectedVariant || it.variant || it.unit || it.product?.unit || baseId.split('_')[1] || '').toLowerCase()
                   return `${name} ${varName}`
                 }
 
@@ -765,8 +796,12 @@ export async function POST(request: NextRequest) {
                   const totalTriggerQty = triggerItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
 
                   const rewardPool = coupon.bogoDishId ? bogoItems : (coupon.menuSection ? bogoItems : allRestaurantItems)
-                  const rewardItems = coupon.defaultFreeDishId
-                    ? allRestaurantItems.filter((it: any) => it.product.id.split('_')[0] === coupon.defaultFreeDishId)
+                  const defaultGiftId = coupon.defaultFreeDishId ? coupon.defaultFreeDishId.trim() : null
+                  const rewardItems = defaultGiftId
+                    ? allRestaurantItems.filter((it: any) => {
+                        const baseId = (it.product?.id || it.productId || it.id || '').split('_')[0].trim()
+                        return baseId === defaultGiftId
+                      })
                     : rewardPool.filter((it: any) => {
                         return getItemVarText(it).includes(rewardVariant)
                       })
@@ -817,10 +852,11 @@ export async function POST(request: NextRequest) {
 
                   if (totalTriggerQty >= minTriggerQty) {
                     const rewardTag = (coupon.rewardVariant || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+                    const targetGiftId = coupon.defaultFreeDishId ? coupon.defaultFreeDishId.trim() : null
                     // Find if gift item is in order items
                     const giftInOrder = allRestaurantItems.find((it: any) => {
-                      const baseId = it.product.id.split('_')[0]
-                      if (coupon.defaultFreeDishId && baseId === coupon.defaultFreeDishId) return true
+                      const baseId = (it.product?.id || it.productId || it.id || '').split('_')[0].trim()
+                      if (targetGiftId) return baseId === targetGiftId
                       if (rewardTag) {
                         const name = String(it.product?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
                         const tags = (it.product?.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
@@ -855,7 +891,7 @@ export async function POST(request: NextRequest) {
                   }
                 } else if (coupon.bogoType === 'CHEAPEST_FREE') {
                   let eligibleRItems = bogoItems
-                  if (coupon.menuSection) {
+                  if (!coupon.bogoDishId && coupon.menuSection) {
                     const secFilters = coupon.menuSection
                       .split(',')
                       .map((s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
@@ -906,16 +942,21 @@ export async function POST(request: NextRequest) {
                   // SAME_ITEM BOGO
                   let eligibleItems = bogoItems
                   if (coupon.bogoDishId) {
-                    eligibleItems = bogoItems.filter((it: any) => it.product.id.split('_')[0] === coupon.bogoDishId)
+                    const targetDish = coupon.bogoDishId.trim()
+                    eligibleItems = bogoItems.filter((it: any) => {
+                      const baseId = (it.product?.id || it.productId || it.id || '').split('_')[0].trim()
+                      return baseId === targetDish
+                    })
                   }
                   let totalBogo = 0
                   let freeUnlocked = 0
                   for (const it of eligibleItems) {
-                    const dbProduct = dbProducts.find((p) => p.id === it.product.id.split('_')[0])
+                    const baseId = (it.product?.id || it.productId || it.id || '').split('_')[0].trim()
+                    const dbProduct = dbProducts.find((p) => p.id === baseId)
                     let itemPrice = dbProduct ? dbProduct.price : 0
-                    const isVariant = it.product.id.includes('_')
+                    const isVariant = (it.product?.id || '').includes('_')
                     if (dbProduct && isVariant && dbProduct.variants && Array.isArray(dbProduct.variants)) {
-                      const [_, vName] = it.product.id.split('_')
+                      const [_, vName] = (it.product?.id || '').split('_')
                       const variant = (dbProduct.variants as any[]).find((v) => v.name === vName)
                       if (variant) itemPrice = variant.price
                     }

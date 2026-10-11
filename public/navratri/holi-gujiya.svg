@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Gujiya Box</title>
+<ellipse cx="120" cy="141" rx="92" ry="8" fill="#713D21" opacity=".12"/>
+<path d="M36 80h168l-11 51H47Z" fill="#28A6A7"/><path d="M36 80h168l-4 13H39Z" fill="#72CBC6"/>
+<g fill="#E8BD72" stroke="#A87937" stroke-width="2"><path d="M47 76a35 35 0 0 1 70 0Z"/><path d="M122 76a35 35 0 0 1 70 0Z"/><path d="M85 43a35 35 0 0 1 70 0Z"/></g>
+<g stroke="#A87937" stroke-width="2" stroke-linecap="round"><path d="m51 73 4-7m6-7 6-5m7-5 8-1m9 2 7 4m7 6 5 7m17 6 4-7m6-7 6-5m7-5 8-1m9 2 7 4m7 6 5 7M91 40l4-7m6-7 6-5m7-4 8-1m9 2 7 4m7 6 5 7"/></g>
+<path d="M67 113h107" stroke="#FFF8DF" stroke-width="3" stroke-linecap="round"/>
+</svg>

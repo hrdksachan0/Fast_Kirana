@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Bread Loaf</title>
+<ellipse cx="120" cy="141" rx="89" ry="8" fill="#264D37" opacity=".12"/>
+<path d="M43 63c0-28 27-36 78-36s77 8 77 36v58c0 12-22 17-77 17s-78-5-78-17Z" fill="#C98D44"/><path d="M43 63c0-28 27-36 78-36s77 8 77 36" fill="#E8BB78"/>
+<path d="M165 40c-18 0-29 9-29 27v60c0 8 10 11 25 11h16c15 0 22-4 22-11V67c0-18-14-27-34-27Z" fill="#F2DCA8" stroke="#A46F35" stroke-width="2"/>
+<path d="M74 44q-14 12-14 28m47-32q-15 13-15 30m41-29q-14 10-14 28" stroke="#C98D44" stroke-width="6" stroke-linecap="round"/>
+<g fill="#DEB976"><circle cx="154" cy="83" r="3"/><circle cx="177" cy="75" r="2"/><circle cx="170" cy="109" r="3"/><circle cx="153" cy="120" r="2"/></g>
+</svg>

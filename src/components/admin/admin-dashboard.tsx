@@ -74,6 +74,7 @@ const CreateOrderModal = dynamic(
   { ssr: false }
 )
 const ProductEditModal = dynamic(() => import('./product-edit-modal'), { ssr: false })
+const CampaignManager = dynamic(() => import('./campaign-manager').then(mod => mod.CampaignManager), { ssr:false })
 const CategoryEditModal = dynamic(
   () => import('./category-edit-modal').then((m) => m.CategoryEditModal),
   { ssr: false }
@@ -105,6 +106,7 @@ export type TabType =
   | 'restaurant-report'
   | 'inward'
   | 'banners'
+  | 'campaigns'
   | 'settings'
   | 'liveops'
   | 'push-notifications'
@@ -845,6 +847,7 @@ export function AdminDashboard({
       { key: 'reviews' as TabType, label: 'Reviews', icon: Star, count: reviewCouponHook.reviews.length },
       { key: 'coupons' as TabType, label: 'Offers', icon: Ticket, count: reviewCouponHook.coupons.length },
       { key: 'banners' as TabType, label: 'Promo Banners', icon: ImageIcon },
+      { key: 'campaigns' as TabType, label: 'Campaign Manager', icon: ImageIcon },
       { key: 'flash-deals' as TabType, label: 'Store Highlights', icon: Zap },
       { key: 'push-notifications' as TabType, label: 'Push Notifications', icon: Bell },
       { key: 'settings' as TabType, label: 'Store Settings', icon: Settings },
@@ -1256,6 +1259,12 @@ export function AdminDashboard({
               onSettingsSaved={() => fetchSettings(selectedHubId)}
             />
           )}
+
+          {activeTab === 'campaigns' && <CampaignManager
+            storeId={selectedHubId}
+            onUpload={handleCloudinaryUpload}
+            authHeaders={sessionUserId ? { 'x-user-id':sessionUserId, 'x-user-role':sessionUserRole } : {}}
+          />}
 
           {activeTab === 'push-notifications' && <PushNotificationsTab />}
 

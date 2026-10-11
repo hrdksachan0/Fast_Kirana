@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/address.dart';
+import '../../data/models/product.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../data/repositories/banner_repository.dart';
 import '../../core/network/api_client.dart';
@@ -34,6 +35,13 @@ import '../../providers/restaurant_provider.dart';
 import '../../data/models/store_settings.dart';
 import 'widgets/hub_coming_soon_view.dart';
 import 'widgets/outside_delivery_zone_view.dart';
+import '../navratri/navratri_data.dart';
+import '../navratri/navratri_linked_products.dart';
+import '../navratri/navratri_shopping_section.dart';
+import '../search/search_screen.dart';
+import '../products/product_detail_screen.dart';
+import '../../core/routes/page_transitions.dart';
+import '../../widgets/voice_search_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -42,8 +50,10 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
-  bool _isGrocerySelected = false; // Food mode default (Food first, then Grocery)
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with WidgetsBindingObserver {
+  bool _isGrocerySelected =
+      true; // Grocery mode default (Grocery first, then Food)
   final int _selectedFilterIndex = 0;
   Timer? _orderSyncTimer;
   Timer? _storeStatusTimer;
@@ -90,7 +100,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         if (ref.read(selectedAddressProvider) == null) {
           LocationService.getCurrentPosition().then((pos) async {
             if (pos != null && mounted) {
-              final details = await LocationService.getAddressFromCoordinates(pos.latitude, pos.longitude);
+              final details = await LocationService.getAddressFromCoordinates(
+                  pos.latitude, pos.longitude);
               final addr = Address(
                 id: 'gps_${DateTime.now().millisecondsSinceEpoch}',
                 userId: 'current',
@@ -133,6 +144,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      ref.invalidate(navratriDataProvider);
+      ref.invalidate(navratriLinkedProductsProvider);
       _checkAndRevalidateCatalog();
     }
   }
@@ -141,7 +154,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     try {
       final dio = ref.read(dioProvider);
       final hub = ref.read(currentStoreHubProvider);
-      final changed = await ProductRepository.checkAndRevalidateCatalog(dio, hub.id);
+      final changed =
+          await ProductRepository.checkAndRevalidateCatalog(dio, hub.id);
       if (changed && mounted) {
         debugPrint('[HomeScreen] SWR: Catalog refreshed on app resume!');
         refreshAllCatalogProviders(ref);
@@ -187,16 +201,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   @override
   Widget build(BuildContext context) {
     final hubStatus = ref.watch(hubAvailabilityProvider);
+    final showNavratri = _isGrocerySelected &&
+        !hubStatus.isOutsideZone &&
+        !hubStatus.isComingSoon &&
+        !hubStatus.isHybridFoodOnly;
+    final campaignState = showNavratri ? ref.watch(navratriDataProvider) : null;
+    final configuredCampaign =
+        campaignState?.isLoading == true ? null : campaignState?.valueOrNull;
+    final navratri =
+        configuredCampaign?.enabled == true ? configuredCampaign : null;
+    final festiveCatalog =
+        navratri != null ? ref.watch(homeProductCatalogProvider) : null;
+    final campaignHomeProducts = festiveCatalog?.isLoading == true
+        ? <Product>[]
+        : festiveCatalog?.valueOrNull ?? <Product>[];
+    final missingLinks = navratri == null
+        ? <String>[]
+        : missingNavratriProductIds(navratri, campaignHomeProducts);
+    final linkedProducts = missingLinks.isEmpty
+        ? null
+        : ref.watch(navratriLinkedProductsProvider(NavratriLinkedProductQuery(
+            storeId: ref.watch(currentStoreHubProvider).id,
+            productIds: missingLinks,
+          )));
+    final campaignProducts = mergeNavratriLinkedProducts(
+        campaignHomeProducts,
+        linkedProducts?.isLoading == true
+            ? []
+            : linkedProducts?.valueOrNull ?? []);
     final cart = ref.watch(cartProvider).valueOrNull;
-    final hasCartItems = (cart?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0) > 0;
+    final hasCartItems =
+        (cart?.items.fold<int>(0, (s, item) => s + item.quantity) ?? 0) > 0;
 
     // React smoothly when store transitions from Closed/Paused to ONLINE
     ref.listen<AsyncValue<StoreSettings>>(storeSettingsProvider, (prev, next) {
       final prevSettings = prev?.valueOrNull;
       final nextSettings = next.valueOrNull;
       if (prevSettings != null && nextSettings != null) {
-        final wasOpen = prevSettings.groceryMartOpen || prevSettings.restaurantOpen;
-        final isNowOpen = nextSettings.groceryMartOpen || nextSettings.restaurantOpen;
+        final wasOpen =
+            prevSettings.groceryMartOpen || prevSettings.restaurantOpen;
+        final isNowOpen =
+            nextSettings.groceryMartOpen || nextSettings.restaurantOpen;
         if (!wasOpen && isNowOpen && mounted) {
           HapticFeedback.mediumImpact();
           refreshAllCatalogProviders(ref);
@@ -207,7 +252,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
               backgroundColor: const Color(0xFF15803D),
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 4),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
               content: Row(
                 children: [
                   Container(
@@ -216,7 +262,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       color: Colors.white24,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 18),
+                    child: const Icon(Icons.storefront_rounded,
+                        color: Colors.white, size: 18),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -226,11 +273,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       children: [
                         Text(
                           'Store is now ONLINE! ⚡',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 13),
+                          style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              fontSize: 13),
                         ),
                         Text(
                           'Accepting fresh orders in Ghatampur.',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.9), fontSize: 11),
+                          style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 11),
                         ),
                       ],
                     ),
@@ -252,6 +305,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             RefreshIndicator(
               color: AppDesignSystem.primary,
               onRefresh: () async {
+                ref.invalidate(navratriDataProvider);
+                ref.invalidate(navratriLinkedProductsProvider);
                 HapticFeedback.mediumImpact();
                 await BannerRepository.invalidateCache();
                 await ProductRepository.invalidateAllCache();
@@ -276,7 +331,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                   parent: BouncingScrollPhysics(),
                 ),
                 slivers: [
-                  const SliverToBoxAdapter(child: HomeTopHeader()),
+                  SliverToBoxAdapter(
+                    child: HomeTopHeader(showSearch: navratri == null),
+                  ),
 
                   // 1. Outside All Serviceable Delivery Zones
                   if (hubStatus.isOutsideZone) ...[
@@ -299,7 +356,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
                   // 3. Fully Active Operational Hub Storefront
                   else ...[
-                    const SliverToBoxAdapter(child: UnserviceableLocationBanner()),
+                    const SliverToBoxAdapter(
+                        child: UnserviceableLocationBanner()),
                     SliverToBoxAdapter(
                       child: HomeCategoryToggle(
                         isGrocerySelected: _isGrocerySelected,
@@ -313,7 +371,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                     ),
                     SliverToBoxAdapter(
                       child: DynamicHeroBannerCarousel(
-                        key: ValueKey('hero_carousel_${_isGrocerySelected ? "grocery" : "food"}'),
+                        key: ValueKey(
+                            'hero_carousel_${_isGrocerySelected ? "grocery" : "food"}'),
                         type: _isGrocerySelected ? 'grocery' : 'food',
                       ),
                     ),
@@ -321,15 +380,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       if (hubStatus.isHybridFoodOnly) ...[
                         SliverToBoxAdapter(
                           child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 20),
                             padding: const EdgeInsets.all(22),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppDesignSystem.orange200),
+                              border:
+                                  Border.all(color: AppDesignSystem.orange200),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppDesignSystem.orange500.withValues(alpha: 0.08),
+                                  color: AppDesignSystem.orange500
+                                      .withValues(alpha: 0.08),
                                   blurRadius: 16,
                                   offset: const Offset(0, 4),
                                 ),
@@ -343,13 +405,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                     color: AppDesignSystem.orange50,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Text('🥕', style: TextStyle(fontSize: 28)),
+                                  child: const Text('🥕',
+                                      style: TextStyle(fontSize: 28)),
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
                                   'Grocery Stocking Up Soon!',
                                   style: GoogleFonts.outfit(
-                                    fontSize: Responsive.scaledFontSize(context, 18),
+                                    fontSize:
+                                        Responsive.scaledFontSize(context, 18),
                                     fontWeight: FontWeight.w800,
                                     color: AppDesignSystem.slate900,
                                   ),
@@ -359,7 +423,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                   'Our local dark store in ${hubStatus.hub.city} is currently stocking up. In the meantime, order hot & fresh meals from top partner restaurants!',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                                    fontSize: Responsive.scaledFontSize(
+                                        context, 12.5),
                                     fontWeight: FontWeight.w500,
                                     color: AppDesignSystem.slate600,
                                     height: 1.4,
@@ -372,7 +437,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                     setState(() => _isGrocerySelected = false);
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 22, vertical: 12),
                                     decoration: BoxDecoration(
                                       color: AppDesignSystem.orange600,
                                       borderRadius: BorderRadius.circular(14),
@@ -380,12 +446,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.restaurant_rounded, color: Colors.white, size: 16),
+                                        const Icon(Icons.restaurant_rounded,
+                                            color: Colors.white, size: 16),
                                         const SizedBox(width: 8),
                                         Text(
                                           'Order Food Now',
                                           style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 13),
+                                            fontSize: Responsive.scaledFontSize(
+                                                context, 13),
                                             fontWeight: FontWeight.w800,
                                             color: Colors.white,
                                           ),
@@ -399,9 +467,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                           ),
                         ),
                       ] else ...[
-                        const SliverToBoxAdapter(child: HomeTopCategoriesGrid()),
+                        const SliverToBoxAdapter(
+                            child: HomeTopCategoriesGrid()),
+                    if (navratri != null) ...[
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: NavratriPinnedHeader(
+                          height: NavratriStickyHeader.height(context,
+                              data: navratri),
+                          child: NavratriStickyHeader(
+                            data: navratri,
+                            onSearch: () => Navigator.push(
+                              context,
+                              FadeSlideRoute(page: const SearchScreen()),
+                            ),
+                            onVoiceSearch: () => VoiceSearchSheet.show(
+                              context,
+                              onResult: (query) => Navigator.push(
+                                context,
+                                FadeSlideRoute(
+                                  page: SearchScreen(initialQuery: query),
+                                ),
+                              ),
+                            ),
+                            onNavigate: (destination) => Navigator.push(
+                              context,
+                              FadeSlideRoute(
+                                page: SearchScreen(
+                                    initialQuery: destination.query),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: NavratriShoppingSection(
+                          data: navratri,
+                          catalog: campaignProducts,
+                          catalogLoading: festiveCatalog?.isLoading ?? false,
+                          catalogFailed: festiveCatalog?.hasError ?? false,
+                          onProductSelected: (product) => Navigator.push(
+                            context,
+                            FadeSlideRoute(
+                                page: ProductDetailScreen(product: product)),
+                          ),
+                          onNavigate: (destination) => Navigator.push(
+                            context,
+                            FadeSlideRoute(
+                              page:
+                                  SearchScreen(initialQuery: destination.query),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                         SliverToBoxAdapter(
-                          child: HomeBuyAgainShelf(isGrocerySelected: _isGrocerySelected),
+                          child: HomeBuyAgainShelf(
+                              isGrocerySelected: _isGrocerySelected),
                         ),
                         const SliverToBoxAdapter(child: HomeProductSections()),
                         ...HomeInfiniteFeed.buildSlivers(
@@ -417,12 +539,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       if (hubStatus.isHybridGroceryOnly) ...[
                         SliverToBoxAdapter(
                           child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 20),
                             padding: const EdgeInsets.all(22),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: const Color(0xFFFDE68A)),
+                              border:
+                                  Border.all(color: const Color(0xFFFDE68A)),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: 0.04),
@@ -439,13 +563,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                     color: Color(0xFFFEF3C7),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Text('🍕', style: TextStyle(fontSize: 28)),
+                                  child: const Text('🍕',
+                                      style: TextStyle(fontSize: 28)),
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
                                   'Food Delivery Coming Soon!',
                                   style: GoogleFonts.outfit(
-                                    fontSize: Responsive.scaledFontSize(context, 18),
+                                    fontSize:
+                                        Responsive.scaledFontSize(context, 18),
                                     fontWeight: FontWeight.w800,
                                     color: AppDesignSystem.slate900,
                                   ),
@@ -455,7 +581,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                   'Partner kitchens are currently onboarding in ${hubStatus.hub.city}. You can enjoy ultra-fast 10-minute grocery delivery right now!',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                                    fontSize: Responsive.scaledFontSize(
+                                        context, 12.5),
                                     fontWeight: FontWeight.w500,
                                     color: AppDesignSystem.slate600,
                                     height: 1.4,
@@ -468,7 +595,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                     setState(() => _isGrocerySelected = true);
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 22, vertical: 12),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF16A34A),
                                       borderRadius: BorderRadius.circular(14),
@@ -476,12 +604,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 16),
+                                        const Icon(Icons.shopping_bag_rounded,
+                                            color: Colors.white, size: 16),
                                         const SizedBox(width: 8),
                                         Text(
                                           'Shop Groceries in 10 Mins',
                                           style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 13),
+                                            fontSize: Responsive.scaledFontSize(
+                                                context, 13),
                                             fontWeight: FontWeight.w800,
                                             color: Colors.white,
                                           ),
@@ -500,7 +630,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       const SliverToBoxAdapter(child: HomeFooter()),
                     ],
                   ],
-                  SliverToBoxAdapter(child: SizedBox(height: hasCartItems ? 120 : 80)),
+                  SliverToBoxAdapter(
+                      child: SizedBox(height: hasCartItems ? 120 : 80)),
                 ],
               ),
             ),

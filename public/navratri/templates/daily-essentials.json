@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "demo": true,
+  "enabled": true,
+  "autoplay": true,
+  "layout": "grid",
+  "searchPrefix": "Search for",
+  "decorationImage": null,
+  "labels": {
+    "sectionLabel": "Everyday, sorted",
+    "specialsHeading": "Daily Picks",
+    "curvedTabLabel": "Top Picks",
+    "loadingText": "Loading this store’s daily essentials collection…",
+    "emptyText": "No matching products in this collection yet. Try another tab or search the catalogue.",
+    "demoLabel": "Demo prices",
+    "resultsDemoLabel": "Demo collection · illustrative prices"
+  },
+  "appearance": {
+    "background": "#88AF86",
+    "card": "#FFF8DF",
+    "text": "#264D37",
+    "smallText": "#1D3C2B",
+    "headerText": "#264D37",
+    "headerOutline": "#FFF8DF",
+    "underline": "#4E8060",
+    "tabSurface": "#FFF8DF"
+  },
+  "timings": {
+    "headerMs": 4400,
+    "productMs": 3400,
+    "searchMs": 3200,
+    "crossfadeMs": 320
+  },
+  "searchSuggestions": [
+    "Milk",
+    "Bread",
+    "Vegetables",
+    "Rice"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "daily-essentials-header-1",
+      "kind": "illustration",
+      "eyebrow": "",
+      "title": "The things your day runs on",
+      "subtitle": "Milk, bread and kitchen staples",
+      "image": "daily-grocery-basket.svg"
+    },
+    {
+      "id": "daily-essentials-header-2",
+      "kind": "title",
+      "eyebrow": "",
+      "title": "Restock the everyday favourites",
+      "subtitle": "Make room in your pantry",
+      "image": null
+    },
+    {
+      "id": "daily-essentials-header-3",
+      "kind": "brand",
+      "eyebrow": "",
+      "title": "Your daily basket, with FastKirana",
+      "subtitle": "Choose what works for your home",
+      "image": "daily-grocery-basket.svg"
+    }
+  ],
+  "products": [
+    {
+      "id": "daily-essentials-milk",
+      "name": "Milk Carton",
+      "image": "daily-milk.svg",
+      "originalPrice": 60,
+      "price": 60,
+      "currency": "INR",
+      "categoryId": "daily-essentials-milk-category",
+      "destinationId": "search-daily-essentials-milk"
+    },
+    {
+      "id": "daily-essentials-bread",
+      "name": "Bread Loaf",
+      "image": "daily-bread.svg",
+      "originalPrice": 40,
+      "price": 40,
+      "currency": "INR",
+      "categoryId": "daily-essentials-bread-category",
+      "destinationId": "search-daily-essentials-bread"
+    },
+    {
+      "id": "daily-essentials-vegetables",
+      "name": "Fresh Vegetables",
+      "image": "daily-vegetables.svg",
+      "originalPrice": 85,
+      "price": 85,
+      "currency": "INR",
+      "categoryId": "daily-essentials-vegetables-category",
+      "destinationId": "search-daily-essentials-vegetables"
+    },
+    {
+      "id": "daily-essentials-rice",
+      "name": "Rice Bag",
+      "image": "daily-rice.svg",
+      "originalPrice": 75,
+      "price": 75,
+      "currency": "INR",
+      "categoryId": "daily-essentials-rice-category",
+      "destinationId": "search-daily-essentials-rice"
+    }
+  ],
+  "categories": [
+    {
+      "id": "daily-essentials-milk-category",
+      "label": "Milk & Breakfast",
+      "image": "daily-milk.svg",
+      "destinationId": "search-daily-essentials-milk",
+      "keywords": [
+        "milk",
+        "breakfast",
+        "dairy"
+      ]
+    },
+    {
+      "id": "daily-essentials-bread-category",
+      "label": "Bread & Bakery",
+      "image": "daily-bread.svg",
+      "destinationId": "search-daily-essentials-bread",
+      "keywords": [
+        "bread",
+        "bakery"
+      ]
+    },
+    {
+      "id": "daily-essentials-vegetables-category",
+      "label": "Fresh Vegetables",
+      "image": "daily-vegetables.svg",
+      "destinationId": "search-daily-essentials-vegetables",
+      "keywords": [
+        "vegetable",
+        "fresh"
+      ]
+    },
+    {
+      "id": "daily-essentials-rice-category",
+      "label": "Pantry Staples",
+      "image": "daily-rice.svg",
+      "destinationId": "search-daily-essentials-rice",
+      "keywords": [
+        "rice",
+        "pantry",
+        "staple"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "top-picks",
+      "label": "Top Picks",
+      "image": "daily-grocery-basket.svg",
+      "keywords": []
+    },
+    {
+      "id": "daily-essentials-fresh",
+      "label": "Fresh & Dairy",
+      "image": "daily-milk.svg",
+      "keywords": [
+        "milk",
+        "dairy",
+        "vegetable",
+        "fresh"
+      ]
+    },
+    {
+      "id": "daily-essentials-bakery",
+      "label": "Bakery",
+      "image": "daily-bread.svg",
+      "keywords": [
+        "bread",
+        "bakery"
+      ]
+    },
+    {
+      "id": "daily-essentials-pantry",
+      "label": "Pantry",
+      "image": "daily-rice.svg",
+      "keywords": [
+        "rice",
+        "pantry",
+        "staple"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "search-daily-essentials-milk",
+      "kind": "search",
+      "query": "milk"
+    },
+    {
+      "id": "search-daily-essentials-bread",
+      "kind": "search",
+      "query": "bread"
+    },
+    {
+      "id": "search-daily-essentials-vegetables",
+      "kind": "search",
+      "query": "vegetables"
+    },
+    {
+      "id": "search-daily-essentials-rice",
+      "kind": "search",
+      "query": "rice"
+    }
+  ]
+}

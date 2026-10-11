@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Besan Flour</title>
+<ellipse cx="120" cy="141" rx="78" ry="8" fill="#273B5B" opacity=".12"/>
+<path d="M72 24h96l11 108H61Z" fill="#D6B876"/><path d="M72 24h96l2 15H70Z" fill="#547B88"/><path d="M62 117h116l1 15H61Z" fill="#547B88"/>
+<rect x="84" y="52" width="72" height="52" rx="8" fill="#FFF8DF"/>
+<path d="M94 86h53c-3 12-13 17-26 17s-24-5-27-17Z" fill="#9F603B"/><path d="M94 86q26-25 53 0Z" fill="#D6B876"/>
+<g fill="#D6B876" stroke="#AA884D" stroke-width="1.5"><circle cx="88" cy="112" r="5"/><circle cx="104" cy="115" r="5"/><circle cx="141" cy="113" r="5"/><circle cx="156" cy="110" r="5"/></g>
+</svg>

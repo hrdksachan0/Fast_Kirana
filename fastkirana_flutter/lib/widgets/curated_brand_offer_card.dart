@@ -275,7 +275,7 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
             imageAsset: widget.imageAsset,
             fit: BoxFit.cover,
             borderRadius: br,
-            showLiveBadge: false, // Pure photo/video: NO BADGES, NO TEXT
+            showLiveBadge: true, // Live Motion badge on looping videos
           ),
         ),
       ),

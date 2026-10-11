@@ -60,9 +60,13 @@ scratch-db-test.ts
 restaurant-card.html
 audit-*.png
 .impeccable/
+artifacts/
 
 # scripts run once during development
 scripts/
+!/scripts/
+/scripts/*
+!/scripts/sync-navratri-assets.mjs
 !fastapi-backend/scripts/
 
 # Firebase Admin credentials

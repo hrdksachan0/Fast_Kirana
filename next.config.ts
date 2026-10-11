@@ -265,10 +265,10 @@ const nextConfig: NextConfig = {
         source: '/api/admin/reviews',
         destination: `${apiDest}/api/admin/reviews`,
       },
-      // ALL Admin APIs (Products, Orders, Users, Stores, Coupons, Vendors, Inventory, Reports, Alerts, etc.) -> FastAPI
+      // Campaign editing uses the local verified NextAuth route. Other admin APIs use FastAPI.
       {
-        source: '/api/admin/:path*',
-        destination: `${apiDest}/api/admin/:path*`,
+        source: '/api/admin/:path((?!campaign(?:/|$)).*)',
+        destination: `${apiDest}/api/admin/:path`,
       },
       {
         source: '/api/admin',

@@ -503,7 +503,7 @@ export function AdminBanners({
   const [isGeneratingGemini, setIsGeneratingGemini] = useState(false)
 
   // Placement & Target Platform States (Defaults to Hero Slider for main storefront)
-  const [placement, setPlacement] = useState<'hero' | 'brand_card'>('hero')
+  const [placement, setPlacement] = useState<'hero' | 'brand_card'>('brand_card')
   const [platform, setPlatform] = useState<'all' | 'mobile' | 'web'>('all')
   const [storeId, setStoreId] = useState<string>(() => propStoreId || stores[0]?.id || 'hub-209206')
 
@@ -516,7 +516,7 @@ export function AdminBanners({
   }, [propStoreId, stores])
 
   // Registered List Filtering Tabs
-  const [activeListTab, setActiveListTab] = useState<'hero' | 'brand_card'>('hero')
+  const [activeListTab, setActiveListTab] = useState<'hero' | 'brand_card'>('brand_card')
   const [activePlatformFilter, setActivePlatformFilter] = useState<'all' | 'mobile' | 'web'>('all')
 
   // Form States
@@ -933,7 +933,7 @@ export function AdminBanners({
   const resetForm = () => {
     setEditingId(null)
     setCardFormat('standard')
-    setPlacement('hero')
+    setPlacement('brand_card')
     setPlatform('all')
     setStoreId(propStoreId || stores[0]?.id || 'hub-209206')
     setTitle('')
@@ -983,8 +983,8 @@ export function AdminBanners({
     setCardFormat(fmt)
 
     const isBrandCard = b.placement === 'brand_card' || ['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type)
-    setPlacement(isBrandCard ? 'brand_card' : 'hero')
-    setActiveListTab(isBrandCard ? 'brand_card' : 'hero')
+    setPlacement('brand_card')
+    setActiveListTab('brand_card')
     setPlatform(b.platform || 'all')
     setStoreId(b.storeId || propStoreId || stores[0]?.id || 'hub-209206')
 
@@ -1275,36 +1275,24 @@ export function AdminBanners({
               
               {/* Placement / Mode / Platform / Store Hub Selectors */}
               <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-card border border-border/60 rounded-2xl">
-                {/* 1. Placement Selector */}
+                {/* 1. Curated Brand Card (Only Brand Card Enabled) */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
-                    1. Section Type *
+                    1. Card Format
                   </label>
-                  <div className="grid grid-cols-2 gap-1 bg-muted/50 p-1 rounded-xl border border-border">
-                    <button
-                      type="button"
-                      onClick={() => setPlacement('hero')}
-                      className={`py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                        placement === 'hero'
-                          ? 'bg-primary text-white shadow-xs font-black'
-                          : 'text-text-muted hover:text-text-primary hover:bg-card/60'
-                      }`}
-                    >
-                      <span>🖼️</span>
-                      <span>Hero Slider</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPlacement('brand_card')}
-                      className={`py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                        placement === 'brand_card'
-                          ? 'bg-primary text-white shadow-xs font-black'
-                          : 'text-text-muted hover:text-text-primary hover:bg-card/60'
-                      }`}
-                    >
-                      <span>💳</span>
-                      <span>Brand Card</span>
-                    </button>
+                  <div className="p-2.5 rounded-xl bg-card border border-primary/20 flex items-center justify-between shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm font-black border border-primary/25">
+                        💳
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-text-primary block">Curated Brand Card</span>
+                        <span className="text-[10px] text-text-muted font-medium">Zepto & Blinkit full-bleed visual card</span>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                      BRAND ONLY
+                    </span>
                   </div>
                 </div>
 
@@ -1627,6 +1615,35 @@ export function AdminBanners({
                           }}
                           className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-medium"
                         />
+                      </div>
+                    </div>
+
+                    {/* 1-Click Curated Video Loop Presets */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
+                        🎬 1-Click Viral Video Loops (Zepto / Instagram Style):
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { label: '🥤 Chilled Soda', url: 'https://assets.mixkit.co/videos/preview/mixkit-cold-drink-with-ice-cubes-42999-large.mp4', title: 'Chilled Drinks & Soda', mode: 'grocery' },
+                          { label: '☕ Hot Coffee Steam', url: 'https://assets.mixkit.co/videos/preview/mixkit-pouring-coffee-into-a-cup-43015-large.mp4', title: 'Fresh Brewed Coffee', mode: 'food' },
+                          { label: '🍕 Cheese Pizza Pull', url: 'https://assets.mixkit.co/videos/preview/mixkit-taking-a-slice-of-pizza-with-cheese-stretching-43034-large.mp4', title: 'Hot Loaded Pizzas', mode: 'food' },
+                          { label: '🥛 Fresh Milk Pour', url: 'https://assets.mixkit.co/videos/preview/mixkit-milk-being-poured-into-a-glass-43026-large.mp4', title: 'Fresh Farm Milk', mode: 'grocery' },
+                        ].map((preset) => (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => {
+                              setVideoUrl(preset.url);
+                              if (!title) setTitle(preset.title);
+                              setType(preset.mode);
+                              setPreviewMediaTab('video');
+                            }}
+                            className="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-border bg-card hover:bg-primary/10 hover:border-primary/40 text-text-primary transition-all cursor-pointer active:scale-95 flex items-center gap-1 shadow-3xs"
+                          >
+                            <span>{preset.label}</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
 
@@ -2125,30 +2142,17 @@ export function AdminBanners({
             </div>
           </div>
 
-          {/* Placement Tabs: Hero Slider Banners vs Brand Cards */}
-          <div className="grid grid-cols-2 gap-2 bg-muted/40 p-1 rounded-xl border border-border/60">
-            <button
-              type="button"
-              onClick={() => setActiveListTab('hero')}
-              className={`py-2 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeListTab === 'hero'
-                  ? 'bg-card text-primary shadow-sm border border-border'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              🖼️ Hero Slider Banners ({banners.filter(b => b.placement !== 'brand_card' && !['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type)).length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveListTab('brand_card')}
-              className={`py-2 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                activeListTab === 'brand_card'
-                  ? 'bg-card text-primary shadow-sm border border-border'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              💳 Brand & Offer Cards ({banners.filter(b => b.placement === 'brand_card' || ['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type)).length})
-            </button>
+          {/* Header: Live Brand & Offer Cards Only */}
+          <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-xl border border-border/60">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">💳</span>
+              <span className="text-xs font-black text-text-primary">
+                Live Brand & Offer Cards ({banners.length})
+              </span>
+            </div>
+            <span className="text-[10px] font-bold text-text-muted">
+              Auto-syncs across Web & Flutter Mobile App
+            </span>
           </div>
 
           {loading ? (
@@ -2157,17 +2161,15 @@ export function AdminBanners({
             </div>
           ) : (() => {
             const filteredBanners = banners.filter(b => {
-              const isBrandCard = b.placement === 'brand_card' || ['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type)
-              const matchesTab = activeListTab === 'brand_card' ? isBrandCard : !isBrandCard
               const bPlatform = b.platform || 'all'
               const matchesPlatform = activePlatformFilter === 'all' || bPlatform === 'all' || bPlatform === activePlatformFilter
-              return matchesTab && matchesPlatform
+              return matchesPlatform
             })
 
             if (filteredBanners.length === 0) {
               return (
                 <div className="py-12 text-center text-xs text-text-secondary bg-muted/20 border border-dashed border-border rounded-xl">
-                  No {activeListTab === 'hero' ? 'Hero Banners' : 'Brand Cards'} registered for {activePlatformFilter === 'all' ? 'All Devices' : activePlatformFilter} yet.
+                  No Brand Cards registered for {activePlatformFilter === 'all' ? 'All Devices' : activePlatformFilter} yet.
                 </div>
               )
             }
@@ -2193,7 +2195,7 @@ export function AdminBanners({
                           
                           {/* Section Tag */}
                           <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                            {b.placement === 'brand_card' ? '💳 BRAND CARD' : '🖼️ HERO BANNER'}
+                            '💳 BRAND CARD'
                           </span>
 
                           {/* Mode Tag */}

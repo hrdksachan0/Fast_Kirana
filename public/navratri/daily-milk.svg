@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Milk Carton</title>
+<ellipse cx="120" cy="141" rx="58" ry="8" fill="#264D37" opacity=".12"/>
+<path d="m78 41 17-24h45l19 24v91H78Z" fill="#DAEEE3" stroke="#4E8060" stroke-width="2"/><path d="M95 17v24H78m17 0h64l-19-24" stroke="#4E8060" stroke-width="2"/><path d="M79 43h79v29H79Z" fill="#4E8060"/><path d="M79 114h79v18H79Z" fill="#4E8060"/>
+<path d="M119 77c-20 25-23 35 0 35s20-10 0-35Z" fill="#FFF8DF"/><path d="m91 26 46 0" stroke="#FFF8DF" stroke-width="3" stroke-linecap="round"/>
+</svg>

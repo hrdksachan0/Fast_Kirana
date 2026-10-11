@@ -12,6 +12,7 @@ import '../../core/services/location_service.dart';
 import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/store_hub_provider.dart';
+import 'dart:convert';
 import '../../providers/cart_provider.dart';
 import '../../data/models/store_hub.dart';
 import '../../widgets/hub_conflict_dialog.dart';
@@ -19,6 +20,7 @@ import 'map_picker_screen.dart';
 import '../home/main_shell.dart';
 import '../../widgets/unserviceable_location_banner.dart';
 import '../../providers/product_provider.dart';
+import '../../core/routes/app_router.dart';
 
 class DeliveryLocationScreen extends ConsumerStatefulWidget {
   final bool autoFetchLocation;
@@ -147,6 +149,137 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
     super.dispose();
   }
 
+  Future<void> _onLocationSelected(Address address, {bool checkServiceable = false, double? distanceKm}) async {
+    HapticFeedback.lightImpact();
+
+    // 1. selectedAddressProvider set
+    ref.read(selectedAddressProvider.notifier).state = address;
+
+    // 2. currentStoreHubProvider auto-sync + catalog refresh
+    refreshAllCatalogProviders(ref);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_chosen_location', true);
+    await prefs.setString('local_selected_address', jsonEncode(address.toJson()));
+
+    if (!mounted) return;
+
+    // 3. Smooth Fade-Through animation direct MainShell (Home)
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      Navigator.of(context).pushAndRemoveUntil(
+        FadeThroughRoute(page: const MainShell()),
+        (route) => false,
+      );
+    }
+
+    // 4 & 5. Light haptic feedback + 'Welcome to FastKirana, [Name]! 🎉' (no time mentioned)
+    final savedName = prefs.getString('user_name') ?? '';
+    final cleanName = (savedName.isNotEmpty &&
+            !savedName.toLowerCase().startsWith('user ') &&
+            !savedName.toLowerCase().startsWith('customer ') &&
+            savedName.toLowerCase() != 'customer' &&
+            savedName != 'FastKirana Customer')
+        ? savedName.trim()
+        : '';
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final rootContext = AppRouter.navigatorKey.currentContext;
+      if (rootContext != null && rootContext.mounted) {
+        if (checkServiceable && distanceKm != null) {
+          UnserviceableLocationBanner.showUnserviceableModal(rootContext, ref, distanceKm);
+        } else {
+          ScaffoldMessenger.of(rootContext).hideCurrentSnackBar();
+          ScaffoldMessenger.of(rootContext).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              behavior: SnackBarBehavior.floating,
+              padding: EdgeInsets.zero,
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+              duration: const Duration(seconds: 4),
+              content: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1.1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.28),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF16A34A), Color(0xFF22C55E)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF16A34A).withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.check_rounded, color: Colors.white, size: 20),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cleanName.isNotEmpty
+                                ? 'Welcome to FastKirana, $cleanName! 🎉'
+                                : 'Welcome to FastKirana! 🎉',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Fresh groceries & essentials at your doorstep',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+      }
+    });
+  }
+
   Future<void> _useCurrentLocation() async {
     setState(() => _isFetchingGps = true);
     HapticFeedback.lightImpact();
@@ -168,36 +301,12 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
           isDefault: true,
         );
 
-        ref.read(selectedAddressProvider.notifier).state = address;
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('has_chosen_location', true);
-
-        if (!mounted) return;
-
         setState(() => _isFetchingGps = false);
-
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        } else {
-          Navigator.pushAndRemoveUntil(
-            context,
-            FadeSlideRoute(page: const MainShell()),
-            (route) => false,
-          );
-        }
-
-        if (!details.isServiceable) {
-          UnserviceableLocationBanner.showUnserviceableModal(context, ref, details.distanceKm);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFF16A34A),
-              content: Text('📍 Location set to ${details.area} (${details.distanceKm.toStringAsFixed(1)} km)'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        await _onLocationSelected(
+          address,
+          checkServiceable: !details.isServiceable,
+          distanceKm: details.distanceKm,
+        );
         return;
       }
     } catch (e) { LoggerService.error("Bare catch", e); }
@@ -227,7 +336,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
       Navigator.of(context).pop();
     } else {
       Navigator.of(context).pushAndRemoveUntil(
-        FadeSlideRoute(page: const MainShell()),
+        FadeThroughRoute(page: const MainShell()),
         (route) => false,
       );
     }
@@ -376,49 +485,52 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                   const SizedBox(height: 16),
 
                 // 2. HERO ACTION BENTO GRID
-                // Hero Card: Use Current GPS Location
+                // Hero Card: Live GPS Radar Card
                 Bounceable(
                   onTap: _isFetchingGps ? null : _useCurrentLocation,
                   child: Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
+                        colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFFED7AA), width: 1.3),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF86EFAC), width: 1.3),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryOrange.withValues(alpha: 0.06),
-                          blurRadius: 12,
-                          offset: const Offset(0, 3),
+                          color: const Color(0xFF16A34A).withValues(alpha: 0.10),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: [
                               BoxShadow(
-                                color: primaryOrange.withValues(alpha: 0.12),
-                                blurRadius: 6,
+                                color: const Color(0xFF16A34A).withValues(alpha: 0.15),
+                                blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          child: _isFetchingGps
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2.2, color: primaryOrange),
-                                )
-                              : const Icon(Icons.my_location_rounded, size: 20, color: primaryOrange),
+                          child: Center(
+                            child: _isFetchingGps
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2.2, color: Color(0xFF16A34A)),
+                                  )
+                                : const Icon(Icons.near_me_rounded, size: 22, color: Color(0xFF16A34A)),
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -429,25 +541,27 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                 children: [
                                   Text(
                                     'Use Current Location',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 14),
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: Responsive.scaledFontSize(context, 14.5),
                                       fontWeight: FontWeight.w900,
                                       color: slateDark,
+                                      letterSpacing: -0.2,
                                     ),
                                   ),
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFDCFCE7),
-                                      borderRadius: BorderRadius.circular(6),
+                                      color: const Color(0xFF16A34A),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      'GPS 🎯',
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 9),
+                                      'LIVE GPS 🎯',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: Responsive.scaledFontSize(context, 8.5),
                                         fontWeight: FontWeight.w900,
-                                        color: const Color(0xFF15803D),
+                                        color: Colors.white,
+                                        letterSpacing: 0.4,
                                       ),
                                     ),
                                   ),
@@ -455,17 +569,25 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Enable GPS for fastest doorstep delivery',
-                                style: GoogleFonts.inter(
+                                'Auto-detect exact doorstep address instantly',
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: Responsive.scaledFontSize(context, 11.5),
                                   fontWeight: FontWeight.w500,
-                                  color: slateMuted,
+                                  color: const Color(0xFF15803D),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: primaryOrange),
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF16A34A)),
+                        ),
                       ],
                     ),
                   ),
@@ -485,11 +607,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                             FadeSlideRoute(page: const MapPickerScreen()),
                           );
                           if (newAddr != null && mounted) {
-                            ref.read(selectedAddressProvider.notifier).state = newAddr;
-                            nav.pushAndRemoveUntil(
-                              FadeSlideRoute(page: const MainShell()),
-                              (route) => false,
-                            );
+                            await _onLocationSelected(newAddr);
                           }
                         },
                         child: Container(
@@ -655,7 +773,6 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                   onTap: () async {
                                     final proceed = await _checkAndHandleHubConflict(hub.latitude, hub.longitude);
                                     if (!proceed || !mounted) return;
-                                    HapticFeedback.lightImpact();
                                     final addr = Address(
                                       id: 'hub_${hub.id}',
                                       userId: 'current',
@@ -669,21 +786,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                       longitude: hub.longitude,
                                       isDefault: true,
                                     );
-                                    ref.read(selectedAddressProvider.notifier).state = addr;
-                                    refreshAllCatalogProviders(ref);
-                                    final prefs = await SharedPreferences.getInstance();
-                                    await prefs.setBool('has_chosen_location', true);
-
-                                    if (!context.mounted) return;
-                                    if (Navigator.of(context).canPop()) {
-                                      Navigator.of(context).pop();
-                                    } else {
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        FadeSlideRoute(page: const MainShell()),
-                                        (route) => false,
-                                      );
-                                    }
+                                    await _onLocationSelected(addr);
                                   },
                                   borderRadius: BorderRadius.circular(14),
                                   child: Container(
@@ -789,22 +892,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                               longitude: loc['lng'] as double,
                               isDefault: true,
                             );
-
-                            ref.read(selectedAddressProvider.notifier).state = addr;
-                            refreshAllCatalogProviders(ref);
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setBool('has_chosen_location', true);
-
-                            if (!context.mounted) return;
-                            if (Navigator.of(context).canPop()) {
-                              Navigator.of(context).pop();
-                            } else {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                FadeSlideRoute(page: const MainShell()),
-                                (route) => false,
-                              );
-                            }
+                            await _onLocationSelected(addr);
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
@@ -963,17 +1051,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                                 final proceed = await _checkAndHandleHubConflict(addr.latitude!, addr.longitude!);
                                 if (!proceed || !mounted) return;
                               }
-                              HapticFeedback.selectionClick();
-                              ref.read(selectedAddressProvider.notifier).state = addr;
-                              refreshAllCatalogProviders(ref);
-                              final prefs = await SharedPreferences.getInstance();
-                              await prefs.setBool('has_chosen_location', true);
-                              if (!context.mounted) return;
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                FadeSlideRoute(page: const MainShell()),
-                                (route) => false,
-                              );
+                              await _onLocationSelected(addr);
                             },
                             child: Padding(
                               padding: const EdgeInsets.all(14),

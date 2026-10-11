@@ -1,0 +1,215 @@
+{
+  "version": 1,
+  "demo": true,
+  "enabled": true,
+  "autoplay": true,
+  "layout": "deals",
+  "searchPrefix": "Search for",
+  "decorationImage": null,
+  "labels": {
+    "sectionLabel": "A considered pantry",
+    "specialsHeading": "Pantry Picks",
+    "curvedTabLabel": "Top Picks",
+    "loadingText": "Loading this store’s value picks collection…",
+    "emptyText": "No matching products in this collection yet. Try another tab or search the catalogue.",
+    "demoLabel": "Demo prices",
+    "resultsDemoLabel": "Demo collection · illustrative prices"
+  },
+  "appearance": {
+    "background": "#626F9D",
+    "card": "#FFF7E2",
+    "text": "#35415F",
+    "smallText": "#263049",
+    "headerText": "#FFF7E2",
+    "headerOutline": "#293656",
+    "underline": "#596584",
+    "tabSurface": "#FFF7E2"
+  },
+  "timings": {
+    "headerMs": 3600,
+    "productMs": 3000,
+    "searchMs": 3100,
+    "crossfadeMs": 240
+  },
+  "searchSuggestions": [
+    "Cooking oil",
+    "Toor dal",
+    "Atta",
+    "Turmeric"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "value-picks-header-1",
+      "kind": "illustration",
+      "eyebrow": "",
+      "title": "Pick the staples you use most",
+      "subtitle": "Compare your everyday favourites",
+      "image": "value-pantry-bag.svg"
+    },
+    {
+      "id": "value-picks-header-2",
+      "kind": "title",
+      "eyebrow": "",
+      "title": "Build a basket that fits your home",
+      "subtitle": "Flour, dal, oil and spices",
+      "image": null
+    },
+    {
+      "id": "value-picks-header-3",
+      "kind": "brand",
+      "eyebrow": "",
+      "title": "Your picks, with FastKirana",
+      "subtitle": "Start here and make it your own",
+      "image": "value-pantry-bag.svg"
+    }
+  ],
+  "products": [
+    {
+      "id": "value-picks-oil",
+      "name": "Cooking Oil",
+      "image": "value-oil.svg",
+      "originalPrice": 140,
+      "price": 140,
+      "currency": "INR",
+      "categoryId": "value-picks-oil-category",
+      "destinationId": "search-value-picks-oil"
+    },
+    {
+      "id": "value-picks-dal",
+      "name": "Toor Dal",
+      "image": "value-dal.svg",
+      "originalPrice": 115,
+      "price": 115,
+      "currency": "INR",
+      "categoryId": "value-picks-dal-category",
+      "destinationId": "search-value-picks-dal"
+    },
+    {
+      "id": "value-picks-atta",
+      "name": "Whole Wheat Atta",
+      "image": "value-atta.svg",
+      "originalPrice": 55,
+      "price": 55,
+      "currency": "INR",
+      "categoryId": "value-picks-atta-category",
+      "destinationId": "search-value-picks-atta"
+    },
+    {
+      "id": "value-picks-turmeric",
+      "name": "Turmeric Powder",
+      "image": "value-turmeric.svg",
+      "originalPrice": 35,
+      "price": 35,
+      "currency": "INR",
+      "categoryId": "value-picks-turmeric-category",
+      "destinationId": "search-value-picks-turmeric"
+    }
+  ],
+  "categories": [
+    {
+      "id": "value-picks-oil-category",
+      "label": "Oils & Cooking",
+      "image": "value-oil.svg",
+      "destinationId": "search-value-picks-oil",
+      "keywords": [
+        "oil",
+        "cooking"
+      ]
+    },
+    {
+      "id": "value-picks-dal-category",
+      "label": "Dals & Pulses",
+      "image": "value-dal.svg",
+      "destinationId": "search-value-picks-dal",
+      "keywords": [
+        "dal",
+        "pulse"
+      ]
+    },
+    {
+      "id": "value-picks-atta-category",
+      "label": "Flour & Staples",
+      "image": "value-atta.svg",
+      "destinationId": "search-value-picks-atta",
+      "keywords": [
+        "atta",
+        "flour",
+        "wheat",
+        "staple"
+      ]
+    },
+    {
+      "id": "value-picks-turmeric-category",
+      "label": "Spices & Seasoning",
+      "image": "value-turmeric.svg",
+      "destinationId": "search-value-picks-turmeric",
+      "keywords": [
+        "turmeric",
+        "spice",
+        "seasoning"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "top-picks",
+      "label": "Top Picks",
+      "image": "value-pantry-bag.svg",
+      "keywords": []
+    },
+    {
+      "id": "value-picks-staples",
+      "label": "Flour & Dal",
+      "image": "value-dal.svg",
+      "keywords": [
+        "atta",
+        "flour",
+        "wheat",
+        "dal",
+        "pulse"
+      ]
+    },
+    {
+      "id": "value-picks-cooking",
+      "label": "Cooking Oils",
+      "image": "value-oil.svg",
+      "keywords": [
+        "oil",
+        "cooking"
+      ]
+    },
+    {
+      "id": "value-picks-spices",
+      "label": "Spices",
+      "image": "value-turmeric.svg",
+      "keywords": [
+        "turmeric",
+        "spice",
+        "seasoning"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "search-value-picks-oil",
+      "kind": "search",
+      "query": "cooking oil"
+    },
+    {
+      "id": "search-value-picks-dal",
+      "kind": "search",
+      "query": "toor dal"
+    },
+    {
+      "id": "search-value-picks-atta",
+      "kind": "search",
+      "query": "atta"
+    },
+    {
+      "id": "search-value-picks-turmeric",
+      "kind": "search",
+      "query": "turmeric"
+    }
+  ]
+}

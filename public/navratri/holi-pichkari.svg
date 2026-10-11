@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Colourful Pichkari</title>
+<ellipse cx="120" cy="140" rx="88" ry="8" fill="#713D21" opacity=".12"/>
+<g transform="rotate(-22 120 85)"><rect x="28" y="55" width="145" height="40" rx="13" fill="#26999D"/><path d="M66 55h53v40H66Z" fill="#E8AF38"/><rect x="170" y="63" width="33" height="24" rx="4" fill="#D74B74"/><rect x="200" y="68" width="17" height="14" rx="3" fill="#985F39"/><rect x="17" y="50" width="16" height="50" rx="6" fill="#D74B74"/><path d="M97 94h33l-9 42H98Z" fill="#D74B74"/><path d="M78 66h26m-26 8h26" stroke="#FFF8DF" stroke-width="3" stroke-linecap="round"/></g>
+<path d="m211 23 11-5m-9 17 15 2m-11 12 10 7" stroke="#72CBC6" stroke-width="4" stroke-linecap="round"/>
+</svg>

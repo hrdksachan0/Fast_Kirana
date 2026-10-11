@@ -25,6 +25,7 @@ mixin _$User {
   bool get isBlocked => throw _privateConstructorUsedError;
   String? get blockReason => throw _privateConstructorUsedError;
   String? get assignedRestaurantId => throw _privateConstructorUsedError;
+  String? get assignedStoreId => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
 
   /// Create a copy of User
@@ -48,6 +49,7 @@ abstract class $UserCopyWith<$Res> {
       bool isBlocked,
       String? blockReason,
       String? assignedRestaurantId,
+      String? assignedStoreId,
       DateTime? createdAt});
 }
 
@@ -75,6 +77,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? isBlocked = null,
     Object? blockReason = freezed,
     Object? assignedRestaurantId = freezed,
+    Object? assignedStoreId = freezed,
     Object? createdAt = freezed,
   }) {
     return _then(_value.copyWith(
@@ -114,6 +117,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.assignedRestaurantId
           : assignedRestaurantId // ignore: cast_nullable_to_non_nullable
               as String?,
+      assignedStoreId: freezed == assignedStoreId
+          ? _value.assignedStoreId
+          : assignedStoreId // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -139,6 +146,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       bool isBlocked,
       String? blockReason,
       String? assignedRestaurantId,
+      String? assignedStoreId,
       DateTime? createdAt});
 }
 
@@ -163,6 +171,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? isBlocked = null,
     Object? blockReason = freezed,
     Object? assignedRestaurantId = freezed,
+    Object? assignedStoreId = freezed,
     Object? createdAt = freezed,
   }) {
     return _then(_$UserImpl(
@@ -202,6 +211,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.assignedRestaurantId
           : assignedRestaurantId // ignore: cast_nullable_to_non_nullable
               as String?,
+      assignedStoreId: freezed == assignedStoreId
+          ? _value.assignedStoreId
+          : assignedStoreId // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: freezed == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -223,6 +236,7 @@ class _$UserImpl extends _User {
       this.isBlocked = false,
       this.blockReason,
       this.assignedRestaurantId,
+      this.assignedStoreId,
       this.createdAt})
       : super._();
 
@@ -247,11 +261,13 @@ class _$UserImpl extends _User {
   @override
   final String? assignedRestaurantId;
   @override
+  final String? assignedStoreId;
+  @override
   final DateTime? createdAt;
 
   @override
   String toString() {
-    return 'User(id: $id, name: $name, email: $email, phone: $phone, image: $image, role: $role, isBlocked: $isBlocked, blockReason: $blockReason, assignedRestaurantId: $assignedRestaurantId, createdAt: $createdAt)';
+    return 'User(id: $id, name: $name, email: $email, phone: $phone, image: $image, role: $role, isBlocked: $isBlocked, blockReason: $blockReason, assignedRestaurantId: $assignedRestaurantId, assignedStoreId: $assignedStoreId, createdAt: $createdAt)';
   }
 
   @override
@@ -271,13 +287,26 @@ class _$UserImpl extends _User {
                 other.blockReason == blockReason) &&
             (identical(other.assignedRestaurantId, assignedRestaurantId) ||
                 other.assignedRestaurantId == assignedRestaurantId) &&
+            (identical(other.assignedStoreId, assignedStoreId) ||
+                other.assignedStoreId == assignedStoreId) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, email, phone, image,
-      role, isBlocked, blockReason, assignedRestaurantId, createdAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      name,
+      email,
+      phone,
+      image,
+      role,
+      isBlocked,
+      blockReason,
+      assignedRestaurantId,
+      assignedStoreId,
+      createdAt);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -299,6 +328,7 @@ abstract class _User extends User {
       final bool isBlocked,
       final String? blockReason,
       final String? assignedRestaurantId,
+      final String? assignedStoreId,
       final DateTime? createdAt}) = _$UserImpl;
   const _User._() : super._();
 
@@ -320,6 +350,8 @@ abstract class _User extends User {
   String? get blockReason;
   @override
   String? get assignedRestaurantId;
+  @override
+  String? get assignedStoreId;
   @override
   DateTime? get createdAt;
 

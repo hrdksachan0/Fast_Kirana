@@ -1,0 +1,212 @@
+{
+  "version": 1,
+  "demo": true,
+  "enabled": true,
+  "autoplay": true,
+  "layout": "banner",
+  "searchPrefix": "Search for",
+  "decorationImage": null,
+  "labels": {
+    "sectionLabel": "Ramadan, together",
+    "specialsHeading": "Ramadan Picks",
+    "curvedTabLabel": "Top Picks",
+    "loadingText": "Loading this store’s ramadan collection…",
+    "emptyText": "No matching products in this collection yet. Try another tab or search the catalogue.",
+    "demoLabel": "Demo prices",
+    "resultsDemoLabel": "Demo collection · illustrative prices"
+  },
+  "appearance": {
+    "background": "#237768",
+    "card": "#FFF6DD",
+    "text": "#255947",
+    "smallText": "#193F36",
+    "headerText": "#FFF6DD",
+    "headerOutline": "#123D35",
+    "underline": "#236F61",
+    "tabSurface": "#FFF6DD"
+  },
+  "timings": {
+    "headerMs": 5500,
+    "productMs": 4200,
+    "searchMs": 3800,
+    "crossfadeMs": 500
+  },
+  "searchSuggestions": [
+    "Dates",
+    "Vermicelli",
+    "Almonds",
+    "Tea"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "ramadan-header-1",
+      "kind": "illustration",
+      "eyebrow": "",
+      "title": "Make space for togetherness",
+      "subtitle": "Ingredients for meals to share",
+      "image": "ramadan-evening.svg"
+    },
+    {
+      "id": "ramadan-header-2",
+      "kind": "title",
+      "eyebrow": "",
+      "title": "A thoughtful basket for your table",
+      "subtitle": "Dates, dry fruits and pantry staples",
+      "image": null
+    },
+    {
+      "id": "ramadan-header-3",
+      "kind": "brand",
+      "eyebrow": "",
+      "title": "Gather with FastKirana",
+      "subtitle": "Create a collection for your home",
+      "image": "ramadan-evening.svg"
+    }
+  ],
+  "products": [
+    {
+      "id": "ramadan-dates",
+      "name": "Dates Box",
+      "image": "ramadan-dates.svg",
+      "originalPrice": 140,
+      "price": 140,
+      "currency": "INR",
+      "categoryId": "ramadan-dates-category",
+      "destinationId": "search-ramadan-dates"
+    },
+    {
+      "id": "ramadan-vermicelli",
+      "name": "Roasted Vermicelli",
+      "image": "ramadan-vermicelli.svg",
+      "originalPrice": 45,
+      "price": 45,
+      "currency": "INR",
+      "categoryId": "ramadan-vermicelli-category",
+      "destinationId": "search-ramadan-vermicelli"
+    },
+    {
+      "id": "ramadan-almonds",
+      "name": "Almonds",
+      "image": "ramadan-almonds.svg",
+      "originalPrice": 190,
+      "price": 190,
+      "currency": "INR",
+      "categoryId": "ramadan-almonds-category",
+      "destinationId": "search-ramadan-almonds"
+    },
+    {
+      "id": "ramadan-tea",
+      "name": "Tea Leaves",
+      "image": "ramadan-tea.svg",
+      "originalPrice": 110,
+      "price": 110,
+      "currency": "INR",
+      "categoryId": "ramadan-tea-category",
+      "destinationId": "search-ramadan-tea"
+    }
+  ],
+  "categories": [
+    {
+      "id": "ramadan-dates-category",
+      "label": "Dates & Fruit",
+      "image": "ramadan-dates.svg",
+      "destinationId": "search-ramadan-dates",
+      "keywords": [
+        "date",
+        "fruit"
+      ]
+    },
+    {
+      "id": "ramadan-vermicelli-category",
+      "label": "Pantry Ingredients",
+      "image": "ramadan-vermicelli.svg",
+      "destinationId": "search-ramadan-vermicelli",
+      "keywords": [
+        "vermicelli",
+        "sewai",
+        "pantry"
+      ]
+    },
+    {
+      "id": "ramadan-almonds-category",
+      "label": "Nuts & Dry Fruits",
+      "image": "ramadan-almonds.svg",
+      "destinationId": "search-ramadan-almonds",
+      "keywords": [
+        "almond",
+        "nut",
+        "dry fruit"
+      ]
+    },
+    {
+      "id": "ramadan-tea-category",
+      "label": "Tea & Drinks",
+      "image": "ramadan-tea.svg",
+      "destinationId": "search-ramadan-tea",
+      "keywords": [
+        "tea",
+        "drink"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "top-picks",
+      "label": "Top Picks",
+      "image": "ramadan-evening.svg",
+      "keywords": []
+    },
+    {
+      "id": "ramadan-dates",
+      "label": "Dates & Nuts",
+      "image": "ramadan-dates.svg",
+      "keywords": [
+        "date",
+        "almond",
+        "nut"
+      ]
+    },
+    {
+      "id": "ramadan-pantry",
+      "label": "Pantry",
+      "image": "ramadan-vermicelli.svg",
+      "keywords": [
+        "vermicelli",
+        "sewai",
+        "pantry"
+      ]
+    },
+    {
+      "id": "ramadan-drinks",
+      "label": "Tea & Drinks",
+      "image": "ramadan-tea.svg",
+      "keywords": [
+        "tea",
+        "drink"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "search-ramadan-dates",
+      "kind": "search",
+      "query": "dates"
+    },
+    {
+      "id": "search-ramadan-vermicelli",
+      "kind": "search",
+      "query": "vermicelli"
+    },
+    {
+      "id": "search-ramadan-almonds",
+      "kind": "search",
+      "query": "almonds"
+    },
+    {
+      "id": "search-ramadan-tea",
+      "kind": "search",
+      "query": "tea"
+    }
+  ]
+}

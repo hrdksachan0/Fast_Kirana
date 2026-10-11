@@ -4,9 +4,113 @@
  */
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { jwtVerify } from 'jose'
+import { auth, verifiedAuth } from '@/auth'
 import { isSuperadminPhone, isRootAdminAccount } from '@/lib/superadmin-config'
 import { logger } from '@/lib/logger'
+
+export interface VerifiedGuardUser {
+  id: string
+  role: string
+  email: string | null
+  phone: string | null
+  assignedStoreId: string | null
+  assignedRestaurantId: string | null
+  isBlocked: boolean
+  deletedAt: Date | null
+}
+
+export interface VerifiedRoleDependencies {
+  getSession: () => Promise<{ user?: { id?: unknown } } | null>
+  verifyBearer: (authorization: string) => Promise<{ userId?: unknown } | null>
+  findUser: (id: string) => Promise<VerifiedGuardUser | null>
+}
+
+/**
+ * Sensitive endpoints must prove identity before looking up account metadata.
+ * Claims establish only the ID; current database role/scope decide access.
+ * Dependencies also make credential and database failures testable offline.
+ */
+export function createVerifiedRoleGuard(dependencies: VerifiedRoleDependencies) {
+  return async (allowedRoles: string[], request?: Request) => {
+    const denied = (message: string, status: number) => ({
+      error: NextResponse.json({ error: message }, { status }),
+      session: null,
+    })
+    let authenticatedId: unknown
+    try {
+      const authorization = request?.headers.get('authorization')
+      if (authorization) {
+        if (!authorization.startsWith('Bearer ')) return denied('Unauthorized: Valid credentials required', 401)
+        const identity = await dependencies.verifyBearer(authorization)
+        authenticatedId = identity?.userId
+      } else {
+        const session = await dependencies.getSession()
+        authenticatedId = session?.user?.id
+      }
+    } catch {
+      return denied('Unauthorized: Credentials could not be verified', 401)
+    }
+    // Never use email, phone, role, or x-user-* headers as identity evidence.
+    if (typeof authenticatedId !== 'string' || !authenticatedId.trim() || authenticatedId.startsWith('mock-id-')) {
+      return denied('Unauthorized: Authenticated user ID required', 401)
+    }
+    let user: VerifiedGuardUser | null
+    try {
+      user = await dependencies.findUser(authenticatedId)
+    } catch {
+      return denied('Authorization is unavailable. Please try again.', 503)
+    }
+    if (!user || user.deletedAt) return denied('Unauthorized: Account is unavailable', 401)
+    if (user.isBlocked) return denied('Forbidden: Account is blocked', 403)
+    const role = user.role.toUpperCase()
+    if (!allowedRoles.some(value => value.toUpperCase() === role)) return denied('Forbidden: Insufficient permissions', 403)
+    return {
+      error: null,
+      session: {
+        user: {
+          id: user.id, role, email: user.email, phone: user.phone,
+          assignedStoreId: user.assignedStoreId,
+          assignedRestaurantId: user.assignedRestaurantId,
+        },
+      },
+    }
+  }
+}
+
+/** Campaign tokens require the configured signing key, HS256, and expiry. */
+export async function verifyCampaignBearer(authorization: string): Promise<{ userId: string } | null> {
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+  const token = authorization.match(/^Bearer (\S+)$/)?.[1]
+  if (!secret?.trim() || !token) return null
+  try {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), {
+      algorithms: ['HS256'],
+      requiredClaims: ['exp'],
+    })
+    const userId = payload.id || payload.sub
+    return typeof userId === 'string' && userId.trim() ? { userId } : null
+  } catch {
+    return null
+  }
+}
+
+/** Verified NextAuth cookie session or signed Bearer; no identity-header fallback. */
+export const requireVerifiedRole = createVerifiedRoleGuard({
+  getSession: async () => await verifiedAuth(),
+  verifyBearer: verifyCampaignBearer,
+  findUser: async id => {
+    const { prisma } = await import('@/lib/prisma')
+    return prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true, role: true, email: true, phone: true,
+        assignedStoreId: true, assignedRestaurantId: true,
+        isBlocked: true, deletedAt: true,
+      },
+    })
+  },
+})
 
 /**
  * Requires an authenticated user with one of the given roles.

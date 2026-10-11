@@ -1,0 +1,214 @@
+{
+  "version": 1,
+  "demo": true,
+  "enabled": true,
+  "autoplay": true,
+  "layout": "split",
+  "searchPrefix": "Search for",
+  "decorationImage": null,
+  "labels": {
+    "sectionLabel": "Rainy-day comforts",
+    "specialsHeading": "Monsoon Picks",
+    "curvedTabLabel": "Top Picks",
+    "loadingText": "Loading this store’s monsoon collection…",
+    "emptyText": "No matching products in this collection yet. Try another tab or search the catalogue.",
+    "demoLabel": "Demo prices",
+    "resultsDemoLabel": "Demo collection · illustrative prices"
+  },
+  "appearance": {
+    "background": "#547B88",
+    "card": "#FFF4DE",
+    "text": "#273B5B",
+    "smallText": "#1F314A",
+    "headerText": "#FFF4DE",
+    "headerOutline": "#243B56",
+    "underline": "#385667",
+    "tabSurface": "#FFF4DE"
+  },
+  "timings": {
+    "headerMs": 5000,
+    "productMs": 3900,
+    "searchMs": 3500,
+    "crossfadeMs": 480
+  },
+  "searchSuggestions": [
+    "Masala tea",
+    "Besan",
+    "Tomato soup",
+    "Floor cleaner"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "monsoon-header-1",
+      "kind": "illustration",
+      "eyebrow": "",
+      "title": "A little comfort for rainy days",
+      "subtitle": "Tea, snacks and pantry favourites",
+      "image": "monsoon-comfort.svg"
+    },
+    {
+      "id": "monsoon-header-2",
+      "kind": "title",
+      "eyebrow": "",
+      "title": "Make room for cosy evenings",
+      "subtitle": "Ingredients for something warm",
+      "image": null
+    },
+    {
+      "id": "monsoon-header-3",
+      "kind": "brand",
+      "eyebrow": "",
+      "title": "Stay stocked with FastKirana",
+      "subtitle": "Kitchen essentials and home care",
+      "image": "monsoon-comfort.svg"
+    }
+  ],
+  "products": [
+    {
+      "id": "monsoon-tea",
+      "name": "Masala Tea",
+      "image": "monsoon-tea.svg",
+      "originalPrice": 125,
+      "price": 125,
+      "currency": "INR",
+      "categoryId": "monsoon-tea-category",
+      "destinationId": "search-monsoon-tea"
+    },
+    {
+      "id": "monsoon-besan",
+      "name": "Besan Flour",
+      "image": "monsoon-besan.svg",
+      "originalPrice": 65,
+      "price": 65,
+      "currency": "INR",
+      "categoryId": "monsoon-besan-category",
+      "destinationId": "search-monsoon-besan"
+    },
+    {
+      "id": "monsoon-soup",
+      "name": "Tomato Soup Mix",
+      "image": "monsoon-soup.svg",
+      "originalPrice": 45,
+      "price": 45,
+      "currency": "INR",
+      "categoryId": "monsoon-soup-category",
+      "destinationId": "search-monsoon-soup"
+    },
+    {
+      "id": "monsoon-cleaner",
+      "name": "Floor Cleaner",
+      "image": "monsoon-cleaner.svg",
+      "originalPrice": 110,
+      "price": 110,
+      "currency": "INR",
+      "categoryId": "monsoon-cleaner-category",
+      "destinationId": "search-monsoon-cleaner"
+    }
+  ],
+  "categories": [
+    {
+      "id": "monsoon-tea-category",
+      "label": "Tea & Drinks",
+      "image": "monsoon-tea.svg",
+      "destinationId": "search-monsoon-tea",
+      "keywords": [
+        "tea",
+        "drink"
+      ]
+    },
+    {
+      "id": "monsoon-besan-category",
+      "label": "Cooking & Snacks",
+      "image": "monsoon-besan.svg",
+      "destinationId": "search-monsoon-besan",
+      "keywords": [
+        "besan",
+        "flour",
+        "snack"
+      ]
+    },
+    {
+      "id": "monsoon-soup-category",
+      "label": "Soups & Warm Bowls",
+      "image": "monsoon-soup.svg",
+      "destinationId": "search-monsoon-soup",
+      "keywords": [
+        "soup",
+        "tomato",
+        "mix"
+      ]
+    },
+    {
+      "id": "monsoon-cleaner-category",
+      "label": "Home Care",
+      "image": "monsoon-cleaner.svg",
+      "destinationId": "search-monsoon-cleaner",
+      "keywords": [
+        "cleaner",
+        "cleaning",
+        "home care"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "top-picks",
+      "label": "Top Picks",
+      "image": "monsoon-comfort.svg",
+      "keywords": []
+    },
+    {
+      "id": "monsoon-tea-snacks",
+      "label": "Tea & Snacks",
+      "image": "monsoon-tea.svg",
+      "keywords": [
+        "tea",
+        "besan",
+        "snack"
+      ]
+    },
+    {
+      "id": "monsoon-warm-bowls",
+      "label": "Warm Bowls",
+      "image": "monsoon-soup.svg",
+      "keywords": [
+        "soup",
+        "tomato",
+        "mix"
+      ]
+    },
+    {
+      "id": "monsoon-home-care",
+      "label": "Home Care",
+      "image": "monsoon-cleaner.svg",
+      "keywords": [
+        "cleaner",
+        "cleaning",
+        "home care"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "search-monsoon-tea",
+      "kind": "search",
+      "query": "masala tea"
+    },
+    {
+      "id": "search-monsoon-besan",
+      "kind": "search",
+      "query": "besan"
+    },
+    {
+      "id": "search-monsoon-soup",
+      "kind": "search",
+      "query": "tomato soup"
+    },
+    {
+      "id": "search-monsoon-cleaner",
+      "kind": "search",
+      "query": "floor cleaner"
+    }
+  ]
+}

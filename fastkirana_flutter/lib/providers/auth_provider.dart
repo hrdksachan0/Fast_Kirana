@@ -32,12 +32,32 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       }
       final json = jsonDecode(raw) as Map<String, dynamic>;
       var user = User.fromJson(json);
+
+      // Check if assigned_store_id was saved separately or in json
+      if (user.assignedStoreId == null || user.assignedStoreId!.isEmpty) {
+        final savedStoreId = await SecureStorage.read('assigned_store_id');
+        if (savedStoreId != null && savedStoreId.isNotEmpty) {
+          user = user.copyWith(assignedStoreId: savedStoreId);
+        }
+      }
+
       final isMasterAdmin = (user.phone != null && (user.phone!.contains('7054470303') || user.phone!.contains('9170942500'))) ||
           user.email.toLowerCase().startsWith('admin@') ||
           user.email.toLowerCase().startsWith('superadmin@');
       if (isMasterAdmin && user.role != 'ADMIN') {
         user = user.copyWith(role: 'ADMIN');
         await SecureStorage.write('user_role', 'ADMIN');
+      }
+
+      // Ensure store managers with known numbers have assignedStoreId populated if null
+      if (user.phone != null && (user.assignedStoreId == null || user.assignedStoreId!.isEmpty)) {
+        if (user.phone!.contains('7054470303')) {
+          user = user.copyWith(assignedStoreId: 'hub-209206');
+        } else if (user.phone!.contains('9696678006')) {
+          user = user.copyWith(assignedStoreId: 'hub-224122');
+        } else if (user.phone!.contains('7633898577')) {
+          user = user.copyWith(assignedStoreId: 'hub-816107');
+        }
       }
       if (mounted) state = AsyncValue.data(user);
 
@@ -87,6 +107,13 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     if (user.assignedRestaurantId != null && user.assignedRestaurantId!.isNotEmpty) {
       await SecureStorage.write('assigned_restaurant_id', user.assignedRestaurantId!);
       await prefs.setString('assigned_restaurant_id', user.assignedRestaurantId!);
+    }
+    if (user.assignedStoreId != null && user.assignedStoreId!.isNotEmpty) {
+      await SecureStorage.write('assigned_store_id', user.assignedStoreId!);
+      await prefs.setString('assigned_store_id', user.assignedStoreId!);
+    } else {
+      await SecureStorage.delete('assigned_store_id');
+      await prefs.remove('assigned_store_id');
     }
     await SecureStorage.loadCache();
     state = AsyncValue.data(user);

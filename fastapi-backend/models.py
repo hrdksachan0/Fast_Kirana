@@ -55,6 +55,20 @@ class OrderType(str, enum.Enum):
     RESTAURANT = "RESTAURANT"
 
 
+class DiscountType(str, enum.Enum):
+    FLAT = "FLAT"
+    PERCENT = "PERCENT"
+    BOGO = "BOGO"
+    FREE_DELIVERY = "FREE_DELIVERY"
+
+
+class BogoType(str, enum.Enum):
+    SAME_ITEM = "SAME_ITEM"
+    BUY_LARGE_GET_SMALL = "BUY_LARGE_GET_SMALL"
+    CHEAPEST_FREE = "CHEAPEST_FREE"
+    FREE_GIFT = "FREE_GIFT"
+
+
 # Note: All enum columns use String type since Prisma stores enums as text in PostgreSQL
 # This ensures SQLAlchemy models work with Prisma-managed schema
 
@@ -425,7 +439,7 @@ class Coupon(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     code: Mapped[str] = mapped_column(String, unique=True, index=True)
-    discountType: Mapped[str] = mapped_column(String)  # FLAT / PERCENT
+    discountType: Mapped[str] = mapped_column(SAEnum(DiscountType, name="DiscountType", create_type=False, native_enum=True))
     value: Mapped[float] = mapped_column(Float)
     minOrder: Mapped[float] = mapped_column(Float, default=0.0)
     maxDiscount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -436,7 +450,7 @@ class Coupon(Base):
     categoryId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     restaurantId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("restaurants.id", ondelete="CASCADE"), nullable=True)
     oncePerCustomer: Mapped[bool] = mapped_column(Boolean, default=False)
-    bogoType: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    bogoType: Mapped[Optional[str]] = mapped_column(SAEnum(BogoType, name="BogoType", create_type=False, native_enum=True), nullable=True)
     triggerVariant: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     rewardVariant: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     defaultFreeDishId: Mapped[Optional[str]] = mapped_column(String, nullable=True)

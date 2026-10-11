@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Fresh Vegetables</title>
+<ellipse cx="120" cy="141" rx="93" ry="8" fill="#264D37" opacity=".12"/>
+<path d="M35 99h174l-18 34H54Z" fill="#C8934D"/><path d="M34 98h176" stroke="#996633" stroke-width="5" stroke-linecap="round"/>
+<path d="m55 88 35-56 26 59Z" fill="#E89532"/><path d="m91 33 3-20m-4 21-14-17m15 17 17-15" stroke="#4E8060" stroke-width="5" stroke-linecap="round"/>
+<g fill="#4E8060"><circle cx="153" cy="63" r="21"/><circle cx="180" cy="78" r="24"/><circle cx="134" cy="88" r="24"/><circle cx="164" cy="95" r="26"/></g><path d="m152 63 8 48m20-33-20 33m-25-23 25 23" stroke="#9CBA66" stroke-width="3" stroke-linecap="round"/>
+<circle cx="82" cy="102" r="22" fill="#C95D43"/><path d="m80 79 5 8 9-5-5 9 6 4-11 1-5 7-2-10-8-3 9-3Z" fill="#4E8060"/>
+<path d="M63 115h117" stroke="#E4B873" stroke-width="3" stroke-linecap="round"/>
+</svg>

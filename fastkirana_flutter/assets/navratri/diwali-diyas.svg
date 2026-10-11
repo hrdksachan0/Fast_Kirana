@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Clay Diya Set</title>
+<ellipse cx="120" cy="140" rx="90" ry="8" fill="#713D21" opacity=".12"/>
+<path d="M29 100h78c-4 28-19 38-39 38s-36-10-39-38Z" fill="#A84A29"/>
+<ellipse cx="68" cy="100" rx="39" ry="9" fill="#7D351F"/><ellipse cx="68" cy="98" rx="28" ry="5" fill="#F5BE58"/>
+<path d="M68 44c-17 22-16 38 0 49 16-11 17-27 0-49Z" fill="#E9912B"/><path d="M68 65c-7 10-7 17 0 24 7-7 7-14 0-24Z" fill="#FFF8DF"/>
+<path d="M132 91h80c-4 29-20 39-40 39s-36-10-40-39Z" fill="#C06033"/>
+<ellipse cx="172" cy="91" rx="40" ry="9" fill="#7D351F"/><ellipse cx="172" cy="89" rx="29" ry="5" fill="#F5BE58"/>
+<path d="M172 31c-18 24-17 41 0 52 17-11 18-28 0-52Z" fill="#E9912B"/><path d="M172 53c-8 12-7 19 0 25 7-6 8-13 0-25Z" fill="#FFF8DF"/>
+<path d="M44 115q24 17 48 0m55-8q25 17 50 0" stroke="#F5BE58" stroke-width="3" stroke-linecap="round"/>
+</svg>

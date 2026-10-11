@@ -16,7 +16,8 @@ import '../../profile/notifications_screen.dart';
 import '../../search/search_screen.dart';
 
 class HomeTopHeader extends ConsumerStatefulWidget {
-  const HomeTopHeader({super.key});
+  final bool showSearch;
+  const HomeTopHeader({super.key, this.showSearch = true});
 
   @override
   ConsumerState<HomeTopHeader> createState() => _HomeTopHeaderState();
@@ -38,10 +39,23 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
   @override
   void initState() {
     super.initState();
+    _syncSearchTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeTopHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.showSearch != widget.showSearch) _syncSearchTimer();
+  }
+
+  void _syncSearchTimer() {
+    _searchTimer?.cancel();
+    if (!widget.showSearch) return;
     _searchTimer = Timer.periodic(const Duration(milliseconds: 3000), (_) {
       if (mounted) {
         setState(() {
-          _searchPlaceholderIndex = (_searchPlaceholderIndex + 1) % _dynamicPlaceholders.length;
+          _searchPlaceholderIndex =
+              (_searchPlaceholderIndex + 1) % _dynamicPlaceholders.length;
         });
       }
     });
@@ -80,13 +94,11 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                   builder: (context, ref, _) {
                     final selectedAddress = ref.watch(selectedAddressProvider);
                     final currentHub = ref.watch(currentStoreHubProvider);
-                    String locationLabel = selectedAddress?.displayLabel ?? 'Home';
-                    if (locationLabel.toLowerCase().contains('family in')) {
-                      locationLabel = 'Family & Friends';
-                    } else if (locationLabel.toLowerCase() == 'active store hub') {
-                      locationLabel = 'Instant Delivery';
-                    }
-                    final shortLocation = selectedAddress?.shortAddress ?? currentHub.city;
+                    final selectedArea = selectedAddress != null
+                        ? selectedAddress.displayArea
+                        : currentHub.city;
+                    final shortLocation =
+                        selectedAddress?.shortAddress ?? currentHub.city;
 
                     return GestureDetector(
                       onTap: () {
@@ -95,7 +107,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                           context,
                           activeAddress: selectedAddress,
                           onAddressSelected: (addr) {
-                            final distKm = (addr.latitude != null && addr.longitude != null)
+                            final distKm = (addr.latitude != null &&
+                                    addr.longitude != null)
                                 ? LocationService.getDistanceKm(
                                     addr.latitude!,
                                     addr.longitude!,
@@ -104,7 +117,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                   )
                                 : 0.0;
                             if (distKm > currentHub.deliveryRadiusKm) {
-                              UnserviceableLocationBanner.showUnserviceableModal(context, ref, distKm);
+                              UnserviceableLocationBanner
+                                  .showUnserviceableModal(context, ref, distKm);
                             }
                           },
                         );
@@ -113,16 +127,33 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Line 1: Delivering to Home / Family & Friends / Work (Zero truncation)
-                          Text(
-                            'Delivering to $locationLabel',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
-                              fontWeight: FontWeight.w700,
-                              color: AppDesignSystem.textSecondary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          // Line 1: Delivering to [Selected Area] with Live Active Dot (Zero mention of time)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF16A34A),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  'Delivering to $selectedArea',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize:
+                                        Responsive.scaledFontSize(context, 10.5),
+                                    fontWeight: FontWeight.w700,
+                                    color: AppDesignSystem.textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 2),
                           // Line 2: Location title + dropdown arrow + Hub indicator pill
@@ -133,7 +164,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                 child: Text(
                                   shortLocation,
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: Responsive.scaledFontSize(context, 14.5),
+                                    fontSize: Responsive.scaledFontSize(
+                                        context, 14.5),
                                     fontWeight: FontWeight.w900,
                                     color: AppDesignSystem.textPrimary,
                                     height: 1.15,
@@ -144,7 +176,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                 ),
                               ),
                               const SizedBox(width: 3),
-                              const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppDesignSystem.textPrimary),
+                              const Icon(Icons.keyboard_arrow_down_rounded,
+                                  size: 18, color: AppDesignSystem.textPrimary),
                             ],
                           ),
                         ],
@@ -160,7 +193,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                 constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 onPressed: () {
                   HapticFeedback.selectionClick();
-                  Navigator.push(context, FadeSlideRoute(page: const NotificationsScreen()));
+                  Navigator.push(context,
+                      FadeSlideRoute(page: const NotificationsScreen()));
                 },
                 icon: Container(
                   width: 40,
@@ -168,7 +202,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                    border:
+                        Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF0F172A).withValues(alpha: 0.05),
@@ -180,7 +215,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      const Icon(Icons.notifications_none_rounded, size: 20, color: Color(0xFF334155)),
+                      const Icon(Icons.notifications_none_rounded,
+                          size: 20, color: Color(0xFF334155)),
                       Positioned(
                         top: 9,
                         right: 9,
@@ -199,118 +235,129 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          if (widget.showSearch) ...[
+            const SizedBox(height: 12),
 
-          // 2. Ambient Search Pill (Floating glow & soft ambient depth)
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              Navigator.push(context, FadeSlideRoute(page: const SearchScreen()));
-            },
-            child: Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(
-                  color: const Color(0xFFE2E8F0),
-                  width: 1.1,
+            // 2. Ambient Search Pill (Floating glow & soft ambient depth)
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.push(
+                    context, FadeSlideRoute(page: const SearchScreen()));
+              },
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1.1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Ambient Lens Badge
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFEE2E2), width: 0.8),
-                    ),
-                    child: const Icon(
-                      Icons.search_rounded,
-                      size: 17,
-                      color: AppDesignSystem.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Builder(
-                      builder: (context) {
-                        final placeholderText =
-                            _dynamicPlaceholders[_searchPlaceholderIndex % _dynamicPlaceholders.length];
-
-                        return AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 250),
-                          layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-                            return Stack(
-                              alignment: Alignment.centerLeft,
-                              children: <Widget>[
-                                ...previousChildren,
-                                if (currentChild != null) currentChild,
-                              ],
-                            );
-                          },
-                          transitionBuilder: (child, animation) => FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          ),
-                          child: Align(
-                            key: ValueKey<String>(placeholderText),
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              placeholderText,
-                              textAlign: TextAlign.left,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: Responsive.scaledFontSize(context, 13),
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF94A3B8),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Ambient Voice Mic Action Button
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      VoiceSearchSheet.show(context, onResult: (query) {
-                        Navigator.push(
-                          context,
-                          FadeSlideRoute(page: SearchScreen(initialQuery: query)),
-                        );
-                      });
-                    },
-                    child: Container(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Ambient Lens Badge
+                    Container(
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
                         color: const Color(0xFFFEF2F2),
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFFECDD3), width: 0.8),
+                        border: Border.all(
+                            color: const Color(0xFFFEE2E2), width: 0.8),
                       ),
-                      child: const Icon(Icons.mic_rounded, size: 16, color: AppDesignSystem.primary),
+                      child: const Icon(
+                        Icons.search_rounded,
+                        size: 17,
+                        color: AppDesignSystem.primary,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          final placeholderText = _dynamicPlaceholders[
+                              _searchPlaceholderIndex %
+                                  _dynamicPlaceholders.length];
+
+                          return AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 250),
+                            layoutBuilder: (Widget? currentChild,
+                                List<Widget> previousChildren) {
+                              return Stack(
+                                alignment: Alignment.centerLeft,
+                                children: <Widget>[
+                                  ...previousChildren,
+                                  if (currentChild != null) currentChild,
+                                ],
+                              );
+                            },
+                            transitionBuilder: (child, animation) =>
+                                FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            ),
+                            child: Align(
+                              key: ValueKey<String>(placeholderText),
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                placeholderText,
+                                textAlign: TextAlign.left,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize:
+                                      Responsive.scaledFontSize(context, 13),
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Ambient Voice Mic Action Button
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        VoiceSearchSheet.show(context, onResult: (query) {
+                          Navigator.push(
+                            context,
+                            FadeSlideRoute(
+                                page: SearchScreen(initialQuery: query)),
+                          );
+                        });
+                      },
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: const Color(0xFFFECDD3), width: 0.8),
+                        ),
+                        child: const Icon(Icons.mic_rounded,
+                            size: 16, color: AppDesignSystem.primary),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

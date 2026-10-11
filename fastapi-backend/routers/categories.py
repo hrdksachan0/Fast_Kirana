@@ -399,7 +399,6 @@ async def get_categories_catalog(
         count_filters = [
             Product.categoryId == cat.id,
             Product.restaurantId.is_(None),
-            Product.isAvailable == True
         ]
         if effective_store_id and effective_store_id != "all":
             count_filters.append(
@@ -412,6 +411,8 @@ async def get_categories_catalog(
                     )
                 )
             )
+        else:
+            count_filters.append(Product.isAvailable == True)
         count_stmt = select(func.count(Product.id)).where(*count_filters)
         count_res = await db.execute(count_stmt)
         p_count = count_res.scalar() or 0
@@ -430,7 +431,6 @@ async def get_categories_catalog(
             sub_count_filters = [
                 Product.categoryId == sub.id,
                 Product.restaurantId.is_(None),
-                Product.isAvailable == True
             ]
             if effective_store_id and effective_store_id != "all":
                 sub_count_filters.append(
@@ -443,6 +443,8 @@ async def get_categories_catalog(
                         )
                     )
                 )
+            else:
+                sub_count_filters.append(Product.isAvailable == True)
             sub_count_stmt = select(func.count(Product.id)).where(*sub_count_filters)
             sub_count_res = await db.execute(sub_count_stmt)
             sub_p_count = sub_count_res.scalar() or 0
@@ -517,7 +519,6 @@ async def get_categories_catalog(
     # Total grocery products count
     total_filters = [
         Product.restaurantId.is_(None),
-        Product.isAvailable == True
     ]
     if effective_store_id and effective_store_id != "all":
         total_filters.append(
@@ -530,6 +531,8 @@ async def get_categories_catalog(
                 )
             )
         )
+    else:
+        total_filters.append(Product.isAvailable == True)
     total_prods_stmt = select(func.count(Product.id)).where(*total_filters)
     total_prods_res = await db.execute(total_prods_stmt)
     total_grocery_products = total_prods_res.scalar() or 0
@@ -576,7 +579,6 @@ async def get_category_products(
     filters = [
         Product.categoryId == category.id,
         Product.restaurantId.is_(None),
-        Product.isAvailable == True
     ]
 
     if effective_store_id and effective_store_id != "all":
@@ -590,6 +592,8 @@ async def get_category_products(
                 )
             )
         )
+    else:
+        filters.append(Product.isAvailable == True)
 
     if search:
         filters.append(Product.name.ilike(f"%{search}%"))
@@ -615,6 +619,42 @@ async def get_category_products(
 
     total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
 
+    inv_map = {}
+    if effective_store_id and effective_store_id != "all" and products:
+        prod_ids = [p.id for p in products]
+        inv_stmt = select(StoreInventory).where(
+            StoreInventory.productId.in_(prod_ids),
+            StoreInventory.storeId == effective_store_id
+        )
+        inv_res = await db.execute(inv_stmt)
+        for inv in inv_res.scalars().all():
+            inv_map[inv.productId] = inv
+
+    formatted_products = []
+    for p in products:
+        inv = inv_map.get(p.id)
+        local_stock = inv.stock if inv else (p.stock or 0)
+        local_avail = (inv.isAvailable and inv.stock > 0) if inv else (p.isAvailable and (p.stock or 0) > 0)
+        local_price = float(inv.priceOverride) if (inv and inv.priceOverride is not None) else float(p.price or 0.0)
+        local_mrp = float(p.mrp or 0.0) if float(p.mrp or 0.0) >= local_price else local_price
+        local_discount = round(((local_mrp - local_price) / local_mrp) * 100) if local_mrp > local_price else 0.0
+
+        formatted_products.append({
+            "id": p.id,
+            "name": p.name,
+            "slug": p.slug,
+            "description": p.description,
+            "imageUrl": p.imageUrl,
+            "price": local_price,
+            "mrp": local_mrp,
+            "discount": local_discount,
+            "unit": p.unit,
+            "stock": local_stock,
+            "isAvailable": local_avail,
+            "tags": p.tags,
+            "categoryId": p.categoryId
+        })
+
     return {
         "success": True,
         "category": {
@@ -632,19 +672,5 @@ async def get_category_products(
             "hasNextPage": page < total_pages,
             "hasPrevPage": page > 1
         },
-        "products": [{
-            "id": p.id,
-            "name": p.name,
-            "slug": p.slug,
-            "description": p.description,
-            "imageUrl": p.imageUrl,
-            "price": p.price,
-            "mrp": p.mrp,
-            "discount": p.discount,
-            "unit": p.unit,
-            "stock": p.stock,
-            "isAvailable": p.isAvailable,
-            "tags": p.tags,
-            "categoryId": p.categoryId
-        } for p in products]
+        "products": formatted_products
     }

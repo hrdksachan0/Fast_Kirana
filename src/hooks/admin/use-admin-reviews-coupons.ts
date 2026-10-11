@@ -231,6 +231,13 @@ export function useAdminReviewsCoupons({
     try {
       const payload = {
         ...newCoupon,
+        code: newCoupon.code.trim().toUpperCase(),
+        bogoDishId: newCoupon.bogoDishId ? newCoupon.bogoDishId.trim() : null,
+        defaultFreeDishId: newCoupon.defaultFreeDishId ? newCoupon.defaultFreeDishId.trim() : null,
+        restaurantId: newCoupon.restaurantId || null,
+        categoryId: newCoupon.categoryId || null,
+        badgeText: newCoupon.badgeText || null,
+        menuSection: newCoupon.menuSection || null,
         value: isBogoOrFreeDelivery ? (newCoupon.discountType === 'FREE_DELIVERY' ? 0 : 100) : (parseFloat(newCoupon.value) || 0),
         minOrder: parseFloat(newCoupon.minOrder) || 0,
         maxDiscount: newCoupon.maxDiscount ? parseFloat(newCoupon.maxDiscount) : null,
@@ -244,7 +251,8 @@ export function useAdminReviewsCoupons({
       })
 
       if (res.ok) {
-        const created = await res.json()
+        const rawCreated = await res.json()
+        const created = rawCreated?.coupon || rawCreated
         setCoupons([created, ...coupons])
         toast.success(`Coupon "${created.code}" created!`)
         setShowAddCoupon(false)
@@ -343,7 +351,8 @@ export function useAdminReviewsCoupons({
       })
 
       if (res.ok) {
-        const updated = await res.json()
+        const rawUpdated = await res.json()
+        const updated = rawUpdated?.coupon || rawUpdated
         setCoupons(coupons.map((c: any) => (c.id === editingCoupon.id ? { ...c, ...updated } : c)))
         toast.success('Coupon updated successfully!')
         setEditingCoupon(null)
@@ -368,7 +377,8 @@ export function useAdminReviewsCoupons({
       })
 
       if (res.ok) {
-        const updated = await res.json()
+        const rawUpdated = await res.json()
+        const updated = rawUpdated?.coupon || rawUpdated
         setCoupons(coupons.map((c: any) => (c.id === couponId ? { ...c, ...updated } : c)))
         toast.success(`Coupon ${!currentActive ? 'activated' : 'deactivated'}`)
       } else {

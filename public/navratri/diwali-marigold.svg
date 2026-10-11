@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Marigold Garland</title>
+<ellipse cx="120" cy="143" rx="78" ry="7" fill="#713D21" opacity=".12"/>
+<path d="M56 24c-9 44 7 107 64 107s73-63 64-107" stroke="#547149" stroke-width="4" stroke-linecap="round"/>
+<g fill="#D56C20"><circle cx="53" cy="34" r="12"/><circle cx="52" cy="56" r="12"/><circle cx="57" cy="79" r="13"/><circle cx="69" cy="100" r="13"/><circle cx="89" cy="116" r="13"/><circle cx="113" cy="126" r="13"/><circle cx="137" cy="125" r="13"/><circle cx="159" cy="115" r="13"/><circle cx="176" cy="97" r="13"/><circle cx="187" cy="76" r="13"/><circle cx="188" cy="53" r="12"/><circle cx="186" cy="31" r="12"/></g>
+<g fill="#F0AA33"><circle cx="53" cy="34" r="7"/><circle cx="52" cy="56" r="7"/><circle cx="57" cy="79" r="8"/><circle cx="69" cy="100" r="8"/><circle cx="89" cy="116" r="8"/><circle cx="113" cy="126" r="8"/><circle cx="137" cy="125" r="8"/><circle cx="159" cy="115" r="8"/><circle cx="176" cy="97" r="8"/><circle cx="187" cy="76" r="8"/><circle cx="188" cy="53" r="7"/><circle cx="186" cy="31" r="7"/></g>
+<path d="M58 7q14 0 15 19-15 0-15-19Zm122 0q-14 0-15 19 15 0 15-19Z" fill="#547149"/>
+</svg>

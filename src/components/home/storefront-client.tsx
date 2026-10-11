@@ -23,6 +23,8 @@ import { FoodEditorialCuration } from '@/components/home/food-editorial-curation
 import { HubComingSoon } from '@/components/home/hub-coming-soon'
 import { CuratedBrandOffersCarousel } from '@/components/home/curated-brand-offers-carousel'
 import { useUIStore } from '@/stores/ui-store'
+import { NavratriSection } from '@/components/home/navratri/navratri-section'
+import { useCampaign } from '@/components/home/navratri/use-campaign'
 
 interface StorefrontClientProps {
   categories: Category[]
@@ -103,6 +105,7 @@ export function StorefrontClient({
 
   // Live dark store hub isolation & coordinates
   const activeStoreId = useUIStore((s) => s.activeStoreId)
+  const campaign = useCampaign(activeStoreId)
   const isLocationServiceable = useUIStore((s) => s.isLocationServiceable)
   const activeCity = useUIStore((s) => s.activeCity)
 
@@ -418,6 +421,19 @@ export function StorefrontClient({
                 <div>
                   <CategoryGrid categories={currentCategories} />
                 </div>
+
+                {/* 3. Campaign Manager Live Festive Section */}
+                {campaign.enabled && (
+                  <div className="-mx-4 sm:mx-0">
+                    <NavratriSection
+                      data={campaign}
+                      products={isLocationServiceable && !isLoadingStoreData ? currentGroceryProducts : []}
+                      loading={isLoadingStoreData}
+                      storeId={activeStoreId}
+                      resolveLinkedProducts={isLocationServiceable}
+                    />
+                  </div>
+                )}
 
                 {/* 3. Speed Strip */}
                 <div>

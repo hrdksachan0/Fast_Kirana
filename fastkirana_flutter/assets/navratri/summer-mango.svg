@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Mangoes</title>
+<ellipse cx="120" cy="141" rx="90" ry="8" fill="#21595A" opacity=".12"/>
+<path d="M79 37c-26-2-48 21-42 51 6 31 38 50 65 39 22-8 21-42 11-66-8-20-20-27-34-24Z" fill="#ECA93E"/><path d="M82 37q4-17 20-20" stroke="#647A41" stroke-width="4" stroke-linecap="round"/><path d="M87 29c19-17 29-14 35-1-17 8-29 9-35 1Z" fill="#647A41"/>
+<path d="M134 47c-6 14-10 31-9 55 1 24 18 37 41 32 30-7 50-31 43-55-7-26-45-38-75-32Z" fill="#FFC759" stroke="#CF8F2A" stroke-width="2"/>
+<path d="m137 58 54 55m-61-35 43 48m-15-76-22 67m43-59-25 64m43-50-22 40" stroke="#DE9E32" stroke-width="3"/>
+</svg>

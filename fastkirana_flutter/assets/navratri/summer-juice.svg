@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Fruit Juice</title>
+<ellipse cx="120" cy="141" rx="85" ry="8" fill="#21595A" opacity=".12"/>
+<path d="m53 45 13-22h46l16 22v88H53Z" fill="#ECA93E" stroke="#CF8F2A" stroke-width="2"/><path d="M66 23v22H53m13 0h62" stroke="#CF8F2A" stroke-width="2"/><circle cx="105" cy="33" r="6" fill="#FFF8DF"/>
+<rect x="65" y="65" width="48" height="38" rx="7" fill="#FFF8DF"/><circle cx="89" cy="84" r="11" fill="#ECA93E"/><path d="M86 72c10-13 17-10 20-4-8 7-14 9-20 4Z" fill="#647A41"/>
+<path d="M151 68h48l-8 64h-32Z" fill="#F2D874" stroke="#DCA337" stroke-width="2"/><ellipse cx="175" cy="68" rx="24" ry="6" fill="#FFC759"/><path d="m175 65 13-31" stroke="#26999D" stroke-width="4" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Ladoo Box</title>
+<ellipse cx="120" cy="139" rx="90" ry="8" fill="#713D21" opacity=".12"/>
+<path d="M36 72h166l-12 59H49Z" fill="#A33A30"/><path d="M36 72h166l-4 18H40Z" fill="#D26A45"/>
+<path d="M53 55h136l11 20H38Z" fill="#E8B75D"/>
+<g fill="#E5A326" stroke="#AD721C" stroke-width="2"><circle cx="74" cy="66" r="22"/><circle cx="120" cy="64" r="24"/><circle cx="166" cy="65" r="22"/><circle cx="97" cy="35" r="23"/><circle cx="143" cy="35" r="23"/></g>
+<g fill="#FFF1B3"><circle cx="89" cy="29" r="3"/><circle cx="103" cy="40" r="2"/><circle cx="134" cy="31" r="3"/><circle cx="153" cy="39" r="2"/><circle cx="66" cy="63" r="3"/><circle cx="123" cy="56" r="3"/><circle cx="164" cy="69" r="3"/></g>
+<path d="M58 112h123" stroke="#E8B75D" stroke-width="4" stroke-linecap="round"/>
+</svg>

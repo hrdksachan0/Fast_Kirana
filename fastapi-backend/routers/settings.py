@@ -181,14 +181,14 @@ async def get_public_settings(
 
         settings_map = DEFAULT_SETTINGS.copy()
         for s in settings_list:
-            if not s.key.startswith("store:"):
+            if not s.key.startswith("store:") and s.key != "homepage_campaign_draft":
                 settings_map[s.key] = s.value
 
         # Layer store-scoped overrides if a specific dark store hub is queried
         if effective_store_id and effective_store_id != "all":
             store_prefix = f"store:{effective_store_id}:"
             for s in settings_list:
-                if s.key.startswith(store_prefix):
+                if s.key.startswith(store_prefix) and s.key != f"{store_prefix}homepage_campaign_draft":
                     sub_key = s.key[len(store_prefix):]
                     settings_map[sub_key] = s.value
 
@@ -370,7 +370,10 @@ async def toggle_serviceability(
 
     # ── 1. HUB / DARKSTORE ──
     if body.targetType == "HUB":
-        store_id = body.targetId or "hub-209206"
+        admin_assigned_store = current_admin.get("assignedStoreId") if isinstance(current_admin, dict) else getattr(current_admin, "assignedStoreId", None)
+        if admin_assigned_store and body.targetId and body.targetId != "default" and body.targetId != admin_assigned_store:
+            raise HTTPException(status_code=403, detail="Store managers can only manage their assigned store hub")
+        store_id = admin_assigned_store or (body.targetId if body.targetId and body.targetId != "default" else None) or "hub-209206"
 
         hub_res = await db.execute(select(DarkStore).where(DarkStore.id == store_id))
         hub = hub_res.scalars().first()

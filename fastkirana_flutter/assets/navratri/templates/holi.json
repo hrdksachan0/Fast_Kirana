@@ -1,0 +1,214 @@
+{
+  "version": 1,
+  "demo": true,
+  "enabled": true,
+  "autoplay": true,
+  "layout": "split",
+  "searchPrefix": "Search for",
+  "decorationImage": null,
+  "labels": {
+    "sectionLabel": "Colours of Holi",
+    "specialsHeading": "Holi Picks",
+    "curvedTabLabel": "Top Picks",
+    "loadingText": "Loading this store’s holi collection…",
+    "emptyText": "No matching products in this collection yet. Try another tab or search the catalogue.",
+    "demoLabel": "Demo prices",
+    "resultsDemoLabel": "Demo collection · illustrative prices"
+  },
+  "appearance": {
+    "background": "#EC7295",
+    "card": "#FFF5DE",
+    "text": "#683540",
+    "smallText": "#562432",
+    "headerText": "#FFF5DE",
+    "headerOutline": "#6D3042",
+    "underline": "#8C284D",
+    "tabSurface": "#FFF5DE"
+  },
+  "timings": {
+    "headerMs": 3800,
+    "productMs": 2800,
+    "searchMs": 3000,
+    "crossfadeMs": 320
+  },
+  "searchSuggestions": [
+    "Gulal",
+    "Pichkari",
+    "Gujiya",
+    "Thandai"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "holi-header-1",
+      "kind": "illustration",
+      "eyebrow": "",
+      "title": "A brighter kind of day",
+      "subtitle": "Colours, snacks and good company",
+      "image": "holi-colour-play.svg"
+    },
+    {
+      "id": "holi-header-2",
+      "kind": "title",
+      "eyebrow": "",
+      "title": "Ready for a colourful gathering?",
+      "subtitle": "Put together your Holi basket",
+      "image": null
+    },
+    {
+      "id": "holi-header-3",
+      "kind": "brand",
+      "eyebrow": "",
+      "title": "Celebrate with FastKirana",
+      "subtitle": "A collection you can make your own",
+      "image": "holi-colour-play.svg"
+    }
+  ],
+  "products": [
+    {
+      "id": "holi-gulal",
+      "name": "Gulal Colours",
+      "image": "holi-gulal.svg",
+      "originalPrice": 70,
+      "price": 70,
+      "currency": "INR",
+      "categoryId": "holi-gulal-category",
+      "destinationId": "search-holi-gulal"
+    },
+    {
+      "id": "holi-pichkari",
+      "name": "Colourful Pichkari",
+      "image": "holi-pichkari.svg",
+      "originalPrice": 110,
+      "price": 110,
+      "currency": "INR",
+      "categoryId": "holi-pichkari-category",
+      "destinationId": "search-holi-pichkari"
+    },
+    {
+      "id": "holi-gujiya",
+      "name": "Gujiya Box",
+      "image": "holi-gujiya.svg",
+      "originalPrice": 160,
+      "price": 160,
+      "currency": "INR",
+      "categoryId": "holi-gujiya-category",
+      "destinationId": "search-holi-gujiya"
+    },
+    {
+      "id": "holi-thandai",
+      "name": "Thandai Mix",
+      "image": "holi-thandai.svg",
+      "originalPrice": 95,
+      "price": 95,
+      "currency": "INR",
+      "categoryId": "holi-thandai-category",
+      "destinationId": "search-holi-thandai"
+    }
+  ],
+  "categories": [
+    {
+      "id": "holi-gulal-category",
+      "label": "Colours & Gulal",
+      "image": "holi-gulal.svg",
+      "destinationId": "search-holi-gulal",
+      "keywords": [
+        "gulal",
+        "colour",
+        "holi"
+      ]
+    },
+    {
+      "id": "holi-pichkari-category",
+      "label": "Play & Celebrate",
+      "image": "holi-pichkari.svg",
+      "destinationId": "search-holi-pichkari",
+      "keywords": [
+        "pichkari",
+        "toy",
+        "water"
+      ]
+    },
+    {
+      "id": "holi-gujiya-category",
+      "label": "Festive Snacks",
+      "image": "holi-gujiya.svg",
+      "destinationId": "search-holi-gujiya",
+      "keywords": [
+        "gujiya",
+        "sweet",
+        "snack"
+      ]
+    },
+    {
+      "id": "holi-thandai-category",
+      "label": "Drinks & Mixes",
+      "image": "holi-thandai.svg",
+      "destinationId": "search-holi-thandai",
+      "keywords": [
+        "thandai",
+        "drink",
+        "mix"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "top-picks",
+      "label": "Top Picks",
+      "image": "holi-colour-play.svg",
+      "keywords": []
+    },
+    {
+      "id": "holi-colours",
+      "label": "Colours",
+      "image": "holi-gulal.svg",
+      "keywords": [
+        "gulal",
+        "colour"
+      ]
+    },
+    {
+      "id": "holi-play",
+      "label": "Playtime",
+      "image": "holi-pichkari.svg",
+      "keywords": [
+        "pichkari",
+        "toy"
+      ]
+    },
+    {
+      "id": "holi-share",
+      "label": "Snacks & Drinks",
+      "image": "holi-gujiya.svg",
+      "keywords": [
+        "gujiya",
+        "snack",
+        "thandai",
+        "drink"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "search-holi-gulal",
+      "kind": "search",
+      "query": "gulal"
+    },
+    {
+      "id": "search-holi-pichkari",
+      "kind": "search",
+      "query": "pichkari"
+    },
+    {
+      "id": "search-holi-gujiya",
+      "kind": "search",
+      "query": "gujiya"
+    },
+    {
+      "id": "search-holi-thandai",
+      "kind": "search",
+      "query": "thandai"
+    }
+  ]
+}

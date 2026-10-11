@@ -1,0 +1,215 @@
+{
+  "version": 1,
+  "demo": true,
+  "enabled": true,
+  "autoplay": true,
+  "layout": "classic",
+  "searchPrefix": "Search for",
+  "decorationImage": null,
+  "labels": {
+    "sectionLabel": "Bring home Diwali",
+    "specialsHeading": "Diwali Picks",
+    "curvedTabLabel": "Top Picks",
+    "loadingText": "Loading this store’s diwali collection…",
+    "emptyText": "No matching products in this collection yet. Try another tab or search the catalogue.",
+    "demoLabel": "Demo prices",
+    "resultsDemoLabel": "Demo collection · illustrative prices"
+  },
+  "appearance": {
+    "background": "#A73D32",
+    "card": "#FFF4D8",
+    "text": "#743922",
+    "smallText": "#532C24",
+    "headerText": "#FFF4D8",
+    "headerOutline": "#542B25",
+    "underline": "#A73D32",
+    "tabSurface": "#FFF4D8"
+  },
+  "timings": {
+    "headerMs": 4500,
+    "productMs": 3200,
+    "searchMs": 3600,
+    "crossfadeMs": 450
+  },
+  "searchSuggestions": [
+    "Diyas",
+    "Ladoo",
+    "Marigold",
+    "Rangoli"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "diwali-header-1",
+      "kind": "illustration",
+      "eyebrow": "",
+      "title": "Lights, sweets, togetherness",
+      "subtitle": "A little glow for your home",
+      "image": "diwali-celebration.svg"
+    },
+    {
+      "id": "diwali-header-2",
+      "kind": "title",
+      "eyebrow": "",
+      "title": "Make room for celebration",
+      "subtitle": "Fill your festive basket",
+      "image": null
+    },
+    {
+      "id": "diwali-header-3",
+      "kind": "brand",
+      "eyebrow": "",
+      "title": "Celebrate with FastKirana",
+      "subtitle": "Build your own Diwali collection",
+      "image": "diwali-celebration.svg"
+    }
+  ],
+  "products": [
+    {
+      "id": "diwali-diyas",
+      "name": "Clay Diya Set",
+      "image": "diwali-diyas.svg",
+      "originalPrice": 80,
+      "price": 80,
+      "currency": "INR",
+      "categoryId": "diwali-diyas-category",
+      "destinationId": "search-diwali-diyas"
+    },
+    {
+      "id": "diwali-ladoo",
+      "name": "Ladoo Box",
+      "image": "diwali-ladoo.svg",
+      "originalPrice": 180,
+      "price": 180,
+      "currency": "INR",
+      "categoryId": "diwali-ladoo-category",
+      "destinationId": "search-diwali-ladoo"
+    },
+    {
+      "id": "diwali-marigold",
+      "name": "Marigold Garland",
+      "image": "diwali-marigold.svg",
+      "originalPrice": 60,
+      "price": 60,
+      "currency": "INR",
+      "categoryId": "diwali-marigold-category",
+      "destinationId": "search-diwali-marigold"
+    },
+    {
+      "id": "diwali-rangoli",
+      "name": "Rangoli Colour Kit",
+      "image": "diwali-rangoli.svg",
+      "originalPrice": 120,
+      "price": 120,
+      "currency": "INR",
+      "categoryId": "diwali-rangoli-category",
+      "destinationId": "search-diwali-rangoli"
+    }
+  ],
+  "categories": [
+    {
+      "id": "diwali-diyas-category",
+      "label": "Lights & Lamps",
+      "image": "diwali-diyas.svg",
+      "destinationId": "search-diwali-diyas",
+      "keywords": [
+        "diya",
+        "lamp",
+        "light"
+      ]
+    },
+    {
+      "id": "diwali-ladoo-category",
+      "label": "Sweets & Sharing",
+      "image": "diwali-ladoo.svg",
+      "destinationId": "search-diwali-ladoo",
+      "keywords": [
+        "ladoo",
+        "sweet",
+        "mithai"
+      ]
+    },
+    {
+      "id": "diwali-marigold-category",
+      "label": "Flowers & Garlands",
+      "image": "diwali-marigold.svg",
+      "destinationId": "search-diwali-marigold",
+      "keywords": [
+        "marigold",
+        "flower",
+        "garland"
+      ]
+    },
+    {
+      "id": "diwali-rangoli-category",
+      "label": "Decorate Your Home",
+      "image": "diwali-rangoli.svg",
+      "destinationId": "search-diwali-rangoli",
+      "keywords": [
+        "rangoli",
+        "decor",
+        "colour"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "top-picks",
+      "label": "Top Picks",
+      "image": "diwali-celebration.svg",
+      "keywords": []
+    },
+    {
+      "id": "diwali-lights",
+      "label": "Lights & Lamps",
+      "image": "diwali-diyas.svg",
+      "keywords": [
+        "diya",
+        "lamp",
+        "light"
+      ]
+    },
+    {
+      "id": "diwali-sweets",
+      "label": "Sweets",
+      "image": "diwali-ladoo.svg",
+      "keywords": [
+        "ladoo",
+        "sweet"
+      ]
+    },
+    {
+      "id": "diwali-decor",
+      "label": "Flowers & Decor",
+      "image": "diwali-marigold.svg",
+      "keywords": [
+        "marigold",
+        "flower",
+        "rangoli",
+        "decor"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "search-diwali-diyas",
+      "kind": "search",
+      "query": "diya"
+    },
+    {
+      "id": "search-diwali-ladoo",
+      "kind": "search",
+      "query": "ladoo"
+    },
+    {
+      "id": "search-diwali-marigold",
+      "kind": "search",
+      "query": "marigold"
+    },
+    {
+      "id": "search-diwali-rangoli",
+      "kind": "search",
+      "query": "rangoli"
+    }
+  ]
+}

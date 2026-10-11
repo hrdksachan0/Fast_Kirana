@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
+<title>Almonds</title>
+<ellipse cx="120" cy="142" rx="86" ry="8" fill="#184E46" opacity=".12"/>
+<path d="M40 91h162c-5 35-33 47-81 47S45 126 40 91Z" fill="#4B9984"/><ellipse cx="121" cy="91" rx="81" ry="16" fill="#D9BA78"/>
+<g fill="#B9793D" stroke="#895326" stroke-width="2"><path d="M61 94c-14-20-10-32 9-37 18 11 18 25-9 37Z"/><path d="M97 94c-14-20-10-32 9-37 18 11 18 25-9 37Z"/><path d="M133 94c-14-20-10-32 9-37 18 11 18 25-9 37Z"/><path d="M169 94c-14-20-10-32 9-37 18 11 18 25-9 37Z"/><path d="M84 66c-14-20-10-32 9-37 18 11 18 25-9 37Z"/><path d="M128 66c-14-20-10-32 9-37 18 11 18 25-9 37Z"/></g>
+<g stroke="#D9BA78" stroke-width="2" stroke-linecap="round"><path d="m68 69-7 16m43-16-7 16m43-16-7 16m43-16-7 16M91 41l-7 16m51-16-7 16"/></g>
+</svg>

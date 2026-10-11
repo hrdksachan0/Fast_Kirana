@@ -504,4 +504,6 @@ export async function auth(...args: any[]) {
   return null
 }
 
-export { handlers, signIn, signOut }
+// Cryptographic cookie-session verification only, without the compatibility
+// identity-header fallback in auth(). Sensitive API guards use this export.
+export { handlers, signIn, signOut, nextAuthAuth as verifiedAuth }

@@ -1,4 +1,5 @@
-@import "tailwindcss";
+/* Scan web sources rather than the Flutter app, build outputs and tooling. */
+@import "tailwindcss" source("../");
 @import "shadcn/tailwind.css";
 
 @variant dark (&:is(.dark *));

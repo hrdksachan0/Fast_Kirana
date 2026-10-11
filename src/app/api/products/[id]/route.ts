@@ -66,6 +66,12 @@ export async function GET(
         const stock = inv?.stock ?? 0
         product.stock = stock
         product.isAvailable = (inv?.isAvailable ?? false) && stock > 0
+        if (inv?.priceOverride !== null && inv?.priceOverride !== undefined) {
+          product.price = inv.priceOverride
+          product.discount = product.mrp > product.price
+            ? Math.max(0, Math.round(((product.mrp - product.price) / product.mrp) * 100))
+            : 0
+        }
       }
     }
 

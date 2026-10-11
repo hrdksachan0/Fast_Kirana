@@ -102,6 +102,8 @@ flutter:
     - assets/banners/
     - assets/fonts/
     - assets/sounds/
+    - assets/navratri/
+    - assets/navratri/templates/
 
   fonts:
     - family: Inter
