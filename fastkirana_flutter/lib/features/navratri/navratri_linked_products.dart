@@ -62,9 +62,12 @@ final navratriLinkedProductsProvider = FutureProvider.autoDispose
 List<String> missingNavratriProductIds(
     NavratriData data, List<Product> catalog) {
   final existing = catalog.map((product) => product.id).toSet();
-  return data.products
-      .map((product) => product.productId)
-      .whereType<String>()
+  final allConfiguredIds = <String>{
+    ...data.products.map((product) => product.productId).whereType<String>(),
+    ...data.tabs.expand((tab) => tab.productIds),
+  };
+  return allConfiguredIds
+      .map((id) => id.trim())
       .where((id) => id.isNotEmpty && !existing.contains(id))
       .toSet()
       .toList(growable: false);

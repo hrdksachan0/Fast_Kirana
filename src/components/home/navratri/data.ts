@@ -74,8 +74,38 @@ export function destinationHref(id: string | null, data = navratriData): string 
 export function filterNavratriProducts(
   products: Product[],
   keywords: string[],
-  data = navratriData
+  data = navratriData,
+  explicitProductIds?: string[]
 ): Product[] {
+  // 1. If explicit product IDs are configured, place them first in chosen order
+  if (explicitProductIds && explicitProductIds.length > 0) {
+    const idMap = new Map(products.map((p) => [p.id, p]))
+    const explicitList = explicitProductIds
+      .map((id) => idMap.get(id))
+      .filter((p): p is Product => Boolean(p && !p.restaurantId))
+
+    const explicitIdSet = new Set(explicitList.map((p) => p.id))
+    const keywordMatches = keywords.length > 0
+      ? products.filter((product) => {
+          if (product.restaurantId || explicitIdSet.has(product.id)) return false
+          const text = [
+            product.name,
+            product.slug,
+            product.description,
+            product.category?.name,
+            product.category?.slug,
+            ...(product.tags ?? []),
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLocaleLowerCase()
+          return matchesNavratriKeywords(text, keywords)
+        })
+      : []
+
+    return [...explicitList, ...keywordMatches]
+  }
+
   const matches = keywords.length
     ? keywords
     : [

@@ -954,11 +954,81 @@ export function CampaignManager({
                   onChange={(label) => patchRow('tabs', index, { label })}
                 />
                 <DelimitedField
-                  label="Product filter keywords (comma separated)"
+                  label="Product filter keywords (comma separated fallback)"
                   values={tab.keywords}
                   delimiter=","
                   onChange={(keywords) => patchRow('tabs', index, { keywords })}
                 />
+                {/* Specific Products (ID-wise) Selector */}
+                <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-text-primary">
+                      📌 Pinned Products for Tab {index + 1} (ID-wise)
+                    </label>
+                    <span className="text-[10px] text-text-secondary">
+                      {((tab as any).productIds || []).length} selected
+                    </span>
+                  </div>
+                  
+                  {/* Dropdown to add a product */}
+                  <div className="flex gap-2">
+                    <select
+                      className={inputClass}
+                      disabled={catalogueLoading || catalogueError}
+                      defaultValue=""
+                      onChange={(e) => {
+                        const pid = e.target.value
+                        if (!pid) return
+                        const currentList: string[] = (tab as any).productIds || []
+                        if (!currentList.includes(pid)) {
+                          patchRow('tabs', index, { productIds: [...currentList, pid] })
+                        }
+                        e.target.value = ""
+                      }}
+                    >
+                      <option value="">+ Add product from catalogue (ID-wise)...</option>
+                      {products
+                        .filter((p) => !p.restaurantId && !((tab as any).productIds || []).includes(p.id))
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} {p.price ? `(₹${p.price})` : ''}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* List of currently selected products with removal */}
+                  {((tab as any).productIds || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {((tab as any).productIds as string[]).map((pid) => {
+                        const prod = products.find((p) => p.id === pid)
+                        const prodName = prod ? prod.name : `Product ID: ${pid}`
+                        return (
+                          <span
+                            key={pid}
+                            className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary"
+                          >
+                            <span className="max-w-[180px] truncate">{prodName}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = ((tab as any).productIds as string[]).filter((id) => id !== pid)
+                                patchRow('tabs', index, { productIds: updated })
+                              }}
+                              className="ml-0.5 text-text-secondary hover:text-red-500 font-bold cursor-pointer"
+                              title="Remove product"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <p className="text-[10px] text-text-secondary leading-normal">
+                    Aapke chune gaye products customer ko sabse pehle exact order me dikhenge.
+                  </p>
+                </div>
                 <ImageField
                   label={`Tab ${index + 1} image`}
                   value={tab.image}
@@ -981,6 +1051,7 @@ export function CampaignManager({
                       label: 'New collection',
                       image: 'top-picks.svg',
                       keywords: [],
+                      productIds: [],
                     },
                   ],
                 }))

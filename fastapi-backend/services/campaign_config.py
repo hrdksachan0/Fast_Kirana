@@ -181,10 +181,15 @@ def validate_campaign(value: Any) -> dict:
     for section, entries in (("categories", categories), ("tabs", tabs)):
         for index, entry in enumerate(entries):
             base = f"{section}[{index}]"
-            _shape(entry, {"id", "label", "image", "keywords", "destinationId"} if section == "categories" else {"id", "label", "image", "keywords"}, base)
+            _shape(entry, {"id", "label", "image", "keywords", "destinationId"} if section == "categories" else {"id", "label", "image", "keywords", "productIds"}, base, required={"id", "label", "image", "keywords"})
             _string(entry.get("label"), f"{base}.label", 200)
             validate_image(entry.get("image"), f"{base}.image")
             _keywords(entry.get("keywords"), f"{base}.keywords")
+            if section == "tabs" and "productIds" in entry:
+                p_ids = entry.get("productIds") or []
+                if not isinstance(p_ids, list):
+                    _error(f"{base}.productIds", "must be a list of product IDs")
+                entry["productIds"] = [str(pid).strip() for pid in p_ids if str(pid).strip()]
     for index, product in enumerate(products):
         base = f"products[{index}]"
         _shape(product, {"id", "name", "image", "originalPrice", "price", "currency", "categoryId", "destinationId", "productId"}, base, required={"id", "name", "image", "originalPrice", "price", "currency", "categoryId", "destinationId"})

@@ -164,7 +164,7 @@ export function NavratriSection({
     resolveLinkedProducts
   )
   const promotion = resolveCampaignPromotions(data, promotionCatalogue)
-  const filtered = filterNavratriProducts(products, tab.keywords, data).slice(0, 8)
+  const filtered = filterNavratriProducts(promotionCatalogue, tab.keywords, data, (tab as any).productIds).slice(0, 12)
   const demos = products.length || loading || !data.demo ? [] : filterDemoProducts(tab, data)
   const categoryCards = data.categories.map((category) => (
     <Link

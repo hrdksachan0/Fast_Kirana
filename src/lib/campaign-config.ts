@@ -151,7 +151,15 @@ export const campaignSchema = z
       )
       .length(4),
     tabs: z
-      .array(z.object({ id, label: copy.min(1), image: campaignImageSchema, keywords }).strict())
+      .array(
+        z.object({
+          id,
+          label: copy.min(1),
+          image: campaignImageSchema,
+          keywords,
+          productIds: z.array(z.string().trim().min(1)).max(40).optional().default([]),
+        }).strict()
+      )
       .min(1)
       .max(8),
     destinations: z

@@ -10,7 +10,11 @@ test('campaign administration stays local with either FastAPI proxy setting', as
       process.env.USE_FASTAPI_PROXY = mode
       const rewrites = await nextConfig.rewrites!()
       assert.ok(!Array.isArray(rewrites))
-      const rules = [...rewrites.beforeFiles, ...rewrites.afterFiles, ...rewrites.fallback]
+      const rules = [
+        ...(rewrites.beforeFiles || []),
+        ...(rewrites.afterFiles || []),
+        ...(rewrites.fallback || []),
+      ]
       const matches = (pathname: string) =>
         rules.filter((rule) => {
           const parsed = tryToParsePath(rule.source)

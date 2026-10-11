@@ -4,13 +4,13 @@ import type { CampaignConfig } from '@/lib/campaign-config'
 
 export function missingCampaignProductIds(data: CampaignConfig, catalogue: Product[]): string[] {
   const present = new Set(catalogue.map((product) => product.id))
-  return [
-    ...new Set(
-      data.products.flatMap((slot) =>
-        slot.productId && !present.has(slot.productId) ? [slot.productId] : []
-      )
-    ),
-  ]
+  const rotatingIds = data.products.flatMap((slot) =>
+    slot.productId && !present.has(slot.productId) ? [slot.productId] : []
+  )
+  const tabProductIds = data.tabs.flatMap((tab: any) =>
+    (tab.productIds || []).filter((id: string) => id && !present.has(id))
+  )
+  return [...new Set([...rotatingIds, ...tabProductIds])]
 }
 
 /** Resolve identities outside the bounded home feed using the same scoped detail API. */

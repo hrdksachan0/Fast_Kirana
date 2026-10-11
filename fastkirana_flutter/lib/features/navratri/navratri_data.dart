@@ -194,17 +194,20 @@ class NavratriCategory {
 class NavratriTab {
   final String id, label, image;
   final List<String> keywords;
+  final List<String> productIds;
   const NavratriTab({
     required this.id,
     required this.label,
     required this.image,
     required this.keywords,
+    this.productIds = const [],
   });
   factory NavratriTab.fromJson(Map<String, dynamic> json) => NavratriTab(
         id: json['id'] as String,
         label: json['label'] as String,
         image: json['image'] as String,
-        keywords: List<String>.from(json['keywords'] as List),
+        keywords: List<String>.from(json['keywords'] as List? ?? []),
+        productIds: List<String>.from(json['productIds'] as List? ?? []),
       );
 }
 
@@ -353,14 +356,28 @@ class NavratriData {
         orElse: () => throw FormatException('Unknown Navratri destination $id'),
       );
 
-  /// Keywords only filter the existing catalogue; demo products never enter it.
+  /// Explicit product IDs are prioritized first; remaining slots match keywords.
   List<Product> filterProducts(List<Product> catalog, NavratriTab tab) {
+    final catalogById = {
+      for (final product in catalog)
+        if (product.restaurantId == null || product.restaurantId!.isEmpty)
+          product.id: product,
+    };
+
+    final explicitProducts = tab.productIds
+        .map((id) => catalogById[id])
+        .whereType<Product>()
+        .toList(growable: false);
+
+    final explicitIds = explicitProducts.map((p) => p.id).toSet();
+
     final allKeywords = [
       ...categories.expand((category) => category.keywords),
       ...tabs.expand((item) => item.keywords),
     ];
     final keywords = tab.keywords.isEmpty ? allKeywords : tab.keywords;
-    return catalog.where((product) {
+    final keywordMatches = catalog.where((product) {
+      if (explicitIds.contains(product.id)) return false;
       if (product.restaurantId != null && product.restaurantId!.isNotEmpty) {
         return false;
       }
@@ -374,6 +391,8 @@ class NavratriData {
       ].join(' ').toLowerCase();
       return matchesNavratriKeywords(text, keywords);
     }).toList(growable: false);
+
+    return [...explicitProducts, ...keywordMatches];
   }
 
   List<NavratriProduct> demoProductsFor(NavratriTab tab) {
