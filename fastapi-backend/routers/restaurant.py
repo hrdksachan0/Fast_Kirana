@@ -712,6 +712,7 @@ async def restaurant_dashboard_products(
             "slug": restaurant.slug,
             "isOpen": restaurant.isOpen,
             "commissionRate": getattr(restaurant, "commissionRate", 20.0) or 20.0,
+            "menuSections": restaurant.menuSections,
         }
     }
 

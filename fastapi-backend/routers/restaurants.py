@@ -773,6 +773,8 @@ async def get_restaurant_sections(
             "name": s.get("name") or s.get("title") or "Section",
             "title": s.get("title") or s.get("name") or "Section",
             "emoji": s.get("emoji") or "🍽️",
+            "tag": s.get("tag") or s.get("slug") or s.get("id"),
+            "matchTags": s.get("matchTags") or ([s.get("tag")] if s.get("tag") else [s.get("id")]),
             "description": s.get("description") or "",
             "imageUrl": s.get("imageUrl") or s.get("image") or None,
             "sortOrder": s.get("sortOrder") if s.get("sortOrder") is not None else idx + 1,
@@ -781,7 +783,30 @@ async def get_restaurant_sections(
         for idx, s in enumerate(sections)
     ]
 
+    # If no sections configured in restaurant.menuSections JSON, check relational RestaurantMenu table
+    if not normalized:
+        rm_stmt = select(RestaurantMenu).where(
+            RestaurantMenu.restaurantId == restaurant.id,
+            RestaurantMenu.isActive == True
+        ).order_by(RestaurantMenu.sortOrder)
+        rm_res = await db.execute(rm_stmt)
+        db_menus = rm_res.scalars().all()
+        for idx, m in enumerate(db_menus):
+            normalized.append({
+                "id": m.id,
+                "name": m.name,
+                "title": m.name,
+                "emoji": m.emoji or "🍽️",
+                "tag": m.slug or m.id,
+                "matchTags": [m.slug] if m.slug else [m.id],
+                "description": m.description or "",
+                "imageUrl": None,
+                "sortOrder": m.sortOrder if m.sortOrder is not None else idx + 1,
+                "disabled": not m.isActive,
+            })
+
     return {
+        "success": True,
         "sections": normalized,
         "restaurant": {
             "id": restaurant.id,

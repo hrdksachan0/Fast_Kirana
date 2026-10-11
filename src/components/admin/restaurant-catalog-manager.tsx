@@ -270,15 +270,26 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
       const prodData = await prodRes.json()
       setProducts(prodData.products || [])
 
-      if (sectionsRes && Array.isArray(sectionsRes) && sectionsRes.length > 0) {
-        setMenuSections(sectionsRes.filter((s: any) => !s.disabled))
-      } else if (prodData.restaurant) {
-        const rawSecs = prodData.restaurant.menuSections
-          ? (typeof prodData.restaurant.menuSections === 'string' ? JSON.parse(prodData.restaurant.menuSections) : prodData.restaurant.menuSections)
-          : null
-        const secs = rawSecs && Array.isArray(rawSecs) ? rawSecs : []
-        setMenuSections(secs.filter((s: any) => !s.disabled))
+      let loadedSections: any[] = []
+      if (Array.isArray(sectionsRes)) {
+        loadedSections = sectionsRes
+      } else if (sectionsRes?.sections && Array.isArray(sectionsRes.sections)) {
+        loadedSections = sectionsRes.sections
+      } else if (prodData?.restaurant?.menuSections) {
+        const rawSecs = typeof prodData.restaurant.menuSections === 'string'
+          ? JSON.parse(prodData.restaurant.menuSections)
+          : prodData.restaurant.menuSections
+        if (Array.isArray(rawSecs)) loadedSections = rawSecs
       }
+
+      let activeSecs = loadedSections.filter((s: any) => !s.disabled)
+      if (activeSecs.length === 0) {
+        activeSecs = DEFAULT_RESTAURANT_MENU_SECTIONS.map((s, idx) => ({
+          id: `SEC-${idx + 1}`,
+          ...s
+        }))
+      }
+      setMenuSections(activeSecs)
 
       if (catRes.ok) {
         const catData = await catRes.json()
@@ -305,9 +316,9 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
     setPrice('')
     setMrp('')
     setUnit('Serving')
-    const defaultFoodCat = categories.find(c => c.slug === 'restaurant-food' || c.slug === 'restaurant' || c.name.toLowerCase().includes('fast food') || c.name.toLowerCase().includes('kitchen'))
-    setCategoryId(defaultFoodCat?.id || categories[0]?.id || '')
-    setSelectedSectionTag(menuSections[0]?.tag || '')
+    const defaultFoodCat = categories.find(c => c.slug === 'restaurant-food' || c.slug === 'restaurant' || c.name.toLowerCase() === 'restaurant food' || c.name.toLowerCase() === 'fast food')
+    setCategoryId(defaultFoodCat?.id || '')
+    setSelectedSectionTag(menuSections[0]?.id || menuSections[0]?.tag || '')
     setDescription('')
     setImageUrl('')
     setStock('999')
@@ -482,14 +493,17 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
       'restaurant'
     ]
 
+    const defaultFoodCat = categories.find(c => c.slug === 'restaurant-food' || c.slug === 'restaurant' || c.name.toLowerCase() === 'restaurant food' || c.name.toLowerCase() === 'fast food')
+
     const payload = {
       name: name.trim(),
       price: priceVal,
       mrp: mrpVal,
       unit: unit.trim() || '1 Serving',
-      categoryId,
+      categoryId: categoryId || defaultFoodCat?.id || null,
       sectionId,
       menuSectionId: sectionId,
+      menuSection: selectedSec?.title || selectedSec?.name || sectionId,
       description: description.trim() || null,
       imageUrl: imageUrl.trim() || null,
       stock: stockVal,
@@ -1163,37 +1177,23 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
                     <Layers className="h-3.5 w-3.5" />
                     Menu Section *
                   </label>
-                  {menuSections.length > 0 ? (
-                    <select
-                      value={selectedSectionTag}
-                      onChange={e => {
-                        setSelectedSectionTag(e.target.value)
-                        const defaultFoodCat = categories.find(c => c.slug === 'restaurant-food' || c.slug === 'restaurant' || c.name.toLowerCase().includes('fast food') || c.name.toLowerCase().includes('kitchen'))
-                        if (defaultFoodCat?.id) setCategoryId(defaultFoodCat.id)
-                      }}
-                      className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold cursor-pointer"
-                      required
-                    >
-                      <option value="" disabled>Select Menu Section</option>
-                      {menuSections.map(sec => (
-                        <option key={sec.id || sec.tag} value={sec.id || sec.tag}>
-                          {sec.emoji ? `${sec.emoji} ` : ''}{sec.title} {sec.id ? `(ID: ${sec.id})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <select
-                      value={categoryId}
-                      onChange={e => setCategoryId(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold cursor-pointer"
-                      required
-                    >
-                      <option value="" disabled>Select Menu Section</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
-                  )}
+                  <select
+                    value={selectedSectionTag}
+                    onChange={e => {
+                      setSelectedSectionTag(e.target.value)
+                      const defaultFoodCat = categories.find(c => c.slug === 'restaurant-food' || c.slug === 'restaurant' || c.name.toLowerCase() === 'restaurant food' || c.name.toLowerCase() === 'fast food')
+                      if (defaultFoodCat?.id) setCategoryId(defaultFoodCat.id)
+                    }}
+                    className="w-full px-4 py-2.5 bg-muted/40 border border-border rounded-2xl text-xs focus:outline-hidden focus:border-orange-500/50 transition-all font-semibold cursor-pointer"
+                    required
+                  >
+                    <option value="" disabled>Select Menu Section</option>
+                    {menuSections.map(sec => (
+                      <option key={sec.id || sec.tag} value={sec.id || sec.tag}>
+                        {sec.emoji ? `${sec.emoji} ` : ''}{sec.title} {sec.id ? `(ID: ${sec.id})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
