@@ -10,6 +10,7 @@ import '../../core/theme/design_system.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/store_settings_provider.dart';
+import '../../providers/store_hub_provider.dart';
 import '../../providers/restaurant_provider.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../widgets/floating_cart_bar.dart';
@@ -119,57 +120,39 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     'onion': ['pyaz', 'onion'],
     'tamatar': ['tomato', 'tamatar'],
     'tomato': ['tamatar', 'tomato'],
-    'biscuit': ['biscuits', 'parle', 'good day', 'oreo', 'cookies', 'biskit'],
-    'chips': ['lays', 'kurkure', 'chips', 'crisps', 'bingo'],
-    'maggie': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    // 🍿 Snacks & Instant Foods
     'maggi': ['maggie', 'maggi', 'noodles', 'instant noodles'],
-    'cold drink': ['coke', 'pepsi', 'thums up', 'sprite', 'fanta', 'beverages', 'soda'],
-    'drink': ['coke', 'pepsi', 'thums up', 'sprite', 'fanta', 'beverages', 'cold drink'],
-    'sabzi': ['vegetables', 'fresh', 'farm'],
-    'fal': ['fruits', 'apple', 'banana', 'mango', 'orange'],
-    'fruits': ['fal', 'fruits', 'apple', 'banana'],
-    'meetha': ['sweets', 'chocolates', 'dessert', 'ice cream', 'mithai', 'soan papdi'],
-    'chocolate': ['chocolates', 'cadbury', 'kitkat', 'silk', 'dairy milk'],
-    'icecream': ['ice cream', 'desserts', 'amul', 'cone', 'cup'],
-
-    // 🌸 Women's Hygiene & Personal Care
-    'woman': ['women', 'womens', 'pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'female'],
-    'women': ['woman', 'womens', 'pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'female'],
-    'womens': ['women', 'woman', 'pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene'],
-    'pad': ['pads', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'women'],
-    'pads': ['pad', 'sanitary', 'whisper', 'stayfree', 'sofy', 'hygiene', 'women'],
-    'sanitary': ['pad', 'pads', 'whisper', 'stayfree', 'hygiene', 'women', 'sofy'],
-    'whisper': ['whisper', 'pad', 'pads', 'sanitary', 'women', 'hygiene'],
-    'stayfree': ['stayfree', 'pad', 'pads', 'sanitary', 'women'],
-    'sofy': ['sofy', 'pad', 'pads', 'sanitary', 'women'],
-    'periods': ['pad', 'pads', 'sanitary', 'whisper', 'stayfree', 'women'],
-
-    // 🧔 Men's Grooming
-    'man': ['men', 'shaving', 'razor', 'gillette', 'blade'],
-    'men': ['man', 'shaving', 'razor', 'gillette', 'blade', 'grooming'],
-    'razor': ['shaving', 'blade', 'gillette', 'guard'],
-    'shaving': ['razor', 'blade', 'gillette', 'foam', 'gel'],
-    'gillette': ['razor', 'blade', 'shaving', 'guard'],
-
-    // 🍬 Sweets & Mithai
-    'soan': ['soan papdi', 'papdi', 'mithai', 'haldiram', 'bikano', 'sweets'],
-    'papdi': ['soan papdi', 'soan', 'mithai', 'sweets'],
-    'soan papdi': ['soan', 'papdi', 'mithai', 'haldiram', 'bikano', 'sweets'],
-    'mithai': ['sweets', 'soan papdi', 'gulab jamun', 'rasgulla', 'laddu', 'barfi'],
-    'sweets': ['mithai', 'chocolates', 'dessert', 'soan papdi', 'gulab jamun'],
-
-    // 👶 Baby Care
-    'baby': ['diaper', 'diapers', 'pampers', 'huggies', 'mamy poko', 'wipes', 'baby soap'],
-    'diaper': ['diapers', 'pampers', 'huggies', 'mamy poko', 'baby'],
-    'diapers': ['diaper', 'pampers', 'huggies', 'mamy poko', 'baby'],
-    'pampers': ['diaper', 'diapers', 'baby', 'huggies'],
+    'maggie': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    'magie': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    'megi': ['maggi', 'maggie', 'noodles'],
+    'meggi': ['maggi', 'maggie', 'noodles'],
+    'biscuit': ['biscuits', 'parle', 'good day', 'oreo', 'cookies', 'biskit', 'biskut'],
+    'biscuits': ['biscuit', 'parle', 'good day', 'biskut', 'cookies'],
+    'biskut': ['biscuit', 'biscuits', 'parle', 'good day'],
+    'biscut': ['biscuit', 'biscuits', 'parle', 'good day'],
+    'biskit': ['biscuit', 'biscuits', 'parle'],
+    'parle': ['parle-g', 'biscuit', 'biscuits', 'rusk'],
 
     // 🧼 Personal Care & Hygiene
     'sabun': ['soap', 'lifebuoy', 'dettol', 'lux', 'dove', 'santoor'],
     'soap': ['sabun', 'lifebuoy', 'dettol', 'lux', 'dove', 'santoor', 'pears'],
+    'surf': ['washing powder', 'detergent', 'surf excel', 'tide', 'ariel', 'wheel', 'ghadi'],
+    'serf': ['surf', 'washing powder', 'detergent', 'surf excel'],
+    'sarf': ['surf', 'washing powder', 'detergent', 'surf excel'],
+    'tide': ['surf', 'detergent', 'washing powder'],
+    'ghadi': ['detergent', 'surf', 'washing powder'],
     'shampoo': ['clinic plus', 'head and shoulders', 'sunsilk', 'dove', 'pantene'],
     'toothpaste': ['colgate', 'pepsodent', 'dant kanti', 'sensodyne', 'brush', 'paste'],
     'paste': ['toothpaste', 'colgate', 'brush'],
+    'colgate': ['toothpaste', 'paste', 'brush'],
+    'colgit': ['colgate', 'toothpaste', 'paste'],
+    'kolget': ['colgate', 'toothpaste', 'paste'],
+
+    // 🪔 Pooja & Essentials
+    'agarbatti': ['incense', 'dhoop', 'cycle agarbatti', 'mangaldeep', 'pooja'],
+    'dhoop': ['agarbatti', 'pooja'],
+    'machis': ['matchbox', 'matches'],
+    'kapoor': ['camphor', 'pooja'],
   };
 
   void _selectCategory(String categoryId, String categoryName) {
@@ -346,12 +329,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             GestureDetector(
                               onTap: _openVoiceSearch,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [AppDesignSystem.orange200, AppDesignSystem.orange300],
+                                    colors: [Color(0xFFFEF2F2), Color(0xFFFFE4E6)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: const Color(0xFFFECDD3), width: 1.1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppDesignSystem.primary.withValues(alpha: 0.12),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1.5),
+                                    ),
+                                  ],
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -359,15 +352,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                     const Icon(
                                       Icons.mic_rounded,
                                       size: 16,
-                                      color: AppDesignSystem.orange600,
+                                      color: AppDesignSystem.primary,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Voice',
+                                      'Bolo',
                                       style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 11),
+                                        fontSize: Responsive.scaledFontSize(context, 11.5),
                                         fontWeight: FontWeight.w800,
-                                        color: AppDesignSystem.orange700,
+                                        color: AppDesignSystem.primary,
                                       ),
                                     ),
                                   ],
@@ -554,68 +547,159 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           error: (_, __) => const SizedBox.shrink(),
         ),
 
-        // 3. Real Dynamic Trending & Popular Searches from Database
+        // 3. Real Dynamic Trending in Town & Popular Searches from Database (100% Dynamic from Products)
         allProductsAsync.when(
           data: (products) {
-            final popularProducts = products
-                .where((p) => p.isAvailable && (p.isBestSeller || p.tags.contains('popular')))
+            final currentHub = ref.watch(currentStoreHubProvider);
+            final hubCity = currentHub.city.isNotEmpty ? currentHub.city : 'Town';
+
+            // Filter in-stock and available products for this hub
+            final availableProducts = products.where((p) => p.isAvailable && p.stock > 0).toList();
+
+            // Trending products: Bestsellers, trending tags, or top sorted items from actual DB
+            final trendingProducts = availableProducts
+                .where((p) => p.isBestSeller || p.isTrending || p.isTopPick || p.tags.contains('popular'))
                 .take(10)
                 .toList();
 
-            final displayItems = popularProducts.isNotEmpty ? popularProducts : products.take(8).toList();
-            if (displayItems.isEmpty) return const SizedBox.shrink();
+            final displayTrending = trendingProducts.isNotEmpty
+                ? trendingProducts
+                : availableProducts.take(10).toList();
+
+            // Extract real brands/categories dynamically from available products' names & tags
+            final Set<String> dynamicBrands = {};
+            for (final p in availableProducts) {
+              // Extract the first word or known brand token from actual product name
+              final firstWord = p.name.trim().split(RegExp(r'\s+')).first;
+              if (firstWord.length >= 3 && !RegExp(r'^\d').hasMatch(firstWord)) {
+                dynamicBrands.add(firstWord);
+              }
+              // Also add any tag that looks like a brand name
+              for (final t in p.tags) {
+                if (t.length >= 3 && !t.contains('veg') && !t.contains('popular') && !t.contains('best')) {
+                  dynamicBrands.add(t);
+                }
+              }
+              if (dynamicBrands.length >= 10) break;
+            }
+
+            final dynamicBrandList = dynamicBrands.take(10).toList();
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Text('🔥', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Trending & Popular Now',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 13.5),
-                        fontWeight: FontWeight.w800,
-                        color: AppDesignSystem.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: displayItems.map((prod) {
-                    return GestureDetector(
-                      onTap: () => _onSearchTermSelected(prod.name),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
-                          border: Border.all(color: AppDesignSystem.border),
-                          boxShadow: AppDesignSystem.shadowSm,
+                // 🔥 Trending in [City] Section (100% from DB products)
+                if (displayTrending.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      Text('🔥', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Trending in $hubCity',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
+                          fontWeight: FontWeight.w800,
+                          color: AppDesignSystem.textPrimary,
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.trending_up_rounded, size: 13, color: AppDesignSystem.orange600),
-                            const SizedBox(width: 5),
-                            Text(
-                              prod.name,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11.5),
-                                fontWeight: FontWeight.w700,
-                                color: AppDesignSystem.textPrimary,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: displayTrending.map((prod) {
+                      return GestureDetector(
+                        onTap: () => _onSearchTermSelected(prod.name),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
+                            border: Border.all(color: AppDesignSystem.border),
+                            boxShadow: AppDesignSystem.shadowSm,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.trending_up_rounded, size: 13, color: AppDesignSystem.orange600),
+                              const SizedBox(width: 5),
+                              Text(
+                                prod.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11.5),
+                                  fontWeight: FontWeight.w700,
+                                  color: AppDesignSystem.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 22),
+                ],
+
+                // 🏷️ Popular Brands in Town (100% extracted from DB products)
+                if (dynamicBrandList.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      Text('⭐', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15))),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Popular in $hubCity',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
+                          fontWeight: FontWeight.w800,
+                          color: AppDesignSystem.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 36,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: dynamicBrandList.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, idx) {
+                        final brand = dynamicBrandList[idx];
+                        return GestureDetector(
+                          onTap: () => _onSearchTermSelected(brand),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.02),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                brand,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11.5),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF1E293B),
+                                ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ],
             );
           },
@@ -870,15 +954,152 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         final filtered = scoredProducts.map((e) => e.key).toList();
 
         if (filtered.isEmpty && matchedRestaurants.isEmpty) {
-          return EmptyState(
-            emoji: '🔍',
-            title: 'No results found for "$_query"',
-            subtitle: 'Try searching for wedson, bal udyan, burger, pizza, milk or check your spelling.',
-            ctaLabel: 'Clear Search',
-            onCta: () {
-              _controller.clear();
-              setState(() => _query = '');
-            },
+          final currentHub = ref.watch(currentStoreHubProvider);
+          final hubCity = currentHub.city.isNotEmpty ? currentHub.city : 'Town';
+          final fallbackAlternatives = products
+              .where((p) => p.isAvailable && p.stock > 0)
+              .take(6)
+              .toList();
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFEE2E2)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFEF2F2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Text('🔎', style: TextStyle(fontSize: 24)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '"$_query" nahi mila',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 16),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Spelling check karein ya neeche diye gaye popular items dekhein',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 12),
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () {
+                        _controller.clear();
+                        setState(() => _query = '');
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Clear Search ✕',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 12),
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              if (fallbackAlternatives.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Popular in $hubCity Right Now',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 14),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ...fallbackAlternatives.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final product = entry.value;
+                  final isFirst = idx == 0;
+                  final isLast = idx == fallbackAlternatives.length - 1;
+
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: isFirst ? const Radius.circular(18) : Radius.zero,
+                          bottom: isLast ? const Radius.circular(18) : Radius.zero,
+                        ),
+                        border: Border(
+                          left: const BorderSide(color: AppDesignSystem.slate200, width: 1.1),
+                          right: const BorderSide(color: AppDesignSystem.slate200, width: 1.1),
+                          top: isFirst ? const BorderSide(color: AppDesignSystem.slate200, width: 1.1) : BorderSide.none,
+                          bottom: isLast
+                              ? const BorderSide(color: AppDesignSystem.slate200, width: 1.1)
+                              : const BorderSide(color: AppDesignSystem.slate100, width: 1),
+                        ),
+                      ),
+                      child: _buildProductRow(
+                        product,
+                        false,
+                        null,
+                        AppDesignSystem.primary,
+                        AppDesignSystem.slate50,
+                        false,
+                        false,
+                        true,
+                        true,
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ],
           );
         }
 
