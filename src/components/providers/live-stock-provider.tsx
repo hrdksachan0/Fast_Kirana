@@ -3,6 +3,7 @@ import { apiUrl, catalogApiUrl } from '@/lib/api-url';
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { useCartStore, CartProduct } from '@/stores/cart-store'
+import { useUIStore } from '@/stores/ui-store'
 
 interface LiveProductState {
   price: number
@@ -60,10 +61,11 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
       })
 
       try {
+        const storeId = useUIStore.getState().activeStoreId || 'hub-209206'
         const res = await fetch(`${catalogApiUrl()}/api/products/live-stock`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: idsToFetch }),
+          body: JSON.stringify({ ids: idsToFetch, storeId }),
         })
         if (res.ok) {
           const data = await res.json()

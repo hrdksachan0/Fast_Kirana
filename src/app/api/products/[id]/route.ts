@@ -15,7 +15,7 @@ export async function GET(
   try {
     const { id } = await params
     const { searchParams } = new URL(request.url)
-    const storeId = searchParams.get('storeId') || request.headers.get('x-store-id')
+    const storeId = searchParams.get('storeId') || request.headers.get('x-store-id') || 'hub-209206'
 
     const product = await prisma.product.findFirst({
       where: {

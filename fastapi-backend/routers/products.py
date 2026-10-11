@@ -891,7 +891,8 @@ async def check_live_stock(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get live prices and inventory stocks for a list of product ids (including variants).
+    Get live prices and inventory stocks for a list of product ids (including variants)
+    localized by DarkStore hub inventory.
     """
     ids = payload.get("ids", [])
     if not isinstance(ids, list):
@@ -900,12 +901,21 @@ async def check_live_stock(
     if not ids:
         return {}
 
+    target_store = payload.get("storeId") or "hub-209206"
+
     # Extract base ids
     base_ids = [id_str.split("_")[0] if "_" in id_str else id_str for id_str in ids]
 
     stmt = select(Product).where(Product.id.in_(base_ids))
     res = await db.execute(stmt)
     products = res.scalars().all()
+
+    inv_stmt = select(StoreInventory).where(
+        StoreInventory.storeId == target_store,
+        StoreInventory.productId.in_(base_ids)
+    )
+    inv_res = await db.execute(inv_stmt)
+    inventories = {inv.productId: inv for inv in inv_res.scalars().all()}
 
     stock_map = {}
     for id_str in ids:
@@ -916,22 +926,29 @@ async def check_live_stock(
         if not p:
             continue
 
+        inv = inventories.get(product_id)
+        is_rest = bool(p.restaurantId)
+        base_stock = (p.stock or 99999) if is_rest else (inv.stock if inv else (p.stock or 0))
+        base_avail = p.isAvailable if is_rest else ((inv.isAvailable and inv.stock > 0) if inv else (p.isAvailable and base_stock > 0))
+        base_price = (inv.priceOverride if (inv and inv.priceOverride) else p.price) if not is_rest else p.price
+
         if is_variant and p.variants and isinstance(p.variants, list):
             variant = next((v for v in p.variants if v.get("name") == variant_name), None)
             if variant:
+                var_stock = variant.get("stock", 0)
                 stock_map[id_str] = {
-                    "price": variant.get("price", p.price),
+                    "price": variant.get("price", base_price),
                     "mrp": variant.get("mrp", p.mrp),
-                    "stock": variant.get("stock", 0),
-                    "isAvailable": p.isAvailable and variant.get("stock", 0) > 0
+                    "stock": var_stock,
+                    "isAvailable": base_avail and var_stock > 0
                 }
                 continue
 
         stock_map[id_str] = {
-            "price": p.price,
+            "price": base_price,
             "mrp": p.mrp,
-            "stock": p.stock,
-            "isAvailable": p.isAvailable
+            "stock": base_stock,
+            "isAvailable": base_avail
         }
 
     return stock_map
@@ -1248,7 +1265,7 @@ async def get_product_details(
     Get detailed product info by ID or Slug, including reviews and category metadata.
     Uses ultra-fast multi-tier caching (60s TTL).
     """
-    target_store = storeId or x_store_id
+    target_store = storeId or x_store_id or "hub-209206"
     cache_key = f"product_detail:{id}:{target_store or 'all'}"
     cached = await get_cached(cache_key)
     if cached is not None:

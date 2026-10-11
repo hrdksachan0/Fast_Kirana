@@ -66,6 +66,10 @@ const [productRaw, relatedRaw] = await Promise.all([
       category: true,
       restaurant: true,
       images: true,
+      inventories: {
+        where: { storeId: 'hub-209206' },
+        select: { stock: true, isAvailable: true, priceOverride: true }
+      },
       reviews: {
         include: {
           user: {
@@ -98,6 +102,10 @@ const [productRaw, relatedRaw] = await Promise.all([
         include: {
           category: true,
           restaurant: true,
+          inventories: {
+            where: { storeId: 'hub-209206' },
+            select: { stock: true, isAvailable: true, priceOverride: true }
+          },
         },
       }).catch(() => [])
     }
@@ -112,6 +120,10 @@ const [productRaw, relatedRaw] = await Promise.all([
         include: {
           category: true,
           restaurant: true,
+          inventories: {
+            where: { storeId: 'hub-209206' },
+            select: { stock: true, isAvailable: true, priceOverride: true }
+          },
         },
       }).catch(() => [])
     }
@@ -123,34 +135,41 @@ const [productRaw, relatedRaw] = await Promise.all([
     notFound()
   }
 
-  // Map to UI types
-  const mapProduct = (p: any): Product => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    description: p.description,
-    imageUrl: p.imageUrl,
-    categoryId: p.categoryId,
-    restaurantId: p.restaurantId,
-    restaurant: p.restaurant,
-    restaurantName: p.restaurant?.name,
-    mrp: p.mrp,
-    price: p.price,
-    discount: p.discount,
-    unit: p.unit,
-    stock: p.stock,
-    isAvailable: p.isAvailable,
-    tags: p.tags,
-    variants: p.variants,
-    category: p.category ? {
-      id: p.category.id,
-      name: p.category.name,
-      slug: p.category.slug,
-      imageUrl: p.category.imageUrl,
-      parentId: p.category.parentId,
-      sortOrder: p.category.sortOrder,
-    } : undefined,
-  })
+  // Map to UI types with dark store inventory support
+  const mapProduct = (p: any): Product => {
+    const hubInv = p.inventories?.[0]
+    const effectiveStock = (hubInv && typeof hubInv.stock === 'number') ? hubInv.stock : (typeof p.stock === 'number' ? p.stock : 0)
+    const effectiveIsAvailable = (hubInv && typeof hubInv.isAvailable === 'boolean') ? hubInv.isAvailable : (p.isAvailable !== false)
+    const effectivePrice = (hubInv && typeof hubInv.priceOverride === 'number') ? hubInv.priceOverride : p.price
+
+    return {
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      description: p.description,
+      imageUrl: p.imageUrl,
+      categoryId: p.categoryId,
+      restaurantId: p.restaurantId,
+      restaurant: p.restaurant,
+      restaurantName: p.restaurant?.name,
+      mrp: p.mrp,
+      price: effectivePrice,
+      discount: p.discount,
+      unit: p.unit,
+      stock: effectiveStock,
+      isAvailable: effectiveIsAvailable,
+      tags: p.tags,
+      variants: p.variants,
+      category: p.category ? {
+        id: p.category.id,
+        name: p.category.name,
+        slug: p.category.slug,
+        imageUrl: p.category.imageUrl,
+        parentId: p.category.parentId,
+        sortOrder: p.category.sortOrder,
+      } : undefined,
+    }
+  }
 
   const product = mapProduct(productRaw)
   const relatedProducts = relatedRaw.map(mapProduct)
