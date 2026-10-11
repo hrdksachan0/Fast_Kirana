@@ -21,6 +21,7 @@ from schemas import CashDepositRequest, FinancialSummaryOut
 from routers.auth import require_admin
 from routers.websockets import manager
 from routers.stores_service import clear_stores_cache
+from routers.settings import clear_settings_cache
 import logging
 
 logger = logging.getLogger(__name__)
@@ -326,7 +327,16 @@ async def save_admin_settings(
         hub_res = await db.execute(select(DarkStore).where(DarkStore.id == target_hub_id))
         hub_obj = hub_res.scalars().first()
         if hub_obj:
-            if "grocery_mart_open" in payload:
+            if "grocery_auto_timing" in payload or "grocery_mart_open" in payload or "grocery_open_time" in payload or "grocery_close_time" in payload:
+                from routers.stores_service import check_is_store_open
+                merged_timing_map = {**current_map, **{k: str(v) for k, v in payload.items()}}
+                hub_obj.groceryOpen = check_is_store_open(merged_timing_map, "grocery")
+                if hub_obj.groceryOpen:
+                    hub_obj.closeReason = None
+                    hub_obj.pauseUntil = None
+                else:
+                    hub_obj.closeReason = "AUTO_SCHEDULE_CLOSED" if payload.get("grocery_auto_timing") == "true" else "MANUAL_OFF"
+            elif "grocery_mart_open" in payload:
                 is_open = str(payload["grocery_mart_open"]).lower() == "true"
                 hub_obj.groceryOpen = is_open
                 if is_open:
@@ -334,6 +344,7 @@ async def save_admin_settings(
                     hub_obj.pauseUntil = None
                 else:
                     hub_obj.closeReason = "MANUAL_OFF"
+
             if "delivery_radius" in payload:
                 try:
                     hub_obj.deliveryRadiusKm = float(payload["delivery_radius"])
@@ -363,6 +374,7 @@ async def save_admin_settings(
 
         await db.commit()
         clear_stores_cache()
+        clear_settings_cache()
 
         return {"success": True}
     except Exception as e:

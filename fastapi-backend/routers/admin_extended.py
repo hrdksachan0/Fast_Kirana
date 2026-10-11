@@ -2663,6 +2663,10 @@ async def admin_update_store(
 
     await db.commit()
     await db.refresh(store)
+    from routers.stores_service import clear_stores_cache
+    from routers.settings import clear_settings_cache
+    clear_stores_cache()
+    clear_settings_cache()
     return {"success": True, "store": {
         "id": store.id,
         "name": store.name,

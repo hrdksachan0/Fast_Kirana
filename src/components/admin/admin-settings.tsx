@@ -347,17 +347,47 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!deliveriesCount.trim() || !ratingValue.trim() || !happyFamilies.trim() || !trustedText.trim() || !deliveryRadius.trim() || !storeUpiVpa.trim() || !taxRate.trim() || !minOrderValue.trim() || !miscFee.trim() || !contactPhone.trim() || !contactEmail.trim() || !contactTimings.trim() || !contactAddress.trim() ||
-        !groceryPickupAddress.trim() ||
-        !groceryFreeDeliveryThreshold.trim() || !combinedFreeDeliveryThreshold.trim() || !deliveryFee.trim() ||
-        !heroGreetingClosed.trim() || !heroSubtitleClosed.trim() ||
-        !heroGreetingMorning.trim() || !heroSubtitleMorningMartClosed.trim() || !heroSubtitleMorningCafeClosed.trim() || !heroSubtitleMorningBothOpen.trim() ||
-        !heroGreetingAfternoon.trim() || !heroSubtitleAfternoonMartClosed.trim() || !heroSubtitleAfternoonCafeClosed.trim() || !heroSubtitleAfternoonBothOpen.trim() ||
-        !heroGreetingEvening.trim() || !heroSubtitleEveningMartClosed.trim() || !heroSubtitleEveningCafeClosed.trim() || !heroSubtitleEveningBothOpen.trim() ||
-        !heroGreetingNight.trim() || !heroSubtitleNightMartClosed.trim() || !heroSubtitleNightCafeClosed.trim() || !heroSubtitleNightBothOpen.trim()) {
-      toast.error('Please fill in all setting fields')
+    // Core critical operational fields
+    if (!deliveryRadius.trim() || !contactPhone.trim()) {
+      toast.error('Please fill in required operational fields (Delivery Radius and Contact Phone)')
       return
     }
+
+    // Fallback safe defaults for cosmetic & greeting fields if blank
+    const cleanDeliveriesCount = deliveriesCount.trim() || '10,000+'
+    const cleanRatingValue = ratingValue.trim() || '4.8'
+    const cleanHappyFamilies = happyFamilies.trim() || '5,000+'
+    const cleanTrustedText = trustedText.trim() || '✨ Trusted by families in your town'
+    const cleanStoreUpiVpa = storeUpiVpa.trim() || '7054470303@paytm'
+    const cleanTaxRate = taxRate.trim() || '5'
+    const cleanMinOrderValue = minOrderValue.trim() || '0'
+    const cleanMiscFee = miscFee.trim() || '5'
+    const cleanContactEmail = contactEmail.trim() || 'help@fastkirana.com'
+    const cleanContactTimings = contactTimings.trim() || '6 AM - 12 AM'
+    const cleanContactAddress = contactAddress.trim() || STORE_ADDRESS
+    const cleanGroceryPickupAddress = groceryPickupAddress.trim() || GROCERY_PICKUP_ADDRESS
+    const cleanGroceryFreeDeliveryThreshold = groceryFreeDeliveryThreshold.trim() || '199'
+    const cleanCombinedFreeDeliveryThreshold = combinedFreeDeliveryThreshold.trim() || '200'
+    const cleanDeliveryFee = deliveryFee.trim() || '25'
+
+    const cleanHeroGreetingClosed = heroGreetingClosed.trim() || "We're resting right now 💤"
+    const cleanHeroSubtitleClosed = heroSubtitleClosed.trim() || "FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!"
+    const cleanHeroGreetingMorning = heroGreetingMorning.trim() || "Good morning, let's get breakfast! 🌅"
+    const cleanHeroSubtitleMorningMartClosed = heroSubtitleMorningMartClosed.trim() || "Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨"
+    const cleanHeroSubtitleMorningCafeClosed = heroSubtitleMorningCafeClosed.trim() || "Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦"
+    const cleanHeroSubtitleMorningBothOpen = heroSubtitleMorningBothOpen.trim() || "Fresh milk, fruits, hot brews, and breakfast essentials delivered in minutes."
+    const cleanHeroGreetingAfternoon = heroGreetingAfternoon.trim() || "Good afternoon! Ready for lunch? 🍛"
+    const cleanHeroSubtitleAfternoonMartClosed = heroSubtitleAfternoonMartClosed.trim() || "Grocery Mart is resting, but our Cafe is cooking delicious hot lunch dishes and rolls! 🥡✨"
+    const cleanHeroSubtitleAfternoonCafeClosed = heroSubtitleAfternoonCafeClosed.trim() || "Cafe is taking a break, but Grocery Mart is delivering lunch staples, dal, and rice! 🌾📦"
+    const cleanHeroSubtitleAfternoonBothOpen = heroSubtitleAfternoonBothOpen.trim() || "Atta, rice, dal, fresh vegetables, and delicious hot rolls delivered fast."
+    const cleanHeroGreetingEvening = heroGreetingEvening.trim() || "It's snack o'clock! Tea & snacks are ready ☕"
+    const cleanHeroSubtitleEveningMartClosed = heroSubtitleEveningMartClosed.trim() || "Grocery Mart is taking a break, but our Cafe is steaming hot chai & fresh samosas! ☕🥟"
+    const cleanHeroSubtitleEveningCafeClosed = heroSubtitleEveningCafeClosed.trim() || "Cafe is resting, but Grocery Mart is delivering chips, biscuits, and munchies! 🍿📦"
+    const cleanHeroSubtitleEveningBothOpen = heroSubtitleEveningBothOpen.trim() || "Samosas, munchies, chips, and chilled soft drinks ready for tea time."
+    const cleanHeroGreetingNight = heroGreetingNight.trim() || "Late night cravings? We got you! 🌙"
+    const cleanHeroSubtitleNightMartClosed = heroSubtitleNightMartClosed.trim() || "Grocery Mart is closed. Cafe is open to deliver hot night snacks & dessert cravings! 🍧✨"
+    const cleanHeroSubtitleNightCafeClosed = heroSubtitleNightCafeClosed.trim() || "Cafe kitchen is resting, but Grocery Mart is active for ice cream, drinks & munchies! 🍦📦"
+    const cleanHeroSubtitleNightBothOpen = heroSubtitleNightBothOpen.trim() || "Indulge in ice creams, chocolates, late night munchies, and cafe specialties."
 
     try {
       setSaving(true)
@@ -375,72 +405,72 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
         body: JSON.stringify({
           storeId: storeId && storeId !== 'all' ? storeId : undefined,
           ...categorySettingsPayload,
-          deliveries_count: deliveriesCount.trim(),
-          rating_value: ratingValue.trim(),
-          happy_families: happyFamilies.trim(),
-          trusted_text: trustedText.trim(),
+          deliveries_count: cleanDeliveriesCount,
+          rating_value: cleanRatingValue,
+          happy_families: cleanHappyFamilies,
+          trusted_text: cleanTrustedText,
           grocery_mart_open: groceryMartOpen ? 'true' : 'false',
           grocery_auto_timing: groceryAutoTiming ? 'true' : 'false',
-          grocery_open_time: groceryOpenTime,
-          grocery_close_time: groceryCloseTime,
+          grocery_open_time: groceryOpenTime || '06:00',
+          grocery_close_time: groceryCloseTime || '23:59',
           restaurant_auto_timing: restaurantAutoTiming ? 'true' : 'false',
-          restaurant_open_time: restaurantOpenTime,
-          restaurant_close_time: restaurantCloseTime,
+          restaurant_open_time: restaurantOpenTime || '10:00',
+          restaurant_close_time: restaurantCloseTime || '22:00',
           cafe_auto_timing: cafeAutoTiming ? 'true' : 'false',
-          cafe_open_time: cafeOpenTime,
-          cafe_close_time: cafeCloseTime,
+          cafe_open_time: cafeOpenTime || '10:00',
+          cafe_close_time: cafeCloseTime || '22:00',
           admin_auto_approve_orders: adminAutoApproveOrders ? 'true' : 'false',
           only_cod: onlyCod ? 'true' : 'false',
           delivery_radius: deliveryRadius.trim(),
-          store_upi_vpa: storeUpiVpa.trim(),
+          store_upi_vpa: cleanStoreUpiVpa,
           store_lat: storeLat.trim(),
           store_lng: storeLng.trim(),
-          avg_delivery_time: avgDeliveryTime.trim(),
-          delivered_today: deliveredToday.trim(),
-          fresh_stock_loaded: freshStockLoaded.trim(),
-          tax_rate: taxRate.trim(),
-          min_order_value: minOrderValue.trim(),
-          misc_fee: miscFee.trim(),
-          misc_fee_label: miscFeeLabel.trim(),
-          combined_misc_fee: combinedMiscFee.trim(),
-          combined_misc_fee_label: combinedMiscFeeLabel.trim(),
-          grocery_free_delivery_threshold: groceryFreeDeliveryThreshold.trim(),
-          combined_free_delivery_threshold: combinedFreeDeliveryThreshold.trim(),
-          delivery_fee: deliveryFee.trim(),
-          delivery_fee_tier1: deliveryFeeTier1.trim(),
-          delivery_threshold_tier1: deliveryThresholdTier1.trim(),
-          delivery_fee_tier2: deliveryFeeTier2.trim(),
-          delivery_threshold_tier2: deliveryThresholdTier2.trim(),
-          delivery_fee_tier3: deliveryFeeTier3.trim(),
-          delivery_threshold_tier3: deliveryThresholdTier3.trim(),
-          delivery_fee_per_km_beyond_5km: deliveryFeePerKmBeyond5km.trim(),
+          avg_delivery_time: avgDeliveryTime.trim() || 'Fast',
+          delivered_today: deliveredToday.trim() || '1,231+',
+          fresh_stock_loaded: freshStockLoaded.trim() || '2 hrs ago',
+          tax_rate: cleanTaxRate,
+          min_order_value: cleanMinOrderValue,
+          misc_fee: cleanMiscFee,
+          misc_fee_label: miscFeeLabel.trim() || 'Packaging Charge',
+          combined_misc_fee: combinedMiscFee.trim() || '5',
+          combined_misc_fee_label: combinedMiscFeeLabel.trim() || 'Combined Packaging Charge',
+          grocery_free_delivery_threshold: cleanGroceryFreeDeliveryThreshold,
+          combined_free_delivery_threshold: cleanCombinedFreeDeliveryThreshold,
+          delivery_fee: cleanDeliveryFee,
+          delivery_fee_tier1: deliveryFeeTier1.trim() || cleanDeliveryFee,
+          delivery_threshold_tier1: deliveryThresholdTier1.trim() || cleanGroceryFreeDeliveryThreshold,
+          delivery_fee_tier2: deliveryFeeTier2.trim() || '35',
+          delivery_threshold_tier2: deliveryThresholdTier2.trim() || '299',
+          delivery_fee_tier3: deliveryFeeTier3.trim() || '50',
+          delivery_threshold_tier3: deliveryThresholdTier3.trim() || '399',
+          delivery_fee_per_km_beyond_5km: deliveryFeePerKmBeyond5km.trim() || '10',
           contact_phone: contactPhone.trim(),
-          contact_email: contactEmail.trim(),
-          contact_timings: contactTimings.trim(),
-          contact_address: contactAddress.trim(),
-          grocery_pickup_address: groceryPickupAddress.trim(),
+          contact_email: cleanContactEmail,
+          contact_timings: cleanContactTimings,
+          contact_address: cleanContactAddress,
+          grocery_pickup_address: cleanGroceryPickupAddress,
           whatsapp_notify_7054470303: notifyPhone1 ? 'true' : 'false',
           whatsapp_notify_8112849854: notifyPhone2 ? 'true' : 'false',
           whatsapp_notify_store_phone: notifyStorePhone ? 'true' : 'false',
           store_alert_phones: storeAlertPhones.trim(),
-          hero_greeting_closed: heroGreetingClosed.trim(),
-          hero_subtitle_closed: heroSubtitleClosed.trim(),
-          hero_greeting_morning: heroGreetingMorning.trim(),
-          hero_subtitle_morning_mart_closed: heroSubtitleMorningMartClosed.trim(),
-          hero_subtitle_morning_cafe_closed: heroSubtitleMorningCafeClosed.trim(),
-          hero_subtitle_morning_both_open: heroSubtitleMorningBothOpen.trim(),
-          hero_greeting_afternoon: heroGreetingAfternoon.trim(),
-          hero_subtitle_afternoon_mart_closed: heroSubtitleAfternoonMartClosed.trim(),
-          hero_subtitle_afternoon_cafe_closed: heroSubtitleAfternoonCafeClosed.trim(),
-          hero_subtitle_afternoon_both_open: heroSubtitleAfternoonBothOpen.trim(),
-          hero_greeting_evening: heroGreetingEvening.trim(),
-          hero_subtitle_evening_mart_closed: heroSubtitleEveningMartClosed.trim(),
-          hero_subtitle_evening_cafe_closed: heroSubtitleEveningCafeClosed.trim(),
-          hero_subtitle_evening_both_open: heroSubtitleEveningBothOpen.trim(),
-          hero_greeting_night: heroGreetingNight.trim(),
-          hero_subtitle_night_mart_closed: heroSubtitleNightMartClosed.trim(),
-          hero_subtitle_night_cafe_closed: heroSubtitleNightCafeClosed.trim(),
-          hero_subtitle_night_both_open: heroSubtitleNightBothOpen.trim(),
+          hero_greeting_closed: cleanHeroGreetingClosed,
+          hero_subtitle_closed: cleanHeroSubtitleClosed,
+          hero_greeting_morning: cleanHeroGreetingMorning,
+          hero_subtitle_morning_mart_closed: cleanHeroSubtitleMorningMartClosed,
+          hero_subtitle_morning_cafe_closed: cleanHeroSubtitleMorningCafeClosed,
+          hero_subtitle_morning_both_open: cleanHeroSubtitleMorningBothOpen,
+          hero_greeting_afternoon: cleanHeroGreetingAfternoon,
+          hero_subtitle_afternoon_mart_closed: cleanHeroSubtitleAfternoonMartClosed,
+          hero_subtitle_afternoon_cafe_closed: cleanHeroSubtitleAfternoonCafeClosed,
+          hero_subtitle_afternoon_both_open: cleanHeroSubtitleAfternoonBothOpen,
+          hero_greeting_evening: cleanHeroGreetingEvening,
+          hero_subtitle_evening_mart_closed: cleanHeroSubtitleEveningMartClosed,
+          hero_subtitle_evening_cafe_closed: cleanHeroSubtitleEveningCafeClosed,
+          hero_subtitle_evening_both_open: cleanHeroSubtitleEveningBothOpen,
+          hero_greeting_night: cleanHeroGreetingNight,
+          hero_subtitle_night_mart_closed: cleanHeroSubtitleNightMartClosed,
+          hero_subtitle_night_cafe_closed: cleanHeroSubtitleNightCafeClosed,
+          hero_subtitle_night_both_open: cleanHeroSubtitleNightBothOpen,
           min_app_version: minAppVersion.trim(),
           latest_app_version: latestAppVersion.trim(),
           app_update_url: appUpdateUrl.trim(),
