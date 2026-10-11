@@ -51,7 +51,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: '/((?!api/).*)',
+        source: '/((?!api/|\\.well-known/).*)',
         has: [
           {
             type: 'host',
@@ -62,7 +62,7 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
-        source: '/((?!api/).*)',
+        source: '/((?!api/|\\.well-known/).*)',
         has: [
           {
             type: 'host',
