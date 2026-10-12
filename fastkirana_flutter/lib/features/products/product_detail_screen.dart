@@ -15,6 +15,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/store_settings_provider.dart';
 import '../../widgets/cart_conflict_dialog.dart';
 import '../cart/cart_screen.dart';
+import '../../core/utils/stock_notice_helper.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final Product product;
@@ -1111,27 +1112,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                         borderRadius: const BorderRadius.horizontal(right: Radius.circular(13)),
                                         onTap: () {
                                            if (p.stock > 0 && inCartQty >= p.stock) {
-                                            HapticFeedback.heavyImpact();
-                                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Row(
-                                                  children: [
-                                                    const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
-                                                    const SizedBox(width: 8),
-                                                    Expanded(
-                                                      child: Text(
-                                                        'Only ${p.stock} units available in stock!',
-                                                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: Colors.white),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                backgroundColor: AppDesignSystem.red600,
-                                                behavior: SnackBarBehavior.floating,
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                                duration: const Duration(seconds: 2),
-                                              ),
+                                            StockNoticeHelper.showStockLimit(
+                                              context: context,
+                                              stock: p.stock,
+                                              hasFloatingCart: true,
                                             );
                                             return;
                                           }

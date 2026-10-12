@@ -7,6 +7,7 @@ import '../../../core/theme/design_system.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../data/models/cart.dart';
 import '../../../providers/cart_provider.dart';
+import '../../../core/utils/stock_notice_helper.dart';
 
 /// Item Row inside Cart with Thumbnail, Price, Unit, Savings, and Stepper
 class CartItemRow extends ConsumerWidget {
@@ -187,31 +188,10 @@ class CartItemRow extends ConsumerWidget {
                     borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
                     onTap: () {
                       if (prod.stock > 0 && qty >= prod.stock) {
-                        HapticFeedback.heavyImpact();
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Only ${prod.stock} units available in stock!',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 12),
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: AppDesignSystem.red600,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            duration: const Duration(seconds: 2),
-                          ),
+                        StockNoticeHelper.showStockLimit(
+                          context: context,
+                          stock: prod.stock,
+                          hasFloatingCart: true,
                         );
                         return;
                       }

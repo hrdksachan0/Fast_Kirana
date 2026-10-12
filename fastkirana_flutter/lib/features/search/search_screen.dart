@@ -22,6 +22,7 @@ import '../../widgets/variant_selector_sheet.dart';
 import '../../widgets/cart_conflict_dialog.dart';
 import '../../data/models/restaurant.dart';
 import '../products/product_detail_screen.dart';
+import '../../core/utils/stock_notice_helper.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   final String? initialQuery;
@@ -1663,19 +1664,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             VariantSelectorSheet.show(context, product);
                           } else {
                             if (product.stock > 0 && inCartQty >= product.stock) {
-                              HapticFeedback.heavyImpact();
-                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Only ${product.stock} units available in stock!',
-                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w700, color: Colors.white),
-                                  ),
-                                  backgroundColor: AppDesignSystem.red600,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  duration: const Duration(seconds: 2),
-                                ),
+                              StockNoticeHelper.showStockLimit(
+                                context: context,
+                                stock: product.stock,
+                                hasFloatingCart: inCartQty > 0,
                               );
                               return;
                             }

@@ -7,6 +7,7 @@ import '../../data/models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../cart_conflict_dialog.dart';
 import '../variant_selector_sheet.dart';
+import '../../core/utils/stock_notice_helper.dart';
 
 // ─── Add To Cart Button & Quantity Stepper ─────────────────────────────────
 
@@ -219,7 +220,7 @@ class AddToCartButton extends ConsumerWidget {
                   final singleItem = matchingItems.first;
                   if (singleItem.product.stock > 0 && inCartQty >= singleItem.product.stock) {
                     HapticFeedback.heavyImpact();
-                    _showStockLimitSnackbar();
+                    _showStockLimitSnackbar(ref);
                     return;
                   }
                   HapticFeedback.lightImpact();
@@ -230,7 +231,7 @@ class AddToCartButton extends ConsumerWidget {
               } else {
                 if (product.stock > 0 && inCartQty >= product.stock) {
                   HapticFeedback.heavyImpact();
-                  _showStockLimitSnackbar();
+                  _showStockLimitSnackbar(ref);
                   return;
                 }
                 final conflict = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
@@ -306,27 +307,12 @@ class AddToCartButton extends ConsumerWidget {
     );
   }
 
-  void _showStockLimitSnackbar() {
-    ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
-    ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
-            SizedBox(width: s(8)),
-            Expanded(
-              child: Text(
-                'Only ${product.stock} units available in stock!',
-                style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFFDC2626),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
-        duration: const Duration(seconds: 2),
-      ),
+  void _showStockLimitSnackbar(WidgetRef ref) {
+    final cartItems = ref.read(cartProvider).value?.totalItems ?? 0;
+    StockNoticeHelper.showStockLimit(
+      context: scaffoldContext,
+      stock: product.stock,
+      hasFloatingCart: cartItems > 0,
     );
   }
 
@@ -341,13 +327,17 @@ class AddToCartButton extends ConsumerWidget {
   }
 
   void _handleAdd(BuildContext context, WidgetRef ref) {
+    final cartItems = ref.read(cartProvider).value?.totalItems ?? 0;
     if (product.stock <= 0 || !product.isAvailable) {
+      final bottomPadding = MediaQuery.of(scaffoldContext).padding.bottom;
+      final bottomMargin = (cartItems > 0) ? (bottomPadding + 80.0) : (bottomPadding + 16.0);
       ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
       ScaffoldMessenger.of(scaffoldContext).showSnackBar(
         SnackBar(
           content: Text('${product.name} is currently out of stock.'),
           backgroundColor: const Color(0xFFDC2626),
           behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(left: 16, right: 16, bottom: bottomMargin),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
         ),
       );
@@ -360,27 +350,10 @@ class AddToCartButton extends ConsumerWidget {
     }
     final success = ref.read(cartProvider.notifier).addProduct(product, 1);
     if (!success) {
-      HapticFeedback.heavyImpact();
-      ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
-      ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
-              SizedBox(width: s(8)),
-              Expanded(
-                child: Text(
-                  'Cannot add more! Only ${product.stock} units available in stock.',
-                  style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFFDC2626),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
-          duration: const Duration(seconds: 2),
-        ),
+      StockNoticeHelper.showStockLimit(
+        context: scaffoldContext,
+        stock: product.stock,
+        hasFloatingCart: cartItems > 0,
       );
     }
   }
