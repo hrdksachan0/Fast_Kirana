@@ -167,9 +167,9 @@ class CartUpsellCard extends ConsumerWidget {
         catLower.contains('ice-cream');
 
     return Container(
-      width: 132,
+      width: 138,
       margin: const EdgeInsets.only(right: 10),
-      padding: const EdgeInsets.all(9),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -227,19 +227,22 @@ class CartUpsellCard extends ConsumerWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 7),
 
           // Product Title (2 lines max)
-          Text(
-            product.name,
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 11.5),
-              fontWeight: FontWeight.w700,
-              color: AppDesignSystem.slate900,
-              height: 1.25,
+          SizedBox(
+            height: 32,
+            child: Text(
+              product.name,
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 11),
+                fontWeight: FontWeight.w700,
+                color: AppDesignSystem.slate900,
+                height: 1.2,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 3),
 

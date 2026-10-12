@@ -106,50 +106,46 @@ class CartBottomCheckoutBar extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Flexible(
-                flex: 4,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onViewBreakdown,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '₹${grandTotal.toInt()}',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 19),
-                              fontWeight: FontWeight.w900,
-                              color: AppDesignSystem.slate900,
-                              letterSpacing: -0.4,
-                            ),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onViewBreakdown,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '₹${grandTotal.toInt()}',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 19),
+                            fontWeight: FontWeight.w900,
+                            color: AppDesignSystem.slate900,
+                            letterSpacing: -0.4,
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF16A34A)),
-                        ],
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        'TOTAL BILL • VIEW BREAKDOWN',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 8.5),
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF15803D),
-                          letterSpacing: 0.2,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        const SizedBox(width: 4),
+                        const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF16A34A)),
+                      ],
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      'TOTAL BILL • VIEW BREAKDOWN',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF15803D),
+                        letterSpacing: 0.1,
                       ),
-                    ],
-                  ),
+                      maxLines: 2,
+                      softWrap: true,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 10),
-              Flexible(
-                flex: 6,
+              const SizedBox(width: 12),
+              Expanded(
                 child: GestureDetector(
                   onTap: () async {
                     HapticFeedback.mediumImpact();

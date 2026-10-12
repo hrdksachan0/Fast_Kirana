@@ -201,12 +201,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         [];
 
     final List<String> searchHints = [
-      'Search for milk',
-      if (restaurantNames.isNotEmpty) ...restaurantNames.map((name) => 'Search for "$name"'),
-      'Search for "milk"',
-      'Search for "butter"',
-      'Search for "burger"',
-      'Search for "pizza"',
+      'Search "milk"',
+      if (restaurantNames.isNotEmpty) ...restaurantNames.map((name) {
+        final clean = name.split(' - ').first.trim();
+        final words = clean.split(' ');
+        final short = words.length > 2 ? '${words[0]} ${words[1]}' : clean;
+        final truncated = short.length > 13 ? short.substring(0, 13) : short;
+        return 'Search "$truncated"';
+      }),
+      'Search "bread"',
+      'Search "butter"',
+      'Search "pizza"',
+      'Search "burger"',
+      'Search "paneer"',
     ];
     final currentHint = searchHints[_searchPlaceholderIndex % searchHints.length];
 
@@ -295,9 +302,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 fillColor: Colors.transparent,
                                 hintText: currentHint,
                                 hintStyle: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontSize: Responsive.scaledFontSize(context, 13),
                                   fontWeight: FontWeight.w500,
                                   color: AppDesignSystem.slate400,
+                                  letterSpacing: -0.1,
                                 ),
                                 border: InputBorder.none,
                                 enabledBorder: InputBorder.none,
@@ -333,7 +341,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             GestureDetector(
                               onTap: _openVoiceSearch,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     colors: [Color(0xFFFEF2F2), Color(0xFFFFE4E6)],
@@ -388,7 +396,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   children: [
                     _query.isEmpty ? _buildDiscoveryContent() : _buildSearchResults(),
 
-                    if (canPop)
+                    if (canPop && MediaQuery.of(context).viewInsets.bottom == 0)
                       FloatingCartBar(bottomOffset: MediaQuery.of(context).padding.bottom + 16),
                   ],
                 ),
