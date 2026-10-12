@@ -356,20 +356,23 @@ export function RestaurantForm({ restaurant, isAdmin = true, onSaved }: Restaura
         storeId: selectedStoreHubId || undefined,
       }
 
-      const url = isEditing ? `/api/restaurants/${restaurant.id}` : '/api/restaurants'
+      const fastToken = (session as any)?.fastapiToken || (session?.user as any)?.fastapiToken || (typeof window !== 'undefined' ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token')) : null)
+      const url = `${apiUrl()}/api/restaurants${isEditing ? `/${restaurant.id}` : ''}`
       const method = isEditing ? 'PATCH' : 'POST'
 
       const res = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          ...(sessionUserId ? { 
-            'x-user-id': sessionUserId, 
+          ...(fastToken ? { 'Authorization': `Bearer ${fastToken}` } : {}),
+          ...(sessionUserId ? {
+            'x-user-id': sessionUserId,
             'x-user-role': sessionUserRole,
             ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
             ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
           } : {})
         },
+        credentials: 'include',
         body: JSON.stringify(payload)
       })
 

@@ -175,12 +175,20 @@ export function CouponsTab({
       setRestaurantDishes([])
       return
     }
-    fetch(`${apiUrl()}/api/restaurants/${targetRestId}/menu`)
+    const fastToken = typeof window !== 'undefined' ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token')) : null
+    fetch(`${apiUrl()}/api/restaurants/${targetRestId}/menu`, {
+      headers: {
+        ...(fastToken ? { 'Authorization': `Bearer ${fastToken}` } : {})
+      },
+      credentials: 'include'
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data?.sections && Array.isArray(data.sections)) {
           const dishes = data.sections.flatMap((s: any) => s.dishes || [])
           setRestaurantDishes(dishes)
+        } else if (Array.isArray(data?.dishes)) {
+          setRestaurantDishes(data.dishes)
         } else {
           setRestaurantDishes([])
         }

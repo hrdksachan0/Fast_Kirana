@@ -9,11 +9,13 @@ import json
 import time
 
 from database import get_db
-from models import Restaurant, User, Product, Order, Category, RestaurantReview
+from models import Restaurant, User, Product, Order, Category, RestaurantReview, RestaurantMenu
 from routers.auth import get_current_user, require_admin, require_auth
 from routers.websockets import manager
 from routers.stores_service import check_restaurant_is_open, clear_stores_cache
 from routers.settings import clear_settings_cache
+from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.attributes import flag_modified
 
 router = APIRouter(prefix="/restaurants", tags=["Restaurants"])
 
@@ -411,6 +413,10 @@ async def update_restaurant(
                         val = int(val)
                     except (ValueError, TypeError):
                         val = getattr(restaurant, key, 0) or 0
+            elif key in ['openTime', 'closeTime']:
+                val = str(val).strip() if val and str(val).strip() else None
+            elif key == 'menuSections':
+                flag_modified(restaurant, 'menuSections')
             setattr(restaurant, key, val)
 
     restaurant.slug = final_slug
@@ -526,13 +532,34 @@ async def get_restaurant_menu(
         except Exception:
             raw_sections = []
 
+    # If no sections configured in restaurant.menuSections JSON, check relational RestaurantMenu table
+    if not raw_sections:
+        rm_stmt = select(RestaurantMenu).where(
+            RestaurantMenu.restaurantId == restaurant.id,
+            RestaurantMenu.isActive == True
+        ).order_by(RestaurantMenu.sortOrder)
+        rm_res = await db.execute(rm_stmt)
+        db_menus = rm_res.scalars().all()
+        for idx, m in enumerate(db_menus):
+            raw_sections.append({
+                "id": m.id,
+                "name": m.name,
+                "title": m.name,
+                "emoji": m.emoji or "🍽️",
+                "tag": m.slug or m.id,
+                "matchTags": [m.slug] if m.slug else [m.id],
+                "description": m.description or "",
+                "imageUrl": None,
+                "sortOrder": m.sortOrder if m.sortOrder is not None else idx + 1,
+            })
+
     sections_map = {}
     normalized_sections = []
 
     for idx, s in enumerate(raw_sections):
         if s.get("disabled"):
             continue
-        tag = (s.get("tag") or f"section_{idx}").lower().strip()
+        tag = (s.get("tag") or s.get("slug") or f"section_{idx}").lower().strip()
         sec_id = s.get("id") or f"sec_{tag}"
         sec_obj = {
             "id": sec_id,
@@ -587,10 +614,15 @@ async def get_restaurant_menu(
             "sectionTitle": None
         }
 
-        # Match section
+        # Match section by ID, tag, or matchTags
         matched_sec = None
         for sec in normalized_sections:
-            if sec["tag"] in p_tags or any(mt in p_tags for mt in sec["matchTags"]):
+            if (
+                sec["id"] == p.categoryId
+                or sec["tag"] in p_tags
+                or sec["id"] in p_tags
+                or any(mt in p_tags for mt in sec["matchTags"])
+            ):
                 matched_sec = sec
                 break
 
@@ -605,8 +637,8 @@ async def get_restaurant_menu(
             dish_dict["sectionTitle"] = "Kitchen Specials"
             other_dishes.append(dish_dict)
 
-    # Fetch shared darkstore beverages and ice creams
-    darkstore_stmt = select(Product).join(Product.category).where(
+    # Fetch shared darkstore beverages and ice creams with eager loaded category
+    darkstore_stmt = select(Product).options(selectinload(Product.category)).join(Product.category).where(
         Product.restaurantId.is_(None),
         Product.isAvailable == True,
         Category.slug.in_(["beverages", "ice-cream"])
@@ -647,9 +679,9 @@ async def get_restaurant_menu(
             "sectionTitle": ""
         }
 
-        # Check category slug via d.category if available, or query
-        cat_slug = getattr(d.category, "slug", "") if hasattr(d, "category") and d.category else ""
-        if "ice" in cat_slug or "ice-cream" in (d.tags or []):
+        # Check category slug via eager loaded d.category
+        cat_slug = (d.category.slug if d.category else "") or ""
+        if "ice" in cat_slug.lower() or "ice-cream" in (d.tags or []):
             g_item["sectionId"] = "sec_ice_creams"
             g_item["sectionTitle"] = "Ice Creams & Sweet Treats"
             ice_creams.append(g_item)
@@ -869,6 +901,7 @@ async def create_restaurant_section(
 
     updated_sections = current_sections + [new_section]
     restaurant.menuSections = updated_sections
+    flag_modified(restaurant, "menuSections")
 
     await db.commit()
 

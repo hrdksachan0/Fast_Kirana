@@ -104,12 +104,14 @@ void main() {
                     size: Size(width, 500),
                     textScaler: TextScaler.linear(scale),
                     disableAnimations: reduced),
-                child: Scaffold(
+                child: const Scaffold(
                     backgroundColor: Colors.white,
                     body: SingleChildScrollView(
                         child: RepaintBoundary(
-                            key: const ValueKey('capture'),
-                            child: const TrendingCategoriesSection())))))));
+                            key: ValueKey('capture'),
+                            child: ColoredBox(
+                                color: Colors.white,
+                                child: TrendingCategoriesSection()))))))));
     await tester.pumpAndSettle();
     await tester.runAsync(() async {
       for (final widget in tester.widgetList<Image>(find.byType(Image))) {
@@ -189,6 +191,11 @@ void main() {
       expect(find.text('10m'), findsNothing);
       expect(find.textContaining('₹'), findsNothing);
       expect(tester.takeException(), isNull);
+      expect(
+          tester
+              .renderObject<RenderParagraph>(find.text('Snacks & munchies'))
+              .didExceedMaxLines,
+          false);
       if (Platform.environment['FEATURED_CAPTURE'] == 'true') {
         await tester.runAsync(() async {
           final boundary = tester.renderObject<RenderRepaintBoundary>(

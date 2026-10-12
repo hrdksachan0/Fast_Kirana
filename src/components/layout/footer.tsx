@@ -49,7 +49,7 @@ export function Footer() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-6 py-12 md:py-16">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-5">
           
           {/* Brand & Socials */}
           <div className="col-span-2 md:col-span-1 space-y-4">
@@ -138,6 +138,54 @@ export function Footer() {
                 <MapPin size={13} className="shrink-0 text-zinc-500" /> {contactAddress}
               </li>
             </ul>
+          </div>
+
+          {/* Download App */}
+          <div className="col-span-2 md:col-span-1">
+            <h4 className="text-[11.5px] font-bold mb-4.5 text-zinc-200 uppercase tracking-widest select-none">Download App</h4>
+            <p className="text-xs text-zinc-500 mb-3.5 leading-relaxed">
+              Experience ultra-fast 10-minute grocery & food deliveries with live tracking on our mobile app.
+            </p>
+            <div className="flex flex-col sm:flex-row md:flex-col gap-2.5">
+              <a
+                href="https://play.google.com/store/apps/details?id=com.fastkirana.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-zinc-900/90 border border-zinc-700/80 hover:border-emerald-500/60 hover:bg-zinc-800/90 transition-all duration-300 shadow-sm hover:shadow-emerald-500/10 active:scale-[0.98]"
+              >
+                <svg className="w-6 h-6 shrink-0 transition-transform group-hover:scale-105" viewBox="0 0 24 24" fill="none">
+                  <path d="M3.609 1.814L13.793 12 3.61 22.186c-.378-.44-.61-1.037-.61-1.706V3.52c0-.669.232-1.266.61-1.706z" fill="#00C1A6"/>
+                  <path d="M17.18 8.613l-3.387 3.387L3.609 1.814C4.015 1.48 4.549 1.28 5.132 1.28c.556 0 1.07.183 1.486.495l10.562 6.838z" fill="#00D2FF"/>
+                  <path d="M17.18 15.387l-10.562 6.838c-.416.312-.93.495-1.486.495-.583 0-1.117-.2-1.523-.534L13.793 12l3.387 3.387z" fill="#FF334B"/>
+                  <path d="M21.22 11.233l-4.04-2.62-3.387 3.387 3.387 3.387 4.04-2.62c.732-.475 1.18-1.304 1.18-2.267 0-.963-.448-1.792-1.18-2.267z" fill="#FFBA00"/>
+                </svg>
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 group-hover:text-zinc-300 transition-colors leading-none">
+                    Get it on
+                  </span>
+                  <span className="text-[13px] font-bold text-white group-hover:text-emerald-400 transition-colors leading-tight mt-0.5">
+                    Google Play
+                  </span>
+                </div>
+              </a>
+
+              <div
+                className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-zinc-900/40 border border-zinc-800/80 text-zinc-500 cursor-not-allowed select-none opacity-80"
+                title="iOS App Coming Soon"
+              >
+                <svg className="w-6 h-6 shrink-0 fill-current text-zinc-400" viewBox="0 0 24 24">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.42c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.98.6-2.61 1.34-.55.63-.99 1.66-.86 2.69 1 .08 1.95-.49 2.55-1.18z"/>
+                </svg>
+                <div className="flex flex-col text-left">
+                  <span className="text-[9px] uppercase font-bold tracking-wider text-zinc-500 leading-none">
+                    Coming Soon on
+                  </span>
+                  <span className="text-[12.5px] font-bold text-zinc-300 leading-tight mt-0.5">
+                    App Store
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -15,7 +15,7 @@ import {
 } from '@/lib/featured-categories'
 
 const inputClass =
-  'w-full min-h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/25'
+  'w-full min-h-11 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/25'
 const buttonClass =
   'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-40'
 const previewTints: Record<string, string> = {
@@ -54,7 +54,21 @@ function categoryArtwork(category: CategorySource) {
 function categoryTint(item: FeaturedCategoryItem, category: CategorySource) {
   if (item.tint !== 'auto') return previewTints[item.tint]
   const slug = `${category.slug} ${category.name}`.toLowerCase()
-  return /fruit|veg/.test(slug) ? '#F0FDF4' : /milk|dairy|bakery|biscuit/.test(slug) ? '#FFFBEB' : /atta|rice|kitchen|dal/.test(slug) ? '#FEF3C7' : /snack|munch/.test(slug) ? '#FFF7ED' : /drink|beverage/.test(slug) ? '#EFF6FF' : /ice.cream/.test(slug) ? '#FDF2F8' : /choco|sweet/.test(slug) ? '#FAF5FF' : '#F8FAFC'
+  return /fruit|veg/.test(slug)
+    ? '#F0FDF4'
+    : /milk|dairy|bakery|biscuit/.test(slug)
+      ? '#FFFBEB'
+      : /atta|rice|kitchen|dal/.test(slug)
+        ? '#FEF3C7'
+        : /snack|munch/.test(slug)
+          ? '#FFF7ED'
+          : /drink|beverage/.test(slug)
+            ? '#EFF6FF'
+            : /ice.cream/.test(slug)
+              ? '#FDF2F8'
+              : /choco|sweet/.test(slug)
+                ? '#FAF5FF'
+                : '#F8FAFC'
 }
 type Props = {
   categories: CategorySource[]
@@ -62,6 +76,29 @@ type Props = {
   onUpload: (file: File, onSuccess: (url: string) => void) => Promise<void>
 }
 
+function PreviewArtwork({
+  source,
+  fallback,
+  label,
+  fit,
+}: {
+  source: string | null
+  fallback: string | null
+  label: string
+  fit: 'cover' | 'contain'
+}) {
+  const [failure, setFailure] = useState(0)
+  const url = failure === 0 ? source : failure === 1 ? fallback : null
+  if (!url) return <span className="text-3xl font-bold">{label[0]}</span>
+  return (
+    <img
+      src={url}
+      alt=""
+      className={`size-full ${fit === 'contain' ? 'object-contain' : 'object-cover'}`}
+      onError={() => setFailure((value) => (value === 0 && source !== fallback ? 1 : 2))}
+    />
+  )
+}
 export function FeaturedCategoriesManager({ categories, storeId, onUpload }: Props) {
   // Re-mount on scope change so no late request or upload can edit another store.
   return (
@@ -84,6 +121,17 @@ function ScopedFeaturedCategoriesManager({ categories, storeId, onUpload }: Prop
   const [reload, setReload] = useState(0)
   const [toAdd, setToAdd] = useState('')
   const [needsDefaults, setNeedsDefaults] = useState(false)
+  const [catalogue, setCatalogue] = useState<CategorySource[]>([])
+  const sources = useMemo(() => {
+    const current = new Map(catalogue.map((category) => [category.id, category]))
+    for (const category of categories)
+      current.set(category.id, {
+        ...current.get(category.id),
+        ...category,
+        _count: current.get(category.id)?._count ?? category._count,
+      })
+    return [...current.values()]
+  }, [catalogue, categories])
   const mounted = useRef(false)
   const edited = useRef(false)
   useEffect(() => {
@@ -92,8 +140,8 @@ function ScopedFeaturedCategoriesManager({ categories, storeId, onUpload }: Prop
       mounted.current = false
     }
   }, [])
-  const eligible = useMemo(() => categories.filter(isGroceryCategory), [categories])
-  const byId = new Map(categories.map((category) => [category.id, category]))
+  const eligible = useMemo(() => sources.filter(isGroceryCategory), [sources])
+  const byId = new Map(sources.map((category) => [category.id, category]))
   const options = eligible.filter(
     (category) => !config?.items.some((item) => item.categoryId === category.id)
   )
@@ -104,20 +152,40 @@ function ScopedFeaturedCategoriesManager({ categories, storeId, onUpload }: Prop
     setNotice('')
     edited.current = false
     const query = storeId ? `?storeId=${encodeURIComponent(storeId)}` : ''
-    fetch(`/api/admin/featured-categories${query}`, {
-      cache: 'no-store',
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const body = await response.json()
+    Promise.all([
+      fetch(`/api/admin/featured-categories${query}`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      }),
+      fetch(`/api/categories${query}`, { cache: 'no-store', signal: controller.signal }),
+    ])
+      .then(async ([response, categoryResponse]) => {
+        const [body, categoryBody] = await Promise.all([response.json(), categoryResponse.json()])
         if (!response.ok)
           throw new Error(body.error || body.detail || 'Unable to load featured categories')
+        if (!categoryResponse.ok)
+          throw new Error('Unable to load the category catalogue. Try again.')
+        const rows: CategorySource[] = Array.isArray(categoryBody)
+          ? categoryBody
+          : categoryBody.categories
+        if (
+          !Array.isArray(rows) ||
+          rows.some(
+            (category) =>
+              !category ||
+              typeof category.id !== 'string' ||
+              typeof category.name !== 'string' ||
+              typeof category.slug !== 'string'
+          )
+        )
+          throw new Error('Unable to load the category catalogue. Try again.')
         if (controller.signal.aborted) return
         const parsed = body.config == null ? null : featuredCategoriesSchema.safeParse(body.config)
         if (parsed && !parsed.success)
           throw new Error('Saved categories could not be loaded safely. Try again.')
         setNeedsDefaults(body.config == null)
-        setConfig(parsed?.success ? parsed.data : defaultFeaturedCategories([]))
+        setCatalogue(rows)
+        setConfig(parsed?.success ? parsed.data : defaultFeaturedCategories(rows))
         setInherited(Boolean(body.inherited))
       })
       .catch((reason) => {
@@ -130,9 +198,8 @@ function ScopedFeaturedCategoriesManager({ categories, storeId, onUpload }: Prop
     return () => controller.abort()
   }, [storeId, reload])
   useEffect(() => {
-    if (needsDefaults && !edited.current && !loading)
-      setConfig(defaultFeaturedCategories(categories))
-  }, [categories, needsDefaults, loading])
+    if (needsDefaults && !edited.current && !loading) setConfig(defaultFeaturedCategories(sources))
+  }, [sources, needsDefaults, loading])
   const busy = loading || saving || uploading !== null
   function edit(change: (current: FeaturedCategoriesConfig) => FeaturedCategoriesConfig) {
     edited.current = true
@@ -325,21 +392,14 @@ function ScopedFeaturedCategoriesManager({ categories, storeId, onUpload }: Prop
                           className="w-36 shrink-0 rounded-xl border border-black/10 p-2.5"
                           style={{ background: categoryTint(item, category) }}
                         >
-                          <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-lg">
-                            <span className="absolute text-3xl font-bold" aria-hidden="true">{category.name[0]}</span>
-                            {source ? (
-                              <img
-                                key={source}
-                                src={source}
-                                alt=""
-                                className={`relative size-full ${item.imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
-                                onError={(event) => {
-                                  event.currentTarget.style.visibility = 'hidden'
-                                }}
-                              />
-                            ) : (
-                              <span className="text-3xl font-bold">{category.name[0]}</span>
-                            )}
+                          <div className="flex h-28 items-center justify-center overflow-hidden rounded-lg">
+                            <PreviewArtwork
+                              key={`${source}|${categoryArtwork(category)}`}
+                              source={source}
+                              fallback={categoryArtwork(category)}
+                              label={category.name}
+                              fit={item.imageFit}
+                            />
                           </div>
                           <figcaption className="text-text-primary mt-2.5 line-clamp-2 min-h-10 text-sm leading-snug font-bold">
                             {item.label || category.name}
@@ -509,7 +569,7 @@ function ScopedFeaturedCategoriesManager({ categories, storeId, onUpload }: Prop
                       </select>
                     </label>
                   </div>
-                  <label className={`${buttonClass} mt-3 cursor-pointer`}>
+                <label className={`${buttonClass} mt-3 cursor-pointer focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2`}>
                     <Upload size={16} />
                     {uploading === item.categoryId ? 'Uploading…' : 'Upload artwork'}
                     <input

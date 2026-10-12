@@ -35,6 +35,9 @@ class TrendingCategoriesSection extends ConsumerWidget {
         final selected = config.select(sources);
         if (selected.isEmpty) return const SizedBox.shrink();
         final scaler = MediaQuery.textScalerOf(context);
+        final tileWidth =
+            (144 + (scaler.scale(14) - 14) * 5).clamp(144.0, 252.0).toDouble();
+        final imageHeight = 112 * tileWidth / 144;
         const labelStyle = TextStyle(
             fontFamily: 'Plus Jakarta Sans',
             fontSize: 14,
@@ -48,45 +51,55 @@ class TrendingCategoriesSection extends ConsumerWidget {
               maxLines: 2,
               textDirection: Directionality.of(context),
               textScaler: scaler)
-            ..layout(maxWidth: 120);
+            ..layout(maxWidth: tileWidth - 20);
           labelHeight = math.max(labelHeight, text.height);
           text.dispose();
         }
         final hasBadge =
             selected.any((category) => category.item.badge.isNotEmpty);
         final badgeHeight = hasBadge ? scaler.scale(11) * 1.3 + 14 : 0.0;
-        final height = 112 + 10 + labelHeight + badgeHeight + 20;
+        final height = imageHeight + 10 + labelHeight + badgeHeight + 20;
+        final heading = Text(config.title,
+            style: const TextStyle(
+                fontFamily: 'Plus Jakarta Sans',
+                fontSize: 18,
+                height: 1.25,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF202A38)));
+        final viewAll = TextButton(
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              ref.read(selectedTabProvider.notifier).state = 2;
+            },
+            style: TextButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                foregroundColor: const Color(0xFFB4232A),
+                padding: const EdgeInsets.symmetric(horizontal: 8)),
+            child: const Text('View all',
+                style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700)));
         return Padding(
           padding: const EdgeInsets.only(top: 12, bottom: 24),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(children: [
-                  Expanded(
-                      child: Text(config.title,
-                          style: const TextStyle(
-                              fontFamily: 'Plus Jakarta Sans',
-                              fontSize: 18,
-                              height: 1.25,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF202A38)))),
-                  const SizedBox(width: 8),
-                  TextButton(
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        ref.read(selectedTabProvider.notifier).state = 2;
-                      },
-                      style: TextButton.styleFrom(
-                          minimumSize: const Size(48, 48),
-                          foregroundColor: const Color(0xFFB4232A),
-                          padding: const EdgeInsets.symmetric(horizontal: 8)),
-                      child: const Text('View all',
-                          style: TextStyle(
-                              fontFamily: 'Plus Jakarta Sans',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700))),
-                ])),
+                child: scaler.scale(18) > 24
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                            heading,
+                            Align(
+                                alignment: AlignmentDirectional.centerEnd,
+                                child: viewAll)
+                          ])
+                    : Row(children: [
+                        Expanded(child: heading),
+                        const SizedBox(width: 8),
+                        viewAll
+                      ])),
             const SizedBox(height: 8),
             SizedBox(
                 height: height,
@@ -99,6 +112,8 @@ class TrendingCategoriesSection extends ConsumerWidget {
                   itemBuilder: (context, index) => _FeaturedTile(
                       key: ValueKey(selected[index].category.id),
                       selection: selected[index],
+                      width: tileWidth,
+                      imageHeight: imageHeight,
                       labelStyle: labelStyle,
                       labelHeight: labelHeight,
                       badgeHeight: badgeHeight),
@@ -113,11 +128,13 @@ class TrendingCategoriesSection extends ConsumerWidget {
 class _FeaturedTile extends StatefulWidget {
   final FeaturedCategorySelection selection;
   final TextStyle labelStyle;
-  final double labelHeight, badgeHeight;
+  final double labelHeight, badgeHeight, width, imageHeight;
   const _FeaturedTile(
       {super.key,
       required this.selection,
       required this.labelStyle,
+      required this.width,
+      required this.imageHeight,
       required this.labelHeight,
       required this.badgeHeight});
   @override
@@ -172,7 +189,7 @@ class _FeaturedTileState extends State<_FeaturedTile> {
                 onHighlightChanged: (value) => setState(() => pressed = value),
                 onTap: openCategory,
                 child: SizedBox(
-                    width: 144,
+                    width: widget.width,
                     child: Padding(
                         padding: const EdgeInsets.all(10),
                         child: Column(
@@ -181,8 +198,8 @@ class _FeaturedTileState extends State<_FeaturedTile> {
                               ClipRRect(
                                   borderRadius: BorderRadius.circular(9),
                                   child: SizedBox(
-                                      width: 124,
-                                      height: 112,
+                                      width: widget.width - 20,
+                                      height: widget.imageHeight,
                                       child: _FeaturedArtwork(
                                           selection: selection))),
                               const SizedBox(height: 10),

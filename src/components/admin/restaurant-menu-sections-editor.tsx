@@ -149,15 +149,18 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
         if (!res.ok) throw new Error('Failed to load restaurant data')
         const data = await res.json()
         
-        if (data.menuSections) {
+        const rawSec = data.menuSections || data.sections
+        if (rawSec) {
           try {
-            const parsed = typeof data.menuSections === 'string' ? JSON.parse(data.menuSections) : data.menuSections
+            const parsed = typeof rawSec === 'string' ? JSON.parse(rawSec) : rawSec
             if (Array.isArray(parsed)) {
               setMenuSections(parsed)
             }
           } catch (e) {
             console.error('Failed to parse restaurant menuSections:', e)
           }
+        } else {
+          setMenuSections([])
         }
       } catch (err: any) {
         console.error(err)
@@ -169,6 +172,8 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
 
     if (assignedRestaurantId) {
       loadRestaurant()
+    } else {
+      setLoading(false)
     }
   }, [assignedRestaurantId])
 
@@ -281,6 +286,10 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
   }
 
   const handleSaveMenuSections = async () => {
+    if (!assignedRestaurantId) {
+      toast.error('Please select an outlet before saving categories')
+      return
+    }
     try {
       setSavingSections(true)
       const normalizedSections = menuSections.map((s, idx) => ({
