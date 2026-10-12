@@ -457,8 +457,8 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
     final sections = <_BentoDepartment>[];
 
     // ── 1. GROCERY & KITCHEN ──
-    final vegCat = findCategory(['fruit', 'veg']);
-    final dairyCat = findCategory(['dairy', 'milk', 'egg']);
+    final vegCat = findCategory(['fruit', 'veg', 'sabzi']);
+    final dairyCat = findCategory(['dairy', 'milk', 'egg', 'bread', 'paneer', 'curd']);
     final kitchenHeroes = <_CategorySlot>[];
     if (vegCat != null) {
       kitchenHeroes.add(_CategorySlot(category: vegCat, customName: 'Fruits &\nVegetables'));
@@ -468,21 +468,33 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
     }
 
     final kitchenCompacts = <_CategorySlot>[];
-    final rationCat = findCategory(['atta', 'rice', 'dal', 'ration', 'kitchen']);
+    final rationCat = findCategory(['atta', 'rice', 'dal', 'ration', 'flour', 'grain']);
     if (rationCat != null) {
-      kitchenCompacts.add(_CategorySlot(category: rationCat, customName: 'Atta, Rice,\nOil & Dals'));
+      kitchenCompacts.add(_CategorySlot(category: rationCat, customName: 'Atta, Rice\n& Dals'));
     }
-    final dryFruitCat = findCategory(['dry-fruit', 'super', 'dry fruit', 'nuts', 'masala', 'spice']);
+    final oilCat = findCategory(['oil', 'ghee', 'cooking oil', 'edible']);
+    if (oilCat != null) {
+      kitchenCompacts.add(_CategorySlot(category: oilCat, customName: 'Oils &\nGhee'));
+    }
+    final masalaCat = findCategory(['masala', 'spice', 'seasoning', 'haldi', 'mirch']);
+    if (masalaCat != null) {
+      kitchenCompacts.add(_CategorySlot(category: masalaCat, customName: 'Masala &\nSpices'));
+    }
+    final dryFruitCat = findCategory(['dry-fruit', 'dry fruit', 'nuts', 'super']);
     if (dryFruitCat != null) {
-      kitchenCompacts.add(_CategorySlot(category: dryFruitCat, customName: 'Masala &\nDry Fruits'));
+      kitchenCompacts.add(_CategorySlot(category: dryFruitCat, customName: 'Dry Fruits\n& Nuts'));
     }
-    final breakfastCat = findCategory(['breakfast', 'sauce', 'spread', 'diet']);
-    if (breakfastCat != null) {
-      kitchenCompacts.add(_CategorySlot(category: breakfastCat, customName: 'Breakfast &\nSauces'));
+    final sauceCat = findCategory(['sauce', 'spread', 'ketchup', 'jam', 'honey']);
+    if (sauceCat != null) {
+      kitchenCompacts.add(_CategorySlot(category: sauceCat, customName: 'Sauces &\nSpreads'));
     }
-    final packagedCat = findCategory(['packaged', 'instant', 'maggi']);
+    final packagedCat = findCategory(['packaged', 'instant', 'maggi', 'noodle', 'ready']);
     if (packagedCat != null) {
       kitchenCompacts.add(_CategorySlot(category: packagedCat, customName: 'Packaged\nFood'));
+    }
+    final breakfastCat = findCategory(['breakfast', 'cereal', 'oats', 'muesli', 'diet']);
+    if (breakfastCat != null) {
+      kitchenCompacts.add(_CategorySlot(category: breakfastCat, customName: 'Breakfast\nEssentials'));
     }
 
     if (kitchenHeroes.isNotEmpty || kitchenCompacts.isNotEmpty) {
@@ -497,29 +509,29 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
 
     // ── 2. SNACKS & DRINKS ──
     final snacksHeroes = <_CategorySlot>[];
-    final drinksCat = findCategory(['beverage', 'drink', 'cold', 'juice']);
+    final drinksCat = findCategory(['beverage', 'drink', 'cold', 'juice', 'soda', 'soft drink']);
     if (drinksCat != null) {
       snacksHeroes.add(_CategorySlot(category: drinksCat, customName: 'Cold Drinks &\nJuices'));
     }
-    final iceCreamCat = findCategory(['ice', 'dessert', 'ice-cream']);
+    final iceCreamCat = findCategory(['ice', 'dessert', 'ice-cream', 'frozen']);
     if (iceCreamCat != null) {
       snacksHeroes.add(_CategorySlot(category: iceCreamCat, customName: 'Ice Creams &\nMore'));
     }
 
     final snacksCompacts = <_CategorySlot>[];
-    final teaCat = findCategory(['tea', 'coffee']);
+    final teaCat = findCategory(['tea', 'coffee', 'chai']);
     if (teaCat != null) {
-      snacksCompacts.add(_CategorySlot(category: teaCat, customName: 'Tea, Coffee &\nMore'));
+      snacksCompacts.add(_CategorySlot(category: teaCat, customName: 'Tea, Coffee\n& More'));
     }
-    final chocoCat = findCategory(['choco', 'sweet', 'cake']);
+    final chocoCat = findCategory(['choco', 'sweet', 'cake', 'candy', 'toffee', 'mithai']);
     if (chocoCat != null) {
-      snacksCompacts.add(_CategorySlot(category: chocoCat, customName: 'Sweet\nCravings'));
+      snacksCompacts.add(_CategorySlot(category: chocoCat, customName: 'Chocolates\n& Sweets'));
     }
-    final munchiesCat = findCategory(['snack', 'munch', 'namkeen', 'chips']);
+    final munchiesCat = findCategory(['snack', 'munch', 'namkeen', 'chips', 'bhuj']);
     if (munchiesCat != null) {
       snacksCompacts.add(_CategorySlot(category: munchiesCat, customName: 'Munchies &\nChips'));
     }
-    final biscuitCat = findCategory(['bakery', 'biscuit', 'cookie']);
+    final biscuitCat = findCategory(['bakery', 'biscuit', 'cookie', 'rusk']);
     if (biscuitCat != null) {
       snacksCompacts.add(_CategorySlot(category: biscuitCat, customName: 'Biscuits &\nCookies'));
     }
@@ -534,18 +546,67 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
       );
     }
 
-    // ── 3. HOUSEHOLD & PERSONAL CARE (OR REMAINING ESSENTIALS) ──
+    // ── 3. HOUSEHOLD & PERSONAL CARE ──
+    // First, explicitly match known household/care categories
+    final householdCompacts = <_CategorySlot>[];
+
+    final laundryCat = findCategory(['laundry', 'detergent', 'wash', 'fabric']);
+    if (laundryCat != null) {
+      householdCompacts.add(_CategorySlot(category: laundryCat, customName: 'Laundry\nCare'));
+    }
+    final dishwashCat = findCategory(['dishwash', 'dish', 'utensil']);
+    if (dishwashCat != null) {
+      householdCompacts.add(_CategorySlot(category: dishwashCat, customName: 'Dishwashing'));
+    }
+    final cleanCat = findCategory(['clean', 'home need', 'household', 'mop', 'broom', 'pest', 'repellent', 'freshener']);
+    if (cleanCat != null) {
+      householdCompacts.add(_CategorySlot(category: cleanCat, customName: 'Home\nCleaning'));
+    }
+    final oralCat = findCategory(['oral', 'dental', 'tooth', 'mouth']);
+    if (oralCat != null) {
+      householdCompacts.add(_CategorySlot(category: oralCat, customName: 'Oral Care\n& Hygiene'));
+    }
+    final hairCat = findCategory(['hair', 'shampoo', 'cosmetic']);
+    if (hairCat != null) {
+      householdCompacts.add(_CategorySlot(category: hairCat, customName: 'Hair Care &\nCosmetics'));
+    }
+    final skinCat = findCategory(['skin', 'body', 'lotion', 'cream', 'face', 'personal']);
+    if (skinCat != null) {
+      householdCompacts.add(_CategorySlot(category: skinCat, customName: 'Skin &\nBody Care'));
+    }
+    final babyCat = findCategory(['baby', 'diaper', 'infant', 'child']);
+    if (babyCat != null) {
+      householdCompacts.add(_CategorySlot(category: babyCat, customName: 'Baby\nCare'));
+    }
+    final sanitaryCat = findCategory(['sanitary', 'feminine', 'hygiene', 'pad']);
+    if (sanitaryCat != null) {
+      householdCompacts.add(_CategorySlot(category: sanitaryCat, customName: 'Hygiene\nEssentials'));
+    }
+    final petCat = findCategory(['pet', 'dog', 'cat food']);
+    if (petCat != null) {
+      householdCompacts.add(_CategorySlot(category: petCat, customName: 'Pet\nCare'));
+    }
+    final stationeryCat = findCategory(['stationery', 'office', 'notebook', 'pen']);
+    if (stationeryCat != null) {
+      householdCompacts.add(_CategorySlot(category: stationeryCat, customName: 'Stationery'));
+    }
+    final poojaCat = findCategory(['pooja', 'puja', 'agarbatti', 'diya', 'devotion']);
+    if (poojaCat != null) {
+      householdCompacts.add(_CategorySlot(category: poojaCat, customName: 'Pooja\nEssentials'));
+    }
+
+    // Catch any remaining unassigned categories and add them to Household
     final remainingCategories = allCategories.where((c) => !usedIds.contains(c.id)).toList();
-    if (remainingCategories.isNotEmpty) {
-      final homeCompacts = <_CategorySlot>[];
-      for (final cat in remainingCategories) {
-        homeCompacts.add(_CategorySlot(category: cat, customName: null));
-      }
+    for (final cat in remainingCategories) {
+      householdCompacts.add(_CategorySlot(category: cat, customName: null));
+    }
+
+    if (householdCompacts.isNotEmpty) {
       sections.add(
         _BentoDepartment(
           title: 'Household & Personal Care',
           heroCategories: const [],
-          compactCategories: homeCompacts,
+          compactCategories: householdCompacts,
         ),
       );
     }
