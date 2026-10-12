@@ -39,6 +39,7 @@ class CafeMenuScreen extends ConsumerStatefulWidget {
 class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTickerProviderStateMixin {
   String _activeCategoryTag = 'all';
   final bool _isVegOnly = false;
+  bool _isSearchActive = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   late TabController _tabController;
@@ -48,6 +49,15 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   final ScrollController _horizontalCategoryController = ScrollController();
   final Map<String, GlobalKey> _sectionKeys = {};
   bool _isManualTabClick = false;
+
+  void _closeSearch() {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isSearchActive = false;
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
 
   static const Color primaryOrange = AppDesignSystem.orange600;
 
@@ -523,113 +533,177 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     final cuisineTags = currentRestaurant?.cuisineTags ?? ['BURGERS', 'BEVERAGES', 'SHAKES', 'PIZZA'];
     final isPureVeg = currentRestaurant?.isPureVeg ?? true;
 
-    return Scaffold(
-      backgroundColor: AppDesignSystem.gray50,
-      body: ResponsiveContainer(
-        maxWidth: Responsive.wideMaxContentWidth,
-        fillHeight: true,
-        child: Stack(
-          children: [
-            RefreshIndicator(
-              color: AppDesignSystem.primary,
-              onRefresh: () async {
-                ref.invalidate(restaurantMenuProvider(widget.restaurantId));
-                ref.invalidate(restaurantReviewsProvider(widget.restaurantId));
-                ref.invalidate(restaurantCouponsProvider(widget.restaurantId));
-                ref.invalidate(restaurantsProvider);
-              },
-              child: NestedScrollView(
-                headerSliverBuilder: (context, innerBoxIsScrolled) => [
-              // ─── 1. HERO SLIVER APP BAR (White & Clean on Collapse, Rich on Expand) ───
-              SliverAppBar(
-                pinned: true,
-                expandedHeight: 210,
-                backgroundColor: Colors.white,
-                surfaceTintColor: Colors.transparent,
-                systemOverlayStyle: innerBoxIsScrolled
-                    ? SystemUiOverlayStyle.dark
-                    : SystemUiOverlayStyle.light,
-                elevation: innerBoxIsScrolled ? 0.5 : 0,
-                leading: Container(
-                  margin: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.arrow_back_rounded,
-                      color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
-                      size: 20,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-                actions: [
-                  // 1. Search Action
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.search_rounded,
-                        color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
-                        size: 20,
-                      ),
-                      onPressed: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) => _buildSearchSheet(),
-                        );
-                      },
-                    ),
-                  ),
-                  // 2. Share Menu Action
-                  Container(
-                    margin: const EdgeInsets.only(top: 8, bottom: 8, right: 8, left: 4),
-                    decoration: BoxDecoration(
-                      color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.share_rounded,
-                        color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
-                        size: 19,
-                      ),
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        const shareUrl = 'https://fastkirana.in/cafe';
-                        final shareText = '🍔 Craving delicious food? Check out the fresh menu of $restaurantName on FastKirana!\nOrder online for fast express delivery: $shareUrl';
-                        Share.share(shareText, subject: '$restaurantName Menu - FastKirana');
-                      },
-                    ),
-                  ),
-                ],
-                centerTitle: false,
-                titleSpacing: 0,
-                title: innerBoxIsScrolled
-                    ? Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: Text(
-                          restaurantName,
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 16),
-                            fontWeight: FontWeight.w900,
+    return PopScope(
+      canPop: !_isSearchActive,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _isSearchActive) {
+          _closeSearch();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppDesignSystem.gray50,
+        body: ResponsiveContainer(
+          maxWidth: Responsive.wideMaxContentWidth,
+          fillHeight: true,
+          child: Stack(
+            children: [
+              RefreshIndicator(
+                color: AppDesignSystem.primary,
+                onRefresh: () async {
+                  ref.invalidate(restaurantMenuProvider(widget.restaurantId));
+                  ref.invalidate(restaurantReviewsProvider(widget.restaurantId));
+                  ref.invalidate(restaurantCouponsProvider(widget.restaurantId));
+                  ref.invalidate(restaurantsProvider);
+                },
+                child: NestedScrollView(
+                  headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                // ─── 1. HERO SLIVER APP BAR (Transforms into Inline Search when active) ───
+                SliverAppBar(
+                  pinned: true,
+                  expandedHeight: _isSearchActive ? null : 210,
+                  backgroundColor: Colors.white,
+                  surfaceTintColor: Colors.transparent,
+                  systemOverlayStyle: (_isSearchActive || innerBoxIsScrolled)
+                      ? SystemUiOverlayStyle.dark
+                      : SystemUiOverlayStyle.light,
+                  elevation: (_isSearchActive || innerBoxIsScrolled) ? 0.5 : 0,
+                  leading: _isSearchActive
+                      ? IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_rounded,
                             color: AppDesignSystem.slate900,
-                            letterSpacing: -0.2,
+                            size: 22,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          onPressed: _closeSearch,
+                        )
+                      : Container(
+                          margin: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.arrow_back_rounded,
+                              color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
+                              size: 20,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
                         ),
-                      )
-                    : null,
-                flexibleSpace: FlexibleSpaceBar(
+                  actions: _isSearchActive
+                      ? null
+                      : [
+                          // 1. Search Action
+                          Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.search_rounded,
+                                color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isSearchActive = true;
+                                  _tabController.index = 0;
+                                });
+                              },
+                            ),
+                          ),
+                          // 2. Share Menu Action
+                          Container(
+                            margin: const EdgeInsets.only(top: 8, bottom: 8, right: 8, left: 4),
+                            decoration: BoxDecoration(
+                              color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.share_rounded,
+                                color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
+                                size: 19,
+                              ),
+                              onPressed: () {
+                                HapticFeedback.lightImpact();
+                                const shareUrl = 'https://fastkirana.in/cafe';
+                                final shareText = '🍔 Craving delicious food? Check out the fresh menu of $restaurantName on FastKirana!\nOrder online for fast express delivery: $shareUrl';
+                                Share.share(shareText, subject: '$restaurantName Menu - FastKirana');
+                              },
+                            ),
+                          ),
+                        ],
+                  centerTitle: false,
+                  titleSpacing: 0,
+                  title: _isSearchActive
+                      ? Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppDesignSystem.slate100,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppDesignSystem.slate200, width: 0.8),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: true,
+                              textInputAction: TextInputAction.search,
+                              onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                              decoration: InputDecoration(
+                                hintText: 'Search dishes in $restaurantName...',
+                                hintStyle: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 13),
+                                  color: AppDesignSystem.slate400,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                prefixIcon: const Icon(Icons.search_rounded, color: AppDesignSystem.slate400, size: 18),
+                                prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? GestureDetector(
+                                        onTap: () {
+                                          _searchController.clear();
+                                          setState(() => _searchQuery = '');
+                                        },
+                                        child: const Icon(Icons.close_rounded, color: AppDesignSystem.slate500, size: 18),
+                                      )
+                                    : null,
+                                suffixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              ),
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
+                                color: AppDesignSystem.slate900,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        )
+                      : (innerBoxIsScrolled
+                          ? Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Text(
+                                restaurantName,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 16),
+                                  fontWeight: FontWeight.w900,
+                                  color: AppDesignSystem.slate900,
+                                  letterSpacing: -0.2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )
+                          : null),
+                  flexibleSpace: _isSearchActive
+                      ? null
+                      : FlexibleSpaceBar(
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -778,123 +852,125 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                 ),
               ),
 
-              // ─── 2. RATING STRIP & HIGH RUSH BADGE ───
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppDesignSystem.green700,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.star_rounded, size: 13, color: Colors.white),
-                            const SizedBox(width: 3),
-                            Text(
-                              ratingVal > 0 ? ratingVal.toStringAsFixed(1) : "4.5",
-                              style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w900, color: Colors.white),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '($totalReviews reviews)',
-                        style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: AppDesignSystem.textSecondary),
-                      ),
-                      if ((currentRestaurant != null && currentRestaurant.activeOrdersCount >= 6) ||
-                          currentRestaurant?.discountBadge?.toUpperCase().contains('RUSH') == true ||
-                          currentRestaurant?.discountBadge?.toUpperCase().contains('BUSY') == true) ...[
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
+              if (!_isSearchActive) ...[
+                // ─── 2. RATING STRIP & HIGH RUSH BADGE ───
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppDesignSystem.green700,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.star_rounded, size: 13, color: Colors.white),
+                              const SizedBox(width: 3),
+                              Text(
+                                ratingVal > 0 ? ratingVal.toStringAsFixed(1) : "4.5",
+                                style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w900, color: Colors.white),
                               ),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFDC2626).withValues(alpha: 0.3),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('⚡', style: TextStyle(fontSize: 11)),
-                                const SizedBox(width: 3),
-                                Flexible(
-                                  child: Text(
-                                    'HIGH DEMAND (NO SURGE FEE)',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 9.5),
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                      letterSpacing: 0.2,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            ],
                           ),
                         ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '($totalReviews reviews)',
+                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: AppDesignSystem.textSecondary),
+                        ),
+                        if ((currentRestaurant != null && currentRestaurant.activeOrdersCount >= 6) ||
+                            currentRestaurant?.discountBadge?.toUpperCase().contains('RUSH') == true ||
+                            currentRestaurant?.discountBadge?.toUpperCase().contains('BUSY') == true) ...[
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('⚡', style: TextStyle(fontSize: 11)),
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
+                                      'HIGH DEMAND (NO SURGE FEE)',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 9.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        letterSpacing: 0.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
 
-              // ─── 2.5 RESTAURANT OFFERS / BOGO TICKETS STRIP ───
-              _buildRestaurantOffersStrip(currentRestaurant),
+                // ─── 2.5 RESTAURANT OFFERS / BOGO TICKETS STRIP ───
+                _buildRestaurantOffersStrip(currentRestaurant),
 
-              // ─── 3. MENU / REVIEWS TAB BAR ───
-              SliverToBoxAdapter(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(bottom: BorderSide(color: AppDesignSystem.border, width: 1)),
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    indicatorColor: primaryOrange,
-                    indicatorWeight: 2.5,
-                    indicatorSize: TabBarIndicatorSize.label,
-                    labelColor: primaryOrange,
-                    unselectedLabelColor: AppDesignSystem.textTertiary,
-                    labelStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, letterSpacing: 0.3),
-                    unselectedLabelStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600),
-                    tabs: [
-                      const Tab(text: 'MENU'),
-                      Tab(text: 'REVIEWS ($totalReviews)'),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ─── 4. PINNED CATEGORY CHIPS BAR (Pinned cleanly below AppBar when scrolled!) ───
-              if (_tabController.index == 0)
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _CategoryChipsDelegate(
-                    horizontalController: _horizontalCategoryController,
-                    menuAsync: menuAsync,
-                    currentRestaurant: currentRestaurant,
-                    activeCategoryTag: _activeCategoryTag,
-                    buildCategories: (prods) => _buildCategories(prods, currentRestaurant),
-                    onCategoryTap: (tag) => _scrollToSection(tag),
+                // ─── 3. MENU / REVIEWS TAB BAR ───
+                SliverToBoxAdapter(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(bottom: BorderSide(color: AppDesignSystem.border, width: 1)),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicatorColor: primaryOrange,
+                      indicatorWeight: 2.5,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      labelColor: primaryOrange,
+                      unselectedLabelColor: AppDesignSystem.textTertiary,
+                      labelStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, letterSpacing: 0.3),
+                      unselectedLabelStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w600),
+                      tabs: [
+                        const Tab(text: 'MENU'),
+                        Tab(text: 'REVIEWS ($totalReviews)'),
+                      ],
+                    ),
                   ),
                 ),
+
+                // ─── 4. PINNED CATEGORY CHIPS BAR (Pinned cleanly below AppBar when scrolled!) ───
+                if (_tabController.index == 0)
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _CategoryChipsDelegate(
+                      horizontalController: _horizontalCategoryController,
+                      menuAsync: menuAsync,
+                      currentRestaurant: currentRestaurant,
+                      activeCategoryTag: _activeCategoryTag,
+                      buildCategories: (prods) => _buildCategories(prods, currentRestaurant),
+                      onCategoryTap: (tag) => _scrollToSection(tag),
+                    ),
+                  ),
+              ],
             ],
 
             // ─── 5. BODY: MENU or REVIEWS ───
@@ -913,7 +989,8 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
         ],
       ),
     ),
-  );
+  ),
+);
   }
 
   // ═══════════════════════════════════════════════════════
@@ -923,8 +1000,12 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     return menuAsync.when(
       data: (products) {
         final renderedCats = _buildCategories(products, currentRestaurant);
-        final totalItems = products.length;
         final sections = renderedCats.where((c) => c.tag != 'all').toList();
+        final totalMatchedItems = sections.fold<int>(0, (sum, sec) => sum + sec.products.length);
+
+        if (_searchQuery.isNotEmpty && sections.isEmpty) {
+          return _buildNoSearchResults(currentRestaurant?.name ?? widget.restaurantName);
+        }
 
         for (final sec in sections) {
           _sectionKeys.putIfAbsent(sec.tag, () => GlobalKey());
@@ -946,12 +1027,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                 child: Container(
                   margin: const EdgeInsets.fromLTRB(0, 0, 0, 4),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  color: AppDesignSystem.orange50,
+                  color: _searchQuery.isNotEmpty ? AppDesignSystem.amber50 : AppDesignSystem.orange50,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '$totalItems ITEMS',
+                        _searchQuery.isNotEmpty
+                            ? '$totalMatchedItems RESULTS FOR "$_searchQuery"'
+                            : '$totalMatchedItems ITEMS',
                         style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w900, color: primaryOrange),
                       ),
                       if (isPureVeg)
@@ -1187,51 +1270,62 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     );
   }
 
-  Widget _buildSearchSheet() {
-    return Container(
-      padding: EdgeInsets.only(
-        top: 16,
-        left: 16,
-        right: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(color: AppDesignSystem.slate200, borderRadius: BorderRadius.circular(2)),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _searchController,
-            autofocus: true,
-            onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-            decoration: InputDecoration(
-              hintText: 'Search items...',
-              hintStyle: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.slate400),
-              prefixIcon: const Icon(Icons.search_rounded, color: AppDesignSystem.slate400),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? GestureDetector(
-                      onTap: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                      child: const Icon(Icons.close_rounded, color: AppDesignSystem.slate400),
-                    )
-                  : null,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.slate200)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppDesignSystem.orange600)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  Widget _buildNoSearchResults(String restaurantName) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: AppDesignSystem.orange50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.search_off_rounded,
+                size: 48,
+                color: primaryOrange,
+              ),
             ),
-            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), color: AppDesignSystem.slate900),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              'No dishes found',
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 18),
+                fontWeight: FontWeight.w800,
+                color: AppDesignSystem.slate900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'We couldn\'t find any dish matching "$_searchQuery" in $restaurantName',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 13),
+                fontWeight: FontWeight.w500,
+                color: AppDesignSystem.slate500,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Clear Search'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryOrange,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

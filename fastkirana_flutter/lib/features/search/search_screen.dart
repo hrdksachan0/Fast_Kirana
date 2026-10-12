@@ -17,7 +17,6 @@ import '../../widgets/floating_cart_bar.dart';
 import '../../widgets/voice_search_sheet.dart';
 import '../../core/utils/fuzzy_matcher.dart';
 import '../../data/models/product.dart';
-import '../../widgets/empty_state.dart';
 import '../../widgets/restaurant_card.dart';
 import '../../widgets/variant_selector_sheet.dart';
 import '../../widgets/cart_conflict_dialog.dart';
@@ -121,11 +120,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     'tamatar': ['tomato', 'tamatar'],
     'tomato': ['tamatar', 'tomato'],
     // 🍿 Snacks & Instant Foods
-    'maggi': ['maggie', 'maggi', 'noodles', 'instant noodles'],
-    'maggie': ['maggi', 'maggie', 'noodles', 'instant noodles'],
-    'magie': ['maggi', 'maggie', 'noodles', 'instant noodles'],
-    'megi': ['maggi', 'maggie', 'noodles'],
-    'meggi': ['maggi', 'maggie', 'noodles'],
+    'maggi': ['maggie', 'maggi', 'noodles', 'instant noodles', 'noodle', 'nestle', 'yippee', 'wai wai', 'chowmein'],
+    'maggie': ['maggi', 'maggie', 'noodles', 'instant noodles', 'noodle', 'nestle', 'yippee', 'wai wai', 'chowmein'],
+    'magie': ['maggi', 'maggie', 'noodles', 'instant noodles', 'noodle'],
+    'magi': ['maggi', 'maggie', 'noodles', 'instant noodles', 'noodle'],
+    'megi': ['maggi', 'maggie', 'noodles', 'instant noodles', 'noodle'],
+    'meggi': ['maggi', 'maggie', 'noodles', 'instant noodles', 'noodle'],
+    'noodle': ['maggi', 'maggie', 'noodles', 'instant noodles', 'chowmein', 'yippee'],
+    'noodles': ['maggi', 'maggie', 'noodle', 'instant noodles', 'chowmein', 'yippee'],
+    'nestle': ['maggi', 'maggie', 'kitkat'],
+    'yippee': ['maggi', 'maggie', 'noodles'],
     'biscuit': ['biscuits', 'parle', 'good day', 'oreo', 'cookies', 'biskit', 'biskut'],
     'biscuits': ['biscuit', 'parle', 'good day', 'biskut', 'cookies'],
     'biskut': ['biscuit', 'biscuits', 'parle', 'good day'],
@@ -711,6 +715,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildSearchResults() {
+    final serverSearchAsync = ref.watch(searchProductsProvider(_query));
     final productsAsync = ref.watch(productsProvider(null));
     final restaurantsAsync = ref.watch(homeRestaurantsProvider);
     final storeSettings = ref.watch(storeSettingsProvider).valueOrNull;
@@ -721,7 +726,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         final rawWords = queryClean.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
 
         // Filter common Hindi / English prepositions & stop words (e.g. "ke", "ka", "ki", "ka pizza", "as ke pizza")
-        const stopWords = {'ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from'};
+        const stopWords = {
+          'ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from',
+          '2', 'two', 'minute', 'minutes', 'min', 'mins', 'packet', 'packets', 'pack', 'packs', 'pkt',
+          'wala', 'wali', 'wale', 'chota', 'choti', 'bada', 'badi', 'rs', 'rupees', 'rupaye',
+          'kg', 'gm', 'g', 'ml', 'liter', 'litre', 'l'
+        };
         final queryWords = rawWords.where((w) => !stopWords.contains(w)).toList();
         final effectiveQueryWords = queryWords.isNotEmpty ? queryWords : rawWords;
 
@@ -841,7 +851,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           for (final term in expandedTerms) {
             if (term.isEmpty || stopWords.contains(term)) continue;
 
-            if (pName.contains(term)) {
+            if (pName == term) {
+              score += 120;
+            } else if (pName.contains(term)) {
               score += 40;
             }
             if (variantNames.any((vn) => vn == term || vn.contains(term) || (vn.length >= 4 && term.contains(vn)))) {
@@ -861,6 +873,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             final nameWords = pName.split(RegExp(r'\s+'));
             if (nameWords.any((nw) => nw.startsWith(term))) {
               score += 30;
+            }
+          }
+
+          // Noodle vs Ketchup intent alignment
+          final isNoodleQuery = queryClean.contains('maggi') ||
+              queryClean.contains('maggie') ||
+              queryClean.contains('magi') ||
+              queryClean.contains('megi') ||
+              queryClean.contains('noodle');
+          if (isNoodleQuery) {
+            if (catSlug.contains('sauce') || pName.contains('ketchup')) {
+              score = (score * 0.4).round();
+            } else if (pName == 'maggi' || pName.contains('noodle') || catSlug.contains('breakfast')) {
+              score += 70;
             }
           }
 
@@ -951,9 +977,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           if (!aInStock && bInStock) return 1;
           return b.value.compareTo(a.value);
         });
-        final filtered = scoredProducts.map((e) => e.key).toList();
+        final localFiltered = scoredProducts.map((e) => e.key).toList();
+
+        // Authoritative live server search results from FastAPI (Zepto/Blinkit architecture)
+        final serverProducts = serverSearchAsync.valueOrNull;
+        List<Product> filtered = localFiltered;
+        if (serverProducts != null && serverProducts.isNotEmpty) {
+          final serverIds = serverProducts.map((p) => p.id).toSet();
+          final remaining = localFiltered.where((p) => !serverIds.contains(p.id)).toList();
+          filtered = [...serverProducts, ...remaining];
+        }
 
         if (filtered.isEmpty && matchedRestaurants.isEmpty) {
+          if (serverSearchAsync.isLoading) {
+            return _buildShimmerGrid();
+          }
           final currentHub = ref.watch(currentStoreHubProvider);
           final hubCity = currentHub.city.isNotEmpty ? currentHub.city : 'Town';
           final fallbackAlternatives = products
@@ -1104,6 +1142,157 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         }
 
         final showRestaurantsSection = matchedRestaurants.isNotEmpty;
+        final isDirectRestaurantNameSearch = isAsQuery ||
+            matchedRestaurants.any((r) =>
+                r.name.toLowerCase().contains(queryClean) ||
+                queryClean.contains(r.name.toLowerCase()) ||
+                r.slug.toLowerCase().contains(queryClean));
+
+        final showRestaurantsFirst = showRestaurantsSection && (isDirectRestaurantNameSearch || filtered.isEmpty);
+
+        final restaurantWidgets = <Widget>[
+          if (showRestaurantsSection) ...[
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text('🍽️', style: TextStyle(fontSize: 13)),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Restaurants & Outlets',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 14),
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...matchedRestaurants.map((r) => RestaurantCard(restaurant: r)),
+            const SizedBox(height: 16),
+          ],
+        ];
+
+        final productWidgets = <Widget>[
+          if (filtered.isNotEmpty) ...[
+            if (showRestaurantsSection && showRestaurantsFirst)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('🍜', style: TextStyle(fontSize: 13)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Dishes & Items',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 14),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ...List.generate(filtered.length, (productIndex) {
+              final product = filtered[productIndex];
+              final isFirst = productIndex == 0;
+              final isLast = productIndex == filtered.length - 1;
+
+              final isFood = isRestaurantProduct(product);
+              final outletName = isFood ? getOutletName(product) : null;
+
+              Color chipColor = AppDesignSystem.amber600;
+              Color chipBg = AppDesignSystem.amber50;
+              if (outletName != null) {
+                if (outletName.contains('Wedson')) {
+                  chipColor = AppDesignSystem.orange600;
+                  chipBg = AppDesignSystem.orange50;
+                } else if (outletName.contains('Bal Udyan')) {
+                  chipColor = AppDesignSystem.violet600;
+                  chipBg = AppDesignSystem.violet50;
+                } else if (outletName.contains('Pizza') || outletName.contains('Hot Pizza')) {
+                  chipColor = AppDesignSystem.rose600;
+                  chipBg = AppDesignSystem.rose50;
+                } else if (outletName.contains('Pari') || outletName.contains('Dairy')) {
+                  chipColor = AppDesignSystem.emerald700;
+                  chipBg = AppDesignSystem.green50;
+                } else if (outletName.contains('A.S')) {
+                  chipColor = AppDesignSystem.cyan600;
+                  chipBg = AppDesignSystem.sky50;
+                }
+              }
+
+              final isGroceryOpen = storeSettings?.groceryMartOpen ?? true;
+              final isRestaurantOpen = RestaurantScheduleHelper.isProductRestaurantOpen(
+                product,
+                storeSettings: storeSettings,
+              );
+              final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
+              final isOutOfStock = product.stock <= 0 || !product.isAvailable;
+              final isClosed = !isStoreOpen || isOutOfStock;
+
+              // Veg / Non-veg
+              final tags = product.tags.map((t) => t.toLowerCase()).toList();
+              final nameLower = product.name.toLowerCase();
+              final isVeg = !tags.any((t) => t.contains('non-veg') || t.contains('nonveg') || t == 'egg' || t.contains('chicken')) &&
+                  !nameLower.contains('chicken') && !nameLower.contains('egg') && !nameLower.contains('mutton');
+
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: isFirst ? const Radius.circular(18) : Radius.zero,
+                      bottom: isLast ? const Radius.circular(18) : Radius.zero,
+                    ),
+                    border: Border(
+                      left: const BorderSide(color: AppDesignSystem.slate200, width: 1.1),
+                      right: const BorderSide(color: AppDesignSystem.slate200, width: 1.1),
+                      top: isFirst ? const BorderSide(color: AppDesignSystem.slate200, width: 1.1) : BorderSide.none,
+                      bottom: isLast
+                          ? const BorderSide(color: AppDesignSystem.slate200, width: 1.1)
+                          : const BorderSide(color: AppDesignSystem.slate100, width: 1),
+                    ),
+                  ),
+                  child: _buildProductRow(
+                    product,
+                    isFood,
+                    outletName,
+                    chipColor,
+                    chipBg,
+                    isClosed,
+                    isOutOfStock,
+                    isStoreOpen,
+                    isVeg,
+                  ),
+                ),
+              );
+            }),
+            if (showRestaurantsSection && !showRestaurantsFirst)
+              const SizedBox(height: 20),
+          ],
+        ];
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -1121,144 +1310,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
             ),
 
-            // 🏬 MATCHED RESTAURANTS SECTION
-            if (showRestaurantsSection) ...[
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4.5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text('🍽️', style: TextStyle(fontSize: 13)),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Restaurants & Outlets',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 14),
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0F172A),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              ...matchedRestaurants.map((r) => RestaurantCard(restaurant: r)),
-              const SizedBox(height: 16),
-            ],
-
-            // 🍔 MATCHED DISHES / PRODUCTS SECTION
-            if (filtered.isNotEmpty) ...[
-              if (showRestaurantsSection)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4.5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text('🍜', style: TextStyle(fontSize: 13)),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Dishes & Items',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 14),
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ...List.generate(filtered.length, (productIndex) {
-                final product = filtered[productIndex];
-                final isFirst = productIndex == 0;
-                final isLast = productIndex == filtered.length - 1;
-
-                final isFood = isRestaurantProduct(product);
-                final outletName = isFood ? getOutletName(product) : null;
-
-                Color chipColor = AppDesignSystem.amber600;
-                Color chipBg = AppDesignSystem.amber50;
-                if (outletName != null) {
-                  if (outletName.contains('Wedson')) {
-                    chipColor = AppDesignSystem.orange600;
-                    chipBg = AppDesignSystem.orange50;
-                  } else if (outletName.contains('Bal Udyan')) {
-                    chipColor = AppDesignSystem.violet600;
-                    chipBg = AppDesignSystem.violet50;
-                  } else if (outletName.contains('Pizza') || outletName.contains('Hot Pizza')) {
-                    chipColor = AppDesignSystem.rose600;
-                    chipBg = AppDesignSystem.rose50;
-                  } else if (outletName.contains('Pari') || outletName.contains('Dairy')) {
-                    chipColor = AppDesignSystem.emerald700;
-                    chipBg = AppDesignSystem.green50;
-                  } else if (outletName.contains('A.S')) {
-                    chipColor = AppDesignSystem.cyan600;
-                    chipBg = AppDesignSystem.sky50;
-                  }
-                }
-
-                final isGroceryOpen = storeSettings?.groceryMartOpen ?? true;
-                final isRestaurantOpen = RestaurantScheduleHelper.isProductRestaurantOpen(
-                  product,
-                  storeSettings: storeSettings,
-                );
-                final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
-                final isOutOfStock = product.stock <= 0 || !product.isAvailable;
-                final isClosed = !isStoreOpen || isOutOfStock;
-
-                // Veg / Non-veg
-                final tags = product.tags.map((t) => t.toLowerCase()).toList();
-                final nameLower = product.name.toLowerCase();
-                final isVeg = !tags.any((t) => t.contains('non-veg') || t.contains('nonveg') || t == 'egg' || t.contains('chicken')) &&
-                    !nameLower.contains('chicken') && !nameLower.contains('egg') && !nameLower.contains('mutton');
-
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(
-                        top: isFirst ? const Radius.circular(18) : Radius.zero,
-                        bottom: isLast ? const Radius.circular(18) : Radius.zero,
-                      ),
-                      border: Border(
-                        left: const BorderSide(color: AppDesignSystem.slate200, width: 1.1),
-                        right: const BorderSide(color: AppDesignSystem.slate200, width: 1.1),
-                        top: isFirst ? const BorderSide(color: AppDesignSystem.slate200, width: 1.1) : BorderSide.none,
-                        bottom: isLast
-                            ? const BorderSide(color: AppDesignSystem.slate200, width: 1.1)
-                            : const BorderSide(color: AppDesignSystem.slate100, width: 1),
-                      ),
-                    ),
-                    child: _buildProductRow(
-                      product,
-                      isFood,
-                      outletName,
-                      chipColor,
-                      chipBg,
-                      isClosed,
-                      isOutOfStock,
-                      isStoreOpen,
-                      isVeg,
-                    ),
-                  ),
-                );
-              }),
+            if (showRestaurantsFirst) ...[
+              ...restaurantWidgets,
+              ...productWidgets,
+            ] else ...[
+              ...productWidgets,
+              ...restaurantWidgets,
             ],
           ],
         );

@@ -433,6 +433,9 @@ class ProductRepository {
       final liveProducts = await future;
       if (!admin) _inFlightFetches.remove(key);
 
+      if (search != null && search.isNotEmpty) {
+        return liveProducts;
+      }
       return _filterProducts(liveProducts, category: category, search: search, restaurantId: restaurantId);
     } catch (e, st) {
       LoggerService.error('ProductRepository: fetchProducts failed ($search, cat=$category, catId=$resolvedId, rid=$restaurantId, store=$effectiveStoreId)', e, st);

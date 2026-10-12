@@ -46,6 +46,20 @@ final productsProvider = FutureProvider.family<List<Product>, String?>((ref, cat
   );
 });
 
+final searchProductsProvider = FutureProvider.family<List<Product>, String>((ref, query) async {
+  final clean = query.trim();
+  if (clean.isEmpty) return [];
+  final repo = ref.watch(productRepositoryProvider);
+  final hub = ref.watch(currentStoreHubProvider);
+  return repo.getProducts(
+    search: clean,
+    limit: 100,
+    storeId: hub.id,
+    includeRestaurants: false,
+    forceRefresh: true,
+  );
+});
+
 final productsByRestaurantProvider = FutureProvider.family<List<Product>, String>((ref, restaurantId) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);

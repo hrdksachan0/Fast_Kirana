@@ -168,11 +168,30 @@ SYNONYM_DICTIONARY = {
     'chips': ['lays', 'kurkure', 'bingo', 'wafers', 'crisps'],
     'lays': ['chips', 'wafers', 'crisps'],
     'kurkure': ['namkeen', 'chips', 'snacks', 'tedhe medhe'],
-    'maggi': ['noodles', 'instant noodles', 'yippee', 'maggie'],
-    'magg': ['maggi', 'noodles', 'instant noodles', 'yippee'],
-    'maggie': ['maggi', 'noodles', 'instant noodles', 'yippee'],
-    'noodles': ['maggi', 'instant noodles', 'chowmein', 'yippee'],
-    'chowmein': ['noodles', 'maggi'],
+    'maggi': ['noodles', 'instant noodles', 'maggie', 'magi', 'megi', 'meggi', 'nestle', 'noodle', 'yippee', 'chowmein', 'wai wai'],
+    'maggie': ['maggi', 'noodles', 'instant noodles', 'magi', 'megi', 'meggi', 'nestle', 'noodle', 'yippee', 'chowmein', 'wai wai'],
+    'magi': ['maggi', 'maggie', 'noodles', 'instant noodles', 'megi', 'meggi', 'noodle'],
+    'magie': ['maggi', 'maggie', 'noodles', 'instant noodles', 'megi', 'meggi', 'noodle'],
+    'megi': ['maggi', 'maggie', 'noodles', 'instant noodles', 'magi', 'meggi', 'noodle'],
+    'meggi': ['maggi', 'maggie', 'noodles', 'instant noodles', 'magi', 'megi', 'noodle'],
+    'magg': ['maggi', 'maggie', 'noodles', 'instant noodles', 'magi', 'megi'],
+    'noodle': ['maggi', 'maggie', 'noodles', 'instant noodles', 'chowmein', 'yippee', 'wai wai'],
+    'noodles': ['maggi', 'maggie', 'noodle', 'instant noodles', 'chowmein', 'yippee', 'wai wai'],
+    'instant noodles': ['maggi', 'maggie', 'noodles', 'noodle', 'yippee'],
+    'nestle': ['maggi', 'maggie', 'kitkat', 'everyday', 'milkmaid'],
+    'yippee': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    'chowmein': ['noodles', 'noodle', 'maggi', 'hakka noodles', 'chings'],
+    'wai wai': ['maggi', 'maggie', 'noodles'],
+    'waiwai': ['maggi', 'maggie', 'noodles'],
+    'maggi noodles': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    'maggie noodles': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    'maggi masala': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    'maggie masala': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    'maggi packet': ['maggi', 'maggie', 'noodles'],
+    'maggi 2 minute': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    'maggie 2 minute': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    '2 minute maggi': ['maggi', 'maggie', 'noodles', 'instant noodles'],
+    '2 min maggi': ['maggi', 'maggie', 'noodles', 'instant noodles'],
     'chocolate': ['cadbury', 'dairy milk', 'kitkat', '5 star', 'chocolates', 'silk'],
     'chocolates': ['chocolate', 'cadbury', 'dairy milk', 'kitkat'],
     'cadbury': ['chocolate', 'dairy milk', 'silk', '5 star'],
@@ -249,7 +268,10 @@ SYNONYM_DICTIONARY = {
 
 # Stop words for product search (Hinglish + English)
 SEARCH_STOP_WORDS = {
-    'ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from'
+    'ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from',
+    '2', 'two', 'minute', 'minutes', 'min', 'mins', 'packet', 'packets', 'pack', 'packs', 'pkt',
+    'wala', 'wali', 'wale', 'chota', 'choti', 'bada', 'badi', 'rs', 'rupees', 'rupaye',
+    'kg', 'gm', 'g', 'ml', 'liter', 'litre', 'l'
 }
 
 # Constant Restaurant IDs
@@ -604,7 +626,17 @@ async def get_products(
             selectinload(Product.restaurant)
         ).where(and_(*filters, *word_clauses))
         res = await db.execute(stmt)
-        matched_products = res.scalars().all()
+        matched_products = list(res.scalars().all())
+
+        # When multi-word query is searched, also include items matching any word clause to avoid dropping primary items
+        if len(word_clauses) > 1:
+            stmt_or = select(Product).options(
+                selectinload(Product.category),
+                selectinload(Product.restaurant)
+            ).where(and_(*filters, or_(*word_clauses))).limit(100)
+            res_or = await db.execute(stmt_or)
+            or_prods = res_or.scalars().all()
+            matched_products = list({p.id: p for p in matched_products + list(or_prods)}.values())
 
         # Fallback to general list if no matches
         is_sql_match = bool(matched_products)
@@ -618,37 +650,67 @@ async def get_products(
 
         # Score matching
         scored_products = []
+        all_query_syns = set(phrase_syns if phrase_syns else [])
+        for w in search_words:
+            all_query_syns.update(SYNONYM_DICTIONARY.get(w, []))
+
         for p in matched_products:
+            p_name_lower = p.name.lower().strip()
             name_score = get_fuzzy_score(normalized_search, p.name)
             p_tags = [t.lower() for t in (p.tags or [])]
-            p_words = set(re.findall(r'\b\w+\b', p.name.lower()))
+            p_words = set(re.findall(r'\b\w+\b', p_name_lower))
 
-            # Exact or synonym tag match bonus
+            # 1. Exact Name & Prefix Boost
+            if p_name_lower == normalized_search:
+                name_score = 150.0
+            elif p_name_lower.startswith(normalized_search + " ") or p_name_lower.startswith(normalized_search):
+                name_score = max(name_score, 120.0)
+            elif normalized_search in p_words:
+                name_score = max(name_score, 110.0)
+
+            # 2. Exact Synonym Match Boost
+            if p_name_lower in all_query_syns:
+                name_score = max(name_score, 140.0)
+            elif any(opt in p_words for opt in all_query_syns):
+                name_score = max(name_score, 115.0)
+
+            # 3. Exact or synonym tag match bonus
             tag_score = 90.0 if any(
-                t == normalized_search or t in SYNONYM_DICTIONARY.get(normalized_search, [])
+                t == normalized_search or t in all_query_syns
                 for t in p_tags
             ) else (85.0 if any(get_fuzzy_score(normalized_search, t) > 60 for t in p_tags) else 0.0)
 
             desc_score = get_fuzzy_score(normalized_search, p.description or "") * 0.5
 
-            # Synonym match bonus (require whole-word match or substantial substring)
+            # 4. Synonym match bonus
             syn_score = 0.0
             for opt in (phrase_syns if phrase_syns else []):
                 if opt in p_words:
-                    syn_score = max(syn_score, 85.0)
-                elif len(opt) >= 4 and opt in p.name.lower():
-                    syn_score = max(syn_score, 75.0)
-                elif any(opt in t for t in p_tags):
+                    syn_score = max(syn_score, 90.0)
+                elif len(opt) >= 4 and opt in p_name_lower:
                     syn_score = max(syn_score, 80.0)
+                elif any(opt in t for t in p_tags):
+                    syn_score = max(syn_score, 85.0)
 
             for w in search_words:
                 for syn in SYNONYM_DICTIONARY.get(w, []):
                     if syn in p_words:
                         syn_score = max(syn_score, 85.0)
-                    elif len(syn) >= 4 and syn in p.name.lower():
-                        syn_score = max(syn_score, 70.0)
+                    elif len(syn) >= 4 and syn in p_name_lower:
+                        syn_score = max(syn_score, 75.0)
                     elif any(syn == t or (len(syn) >= 4 and syn in t) for t in p_tags):
                         syn_score = max(syn_score, 80.0)
+
+            # 5. Category intent alignment (e.g. Noodles vs Tomato Ketchup)
+            cat_slug = (p.category.slug if p.category else "").lower()
+            cat_name = (p.category.name if p.category else "").lower()
+            is_noodle_query = any(k in normalized_search for k in ['maggi', 'maggie', 'magi', 'megi', 'noodle', 'instant noodle'])
+            if is_noodle_query:
+                if 'sauce' in cat_slug or 'ketchup' in p_name_lower or 'sauces' in cat_name:
+                    name_score = min(name_score, 80.0)
+                    syn_score = min(syn_score, 80.0)
+                elif 'breakfast' in cat_slug or p_name_lower == 'maggi' or 'noodle' in p_name_lower or 'noodles' in p_name_lower:
+                    name_score = max(name_score, 135.0)
 
             score = max(name_score, tag_score, desc_score, syn_score)
             if score > 35:
