@@ -51,6 +51,11 @@ function categoryArtwork(category: CategorySource) {
                     : null
   return asset ? `/${asset}_category.webp` : null
 }
+function categoryTint(item: FeaturedCategoryItem, category: CategorySource) {
+  if (item.tint !== 'auto') return previewTints[item.tint]
+  const slug = `${category.slug} ${category.name}`.toLowerCase()
+  return /fruit|veg/.test(slug) ? '#F0FDF4' : /milk|dairy|bakery|biscuit/.test(slug) ? '#FFFBEB' : /atta|rice|kitchen|dal/.test(slug) ? '#FEF3C7' : /snack|munch/.test(slug) ? '#FFF7ED' : /drink|beverage/.test(slug) ? '#EFF6FF' : /ice.cream/.test(slug) ? '#FDF2F8' : /choco|sweet/.test(slug) ? '#FAF5FF' : '#F8FAFC'
+}
 type Props = {
   categories: CategorySource[]
   storeId: string | null
@@ -318,15 +323,16 @@ function ScopedFeaturedCategoriesManager({ categories, storeId, onUpload }: Prop
                         <figure
                           key={item.categoryId}
                           className="w-36 shrink-0 rounded-xl border border-black/10 p-2.5"
-                          style={{ background: previewTints[item.tint] }}
+                          style={{ background: categoryTint(item, category) }}
                         >
-                          <div className="flex h-28 items-center justify-center overflow-hidden rounded-lg">
+                          <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-lg">
+                            <span className="absolute text-3xl font-bold" aria-hidden="true">{category.name[0]}</span>
                             {source ? (
                               <img
                                 key={source}
                                 src={source}
                                 alt=""
-                                className={`size-full ${item.imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                                className={`relative size-full ${item.imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
                                 onError={(event) => {
                                   event.currentTarget.style.visibility = 'hidden'
                                 }}
@@ -335,7 +341,7 @@ function ScopedFeaturedCategoriesManager({ categories, storeId, onUpload }: Prop
                               <span className="text-3xl font-bold">{category.name[0]}</span>
                             )}
                           </div>
-                          <figcaption className="text-text-primary mt-2.5 text-sm leading-snug font-bold">
+                          <figcaption className="text-text-primary mt-2.5 line-clamp-2 min-h-10 text-sm leading-snug font-bold">
                             {item.label || category.name}
                           </figcaption>
                           {item.badge && (

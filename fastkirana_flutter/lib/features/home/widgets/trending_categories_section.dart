@@ -97,6 +97,7 @@ class TrendingCategoriesSection extends ConsumerWidget {
                   itemCount: selected.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, index) => _FeaturedTile(
+                      key: ValueKey(selected[index].category.id),
                       selection: selected[index],
                       labelStyle: labelStyle,
                       labelHeight: labelHeight,
@@ -114,7 +115,8 @@ class _FeaturedTile extends StatefulWidget {
   final TextStyle labelStyle;
   final double labelHeight, badgeHeight;
   const _FeaturedTile(
-      {required this.selection,
+      {super.key,
+      required this.selection,
       required this.labelStyle,
       required this.labelHeight,
       required this.badgeHeight});
@@ -263,13 +265,15 @@ class _FeaturedArtwork extends StatelessWidget {
     if (source == null || source.isEmpty) return fallback();
     final url =
         source.startsWith('/') ? 'https://www.fastkirana.in$source' : source;
-    if (!url.startsWith('https://') && !url.startsWith('http://'))
+    if (!url.startsWith('https://') && !url.startsWith('http://')) {
       return fallback();
-    if (Uri.tryParse(url)?.path.toLowerCase().endsWith('.svg') ?? false)
+    }
+    if (Uri.tryParse(url)?.path.toLowerCase().endsWith('.svg') ?? false) {
       return SvgPicture.network(url,
           fit: fit,
           placeholderBuilder: (_) => fallback(),
           errorBuilder: (_, __, ___) => fallback());
+    }
     return CachedNetworkImage(
         imageUrl: url,
         fit: fit,

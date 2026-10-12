@@ -190,15 +190,17 @@ void main() {
       expect(find.textContaining('₹'), findsNothing);
       expect(tester.takeException(), isNull);
       if (Platform.environment['FEATURED_CAPTURE'] == 'true') {
-        final boundary = tester.renderObject<RenderRepaintBoundary>(
-            find.byKey(const ValueKey('capture')));
-        final image = await boundary.toImage(pixelRatio: 2);
-        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-        final file =
-            File('../artifacts/featured-categories/flutter-${viewport.$3}.png');
-        await file.parent.create(recursive: true);
-        await file.writeAsBytes(bytes!.buffer.asUint8List());
-        image.dispose();
+        await tester.runAsync(() async {
+          final boundary = tester.renderObject<RenderRepaintBoundary>(
+              find.byKey(const ValueKey('capture')));
+          final image = await boundary.toImage(pixelRatio: 2);
+          final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+          final file = File(
+              '../artifacts/featured-categories/flutter-${viewport.$3}.png');
+          await file.parent.create(recursive: true);
+          await file.writeAsBytes(bytes!.buffer.asUint8List());
+          image.dispose();
+        });
       }
     });
   }
@@ -219,13 +221,13 @@ void main() {
         ]),
         observer: observer);
     final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
     expect(
         tester
             .getSemantics(find.bySemanticsLabel('Shop Movie night'))
             .getSemanticsData()
             .hasAction(ui.SemanticsAction.tap),
         true);
+    semantics.dispose();
     await tester.tap(find.text('Movie night'));
     final route = observer.routes.last as ZeptoSlideRoute;
     expect((route.page as CategoryProductsScreen).category.id, 'snacks');
