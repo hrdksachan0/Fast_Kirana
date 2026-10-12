@@ -228,7 +228,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       setLoading(true)
       try {
         const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-        const res = await fetch(`${catalogApiUrl()}/api/products?search=${encodeURIComponent(query)}&limit=20${storeParam}`, {
+        const res = await fetch(`${catalogApiUrl()}/api/products?search=${encodeURIComponent(query)}&limit=50${storeParam}`, {
           signal: controller.signal
         })
         if (res.ok) {

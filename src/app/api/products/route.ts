@@ -13,25 +13,7 @@ import { getSemanticAiScore } from '@/lib/vector-search'
 import { normalizeRestaurantId } from '@/lib/restaurant-ids'
 import { extractCityFromStoreName } from '@/lib/store-resolver'
 
-const SYNONYM_DICTIONARY: Record<string, string[]> = {
-  'aalu': ['potato', 'aloo'],
-  'aloo': ['potato', 'aalu'],
-  'pyaz': ['onion', 'pyaj'],
-  'pyaj': ['onion', 'pyaz'],
-  'doodh': ['milk', 'dudh'],
-  'dudh': ['milk', 'doodh'],
-  'dahi': ['curd', 'yogurt'],
-  'anda': ['egg', 'eggs'],
-  'tamatar': ['tomato', 'tomatoes'],
-  'makhan': ['butter'],
-  'nimbu': ['lemon', 'lime'],
-  'chai': ['tea'],
-  'patti': ['tea'],
-  'pani': ['water'],
-  'chawal': ['rice'],
-  'chini': ['sugar'],
-  'namak': ['salt']
-}
+import { SYNONYM_DICTIONARY } from '@/lib/synonyms'
 
 const SEARCH_STOP_WORDS = new Set([
   'ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from'
