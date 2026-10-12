@@ -263,8 +263,7 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF9A3412), // orange-900
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
                               ),
                             ],
                           ),

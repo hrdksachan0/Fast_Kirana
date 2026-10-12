@@ -203,8 +203,7 @@ class RiderPickupCard extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white.withValues(alpha: 0.95),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
                               ),
                             ],
                           ),
@@ -404,8 +403,7 @@ class RiderPickupCard extends StatelessWidget {
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF9A3412), // orange-900
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
                               ),
                             ],
                           ),
@@ -796,14 +794,13 @@ class RiderPickupCard extends StatelessWidget {
                                   const SizedBox(width: 4),
                                   Flexible(
                                     child: Text(
-                                      isFood ? 'Cooking in Kitchen...' : 'Packing at Store...',
+                                      isFood ? 'Cooking in Kitchen' : 'Packing at Store',
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 10),
                                         fontWeight: FontWeight.w800,
                                         color: AppDesignSystem.amber600,
                                       ),
                                       maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
