@@ -146,16 +146,16 @@ class CategoryVisualHelper {
     return const Color(0xFFE2E8F0);
   }
 
-  static Widget buildAvatarImage(BuildContext context, Category cat) {
+  static Widget buildAvatarImage(BuildContext context, Category cat, {BoxFit fit = BoxFit.contain}) {
     final imgUrl = cat.imageUrl ?? '';
 
     // 1. If real Cloudinary / HTTP URL from Supabase is present, use it directly!
     if (imgUrl.isNotEmpty && imgUrl.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: imgUrl,
-        fit: BoxFit.cover,
-        memCacheWidth: 200,
-        memCacheHeight: 200,
+        fit: fit,
+        memCacheWidth: 260,
+        memCacheHeight: 260,
         placeholder: (_, __) => Shimmer.fromColors(
           baseColor: AppDesignSystem.border,
           highlightColor: AppDesignSystem.gray50,
@@ -169,9 +169,9 @@ class CategoryVisualHelper {
     if (imgUrl.isNotEmpty && imgUrl.startsWith('/')) {
       return CachedNetworkImage(
         imageUrl: 'https://www.fastkirana.in$imgUrl',
-        fit: BoxFit.cover,
-        memCacheWidth: 200,
-        memCacheHeight: 200,
+        fit: fit,
+        memCacheWidth: 260,
+        memCacheHeight: 260,
         placeholder: (_, __) => Shimmer.fromColors(
           baseColor: AppDesignSystem.border,
           highlightColor: AppDesignSystem.gray50,
@@ -229,13 +229,13 @@ class CategoryVisualHelper {
     if (webCdnUrl != null) {
       return CachedNetworkImage(
         imageUrl: webCdnUrl,
-        fit: BoxFit.cover,
-        memCacheWidth: 200,
-        memCacheHeight: 200,
-        placeholder: (_, __) => Image.asset(fallbackAsset, fit: BoxFit.cover),
+        fit: fit,
+        memCacheWidth: 260,
+        memCacheHeight: 260,
+        placeholder: (_, __) => Image.asset(fallbackAsset, fit: fit),
         errorWidget: (_, __, ___) => Image.asset(
           fallbackAsset,
-          fit: BoxFit.cover,
+          fit: fit,
           errorBuilder: (_, __, ___) => buildFallback(context, cat),
         ),
       );
