@@ -22,6 +22,7 @@ import '../../providers/store_hub_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/hub_conflict_dialog.dart';
 import 'doorstep_details_screen.dart';
+import '../../core/utils/address_formatter.dart';
 
 class MapPickerScreen extends ConsumerStatefulWidget {
   final double? initialLat;
@@ -148,13 +149,24 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
           final area = place.subLocality?.isNotEmpty == true
               ? place.subLocality!
               : (place.locality?.isNotEmpty == true ? place.locality! : activeHub.city);
-          final full = '${place.name ?? ''}, ${place.subLocality ?? ''}, ${place.locality ?? activeHub.city}, ${place.postalCode ?? (activeHub.city.toLowerCase().contains('akbarpur') ? '224122' : '209206')}, Uttar Pradesh, India'
-              .replaceAll(RegExp(r',\s*,'), ',')
-              .trim();
+
+          final placeName = place.name ?? '';
+          final isPlusCode = AddressFormatter.isPlusCode(placeName);
+          final cleanPlaceName = isPlusCode ? '' : placeName;
+
+          final rawTokens = [
+            if (cleanPlaceName.isNotEmpty && cleanPlaceName != area) cleanPlaceName,
+            if (place.subLocality != null && place.subLocality!.isNotEmpty) place.subLocality!,
+            place.locality ?? activeHub.city,
+            place.postalCode ?? (activeHub.city.toLowerCase().contains('akbarpur') ? '224122' : '209206'),
+          ].join(', ');
+
+          final cleanFull = AddressFormatter.formatCleanSingleLine(rawTokens, areaFallback: area);
+          final cleanArea = AddressFormatter.extractAreaName(cleanFull, fallback: area);
 
           setState(() {
-            _areaName = area;
-            _fullAddress = full.startsWith(',') ? full.substring(1).trim() : full;
+            _areaName = cleanArea;
+            _fullAddress = cleanFull;
           });
           return;
         }
@@ -164,7 +176,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
     if (mounted) {
       setState(() {
         _areaName = distKm <= 1.0 ? '${activeHub.city} Central' : '${activeHub.city} Area';
-        _fullAddress = '${activeHub.name}, ${activeHub.city}, Uttar Pradesh, India';
+        _fullAddress = '${activeHub.name}, ${activeHub.city}';
       });
     }
   }

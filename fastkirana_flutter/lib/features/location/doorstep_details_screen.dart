@@ -11,6 +11,7 @@ import '../../providers/address_provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../data/models/store_hub.dart';
 import '../../providers/store_hub_provider.dart';
+import '../../core/utils/address_formatter.dart';
 
 class DoorstepDetailsScreen extends ConsumerStatefulWidget {
   final double lat;
@@ -131,11 +132,16 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
 
       final street = _streetController.text.trim();
 
+      final cleanArea = AddressFormatter.extractAreaName(
+        widget.fullAddress,
+        fallback: widget.areaName,
+      );
+
       final savedAddress = await ref.read(addressesProvider.notifier).addAddress({
         'label': label,
         'houseNo': houseNo,
-        'street': street.isNotEmpty ? street : widget.areaName,
-        'area': widget.areaName,
+        'street': street.isNotEmpty ? street : cleanArea,
+        'area': cleanArea,
         'city': resolvedCity,
         'pincode': resolvedPincode,
         'phone': receiverPhone,
@@ -160,13 +166,17 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
+        final cleanArea = AddressFormatter.extractAreaName(
+          widget.fullAddress,
+          fallback: widget.areaName,
+        );
         final localAddress = Address(
           id: 'addr_${DateTime.now().millisecondsSinceEpoch}',
           userId: 'local',
           label: _customLabelController.text.trim().isNotEmpty ? _customLabelController.text.trim() : _selectedCategory,
           houseNo: _houseNoController.text.trim(),
-          street: _streetController.text.trim().isNotEmpty ? _streetController.text.trim() : widget.areaName,
-          area: widget.areaName,
+          street: _streetController.text.trim().isNotEmpty ? _streetController.text.trim() : cleanArea,
+          area: cleanArea,
           city: resolvedCity,
           pincode: resolvedPincode,
           phone: _receiverPhoneController.text.trim(),
@@ -186,6 +196,15 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     final accountName = user?.name?.isNotEmpty == true ? user!.name! : 'My Account';
     final accountPhone = (user?.phone != null && user!.phone!.isNotEmpty) ? user.phone! : '+91 70544 70303';
 
+    final cleanSingleLine = AddressFormatter.formatCleanSingleLine(
+      widget.fullAddress,
+      areaFallback: widget.areaName,
+    );
+    final cleanAreaName = AddressFormatter.extractAreaName(
+      widget.fullAddress,
+      fallback: widget.areaName,
+    );
+
     return Scaffold(
       backgroundColor: AppDesignSystem.slate50,
       appBar: AppBar(
@@ -201,7 +220,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.areaName,
+              cleanAreaName,
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 15),
                 fontWeight: FontWeight.w800,
@@ -209,7 +228,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
               ),
             ),
             Text(
-              widget.fullAddress,
+              cleanSingleLine,
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w500,
@@ -635,14 +654,14 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                   ),
                                   const SizedBox(height: 3),
                                   Text(
-                                    widget.fullAddress,
+                                    cleanSingleLine,
                                     style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 12),
+                                      fontSize: Responsive.scaledFontSize(context, 12.5),
                                       fontWeight: FontWeight.w700,
                                       color: slateDark,
                                     ),
                                     maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: true,
                                   ),
                                 ],
                               ),

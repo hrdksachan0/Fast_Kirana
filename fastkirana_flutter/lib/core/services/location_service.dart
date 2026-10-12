@@ -14,6 +14,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/store_hub_provider.dart';
 import '../../providers/store_settings_provider.dart';
 import '../../widgets/location_drift_sheet.dart';
+import '../utils/address_formatter.dart';
 
 class LocationDetails {
   final double latitude;
@@ -410,20 +411,22 @@ class LocationService {
         final placemarks = await placemarkFromCoordinates(lat, lng);
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
-          houseNo = place.subThoroughfare ?? place.name ?? '';
+          final placeName = place.name ?? '';
+          final isPlus = AddressFormatter.isPlusCode(placeName);
+          houseNo = place.subThoroughfare ?? (isPlus ? '' : placeName);
           street = place.thoroughfare ?? '';
           area = place.subLocality?.isNotEmpty == true ? place.subLocality! : (place.locality ?? hubCity);
           city = place.locality ?? place.administrativeArea ?? hubCity;
           pincode = place.postalCode ?? (hubIdPin ?? (hub.city.toLowerCase().contains('akbarpur') ? '224122' : (hub.city.toLowerCase().contains('pakur') ? '816107' : '209206')));
 
-          final parts = [
-            if (houseNo.isNotEmpty) houseNo,
-            if (street.isNotEmpty) street,
-            if (area.isNotEmpty) area,
-            if (city.isNotEmpty) city,
+          final rawParts = [
+            if (houseNo.isNotEmpty && !isPlus) houseNo,
+            if (street.isNotEmpty && street != houseNo) street,
+            if (area.isNotEmpty && area != street) area,
+            if (city.isNotEmpty && city != area) city,
             if (pincode.isNotEmpty) pincode,
-          ];
-          formatted = parts.join(', ');
+          ].join(', ');
+          formatted = AddressFormatter.formatCleanSingleLine(rawParts, areaFallback: area);
         }
       }
     } catch (e) {
