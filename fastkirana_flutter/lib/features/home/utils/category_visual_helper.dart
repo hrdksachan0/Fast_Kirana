@@ -147,41 +147,26 @@ class CategoryVisualHelper {
   }
 
   static Widget buildAvatarImage(BuildContext context, Category cat, {BoxFit fit = BoxFit.contain}) {
-    final imgUrl = cat.imageUrl ?? '';
+    String imgUrl = (cat.imageUrl ?? '').trim();
     final slug = cat.slug.toLowerCase().trim();
     final name = cat.name.toLowerCase().trim();
 
-    // ── 1. CURATED CDN IMAGE OVERRIDE (slug/name matching) ──
-    // Always prefer curated images over raw backend URLs to prevent mismatched images.
-    final curatedUrl = _getCuratedImageUrl(slug, name);
-    if (curatedUrl != null) {
-      return CachedNetworkImage(
-        imageUrl: curatedUrl,
-        fit: fit,
-        memCacheWidth: 320,
-        memCacheHeight: 320,
-        placeholder: (_, __) => Shimmer.fromColors(
-          baseColor: AppDesignSystem.border,
-          highlightColor: AppDesignSystem.gray50,
-          child: Container(color: Colors.white),
-        ),
-        errorWidget: (_, __, ___) {
-          // If CDN fails, try backend URL as fallback
-          if (imgUrl.isNotEmpty && imgUrl.startsWith('http')) {
-            return CachedNetworkImage(
-              imageUrl: imgUrl,
-              fit: fit,
-              memCacheWidth: 320,
-              memCacheHeight: 320,
-              errorWidget: (_, __, ___) => buildFallback(context, cat),
-            );
-          }
-          return buildFallback(context, cat);
-        },
-      );
+    // 1. Resolve relative URLs from FastKirana CDN
+    if (imgUrl.isNotEmpty && imgUrl.startsWith('/')) {
+      final cleanPath = imgUrl.replaceAll('.png', '.webp');
+      imgUrl = 'https://www.fastkirana.in$cleanPath';
     }
 
-    // ── 2. Backend HTTP URL (only for uncurated categories) ──
+    // 2. Curated high-res CDN visuals for top heroes if relative or missing
+    if (slug.contains('ice') || slug.contains('dessert') || name.contains('ice cream')) {
+      imgUrl = 'https://www.fastkirana.in/ice_cream_category.webp';
+    } else if (slug == 'beverages' || slug == 'cold-drinks' || (slug.contains('beverage') && !imgUrl.startsWith('http'))) {
+      imgUrl = 'https://www.fastkirana.in/beverages_category.webp';
+    } else if ((slug == 'fruits-vegetables' || cat.id == 'CAT-101') && (imgUrl.isEmpty || !imgUrl.startsWith('http'))) {
+      imgUrl = 'https://www.fastkirana.in/fruits_vegetables_category.webp';
+    }
+
+    // 3. Load from Network (real Supabase or CDN image)
     if (imgUrl.isNotEmpty && imgUrl.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: imgUrl,
@@ -197,135 +182,7 @@ class CategoryVisualHelper {
       );
     }
 
-    // ── 3. Relative URL from Supabase ──
-    if (imgUrl.isNotEmpty && imgUrl.startsWith('/')) {
-      return CachedNetworkImage(
-        imageUrl: 'https://www.fastkirana.in$imgUrl',
-        fit: fit,
-        memCacheWidth: 320,
-        memCacheHeight: 320,
-        placeholder: (_, __) => Shimmer.fromColors(
-          baseColor: AppDesignSystem.border,
-          highlightColor: AppDesignSystem.gray50,
-          child: Container(color: Colors.white),
-        ),
-        errorWidget: (_, __, ___) => buildFallback(context, cat),
-      );
-    }
-
     return buildFallback(context, cat);
-  }
-
-  /// Returns a curated CDN image URL for known category slugs/names.
-  /// Returns null if no curated image is available.
-  static String? _getCuratedImageUrl(String slug, String name) {
-    const cdn = 'https://www.fastkirana.in';
-
-    // Fruits & Vegetables
-    if (slug.contains('fruit') || slug.contains('veg') || name.contains('fruit') || name.contains('veg') || name.contains('sabzi')) {
-      return '$cdn/fruits_vegetables_category.webp';
-    }
-    // Dairy, Bread & Eggs
-    if (slug.contains('dairy') || slug.contains('milk') || slug.contains('egg') || name.contains('dairy') || name.contains('milk') || name.contains('paneer') || name.contains('curd')) {
-      return '$cdn/dairy_breakfast_category.webp';
-    }
-    // Atta, Rice & Dals
-    if (slug.contains('atta') || slug.contains('rice') || slug.contains('dal') || slug.contains('ration') || slug.contains('flour') || slug.contains('grain') || name.contains('atta') || name.contains('ration')) {
-      return '$cdn/atta_rice_dal_category.webp';
-    }
-    // Oils & Ghee — use atta_rice_dal as closest match (cooking essentials)
-    if (slug.contains('oil') || slug.contains('ghee') || name.contains('oil') || name.contains('ghee')) {
-      return '$cdn/atta_rice_dal_category.webp';
-    }
-    // Masala & Spices — use atta_rice_dal (kitchen staples)
-    if (slug.contains('masala') || slug.contains('spice') || name.contains('masala') || name.contains('spice')) {
-      return '$cdn/atta_rice_dal_category.webp';
-    }
-    // Dry Fruits & Nuts
-    if (slug.contains('dry-fruit') || slug.contains('dry fruit') || slug.contains('nuts') || slug.contains('super') || name.contains('dry fruit') || name.contains('nuts')) {
-      return '$cdn/fruits_vegetables_category.webp';
-    }
-    // Sauces & Spreads — use snacks_munchies as closest
-    if (slug.contains('sauce') || slug.contains('spread') || slug.contains('ketchup') || slug.contains('jam') || name.contains('sauce') || name.contains('spread')) {
-      return '$cdn/snacks_munchies_category.webp';
-    }
-    // Packaged Food
-    if (slug.contains('packaged') || slug.contains('instant') || slug.contains('maggi') || slug.contains('noodle') || name.contains('packaged') || name.contains('instant')) {
-      return '$cdn/snacks_munchies_category.webp';
-    }
-    // Breakfast Cereals
-    if (slug.contains('breakfast') || slug.contains('cereal') || slug.contains('oats') || name.contains('breakfast') || name.contains('cereal')) {
-      return '$cdn/dairy_breakfast_category.webp';
-    }
-    // Cold Drinks & Juices
-    if (slug.contains('beverage') || slug.contains('drink') || slug.contains('cold') || slug.contains('juice') || slug.contains('soda') || name.contains('beverage') || name.contains('drink') || name.contains('juice')) {
-      return '$cdn/beverages_category.webp';
-    }
-    // Ice Creams & Desserts
-    if (slug.contains('ice') || slug.contains('dessert') || slug.contains('frozen') || name.contains('ice cream') || name.contains('dessert')) {
-      return '$cdn/ice_cream_category.webp';
-    }
-    // Tea, Coffee
-    if (slug.contains('tea') || slug.contains('coffee') || slug.contains('chai') || name.contains('tea') || name.contains('coffee')) {
-      return '$cdn/beverages_category.webp';
-    }
-    // Chocolates & Sweets
-    if (slug.contains('choco') || slug.contains('sweet') || slug.contains('candy') || slug.contains('toffee') || slug.contains('cake') || name.contains('choco') || name.contains('sweet') || name.contains('mithai')) {
-      return '$cdn/bakery_biscuits_category.webp';
-    }
-    // Snacks, Munchies, Namkeen, Chips
-    if (slug.contains('snack') || slug.contains('munch') || slug.contains('namkeen') || slug.contains('chips') || name.contains('snack') || name.contains('munch') || name.contains('namkeen') || name.contains('chips')) {
-      return '$cdn/snacks_munchies_category.webp';
-    }
-    // Biscuits & Cookies, Bakery
-    if (slug.contains('bakery') || slug.contains('biscuit') || slug.contains('cookie') || slug.contains('rusk') || name.contains('bakery') || name.contains('biscuit') || name.contains('cookie')) {
-      return '$cdn/bakery_biscuits_category.webp';
-    }
-    // Personal Care, Skin, Body
-    if (slug.contains('personal') || slug.contains('skin') || slug.contains('body') || slug.contains('face') || name.contains('personal care') || name.contains('skin')) {
-      return '$cdn/personal_care_category.webp';
-    }
-    // Hair Care & Cosmetics
-    if (slug.contains('hair') || slug.contains('shampoo') || slug.contains('cosmetic') || name.contains('hair') || name.contains('cosmetic')) {
-      return '$cdn/personal_care_category.webp';
-    }
-    // Oral Care & Hygiene
-    if (slug.contains('oral') || slug.contains('dental') || slug.contains('tooth') || name.contains('oral') || name.contains('dental') || name.contains('tooth')) {
-      return '$cdn/personal_care_category.webp';
-    }
-    // Household, Cleaning, Home Needs
-    if (slug.contains('household') || slug.contains('clean') || slug.contains('home') || slug.contains('mop') || slug.contains('broom') || name.contains('cleaning') || name.contains('household') || name.contains('home need')) {
-      return '$cdn/household_category.webp';
-    }
-    // Laundry
-    if (slug.contains('laundry') || slug.contains('detergent') || slug.contains('fabric') || name.contains('laundry') || name.contains('detergent')) {
-      return '$cdn/household_category.webp';
-    }
-    // Dishwashing
-    if (slug.contains('dishwash') || slug.contains('dish') || slug.contains('utensil') || name.contains('dishwash')) {
-      return '$cdn/household_category.webp';
-    }
-    // Pest Control
-    if (slug.contains('pest') || slug.contains('repellent') || slug.contains('freshener') || name.contains('pest') || name.contains('repellent')) {
-      return '$cdn/household_category.webp';
-    }
-    // Baby Care
-    if (slug.contains('baby') || slug.contains('diaper') || slug.contains('infant') || name.contains('baby') || name.contains('diaper')) {
-      return '$cdn/personal_care_category.webp';
-    }
-    // Hygiene, Sanitary
-    if (slug.contains('hygiene') || slug.contains('sanitary') || slug.contains('feminine') || name.contains('hygiene') || name.contains('sanitary')) {
-      return '$cdn/personal_care_category.webp';
-    }
-    // Pooja
-    if (slug.contains('pooja') || slug.contains('puja') || slug.contains('agarbatti') || name.contains('pooja') || name.contains('puja')) {
-      return '$cdn/household_category.webp';
-    }
-    // Restaurant / Cafe
-    if (slug.contains('restaurant') || slug.contains('cafe') || slug.contains('food')) {
-      return '$cdn/cafe_category.webp';
-    }
-    return null;
   }
 
   static Widget buildFallback(BuildContext context, Category cat) {

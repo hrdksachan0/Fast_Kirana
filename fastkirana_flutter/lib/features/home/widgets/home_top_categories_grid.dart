@@ -23,7 +23,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
       padding: const EdgeInsets.only(top: 8, bottom: 12),
       child: categoriesAsync.when(
         data: (categories) {
-          // Filter out restaurant/cafe items and 0-product items if applicable
+          // Filter out restaurant/cafe items
           final groceryCategories = categories.where((c) {
             final slug = c.slug.toLowerCase().trim();
             final name = c.name.toLowerCase().trim();
@@ -50,134 +50,102 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
 
           if (groceryCategories.isEmpty) return const SizedBox.shrink();
 
-          // Organize categories into Departmental Bento Grids (Zepto / Blinkit architecture)
-          final sections = _buildBentoSections(groceryCategories);
+          // Build unified Blinkit-style category architecture (no 3 separate departments)
+          final bento = _buildUnifiedBento(groceryCategories);
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (int i = 0; i < sections.length; i++) ...[
-                if (i > 0) const SizedBox(height: 22),
-                _buildDepartmentSection(context, ref, sections[i]),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Single Unified Section Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Explore by Category',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: Responsive.scaledFontSize(context, 18),
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF0F172A),
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    Bounceable(
+                      scaleFactor: 0.95,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        ref.read(selectedTabProvider.notifier).state = 2; // Categories tab
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'See All',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                fontWeight: FontWeight.w800,
+                                color: AppDesignSystem.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 8.5,
+                              color: AppDesignSystem.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // 2. Top Hero Row (2 Wide Appetizing Anchors)
+                if (bento.heroes.isNotEmpty) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (int h = 0; h < bento.heroes.length; h++) ...[
+                        if (h > 0) const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildHeroCard(
+                            context,
+                            bento.heroes[h].category,
+                            bento.heroes[h].customName,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // 3. Compact 4-Column Grid (Symmetric Rows)
+                if (bento.compacts.isNotEmpty) ...[
+                  _buildCompactGrid(context, bento.compacts),
+                ],
               ],
-            ],
+            ),
           );
         },
         loading: () => _buildBentoShimmer(),
         error: (_, __) => const SizedBox.shrink(),
-      ),
-    );
-  }
-
-  // ─── DEPARTMENT SECTION BUILDER ───
-  Widget _buildDepartmentSection(
-    BuildContext context,
-    WidgetRef ref,
-    _BentoDepartment department,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                department.title,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: Responsive.scaledFontSize(context, 18),
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF0F172A),
-                  letterSpacing: -0.4,
-                ),
-              ),
-              Bounceable(
-                scaleFactor: 0.95,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  ref.read(selectedTabProvider.notifier).state = 2; // Categories tab
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'See All',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: Responsive.scaledFontSize(context, 10.5),
-                          fontWeight: FontWeight.w800,
-                          color: AppDesignSystem.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 3),
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 8.5,
-                        color: AppDesignSystem.primary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Layout Builder for Adaptive Sizing
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final availableWidth = constraints.maxWidth;
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. HERO ROW (2 Wide Cards)
-                  if (department.heroCategories.isNotEmpty) ...[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (int h = 0; h < department.heroCategories.length; h++) ...[
-                          if (h > 0) const SizedBox(width: 10),
-                          Expanded(
-                            child: _buildHeroCard(
-                              context,
-                              department.heroCategories[h].category,
-                              department.heroCategories[h].customName,
-                            ),
-                          ),
-                        ],
-                        // Balance row if only 1 hero exists
-                        if (department.heroCategories.length == 1)
-                          const Expanded(child: SizedBox.shrink()),
-                      ],
-                    ),
-                    if (department.compactCategories.isNotEmpty) const SizedBox(height: 12),
-                  ],
-
-                  // 2. COMPACT ROWS (4 Columns Grid)
-                  if (department.compactCategories.isNotEmpty) ...[
-                    _buildCompactGrid(context, department.compactCategories, availableWidth),
-                  ],
-                ],
-              );
-            },
-          ),
-        ],
       ),
     );
   }
@@ -264,7 +232,6 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
   Widget _buildCompactGrid(
     BuildContext context,
     List<_CategorySlot> compacts,
-    double availableWidth,
   ) {
     const int crossAxisCount = 4;
     const double gap = 8.0;
@@ -387,7 +354,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(height: 18, width: 140, color: Colors.white),
+            Container(height: 18, width: 160, color: Colors.white),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -413,37 +380,50 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                for (int c = 0; c < 4; c++) ...[
-                  if (c > 0) const SizedBox(width: 8),
-                  Expanded(
-                    child: Container(
-                      height: 74,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
+            for (int r = 0; r < 3; r++) ...[
+              if (r > 0) const SizedBox(height: 10),
+              Row(
+                children: [
+                  for (int c = 0; c < 4; c++) ...[
+                    if (c > 0) const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        height: 74,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
-            ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  // ─── BENTO SECTIONS MAPPING (ZEPTO / BLINKIT STANDARDS) ───
-  List<_BentoDepartment> _buildBentoSections(List<Category> allCategories) {
+  // ─── UNIFIED BENTO ARCHITECTURE (NO 3-WAY SPLIT, ZERO REDUNDANCY) ───
+  _UnifiedBentoData _buildUnifiedBento(List<Category> allCategories) {
     final usedIds = <String>{};
 
-    Category? findCategory(List<String> keywords) {
+    Category? findCat({required List<String> ids, required List<String> keywords}) {
+      // 1. Try exact ID match first
+      for (final id in ids) {
+        for (final cat in allCategories) {
+          if (!usedIds.contains(cat.id) && cat.id.toLowerCase().trim() == id.toLowerCase().trim()) {
+            usedIds.add(cat.id);
+            return cat;
+          }
+        }
+      }
+      // 2. Try slug/name keyword match
       for (final cat in allCategories) {
         if (usedIds.contains(cat.id)) continue;
-        final s = cat.slug.toLowerCase();
-        final n = cat.name.toLowerCase();
+        final s = cat.slug.toLowerCase().trim();
+        final n = cat.name.toLowerCase().trim();
         for (final kw in keywords) {
           if (s.contains(kw) || n.contains(kw)) {
             usedIds.add(cat.id);
@@ -454,164 +434,111 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
       return null;
     }
 
-    final sections = <_BentoDepartment>[];
+    void markUsed(List<String> ids) {
+      for (final id in ids) {
+        for (final cat in allCategories) {
+          if (cat.id.toLowerCase().trim() == id.toLowerCase().trim()) {
+            usedIds.add(cat.id);
+          }
+        }
+      }
+    }
 
-    // ── 1. GROCERY & KITCHEN ──
-    final vegCat = findCategory(['fruit', 'veg', 'sabzi']);
-    final dairyCat = findCategory(['dairy', 'milk', 'egg', 'bread', 'paneer', 'curd']);
-    final kitchenHeroes = <_CategorySlot>[];
+    // ── 1. HEROES (2 Wide Cards) ──
+    final vegCat = findCat(ids: ['CAT-101'], keywords: ['fruits-vegetables', 'fruit', 'vegetable']);
+    final dairyCat = findCat(ids: ['CAT-116'], keywords: ['dairy-products', 'dairy', 'milk']);
+    markUsed(['SUB-101-01', 'SUB-101-02']); // Consume child fruit/veg items
+
+    final heroes = <_CategorySlot>[];
     if (vegCat != null) {
-      kitchenHeroes.add(_CategorySlot(category: vegCat, customName: 'Fruits &\nVegetables'));
+      heroes.add(_CategorySlot(category: vegCat, customName: 'Fruits &\nVegetables'));
     }
     if (dairyCat != null) {
-      kitchenHeroes.add(_CategorySlot(category: dairyCat, customName: 'Dairy, Bread &\nEggs'));
+      heroes.add(_CategorySlot(category: dairyCat, customName: 'Dairy, Bread &\nEggs'));
     }
 
-    final kitchenCompacts = <_CategorySlot>[];
-    final rationCat = findCategory(['atta', 'rice', 'dal', 'ration', 'flour', 'grain']);
-    if (rationCat != null) {
-      kitchenCompacts.add(_CategorySlot(category: rationCat, customName: 'Atta, Rice\n& Dals'));
+    // ── 2. COMPACT PODS (16 Categories = 4 Clean Rows of 4) ──
+    final compacts = <_CategorySlot>[];
+
+    // Row 1: Kitchen Staples
+    final attaCat = findCat(ids: ['SUB-113-01'], keywords: ['atta-rice-sugar', 'atta', 'flour']);
+    if (attaCat != null) {
+      compacts.add(_CategorySlot(category: attaCat, customName: 'Atta, Rice\n& Sugar'));
     }
-    final oilCat = findCategory(['oil', 'ghee', 'cooking oil', 'edible']);
+    final oilCat = findCat(ids: ['SUB-113-02'], keywords: ['oils-ghee', 'oil', 'ghee']);
     if (oilCat != null) {
-      kitchenCompacts.add(_CategorySlot(category: oilCat, customName: 'Oils &\nGhee'));
+      compacts.add(_CategorySlot(category: oilCat, customName: 'Oils &\nGhee'));
     }
-    final masalaCat = findCategory(['masala', 'spice', 'seasoning', 'haldi', 'mirch']);
+    final dalCat = findCat(ids: ['SUB-113-03'], keywords: ['dals-pulses', 'dal', 'pulse']);
+    if (dalCat != null) {
+      compacts.add(_CategorySlot(category: dalCat, customName: 'Dals &\nPulses'));
+    }
+    final masalaCat = findCat(ids: ['SUB-113-04'], keywords: ['spices-masala', 'masala', 'spice']);
     if (masalaCat != null) {
-      kitchenCompacts.add(_CategorySlot(category: masalaCat, customName: 'Masala &\nSpices'));
+      compacts.add(_CategorySlot(category: masalaCat, customName: 'Spices &\nMasala'));
     }
-    final dryFruitCat = findCategory(['dry-fruit', 'dry fruit', 'nuts', 'super']);
+
+    // Row 2: Breakfast, Cooking & Refreshments
+    final dryFruitCat = findCat(ids: ['SUB-114-02', 'CAT-114'], keywords: ['dry-fruits', 'dry fruit', 'nuts']);
     if (dryFruitCat != null) {
-      kitchenCompacts.add(_CategorySlot(category: dryFruitCat, customName: 'Dry Fruits\n& Nuts'));
+      compacts.add(_CategorySlot(category: dryFruitCat, customName: 'Dry Fruits\n& Nuts'));
     }
-    final sauceCat = findCategory(['sauce', 'spread', 'ketchup', 'jam', 'honey']);
+    markUsed(['CAT-114']);
+    final sauceCat = findCat(ids: ['SUB-104-01'], keywords: ['sauces-spreads', 'sauce', 'spread', 'ketchup']);
     if (sauceCat != null) {
-      kitchenCompacts.add(_CategorySlot(category: sauceCat, customName: 'Sauces &\nSpreads'));
+      compacts.add(_CategorySlot(category: sauceCat, customName: 'Sauces &\nSpreads'));
     }
-    final packagedCat = findCategory(['packaged', 'instant', 'maggi', 'noodle', 'ready']);
-    if (packagedCat != null) {
-      kitchenCompacts.add(_CategorySlot(category: packagedCat, customName: 'Packaged\nFood'));
-    }
-    final breakfastCat = findCategory(['breakfast', 'cereal', 'oats', 'muesli', 'diet']);
-    if (breakfastCat != null) {
-      kitchenCompacts.add(_CategorySlot(category: breakfastCat, customName: 'Breakfast\nEssentials'));
-    }
-
-    if (kitchenHeroes.isNotEmpty || kitchenCompacts.isNotEmpty) {
-      sections.add(
-        _BentoDepartment(
-          title: 'Grocery & Kitchen',
-          heroCategories: kitchenHeroes,
-          compactCategories: kitchenCompacts,
-        ),
-      );
-    }
-
-    // ── 2. SNACKS & DRINKS ──
-    final snacksHeroes = <_CategorySlot>[];
-    final drinksCat = findCategory(['beverage', 'drink', 'cold', 'juice', 'soda', 'soft drink']);
+    final drinksCat = findCat(ids: ['CAT-108'], keywords: ['beverages', 'beverage', 'drink', 'cold']);
     if (drinksCat != null) {
-      snacksHeroes.add(_CategorySlot(category: drinksCat, customName: 'Cold Drinks &\nJuices'));
+      compacts.add(_CategorySlot(category: drinksCat, customName: 'Cold Drinks\n& Juices'));
     }
-    final iceCreamCat = findCategory(['ice', 'dessert', 'ice-cream', 'frozen']);
+    final iceCreamCat = findCat(ids: ['CAT-105'], keywords: ['ice-cream', 'ice cream', 'dessert']);
     if (iceCreamCat != null) {
-      snacksHeroes.add(_CategorySlot(category: iceCreamCat, customName: 'Ice Creams &\nMore'));
+      compacts.add(_CategorySlot(category: iceCreamCat, customName: 'Ice Creams\n& More'));
     }
 
-    final snacksCompacts = <_CategorySlot>[];
-    final teaCat = findCategory(['tea', 'coffee', 'chai']);
+    // Row 3: Tea, Sweets & Snacks
+    final teaCat = findCat(ids: ['SUB-113-05'], keywords: ['tea-coffee-salt', 'tea', 'coffee', 'chai']);
     if (teaCat != null) {
-      snacksCompacts.add(_CategorySlot(category: teaCat, customName: 'Tea, Coffee\n& More'));
+      compacts.add(_CategorySlot(category: teaCat, customName: 'Tea, Coffee\n& More'));
     }
-    final chocoCat = findCategory(['choco', 'sweet', 'cake', 'candy', 'toffee', 'mithai']);
+    final chocoCat = findCat(ids: ['SUB-115-03'], keywords: ['chocolates-sweets', 'chocolate', 'choco', 'sweet']);
     if (chocoCat != null) {
-      snacksCompacts.add(_CategorySlot(category: chocoCat, customName: 'Chocolates\n& Sweets'));
+      compacts.add(_CategorySlot(category: chocoCat, customName: 'Chocolates\n& Sweets'));
     }
-    final munchiesCat = findCategory(['snack', 'munch', 'namkeen', 'chips', 'bhuj']);
-    if (munchiesCat != null) {
-      snacksCompacts.add(_CategorySlot(category: munchiesCat, customName: 'Munchies &\nChips'));
+    final namkeenCat = findCat(ids: ['SUB-SUB-115-01-02'], keywords: ['namkeen', 'munch', 'snack', 'chips']);
+    if (namkeenCat != null) {
+      compacts.add(_CategorySlot(category: namkeenCat, customName: 'Munchies &\nNamkeen'));
     }
-    final biscuitCat = findCategory(['bakery', 'biscuit', 'cookie', 'rusk']);
-    if (biscuitCat != null) {
-      snacksCompacts.add(_CategorySlot(category: biscuitCat, customName: 'Biscuits &\nCookies'));
+    final cookieCat = findCat(ids: ['SUB-SUB-115-01-01', 'SUB-115-01'], keywords: ['cookies', 'biscuit', 'bakery']);
+    if (cookieCat != null) {
+      compacts.add(_CategorySlot(category: cookieCat, customName: 'Biscuits &\nCookies'));
     }
+    markUsed(['CAT-115', 'SUB-115-01', 'SUB-115-04', 'CAT-113']);
 
-    if (snacksHeroes.isNotEmpty || snacksCompacts.isNotEmpty) {
-      sections.add(
-        _BentoDepartment(
-          title: 'Snacks & Drinks',
-          heroCategories: snacksHeroes,
-          compactCategories: snacksCompacts,
-        ),
-      );
-    }
-
-    // ── 3. HOUSEHOLD & PERSONAL CARE ──
-    // First, explicitly match known household/care categories
-    final householdCompacts = <_CategorySlot>[];
-
-    final laundryCat = findCategory(['laundry', 'detergent', 'wash', 'fabric']);
+    // Row 4: Home Essentials & Personal Care
+    final laundryCat = findCat(ids: ['SUB-107-03'], keywords: ['laundary-care', 'laundry', 'detergent']);
     if (laundryCat != null) {
-      householdCompacts.add(_CategorySlot(category: laundryCat, customName: 'Laundry\nCare'));
+      compacts.add(_CategorySlot(category: laundryCat, customName: 'Laundry\nCare'));
     }
-    final dishwashCat = findCategory(['dishwash', 'dish', 'utensil']);
+    final dishwashCat = findCat(ids: ['SUB-107-01'], keywords: ['dishwashing', 'dish']);
     if (dishwashCat != null) {
-      householdCompacts.add(_CategorySlot(category: dishwashCat, customName: 'Dishwashing'));
+      compacts.add(_CategorySlot(category: dishwashCat, customName: 'Dishwashing'));
     }
-    final cleanCat = findCategory(['clean', 'home need', 'household', 'mop', 'broom', 'pest', 'repellent', 'freshener']);
-    if (cleanCat != null) {
-      householdCompacts.add(_CategorySlot(category: cleanCat, customName: 'Home\nCleaning'));
-    }
-    final oralCat = findCategory(['oral', 'dental', 'tooth', 'mouth']);
+    final oralCat = findCat(ids: ['SUB-109-02'], keywords: ['oral-care-hygeine', 'oral', 'dental']);
     if (oralCat != null) {
-      householdCompacts.add(_CategorySlot(category: oralCat, customName: 'Oral Care\n& Hygiene'));
+      compacts.add(_CategorySlot(category: oralCat, customName: 'Oral Care &\nHygiene'));
     }
-    final hairCat = findCategory(['hair', 'shampoo', 'cosmetic']);
+    final hairCat = findCat(ids: ['SUB-109-01', 'CAT-109'], keywords: ['hair-care-cosmetics', 'personal-care']);
     if (hairCat != null) {
-      householdCompacts.add(_CategorySlot(category: hairCat, customName: 'Hair Care &\nCosmetics'));
+      compacts.add(_CategorySlot(category: hairCat, customName: 'Hair Care &\nCosmetics'));
     }
-    final skinCat = findCategory(['skin', 'body', 'lotion', 'cream', 'face', 'personal']);
-    if (skinCat != null) {
-      householdCompacts.add(_CategorySlot(category: skinCat, customName: 'Skin &\nBody Care'));
-    }
-    final babyCat = findCategory(['baby', 'diaper', 'infant', 'child']);
-    if (babyCat != null) {
-      householdCompacts.add(_CategorySlot(category: babyCat, customName: 'Baby\nCare'));
-    }
-    final sanitaryCat = findCategory(['sanitary', 'feminine', 'hygiene', 'pad']);
-    if (sanitaryCat != null) {
-      householdCompacts.add(_CategorySlot(category: sanitaryCat, customName: 'Hygiene\nEssentials'));
-    }
-    final petCat = findCategory(['pet', 'dog', 'cat food']);
-    if (petCat != null) {
-      householdCompacts.add(_CategorySlot(category: petCat, customName: 'Pet\nCare'));
-    }
-    final stationeryCat = findCategory(['stationery', 'office', 'notebook', 'pen']);
-    if (stationeryCat != null) {
-      householdCompacts.add(_CategorySlot(category: stationeryCat, customName: 'Stationery'));
-    }
-    final poojaCat = findCategory(['pooja', 'puja', 'agarbatti', 'diya', 'devotion']);
-    if (poojaCat != null) {
-      householdCompacts.add(_CategorySlot(category: poojaCat, customName: 'Pooja\nEssentials'));
-    }
+    markUsed(['CAT-107', 'CAT-109', 'SUB-107-02', 'SUB-107-04']);
 
-    // Catch any remaining unassigned categories and add them to Household
-    final remainingCategories = allCategories.where((c) => !usedIds.contains(c.id)).toList();
-    for (final cat in remainingCategories) {
-      householdCompacts.add(_CategorySlot(category: cat, customName: null));
-    }
-
-    if (householdCompacts.isNotEmpty) {
-      sections.add(
-        _BentoDepartment(
-          title: 'Household & Personal Care',
-          heroCategories: const [],
-          compactCategories: householdCompacts,
-        ),
-      );
-    }
-
-    return sections;
+    return _UnifiedBentoData(
+      heroes: heroes,
+      compacts: compacts,
+    );
   }
 }
 
@@ -623,14 +550,12 @@ class _CategorySlot {
   const _CategorySlot({required this.category, this.customName});
 }
 
-class _BentoDepartment {
-  final String title;
-  final List<_CategorySlot> heroCategories;
-  final List<_CategorySlot> compactCategories;
+class _UnifiedBentoData {
+  final List<_CategorySlot> heroes;
+  final List<_CategorySlot> compacts;
 
-  const _BentoDepartment({
-    required this.title,
-    required this.heroCategories,
-    required this.compactCategories,
+  const _UnifiedBentoData({
+    required this.heroes,
+    required this.compacts,
   });
 }
