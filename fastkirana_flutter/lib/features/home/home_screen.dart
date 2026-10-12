@@ -17,7 +17,6 @@ import 'widgets/home_footer.dart';
 import 'widgets/home_food_storefront.dart';
 import 'widgets/home_buy_again_shelf.dart';
 import 'widgets/home_top_categories_grid.dart';
-import 'widgets/trending_categories_section.dart';
 import 'widgets/home_product_sections.dart';
 import 'widgets/home_infinite_feed.dart';
 import 'widgets/home_top_header.dart';
@@ -42,7 +41,6 @@ import '../navratri/navratri_shopping_section.dart';
 import '../search/search_screen.dart';
 import '../products/product_detail_screen.dart';
 import '../../core/routes/page_transitions.dart';
-import '../../widgets/voice_search_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -333,7 +331,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   parent: BouncingScrollPhysics(),
                 ),
                 slivers: [
-                  SliverToBoxAdapter(
+                  const SliverToBoxAdapter(
                     child: HomeTopHeader(showSearch: true),
                   ),
 
@@ -470,8 +468,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                       ] else ...[
                         const SliverToBoxAdapter(
-                            child: TrendingCategoriesSection()),
-                        const SliverToBoxAdapter(
                             child: HomeTopCategoriesGrid()),
                     if (navratri != null) ...[
                       SliverToBoxAdapter(
@@ -552,7 +548,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'Partner kitchens are currently onboarding in ${hubStatus.hub.city}. You can enjoy ultra-fast 10-minute grocery delivery right now!',
+                                  'Partner kitchens are currently onboarding in ${hubStatus.hub.city}. You can enjoy ultra-fast grocery delivery right now!',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(
@@ -582,7 +578,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                             color: Colors.white, size: 16),
                                         const SizedBox(width: 8),
                                         Text(
-                                          'Shop Groceries in 10 Mins',
+                                          'Shop Groceries',
                                           style: GoogleFonts.inter(
                                             fontSize: Responsive.scaledFontSize(
                                                 context, 13),

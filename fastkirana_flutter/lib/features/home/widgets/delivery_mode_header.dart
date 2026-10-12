@@ -124,7 +124,7 @@ class DeliveryModeHeader extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    '10 MINS ⚡',
+                                    'FAST DELIVERY ⚡',
                                     style: AppDesignSystem.captionBold.copyWith(
                                       color: AppDesignSystem.primary,
                                       fontSize: 11,

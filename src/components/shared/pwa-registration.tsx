@@ -100,6 +100,7 @@ export function PWARegistration() {
   if (
     !showBanner ||
     !pathname ||
+    hasCartItems ||
     pathname.startsWith('/checkout') ||
     pathname.startsWith('/order/') ||
     pathname.startsWith('/picker') ||

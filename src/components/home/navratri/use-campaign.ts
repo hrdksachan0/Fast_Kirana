@@ -6,12 +6,16 @@ import { parseCampaignConfig, type CampaignConfig } from '@/lib/campaign-config'
 import { navratriData } from './data'
 
 export const bundledCampaign = parseCampaignConfig(navratriData)
+export const disabledCampaign: CampaignConfig = {
+  ...bundledCampaign,
+  enabled: false,
+}
 
 /** Fetch published configuration only; drafts stay inside the admin editor. */
 export function useCampaign(storeId?: string | null, active = true) {
   const [state, setState] = useState<{ storeId: string; data: CampaignConfig }>({
     storeId: '',
-    data: bundledCampaign,
+    data: disabledCampaign,
   })
   const key = storeId ?? ''
   useEffect(() => {
@@ -27,10 +31,10 @@ export function useCampaign(storeId?: string | null, active = true) {
         if (!response.ok) throw new Error('Campaign unavailable')
         const result = await response.json()
         const data =
-          result.campaign == null ? bundledCampaign : parseCampaignConfig(result.campaign)
+          result.campaign == null ? disabledCampaign : parseCampaignConfig(result.campaign)
         if (!controller.signal.aborted) setState({ storeId: key, data })
       } catch {
-        if (!controller.signal.aborted) setState({ storeId: key, data: bundledCampaign })
+        if (!controller.signal.aborted) setState({ storeId: key, data: disabledCampaign })
       }
     }
     void load()
@@ -45,5 +49,5 @@ export function useCampaign(storeId?: string | null, active = true) {
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [key, active])
-  return state.storeId === key ? state.data : bundledCampaign
+  return state.storeId === key ? state.data : disabledCampaign
 }

@@ -569,7 +569,9 @@ function ScopedFeaturedCategoriesManager({ categories, storeId, onUpload }: Prop
                       </select>
                     </label>
                   </div>
-                <label className={`${buttonClass} mt-3 cursor-pointer focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2`}>
+                  <label
+                    className={`${buttonClass} focus-within:ring-primary mt-3 cursor-pointer focus-within:ring-2 focus-within:ring-offset-2 focus-within:outline-none`}
+                  >
                     <Upload size={16} />
                     {uploading === item.categoryId ? 'Uploading…' : 'Upload artwork'}
                     <input

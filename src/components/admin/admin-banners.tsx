@@ -234,7 +234,7 @@ export const INSTAMART_PRO_DESIGNS = [
   {
     id: 'late-night-cravings',
     name: '🌙 Late Night Craving Remedies',
-    badge: 'MIDNIGHT 10-MINS',
+    badge: 'MIDNIGHT EXPRESS',
     title: 'Late Night Craving Remedies 🌙',
     description: 'Chips, Instant Noodles, Chocolates & Beverages under ₹49!',
     code: 'NIGHT49',
@@ -248,7 +248,7 @@ export const INSTAMART_PRO_DESIGNS = [
     name: '⚡ Instant Kitchen Pantry',
     badge: 'DAILY ESSENTIALS',
     title: 'Instant Kitchen Pantry & Essentials',
-    description: 'Milk, Bread, Eggs, Butter, Spices & Cooking Pastes delivered in 10 mins.',
+    description: 'Milk, Bread, Eggs, Butter, Spices & Cooking Pastes delivered fast.',
     code: 'FAST10',
     imageUrl: '/banners/banner-instant-5.png',
     linkUrl: '/category/dairy-breakfast',
@@ -346,7 +346,7 @@ export const MULTI_CARD_PRESETS = [
     imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&q=80',
     hasWireframeGrid: true,
     cashbackTitle: 'FLAT 35% OFF',
-    cashbackSubtitle: '+ 10-Min Morning Delivery in Ghatampur',
+    cashbackSubtitle: '+ Express Morning Delivery in Ghatampur',
     ctaText: 'SHOP FRESH',
     ctaUrl: '/category/fruits-vegetables',
     ctaBgColorHex: '#10B981',
@@ -363,7 +363,7 @@ export const MULTI_CARD_PRESETS = [
     cardType: 'bento_grid',
     title: 'HOUSEHOLD STAPLES',
     description: 'Dairy Milk, Farm Eggs, Atta & Cooking Oils',
-    eyebrowTag: '⚡ 10-MIN EXPRESS PANTRY',
+    eyebrowTag: '⚡ EXPRESS PANTRY',
     gridImages: [
       'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&q=80',
       'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80',
@@ -1932,7 +1932,7 @@ export function AdminBanners({
                 
                 {/* App Header simulation */}
                 <div className="flex items-center justify-between text-white text-[10px] px-1 font-bold">
-                  <span>⚡ 10 Mins • Ghatampur</span>
+                  <span>⚡ Fast Delivery • Ghatampur</span>
                   <span className={`text-[8px] px-1.5 py-0.5 rounded font-mono uppercase font-black ${
                     type === 'food' || type === 'cafe'
                       ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'

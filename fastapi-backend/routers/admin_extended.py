@@ -3073,7 +3073,7 @@ Return ONLY a valid JSON object with these EXACT keys:
             fallback_title = "MUNCHIES & SODAS"
         else:
             fallback_title = f"{cat_upper} STAPLES"
-        fallback_sub = "Handpicked daily harvest delivered in 10 mins"
+        fallback_sub = "Handpicked daily harvest delivered fast"
 
     slug = re.sub(r'[^a-z0-9]+', '-', category_name.lower())
 

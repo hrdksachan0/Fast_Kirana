@@ -360,7 +360,7 @@ export function Navbar() {
 
             {/* Bottom Row: Full-width Search Trigger */}
             {!isStorefrontPage && (
-              pathname === '/' ? <NavratriSearch data={campaign} onSearch={() => setSearchOpen(true)} /> :
+              pathname === '/' && campaign.enabled ? <NavratriSearch data={campaign} onSearch={() => setSearchOpen(true)} /> :
               <div
                 onClick={() => setSearchOpen(true)}
                 className="w-full relative cursor-pointer group mt-0.5"
@@ -407,7 +407,7 @@ export function Navbar() {
             </div>
 
             {/* Center: Search bar Trigger */}
-            {pathname === '/' ? (
+            {pathname === '/' && campaign.enabled ? (
               <div className="flex-1 max-w-xl"><NavratriSearch data={campaign} onSearch={() => setSearchOpen(true)} /></div>
             ) : (
             <div

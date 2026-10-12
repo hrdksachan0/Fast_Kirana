@@ -1,15 +1,15 @@
 # Flutter featured categories
 
-The home screen now has a short, editable category rail above Explore Categories. It uses existing category photos on flat pastel surfaces, readable two-line names, a 48px View all target and a small press response. Reduced motion disables the press transition and category route animation. Hardcoded order ranks, LIVE badges, delivery times, prices and offers have been removed from this rail.
+The home screen has a short, editable category rail above Explore Categories. It uses existing category photos on flat pastel surfaces, Plus Jakarta Sans, readable two-line names, a 48px View all target and a small press response. Tapping a tile opens its actual category products screen; View all selects the full Categories tab. Tile dimensions grow with text scaling, and large text places View all beneath the heading. Reduced motion disables the press transition and category route animation. Hardcoded order ranks, LIVE badges, delivery times, prices and offers have been removed from this rail.
 
 ## Admin workflow
 
 Open **Admin → Products & Inventory → Categories → Featured categories**. Choose the store before editing, then save before switching stores.
 
 - Edit the heading and show/hide the whole section.
-- Select up to six existing grocery parent categories and move them up/down.
+- Select up to six existing grocery parent categories, move them up/down, and show/hide individual entries.
 - Change a display name without changing its catalogue destination.
-- Upload artwork or use an HTTPS URL/absolute public image path. Choose Fill for photos and Fit for cutouts.
+- Upload PNG, JPG, WebP, AVIF or SVG artwork up to 5 MB, or use an HTTPS URL/absolute public image path. Leave the image blank to use category artwork. Choose Fill for photos and Fit for cutouts.
 - Choose a pastel background and one optional editorial badge: Featured, Seasonal or Everyday.
 - Preview the layout before saving. Empty and unavailable categories are omitted by the app.
 
@@ -17,17 +17,17 @@ The editor refreshes category metadata for the selected store and prevents savin
 
 ## Data and behaviour
 
-Existing `StoreSetting` storage holds a JSON string under `featured_categories`, or `store:<storeId>:featured_categories` for a store override. No migration is required. Global settings are inherited until a store override is saved. Missing/malformed config falls back to up to six grocery roots in catalogue order. A saved empty selection, all hidden items or a disabled section stays hidden.
+Existing `StoreSetting` storage holds a JSON string under `featured_categories`, or `store:<storeId>:featured_categories` for a store override. No migration is required. Global settings are inherited until a store override is saved. Missing/malformed config falls back to up to six eligible grocery roots sorted by catalogue sort order, then name and ID. A saved empty selection, all hidden items or a disabled section stays hidden.
 
 Both Next and FastAPI expose verified-admin GET/PUT `/api/admin/featured-categories`. Writes validate image paths, unique IDs, a six-item limit and real grocery parent references in one batched query. Assigned admins stay within their store. Browser saves use the same-origin Next route; API clients use a verified Bearer token. Compatibility identity headers do not authorize these endpoints.
 
-Flutter reads the config from the existing store-scoped settings feed, refreshes it through Home's existing polling and on app resume, and waits for settings during a store change. Save invalidates existing settings caches. Deploy the web/admin and backend changes, then release the Flutter app to deliver this feature to customers.
+Flutter reads the config from the existing store-scoped settings feed, refreshes it through Home's existing 20-second polling and on app resume, and waits for settings during a store change. Save invalidates existing settings caches. Deploy the web/admin and backend changes, then release the Flutter app to deliver this feature to customers.
 
-This is manual editorial curation. Automatic ranking from orders, pricing, campaign schedules and experiments are future scope. No production settings were written during local validation.
+This is manual editorial curation. Automatic ranking from orders, pricing, campaign schedules and experiments are future scope. No production settings were written during local validation, and this task did not publish, deploy or generate an APK.
 
 ## Local verification
 
-Validation covers API permissions, store inheritance/isolation, invalid artwork and unsupported badges; native category identity/navigation, empty settings, reduced motion and 320/390/672px layouts including 2× text; and real admin editor upload, reorder, save, reload, failure recovery and visibility controls using isolated browser fixtures.
+Validation covers API permissions, store inheritance/isolation, invalid artwork and unsupported badges; native category identity/navigation, empty settings, reduced motion and 320/390/672px layouts including 2× text; and real admin editor upload, reorder, save, reload, failure recovery and visibility controls using isolated browser fixtures. Browser coverage includes placeholder contrast of at least 4.5:1 and visible keyboard focus on artwork upload.
 
 Captures are saved in `artifacts/featured-categories/`. They show the actual Flutter widget and admin component with synthetic catalogue entries and the project's existing category photos.
 

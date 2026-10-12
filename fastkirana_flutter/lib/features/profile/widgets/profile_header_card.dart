@@ -119,7 +119,7 @@ class ProfileHeaderCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Log in for 10-min delivery & live tracking',
+                      'Log in for fast delivery & live tracking',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w500,

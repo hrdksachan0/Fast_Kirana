@@ -144,7 +144,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <h4 className="text-[11.5px] font-bold mb-4.5 text-zinc-200 uppercase tracking-widest select-none">Download App</h4>
             <p className="text-xs text-zinc-500 mb-3.5 leading-relaxed">
-              Experience ultra-fast 10-minute grocery & food deliveries with live tracking on our mobile app.
+              Experience ultra-fast grocery & food deliveries with live tracking on our mobile app.
             </p>
             <div className="flex flex-col sm:flex-row md:flex-col gap-2.5">
               <a

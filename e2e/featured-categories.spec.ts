@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { loadEnvConfig } from '@next/env'
 import { encode } from 'next-auth/jwt'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import {
   featuredCategoriesSchema,
   type FeaturedCategoriesConfig,
@@ -177,6 +177,23 @@ test.describe('Flutter featured category admin editor', () => {
       await page.setViewportSize(viewport)
       const { editor, writes } = await prepare(page)
       await expect(editor.getByRole('button', { name: 'Save categories' })).toBeEnabled()
+      const contrast = await editor
+        .getByLabel('Display name 1', { exact: true })
+        .evaluate((input) => {
+          const colour = getComputedStyle(input, '::placeholder')
+            .color.match(/[\d.]+/g)!
+            .slice(0, 3)
+            .map(Number)
+          const channels = colour.map((value) => {
+            const normalized = value / 255
+            return normalized <= 0.04045
+              ? normalized / 12.92
+              : ((normalized + 0.055) / 1.055) ** 2.4
+          })
+          return 1.05 / (0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2] + 0.05)
+        })
+      expect(contrast).toBeGreaterThanOrEqual(4.5)
+      const uploadInput = editor.getByLabel('Upload artwork 1', { exact: true })
       await editor.getByLabel('Section heading').fill('Your everyday picks')
       await editor.getByLabel('Display name 1', { exact: true }).fill('Movie night')
       await editor.getByLabel('Badge 1', { exact: true }).selectOption('Seasonal')
@@ -215,6 +232,37 @@ test.describe('Flutter featured category admin editor', () => {
       expect(await editor.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
         true
       )
+      await uploadInput.evaluate((input) =>
+        input.closest('label')!.scrollIntoView({ block: 'center' })
+      )
+      await uploadInput.focus()
+      await expect(uploadInput).toBeFocused()
+      // The incumbent theme animates box-shadow for 350ms. Inspect the settled focus ring.
+      await expect
+        .poll(() => uploadInput.evaluate((input) => input.closest('label')!.getAnimations().length))
+        .toBe(0)
+      const focusState = await uploadInput.evaluate((input) => {
+        const label = input.closest('label')!,
+          style = getComputedStyle(label)
+        return {
+          focused: document.activeElement === input,
+          within: label.matches(':focus-within'),
+          shadow: style.boxShadow,
+          ringColor: style.getPropertyValue('--tw-ring-color'),
+          ringShadow: style.getPropertyValue('--tw-ring-shadow'),
+        }
+      })
+      expect(focusState.focused).toBe(true)
+      expect(focusState.within).toBe(true)
+      expect(focusState.shadow).not.toBe('none')
+      expect(focusState.shadow).toContain('4px')
+      if (viewport.name === 'desktop') {
+        writeFileSync(
+          'artifacts/featured-categories/upload-focus-state.json',
+          JSON.stringify(focusState, null, 2)
+        )
+        await page.screenshot({ path: 'artifacts/featured-categories/editor-upload-focus.png' })
+      }
     })
   }
   test('load failure cannot overwrite configuration; retry recovers', async ({ page }) => {

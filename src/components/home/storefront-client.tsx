@@ -296,7 +296,7 @@ export function StorefrontClient({
   }
 
   return (
-    <div className="flex flex-col gap-3 md:gap-5 relative pb-12">
+    <div className="flex flex-col gap-2 md:gap-4 relative pb-12">
       {/* Floating Online Transition Alert */}
       <AnimatePresence>
         {onlineAlert && (
@@ -324,10 +324,10 @@ export function StorefrontClient({
       {/* Dynamic Celebration Floating Emojis */}
       <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 
-      {/* Clean & Spacious Top Store Mode Switcher */}
-      <div className="w-full flex items-center justify-center pt-3 sm:pt-4 pb-2 mt-1 sm:mt-2 px-4 pointer-events-auto">
+      {/* Compact Top Store Mode Switcher */}
+      <div className="w-full flex items-center justify-center pt-1 sm:pt-2 pb-1.5 px-4 pointer-events-auto">
         <div 
-          className="relative flex items-center w-full max-w-[420px] h-[58px] sm:h-[64px] p-2 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_14px_38px_-8px_rgba(0,0,0,0.18),0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] border-2 border-zinc-200/90 dark:border-zinc-800/90" 
+          className="relative flex items-center w-full max-w-[420px] h-[54px] sm:h-[60px] p-1.5 sm:p-2 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_10px_30px_-6px_rgba(0,0,0,0.14),0_3px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] border-2 border-zinc-200/90 dark:border-zinc-800/90" 
           role="tablist" 
           aria-label="Store mode"
         >

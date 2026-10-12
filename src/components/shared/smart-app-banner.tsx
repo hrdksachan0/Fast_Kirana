@@ -129,7 +129,7 @@ export function SmartAppBanner() {
                 ⚡ FastKirana
               </span>
               <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                <Sparkles size={8} /> 10 Mins
+                <Sparkles size={8} /> Fast Delivery
               </span>
             </div>
             <p className="text-[10px] font-medium text-zinc-400 truncate mt-0.5 leading-tight">

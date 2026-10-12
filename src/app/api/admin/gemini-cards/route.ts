@@ -200,7 +200,7 @@ Return ONLY a valid JSON object with these EXACT keys:
 
     const fallbackSubtitle = isFood
       ? 'Hot, fresh & delivered piping hot in 15 mins'
-      : 'Handpicked daily harvest delivered in 10 mins'
+      : 'Handpicked daily harvest delivered fast'
 
     return NextResponse.json({
       success: true,
