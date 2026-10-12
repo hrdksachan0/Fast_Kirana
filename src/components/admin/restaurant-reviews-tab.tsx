@@ -202,19 +202,28 @@ export function RestaurantReviewsTab({ restaurantId }: RestaurantReviewsTabProps
               className="bg-card border border-border/70 rounded-2xl p-4 space-y-2 shadow-2xs hover:border-border transition-colors"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  {rev.user?.image ? (
-                    <img src={rev.user.image} alt="User" className="h-8 w-8 rounded-full object-cover border border-border/50" />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-secondary text-text-primary flex items-center justify-center text-xs font-black border border-border/50">
-                      {(rev.user?.name || 'U').slice(0, 1).toUpperCase()}
+                {(() => {
+                  const rawName = rev.user?.name || ''
+                  const displayName = (!rawName || rawName.includes('Guest Shopper') || rawName.toLowerCase().startsWith('guest'))
+                    ? 'Verified Customer'
+                    : rawName
+
+                  return (
+                    <div className="flex items-center gap-2.5">
+                      {rev.user?.image ? (
+                        <img src={rev.user.image} alt={displayName} className="h-8 w-8 rounded-full object-cover border border-border/50" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-secondary text-text-primary flex items-center justify-center text-xs font-black border border-border/50">
+                          {displayName.slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <h4 className="text-xs font-black text-text-primary">{displayName}</h4>
+                        <p className="text-[9px] font-bold text-text-muted">{formatDate(rev.createdAt, 'dd MMM yyyy, hh:mm a')}</p>
+                      </div>
                     </div>
-                  )}
-                  <div>
-                    <h4 className="text-xs font-black text-text-primary">{rev.user?.name || 'Verified Customer'}</h4>
-                    <p className="text-[9px] font-bold text-text-muted">{formatDate(rev.createdAt, 'dd MMM yyyy, hh:mm a')}</p>
-                  </div>
-                </div>
+                  )
+                })()}
 
                 <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full font-black text-xs">
                   <span>{rev.rating}</span>

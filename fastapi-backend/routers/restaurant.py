@@ -17,7 +17,7 @@ from database import get_db
 from models import (
     User, Order, OrderItem, Product, Category, Review, Role, OrderStatus, OrderType
 )
-from routers.auth import require_admin, require_auth
+from routers.auth import require_admin, require_auth, get_current_user
 from routers.websockets import manager
 
 router = APIRouter(prefix="/api", tags=["Restaurant & Cafe"])
@@ -121,13 +121,27 @@ async def get_restaurant_reviews(
     prod_res = await db.execute(prod_stmt)
     prod_reviews = prod_res.scalars().all()
 
+    def format_clean_user(u):
+        if not u:
+            return {"id": "verified", "name": "Verified Customer", "image": None}
+        raw_name = (u.name or "").strip()
+        if not raw_name or "guest shopper" in raw_name.lower() or raw_name.lower().startswith("guest"):
+            clean_name = "Verified Customer"
+        else:
+            clean_name = raw_name
+        return {
+            "id": u.id,
+            "name": clean_name,
+            "image": u.image
+        }
+
     all_reviews_list = []
     for r in direct_reviews:
         all_reviews_list.append({
             "id": r.id,
             "rating": r.rating,
             "comment": r.comment,
-            "user": {"id": r.user.id, "name": r.user.name, "image": r.user.image} if r.user else None,
+            "user": format_clean_user(r.user),
             "createdAt": r.createdAt.isoformat() if r.createdAt else None
         })
     for r in prod_reviews:
@@ -135,7 +149,7 @@ async def get_restaurant_reviews(
             "id": r.id,
             "rating": r.rating,
             "comment": r.comment,
-            "user": {"id": r.user.id, "name": r.user.name, "image": r.user.image} if r.user else None,
+            "user": format_clean_user(r.user),
             "createdAt": r.createdAt.isoformat() if r.createdAt else None
         })
 
@@ -155,6 +169,7 @@ async def get_restaurant_reviews(
 async def post_restaurant_review(
     restaurant_id: str,
     payload: Dict[str, Any] = Body(...),
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Submit a review for a restaurant."""
@@ -172,11 +187,43 @@ async def post_restaurant_review(
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
-    # Resolve or create a default user for guest reviews if not logged in
-    user_stmt = select(User).limit(1)
-    user_res = await db.execute(user_stmt)
-    first_user = user_res.scalars().first()
-    user_id = payload.get("userId") or (first_user.id if first_user else str(uuid.uuid4()))
+    # 1. Determine user identity & reviewer name
+    auth_user_id = (current_user.get("id") or current_user.get("userId")) if current_user else None
+    passed_user_id = payload.get("userId") or auth_user_id
+
+    explicit_name = str(payload.get("userName") or payload.get("reviewerName") or payload.get("name") or "").strip()
+    auth_name = str(current_user.get("name") or "").strip() if current_user else ""
+
+    # Sanitize out any "Guest Shopper" strings
+    if explicit_name and ("guest shopper" in explicit_name.lower() or explicit_name.lower().startswith("guest")):
+        explicit_name = ""
+    if auth_name and ("guest shopper" in auth_name.lower() or auth_name.lower().startswith("guest")):
+        auth_name = ""
+
+    chosen_name = explicit_name or auth_name
+
+    target_user = None
+    if passed_user_id:
+        u_res = await db.execute(select(User).where(User.id == passed_user_id))
+        target_user = u_res.scalars().first()
+
+    if target_user:
+        curr_name = (target_user.name or "").strip()
+        if chosen_name and (not curr_name or "guest shopper" in curr_name.lower() or curr_name.lower().startswith("guest")):
+            target_user.name = chosen_name
+        user_id = target_user.id
+    else:
+        # Create a dedicated user for this review so foreign keys work and attribution is clean
+        new_uid = passed_user_id or str(uuid.uuid4())
+        final_name = chosen_name or "Verified Customer"
+        new_user = User(
+            id=new_uid,
+            name=final_name,
+            role="USER",
+            createdAt=datetime.utcnow()
+        )
+        db.add(new_user)
+        user_id = new_uid
 
     new_review = RestaurantReview(
         id=str(uuid.uuid4()),
@@ -190,7 +237,6 @@ async def post_restaurant_review(
 
     # Update restaurant rating and count
     restaurant.reviewCount = (restaurant.reviewCount or 0) + 1
-    # Recalculate average
     new_avg = ((restaurant.rating or 4.5) * (restaurant.reviewCount - 1) + rating) / restaurant.reviewCount
     restaurant.rating = round(new_avg, 1)
 

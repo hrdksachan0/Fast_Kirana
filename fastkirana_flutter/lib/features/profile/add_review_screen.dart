@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../providers/restaurant_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../core/network/api_client.dart';
 
 class AddReviewScreen extends ConsumerStatefulWidget {
@@ -23,16 +24,42 @@ class AddReviewScreen extends ConsumerStatefulWidget {
 class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
   int _rating = 5;
   final _reviewController = TextEditingController();
+  final _nameController = TextEditingController();
   bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(authProvider).valueOrNull;
+      final existingName = user?.name?.trim() ?? '';
+      if (existingName.isNotEmpty &&
+          !existingName.toLowerCase().startsWith('guest') &&
+          !existingName.contains('Guest Shopper')) {
+        _nameController.text = existingName;
+      }
+    });
+  }
 
   @override
   void dispose() {
     _reviewController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
   Future<void> _submitReview() async {
     final comment = _reviewController.text.trim();
+    final user = ref.read(authProvider).valueOrNull;
+    final enteredName = _nameController.text.trim();
+    final fallbackName = (user?.name != null &&
+            user!.name!.isNotEmpty &&
+            !user.name!.toLowerCase().startsWith('guest') &&
+            !user.name!.contains('Guest Shopper'))
+        ? user.name!
+        : 'Verified Customer';
+    final reviewerName = enteredName.isNotEmpty ? enteredName : fallbackName;
+
     setState(() => _isSubmitting = true);
     HapticFeedback.heavyImpact();
 
@@ -40,10 +67,16 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
       final dio = ref.read(dioProvider);
       final targetId = widget.restaurantId ?? 'as-restaurant';
 
-      await dio.post('/api/restaurants/$targetId/reviews', data: {
+      final payload = <String, dynamic>{
         'rating': _rating,
         'comment': comment.isNotEmpty ? comment : 'Delicious food and fast delivery!',
-      });
+        'userName': reviewerName,
+      };
+      if (user?.id != null && user!.id.isNotEmpty) {
+        payload['userId'] = user.id;
+      }
+
+      await dio.post('/api/restaurants/$targetId/reviews', data: payload);
 
       // Instantly refresh reviews and restaurant stats across the entire app
       ref.invalidate(restaurantReviewsProvider(targetId));
@@ -155,6 +188,57 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
                   Text(
                     ['⭐ Needs Improvement', '⭐⭐ Fair', '⭐⭐⭐ Good', '⭐⭐⭐⭐ Very Good', '⭐⭐⭐⭐⭐ Outstanding Experience'][_rating - 1],
                     style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13.5), fontWeight: FontWeight.w700, color: AppDesignSystem.primary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Reviewer Name Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppDesignSystem.borderLight),
+                boxShadow: AppDesignSystem.shadowSm,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Your Name',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 13),
+                      fontWeight: FontWeight.w800,
+                      color: AppDesignSystem.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _nameController,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 13),
+                      color: AppDesignSystem.slate900,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Enter your name (e.g. Rahul Sharma)',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 12.5),
+                        color: AppDesignSystem.textMuted,
+                      ),
+                      filled: true,
+                      fillColor: AppDesignSystem.slate50,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppDesignSystem.slate200),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppDesignSystem.slate200),
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -149,19 +149,25 @@ export function ReviewsTab({
                   </td>
                 </tr>
               ) : (
-                filteredReviews.map((r: any) => (
-                  <tr key={r.id} className="hover:bg-muted/30">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-600 font-bold text-[10px]">
-                          {r.user.name?.charAt(0) || 'U'}
+                filteredReviews.map((r: any) => {
+                  const rawName = r.user?.name || ''
+                  const displayName = (!rawName || rawName.includes('Guest Shopper') || rawName.toLowerCase().startsWith('guest'))
+                    ? 'Verified Customer'
+                    : rawName
+
+                  return (
+                    <tr key={r.id} className="hover:bg-muted/30">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="h-7 w-7 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-600 font-bold text-[10px]">
+                            {displayName.charAt(0) || 'V'}
+                          </div>
+                          <div>
+                            <div className="font-bold text-text-primary text-[11px]">{displayName}</div>
+                            <div className="text-[9px] text-text-muted font-normal">{formatDisplayEmail(r.user?.email)}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-bold text-text-primary text-[11px]">{r.user.name || 'Anonymous'}</div>
-                          <div className="text-[9px] text-text-muted font-normal">{formatDisplayEmail(r.user.email)}</div>
-                        </div>
-                      </div>
-                    </td>
+                      </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span className="text-lg h-7 w-7 bg-muted/60 flex items-center justify-center rounded-lg border text-[11px]">
@@ -205,7 +211,8 @@ export function ReviewsTab({
                       </div>
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>

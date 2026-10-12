@@ -187,7 +187,10 @@ class CafeReviewsTab extends StatelessWidget {
             final rating = review['rating'] ?? 5;
             final comment = review['comment'] ?? '';
             final createdAt = review['createdAt'] ?? '';
-            final userName = user?['name'] ?? 'Customer';
+            final rawName = user?['name']?.toString() ?? '';
+            final userName = (rawName.isEmpty || rawName.contains('Guest Shopper') || rawName.toLowerCase().startsWith('guest'))
+                ? 'Verified Customer'
+                : rawName;
 
             return Container(
               padding: const EdgeInsets.all(14),

@@ -2,6 +2,7 @@
 import { apiUrl } from '@/lib/api-url';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -187,6 +188,7 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
   const isClickingTabRef = useRef(false)
   const categoryTabsRef = useRef<HTMLDivElement>(null)
   const { items, getTotalItems, getSubtotal } = useCart()
+  const { data: session } = useSession()
 
   // Reviews states
   const [activeSubTab, setActiveSubTab] = useState<'menu' | 'reviews'>('menu')
@@ -194,7 +196,14 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
   const [reviewsLoading, setReviewsLoading] = useState(true)
   const [newRating, setNewRating] = useState(5)
   const [newComment, setNewComment] = useState('')
+  const [reviewerName, setReviewerName] = useState('')
   const [isSubmittingReview, setIsSubmittingReview] = useState(false)
+
+  useEffect(() => {
+    if (session?.user?.name && !session.user.name.includes('Guest')) {
+      setReviewerName(session.user.name)
+    }
+  }, [session?.user?.name])
 
   const fetchReviews = async () => {
     try {
@@ -221,10 +230,16 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
     setIsSubmittingReview(true)
     try {
       const targetIdentifier = restaurant.id || restaurant.slug
+      const finalName = reviewerName.trim() || session?.user?.name || ''
       const res = await fetch(`${apiUrl()}/api/restaurants/${targetIdentifier}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating: newRating, comment: newComment }),
+        body: JSON.stringify({
+          rating: newRating,
+          comment: newComment,
+          userId: session?.user?.id,
+          userName: finalName,
+        }),
       })
       const data = await res.json()
       if (res.ok) {
@@ -926,7 +941,14 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
                 ))}
               </div>
 
-              <div className="relative">
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Your Name (e.g. Rahul Sharma)"
+                  value={reviewerName}
+                  onChange={(e) => setReviewerName(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs font-semibold text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                />
                 <textarea
                   placeholder="Tell us about your experience (food quality, packaging, delivery)..."
                   value={newComment}
@@ -960,38 +982,45 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
               </div>
             ) : (
               <div className="space-y-3">
-                {reviews.map((rev) => (
-                  <div key={rev.id} className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl p-4 space-y-2.5 shadow-xs">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {rev.user?.image ? (
-                          <div className="w-8 h-8 rounded-full overflow-hidden relative">
-                            <Image src={rev.user.image} alt={rev.user?.name || 'User'} fill className="object-cover" />
+                {reviews.map((rev) => {
+                  const rawName = rev.user?.name || ''
+                  const displayName = (!rawName || rawName.includes('Guest Shopper') || rawName.toLowerCase().startsWith('guest'))
+                    ? 'Verified Customer'
+                    : rawName
+
+                  return (
+                    <div key={rev.id} className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl p-4 space-y-2.5 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {rev.user?.image ? (
+                            <div className="w-8 h-8 rounded-full overflow-hidden relative">
+                              <Image src={rev.user.image} alt={displayName} fill className="object-cover" />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center text-xs font-black">
+                              {displayName.slice(0, 1).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs font-black text-zinc-900 dark:text-zinc-100">{displayName}</p>
+                            <p className="text-[9px] font-bold text-zinc-400">{formatDate(rev.createdAt, 'dd MMM yyyy')}</p>
                           </div>
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center text-xs font-black">
-                            {(rev.user?.name || 'U').slice(0, 1).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-xs font-black text-zinc-900 dark:text-zinc-100">{rev.user?.name || 'Anonymous'}</p>
-                          <p className="text-[9px] font-bold text-zinc-400">{formatDate(rev.createdAt, 'dd MMM yyyy')}</p>
+                        </div>
+
+                        <div className="flex items-center gap-0.5 text-yellow-400 bg-yellow-400/5 dark:bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/10">
+                          <Star size={11} className="fill-current" />
+                          <span className="text-[10px] font-black">{rev.rating}</span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-0.5 text-yellow-400 bg-yellow-400/5 dark:bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/10">
-                        <Star size={11} className="fill-current" />
-                        <span className="text-[10px] font-black">{rev.rating}</span>
-                      </div>
+                      {rev.comment && (
+                        <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300 leading-relaxed pl-1">
+                          {rev.comment}
+                        </p>
+                      )}
                     </div>
-
-                    {rev.comment && (
-                      <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300 leading-relaxed pl-1">
-                        {rev.comment}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

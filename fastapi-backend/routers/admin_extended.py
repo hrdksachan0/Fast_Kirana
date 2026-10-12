@@ -1539,10 +1539,18 @@ async def admin_get_reviews(
     stmt = select(Review).options(sl(Review.user), sl(Review.product)).order_by(desc(Review.createdAt))
     result = await db.execute(stmt)
     reviews = result.scalars().all()
+    def _clean_reviewer_name(u):
+        if not u:
+            return "Verified Customer"
+        n = (u.name or "").strip()
+        if not n or "guest shopper" in n.lower() or n.lower().startswith("guest"):
+            return "Verified Customer"
+        return n
+
     return {"reviews": [
         {"id": r.id, "rating": r.rating, "comment": r.comment,
          "userId": r.userId, "productId": r.productId,
-         "user": {"id": r.user.id, "name": r.user.name} if r.user else None,
+         "user": {"id": r.user.id, "name": _clean_reviewer_name(r.user)} if r.user else {"id": "verified", "name": "Verified Customer"},
          "product": {"id": r.product.id, "name": r.product.name} if r.product else None,
          "createdAt": r.createdAt.isoformat() if r.createdAt else None}
         for r in reviews
@@ -3848,6 +3856,16 @@ async def get_admin_reviews(
     r_reviews = (await db.execute(r_stmt)).scalars().all()
 
     all_reviews = []
+    def _clean_user_dict(u):
+        if not u:
+            return {"id": "verified", "name": "Verified Customer", "email": None}
+        n = (u.name or "").strip()
+        if not n or "guest shopper" in n.lower() or n.lower().startswith("guest"):
+            clean_name = "Verified Customer"
+        else:
+            clean_name = n
+        return {"id": u.id, "name": clean_name, "email": u.email}
+
     for r in p_reviews:
         all_reviews.append({
             "id": r.id,
@@ -3856,7 +3874,7 @@ async def get_admin_reviews(
             "comment": r.comment,
             "createdAt": r.createdAt.isoformat() if r.createdAt else None,
             "type": "PRODUCT",
-            "user": {"id": r.user.id, "name": r.user.name, "email": r.user.email} if r.user else None,
+            "user": _clean_user_dict(r.user),
             "product": {"id": r.product.id, "name": r.product.name, "slug": r.product.slug, "imageUrl": r.product.imageUrl} if r.product else None
         })
 
@@ -3868,7 +3886,7 @@ async def get_admin_reviews(
             "comment": r.comment,
             "createdAt": r.createdAt.isoformat() if r.createdAt else None,
             "type": "RESTAURANT",
-            "user": {"id": r.user.id, "name": r.user.name, "email": r.user.email} if r.user else None,
+            "user": _clean_user_dict(r.user),
             "product": {
                 "id": r.restaurant.id if r.restaurant else "",
                 "name": f"Restaurant: {r.restaurant.name}" if r.restaurant else "Restaurant",
