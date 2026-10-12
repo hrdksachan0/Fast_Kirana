@@ -460,33 +460,33 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
     // ── 2. COMPACT PODS (16 Categories = 4 Clean Rows of 4) ──
     final compacts = <_CategorySlot>[];
 
-    // Row 1: Kitchen Staples
+    // Row 1: Cooking & Kitchen Staples
     final attaCat = findCat(ids: ['SUB-113-01'], keywords: ['atta-rice-sugar', 'atta', 'flour']);
     if (attaCat != null) {
       compacts.add(_CategorySlot(category: attaCat, customName: 'Atta, Rice\n& Sugar'));
     }
-    final oilCat = findCat(ids: ['SUB-113-02'], keywords: ['oils-ghee', 'oil', 'ghee']);
-    if (oilCat != null) {
-      compacts.add(_CategorySlot(category: oilCat, customName: 'Oils &\nGhee'));
-    }
     final dalCat = findCat(ids: ['SUB-113-03'], keywords: ['dals-pulses', 'dal', 'pulse']);
     if (dalCat != null) {
       compacts.add(_CategorySlot(category: dalCat, customName: 'Dals &\nPulses'));
+    }
+    final oilCat = findCat(ids: ['SUB-113-02'], keywords: ['oils-ghee', 'oil', 'ghee']);
+    if (oilCat != null) {
+      compacts.add(_CategorySlot(category: oilCat, customName: 'Oils &\nGhee'));
     }
     final masalaCat = findCat(ids: ['SUB-113-04'], keywords: ['spices-masala', 'masala', 'spice']);
     if (masalaCat != null) {
       compacts.add(_CategorySlot(category: masalaCat, customName: 'Spices &\nMasala'));
     }
 
-    // Row 2: Breakfast, Cooking & Refreshments
+    // Row 2: Daily Sips, Dry Fruits & Cold Treats
     final dryFruitCat = findCat(ids: ['SUB-114-02', 'CAT-114'], keywords: ['dry-fruits', 'dry fruit', 'nuts']);
     if (dryFruitCat != null) {
       compacts.add(_CategorySlot(category: dryFruitCat, customName: 'Dry Fruits\n& Nuts'));
     }
     markUsed(['CAT-114']);
-    final sauceCat = findCat(ids: ['SUB-104-01'], keywords: ['sauces-spreads', 'sauce', 'spread', 'ketchup']);
-    if (sauceCat != null) {
-      compacts.add(_CategorySlot(category: sauceCat, customName: 'Sauces &\nSpreads'));
+    final teaCat = findCat(ids: ['SUB-113-05'], keywords: ['tea-coffee-salt', 'tea', 'coffee', 'chai']);
+    if (teaCat != null) {
+      compacts.add(_CategorySlot(category: teaCat, customName: 'Tea, Coffee\n& More'));
     }
     final drinksCat = findCat(ids: ['CAT-108'], keywords: ['beverages', 'beverage', 'drink', 'cold']);
     if (drinksCat != null) {
@@ -497,10 +497,10 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
       compacts.add(_CategorySlot(category: iceCreamCat, customName: 'Ice Creams\n& More'));
     }
 
-    // Row 3: Tea, Sweets & Snacks
-    final teaCat = findCat(ids: ['SUB-113-05'], keywords: ['tea-coffee-salt', 'tea', 'coffee', 'chai']);
-    if (teaCat != null) {
-      compacts.add(_CategorySlot(category: teaCat, customName: 'Tea, Coffee\n& More'));
+    // Row 3: Snacks, Sweets & Bakery
+    final sauceCat = findCat(ids: ['SUB-104-01'], keywords: ['sauces-spreads', 'sauce', 'spread', 'ketchup']);
+    if (sauceCat != null) {
+      compacts.add(_CategorySlot(category: sauceCat, customName: 'Sauces &\nSpreads'));
     }
     final chocoCat = findCat(ids: ['SUB-115-03'], keywords: ['chocolates-sweets', 'chocolate', 'choco', 'sweet']);
     if (chocoCat != null) {
@@ -514,9 +514,9 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
     if (cookieCat != null) {
       compacts.add(_CategorySlot(category: cookieCat, customName: 'Biscuits &\nCookies'));
     }
-    markUsed(['CAT-115', 'SUB-115-01', 'SUB-115-04', 'CAT-113']);
+    markUsed(['CAT-115', 'SUB-115-01', 'SUB-115-04', 'CAT-113', 'CAT-104', 'SUB-104-02']);
 
-    // Row 4: Home Essentials & Personal Care
+    // Row 4: Home & Personal Care Essentials
     final laundryCat = findCat(ids: ['SUB-107-03'], keywords: ['laundary-care', 'laundry', 'detergent']);
     if (laundryCat != null) {
       compacts.add(_CategorySlot(category: laundryCat, customName: 'Laundry\nCare'));

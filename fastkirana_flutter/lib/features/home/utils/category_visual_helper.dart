@@ -148,25 +148,27 @@ class CategoryVisualHelper {
 
   static Widget buildAvatarImage(BuildContext context, Category cat, {BoxFit fit = BoxFit.contain}) {
     String imgUrl = (cat.imageUrl ?? '').trim();
-    final slug = cat.slug.toLowerCase().trim();
-    final name = cat.name.toLowerCase().trim();
 
-    // 1. Resolve relative URLs from FastKirana CDN
+    // 1. If relative URL from Supabase / live DB (e.g. /fruits_vegetables_category.png), resolve to live CDN
     if (imgUrl.isNotEmpty && imgUrl.startsWith('/')) {
       final cleanPath = imgUrl.replaceAll('.png', '.webp');
       imgUrl = 'https://www.fastkirana.in$cleanPath';
     }
 
-    // 2. Curated high-res CDN visuals for top heroes if relative or missing
-    if (slug.contains('ice') || slug.contains('dessert') || name.contains('ice cream')) {
-      imgUrl = 'https://www.fastkirana.in/ice_cream_category.webp';
-    } else if (slug == 'beverages' || slug == 'cold-drinks' || (slug.contains('beverage') && !imgUrl.startsWith('http'))) {
-      imgUrl = 'https://www.fastkirana.in/beverages_category.webp';
-    } else if ((slug == 'fruits-vegetables' || cat.id == 'CAT-101') && (imgUrl.isEmpty || !imgUrl.startsWith('http'))) {
-      imgUrl = 'https://www.fastkirana.in/fruits_vegetables_category.webp';
+    // 2. Special fallback only if imgUrl is completely empty or not a valid URL
+    if (imgUrl.isEmpty || !imgUrl.startsWith('http')) {
+      final slug = cat.slug.toLowerCase().trim();
+      final name = cat.name.toLowerCase().trim();
+      if (slug == 'ice-cream' || slug.contains('ice-cream') || name == 'ice cream' || name.contains('ice cream')) {
+        imgUrl = 'https://www.fastkirana.in/ice_cream_category.webp';
+      } else if (slug == 'beverages' || slug.contains('beverage') || name.contains('beverage') || name.contains('drink')) {
+        imgUrl = 'https://www.fastkirana.in/beverages_category.webp';
+      } else if (slug == 'fruits-vegetables' || slug.contains('fruit') || slug.contains('veg')) {
+        imgUrl = 'https://www.fastkirana.in/fruits_vegetables_category.webp';
+      }
     }
 
-    // 3. Load from Network (real Supabase or CDN image)
+    // 3. Load authentic linked image (from Supabase or FastKirana CDN)
     if (imgUrl.isNotEmpty && imgUrl.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: imgUrl,
