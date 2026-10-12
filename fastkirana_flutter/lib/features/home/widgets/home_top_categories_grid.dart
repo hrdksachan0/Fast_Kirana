@@ -20,10 +20,11 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      padding: const EdgeInsets.only(top: 10, bottom: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ─── 1. ELEVATED HEADER ───
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -35,29 +36,34 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                     Text(
                       'Explore Categories',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: Responsive.scaledFontSize(context, 16.5),
+                        fontSize: Responsive.scaledFontSize(context, 17),
                         fontWeight: FontWeight.w900,
-                        color: AppDesignSystem.textPrimary,
-                        letterSpacing: -0.3,
+                        color: const Color(0xFF0F172A),
+                        letterSpacing: -0.4,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(4),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFEF2F2), Color(0xFFFFE4E6)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFFECDD3), width: 0.8),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.bolt_rounded, size: 10, color: AppDesignSystem.primary),
+                          const Icon(Icons.bolt_rounded, size: 11, color: AppDesignSystem.primary),
+                          const SizedBox(width: 2),
                           Text(
                             'FAST',
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 8.5,
+                              fontSize: 9,
                               fontWeight: FontWeight.w800,
                               color: AppDesignSystem.primary,
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ],
@@ -65,16 +71,25 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                     ),
                   ],
                 ),
-                GestureDetector(
+                Bounceable(
+                  scaleFactor: 0.95,
                   onTap: () {
                     HapticFeedback.selectionClick();
                     ref.read(selectedTabProvider.notifier).state = 2; // Categories tab
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -87,7 +102,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                             color: AppDesignSystem.primary,
                           ),
                         ),
-                        const SizedBox(width: 2),
+                        const SizedBox(width: 3),
                         const Icon(Icons.arrow_forward_ios_rounded, size: 9, color: AppDesignSystem.primary),
                       ],
                     ),
@@ -96,7 +111,9 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+
+          // ─── 2. CATEGORIES 2-ROW HORIZONTAL SCROLL ───
           categoriesAsync.when(
             data: (categories) {
               final groceryCategories = categories.where((c) {
@@ -129,13 +146,13 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
               final numCols = (groceryCategories.length / 2).ceil();
 
               return SizedBox(
-                height: 200,
+                height: 214,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: numCols,
-                  separatorBuilder: (_, __) => const SizedBox(width: 9),
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
                   itemBuilder: (context, colIdx) {
                     final cat1 = groceryCategories[colIdx * 2];
                     final cat2 = (colIdx * 2 + 1 < groceryCategories.length)
@@ -150,7 +167,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                         if (cat2 != null)
                           _buildCategoryGridTile(context, cat2)
                         else
-                          const SizedBox(width: 72, height: 95.5),
+                          const SizedBox(width: 75, height: 102),
                       ],
                     );
                   },
@@ -158,38 +175,38 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
               );
             },
             loading: () => SizedBox(
-              height: 200,
+              height: 214,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: 5,
-                separatorBuilder: (_, __) => const SizedBox(width: 9),
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (_, __) => Shimmer.fromColors(
                   baseColor: AppDesignSystem.border,
                   highlightColor: AppDesignSystem.gray50,
                   child: Column(
                     children: [
                       Container(
-                        width: 66,
-                        height: 66,
+                        width: 68,
+                        height: 68,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 5),
                       Container(height: 10, width: 50, color: Colors.white),
                       const SizedBox(height: 16),
                       Container(
-                        width: 66,
-                        height: 66,
+                        width: 68,
+                        height: 68,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 5),
                       Container(height: 10, width: 50, color: Colors.white),
                     ],
                   ),
@@ -204,11 +221,11 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
   }
 
   Widget _buildCategoryGridTile(BuildContext context, Category cat) {
-    final bgTint = CategoryVisualHelper.getSoftColor(cat.slug, cat.name);
-    final borderTint = CategoryVisualHelper.getBorderColor(cat.slug, cat.name);
+    final gradientColors = CategoryVisualHelper.getGradientColors(cat.slug, cat.name);
+    final accentColor = CategoryVisualHelper.getAccentColor(cat.slug, cat.name);
 
     return Bounceable(
-      scaleFactor: 0.93,
+      scaleFactor: 0.95,
       onTap: () {
         HapticFeedback.lightImpact();
         Navigator.push(
@@ -217,52 +234,81 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
         );
       },
       child: SizedBox(
-        width: 72,
+        width: 75,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // ─── 3. PREMIUM SOFT POD (Zepto / Blinkit Glass-Pod Aesthetic) ───
             Container(
-              width: 66,
-              height: 66,
+              width: 68,
+              height: 68,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.white,
-                    bgTint,
-                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: gradientColors,
                 ),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: borderTint.withValues(alpha: 0.8),
-                  width: 1.0,
+                  color: Colors.white,
+                  width: 1.8,
                 ),
                 boxShadow: [
+                  // Ambient signature glow
                   BoxShadow(
-                    color: borderTint.withValues(alpha: 0.35),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2.5),
+                    color: accentColor.withValues(alpha: 0.22),
+                    blurRadius: 9,
+                    offset: const Offset(0, 3.5),
                   ),
+                  // Subtle edge definition
                   BoxShadow(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.04),
                     blurRadius: 3,
                     offset: const Offset(0, 1),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.all(5),
-              child: Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: CategoryVisualHelper.buildAvatarImage(context, cat),
-                ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Clean rounded category visual
+                  Padding(
+                    padding: const EdgeInsets.all(4.5),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: CategoryVisualHelper.buildAvatarImage(context, cat),
+                    ),
+                  ),
+
+                  // Tactile Glossy Sheen Highlight (Subtle Apple / Glassmorphic highlight)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.white.withValues(alpha: 0.45),
+                              Colors.white.withValues(alpha: 0.0),
+                              Colors.black.withValues(alpha: 0.03),
+                            ],
+                            stops: const [0.0, 0.55, 1.0],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 3.5),
+            const SizedBox(height: 5),
+
+            // ─── 4. CRISP LEGIBLE LABEL ───
             SizedBox(
-              width: 72,
-              height: 26,
+              width: 75,
+              height: 28,
               child: Center(
                 child: Text(
                   cat.name,
@@ -271,10 +317,10 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: Responsive.scaledFontSize(context, 10.5),
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF0F172A),
-                    height: 1.15,
-                    letterSpacing: -0.25,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1E293B),
+                    height: 1.18,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ),
