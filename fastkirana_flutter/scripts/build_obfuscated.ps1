@@ -28,7 +28,7 @@ try {
     }
 
     $args += @(
-        "--dart-define=API_BASE_URL=https://www.fastkirana.in",
+        "--dart-define=API_BASE_URL=https://api.fastkirana.in",
         "--dart-define=WEB_STOREFRONT_URL=https://fastkirana.in",
         "--dart-define=RAZORPAY_KEY_ID=rzp_live_TRvyzlqHiRGWbr",
         "--dart-define=BUILD_FLAVOR=prod"

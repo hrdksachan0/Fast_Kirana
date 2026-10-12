@@ -289,10 +289,13 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
         sortOrder: (s as any).sortOrder !== undefined ? (s as any).sortOrder : idx + 1,
       }))
 
+      const fastToken = (session as any)?.fastapiToken || (session?.user as any)?.fastapiToken || (typeof window !== 'undefined' ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token')) : null)
+
       const res = await fetch(`${apiUrl()}/api/restaurants/${assignedRestaurantId}`, {
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
+          ...(fastToken ? { 'Authorization': `Bearer ${fastToken}` } : {}),
           ...(sessionUserId ? {
             'x-user-id': sessionUserId,
             'x-user-role': sessionUserRole,
@@ -300,6 +303,7 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
             ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
           } : {})
         },
+        credentials: 'include',
         body: JSON.stringify({ menuSections: normalizedSections })
       })
 

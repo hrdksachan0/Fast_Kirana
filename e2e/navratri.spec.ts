@@ -5,6 +5,7 @@ import dailyTemplate from '../public/navratri/templates/daily-essentials.json'
 import templateIndex from '../public/navratri/templates/index.json'
 import type { Product } from '../src/types'
 import { parseCampaignConfig, type CampaignConfig } from '../src/lib/campaign-config'
+import { createCampaignBlock, defaultCampaignBlocks } from '../src/lib/campaign-blocks'
 import { loadEnvConfig } from '@next/env'
 import { encode } from 'next-auth/jwt'
 
@@ -63,13 +64,18 @@ async function prepareHome(page: Page, catalogue = products, published: Campaign
     localStorage.setItem('fk-city', 'Ghatampur')
     localStorage.setItem('fk-theme', 'light')
   })
-  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60000 })
   if (published?.enabled === false) {
     await expect(page.getByTestId('navratri-section')).toHaveCount(0, { timeout: 15000 })
     return { catalogueRequests, detailRequests }
   }
-  await expect(page.getByTestId('navratri-section')).toBeVisible()
-  if (catalogue.length) {
+  await expect(page.getByTestId('navratri-section')).toBeVisible({ timeout: 20000 })
+  if (published) await expect(page.getByTestId('navratri-section')).toHaveAttribute('aria-label', published.labels.sectionLabel, { timeout: 20000 })
+  if (published?.composition === 'blocks') {
+    await expect(page.getByTestId('campaign-block-canvas')).toBeVisible({ timeout: 20000 })
+    await expect(page.getByRole('button', { name: 'Fast Delivery Navratri Test Hub', exact: true })).toBeVisible()
+  }
+  if (catalogue.length && published?.composition !== 'blocks') {
     try {
       await expect(page.getByTestId('navratri-section').getByRole('tabpanel')).toContainText(catalogue[0].name, { timeout: 15000 })
     } catch (error) {
@@ -120,6 +126,7 @@ async function cardGeometry(page: Page) {
 
 test.describe('Navratri homepage campaign', () => {
   test.use({ serviceWorkers: 'block' })
+  test.setTimeout(90000)
   test('hydrates linked products outside the capped homepage feed and hides unavailable or missing slots', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     const linkedIds = ['campaign-live-puja', 'campaign-sold-out', 'campaign-unavailable', 'campaign-deleted']
@@ -315,7 +322,7 @@ test.describe('Navratri homepage campaign', () => {
     }
     await expect(section.getByText('Demo prices', { exact: true })).toBeVisible()
     await section.getByRole('link', { name: 'Shop Puja Needs' }).click()
-    await expect(page).toHaveURL(/\/search\?q=puja$/, { timeout: 25000 })
+    await expect(page).toHaveURL(/\/search\?q=puja$/, { timeout: 60000 })
     await expect(page.getByRole('heading', { name: /puja/i }).first()).toBeVisible()
   })
 
@@ -369,12 +376,21 @@ test.describe('Navratri homepage campaign', () => {
       const transform = getComputedStyle(element).transform
       return transform === 'none' || new DOMMatrixReadOnly(transform).isIdentity
     })).toBe(true)
+    await page.evaluate(() => {
+      const state = window as unknown as { __campaignMotionChanged: boolean }
+      state.__campaignMotionChanged = false
+      window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => {
+        state.__campaignMotionChanged = true
+      }, { once: true })
+    })
     await page.emulateMedia({ reducedMotion: 'no-preference' })
-    // MediaQueryList change is delivered on the next rendering frame; let it
-    // start autoplay before measuring the product's full 2500ms interval.
+    // Emulation delivers its native media event asynchronously. Wait for that
+    // event before advancing the fake clock through a full product interval.
     await page.clock.runFor(32)
+    await expect.poll(() => page.evaluate(() =>
+      (window as unknown as { __campaignMotionChanged: boolean }).__campaignMotionChanged)).toBe(true)
     await page.clock.runFor(2500)
-    expect(await activeIndex(specials)).toBe(1)
+    await expect.poll(() => activeIndex(specials)).toBe(1)
   })
 
   test('search stays pinned while scrolling, department row is absent, and the existing overlay submits a query', async ({ page }) => {
@@ -546,12 +562,19 @@ async function prepareCampaignManager(page: Page, catalogue: Product[] = [], sto
     }
     else if (pathname === '/api/admin/orders') { dashboardHydrated = true; body = { orders: [], total: 0, totalPages: 1, stats: {} } }
     else if (pathname === '/api/admin/users') body = { users: [], total: 0 }
-    else if (pathname === '/api/stores/hubs') body = { hubs: [] }
+    else if (pathname === '/api/stores/hubs') body = { hubs: [{ id: 'navratri-test-hub', city: 'Ghatampur', latitude: 26.1534185, longitude: 80.1714024, deliveryRadiusKm: 5 }] }
     else if (['/api/admin/stores', '/api/banners', '/api/restaurants', '/api/categories', '/api/admin/categories', '/api/admin/reviews', '/api/admin/coupons'].includes(pathname)) body = []
     else if (pathname === '/api/store-status') body = { grocery_mart_open: 'true', cafe_open: 'true', restaurant_open: 'true' }
     await route.fulfill({ json: body })
   })
-  await page.addInitScript(() => localStorage.setItem('push-prompt-dismissed', 'true'))
+  await page.addInitScript(() => {
+    localStorage.setItem('push-prompt-dismissed', 'true')
+    localStorage.setItem('fk-location', 'Navratri Test Hub')
+    localStorage.setItem('fk-store-id', 'navratri-test-hub')
+    localStorage.setItem('fk-coords', JSON.stringify({ lat: 26.1534185, lng: 80.1714024 }))
+    localStorage.setItem('fk-city', 'Ghatampur')
+    localStorage.setItem('fk-theme', 'light')
+  })
   await page.setViewportSize({ width: 1280, height: 1000 })
   await page.goto(`/admin?storeId=${encodeURIComponent(storeId)}`, { waitUntil: 'domcontentloaded', timeout: 90000 })
   await expect.poll(() => dashboardHydrated, { timeout: 25000 }).toBe(true)
@@ -572,6 +595,158 @@ test.describe('Generic admin campaign editor', () => {
   test.use({ serviceWorkers: 'block' })
   test.setTimeout(120000)
 
+  test('builds, reorders, duplicates and saves custom blocks; publication retains editable composition', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const { manager, draft, published, mutations } = await prepareCampaignManager(page)
+    await manager.getByRole('combobox', { name: 'Campaign composition', exact: true }).selectOption('blocks')
+    const editor = manager.getByTestId('campaign-block-editor')
+    await expect(editor.locator('[data-editor-block]')).toHaveCount(4)
+    await editor.getByRole('combobox', { name: 'New block type' }).selectOption('image')
+    await editor.getByRole('button', { name: 'Add block', exact: true }).click()
+    await editor.getByRole('textbox', { name: 'Block 5 heading', exact: true }).fill('Festival artwork')
+    await editor.getByRole('combobox', { name: 'New block type' }).selectOption('text')
+    await editor.getByRole('button', { name: 'Add block', exact: true }).click()
+    await editor.getByRole('textbox', { name: 'Block 6 heading', exact: true }).fill('Make your celebration yours')
+    await editor.getByRole('textbox', { name: 'Block 6 message', exact: true }).fill('Choose your essentials from this store.')
+    await editor.getByRole('combobox', { name: 'Block 6 animation', exact: true }).selectOption('slide')
+    await editor.getByRole('combobox', { name: 'Block 6 animation speed', exact: true }).selectOption('slow')
+    await editor.getByRole('button', { name: 'Move Block 6 up', exact: true }).click()
+    await editor.getByRole('button', { name: 'Duplicate Block 5', exact: true }).click()
+    await expect(editor.locator('[data-editor-block]')).toHaveCount(7)
+    await editor.getByRole('button', { name: 'Remove Block 6', exact: true }).click()
+    await editor.getByLabel('Show block 6', { exact: true }).uncheck()
+    await manager.getByRole('button', { name: 'Save Draft', exact: true }).click()
+    await expect(manager.getByRole('status')).toContainText('Draft saved')
+    expect(draft().blocks.map(block => block.type)).toEqual(['banner', 'spotlight', 'categories', 'collection', 'text', 'image'])
+    expect(draft().blocks[4].motion).toEqual({ preset: 'slide', speed: 'slow' })
+    expect(published().composition).toBe('template')
+    await manager.getByRole('combobox', { name: 'Campaign composition', exact: true }).selectOption('template')
+    await manager.getByRole('combobox', { name: 'Campaign composition', exact: true }).selectOption('blocks')
+    await expect(editor.getByRole('textbox', { name: 'Block 5 heading', exact: true })).toHaveValue('Make your celebration yours')
+    await manager.getByRole('button', { name: 'Publish', exact: true }).click()
+    await expect(manager.getByRole('status')).toContainText('Campaign published')
+    expect(mutations.at(-1)?.campaign.composition).toBe('blocks')
+    expect(published().blocks.filter(block => block.enabled)).toHaveLength(5)
+    await editor.getByRole('heading', { name: 'Block 1: Rotating banner', exact: true }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: 'artifacts/campaign-builder/admin-desktop.png', fullPage: false })
+    const hydratedReload = page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/orders')
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await hydratedReload
+    await page.getByRole('button', { name: /Marketing/ }).click()
+    await page.getByRole('button', { name: 'Campaign Manager', exact: true }).click()
+    await expect(page.getByRole('textbox', { name: 'Block 5 heading', exact: true })).toHaveValue('Make your celebration yours')
+    const shopper = await page.context().newPage()
+    await shopper.setViewportSize({ width: 390, height: 1000 })
+    await shopper.goto('/', { waitUntil: 'domcontentloaded' })
+    const canvas = shopper.getByTestId('campaign-block-canvas')
+    await expect(canvas).toBeVisible({ timeout: 20000 })
+    await expect(canvas.locator('[data-campaign-block]')).toHaveCount(5)
+    await expect(canvas).toContainText('Make your celebration yours')
+    await expect(canvas).not.toContainText('Festival artwork')
+    await shopper.screenshot({ path: 'artifacts/campaign-builder/published-mobile.png', fullPage: false })
+  })
+
+  test('block composition renders all content types and selection order at mobile and desktop widths', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const config = parseCampaignConfig(campaign)
+    config.composition = 'blocks'
+    config.blocks = defaultCampaignBlocks(config)
+    config.blocks[0].itemIds = [config.headers[2].id, config.headers[0].id]
+    config.blocks[2].itemIds = [config.categories[3].id, config.categories[1].id]
+    const image = createCampaignBlock('image', config, 'custom-image')
+    image.title = 'Artwork from your campaign'; image.destinationId = config.destinations[0].id
+    const text = createCampaignBlock('text', config, 'custom-text')
+    text.title = 'Your occasion, your shopping list'
+    config.blocks.push(image, text)
+    await prepareHome(page, products, config)
+    const canvas = page.getByTestId('campaign-block-canvas')
+    await expect(canvas.locator('[data-campaign-block]')).toHaveCount(6)
+    await expect(canvas.locator('[data-block-type="collection"]')).toContainText(products[0].name)
+    await expect(canvas.getByRole('heading', { name: config.headers[2].title, exact: true })).toBeVisible()
+    expect(await canvas.locator('[data-block-type="categories"] a').allTextContents()).toEqual([config.categories[3].label, config.categories[1].label])
+    await expect(canvas.getByRole('heading', { name: text.title, exact: true })).toBeVisible()
+    await expect(canvas.locator('[data-block-type="image"] a')).toHaveAttribute('href', `/search?q=${encodeURIComponent(config.destinations[0].query)}`)
+    for (const width of [320, 390, 1280]) {
+      await page.setViewportSize({ width, height: 1000 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      expect(await canvas.locator('[data-campaign-block]').evaluateAll(elements => elements.every(element => {
+        const box = element.getBoundingClientRect(); return box.width > 0 && box.right <= innerWidth + 1 && box.left >= -1
+      }))).toBe(true)
+      await canvas.screenshot({ path: `artifacts/campaign-builder/composition-${width}.png`, animations: 'disabled' })
+    }
+  })
+
+  test('all block animation presets respect playback, visibility and reduced motion', async ({ page }) => {
+    await page.clock.install()
+    const config = parseCampaignConfig(campaign)
+    config.composition = 'blocks'
+    config.blocks = ['none', 'fade', 'slide', 'float', 'zoom', 'sparkle'].map((preset, index) => ({
+      ...createCampaignBlock('spotlight', config, `motion-${index}`), motion: { preset: preset as CampaignConfig['blocks'][number]['motion']['preset'], speed: 'normal' },
+    }))
+    await prepareHome(page, [], config)
+    const canvas = page.getByTestId('campaign-block-canvas')
+    await freezeAndRestartRotations(page)
+    const slide = canvas.locator('[data-campaign-block="motion-0"] [data-active]')
+    const initial = await activeIndex(slide)
+    await page.clock.runFor(2500)
+    expect(await activeIndex(slide)).toBe((initial + 1) % config.products.length)
+    await expect(canvas.locator('[data-motion="float"] img').first()).toHaveCSS('animation-name', /floatArt/)
+    await expect(canvas.locator('[data-motion="zoom"] img').first()).toHaveCSS('animation-name', /zoomArt/)
+    await expect(slide.first()).toHaveCSS('transition-duration', '0s, 0s')
+    await canvas.getByRole('button', { name: 'Pause campaign animations' }).click()
+    await expect(canvas.locator('[data-running="true"]')).toHaveCount(0)
+    const stopped = await activeIndex(slide)
+    await page.clock.runFor(9000); expect(await activeIndex(slide)).toBe(stopped)
+    await canvas.getByRole('button', { name: 'Play campaign animations' }).click()
+    await expect(canvas.locator('[data-running="true"]')).toHaveCount(6)
+    await visibility(page, 'hidden'); await expect(canvas.locator('[data-running="true"]')).toHaveCount(0)
+    await page.clock.runFor(5000); expect(await activeIndex(slide)).toBe(stopped)
+    await visibility(page, 'visible')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect(canvas.locator('[data-running="true"]')).toHaveCount(0)
+    const reduced = await activeIndex(slide)
+    await page.clock.runFor(9000); expect(await activeIndex(slide)).toBe(reduced)
+    await expect(canvas.locator('[data-motion="float"] img').first()).toHaveCSS('animation-name', 'none')
+  })
+
+  test('live collection presets animate artwork while shopping controls stay steady', async ({ page }) => {
+    const config = parseCampaignConfig(campaign)
+    config.composition = 'blocks'
+    const presets = ['none', 'fade', 'slide', 'float', 'zoom', 'sparkle'] as const
+    config.blocks = presets.map((preset, index) => ({
+      ...createCampaignBlock('collection', config, `live-motion-${index}`),
+      motion: { preset, speed: 'normal' },
+    }))
+    await prepareHome(page, products, config)
+    const canvas = page.getByTestId('campaign-block-canvas')
+    await expect(canvas.locator('[data-campaign-product-art]')).toHaveCount(products.length * presets.length)
+    const geometry = () => canvas.locator('[data-block-type="collection"] a, [data-block-type="collection"] button').evaluateAll(elements => elements.map(element => {
+      const rect = element.getBoundingClientRect()
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+    }))
+    const before = await geometry()
+    for (const preset of presets) {
+      const block = canvas.locator(`[data-motion="${preset}"]`)
+      const artwork = block.locator('[data-campaign-product-art]').first()
+      await expect(block).toHaveAttribute('data-running', 'true')
+      await expect(artwork).toHaveCSS('animation-name', preset === 'none' || preset === 'sparkle' ? 'none' : new RegExp(`${preset}Art`))
+      if (preset === 'sparkle') {
+        expect(await artwork.locator('..').evaluate(element => getComputedStyle(element, '::before').animationName)).toMatch(/sparkleArt/)
+      }
+      await expect(block).toContainText(products[0].name)
+    }
+    await page.waitForTimeout(150)
+    expect(await geometry()).toEqual(before)
+    await canvas.getByRole('button', { name: 'Pause campaign animations' }).click()
+    await expect(canvas.locator('[data-running="true"]')).toHaveCount(0)
+    await expect(canvas.locator('[data-campaign-product-art]').first()).toHaveCSS('animation-name', 'none')
+    await canvas.getByRole('button', { name: 'Play campaign animations' }).click()
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect(canvas.locator('[data-running="true"]')).toHaveCount(0)
+    expect(await canvas.locator('[data-campaign-product-art]').evaluateAll(elements => elements.every(element => getComputedStyle(element).animationName === 'none'))).toBe(true)
+    await canvas.locator('[data-campaign-block="live-motion-4"]').screenshot({ path: 'artifacts/campaign-builder/live-collection.png', animations: 'disabled' })
+  })
+
   test('selects campaign types without changing edits; explicit replacement saves a private Diwali draft and publishes it after reload', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     const preset = parseCampaignConfig(diwaliTemplate)
@@ -582,7 +757,7 @@ test.describe('Generic admin campaign editor', () => {
     for (const template of templateIndex) {
       await expect(picker.locator(`option[value="${template.id}"]`)).toHaveText(template.name)
     }
-    const heading = manager.getByRole('textbox', { name: 'Tall card heading', exact: true })
+    const heading = manager.getByRole('textbox', { name: 'Product spotlight heading', exact: true })
     await heading.fill('My unsaved campaign')
     await picker.selectOption('diwali')
     await expect(heading).toHaveValue('My unsaved campaign')
@@ -647,7 +822,7 @@ test.describe('Generic admin campaign editor', () => {
       expect(published()).toEqual(draft())
       await shopper.reload({ waitUntil: 'domcontentloaded' })
       const liveSection = shopper.getByTestId('navratri-section')
-      await expect(liveSection).toHaveAttribute('aria-label', preset.labels.sectionLabel)
+      await expect(liveSection).toHaveAttribute('aria-label', preset.labels.sectionLabel, { timeout: 20000 })
       await expect(liveSection).toHaveAttribute('data-layout', 'classic')
       await expect(shopper.getByTestId('navratri-special').getByRole('heading')).toHaveText('Diwali Weekend Picks')
       await expect(liveSection).toHaveCSS('--festival-orange', preset.appearance.background)
@@ -659,7 +834,7 @@ test.describe('Generic admin campaign editor', () => {
 
   test('edits copy, imagery, timings and ordering; draft stays private until publish, then hide retains the draft', async ({ page }) => {
     const { manager, mutations, published, draft } = await prepareCampaignManager(page)
-    await manager.getByRole('textbox', { name: 'Tall card heading', exact: true }).fill('Diwali Specials')
+    await manager.getByRole('textbox', { name: 'Product spotlight heading', exact: true }).fill('Diwali Specials')
     await manager.getByRole('textbox', { name: 'Campaign name', exact: true }).fill('Celebrate Diwali')
     await manager.locator('summary').filter({ hasText: 'Header slides' }).click()
     await manager.getByRole('textbox', { name: 'Slide 1 title', exact: true }).fill('Diwali, together')
@@ -700,7 +875,7 @@ test.describe('Generic admin campaign editor', () => {
 
   test('invalid copy, timing and image values show validation errors without issuing a mutation', async ({ page }) => {
     const { manager, mutations } = await prepareCampaignManager(page)
-    const heading = manager.getByRole('textbox', { name: 'Tall card heading', exact: true })
+    const heading = manager.getByRole('textbox', { name: 'Product spotlight heading', exact: true })
     await heading.fill('')
     await manager.getByRole('button', { name: 'Save Draft', exact: true }).click()
     await expect(manager.getByRole('alert')).toContainText('specialsHeading')

@@ -8,6 +8,7 @@ import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/product.dart';
 import '../../providers/store_hub_provider.dart';
+import 'campaign_block.dart';
 
 /// The same versioned manifest is served by the web application.
 final navratriDataProvider = FutureProvider<NavratriData>((ref) async {
@@ -245,6 +246,8 @@ class NavratriDestination {
 class NavratriData {
   final int version;
   final String layout;
+  final String composition;
+  final List<CampaignBlock> blocks;
   final bool demo;
   final NavratriTimings timings;
   final List<String> searchSuggestions;
@@ -263,6 +266,8 @@ class NavratriData {
   const NavratriData({
     required this.version,
     this.layout = 'classic',
+    this.composition = 'template',
+    this.blocks = const [],
     required this.demo,
     required this.timings,
     required this.searchSuggestions,
@@ -285,6 +290,15 @@ class NavratriData {
       throw const FormatException('Unsupported Navratri manifest version');
     }
     final layout = json.containsKey('layout') ? json['layout'] : 'classic';
+    final composition =
+        json.containsKey('composition') ? json['composition'] : 'template';
+    if (!const ['template', 'blocks'].contains(composition)) {
+      throw const FormatException('Unsupported campaign composition');
+    }
+    final rawBlocks = json.containsKey('blocks') ? json['blocks'] : <dynamic>[];
+    if (rawBlocks is! List || rawBlocks.length > 16) {
+      throw const FormatException('Invalid campaign blocks');
+    }
     if (!const ['classic', 'banner', 'split', 'grid', 'deals']
         .contains(layout)) {
       throw const FormatException('Unsupported campaign layout');
@@ -296,6 +310,11 @@ class NavratriData {
     final data = NavratriData(
       version: 1,
       layout: layout as String,
+      composition: composition as String,
+      blocks: rawBlocks
+          .map((value) =>
+              CampaignBlock.fromJson(Map<String, dynamic>.from(value as Map)))
+          .toList(growable: false),
       demo: json['demo'] as bool? ?? true,
       timings: NavratriTimings.fromJson(
           json['timings'] as Map<String, dynamic>? ??
@@ -324,6 +343,35 @@ class NavratriData {
           ? json['decorationImage'] as String?
           : 'string-lights.svg',
     );
+    if (data.blocks.map((block) => block.id).toSet().length !=
+        data.blocks.length) {
+      throw const FormatException('Duplicate campaign block IDs');
+    }
+    if (data.composition == 'blocks' &&
+        !data.blocks.any((block) => block.enabled)) {
+      throw const FormatException('Add at least one visible campaign block');
+    }
+    for (final block in data.blocks) {
+      final source = block.type == 'banner'
+          ? data.headers.map((item) => item.id)
+          : block.type == 'categories'
+              ? data.categories.map((item) => item.id)
+              : block.type == 'spotlight'
+                  ? data.products.map((item) => item.id)
+                  : <String>[];
+      if (block.itemIds.any((id) => !source.contains(id))) {
+        throw const FormatException('Unknown campaign block item');
+      }
+      if (block.type == 'collection'
+          ? !data.tabs.any((tab) => tab.id == block.tabId)
+          : block.tabId != null) {
+        throw const FormatException('Invalid campaign block collection');
+      }
+      if (block.destinationId != null) data.destination(block.destinationId!);
+      if (block.image != null && !validNavratriImage(block.image)) {
+        throw const FormatException('Invalid campaign block image');
+      }
+    }
     if (!data.enabled) return data;
     if (data.headers.isEmpty ||
         data.headers.length > 8 ||
@@ -336,8 +384,14 @@ class NavratriData {
       throw const FormatException('Navratri manifest has incomplete sections');
     }
     if (!data.demo &&
-        data.products
-            .any((item) => item.productId?.trim().isNotEmpty != true)) {
+        data.products.any((item) =>
+            (data.composition == 'template' ||
+                data.blocks.any((block) =>
+                    block.enabled &&
+                    block.type == 'spotlight' &&
+                    (block.itemIds.isEmpty ||
+                        block.itemIds.contains(item.id)))) &&
+            item.productId?.trim().isNotEmpty != true)) {
       throw const FormatException(
           'Live campaigns require catalogue product links');
     }
@@ -375,7 +429,9 @@ class NavratriData {
       ...categories.expand((category) => category.keywords),
       ...tabs.expand((item) => item.keywords),
     ];
-    final keywords = tab.keywords.isEmpty ? allKeywords : tab.keywords;
+    final keywords = tab.keywords.isEmpty
+        ? (tab.productIds.isEmpty ? allKeywords : <String>[])
+        : tab.keywords;
     final keywordMatches = catalog.where((product) {
       if (explicitIds.contains(product.id)) return false;
       if (product.restaurantId != null && product.restaurantId!.isNotEmpty) {

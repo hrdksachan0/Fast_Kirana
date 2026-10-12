@@ -32,6 +32,7 @@ class ProductCard extends ConsumerStatefulWidget {
   final bool isCompact;
   final bool showOutlet;
   final String? heroTag;
+  final Widget Function(Widget)? imageBuilder;
 
   const ProductCard({
     super.key,
@@ -41,6 +42,7 @@ class ProductCard extends ConsumerStatefulWidget {
     this.isCompact = false,
     this.showOutlet = true,
     this.heroTag,
+    this.imageBuilder,
   });
 
   @override
@@ -250,6 +252,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     showAddedCheck: false,
                     showOutlet: widget.showOutlet,
                     heroTag: widget.heroTag,
+                    imageBuilder: widget.imageBuilder,
                   ),
                   SizedBox(height: s(5)),
 

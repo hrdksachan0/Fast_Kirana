@@ -91,8 +91,10 @@ test('store price at or above MRP does not report a negative discount', async ()
   }
 })
 
-test('unscoped product detail preserves global inventory and pricing', async () => {
+test('product detail without an explicit hub uses the default hub inventory and pricing', async () => {
   const product = await getProduct({ stock: 3, isAvailable: true, priceOverride: 0 }, null)
-  assert.deepEqual(product, baseProduct)
-  assert.deepEqual(inventoryLookups, [])
+  assert.deepEqual(product, { ...baseProduct, stock: 3, price: 0, discount: 100 })
+  assert.deepEqual(inventoryLookups, [{
+    where: { productId_storeId: { productId: 'catalogue-product', storeId: 'hub-209206' } },
+  }])
 })

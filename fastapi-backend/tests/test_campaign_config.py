@@ -36,6 +36,62 @@ def test_defaults_and_generic_empty_navigation(config):
     assert result["decorationImage"] == "string-lights.svg"
     assert result["labels"]["demoLabel"]
     assert len(result["categories"]) == 4
+    assert result["composition"] == "template"
+    assert result["blocks"] == []
+
+
+@pytest.mark.parametrize("kind,presentation", [("banner", "wide"), ("categories", "grid"), ("categories", "row"), ("spotlight", "wide"), ("spotlight", "offer"), ("collection", "row"), ("collection", "grid"), ("image", "wide"), ("text", "plain")])
+def test_block_composition_round_trips_without_mutating_source(config, kind, presentation):
+    block = {"id": "custom-block", "type": kind, "presentation": presentation,
+             "title": "Weekend collection", "motion": {"preset": "float", "speed": "slow"}}
+    if kind == "collection":
+        block["tabId"] = config["tabs"][0]["id"]
+    if kind == "image":
+        block["image"] = "https://example.test/weekend.webp"
+    if kind == "text":
+        block["motion"]["preset"] = "slide"
+    config.update(composition="blocks", blocks=[block])
+    original = deepcopy(config)
+    normalized = validate_campaign(config)
+    assert normalized["composition"] == "blocks"
+    assert normalized["blocks"][0]["enabled"] is True
+    assert normalized["blocks"][0]["motion"] == block["motion"]
+    assert parse_stored_campaign(json.dumps(normalized)) == normalized
+    assert config == original
+
+
+@pytest.mark.parametrize("change", [
+    {"type": "unsupported"}, {"presentation": "offer"}, {"enabled": "true"},
+    {"itemIds": ["missing"]}, {"itemIds": ["missing", "missing"]},
+    {"destinationId": "missing"}, {"tabId": "missing"}, {"tabId": {}},
+    {"image": "javascript:alert(1)"}, {"motion": {"preset": "unsupported"}},
+    {"motion": {"speed": "very-fast"}}, {"motion": {"script": "alert(1)"}},
+    {"title": "a" * 201}, {"body": "a" * 501}, {"unknown": True},
+])
+def test_invalid_blocks_cannot_be_published(config, change):
+    config.update(composition="blocks", blocks=[{"id": "custom", "type": "banner", "presentation": "wide", **change}])
+    with pytest.raises(CampaignValidationError, match="blocks"):
+        validate_campaign(config)
+
+
+@pytest.mark.parametrize("blocks", [[], [{"id": "hidden", "type": "banner", "enabled": False}],
+    [{"id": "same", "type": "banner"}, {"id": "same", "type": "banner"}],
+    [{"id": f"block-{index}", "type": "banner"} for index in range(17)]])
+def test_empty_duplicate_or_oversized_compositions_are_rejected(config, blocks):
+    config.update(composition="blocks", blocks=blocks)
+    with pytest.raises(CampaignValidationError, match="blocks"):
+        validate_campaign(config)
+
+
+def test_live_blocks_require_catalogue_links_only_for_displayed_slots(config):
+    config.update(demo=False, composition="blocks", blocks=[{"id": "image", "type": "image", "image": "chunri.svg"}])
+    assert validate_campaign(config)["demo"] is False
+    slot = config["products"][1]
+    config["blocks"] = [{"id": "spotlight", "type": "spotlight", "itemIds": [slot["id"]]}]
+    with pytest.raises(CampaignValidationError, match="productId"):
+        validate_campaign(config)
+    slot["productId"] = "catalogue-sku"
+    assert validate_campaign(config)["composition"] == "blocks"
 
 
 @pytest.mark.parametrize("layout", ["classic", "banner", "split", "grid", "deals"])
@@ -64,7 +120,7 @@ def test_bundled_templates_are_accepted_by_publish_contract(template):
     source = Path(__file__).resolve().parents[2] / "public" / "navratri" / "templates" / f"{template}.json"
     config = json.loads(source.read_text(encoding="utf-8"))
     result = validate_campaign(config)
-    assert result == config
+    assert result == {**config, "composition": "template", "blocks": []}
     assert result["demo"] is True
 
 

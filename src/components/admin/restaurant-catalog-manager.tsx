@@ -513,8 +513,11 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
       variants: formattedVariants
     }
 
+    const fastToken = (session as any)?.fastapiToken || (session?.user as any)?.fastapiToken || (typeof window !== 'undefined' ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token')) : null)
+
     const reqHeaders = {
       'Content-Type': 'application/json',
+      ...(fastToken ? { 'Authorization': `Bearer ${fastToken}` } : {}),
       ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
       ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
       ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
@@ -529,13 +532,18 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
         res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${editingProduct.id}`, {
           method: 'PATCH',
           headers: reqHeaders,
-          body: JSON.stringify(payload)
+          credentials: 'include',
+          body: JSON.stringify({
+            ...payload,
+            restaurantId: effectiveRestId || assignedRestaurantId
+          })
         })
       } else {
         // Add Product
         res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products`, {
           method: 'POST',
           headers: reqHeaders,
+          credentials: 'include',
           body: JSON.stringify({
             ...payload,
             restaurantId: effectiveRestId || assignedRestaurantId

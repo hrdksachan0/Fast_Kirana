@@ -145,6 +145,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      ref.invalidate(storeSettingsProvider);
       ref.invalidate(navratriDataProvider);
       ref.invalidate(navratriLinkedProductsProvider);
       _checkAndRevalidateCatalog();

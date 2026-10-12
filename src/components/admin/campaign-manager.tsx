@@ -14,6 +14,8 @@ import { navratriAsset, navratriData } from '@/components/home/navratri/data'
 import { NavratriSection } from '@/components/home/navratri/navratri-section'
 import { NavratriSearch } from '@/components/home/navratri/navratri-search'
 import type { Product } from '@/types'
+import { CampaignBlockEditor } from './campaign-block-editor'
+import { defaultCampaignBlocks } from '@/lib/campaign-blocks'
 
 type Collection = 'headers' | 'products' | 'categories' | 'tabs' | 'destinations'
 const colourLabels: Record<keyof CampaignConfig['appearance'], string> = {
@@ -603,11 +605,32 @@ export function CampaignManager({
             </p>
           </Section>
           <Section title="Campaign & labels" open>
+            <Field label="Campaign composition">
+              <select
+                aria-label="Campaign composition"
+                className={inputClass}
+                value={draft.composition}
+                onChange={(event) =>
+                  change((previous) => ({
+                    ...previous,
+                    composition: event.target.value as CampaignConfig['composition'],
+                    blocks:
+                      event.target.value === 'blocks' && !previous.blocks.length
+                        ? defaultCampaignBlocks(previous)
+                        : previous.blocks,
+                  }))
+                }
+              >
+                <option value="template">Template layout</option>
+                <option value="blocks">Custom blocks</option>
+              </select>
+            </Field>
             <Field label="Campaign layout">
               <select
                 aria-label="Campaign layout"
                 className={inputClass}
                 value={draft.layout}
+                disabled={draft.composition === 'blocks'}
                 onChange={(event) =>
                   change((previous) => ({
                     ...previous,
@@ -622,6 +645,12 @@ export function CampaignManager({
                 ))}
               </select>
             </Field>
+            {draft.composition === 'blocks' && (
+              <p className="text-text-secondary text-xs">
+                The block order controls this campaign. Switching to Template layout keeps your
+                custom blocks for later.
+              </p>
+            )}
             <p className="text-text-secondary text-xs">
               {campaignLayouts.find((layout) => layout.id === draft.layout)?.description}
             </p>
@@ -644,8 +673,8 @@ export function CampaignManager({
               ))}
             </div>
             <p className="text-text-secondary text-xs">
-              For a live campaign, link every promotional slot to a catalogue product. Its price,
-              stock, name and image come from that store’s catalogue.
+              For a live campaign, link every displayed promotional slot to a catalogue product. Its
+              price, stock, name and image come from that store’s catalogue.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               {Object.entries(draft.labels).map(([key, value]) => (
@@ -654,7 +683,7 @@ export function CampaignManager({
                   label={
                     {
                       sectionLabel: 'Campaign name',
-                      specialsHeading: 'Tall card heading',
+                      specialsHeading: 'Product spotlight heading',
                       curvedTabLabel: 'Curved tab label',
                       loadingText: 'Loading message',
                       emptyText: 'Empty collection message',
@@ -673,6 +702,17 @@ export function CampaignManager({
               ))}
             </div>
           </Section>
+          {draft.composition === 'blocks' && (
+            <Section title="Campaign blocks" open>
+              <CampaignBlockEditor
+                data={draft}
+                onChange={(blocks) => change((previous) => ({ ...previous, blocks }))}
+                renderImageField={(label, value, onChange) => (
+                  <ImageField label={label} value={value} onChange={onChange} onUpload={onUpload} />
+                )}
+              />
+            </Section>
+          )}
           <Section title="Header slides">
             {draft.headers.map((slide, index) => (
               <div key={slide.id} className="border-border space-y-3 border-b pb-4 last:border-0">
@@ -899,8 +939,8 @@ export function CampaignManager({
           </Section>
           <Section title="Four category cards">
             <p className="text-text-secondary text-xs">
-              This template keeps the tall-left card and four category cards. Replace each card’s
-              content and search destination here.
+              The four category cards follow the selected layout. Edit each card’s content and
+              search destination here.
             </p>
             {draft.categories.map((category, index) => (
               <div
@@ -954,22 +994,22 @@ export function CampaignManager({
                   onChange={(label) => patchRow('tabs', index, { label })}
                 />
                 <DelimitedField
-                  label="Product filter keywords (comma separated fallback)"
+                  label="Product filter keywords (comma separated)"
                   values={tab.keywords}
                   delimiter=","
                   onChange={(keywords) => patchRow('tabs', index, { keywords })}
                 />
                 {/* Specific Products (ID-wise) Selector */}
-                <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-3">
+                <div className="border-border/80 bg-muted/20 space-y-2 rounded-xl border p-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-text-primary">
+                    <label className="text-text-primary text-xs font-bold">
                       📌 Pinned Products for Tab {index + 1} (ID-wise)
                     </label>
-                    <span className="text-[10px] text-text-secondary">
+                    <span className="text-text-secondary text-[10px]">
                       {((tab as any).productIds || []).length} selected
                     </span>
                   </div>
-                  
+
                   {/* Dropdown to add a product */}
                   <div className="flex gap-2">
                     <select
@@ -983,12 +1023,14 @@ export function CampaignManager({
                         if (!currentList.includes(pid)) {
                           patchRow('tabs', index, { productIds: [...currentList, pid] })
                         }
-                        e.target.value = ""
+                        e.target.value = ''
                       }}
                     >
                       <option value="">+ Add product from catalogue (ID-wise)...</option>
                       {products
-                        .filter((p) => !p.restaurantId && !((tab as any).productIds || []).includes(p.id))
+                        .filter(
+                          (p) => !p.restaurantId && !((tab as any).productIds || []).includes(p.id)
+                        )
                         .map((p) => (
                           <option key={p.id} value={p.id}>
                             {p.name} {p.price ? `(₹${p.price})` : ''}
@@ -1006,16 +1048,18 @@ export function CampaignManager({
                         return (
                           <span
                             key={pid}
-                            className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary"
+                            className="border-primary/30 bg-primary/10 text-primary inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-semibold"
                           >
                             <span className="max-w-[180px] truncate">{prodName}</span>
                             <button
                               type="button"
                               onClick={() => {
-                                const updated = ((tab as any).productIds as string[]).filter((id) => id !== pid)
+                                const updated = ((tab as any).productIds as string[]).filter(
+                                  (id) => id !== pid
+                                )
                                 patchRow('tabs', index, { productIds: updated })
                               }}
-                              className="ml-0.5 text-text-secondary hover:text-red-500 font-bold cursor-pointer"
+                              className="text-text-secondary ml-0.5 cursor-pointer font-bold hover:text-red-500"
                               title="Remove product"
                             >
                               ✕
@@ -1025,7 +1069,7 @@ export function CampaignManager({
                       })}
                     </div>
                   )}
-                  <p className="text-[10px] text-text-secondary leading-normal">
+                  <p className="text-text-secondary text-[10px] leading-normal">
                     Aapke chune gaye products customer ko sabse pehle exact order me dikhenge.
                   </p>
                 </div>
@@ -1147,21 +1191,29 @@ export function CampaignManager({
               Preview shows the template until configuration errors are fixed.
             </p>
           )}
-          <div inert data-testid="campaign-preview">
-            <div className="mb-3">
-              <NavratriSearch
-                key={`search-${previewRevision}-${preview.layout}`}
+          <div
+            className={
+              preview.composition === 'blocks' ? 'max-h-[70vh] overflow-y-auto' : undefined
+            }
+            tabIndex={preview.composition === 'blocks' ? 0 : undefined}
+            aria-label="Campaign preview scroll area"
+          >
+            <div inert data-testid="campaign-preview">
+              <div className="mb-3">
+                <NavratriSearch
+                  key={`search-${previewRevision}-${preview.layout}`}
+                  data={{ ...preview, autoplay: playPreview && preview.autoplay }}
+                  onSearch={() => {}}
+                />
+              </div>
+              <NavratriSection
+                key={`section-${previewRevision}-${preview.layout}`}
                 data={{ ...preview, autoplay: playPreview && preview.autoplay }}
-                onSearch={() => {}}
+                products={products}
+                storeId={scope}
+                loading={catalogueLoading}
               />
             </div>
-            <NavratriSection
-              key={`section-${previewRevision}-${preview.layout}`}
-              data={{ ...preview, autoplay: playPreview && preview.autoplay }}
-              products={products}
-              storeId={scope}
-              loading={catalogueLoading}
-            />
           </div>
           <p className="mt-3 text-xs text-slate-600">
             Drafts are private until you publish. Cart and navigation are disabled in this preview.

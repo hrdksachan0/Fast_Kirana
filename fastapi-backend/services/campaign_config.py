@@ -124,7 +124,7 @@ def _keywords(value: Any, path: str):
 
 def validate_campaign(value: Any) -> dict:
     campaign = deepcopy(_object(value, "campaign"))
-    _shape(campaign, {"version", "layout", "demo", "enabled", "autoplay", "searchPrefix", "decorationImage", "labels", "appearance", "timings", "searchSuggestions", "navigation", "headers", "products", "categories", "tabs", "destinations"}, "campaign", required={"version", "demo", "timings", "searchSuggestions", "headers", "products", "categories", "tabs", "destinations"})
+    _shape(campaign, {"version", "layout", "composition", "blocks", "demo", "enabled", "autoplay", "searchPrefix", "decorationImage", "labels", "appearance", "timings", "searchSuggestions", "navigation", "headers", "products", "categories", "tabs", "destinations"}, "campaign", required={"version", "demo", "timings", "searchSuggestions", "headers", "products", "categories", "tabs", "destinations"})
     if campaign.get("version") != 1 or isinstance(campaign.get("version"), bool):
         _error("version", "unsupported schema version; expected 1")
     if campaign.get("layout", "classic") not in ("classic", "banner", "split", "grid", "deals"):
@@ -153,6 +153,71 @@ def validate_campaign(value: Any) -> dict:
     destinations = _entries(campaign.get("destinations"), "destinations", 1, 80)
     destination_ids = {item["id"] for item in destinations}
     category_ids = {item["id"] for item in categories}
+    if campaign.get("composition", "template") not in ("template", "blocks"):
+        _error("composition", "must be template or blocks")
+    blocks = _entries(campaign.get("blocks", []), "blocks", 0, 16)
+    presentations = {
+        "banner": ("wide",), "categories": ("grid", "row"),
+        "spotlight": ("wide", "offer"), "collection": ("grid", "row"),
+        "image": ("wide",), "text": ("plain",),
+    }
+    for index, block in enumerate(blocks):
+        base = f"blocks[{index}]"
+        _shape(block, {"id", "type", "enabled", "title", "body", "image", "destinationId", "itemIds", "tabId", "presentation", "motion"}, base, required={"id", "type"})
+        kind = block.get("type")
+        if not isinstance(kind, str) or kind not in presentations:
+            _error(f"{base}.type", "unknown block type")
+        block.setdefault("enabled", True)
+        if not isinstance(block["enabled"], bool):
+            _error(f"{base}.enabled", "must be a boolean")
+        block.setdefault("title", "")
+        block.setdefault("body", "")
+        _string(block["title"], f"{base}.title", 200, empty=True)
+        _string(block["body"], f"{base}.body", 500, empty=True)
+        block.setdefault("image", None)
+        validate_image(block["image"], f"{base}.image", nullable=True)
+        block.setdefault("destinationId", None)
+        if block["destinationId"] is not None:
+            block["destinationId"] = _id(block["destinationId"], f"{base}.destinationId")
+            if block["destinationId"] not in destination_ids:
+                _error(f"{base}.destinationId", "must reference an existing destination")
+        block.setdefault("presentation", "wide")
+        if block["presentation"] not in presentations[kind]:
+            _error(f"{base}.presentation", "unsupported presentation for this block")
+        source = headers if kind == "banner" else categories if kind == "categories" else products if kind == "spotlight" else []
+        available = {item["id"] for item in source}
+        item_ids = block.setdefault("itemIds", [])
+        if not isinstance(item_ids, list) or len(item_ids) > 12:
+            _error(f"{base}.itemIds", "must be an array of at most 12 item IDs")
+        block["itemIds"] = [_id(item, f"{base}.itemIds") for item in item_ids]
+        if len(set(block["itemIds"])) != len(block["itemIds"]) or any(item not in available for item in block["itemIds"]):
+            _error(f"{base}.itemIds", "must reference unique existing items for this block")
+        block.setdefault("tabId", None)
+        if block["tabId"] is not None:
+            block["tabId"] = _id(block["tabId"], f"{base}.tabId")
+        if kind == "collection":
+            if block["tabId"] not in {item["id"] for item in tabs}:
+                _error(f"{base}.tabId", "must reference an existing collection")
+        elif block["tabId"] is not None:
+            _error(f"{base}.tabId", "only collection blocks use a collection")
+        if kind == "image" and not block["image"]:
+            _error(f"{base}.image", "image banners need artwork")
+        if kind == "text" and not (block["title"].strip() or block["body"].strip()):
+            _error(f"{base}.title", "text blocks need a heading or message")
+        motion = block.setdefault("motion", {"preset": "fade", "speed": "normal"})
+        _object(motion, f"{base}.motion")
+        _shape(motion, {"preset", "speed"}, f"{base}.motion", required=set())
+        motion.setdefault("preset", "fade")
+        motion.setdefault("speed", "normal")
+        if motion["preset"] not in ("none", "fade", "slide", "float", "zoom", "sparkle"):
+            _error(f"{base}.motion.preset", "unknown motion preset")
+        if motion["speed"] not in ("slow", "normal", "fast"):
+            _error(f"{base}.motion.speed", "must be slow, normal, or fast")
+        if kind == "text" and motion["preset"] not in ("none", "fade", "slide"):
+            _error(f"{base}.motion", "text blocks support no effect, soft fade, or slide in")
+    if campaign.get("composition") == "blocks" and not any(block["enabled"] for block in blocks):
+        _error("blocks", "add at least one visible block")
+    campaign["blocks"] = blocks
     for index, destination in enumerate(destinations):
         _shape(destination, {"id", "kind", "query"}, f"destinations[{index}]")
         if destination.get("kind") != "search":
@@ -208,7 +273,10 @@ def validate_campaign(value: Any) -> dict:
             _error(f"{base}.price", "cannot exceed originalPrice")
         if "productId" in product:
             product["productId"] = _id(product["productId"], f"{base}.productId")
-        if not campaign["demo"] and not product.get("productId"):
+        displayed = campaign.get("composition", "template") == "template" or any(
+            block["enabled"] and block["type"] == "spotlight" and
+            (not block["itemIds"] or product["id"] in block["itemIds"]) for block in blocks)
+        if not campaign["demo"] and displayed and not product.get("productId"):
             _error(f"{base}.productId", "live campaigns require a catalogue product reference")
     if "searchPrefix" in campaign:
         _string(campaign["searchPrefix"], "searchPrefix", 200)
@@ -229,6 +297,7 @@ def validate_campaign(value: Any) -> dict:
         _error("campaign", "configuration exceeds 128 KB")
     campaign.setdefault("enabled", True)
     campaign.setdefault("layout", "classic")
+    campaign.setdefault("composition", "template")
     campaign.setdefault("autoplay", True)
     campaign.setdefault("searchPrefix", "Search for")
     campaign.setdefault("decorationImage", "string-lights.svg")

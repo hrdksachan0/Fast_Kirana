@@ -3,7 +3,8 @@ import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
-import { Search, ToggleLeft, ToggleRight, Check, X, Sparkles, SlidersHorizontal, RefreshCw, Utensils, IndianRupee, Plus, Loader2, Image as ImageIcon } from 'lucide-react'
+import { Search, ToggleLeft, ToggleRight, Check, X, Sparkles, SlidersHorizontal, RefreshCw, Utensils, IndianRupee, Plus, Loader2, Image as ImageIcon, Layers } from 'lucide-react'
+import { RestaurantMenuSectionsEditor } from './restaurant-menu-sections-editor'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
 import { RestaurantPayoutsLedger } from './restaurant-payouts-ledger'
@@ -21,6 +22,7 @@ interface Product {
   price: number
   stock: number
   isAvailable: boolean
+  restaurantId?: string
   category?: {
     name: string
     slug: string
@@ -34,19 +36,22 @@ interface AdminRestaurantConsoleProps {
 
 export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestaurantConsoleProps) {
   const { data: session } = useSession()
+  const fastToken = (session as any)?.fastapiToken || (session?.user as any)?.fastapiToken || (typeof window !== 'undefined' ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token')) : null)
+
   const authHeaders = useMemo(() => ({
     'Content-Type': 'application/json',
+    ...(fastToken ? { 'Authorization': `Bearer ${fastToken}` } : {}),
     ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
     ...((session?.user as any)?.role ? { 'x-user-role': (session?.user as any).role } : { 'x-user-role': 'ADMIN' }),
     ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
     ...((session?.user as any)?.phone ? { 'x-user-phone': (session?.user as any).phone } : {}),
-  }), [session])
+  }), [session, fastToken])
 
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'instock' | 'outofstock' | 'hidden'>('all')
-  const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'payouts'>('catalog')
+  const [activeSubTab, setActiveSubTab] = useState<'catalog' | 'sections' | 'payouts'>('catalog')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null)
   const [editPriceVal, setEditPriceVal] = useState('')
@@ -105,6 +110,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
     mrp: '',
     imageUrl: '',
     sectionTag: 'main-course',
+    restaurantId: '',
   })
 
   const mediaImages = useMemo(() => {
@@ -162,39 +168,50 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
 
   const handleOpenAddDish = () => {
     setEditingDish(null)
+    const defaultRestId = selectedRestaurantId !== 'ALL' && selectedRestaurantId !== 'NONE'
+      ? selectedRestaurantId
+      : (restaurants.length > 0 ? restaurants[0].id : '')
     setDishForm({
       name: '',
       price: '',
       mrp: '',
       imageUrl: '',
       sectionTag: 'main-course',
+      restaurantId: defaultRestId,
     })
     setShowDishModal(true)
   }
 
   const handleOpenEditDish = (product: Product) => {
     setEditingDish(product)
+    const defaultRestId = (product as any).restaurantId || (selectedRestaurantId !== 'ALL' && selectedRestaurantId !== 'NONE' ? selectedRestaurantId : (restaurants[0]?.id || ''))
     setDishForm({
       name: product.name || '',
       price: String(product.price || ''),
       mrp: String(product.mrp || ''),
       imageUrl: product.imageUrl || '',
       sectionTag: (product as any).tags?.[0] || 'main-course',
+      restaurantId: defaultRestId,
     })
     setShowDishModal(true)
   }
 
   const handleSaveDish = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!dishForm.name || !dishForm.price || !dishForm.mrp) {
+    if (!dishForm.name.trim() || !dishForm.price || !dishForm.mrp) {
       toast.error('Please fill in dish name, price, and MRP')
       return
     }
 
     // Determine which restaurant to assign this dish to
-    const targetRestaurantId = selectedRestaurantId !== 'ALL' 
+    const targetRestaurantId = dishForm.restaurantId || (selectedRestaurantId !== 'ALL' 
       ? selectedRestaurantId 
-      : (restaurants.length > 0 ? restaurants[0].id : '')
+      : (restaurants.length > 0 ? restaurants[0].id : ''))
+
+    if (!targetRestaurantId) {
+      toast.error('Please select a restaurant outlet before adding a dish')
+      return
+    }
 
     setSavingDish(true)
     try {
@@ -203,17 +220,19 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
         const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${editingDish.id}`, {
           method: 'PATCH',
           headers: authHeaders,
+          credentials: 'include',
           body: JSON.stringify({
-            name: dishForm.name,
+            name: dishForm.name.trim(),
             price: parseFloat(dishForm.price),
             mrp: parseFloat(dishForm.mrp),
-            imageUrl: dishForm.imageUrl,
+            imageUrl: dishForm.imageUrl?.trim() || null,
             tags: [dishForm.sectionTag, 'restaurant'],
+            restaurantId: targetRestaurantId,
           }),
         })
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
-          throw new Error(errData.error || 'Failed to update dish')
+          throw new Error(errData.error || errData.detail || errData.message || 'Failed to update dish')
         }
         const data = await res.json()
         const updated = data.product || data
@@ -224,11 +243,12 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
         const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products`, {
           method: 'POST',
           headers: authHeaders,
+          credentials: 'include',
           body: JSON.stringify({
-            name: dishForm.name,
+            name: dishForm.name.trim(),
             price: parseFloat(dishForm.price),
             mrp: parseFloat(dishForm.mrp),
-            imageUrl: dishForm.imageUrl,
+            imageUrl: dishForm.imageUrl?.trim() || null,
             stock: 99999,
             isAvailable: true,
             tags: [dishForm.sectionTag, 'restaurant'],
@@ -237,7 +257,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
         })
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
-          throw new Error(errData.error || 'Failed to create dish')
+          throw new Error(errData.error || errData.detail || errData.message || 'Failed to create dish')
         }
         const data = await res.json()
         const created = data.product || data
@@ -245,6 +265,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
         toast.success(`New dish "${dishForm.name}" added to menu! 🎉`)
       }
       setShowDishModal(false)
+      fetchRestaurantProducts()
     } catch (err: any) {
       toast.error(err.message || 'Error saving dish')
     } finally {
@@ -301,6 +322,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
       const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products?${params.toString()}`, { 
         cache: 'no-store',
         headers: authHeaders,
+        credentials: 'include',
       })
       if (!res.ok) throw new Error('Failed to fetch catalog')
       const data = await res.json()
@@ -329,6 +351,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
       const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: authHeaders,
+        credentials: 'include',
         body: JSON.stringify({ isAvailable: newStatus }),
       })
       if (res.ok) {
@@ -353,6 +376,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
       const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: authHeaders,
+        credentials: 'include',
         body: JSON.stringify({ stock: newStock }),
       })
       if (res.ok) {
@@ -382,6 +406,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
       const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: authHeaders,
+        credentials: 'include',
         body: JSON.stringify({ price: priceNum, mrp: mrpNum }),
       })
       if (res.ok) {
@@ -514,6 +539,17 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
             >
               <Utensils className="h-4 w-4" />
               Menu Catalog
+            </button>
+            <button
+              onClick={() => setActiveSubTab('sections')}
+              className={`flex items-center gap-2 pb-3 px-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                activeSubTab === 'sections' 
+                  ? 'border-red-650 text-red-600' 
+                  : 'border-transparent text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Layers className="h-4 w-4" />
+              Menu Categories
             </button>
             <button
               onClick={() => setActiveSubTab('payouts')}
@@ -761,6 +797,20 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
         </>
       )}
 
+      {activeSubTab === 'sections' && (
+        <div className="space-y-4">
+          {selectedRestaurantId === 'ALL' && restaurants.length > 1 && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-700 dark:text-amber-300 font-bold flex items-center justify-between">
+              <span>Configuring menu categories for <strong>{restaurants[0]?.name}</strong>. Use the outlet selector above to switch outlets.</span>
+            </div>
+          )}
+          <RestaurantMenuSectionsEditor 
+            assignedRestaurantId={selectedRestaurantId !== 'ALL' && selectedRestaurantId !== 'NONE' ? selectedRestaurantId : (restaurants[0]?.id || '')} 
+            isCafe={false} 
+          />
+        </div>
+      )}
+
       {activeSubTab === 'payouts' && (
         <RestaurantPayoutsLedger isAdmin={isAdmin} />
       )}
@@ -784,6 +834,23 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
             </div>
 
             <form onSubmit={handleSaveDish} className="p-5 space-y-4">
+              {restaurants.length > 1 && (
+                <div>
+                  <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Outlet *</label>
+                  <select
+                    value={dishForm.restaurantId}
+                    onChange={e => setDishForm({ ...dishForm, restaurantId: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold cursor-pointer"
+                  >
+                    {restaurants.map(r => (
+                      <option key={r.id} value={r.id}>
+                        🍽️ {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="text-[10px] font-bold text-text-secondary block mb-1">Dish Name *</label>
                 <input

@@ -86,16 +86,16 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppDesignSystem.slate900,
-        contentTextStyle: GoogleFonts.inter(
+        backgroundColor: Colors.white,
+        contentTextStyle: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: Colors.white,
+          color: const Color(0xFF0F172A),
         ),
         elevation: 8,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppDesignSystem.slate700, width: 1),
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
         ),
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
@@ -183,16 +183,16 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppDesignSystem.slate900,
-        contentTextStyle: GoogleFonts.inter(
+        backgroundColor: const Color(0xFF1E293B),
+        contentTextStyle: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: Colors.white,
+          color: const Color(0xFFF8FAFC),
         ),
         elevation: 8,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppDesignSystem.slate700, width: 1),
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: Color(0xFF334155), width: 1),
         ),
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),

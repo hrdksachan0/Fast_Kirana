@@ -74,10 +74,35 @@ const product = z
     path: ['price'],
   })
 
+export const campaignMotionSchema = z
+  .object({
+    preset: z.enum(['none', 'fade', 'slide', 'float', 'zoom', 'sparkle']).default('fade'),
+    speed: z.enum(['slow', 'normal', 'fast']).default('normal'),
+  })
+  .strict()
+
+export const campaignBlockSchema = z
+  .object({
+    id,
+    type: z.enum(['banner', 'categories', 'spotlight', 'collection', 'image', 'text']),
+    enabled: z.boolean().default(true),
+    title: copy.default(''),
+    body: z.string().max(500).default(''),
+    image: campaignImageSchema.nullable().default(null),
+    destinationId: id.nullable().default(null),
+    itemIds: z.array(id).max(12).default([]),
+    tabId: id.nullable().default(null),
+    presentation: z.enum(['wide', 'grid', 'row', 'offer', 'plain']).default('wide'),
+    motion: campaignMotionSchema.default({ preset: 'fade', speed: 'normal' }),
+  })
+  .strict()
+
 export const campaignSchema = z
   .object({
     version: z.literal(1),
     layout: z.enum(['classic', 'banner', 'split', 'grid', 'deals']).default('classic'),
+    composition: z.enum(['template', 'blocks']).default('template'),
+    blocks: z.array(campaignBlockSchema).max(16).default([]),
     demo: z.boolean(),
     enabled: z.boolean().default(true),
     autoplay: z.boolean().default(true),
@@ -152,13 +177,15 @@ export const campaignSchema = z
       .length(4),
     tabs: z
       .array(
-        z.object({
-          id,
-          label: copy.min(1),
-          image: campaignImageSchema,
-          keywords,
-          productIds: z.array(z.string().trim().min(1)).max(40).optional().default([]),
-        }).strict()
+        z
+          .object({
+            id,
+            label: copy.min(1),
+            image: campaignImageSchema,
+            keywords,
+            productIds: z.array(z.string().trim().min(1)).max(40).optional().default([]),
+          })
+          .strict()
       )
       .min(1)
       .max(8),
@@ -182,6 +209,53 @@ export const campaignSchema = z
         context.addIssue({ code: 'custom', path: [collection], message: 'IDs must be unique' })
     }
     const destinations = new Set(campaign.destinations.map((value) => value.id))
+    const blockIds = campaign.blocks.map((block) => block.id)
+    if (new Set(blockIds).size !== blockIds.length)
+      context.addIssue({ code: 'custom', path: ['blocks'], message: 'Block IDs must be unique' })
+    if (campaign.composition === 'blocks' && !campaign.blocks.some((block) => block.enabled))
+      context.addIssue({
+        code: 'custom',
+        path: ['blocks'],
+        message: 'Add at least one visible block',
+      })
+    const presentations = {
+      banner: ['wide'],
+      categories: ['grid', 'row'],
+      spotlight: ['wide', 'offer'],
+      collection: ['grid', 'row'],
+      image: ['wide'],
+      text: ['plain'],
+    }
+    campaign.blocks.forEach((block, index) => {
+      const issue = (field: string, message: string) =>
+        context.addIssue({ code: 'custom', path: ['blocks', index, field], message })
+      if (!presentations[block.type].includes(block.presentation))
+        issue('presentation', 'Choose a presentation supported by this block')
+      if (block.destinationId && !destinations.has(block.destinationId))
+        issue('destinationId', 'Choose an existing destination')
+      if (new Set(block.itemIds).size !== block.itemIds.length)
+        issue('itemIds', 'Choose each item only once')
+      const source =
+        block.type === 'banner'
+          ? campaign.headers
+          : block.type === 'categories'
+            ? campaign.categories
+            : block.type === 'spotlight'
+              ? campaign.products
+              : []
+      const available = new Set(source.map((item) => item.id))
+      if (block.itemIds.some((item) => !available.has(item)))
+        issue('itemIds', 'Choose existing items for this block')
+      if (block.type === 'collection') {
+        if (!campaign.tabs.some((tab) => tab.id === block.tabId))
+          issue('tabId', 'Choose an existing collection')
+      } else if (block.tabId) issue('tabId', 'Only collection blocks use a collection')
+      if (block.type === 'image' && !block.image) issue('image', 'Image banners need artwork')
+      if (block.type === 'text' && !block.title.trim() && !block.body.trim())
+        issue('title', 'Text blocks need a heading or message')
+      if (block.type === 'text' && !['none', 'fade', 'slide'].includes(block.motion.preset))
+        issue('motion', 'Text blocks support no effect, soft fade, or slide in')
+    })
     campaign.headers.forEach((slide, index) => {
       if (slide.kind !== 'title' && !slide.image)
         context.addIssue({
@@ -209,14 +283,25 @@ export const campaignSchema = z
           path: ['products', index, 'categoryId'],
           message: 'Choose an existing card category',
         })
-      if (!campaign.demo && !item.productId)
+      const displayed =
+        campaign.composition === 'template' ||
+        campaign.blocks.some(
+          (block) =>
+            block.enabled &&
+            block.type === 'spotlight' &&
+            (!block.itemIds.length || block.itemIds.includes(item.id))
+        )
+      if (!campaign.demo && displayed && !item.productId)
         context.addIssue({
           code: 'custom',
           path: ['products', index, 'productId'],
-          message: 'Live campaigns must link every promotional card to a catalogue product',
+          message:
+            'Live campaigns must link every displayed promotional card to a catalogue product',
         })
     })
   })
 
 export type CampaignConfig = z.infer<typeof campaignSchema>
+export type CampaignBlock = z.infer<typeof campaignBlockSchema>
+export type CampaignMotion = z.infer<typeof campaignMotionSchema>
 export const parseCampaignConfig = (value: unknown): CampaignConfig => campaignSchema.parse(value)

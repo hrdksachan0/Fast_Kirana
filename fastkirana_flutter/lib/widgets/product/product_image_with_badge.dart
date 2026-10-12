@@ -442,6 +442,7 @@ class ImageShowcase extends StatelessWidget {
   final bool showAddedCheck;
   final bool showOutlet;
   final String? heroTag;
+  final Widget Function(Widget)? imageBuilder;
 
   const ImageShowcase({
     super.key,
@@ -459,11 +460,15 @@ class ImageShowcase extends StatelessWidget {
     required this.showAddedCheck,
     this.showOutlet = true,
     this.heroTag,
+    this.imageBuilder,
   });
 
   @override
   Widget build(BuildContext context) {
     final s = uiScale;
+    final image = heroTag != null
+        ? Hero(tag: heroTag!, child: ProductImage(product: product, isFood: isFood, s: s))
+        : ProductImage(product: product, isFood: isFood, s: s);
     return Container(
       height: imageHeight,
       width: double.infinity,
@@ -476,9 +481,7 @@ class ImageShowcase extends StatelessWidget {
         children: [
           // Product Photo
           Positioned.fill(
-            child: heroTag != null
-                ? Hero(tag: heroTag!, child: ProductImage(product: product, isFood: isFood, s: s))
-                : ProductImage(product: product, isFood: isFood, s: s),
+            child: imageBuilder?.call(image) ?? image,
           ),
 
           // Badges

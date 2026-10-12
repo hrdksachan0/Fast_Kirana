@@ -403,6 +403,17 @@ export function StorefrontClient({
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="container mx-auto px-4 pt-2 flex flex-col gap-5 sm:gap-6 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
           >
+            {campaign.enabled && isLocationServiceable && (
+              <div className="-mx-4 sm:mx-0">
+                <NavratriSection
+                  data={campaign}
+                  products={!isLoadingStoreData ? currentGroceryProducts : []}
+                  loading={isLoadingStoreData}
+                  storeId={activeStoreId}
+                  resolveLinkedProducts={isLocationServiceable}
+                />
+              </div>
+            )}
             {isLoadingStoreData ? (
               <div className="w-full py-20 flex flex-col items-center justify-center gap-3">
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -421,19 +432,6 @@ export function StorefrontClient({
                 <div>
                   <CategoryGrid categories={currentCategories} />
                 </div>
-
-                {/* 3. Campaign Manager Live Festive Section */}
-                {campaign.enabled && (
-                  <div className="-mx-4 sm:mx-0">
-                    <NavratriSection
-                      data={campaign}
-                      products={isLocationServiceable && !isLoadingStoreData ? currentGroceryProducts : []}
-                      loading={isLoadingStoreData}
-                      storeId={activeStoreId}
-                      resolveLinkedProducts={isLocationServiceable}
-                    />
-                  </div>
-                )}
 
                 {/* 3. Speed Strip */}
                 <div>

@@ -20,6 +20,7 @@ import { useRotation } from './use-rotation'
 import { usePromotionProducts } from './use-promotion-products'
 import { campaignHeaderSecondary } from '@/lib/campaign-appearance'
 import styles from './navratri.module.css'
+import { CampaignBlockCanvas } from './campaign-block-canvas'
 
 function RotatingHeader({ data, paused }: { data: NavratriData; paused: boolean }) {
   const index = useRotation(data.headers.length, data.timings.headerMs, paused)
@@ -164,7 +165,12 @@ export function NavratriSection({
     resolveLinkedProducts
   )
   const promotion = resolveCampaignPromotions(data, promotionCatalogue)
-  const filtered = filterNavratriProducts(promotionCatalogue, tab.keywords, data, (tab as any).productIds).slice(0, 12)
+  const filtered = filterNavratriProducts(
+    promotionCatalogue,
+    tab.keywords,
+    data,
+    (tab as any).productIds
+  ).slice(0, 12)
   const demos = products.length || loading || !data.demo ? [] : filterDemoProducts(tab, data)
   const categoryCards = data.categories.map((category) => (
     <Link
@@ -206,6 +212,7 @@ export function NavratriSection({
       aria-label={data.labels.sectionLabel}
       data-testid="navratri-section"
       data-layout={data.layout}
+      data-composition={data.composition}
       style={
         {
           '--navratri-fade': `${data.timings.crossfadeMs}ms`,
@@ -222,133 +229,151 @@ export function NavratriSection({
         } as CSSProperties
       }
     >
-      <div className={styles.festival}>
-        {data.decorationImage && (
-          <Image
-            src={navratriAsset(data.decorationImage)}
-            alt=""
-            width={900}
-            height={32}
-            unoptimized
-            className={styles.lights}
-            loading="eager"
-          />
-        )}
-        <RotatingHeader data={data} paused={paused || focused || !data.autoplay} />
-        <div
-          className={data.layout === 'classic' ? styles.cards : styles.variantCards}
-          onFocusCapture={() => setFocused(true)}
-          onBlurCapture={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false)
-          }}
-        >
-          {data.layout === 'classic' ? (
-            <>
-              {productSpotlight}
-              {categoryCards}
-            </>
-          ) : (
-            <>
-              {(data.layout === 'banner' || data.layout === 'deals') && productSpotlight}
-              <div className={styles.categoryDeck}>{categoryCards}</div>
-              {(data.layout === 'split' || data.layout === 'grid') && productSpotlight}
-            </>
-          )}
-        </div>
-        <div className={styles.festivalFooter}>
-          <button
-            type="button"
-            className={styles.pause}
-            onClick={() => setPaused((value) => !value)}
-            aria-label={paused ? 'Play campaign animations' : 'Pause campaign animations'}
-            aria-pressed={paused}
-          >
-            {paused ? (
-              <Play size={13} aria-hidden="true" />
-            ) : (
-              <Pause size={13} aria-hidden="true" />
+      {data.composition === 'blocks' ? (
+        <CampaignBlockCanvas
+          data={data}
+          catalogue={promotionCatalogue}
+          loading={loading}
+          paused={paused}
+          onPause={() => setPaused((value) => !value)}
+        />
+      ) : (
+        <>
+          <div className={styles.festival}>
+            {data.decorationImage && (
+              <Image
+                src={navratriAsset(data.decorationImage)}
+                alt=""
+                width={900}
+                height={32}
+                unoptimized
+                className={styles.lights}
+                loading="eager"
+              />
             )}
-            <span>{paused ? 'Play' : 'Pause'}</span>
-          </button>
-          <span className={styles.curvedTab}>{data.labels.curvedTabLabel}</span>
-        </div>
-      </div>
-      <div
-        className={styles.tabs}
-        role="tablist"
-        aria-label={`${data.labels.sectionLabel} collections`}
-      >
-        {data.tabs.map((item, i) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            id={`${id}-tab-${i}`}
-            aria-controls={`${id}-panel`}
-            aria-selected={i === currentTab}
-            tabIndex={i === currentTab ? 0 : -1}
-            className={styles.tab}
-            onClick={() => setSelected(i)}
-            onKeyDown={(event) => keyboardTab(event, i)}
-          >
-            <span className={styles.tabArt}>
-              <Image src={navratriAsset(item.image)} alt="" width={64} height={64} unoptimized />
-            </span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </div>
-      <div
-        id={`${id}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${id}-tab-${currentTab}`}
-        tabIndex={0}
-        className={styles.results}
-      >
-        <div className={styles.resultsHeading}>
-          <h3>{tab.label}</h3>
-          {products.length === 0 && !loading && data.demo && (
-            <span>{data.labels.resultsDemoLabel}</span>
-          )}
-        </div>
-        {loading ? (
-          <p className={styles.empty} role="status">
-            {data.labels.loadingText}
-          </p>
-        ) : filtered.length > 0 ? (
-          <div className={styles.productGrid}>
-            {filtered.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : demos.length > 0 ? (
-          <div className={styles.productGrid}>
-            {demos.map((product) => (
-              <Link
-                key={product.id}
-                href={destinationHref(product.destinationId, data)}
-                prefetch={false}
-                className={styles.demoProduct}
+            <RotatingHeader data={data} paused={paused || focused || !data.autoplay} />
+            <div
+              className={data.layout === 'classic' ? styles.cards : styles.variantCards}
+              onFocusCapture={() => setFocused(true)}
+              onBlurCapture={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false)
+              }}
+            >
+              {data.layout === 'classic' ? (
+                <>
+                  {productSpotlight}
+                  {categoryCards}
+                </>
+              ) : (
+                <>
+                  {(data.layout === 'banner' || data.layout === 'deals') && productSpotlight}
+                  <div className={styles.categoryDeck}>{categoryCards}</div>
+                  {(data.layout === 'split' || data.layout === 'grid') && productSpotlight}
+                </>
+              )}
+            </div>
+            <div className={styles.festivalFooter}>
+              <button
+                type="button"
+                className={styles.pause}
+                onClick={() => setPaused((value) => !value)}
+                aria-label={paused ? 'Play campaign animations' : 'Pause campaign animations'}
+                aria-pressed={paused}
               >
-                <Image
-                  src={navratriAsset(product.image)}
-                  alt=""
-                  width={130}
-                  height={130}
-                  unoptimized
-                />
-                <span>{product.name}</span>
-                <strong>
-                  {navratriPrice(product.price)} <small>Demo</small>
-                </strong>
-                <span className={styles.browse}>Search catalogue</span>
-              </Link>
+                {paused ? (
+                  <Play size={13} aria-hidden="true" />
+                ) : (
+                  <Pause size={13} aria-hidden="true" />
+                )}
+                <span>{paused ? 'Play' : 'Pause'}</span>
+              </button>
+              <span className={styles.curvedTab}>{data.labels.curvedTabLabel}</span>
+            </div>
+          </div>
+          <div
+            className={styles.tabs}
+            role="tablist"
+            aria-label={`${data.labels.sectionLabel} collections`}
+          >
+            {data.tabs.map((item, i) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                id={`${id}-tab-${i}`}
+                aria-controls={`${id}-panel`}
+                aria-selected={i === currentTab}
+                tabIndex={i === currentTab ? 0 : -1}
+                className={styles.tab}
+                onClick={() => setSelected(i)}
+                onKeyDown={(event) => keyboardTab(event, i)}
+              >
+                <span className={styles.tabArt}>
+                  <Image
+                    src={navratriAsset(item.image)}
+                    alt=""
+                    width={64}
+                    height={64}
+                    unoptimized
+                  />
+                </span>
+                <span>{item.label}</span>
+              </button>
             ))}
           </div>
-        ) : (
-          <p className={styles.empty}>{data.labels.emptyText}</p>
-        )}
-      </div>
+          <div
+            id={`${id}-panel`}
+            role="tabpanel"
+            aria-labelledby={`${id}-tab-${currentTab}`}
+            tabIndex={0}
+            className={styles.results}
+          >
+            <div className={styles.resultsHeading}>
+              <h3>{tab.label}</h3>
+              {products.length === 0 && !loading && data.demo && (
+                <span>{data.labels.resultsDemoLabel}</span>
+              )}
+            </div>
+            {loading ? (
+              <p className={styles.empty} role="status">
+                {data.labels.loadingText}
+              </p>
+            ) : filtered.length > 0 ? (
+              <div className={styles.productGrid}>
+                {filtered.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : demos.length > 0 ? (
+              <div className={styles.productGrid}>
+                {demos.map((product) => (
+                  <Link
+                    key={product.id}
+                    href={destinationHref(product.destinationId, data)}
+                    prefetch={false}
+                    className={styles.demoProduct}
+                  >
+                    <Image
+                      src={navratriAsset(product.image)}
+                      alt=""
+                      width={130}
+                      height={130}
+                      unoptimized
+                    />
+                    <span>{product.name}</span>
+                    <strong>
+                      {navratriPrice(product.price)} <small>Demo</small>
+                    </strong>
+                    <span className={styles.browse}>Search catalogue</span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.empty}>{data.labels.emptyText}</p>
+            )}
+          </div>
+        </>
+      )}
     </section>
   )
 }

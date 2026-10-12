@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { campaignTemplates, createCampaignFromTemplate } from '../campaign-templates'
 import { parseCampaignConfig } from '../campaign-config'
+import { campaignContrast, campaignHeaderSecondary } from '../campaign-appearance'
 import { destinationHref, filterDemoProducts, filterNavratriProducts } from '../../components/home/navratri/data'
 import type { Product } from '../../types'
 
@@ -102,4 +103,13 @@ test('starting a template creates isolated editable state without altering regis
 
 test('unknown template IDs fail instead of silently replacing the draft', () => {
   assert.throws(() => createCampaignFromTemplate('missing-preset'), RangeError)
+})
+
+test('header supporting copy stays readable on every bundled theme background', () => {
+  for (const { id, config } of campaignTemplates) {
+    assert.ok(
+      campaignContrast(campaignHeaderSecondary(config.appearance), config.appearance.background) >= 4.5,
+      `${id} header supporting text needs sufficient contrast`,
+    )
+  }
 })

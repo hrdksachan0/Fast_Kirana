@@ -75,6 +75,7 @@ const CreateOrderModal = dynamic(
 )
 const ProductEditModal = dynamic(() => import('./product-edit-modal'), { ssr: false })
 const CampaignManager = dynamic(() => import('./campaign-manager').then(mod => mod.CampaignManager), { ssr:false })
+const FeaturedCategoriesManager = dynamic(() => import('./featured-categories-manager').then(mod => mod.FeaturedCategoriesManager), { ssr: false })
 const CategoryEditModal = dynamic(
   () => import('./category-edit-modal').then((m) => m.CategoryEditModal),
   { ssr: false }
@@ -996,6 +997,12 @@ export function AdminDashboard({
               openWhatsAppModal={openWhatsAppModal}
             />
           )}
+
+          {activeTab === 'categories' && <FeaturedCategoriesManager
+            categories={categoryHook.categories}
+            storeId={selectedHubId && selectedHubId !== 'all' ? selectedHubId : null}
+            onUpload={handleCloudinaryUpload}
+          />}
 
           {(activeTab === 'products' ||
             activeTab === 'categories' ||

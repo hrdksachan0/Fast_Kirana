@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse, ORJSONResponse
 import os
 import time
 from config import settings
-from routers import products, delivery, admin, admin_extended, forecast, orders, websockets, auth, cart, addresses, payments, restaurant, picker, profile, settings as store_settings_router, orders_helper, products_helper, public, paytm, fcm, categories, banners, restaurants, coupons, health, upload, cron, campaigns
+from routers import products, delivery, admin, admin_extended, forecast, orders, websockets, auth, cart, addresses, payments, restaurant, picker, profile, settings as store_settings_router, orders_helper, products_helper, public, paytm, fcm, categories, banners, restaurants, coupons, health, upload, cron, campaigns, featured_categories
 
 try:
     import sentry_sdk
@@ -361,6 +361,7 @@ app.include_router(profile.router, prefix="/api")
 app.include_router(banners.router, prefix="/api")
 app.include_router(store_settings_router.router, prefix="/api")
 app.include_router(campaigns.router, prefix="/api")
+app.include_router(featured_categories.router, prefix="/api")
 app.include_router(store_settings_router.router)
 app.include_router(store_settings_router.location_router, prefix="/api")
 app.include_router(orders_helper.helper_router, prefix="/api")

@@ -29,13 +29,17 @@ export function useAdminProducts({
   sessionUserPhone,
   activeTab,
 }: UseAdminProductsProps) {
-  const authHeaders = useMemo(() => ({
-    'Content-Type': 'application/json',
-    ...(sessionUserId ? { 'x-user-id': sessionUserId } : {}),
-    ...(sessionUserRole ? { 'x-user-role': sessionUserRole } : { 'x-user-role': 'ADMIN' }),
-    ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
-    ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
-  }), [sessionUserId, sessionUserRole, sessionUserEmail, sessionUserPhone])
+  const authHeaders = useMemo(() => {
+    const fastToken = typeof window !== 'undefined' ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token')) : null
+    return {
+      'Content-Type': 'application/json',
+      ...(fastToken ? { 'Authorization': `Bearer ${fastToken}` } : {}),
+      ...(sessionUserId ? { 'x-user-id': sessionUserId } : {}),
+      ...(sessionUserRole ? { 'x-user-role': sessionUserRole } : { 'x-user-role': 'ADMIN' }),
+      ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
+      ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
+    }
+  }, [sessionUserId, sessionUserRole, sessionUserEmail, sessionUserPhone])
 
   const [products, setProducts] = useState<any[]>(Array.isArray(initialProducts) ? initialProducts : [])
   const [allProducts, setAllProducts] = useState<any[]>(Array.isArray(initialAllProducts) ? initialAllProducts : [])
@@ -982,14 +986,8 @@ export function useAdminProducts({
 
       const res = await fetch(`/api/products`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(sessionUserId ? { 'x-user-id': sessionUserId } : {}),
-          ...(sessionUserRole ? { 'x-user-role': sessionUserRole } : { 'x-user-role': 'ADMIN' }),
-          ...(sessionUserEmail ? { 'x-user-email': sessionUserEmail } : {}),
-          ...(sessionUserPhone ? { 'x-user-phone': sessionUserPhone } : {}),
-        },
-        credentials: 'same-origin',
+        headers: authHeaders,
+        credentials: 'include',
         body: JSON.stringify(createPayload),
       })
 

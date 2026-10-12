@@ -82,3 +82,4 @@ fastapi-backend/firebase-credentials.json
 
 .claude/
 agent/
+test-results/

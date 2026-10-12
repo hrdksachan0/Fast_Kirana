@@ -9,6 +9,7 @@ import '../../data/models/product.dart';
 import '../../widgets/product_card.dart';
 import 'navratri_animation.dart';
 import 'navratri_data.dart';
+import 'campaign_block_section.dart';
 
 const navratriOrange = Color(0xFFFF831F);
 const navratriCream = Color(0xFFFFF8DF);
@@ -361,6 +362,7 @@ class _NavratriShoppingSectionState
 
   @override
   void startTimers() {
+    if (widget.data.composition == 'blocks') return;
     periodic(widget.data.timings.header, () {
       setState(() => _header = (_header + 1) % widget.data.headers.length);
       _preloadNext();
@@ -833,6 +835,24 @@ class _NavratriShoppingSectionState
   @override
   Widget build(BuildContext context) {
     if (!widget.data.enabled) return const SizedBox.shrink();
+    if (widget.data.composition == 'blocks') {
+      return Semantics(
+          label: _labels.sectionLabel,
+          child: _CampaignStyle(
+              data: widget.data,
+              child: CampaignBlockSection(
+                  data: widget.data,
+                  catalog: widget.catalog,
+                  loading: widget.catalogLoading,
+                  paused: _paused,
+                  onPause: () {
+                    setState(() => _paused = !_paused);
+                    syncAutoplay();
+                  },
+                  onNavigate: widget.onNavigate,
+                  onProductSelected: widget.onProductSelected,
+                  artwork: (image) => NavratriIllustration(image: image))));
+    }
     final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
     final products = _promotions;
     final product = products.isEmpty ? null : products[_product];

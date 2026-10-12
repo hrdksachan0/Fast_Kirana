@@ -1,7 +1,7 @@
 'use client';
 import { apiUrl } from '@/lib/api-url';
 
-import { useState, useCallback, useMemo, useRef, useEffect, memo } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, memo, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Plus, Minus, Check, Zap, Heart, Store } from 'lucide-react'
 import { useProductQuantity, useCartActions } from '@/hooks/use-cart'
@@ -17,6 +17,7 @@ import { triggerHaptic } from '@/lib/haptic'
 interface ProductCardProps {
   product: Product
   isCompact?: boolean
+  renderArtwork?: (artwork: ReactNode) => ReactNode
 }
 
 import { useRouter } from 'next/navigation'
@@ -25,7 +26,7 @@ import { useLiveStock } from '@/components/providers/live-stock-provider'
 import { checkDishTimeAvailability } from '@/lib/dish-timing'
 import { getOutletName } from '@/lib/constants'
 
-function ProductCardComponent({ product, isCompact = false }: ProductCardProps) {
+function ProductCardComponent({ product, isCompact = false, renderArtwork }: ProductCardProps) {
   const router = useRouter()
   const groceryMartOpen = useUIStore((s) => s.groceryMartOpen)
   const cafeOpen = useUIStore((s) => s.cafeOpen)
@@ -341,6 +342,17 @@ function ProductCardComponent({ product, isCompact = false }: ProductCardProps) 
 
   const isLowStock = product.category?.slug !== 'cafe' && !product.tags?.includes('cafe') && resolvedStock > 0 && resolvedStock <= (product.minStock ?? 10)
 
+  const artwork = (
+    <ProductImage
+      src={product.imageUrl}
+      alt={product.name}
+      categorySlug={categorySlug}
+      isBestseller={product.tags?.includes('popular')}
+      width={240}
+      className="h-full w-full object-contain p-1.5 transition-transform duration-300 ease-out md:group-hover:scale-108 group-active:scale-[0.97]"
+    />
+  )
+
   return (
     <div
       className={cn(
@@ -411,14 +423,7 @@ function ProductCardComponent({ product, isCompact = false }: ProductCardProps) 
               : "h-[120px] min-[375px]:h-[135px] sm:h-[150px] md:h-[168px]"
           )}
         >
-          <ProductImage
-            src={product.imageUrl}
-            alt={product.name}
-            categorySlug={categorySlug}
-            isBestseller={product.tags?.includes('popular')}
-            width={240}
-            className="h-full w-full object-contain p-1.5 transition-transform duration-300 ease-out md:group-hover:scale-108 group-active:scale-[0.97]"
-          />
+          {renderArtwork ? renderArtwork(artwork) : artwork}
 
           {/* Heart / Wishlist Button */}
           <button
