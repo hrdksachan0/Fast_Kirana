@@ -17,6 +17,7 @@ import 'widgets/home_footer.dart';
 import 'widgets/home_food_storefront.dart';
 import 'widgets/home_buy_again_shelf.dart';
 import 'widgets/home_top_categories_grid.dart';
+import 'widgets/trending_categories_section.dart';
 import 'widgets/home_product_sections.dart';
 import 'widgets/home_infinite_feed.dart';
 import 'widgets/home_top_header.dart';
@@ -332,7 +333,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
                 slivers: [
                   SliverToBoxAdapter(
-                    child: HomeTopHeader(showSearch: navratri == null),
+                    child: HomeTopHeader(showSearch: true),
                   ),
 
                   // 1. Outside All Serviceable Delivery Zones
@@ -468,38 +469,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                       ] else ...[
                         const SliverToBoxAdapter(
+                            child: TrendingCategoriesSection()),
+                        const SliverToBoxAdapter(
                             child: HomeTopCategoriesGrid()),
                     if (navratri != null) ...[
-                      SliverPersistentHeader(
-                        pinned: true,
-                        delegate: NavratriPinnedHeader(
-                          height: NavratriStickyHeader.height(context,
-                              data: navratri),
-                          child: NavratriStickyHeader(
-                            data: navratri,
-                            onSearch: () => Navigator.push(
-                              context,
-                              FadeSlideRoute(page: const SearchScreen()),
-                            ),
-                            onVoiceSearch: () => VoiceSearchSheet.show(
-                              context,
-                              onResult: (query) => Navigator.push(
-                                context,
-                                FadeSlideRoute(
-                                  page: SearchScreen(initialQuery: query),
-                                ),
-                              ),
-                            ),
-                            onNavigate: (destination) => Navigator.push(
-                              context,
-                              FadeSlideRoute(
-                                page: SearchScreen(
-                                    initialQuery: destination.query),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                       SliverToBoxAdapter(
                         child: NavratriShoppingSection(
                           data: navratri,

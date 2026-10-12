@@ -328,7 +328,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Prominent Bolo / Voice Search Pill for Town Audience
+                    // Ambient Voice Mic Action Button
                     GestureDetector(
                       onTap: () {
                         HapticFeedback.lightImpact();
@@ -341,41 +341,16 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                         });
                       },
                       child: Container(
-                        height: 34,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        width: 32,
+                        height: 32,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFEF2F2), Color(0xFFFFE4E6)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(17),
+                          color: const Color(0xFFFEF2F2),
+                          shape: BoxShape.circle,
                           border: Border.all(
-                              color: const Color(0xFFFECDD3), width: 1.2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppDesignSystem.primary.withValues(alpha: 0.12),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                              color: const Color(0xFFFECDD3), width: 0.8),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.mic_rounded,
-                                size: 16, color: AppDesignSystem.primary),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Bolo',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: Responsive.scaledFontSize(context, 11.5),
-                                fontWeight: FontWeight.w800,
-                                color: AppDesignSystem.primary,
-                              ),
-                            ),
-                          ],
-                        ),
+                        child: const Icon(Icons.mic_rounded,
+                            size: 16, color: AppDesignSystem.primary),
                       ),
                     ),
                   ],
