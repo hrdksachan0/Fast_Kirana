@@ -84,7 +84,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             crunchPngs true
             ndk {
-                debugSymbolLevel 'none'
+                debugSymbolLevel 'SYMBOL_TABLE'
             }
         }
         debug {
