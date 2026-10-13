@@ -30,7 +30,6 @@ import { JsonLdSchema } from '@/components/seo/json-ld'
 import { UnserviceableLocationBanner } from '@/components/layout/unserviceable-banner'
 import { PhoneEnforcementModal } from '@/components/auth/phone-enforcement-modal'
 import { NetworkLivenessBanner } from '@/components/shared/network-liveness-banner'
-import { SmartAppBanner } from '@/components/shared/smart-app-banner'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -141,7 +140,6 @@ export default function RootLayout({
                 <div className="hidden md:block fixed inset-0 pointer-events-none z-[-1] overflow-hidden opacity-30 dark:opacity-35 bg-[radial-gradient(ellipse_at_top_left,rgba(226,10,34,0.06),transparent_50%),radial-gradient(ellipse_at_bottom_right,rgba(0,177,64,0.05),transparent_50%)] transform-gpu" />
 
                 <div className="flex flex-col min-h-screen">
-                  <SmartAppBanner />
                   <Navbar />
                   <UnserviceableLocationBanner />
                   <MainWrapper>

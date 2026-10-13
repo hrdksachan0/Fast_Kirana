@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import { PlusCircle, X, ImageIcon, Sparkles, Loader2, Trash } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { PlusCircle, X, ImageIcon, Sparkles, Loader2, Trash, Search, FolderPlus, Tag } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Category } from '@prisma/client'
 
@@ -11,7 +11,7 @@ interface CategoryWithCount extends Category {
 
 interface CategoriesTabProps {
   categories: CategoryWithCount[]
-  newCategory: { name: string; imageUrl: string; sortOrder: string; parentId: string }
+  newCategory: { id?: string; name: string; imageUrl: string; sortOrder: string; parentId: string }
   showAddCategory: boolean
   editingCategory: any
   savingCategoryId: string | null
@@ -71,6 +71,15 @@ export function CategoriesTab({
   allProducts,
 }: CategoriesTabProps) {
   const isStoreScoped = Boolean(selectedHubId && selectedHubId !== 'all')
+  const [categorySearch, setCategorySearch] = useState('')
+  const [levelFilter, setLevelFilter] = useState<'all' | 'root' | 'sub'>('all')
+
+  // Top-level categories available for parent assignment
+  const rootCategories = useMemo(() => {
+    return categories
+      .filter((c) => !c.parentId && c.slug !== 'cafe' && c.slug !== 'restaurant')
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+  }, [categories])
 
   const { storeCatIds, storeProductCounts } = useMemo(() => {
     const ids = new Set<string>()
@@ -85,21 +94,58 @@ export function CategoriesTab({
         counts[catId] = (counts[catId] || 0) + 1
       }
     }
+    // Also include parent IDs if any subcategory has stock in this store
+    for (const c of categories) {
+      if (c.parentId && ids.has(c.id)) {
+        ids.add(c.parentId)
+      }
+    }
     return { storeCatIds: ids, storeProductCounts: counts }
-  }, [allProducts])
+  }, [allProducts, categories])
 
   const filteredCategories: CategoryWithCount[] = useMemo(() => {
-    const validCats = categories.filter((c) => c.slug !== 'cafe' && c.slug !== 'restaurant')
+    let validCats = categories.filter((c) => c.slug !== 'cafe' && c.slug !== 'restaurant')
     if (isStoreScoped) {
       const storeCats = validCats.filter((c) => storeCatIds.has(c.id))
-      // HUB FALLBACK: If store has stocked products, show store-active categories; otherwise show all master categories
       if (storeCats.length > 0) {
-        return storeCats
+        validCats = storeCats
       }
-      return validCats
     }
+
+    if (levelFilter === 'root') {
+      validCats = validCats.filter((c) => !c.parentId)
+    } else if (levelFilter === 'sub') {
+      validCats = validCats.filter((c) => Boolean(c.parentId))
+    }
+
+    if (categorySearch.trim()) {
+      const q = categorySearch.trim().toLowerCase()
+      validCats = validCats.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.slug.toLowerCase().includes(q) ||
+          c.id.toLowerCase().includes(q)
+      )
+    }
+
     return validCats
-  }, [categories, isStoreScoped, storeCatIds])
+  }, [categories, isStoreScoped, storeCatIds, levelFilter, categorySearch])
+
+  // Count breakdown
+  const rootCount = useMemo(() => categories.filter((c) => !c.parentId && c.slug !== 'cafe' && c.slug !== 'restaurant').length, [categories])
+  const subCount = useMemo(() => categories.filter((c) => Boolean(c.parentId) && c.slug !== 'cafe' && c.slug !== 'restaurant').length, [categories])
+
+  const openAddSubcategoryFor = (parentCatId: string) => {
+    setNewCategory({
+      id: '',
+      name: '',
+      imageUrl: '',
+      sortOrder: '0',
+      parentId: parentCatId,
+    })
+    setShowAddCategory(true)
+    window.scrollTo({ top: 120, behavior: 'smooth' })
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -108,34 +154,44 @@ export function CategoriesTab({
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h3 className="font-extrabold text-text-primary text-base flex items-center gap-2">
-              <span>📁 Categories</span>
+              <span>📁 Category & Subcategory Management</span>
             </h3>
             {isStoreScoped ? (
               <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
                 🏪 Store Categories: {filteredCategories.length} {storeCatIds.size === 0 && '(Catalog Default)'}
               </span>
             ) : (
-              <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
-                {filteredCategories.length} Total
-              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold">
+                  {categories.length} Total
+                </span>
+                <span className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/20">
+                  {rootCount} Top-Level
+                </span>
+                <span className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full font-bold border border-amber-500/20">
+                  {subCount} Subcategories
+                </span>
+              </div>
             )}
           </div>
           <p className="text-xs text-text-secondary mt-1">
             {isStoreScoped
               ? 'Showing categories available in this store outlet with fallback to master catalog.'
-              : 'Manage product categories and upload category photos.'}
+              : 'Organize systematic categories and subcategories (e.g. Fruits & Vegetables ➔ Fresh Fruits / Fresh Vegetables).'}
           </p>
         </div>
 
         <button
           onClick={() => {
             setShowAddCategory(!showAddCategory)
-            setNewCategory({ name: '', imageUrl: '', sortOrder: '0', parentId: '' })
+            if (!showAddCategory) {
+              setNewCategory({ id: '', name: '', imageUrl: '', sortOrder: '0', parentId: '' })
+            }
           }}
           className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/95 transition-all shadow-xs cursor-pointer active:scale-98"
         >
           <PlusCircle className="h-4 w-4" />
-          <span>{showAddCategory ? 'Close Form' : 'Add Category'}</span>
+          <span>{showAddCategory ? 'Close Form' : 'Add Category / Subcategory'}</span>
         </button>
       </div>
 
@@ -150,23 +206,85 @@ export function CategoriesTab({
             className="bg-card p-6 border border-border rounded-2xl shadow-md space-y-5 max-w-xl animate-slide-up"
           >
             <div className="border-b border-border/60 pb-3 flex justify-between items-center">
-              <h4 className="font-extrabold text-text-primary text-sm">Create Category</h4>
+              <div>
+                <h4 className="font-extrabold text-text-primary text-sm">
+                  {newCategory.parentId ? 'Create New Subcategory' : 'Create Category'}
+                </h4>
+                {newCategory.parentId && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-0.5">
+                    ↳ Parent: {categories.find((c) => c.id === newCategory.parentId)?.name || newCategory.parentId}
+                  </p>
+                )}
+              </div>
               <span className="text-[10px] text-text-muted font-mono">POST /api/categories</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Category Level / Parent Selector */}
               <div className="sm:col-span-2">
-                <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Name *</label>
+                <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                  Parent Category (Hierarchy Level) *
+                </label>
+                <select
+                  value={newCategory.parentId || ''}
+                  onChange={(e) => setNewCategory({ ...newCategory, parentId: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                >
+                  <option value="">📂 None (Create as Top-Level Category)</option>
+                  {rootCategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      📁 {c.name} ({c.id})
+                    </option>
+                  ))}
+                </select>
+                {newCategory.parentId ? (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-1">
+                    ↳ Will be created as a systematic subcategory under &ldquo;{categories.find((c) => c.id === newCategory.parentId)?.name}&rdquo;
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-text-muted mt-1">
+                    Will appear on the main navigation rail as a primary root category.
+                  </p>
+                )}
+              </div>
+
+              {/* Category Name */}
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                  {newCategory.parentId ? 'Subcategory Name *' : 'Category Name *'}
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Fresh Milk, Snacks, or Fruits & Vegetables"
+                  placeholder={
+                    newCategory.parentId
+                      ? 'e.g. Fresh Fruits, Oils & Ghee, Dals & Pulses'
+                      : 'e.g. Fruits & Vegetables, Kitchen & Ration, Snacks & Munchies'
+                  }
                   value={newCategory.name}
                   onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                 />
               </div>
 
+              {/* Optional Custom Category ID */}
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                  Category ID (Optional — leave blank to auto-generate)
+                </label>
+                <input
+                  type="text"
+                  placeholder={newCategory.parentId ? 'e.g. SUB-101-03 or SUB-113-06' : 'e.g. CAT-117'}
+                  value={newCategory.id || ''}
+                  onChange={(e) => setNewCategory({ ...newCategory, id: e.target.value.toUpperCase().trim() })}
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-mono font-semibold"
+                />
+                <p className="text-[10px] text-text-muted mt-1">
+                  Optional systematic code (e.g. SUB-XXX-YY). If left blank, a unique ID is auto-assigned.
+                </p>
+              </div>
+
+              {/* Photo / Icon */}
               <div className="sm:col-span-2">
                 <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Photo / Icon</label>
                 <div className="flex flex-col sm:flex-row items-center gap-3 bg-muted/10 p-3.5 rounded-xl border border-dashed border-border/80">
@@ -234,6 +352,7 @@ export function CategoriesTab({
                 </div>
               </div>
 
+              {/* Sort Order */}
               <div className="sm:col-span-2">
                 <label className="text-[10px] font-bold text-text-secondary block mb-1">Sort Order Weight</label>
                 <input
@@ -265,7 +384,7 @@ export function CategoriesTab({
                     Creating...
                   </>
                 ) : (
-                  'Save Category'
+                  newCategory.parentId ? 'Create Subcategory' : 'Create Category'
                 )}
               </button>
             </div>
@@ -283,7 +402,7 @@ export function CategoriesTab({
             <div className="border-b border-border/60 pb-3 flex justify-between items-center">
               <div>
                 <h4 className="font-black text-text-primary text-base">Edit Category</h4>
-                <p className="text-[10px] text-text-muted">ID: {editingCategory.id}</p>
+                <p className="text-[10px] text-text-muted font-mono">ID: {editingCategory.id}</p>
               </div>
               <button
                 type="button"
@@ -295,6 +414,27 @@ export function CategoriesTab({
             </div>
 
             <div className="space-y-4">
+              {/* Parent Category in Edit */}
+              <div>
+                <label className="text-[10px] font-bold text-text-secondary block mb-1">
+                  Parent Category (Hierarchy Level)
+                </label>
+                <select
+                  value={categoryEditForm.parentId || ''}
+                  onChange={(e) => setCategoryEditForm({ ...categoryEditForm, parentId: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+                >
+                  <option value="">📂 None (Top-Level Category)</option>
+                  {rootCategories
+                    .filter((c) => c.id !== editingCategory.id)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        📁 {c.name} ({c.id})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
               <div>
                 <label className="text-[10px] font-bold text-text-secondary block mb-1">Category Name *</label>
                 <input
@@ -403,16 +543,75 @@ export function CategoriesTab({
 
       {/* Categories Tree List Table */}
       <div className="bg-card border border-border rounded-2xl p-5 shadow-sm overflow-hidden space-y-4">
+        {/* Table Filters & Search Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-2 border-b border-border/40">
+          <div className="flex items-center gap-1.5 bg-muted/30 p-1 rounded-xl border border-border/60">
+            <button
+              type="button"
+              onClick={() => setLevelFilter('all')}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                levelFilter === 'all'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              All ({categories.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setLevelFilter('root')}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                levelFilter === 'root'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Top-Level ({rootCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setLevelFilter('sub')}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                levelFilter === 'sub'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Subcategories ({subCount})
+            </button>
+          </div>
+
+          <div className="relative flex-1 sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+            <input
+              type="text"
+              placeholder="Search by name, ID, or slug..."
+              value={categorySearch}
+              onChange={(e) => setCategorySearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
+            />
+            {categorySearch && (
+              <button
+                type="button"
+                onClick={() => setCategorySearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {filteredCategories.length === 0 ? (
           <div className="text-center py-12 px-4 bg-muted/10 rounded-2xl border border-dashed border-border/80 my-2">
             <div className="text-4xl mb-3">🏪</div>
             <h4 className="text-sm font-extrabold text-text-primary">
-              {isStoreScoped ? 'New Store Setup — No Categories Found' : 'No Categories Found'}
+              {isStoreScoped ? 'New Store Setup — No Categories Found' : 'No Categories Match'}
             </h4>
             <p className="text-xs text-text-secondary max-w-md mx-auto mt-1 mb-2">
               {isStoreScoped
                 ? 'This store has no active categories yet. Inward products or add a new category to get started.'
-                : 'Get started by creating your first product category using the button above.'}
+                : 'Try adjusting your search query or level filter.'}
             </p>
           </div>
         ) : (
@@ -422,7 +621,7 @@ export function CategoriesTab({
                 <tr className="border-b border-border text-text-secondary uppercase tracking-wider font-bold">
                   <th className="py-3 px-4">ID</th>
                   <th className="py-3 px-4">Photo / Icon</th>
-                  <th className="py-3 px-4">Category Name</th>
+                  <th className="py-3 px-4">Category Name & Hierarchy</th>
                   <th className="py-3 px-4">Slug Identifier</th>
                   <th className="py-3 px-4 text-center">Sort Order</th>
                   <th className="py-3 px-4 text-center">Items Stocked</th>
@@ -435,9 +634,24 @@ export function CategoriesTab({
                     ? storeProductCounts[c.id] || 0
                     : c._count?.products || 0
 
+                  const parentCategory = c.parentId ? categories.find((p) => p.id === c.parentId) : null
+                  const childCategories = categories.filter((ch) => ch.parentId === c.id)
+
+                  // Sum products across child subcategories
+                  const childIds = childCategories.map((ch) => ch.id)
+                  const subProductsTotal = childIds.reduce((sum, chId) => {
+                    return (
+                      sum +
+                      (isStoreScoped
+                        ? storeProductCounts[chId] || 0
+                        : categories.find((k) => k.id === chId)?._count?.products || 0)
+                    )
+                  }, 0)
+                  const combinedCount = directCount + subProductsTotal
+
                   return (
                     <tr key={c.id} className="hover:bg-muted/30 transition-colors bg-card">
-                      <td className="py-3 px-4 font-mono text-[11px] font-bold text-primary">
+                      <td className="py-3 px-4 font-mono text-[11px] font-bold text-primary whitespace-nowrap">
                         {c.id}
                       </td>
 
@@ -454,26 +668,70 @@ export function CategoriesTab({
                       </td>
 
                       <td className="py-3 px-4">
-                        <span className="font-black text-sm text-text-primary">
-                          {c.name}
-                        </span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-black text-sm text-text-primary">
+                              {c.name}
+                            </span>
+                            {c.parentId ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 whitespace-nowrap">
+                                ↳ Subcategory of {parentCategory?.name || c.parentId}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 whitespace-nowrap">
+                                Top-Level ({childCategories.length} Subs)
+                              </span>
+                            )}
+                          </div>
+                          {childCategories.length > 0 && (
+                            <div className="flex items-center gap-1 flex-wrap text-[10px] text-text-muted">
+                              <span className="font-bold">Subcategories:</span>
+                              {childCategories.map((sc) => (
+                                <span key={sc.id} className="bg-muted/40 px-1.5 py-0.2 rounded border border-border/50 font-mono">
+                                  {sc.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3 px-4 font-mono text-[10px] text-text-muted">{c.slug}</td>
                       <td className="py-3 px-4 text-center font-black">{c.sortOrder}</td>
 
                       <td className="py-3 px-4 text-center">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
-                          directCount > 0 
-                            ? 'bg-primary/10 text-primary' 
-                            : 'bg-muted text-text-muted'
-                        }`}>
-                          {directCount} Products
-                        </span>
+                        <div>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                              combinedCount > 0
+                                ? 'bg-primary/10 text-primary'
+                                : 'bg-muted text-text-muted'
+                            }`}
+                          >
+                            {combinedCount} Products
+                          </span>
+                          {subProductsTotal > 0 && (
+                            <span className="block text-[9px] text-text-muted mt-0.5">
+                              ({directCount} direct, {subProductsTotal} in subs)
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {!c.parentId && (
+                            <button
+                              type="button"
+                              onClick={() => openAddSubcategoryFor(c.id)}
+                              title={`Add Subcategory under ${c.name}`}
+                              className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-bold rounded-lg transition-all cursor-pointer inline-flex items-center gap-1"
+                            >
+                              <FolderPlus className="h-3 w-3" />
+                              <span>+ Sub</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => startEditingCategory(c)}

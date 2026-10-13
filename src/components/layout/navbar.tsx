@@ -304,10 +304,7 @@ export function Navbar() {
       <nav
         data-site-navbar
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b backdrop-blur-xl",
-          isScrolled
-            ? "bg-white/70 dark:bg-zinc-950/70 border-zinc-200/45 dark:border-white/[0.05] shadow-md py-1.5"
-            : "bg-white/80 dark:bg-zinc-950/80 border-zinc-150/30 dark:border-white/[0.04] shadow-xs py-2.5"
+          "fixed top-0 left-0 right-0 z-50 transition-colors duration-200 border-b border-zinc-200/60 dark:border-zinc-800/60 bg-white dark:bg-zinc-950 shadow-2xs py-2.5"
         )}
       >
         <div className="mx-auto max-w-7xl px-4">

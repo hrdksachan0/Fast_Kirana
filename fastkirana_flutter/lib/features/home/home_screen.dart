@@ -53,7 +53,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with WidgetsBindingObserver {
   bool _isGrocerySelected =
       true; // Grocery mode default (Grocery first, then Food)
-  final int _selectedFilterIndex = 0;
+  int _selectedFilterIndex = 0;
   Timer? _orderSyncTimer;
   Timer? _storeStatusTimer;
 
@@ -502,6 +502,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           scrollController: _homeScrollController,
                           visibleGridCount: _visibleGridCount,
                           selectedFilterIndex: _selectedFilterIndex,
+                          onFilterChanged: (newIdx) {
+                            HapticFeedback.selectionClick();
+                            setState(() {
+                              _selectedFilterIndex = newIdx;
+                              _visibleGridCount = 20;
+                            });
+                          },
                         ),
                       ],
                       const SliverToBoxAdapter(child: HomeFooter()),

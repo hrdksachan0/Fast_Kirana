@@ -150,13 +150,16 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
     );
   }
 
-  // ─── HERO CARD (50% WIDTH, WIDE APPETIZING CONTAINER) ───
+  // ─── HERO CARD (50% WIDTH, WIDE LUXURY APPETIZING CONTAINER) ───
   Widget _buildHeroCard(
     BuildContext context,
     Category cat,
     String? customDisplayName,
   ) {
     final title = customDisplayName ?? cat.name;
+    final softBg = CategoryVisualHelper.getSoftColor(cat.slug, cat.name);
+    final borderColor = CategoryVisualHelper.getBorderColor(cat.slug, cat.name);
+    final accentColor = CategoryVisualHelper.getAccentColor(cat.slug, cat.name);
 
     return Bounceable(
       scaleFactor: 0.95,
@@ -170,39 +173,70 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Soft Clean Card Container (Blinkit / Zepto aesthetic)
+          // Luxury Dual-Tone Hero Container with Smooth Squircle Finish
           Container(
-            height: 98,
+            height: 114,
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9), // Soft slate-100 neutral surface
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  softBg,
+                  Colors.white.withValues(alpha: 0.95),
+                  softBg.withValues(alpha: 0.7),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: borderColor.withValues(alpha: 0.9),
+                width: 1.2,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+                  color: accentColor.withValues(alpha: 0.09),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
                 ),
               ],
             ),
             child: Stack(
               fit: StackFit.expand,
               children: [
+                // Subtle Ambient Corner Glow Pod
+                Positioned(
+                  top: -12,
+                  right: -12,
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: accentColor.withValues(alpha: 0.08),
+                    ),
+                  ),
+                ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: CategoryVisualHelper.buildAvatarImage(
-                      context,
-                      cat,
-                      fit: BoxFit.contain,
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: Center(
+                    child: Transform.scale(
+                      scale: 1.14,
+                      child: CategoryVisualHelper.buildAvatarImage(
+                        context,
+                        cat,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 7),
 
           // 2-Line Centered Title Below Card
           SizedBox(
@@ -228,15 +262,15 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
     );
   }
 
-  // ─── COMPACT GRID (4 COLUMNS, CLEAN SQUIRCLE PODS) ───
+  // ─── COMPACT GRID (CLEAN SQUIRCLE PODS) ───
   Widget _buildCompactGrid(
     BuildContext context,
     List<_CategorySlot> compacts,
   ) {
-    const int crossAxisCount = 4;
+    final int crossAxisCount = (compacts.length % 3 == 0) ? 3 : 4;
     const double gap = 8.0;
 
-    // Split compacts into rows of 4
+    // Split compacts into rows
     final List<List<_CategorySlot>> rows = [];
     for (int i = 0; i < compacts.length; i += crossAxisCount) {
       final end = (i + crossAxisCount < compacts.length) ? i + crossAxisCount : compacts.length;
@@ -271,13 +305,16 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
     );
   }
 
-  // ─── COMPACT CARD (25% WIDTH, CLEAN SLATE CONTAINER) ───
+  // ─── COMPACT CARD (25% WIDTH, LUXURY SQUIRCLE CONTAINER) ───
   Widget _buildCompactCard(
     BuildContext context,
     Category cat,
     String? customDisplayName,
   ) {
     final title = customDisplayName ?? cat.name;
+    final softBg = CategoryVisualHelper.getSoftColor(cat.slug, cat.name);
+    final borderColor = CategoryVisualHelper.getBorderColor(cat.slug, cat.name);
+    final accentColor = CategoryVisualHelper.getAccentColor(cat.slug, cat.name);
 
     return Bounceable(
       scaleFactor: 0.95,
@@ -291,38 +328,74 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Soft Clean Square Container
+          // Luxury Soft-Gradient Squircle Container
           Container(
-            height: 74,
+            height: 86,
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9), // Slate-100 neutral surface
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  softBg,
+                  Colors.white,
+                ],
+                stops: const [0.0, 0.8],
+              ),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: borderColor.withValues(alpha: 0.85),
+                width: 1.1,
+              ),
               boxShadow: [
                 BoxShadow(
+                  color: accentColor.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+                BoxShadow(
                   color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1.5),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
                 ),
               ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(5),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(11),
-                child: CategoryVisualHelper.buildAvatarImage(
-                  context,
-                  cat,
-                  fit: BoxFit.contain,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Ambient corner aura
+                Positioned(
+                  top: -8,
+                  right: -8,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: accentColor.withValues(alpha: 0.06),
+                    ),
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.all(3),
+                  child: Center(
+                    child: Transform.scale(
+                      scale: 1.14,
+                      child: CategoryVisualHelper.buildAvatarImage(
+                        context,
+                        cat,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
 
-          // 2-Line Centered Label Below Card
+          // 2-Line Centered Label Below Card (Truncation-Free)
           SizedBox(
-            height: 29,
+            height: 32,
             child: Center(
               child: Text(
                 title,
@@ -331,10 +404,10 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: Responsive.scaledFontSize(context, 11),
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   color: const Color(0xFF0F172A),
                   height: 1.15,
-                  letterSpacing: -0.2,
+                  letterSpacing: -0.25,
                 ),
               ),
             ),
@@ -360,20 +433,20 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Container(
-                    height: 98,
+                    height: 102,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Container(
-                    height: 98,
+                    height: 102,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                 ),
@@ -388,10 +461,10 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                     if (c > 0) const SizedBox(width: 8),
                     Expanded(
                       child: Container(
-                        height: 74,
+                        height: 80,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(15),
+                          borderRadius: BorderRadius.circular(18),
                         ),
                       ),
                     ),
@@ -405,135 +478,102 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
     );
   }
 
-  // ─── UNIFIED BENTO ARCHITECTURE (NO 3-WAY SPLIT, ZERO REDUNDANCY) ───
+  // ─── UNIFIED BENTO ARCHITECTURE (DYNAMIC, RESILIENT & BEAUTIFUL) ───
+  static String _formatSlotTitle(String rawName) {
+    var name = rawName.trim();
+    name = name.replaceAll(RegExp(r'\s+'), ' ');
+
+    final lower = name.toLowerCase();
+    // Dry fruit check MUST come before generic fruit check
+    if (lower.contains('dry fruit') || lower.contains('super food') || lower.contains('superfood') || lower.contains('nut')) return 'Dry Fruits\n& Superfoods';
+    if (lower.contains('fruit') || lower.contains('veg')) return 'Fruits &\nVegetables';
+    if (lower.contains('dairy') || lower.contains('milk')) return 'Dairy\nProducts';
+    if (lower.contains('kitchen') || lower.contains('ration')) return 'Kitchen &\nRation';
+    if (lower.contains('cookie') || lower.contains('namkeen')) return 'Cookies &\nNamkeen';
+    if (lower.contains('packaged') || lower.contains('instant')) return 'Packaged\nItems';
+    if (lower.contains('cake') || lower.contains('choco')) return 'Cakes &\nChocolates';
+    if (lower.contains('beverage') || lower.contains('drink')) return 'Beverages\n& Drinks';
+    if (lower.contains('ice cream') || lower.contains('dessert')) return 'Ice Cream\n& Desserts';
+    if (lower.contains('personal') || lower.contains('hygiene')) return 'Personal Care\n& Hygiene';
+    if (lower.contains('household') || lower.contains('clean')) return 'Household\nEssentials';
+
+    if (name.contains('\n')) return name;
+
+    // Smart line balancing for clean 2-line rendering
+    if (name.contains(' & ')) {
+      final parts = name.split(' & ');
+      return '${parts[0]} &\n${parts.sublist(1).join(' & ')}';
+    }
+    if (name.contains(', ') && name.length > 10) {
+      final commaIdx = name.indexOf(', ');
+      return '${name.substring(0, commaIdx + 1)}\n${name.substring(commaIdx + 2)}';
+    }
+    if (name.contains(' ') && name.length > 12) {
+      final spaceIdx = name.indexOf(' ');
+      return '${name.substring(0, spaceIdx)}\n${name.substring(spaceIdx + 1)}';
+    }
+    return name;
+  }
+
   _UnifiedBentoData _buildUnifiedBento(List<Category> allCategories) {
+    // 1. Strictly filter only ROOT categories (parentId == null or empty)
+    final rootCategories = allCategories.where((c) {
+      if (c.parentId != null && c.parentId!.isNotEmpty) return false;
+      final slug = c.slug.toLowerCase().trim();
+      final name = c.name.toLowerCase().trim();
+      if (slug == 'restaurant-food' ||
+          slug == 'restaurant' ||
+          slug == 'cafe' ||
+          slug == 'fast-food-kitchen' ||
+          slug.contains('restaurant') ||
+          slug.contains('fastfood') ||
+          name.contains('restaurant') ||
+          name.contains('cafe')) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    rootCategories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
     final usedIds = <String>{};
 
-    Category? findCat({required List<String> ids, required List<String> keywords}) {
-      // 1. Try exact ID match first
-      for (final id in ids) {
-        for (final cat in allCategories) {
-          if (!usedIds.contains(cat.id) && cat.id.toLowerCase().trim() == id.toLowerCase().trim()) {
-            usedIds.add(cat.id);
-            return cat;
-          }
-        }
-      }
-      // 2. Try slug/name keyword match
-      for (final cat in allCategories) {
-        if (usedIds.contains(cat.id)) continue;
-        final s = cat.slug.toLowerCase().trim();
-        final n = cat.name.toLowerCase().trim();
-        for (final kw in keywords) {
-          if (s.contains(kw) || n.contains(kw)) {
-            usedIds.add(cat.id);
-            return cat;
-          }
-        }
-      }
-      return null;
-    }
-
-    void markUsed(List<String> ids) {
-      for (final id in ids) {
-        for (final cat in allCategories) {
-          if (cat.id.toLowerCase().trim() == id.toLowerCase().trim()) {
-            usedIds.add(cat.id);
-          }
-        }
-      }
-    }
-
-    // ── 1. HEROES (2 Wide Cards) ──
-    final vegCat = findCat(ids: ['CAT-101'], keywords: ['fruits-vegetables', 'fruit', 'vegetable']);
-    final dairyCat = findCat(ids: ['CAT-116'], keywords: ['dairy-products', 'dairy', 'milk']);
-    markUsed(['SUB-101-01', 'SUB-101-02']); // Consume child fruit/veg items
-
+    // 2. HEROES (2 Wide High-Demand Anchors: Fresh Produce & Dairy)
     final heroes = <_CategorySlot>[];
-    if (vegCat != null) {
-      heroes.add(_CategorySlot(category: vegCat, customName: 'Fruits &\nVegetables'));
+    for (final cat in rootCategories) {
+      if (cat.id == 'CAT-101' || cat.id == 'CAT-116') {
+        usedIds.add(cat.id);
+        heroes.add(_CategorySlot(
+          category: cat,
+          customName: _formatSlotTitle(cat.name),
+        ));
+      }
     }
-    if (dairyCat != null) {
-      heroes.add(_CategorySlot(category: dairyCat, customName: 'Dairy, Bread &\nEggs'));
+    // Fallback heroes if veg or dairy were not matched by ID
+    if (heroes.length < 2) {
+      for (final cat in rootCategories) {
+        if (!usedIds.contains(cat.id)) {
+          usedIds.add(cat.id);
+          heroes.add(_CategorySlot(
+            category: cat,
+            customName: _formatSlotTitle(cat.name),
+          ));
+          if (heroes.length == 2) break;
+        }
+      }
     }
 
-    // ── 2. COMPACT PODS (16 Categories = 4 Clean Rows of 4) ──
+    // 3. COMPACT PODS (All remaining 9 ROOT categories only - ZERO subcategories!)
     final compacts = <_CategorySlot>[];
-
-    // Row 1: Cooking & Kitchen Staples
-    final attaCat = findCat(ids: ['SUB-113-01'], keywords: ['atta-rice-sugar', 'atta', 'flour']);
-    if (attaCat != null) {
-      compacts.add(_CategorySlot(category: attaCat, customName: 'Atta, Rice\n& Sugar'));
+    for (final cat in rootCategories) {
+      if (!usedIds.contains(cat.id)) {
+        usedIds.add(cat.id);
+        compacts.add(_CategorySlot(
+          category: cat,
+          customName: _formatSlotTitle(cat.name),
+        ));
+      }
     }
-    final dalCat = findCat(ids: ['SUB-113-03'], keywords: ['dals-pulses', 'dal', 'pulse']);
-    if (dalCat != null) {
-      compacts.add(_CategorySlot(category: dalCat, customName: 'Dals &\nPulses'));
-    }
-    final oilCat = findCat(ids: ['SUB-113-02'], keywords: ['oils-ghee', 'oil', 'ghee']);
-    if (oilCat != null) {
-      compacts.add(_CategorySlot(category: oilCat, customName: 'Oils &\nGhee'));
-    }
-    final masalaCat = findCat(ids: ['SUB-113-04'], keywords: ['spices-masala', 'masala', 'spice']);
-    if (masalaCat != null) {
-      compacts.add(_CategorySlot(category: masalaCat, customName: 'Spices &\nMasala'));
-    }
-
-    // Row 2: Daily Sips, Dry Fruits & Cold Treats
-    final dryFruitCat = findCat(ids: ['SUB-114-02', 'CAT-114'], keywords: ['dry-fruits', 'dry fruit', 'nuts']);
-    if (dryFruitCat != null) {
-      compacts.add(_CategorySlot(category: dryFruitCat, customName: 'Dry Fruits\n& Nuts'));
-    }
-    markUsed(['CAT-114']);
-    final teaCat = findCat(ids: ['SUB-113-05'], keywords: ['tea-coffee-salt', 'tea', 'coffee', 'chai']);
-    if (teaCat != null) {
-      compacts.add(_CategorySlot(category: teaCat, customName: 'Tea, Coffee\n& More'));
-    }
-    final drinksCat = findCat(ids: ['CAT-108'], keywords: ['beverages', 'beverage', 'drink', 'cold']);
-    if (drinksCat != null) {
-      compacts.add(_CategorySlot(category: drinksCat, customName: 'Cold Drinks\n& Juices'));
-    }
-    final iceCreamCat = findCat(ids: ['CAT-105'], keywords: ['ice-cream', 'ice cream', 'dessert']);
-    if (iceCreamCat != null) {
-      compacts.add(_CategorySlot(category: iceCreamCat, customName: 'Ice Creams\n& More'));
-    }
-
-    // Row 3: Snacks, Sweets & Bakery
-    final sauceCat = findCat(ids: ['SUB-104-01'], keywords: ['sauces-spreads', 'sauce', 'spread', 'ketchup']);
-    if (sauceCat != null) {
-      compacts.add(_CategorySlot(category: sauceCat, customName: 'Sauces &\nSpreads'));
-    }
-    final chocoCat = findCat(ids: ['SUB-115-03'], keywords: ['chocolates-sweets', 'chocolate', 'choco', 'sweet']);
-    if (chocoCat != null) {
-      compacts.add(_CategorySlot(category: chocoCat, customName: 'Chocolates\n& Sweets'));
-    }
-    final namkeenCat = findCat(ids: ['SUB-SUB-115-01-02'], keywords: ['namkeen', 'munch', 'snack', 'chips']);
-    if (namkeenCat != null) {
-      compacts.add(_CategorySlot(category: namkeenCat, customName: 'Munchies &\nNamkeen'));
-    }
-    final cookieCat = findCat(ids: ['SUB-SUB-115-01-01', 'SUB-115-01'], keywords: ['cookies', 'biscuit', 'bakery']);
-    if (cookieCat != null) {
-      compacts.add(_CategorySlot(category: cookieCat, customName: 'Biscuits &\nCookies'));
-    }
-    markUsed(['CAT-115', 'SUB-115-01', 'SUB-115-04', 'CAT-113', 'CAT-104', 'SUB-104-02']);
-
-    // Row 4: Home & Personal Care Essentials
-    final laundryCat = findCat(ids: ['SUB-107-03'], keywords: ['laundary-care', 'laundry', 'detergent']);
-    if (laundryCat != null) {
-      compacts.add(_CategorySlot(category: laundryCat, customName: 'Laundry\nCare'));
-    }
-    final dishwashCat = findCat(ids: ['SUB-107-01'], keywords: ['dishwashing', 'dish']);
-    if (dishwashCat != null) {
-      compacts.add(_CategorySlot(category: dishwashCat, customName: 'Dishwashing'));
-    }
-    final oralCat = findCat(ids: ['SUB-109-02'], keywords: ['oral-care-hygeine', 'oral', 'dental']);
-    if (oralCat != null) {
-      compacts.add(_CategorySlot(category: oralCat, customName: 'Oral Care &\nHygiene'));
-    }
-    final hairCat = findCat(ids: ['SUB-109-01', 'CAT-109'], keywords: ['hair-care-cosmetics', 'personal-care']);
-    if (hairCat != null) {
-      compacts.add(_CategorySlot(category: hairCat, customName: 'Hair Care &\nCosmetics'));
-    }
-    markUsed(['CAT-107', 'CAT-109', 'SUB-107-02', 'SUB-107-04']);
 
     return _UnifiedBentoData(
       heroes: heroes,

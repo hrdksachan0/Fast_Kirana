@@ -175,6 +175,7 @@ async def create_category(
     image_url = payload.get("imageUrl", "📦")
     sort_order = payload.get("sortOrder", 0)
     parent_id = payload.get("parentId")
+    custom_id = payload.get("id")
 
     if not name:
         raise HTTPException(
@@ -201,8 +202,22 @@ async def create_category(
         except (ValueError, TypeError):
             sort_order_int = 0
 
+        # Determine Category ID (support custom systematic ID like SUB-101-03 or generate_id)
+        if custom_id and str(custom_id).strip():
+            target_id = str(custom_id).strip()
+            # Ensure unique ID
+            stmt_id = select(Category).where(Category.id == target_id)
+            r_id = await db.execute(stmt_id)
+            if r_id.scalars().first():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Category with ID '{target_id}' already exists."
+                )
+        else:
+            target_id = generate_id()
+
         new_category = Category(
-            id=generate_id(),
+            id=target_id,
             name=name,
             slug=final_slug,
             imageUrl=image_url,

@@ -698,6 +698,9 @@ bool isProductInGroceryCategory(Product p, dynamic category) {
     return pSlug == 'cookies' ||
         pSlug == 'namkeen' ||
         pSlug == 'cookies-namkeen' ||
+        upperPCatId == 'CAT-102' ||
+        upperPCatId.startsWith('SUB-102-') ||
+        upperPParentId == 'CAT-102' ||
         upperPCatId == 'SUB-115-01' ||
         upperPCatId.startsWith('SUB-SUB-115-01-') ||
         upperPParentId == 'SUB-115-01';

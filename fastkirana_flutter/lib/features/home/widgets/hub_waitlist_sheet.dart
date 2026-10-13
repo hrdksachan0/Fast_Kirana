@@ -312,6 +312,8 @@ class _HubWaitlistSheetState extends ConsumerState<HubWaitlistSheet> {
                               color: AppDesignSystem.slate400,
                               letterSpacing: 0,
                             ),
+                            filled: false,
+                            fillColor: Colors.transparent,
                             border: InputBorder.none,
                           ),
                         ),

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Category, Product } from '@/types'
 import { CategoryGrid } from '@/components/home/category-grid'
-import { HeroArea } from '@/components/home/hero-area'
+import { HeroBanner } from '@/components/home/hero-banner'
 import { SpeedStrip } from '@/components/home/speed-strip'
 import { CafeSection } from '@/components/home/cafe-section'
 import { RestaurantListing } from '@/components/home/restaurant-listing'
@@ -157,36 +157,31 @@ export function StorefrontClient({
         lastFetchedStoreIdRef.current = 'hub-209206'
       }
 
-      // Silently sync latest banners on client mount to guarantee real-time deactivation/updates
-      fetch(`${catalogApiUrl()}/api/banners?storeId=hub-209206&_t=${Date.now()}`, {
-        cache: 'no-store',
-      })
-        .then((r) => r.json())
-        .then((banners) => {
-          if (Array.isArray(banners)) {
-            setCurrentPromoBanners(banners)
-          }
+      // Silently sync latest banners on client mount once
+      if (!lastFetchedStoreIdRef.current) {
+        lastFetchedStoreIdRef.current = 'hub-209206'
+        fetch(`${catalogApiUrl()}/api/banners?storeId=hub-209206&_t=${Date.now()}`, {
+          cache: 'no-store',
         })
-        .catch(() => {})
+          .then((r) => r.json())
+          .then((banners) => {
+            if (Array.isArray(banners)) {
+              setCurrentPromoBanners(banners)
+            }
+          })
+          .catch(() => {})
 
-      // Lazy-load complete catalog in background so 100% of products are available
-      // without making initial SSR HTML heavy
-      if (currentGroceryProducts.length < 350 && lastFetchedStoreIdRef.current !== 'hub-209206-full') {
-        let isMounted = true
-        const timer = setTimeout(() => {
+        // Lazy-load complete catalog in background once if initial SSR slice was small
+        if (allGroceryProducts.length < 350) {
           fetch(`${catalogApiUrl()}/api/products?storeId=hub-209206&limit=500&excludeRestaurant=true`)
             .then((r) => r.json())
             .then((d) => {
-              if (isMounted && Array.isArray(d?.products) && d.products.length > 0) {
+              if (Array.isArray(d?.products) && d.products.length > 0) {
                 setCurrentGroceryProducts(d.products)
                 lastFetchedStoreIdRef.current = 'hub-209206-full'
               }
             })
             .catch(() => {})
-        }, 500)
-        return () => {
-          isMounted = false
-          clearTimeout(timer)
         }
       }
       return
@@ -223,7 +218,7 @@ export function StorefrontClient({
     return () => {
       isMounted = false
     }
-  }, [activeStoreId, allGroceryProducts, promoBanners, restaurants, currentGroceryProducts.length])
+  }, [activeStoreId])
 
   // Derive hub-scoped category & curation lists
   const currentFlashDeals = useMemo(() => {
@@ -296,7 +291,7 @@ export function StorefrontClient({
   }
 
   return (
-    <div className="flex flex-col gap-2 md:gap-4 relative pb-12">
+    <div className="flex flex-col relative pb-12">
       {/* Floating Online Transition Alert */}
       <AnimatePresence>
         {onlineAlert && (
@@ -324,10 +319,10 @@ export function StorefrontClient({
       {/* Dynamic Celebration Floating Emojis */}
       <FloatingEmojis type={activeTab === 'food' ? 'food' : 'grocery'} />
 
-      {/* Compact Top Store Mode Switcher */}
-      <div className="w-full flex items-center justify-center pt-1 sm:pt-2 pb-1.5 px-4 pointer-events-auto">
+      {/* Sticky Top Store Mode Switcher (Seamlessly flush with navbar, zero gap, solid background) */}
+      <div className="sticky top-[108px] sm:top-[112px] md:top-[64px] z-30 w-full flex items-center justify-center pt-1.5 pb-2 px-3 sm:px-4 bg-white dark:bg-zinc-950 border-b border-zinc-200/50 dark:border-zinc-800/50 shadow-2xs pointer-events-auto transition-colors">
         <div 
-          className="relative flex items-center w-full max-w-[420px] h-[54px] sm:h-[60px] p-1.5 sm:p-2 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_10px_30px_-6px_rgba(0,0,0,0.14),0_3px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] border-2 border-zinc-200/90 dark:border-zinc-800/90" 
+          className="relative flex items-center w-full max-w-[380px] sm:max-w-[420px] h-[46px] sm:h-[52px] p-1 sm:p-1.5 rounded-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl shadow-[0_6px_20px_-4px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.05)] dark:shadow-[0_12px_32px_-8px_rgba(0,0,0,0.85)] border border-zinc-200/90 dark:border-zinc-800/90" 
           role="tablist" 
           aria-label="Store mode"
         >
@@ -336,7 +331,7 @@ export function StorefrontClient({
             onClick={() => handleTabChange('grocery')}
             whileTap={{ scale: 0.96 }}
             className={cn(
-              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-3.5 group",
+              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-3 group",
               activeTab === 'grocery' ? "" : "hover:text-zinc-900 dark:hover:text-white"
             )}
             role="tab"
@@ -349,14 +344,14 @@ export function StorefrontClient({
                 transition={{ type: 'spring', stiffness: 450, damping: 28 }}
               />
             )}
-            <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'grocery' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
+            <div className={cn("relative z-10 flex items-center gap-2 transition-colors duration-300", activeTab === 'grocery' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
               <div className={cn(
-                "w-9.5 h-9.5 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-xl sm:text-2xl select-none",
+                "w-7.5 h-7.5 sm:w-8.5 sm:h-8.5 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-base sm:text-xl select-none",
                 activeTab === 'grocery' ? "bg-white text-rose-600 shadow-md scale-105" : "bg-zinc-100 dark:bg-zinc-900"
               )}>
                 🛍️
               </div>
-              <span className="text-[17px] sm:text-[19px] font-black tracking-tight leading-none">Grocery</span>
+              <span className="text-[14.5px] sm:text-[16.5px] font-black tracking-tight leading-none">Grocery</span>
             </div>
           </motion.button>
 
@@ -365,7 +360,7 @@ export function StorefrontClient({
             onClick={() => handleTabChange('food')}
             whileTap={{ scale: 0.96 }}
             className={cn(
-              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-3.5 group",
+              "relative z-10 flex items-center justify-center rounded-full cursor-pointer outline-none transition-all duration-300 h-full flex-1 select-none border-none bg-transparent px-3 group",
               activeTab === 'food' ? "" : "hover:text-zinc-900 dark:hover:text-white"
             )}
             role="tab"
@@ -378,30 +373,30 @@ export function StorefrontClient({
                 transition={{ type: 'spring', stiffness: 450, damping: 28 }}
               />
             )}
-            <div className={cn("relative z-10 flex items-center gap-2.5 transition-colors duration-300", activeTab === 'food' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
+            <div className={cn("relative z-10 flex items-center gap-2 transition-colors duration-300", activeTab === 'food' ? "text-white" : "text-zinc-600 dark:text-zinc-400")}>
               <div className={cn(
-                "w-9.5 h-9.5 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-xl sm:text-2xl select-none",
+                "w-7.5 h-7.5 sm:w-8.5 sm:h-8.5 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-300 text-base sm:text-xl select-none",
                 activeTab === 'food' ? "bg-white text-orange-600 shadow-md scale-105" : "bg-zinc-100 dark:bg-zinc-900"
               )}>
                 🍔
               </div>
-              <span className="text-[17px] sm:text-[19px] font-black tracking-tight leading-none">Food</span>
+              <span className="text-[14.5px] sm:text-[16.5px] font-black tracking-tight leading-none">Food</span>
             </div>
           </motion.button>
         </div>
       </div>
 
       {/* Tab Content Views */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence initial={false}>
         {/* Tab 1: GROCERY */}
         {activeTab === 'grocery' && (
           <motion.div
             key="grocery-content"
-            initial={{ opacity: 0, y: 15 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="container mx-auto px-4 pt-2 flex flex-col gap-5 sm:gap-6 md:gap-8 max-w-7xl relative z-10 min-h-[50vh]"
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="container mx-auto px-3 sm:px-4 pt-1 flex flex-col gap-3 sm:gap-4 md:gap-6 max-w-7xl relative z-10 min-h-[50vh]"
           >
             {campaign.enabled && isLocationServiceable && (
               <div className="-mx-4 sm:mx-0">
@@ -425,7 +420,7 @@ export function StorefrontClient({
               <>
                 {/* 1. Hero Banners */}
                 <div>
-                  <HeroArea initialBanners={currentPromoBanners} />
+                  <HeroBanner initialBanners={currentPromoBanners} mode="grocery" />
                 </div>
 
                 {/* 2. Trending Categories */}
@@ -477,11 +472,11 @@ export function StorefrontClient({
         {activeTab === 'food' && (
           <motion.div
             key="food-content"
-            initial={{ opacity: 0, y: 15 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="container mx-auto px-4 pt-4 flex flex-col gap-5 max-w-7xl relative z-10 min-h-[50vh]"
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="container mx-auto px-3 sm:px-4 pt-1 flex flex-col gap-3 sm:gap-4 md:gap-6 max-w-7xl relative z-10 min-h-[50vh]"
           >
             <CuratedBrandOffersCarousel initialBanners={currentPromoBanners} mode="food" sectionTitle="Trending Restaurant & Cafe Specials" />
             {isLoadingStoreData ? (

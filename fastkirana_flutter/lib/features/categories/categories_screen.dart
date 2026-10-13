@@ -9,6 +9,7 @@ import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
 import 'category_products_screen.dart';
 import '../../widgets/voice_search_sheet.dart';
+import '../home/utils/category_visual_helper.dart';
 
 class CategoriesScreen extends ConsumerStatefulWidget {
   const CategoriesScreen({super.key});
@@ -21,114 +22,19 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  // Synchronized with Web constants.ts and database slugs
-  static const Map<String, Map<String, dynamic>> _categoryMetadata = {
-    'fruits-vegetables': {
-      'tagline': '100% Farm-Fresh Organic',
-      'items': 33,
-      'btnColor': AppDesignSystem.emerald600,
-      'asset': 'assets/categories/fruits_vegetables_category.webp',
-      'webImage': 'https://www.fastkirana.in/fruits_vegetables_category.webp',
-    },
-    'healthy-foods': {
-      'tagline': 'Essential Products',
-      'items': 11,
-      'btnColor': AppDesignSystem.red600,
-      'asset': 'assets/categories/fruits_vegetables_category.webp',
-      'webImage': 'https://www.fastkirana.in/fruits_vegetables_category.webp',
-    },
-    'kitchen-needs': {
-      'tagline': 'Fortune Oil, Atta & Dal',
-      'items': 42,
-      'btnColor': AppDesignSystem.emerald600,
-      'asset': 'assets/categories/atta_rice_dal_category.webp',
-      'webImage': 'https://www.fastkirana.in/atta_rice_dal_category.webp',
-    },
-    'atta-rice-dal': {
-      'tagline': 'Fortune Oil, Atta & Dal',
-      'items': 42,
-      'btnColor': AppDesignSystem.emerald600,
-      'asset': 'assets/categories/atta_rice_dal_category.webp',
-      'webImage': 'https://www.fastkirana.in/atta_rice_dal_category.webp',
-    },
-    'snacks-munchies': {
-      'tagline': 'Crisps, Namkeen & Chips',
-      'items': 28,
-      'btnColor': AppDesignSystem.red600,
-      'asset': 'assets/categories/snacks_munchies_category.webp',
-      'webImage': 'https://www.fastkirana.in/snacks_munchies_category.webp',
-    },
-    'beverages': {
-      'tagline': 'Cold Drinks & Real Juices',
-      'items': 19,
-      'btnColor': AppDesignSystem.cyan600,
-      'asset': 'assets/categories/beverages_category.webp',
-      'webImage': 'https://www.fastkirana.in/beverages_category.webp',
-    },
-    'ice-cream': {
-      'tagline': 'Cool Tubs, Cones & Treats',
-      'items': 15,
-      'btnColor': AppDesignSystem.red600,
-      'asset': 'assets/categories/ice_cream_category.webp',
-      'webImage': 'https://www.fastkirana.in/ice_cream_category.webp',
-    },
-    'chocolates': {
-      'tagline': 'Silk, Bars & Confectionery',
-      'items': 24,
-      'btnColor': AppDesignSystem.violet600,
-      'asset': 'assets/categories/bakery_biscuits_category.webp',
-      'webImage': 'https://www.fastkirana.in/bakery_biscuits_category.webp',
-    },
-    'bakery': {
-      'tagline': 'Fresh Cookies & Rusks',
-      'items': 16,
-      'btnColor': AppDesignSystem.orange600,
-      'asset': 'assets/categories/bakery_biscuits_category.webp',
-      'webImage': 'https://www.fastkirana.in/bakery_biscuits_category.webp',
-    },
-    'packaged-foods': {
-      'tagline': 'Instant Maggi & Ready Meals',
-      'items': 18,
-      'btnColor': AppDesignSystem.red600,
-      'asset': 'assets/categories/snacks_munchies_category.webp',
-      'webImage': 'https://www.fastkirana.in/snacks_munchies_category.webp',
-    },
-    'personal-care': {
-      'tagline': 'Soaps, Shampoos & Care',
-      'items': 22,
-      'btnColor': AppDesignSystem.teal600,
-      'asset': 'assets/categories/personal_care_category.webp',
-      'webImage': 'https://www.fastkirana.in/personal_care_category.webp',
-    },
-    'home-needs-and-cleaning': {
-      'tagline': 'Detergents & Home Cleaners',
-      'items': 20,
-      'btnColor': AppDesignSystem.cyan600,
-      'asset': 'assets/categories/household_category.webp',
-      'webImage': 'https://www.fastkirana.in/household_category.webp',
-    },
-    'groceries': {
-      'tagline': 'Daily Essentials, Sugar & Oil',
-      'items': 106,
-      'btnColor': AppDesignSystem.emerald600,
-      'asset': 'assets/categories/atta_rice_dal_category.webp',
-      'webImage': 'https://www.fastkirana.in/atta_rice_dal_category.webp',
-    },
-    'kirana-ration': {
-      'tagline': 'Atta, Rice, Dal & Grains',
-      'items': 42,
-      'btnColor': AppDesignSystem.emerald600,
-      'asset': 'assets/categories/atta_rice_dal_category.webp',
-      'webImage': 'https://www.fastkirana.in/atta_rice_dal_category.webp',
-    },
-    'restaurant-food': {
-      'tagline': 'Hot Burgers, Rolls & Meals',
-      'items': 35,
-      'btnColor': AppDesignSystem.orange600,
-      'asset': 'assets/categories/cafe_category.webp',
-      'webImage': 'https://www.fastkirana.in/cafe_category.webp',
-    },
-  };
+  static const List<String> _priorityParentOrder = [
+    'CAT-101', // 🍎 Fruits & Vegetables
+    'CAT-116', // 🥛 Dairy Products
+    'CAT-113', // 🌾 Kitchen & Ration
+    'CAT-104', // 📦 Packaged Items
+    'SUB-115-01', // 🍪 Cookies & Namkeen
+    'CAT-114', // 🥜 Dry Fruits & Super Foods
+    'CAT-115', // 🍫 Cakes & Chocolates
+    'CAT-108', // 🥤 Beverages & Drinks
+    'CAT-105', // 🍦 Ice Cream & Desserts
+    'CAT-109', // 🧴 Personal Care & Hygiene
+    'CAT-107', // 🧹 Household Essentials
+  ];
 
   @override
   void dispose() {
@@ -213,13 +119,14 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       ),
                     ),
 
-                    // Right Illustration: Grocery Shopping Bag
+                    // Right Illustration: Authentic Grocery Delivery Packshot
                     Container(
                       width: 76,
                       height: 76,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.04),
@@ -231,20 +138,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: CachedNetworkImage(
-                          imageUrl: 'https://www.fastkirana.in/fruits-vegetables.png',
-                          fit: BoxFit.contain,
-                          memCacheWidth: 400,
-                          memCacheHeight: 400,
-                          placeholder: (_, __) => Image.asset(
-                            'assets/categories/fruits_vegetables_category.webp',
-                            fit: BoxFit.contain,
-                          ),
-                          errorWidget: (_, __, ___) => Image.asset(
-                            'assets/categories/fruits_vegetables_category.webp',
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => Center(
-                              child: Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 36))),
-                            ),
+                          imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1789046038149-zj8z8q.jpg',
+                          fit: BoxFit.cover,
+                          memCacheWidth: 300,
+                          memCacheHeight: 300,
+                          placeholder: (_, __) => Container(color: const Color(0xFFF1F5F9)),
+                          errorWidget: (_, __, ___) => const Center(
+                            child: Text('🛍️', style: TextStyle(fontSize: 32)),
                           ),
                         ),
                       ),
@@ -257,7 +157,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
             // 2. Search Input Bar (Pill style matching modern aesthetic)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Container(
                   height: 46,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -317,7 +217,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           cursorColor: AppDesignSystem.primary,
                           decoration: InputDecoration(
                             isDense: true,
-                            hintText: 'Search categories...',
+                            hintText: 'Search categories or products...',
                             hintStyle: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 12.5),
                               fontWeight: FontWeight.w500,
@@ -398,14 +298,11 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               ),
             ),
 
-            // 3. 2-Column Grid of Beautiful Category Cards
+            // 3. 2-Column Grid of 11 Beautiful Parent Category Cards
             categoriesAsync.when(
               data: (categories) {
-                var filtered = categories.where((c) {
-                  // Subcategories should NEVER appear as separate top-level cards!
-                  if (c.parentId != null && c.parentId!.isNotEmpty) {
-                    return false;
-                  }
+                // Remove restaurant/cafe food categories
+                final groceryCategories = categories.where((c) {
                   final slug = c.slug.toLowerCase().trim();
                   final name = c.name.toLowerCase().trim();
                   if (slug == 'restaurant' ||
@@ -424,15 +321,36 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   }
                   return true;
                 }).toList();
+
+                // STRICT RULE: CategoriesScreen only renders the 11 Top-Level Parent Categories.
+                // Subcategories are accessed inside CategoryProductsScreen as horizontal tabs.
+                final parentCategories = groceryCategories.where((c) {
+                  return c.parentId == null || c.parentId!.isEmpty;
+                }).toList();
+
+                // Sort in exact priority order specified for quick-commerce navigation
+                parentCategories.sort((a, b) {
+                  final aIdx = _priorityParentOrder.indexOf(a.id);
+                  final bIdx = _priorityParentOrder.indexOf(b.id);
+                  if (aIdx != -1 && bIdx != -1) return aIdx.compareTo(bIdx);
+                  if (aIdx != -1) return -1;
+                  if (bIdx != -1) return 1;
+                  return a.sortOrder.compareTo(b.sortOrder);
+                });
+
+                List<Category> filtered;
+
                 if (_searchQuery.isNotEmpty) {
-                  filtered = filtered.where((c) {
+                  filtered = parentCategories.where((c) {
                     final matchName = c.name.toLowerCase().contains(_searchQuery) ||
                         c.slug.toLowerCase().contains(_searchQuery);
-                    final matchChild = categories.any((sub) =>
+                    final matchChild = groceryCategories.any((sub) =>
                         sub.parentId == c.id &&
                         (sub.name.toLowerCase().contains(_searchQuery) || sub.slug.toLowerCase().contains(_searchQuery)));
                     return matchName || matchChild;
                   }).toList();
+                } else {
+                  filtered = parentCategories;
                 }
 
                 if (filtered.isEmpty) {
@@ -453,7 +371,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Try searching with another keyword',
+                            'Try selecting another filter or searching with another keyword',
                             style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500),
                           ),
                         ],
@@ -525,23 +443,12 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     );
   }
 
-  // 1:1 Replica of Category Card in Screenshot with Ultra-Premium Finish
+  // 1:1 Replica of Category Card with 100% Dynamic Data & Realistic Photography
   Widget _buildReferenceCategoryCard(BuildContext context, Category category) {
-    final meta = _categoryMetadata[category.slug] ??
-        _categoryMetadata[category.id] ??
-        {
-          'tagline': 'Essential Products',
-          'items': category.productCount ?? 15,
-          'btnColor': AppDesignSystem.red600,
-          'asset': 'assets/categories/fruits_vegetables_category.webp',
-          'webImage': category.imageUrl ?? 'https://www.fastkirana.in/fruits-vegetables.png',
-        };
-
-    final int itemCount = (meta['items'] as int?) ?? (category.productCount ?? 20);
-    final Color btnColor = (meta['btnColor'] as Color?) ?? AppDesignSystem.red600;
-    final String tagline = (meta['tagline'] as String?) ?? '100% Quality Checked';
-    final String assetPath = (meta['asset'] as String?) ?? 'assets/categories/fruits_vegetables_category.webp';
-    final String? webUrl = category.imageUrl ?? (meta['webImage'] as String?);
+    final int itemCount = category.productCount ?? 0;
+    final Color btnColor = CategoryVisualHelper.getDynamicButtonColor(category);
+    final String tagline = CategoryVisualHelper.getDynamicTagline(category);
+    final String resolvedWebUrl = CategoryVisualHelper.resolveRealisticImageUrl(category);
 
     return GestureDetector(
       onTap: () {
@@ -582,41 +489,45 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Real Image
+                  // Real High-Definition Photographic Packshot
                   ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: () {
-                      final resolvedWebUrl = (webUrl != null && webUrl.isNotEmpty)
-                          ? (webUrl.startsWith('http')
-                              ? webUrl
-                              : (webUrl.startsWith('/') ? 'https://www.fastkirana.in$webUrl' : null))
-                          : null;
-
-                      if (resolvedWebUrl != null) {
-                        return CachedNetworkImage(
-                          imageUrl: resolvedWebUrl,
-                          fit: BoxFit.cover,
-                          memCacheWidth: 400,
-                          memCacheHeight: 400,
-                          maxWidthDiskCache: 600,
-                          maxHeightDiskCache: 600,
-                          errorWidget: (_, __, ___) => Image.asset(
-                            assetPath,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Center(
-                              child: Text('🥬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 38))),
+                    child: CachedNetworkImage(
+                      imageUrl: resolvedWebUrl,
+                      fit: BoxFit.contain,
+                      memCacheWidth: 400,
+                      memCacheHeight: 400,
+                      maxWidthDiskCache: 600,
+                      maxHeightDiskCache: 600,
+                      placeholder: (_, __) => Container(
+                        color: const Color(0xFFF8FAFC),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppDesignSystem.primary,
                             ),
                           ),
-                        );
-                      }
-                      return Image.asset(
-                        assetPath,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Center(
-                          child: Text('🥬', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 38))),
                         ),
-                      );
-                    }(),
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        color: const Color(0xFFF8FAFC),
+                        child: Center(
+                          child: Text(
+                            category.name.isNotEmpty
+                                ? category.name.characters.first.toUpperCase()
+                                : '🛍️',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: Responsive.scaledFontSize(context, 26),
+                              fontWeight: FontWeight.w900,
+                              color: AppDesignSystem.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
 
                   // Top Left: Items Badge Pill
@@ -642,7 +553,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           const Icon(Icons.inventory_2_outlined, size: 10, color: AppDesignSystem.rose600),
                           const SizedBox(width: 3),
                           Text(
-                            '$itemCount ITEMS',
+                            itemCount > 0 ? '$itemCount ITEMS' : 'IN STOCK',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 8.5),
                               fontWeight: FontWeight.w900,

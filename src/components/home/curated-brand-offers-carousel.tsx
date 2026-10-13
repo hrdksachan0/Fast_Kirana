@@ -175,7 +175,7 @@ function BrandCardMedia({
 
   if (imageUrl) {
     return (
-      <div className="relative w-full h-full overflow-hidden bg-zinc-950">
+      <div className="absolute inset-0 w-full h-full overflow-hidden bg-zinc-950">
         <Image
           src={imageUrl}
           alt={alt}
@@ -241,12 +241,12 @@ export function CuratedBrandOffersCarousel({
   if (cards.length === 0) return null
 
   return (
-    <section className="w-full relative z-10 pt-1 space-y-3 select-none" aria-label={sectionTitle}>
+    <section className="w-full relative z-10 space-y-2 sm:space-y-3 select-none" aria-label={sectionTitle}>
       {/* Shelf Header */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xs border border-primary/20">
-            <Sparkles className="h-3.5 w-3.5" />
+          <div className="h-6 w-6 sm:h-7 sm:w-7 rounded-lg sm:rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xs border border-primary/20">
+            <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           </div>
           <div>
             <h2 className="text-sm min-[375px]:text-base sm:text-lg font-black text-text-primary tracking-tight">
@@ -276,10 +276,10 @@ export function CuratedBrandOffersCarousel({
         </div>
       </div>
 
-      {/* Horizontal Multi-Card Shelf (260x375 Proportions, Pure Full-Bleed Media, Zero Text Overlay) */}
+      {/* Horizontal Multi-Card Shelf (Balanced 195x265 / 240x330 Proportions, Zero Text Overlay) */}
       <div
         ref={scrollRef}
-        className="flex items-center gap-3.5 sm:gap-4 overflow-x-auto scrollbar-none py-1 px-1 scroll-smooth"
+        className="flex items-center gap-2.5 sm:gap-3.5 overflow-x-auto scrollbar-none py-0.5 px-0.5 scroll-smooth"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {cards.map((card, idx) => {
@@ -287,9 +287,9 @@ export function CuratedBrandOffersCarousel({
           return (
             <div
               key={card.id || idx}
-              className="relative w-[210px] min-[375px]:w-[225px] sm:w-[260px] h-[300px] min-[375px]:h-[325px] sm:h-[375px] rounded-[24px] sm:rounded-[28px] overflow-hidden bg-neutral-900 border-2 border-black/10 dark:border-white/15 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.015] active:scale-[0.985] shrink-0 group cursor-pointer"
+              className="relative w-[170px] min-[375px]:w-[195px] sm:w-[240px] h-[235px] min-[375px]:h-[265px] sm:h-[330px] rounded-[18px] sm:rounded-[24px] overflow-hidden bg-neutral-900 border border-black/10 dark:border-white/15 shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.015] active:scale-[0.985] shrink-0 group cursor-pointer"
             >
-              <Link href={targetUrl} prefetch={false} className="block w-full h-full">
+              <Link href={targetUrl} prefetch={false} className="relative block w-full h-full">
                 <BrandCardMedia
                   imageUrl={card.imageUrl}
                   videoUrl={card.videoUrl}
@@ -297,7 +297,7 @@ export function CuratedBrandOffersCarousel({
                 />
 
                 {/* Subtle Inner Glass Rim */}
-                <div className="absolute inset-0 rounded-[24px] sm:rounded-[28px] border border-white/10 pointer-events-none" />
+                <div className="absolute inset-0 rounded-[18px] sm:rounded-[24px] border border-white/10 pointer-events-none" />
               </Link>
             </div>
           )

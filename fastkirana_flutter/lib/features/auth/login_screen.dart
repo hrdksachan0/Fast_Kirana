@@ -355,6 +355,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   // Phone Input Field Container
                                   Container(
                                     height: 54,
+                                    clipBehavior: Clip.antiAlias,
                                     decoration: BoxDecoration(
                                       color: _isFocused ? Colors.white : const Color(0xFFF8FAFC),
                                       borderRadius: BorderRadius.circular(14),
@@ -433,6 +434,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                                 color: const Color(0xFF94A3B8),
                                                 letterSpacing: 0.2,
                                               ),
+                                              filled: false,
+                                              fillColor: Colors.transparent,
                                               border: InputBorder.none,
                                               enabledBorder: InputBorder.none,
                                               focusedBorder: InputBorder.none,
@@ -440,9 +443,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                               errorBorder: InputBorder.none,
                                               focusedErrorBorder: InputBorder.none,
                                               isDense: true,
-                                              contentPadding: const EdgeInsets.symmetric(
-                                                horizontal: 12,
-                                                vertical: 14,
+                                              contentPadding: const EdgeInsets.only(
+                                                left: 12,
+                                                right: 14,
+                                                top: 14,
+                                                bottom: 14,
                                               ),
                                             ),
                                             onSubmitted: (_) => _handleContinue(),

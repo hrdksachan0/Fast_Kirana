@@ -104,24 +104,51 @@ class RestaurantRegistry {
         n.contains('fanta') ||
         n.contains('limca') ||
         n.contains('frooti') ||
-        n.contains('maaza')) {
+        n.contains('maaza') ||
+        n.contains('maggi') ||
+        n.contains('maggie') ||
+        n.contains('yippee') ||
+        n.contains('instant noodle') ||
+        n.contains('noodles masala') ||
+        n.contains('noodle masala') ||
+        n.contains('sauce') ||
+        n.contains('ketchup') ||
+        n.contains('pouch') ||
+        n.contains('sachet') ||
+        n.contains('masala') ||
+        n.contains('chai patti') ||
+        n.contains('tea ( chai') ||
+        n.contains('tea bag') ||
+        n.contains('green tea') ||
+        n.contains('coffee powder') ||
+        n.contains('popcorn') ||
+        n.contains('oats') ||
+        n.contains('dal') ||
+        n.contains('chana') ||
+        n.contains('rajma') ||
+        n.contains('atta') ||
+        n.contains('rice') ||
+        n.contains('oil') ||
+        n.contains('ghee') ||
+        n.contains('pack') ||
+        n.contains('packet')) {
       return false;
     }
 
     // Exact cooked dish keywords
     const dishKeywords = [
       'spring roll', 'veg roll', 'paneer roll', 'egg roll', 'kathi roll', 'frankie roll', 'wrap',
-      'burger', 'pizza', 'sandwich', 'sandwitch', 'chowmein', 'noodle', 'noodles',
-      'fried rice', 'manchurian', 'calzone', 'pasta', 'thali', 'biryani',
+      'burger', 'pizza', 'sandwich', 'sandwitch', 'chowmein', 'hakka noodle', 'schezwan noodle',
+      'fried rice', 'manchurian', 'calzone', 'thali', 'biryani',
       'pav bhaji', 'pavbhaji', 'momos', 'momo', 'garlic bread',
       'chole bhature', 'bhature', 'kulcha', 'dosa', 'idli', 'vada', 'vadapav',
-      'french fries', 'fries', 'finger', 'finger chips', 'peri peri',
+      'french fries', 'fries', 'finger chips', 'peri peri fries',
       'chilli potato', 'crispy corn', 'paneer tikka', 'soya chaap', 'chaap',
       'handi paneer', 'kadhai paneer', 'shahi paneer', 'dal makhani', 'tandoori roti',
       'butter naan', 'garlic naan', 'missi roti', 'paneer paratha', 'aloo paratha',
-      'shake', 'cold coffee', 'coffee', 'tea', 'chai', 'beverage', 'mocktail', 'lassi',
-      'maggi', 'soup', 'samosa', 'cutlet', 'tikki', 'curry', 'gravy', 'kofta', 'korma',
-      'rajma', 'chana', 'jeera rice', 'pulao', 'dessert', 'pastry', 'cake', 'waffle'
+      'shake', 'cold coffee', 'hot coffee', 'kulhad chai', 'cutting chai', 'mocktail', 'sweet lassi',
+      'samosa', 'cutlet', 'tikki', 'curry', 'gravy', 'kofta', 'korma',
+      'jeera rice', 'pulao', 'pastry', 'waffle'
     ];
     return dishKeywords.any((k) => n.contains(k));
   }
@@ -398,29 +425,42 @@ class RestaurantScheduleHelper {
 
 /// Check if a product is a food / restaurant dish dynamically
 bool isRestaurantProduct(Product product) {
-  // 1. Explicit restaurant assignment from database
+  // 1. Explicit restaurant assignment from database (Authoritative source of truth)
   if ((product.restaurantId != null && product.restaurantId!.trim().isNotEmpty) ||
       product.restaurant != null) {
     return true;
   }
 
-  // 2. Dish name keyword matching (e.g. Spring Roll, Matka Kulfi, Burger, Pizza, etc.)
-  if (RestaurantRegistry.isFoodDishName(product.name)) {
-    return true;
+  // 2. Strict Grocery Protection:
+  // If the product belongs to a known Kirana / Grocery category or subcategory, it is NEVER a restaurant item!
+  // This permanently protects packaged staples like Maggi, Yippee, Pasta, Ketchup, Tea, Coffee, Chana Dal, etc.
+  final catId = (product.categoryId ?? product.category?.id ?? '').toUpperCase().trim();
+  final catSlug = (product.category?.slug ?? '').toLowerCase().trim();
+  if (catId.startsWith('SUB-') ||
+      catId.startsWith('CAT-10') ||
+      catId == 'CAT-113' ||
+      catId == 'CAT-114' ||
+      catId == 'CAT-115' ||
+      catId == 'CAT-116') {
+    return false;
   }
 
   // 3. Explicit restaurant category from database
-  final categorySlug = (product.category?.slug ?? product.categoryId ?? '').toLowerCase();
-  if (categorySlug.contains('restaurant') ||
-      categorySlug.contains('cafe') ||
-      categorySlug.contains('kitchen') ||
-      categorySlug.contains('cat-112')) {
+  if (catSlug.contains('restaurant') ||
+      catSlug.contains('cafe') ||
+      catSlug.contains('fast-food') ||
+      catId.contains('CAT-112')) {
     return true;
   }
 
   // 4. Explicit tags
   final tags = product.tags.map((t) => t.toLowerCase()).toList();
   if (tags.any((t) => t == 'restaurant' || t == 'cafe' || t == 'cooked' || t == 'dish')) {
+    return true;
+  }
+
+  // 5. Dish name keyword matching ONLY for uncategorized cooked food items (where categoryId is empty)
+  if (catId.isEmpty && RestaurantRegistry.isFoodDishName(product.name)) {
     return true;
   }
 
@@ -445,8 +485,8 @@ String getOutletName(Product product) {
     return registeredName;
   }
 
-  // 3. If dish matches food keywords, return Restaurant fallback
-  if (isRestaurantProduct(product)) {
+  // 3. If dish has a valid restaurantId, return Restaurant fallback
+  if (isRestaurantProduct(product) && (product.restaurantId != null && product.restaurantId!.trim().isNotEmpty)) {
     return 'Restaurant';
   }
 

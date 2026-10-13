@@ -813,7 +813,7 @@ export function DealsCurationHub({
 
       {/* Premium Curation Tab Bar */}
       {/* Mobile view: Category Circles Strip */}
-      <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-y border-zinc-200/60 dark:border-zinc-800/60 -mx-4 px-4 py-2 flex md:hidden items-center gap-4 overflow-x-auto select-none w-[calc(100%+2rem)] justify-start scroll-smooth snap-x snap-mandatory scrollbar-none shadow-2xs">
+      <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-y border-zinc-200/60 dark:border-zinc-800/60 -mx-3 sm:-mx-4 px-3 sm:px-4 py-1.5 flex md:hidden items-center gap-3 overflow-x-auto select-none w-[calc(100%+1.5rem)] sm:w-[calc(100%+2rem)] justify-start scroll-smooth snap-x snap-mandatory scrollbar-none shadow-2xs">
         {curations.map((c) => {
           const isActive = activeCuration === c.id
           return (
@@ -919,7 +919,7 @@ export function DealsCurationHub({
                 <p className="text-[10px] text-text-secondary mt-0.5">Please check back later!</p>
               </div>
             ) : (
-              <div className="space-y-8 sm:space-y-10">
+              <div className="space-y-5 sm:space-y-8">
                 {groupedProducts.map((group, groupIndex) => {
                   const hasMultipleSubgroups = group.subgroups && (
                     group.subgroups.length > 1 ||
@@ -963,7 +963,7 @@ export function DealsCurationHub({
 
                         {/* Subcategory Shelves (Separated by Subcategory) */}
                         {hasMultipleSubgroups ? (
-                          <div className="space-y-6 pl-0.5 sm:pl-1">
+                          <div className="space-y-4 sm:space-y-5 pl-0.5 sm:pl-1">
                             {group.subgroups.map((sub) => {
                               const subHref = group.categorySlug
                                 ? `/category/${group.categorySlug}?sub=${sub.subcategoryId}`

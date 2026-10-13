@@ -28,9 +28,9 @@ export function SpeedStrip({
   ]
 
   return (
-    <section className="py-1.5 md:py-3">
+    <section className="py-0.5 md:py-1.5">
       {/* Mobile: Compact stats bar */}
-      <div className="flex md:hidden items-center justify-center gap-4 px-3 py-2.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-zinc-200/50 dark:border-zinc-800/30 shadow-xs">
+      <div className="flex md:hidden items-center justify-center gap-4 px-3 py-2 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-zinc-200/50 dark:border-zinc-800/30 shadow-xs">
         <div className="flex items-center gap-1.5">
           <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />

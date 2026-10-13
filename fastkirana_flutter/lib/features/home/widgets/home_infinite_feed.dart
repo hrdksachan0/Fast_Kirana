@@ -4,29 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../../core/theme/design_system.dart';
-import '../../../core/routes/page_transitions.dart';
 import '../../../data/models/product.dart';
 import '../../../data/models/category.dart';
 import '../../../providers/product_provider.dart';
 import '../../../providers/store_hub_provider.dart';
 import '../../../widgets/product_card.dart';
-import '../../categories/category_products_screen.dart';
-import '../utils/category_visual_helper.dart';
 import 'home_end_of_aisle_search_card.dart';
+import 'home_aisle_spotlight_banner.dart';
 
 class HomeInfiniteFeed {
   HomeInfiniteFeed._();
 
-  static List<Product> getFilteredGridProducts({
-    required List<Product> all,
-    required List<Category> categories,
-    required int selectedFilterIndex,
-  }) {
-    // Strictly isolate grocery items (exclude restaurant dishes)
-    final groceryItems = all.where((p) => p.restaurantId == null && p.restaurant == null).toList();
-
-    final groceryCategories = categories.where((c) {
-      if (c.parentId != null && c.parentId!.isNotEmpty) return false;
+  /// Strictly extract only SUBCATEGORIES for granular product filtering in the bottom feed
+  static List<Category> getGrocerySubcategories(List<Category> allCategories) {
+    final list = allCategories.where((c) {
+      // Must be a subcategory (has parentId)
+      if (c.parentId == null || c.parentId!.isEmpty) return false;
       final slug = c.slug.toLowerCase().trim();
       final name = c.name.toLowerCase().trim();
       if (slug == 'restaurant-food' ||
@@ -41,12 +34,49 @@ class HomeInfiniteFeed {
       }
       return true;
     }).toList();
-    groceryCategories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    // Priority ordering for intuitive, fast daily essentials shopping
+    int getPriority(Category cat) {
+      final id = cat.id.toUpperCase();
+      final slug = cat.slug.toLowerCase();
+      if (id == 'SUB-113-01' || slug.contains('atta')) return 1;
+      if (id == 'SUB-113-03' || slug.contains('dal')) return 2;
+      if (id == 'SUB-113-02' || slug.contains('oil')) return 3;
+      if (id == 'SUB-113-04' || slug.contains('masala')) return 4;
+      if (id == 'SUB-113-05' || slug.contains('tea')) return 5;
+      if (id == 'SUB-102-01' || slug.contains('cookie')) return 6;
+      if (id == 'SUB-102-02' || slug.contains('namkeen')) return 7;
+      if (id == 'SUB-104-01' || slug.contains('sauce')) return 8;
+      if (id == 'SUB-104-02' || slug.contains('noodle')) return 9;
+      if (id == 'SUB-114-02' || slug.contains('dry-fruit')) return 10;
+      if (id == 'SUB-115-03' || slug.contains('choco')) return 11;
+      if (id == 'SUB-115-02' || slug.contains('bakery')) return 12;
+      if (id == 'SUB-107-03' || slug.contains('laund')) return 13;
+      if (id == 'SUB-107-01' || slug.contains('dish')) return 14;
+      if (id == 'SUB-109-02' || slug.contains('oral')) return 15;
+      if (id == 'SUB-109-01' || slug.contains('hair')) return 16;
+      if (id == 'SUB-101-01' || slug.contains('fruit')) return 17;
+      if (id == 'SUB-101-02' || slug.contains('veg')) return 18;
+      return 50 + cat.sortOrder;
+    }
+
+    list.sort((a, b) => getPriority(a).compareTo(getPriority(b)));
+    return list;
+  }
+
+  static List<Product> getFilteredGridProducts({
+    required List<Product> all,
+    required List<Category> categories,
+    required int selectedFilterIndex,
+  }) {
+    // Strictly isolate grocery items (exclude restaurant dishes)
+    final groceryItems = all.where((p) => p.restaurantId == null && p.restaurant == null).toList();
+    final subcategories = getGrocerySubcategories(categories);
 
     final List<Product> result;
-    if (selectedFilterIndex > 0 && selectedFilterIndex <= groceryCategories.length) {
-      final selectedCat = groceryCategories[selectedFilterIndex - 1];
-      result = groceryItems.where((p) => isProductInGroceryCategory(p, selectedCat)).toList();
+    if (selectedFilterIndex > 0 && selectedFilterIndex <= subcategories.length) {
+      final selectedSub = subcategories[selectedFilterIndex - 1];
+      result = groceryItems.where((p) => isProductInGroceryCategory(p, selectedSub)).toList();
     } else {
       result = groceryItems;
     }
@@ -54,21 +84,51 @@ class HomeInfiniteFeed {
     return result;
   }
 
-  static String _getCategorySubtitle(String name) {
+  static String _getSubcategoryEmoji(String slug, String name) {
+    final s = slug.toLowerCase();
+    final n = name.toLowerCase();
+    if (s.contains('atta') || s.contains('flour') || s.contains('rice') || s.contains('sugar')) return '🌾';
+    if (s.contains('dal') || s.contains('pulse') || n.contains('dal')) return '🍲';
+    if (s.contains('oil') || s.contains('ghee') || n.contains('oil') || n.contains('ghee')) return '🛢️';
+    if (s.contains('masala') || s.contains('spice') || n.contains('masala')) return '🌶️';
+    if (s.contains('tea') || s.contains('coffee') || s.contains('chai')) return '☕';
+    if (s.contains('cookie') || s.contains('biscuit') || n.contains('cookie')) return '🍪';
+    if (s.contains('namkeen') || s.contains('snack') || n.contains('namkeen')) return '🥨';
+    if (s.contains('sauce') || s.contains('spread') || s.contains('ketchup')) return '🍅';
+    if (s.contains('noodle') || s.contains('pasta') || s.contains('instant')) return '🍜';
+    if (s.contains('dry') || s.contains('nut') || s.contains('cashew') || s.contains('almond')) return '🥜';
+    if (s.contains('choco') || s.contains('sweet')) return '🍫';
+    if (s.contains('bakery') || s.contains('bread') || s.contains('rusk')) return '🍞';
+    if (s.contains('laund') || s.contains('detergent')) return '🧼';
+    if (s.contains('dish') || s.contains('scrub')) return '🧽';
+    if (s.contains('oral') || s.contains('dental') || s.contains('toothpaste')) return '🪥';
+    if (s.contains('hair') || s.contains('shampoo') || s.contains('oil')) return '🧴';
+    if (s.contains('fruit')) return '🍎';
+    if (s.contains('veg')) return '🥦';
+    return '🛍️';
+  }
+
+  static String _getSubcategorySubtitle(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('snack') || lower.contains('munch')) return 'Crunchy chips, namkeen & snacks';
-    if (lower.contains('choco') || lower.contains('sweet')) return 'Dairy Milk Silk, bars & confectionery';
-    if (lower.contains('fruit') || lower.contains('veg')) return 'Farm fresh vegetables & fruits';
-    if (lower.contains('atta') || lower.contains('rice') || lower.contains('dal') || lower.contains('oil') || lower.contains('grain') || lower.contains('pulse')) return 'Fortune oil, grains, atta & pulses';
-    if (lower.contains('ice') || lower.contains('cream') || lower.contains('dessert')) return 'Cool tubs, cones, kulfi & desserts';
-    if (lower.contains('beverage') || lower.contains('drink')) return 'Cold drinks, real juices & energy sodas';
-    if (lower.contains('bakery') || lower.contains('biscuit')) return 'Fresh cookies, rusks & bakery bites';
-    if (lower.contains('care') || lower.contains('hygiene')) return 'Soaps, shampoos, skincare & essentials';
-    if (lower.contains('clean') || lower.contains('home')) return 'Detergents, cleaners & home supplies';
-    if (lower.contains('health')) return 'Nutritious picks, dry fruits & oats';
-    if (lower.contains('pack')) return 'Instant noodles, pasta & ready to eat';
-    if (lower.contains('food') || lower.contains('rest') || lower.contains('cafe')) return 'Hot burgers, rolls, pizzas & meals';
-    return 'Top quality grocery essentials';
+    if (lower.contains('atta') || lower.contains('flour') || lower.contains('rice')) return 'Aashirvaad, Fortune atta, basmati & grains';
+    if (lower.contains('dal') || lower.contains('pulse')) return 'Toor, moong, chana & unpolished dals';
+    if (lower.contains('oil') || lower.contains('ghee')) return 'Refined, mustard oil & Amul pure ghee';
+    if (lower.contains('masala') || lower.contains('spice')) return 'Catch, Everest & MDH blended spices';
+    if (lower.contains('tea') || lower.contains('coffee') || lower.contains('chai')) return 'Tata Tea Gold, Nescafe & morning brews';
+    if (lower.contains('cookie') || lower.contains('biscuit')) return 'Good Day, Parle-G, Oreo & bakery bites';
+    if (lower.contains('namkeen') || lower.contains('snack')) return 'Haldiram bhujia, mixture & crunchy munchies';
+    if (lower.contains('sauce') || lower.contains('spread')) return 'Kissan ketchup, jams & chocolate spreads';
+    if (lower.contains('noodle') || lower.contains('pasta')) return 'Maggi 2-minute, Yippee & quick pasta';
+    if (lower.contains('dry') || lower.contains('nut')) return 'Premium almonds, cashews & Afghan raisins';
+    if (lower.contains('choco') || lower.contains('sweet')) return 'Dairy Milk Silk, 5 Star & festive chocolates';
+    if (lower.contains('bakery') || lower.contains('bread')) return 'Fresh milk breads, pav & tea rusks';
+    if (lower.contains('laund') || lower.contains('detergent')) return 'Surf Excel, Ariel & Tide wash powders';
+    if (lower.contains('dish')) return 'Vim liquid, bars & dishwash sponges';
+    if (lower.contains('oral') || lower.contains('dental')) return 'Colgate, Sensodyne & oral hygiene';
+    if (lower.contains('hair')) return 'Head & Shoulders, Dove & hair oils';
+    if (lower.contains('fruit')) return 'Fresh farm apples, bananas & seasonal fruits';
+    if (lower.contains('veg')) return 'Farm fresh potatoes, onions, tomatoes & greens';
+    return 'Top quality grocery essentials in Ghatampur';
   }
 
   static List<Widget> buildSlivers({
@@ -77,15 +137,26 @@ class HomeInfiniteFeed {
     required ScrollController scrollController,
     required int visibleGridCount,
     required int selectedFilterIndex,
+    required ValueChanged<int> onFilterChanged,
   }) {
     final catalogAsync = ref.watch(homeProductCatalogProvider);
+    final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
+    final subcategories = getGrocerySubcategories(categories);
 
     return catalogAsync.when(
       loading: () => [
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 26, 16, 12),
-            child: _buildInfiniteFeedHeader(context, ref, 0, isLoading: true, selectedFilterIndex: selectedFilterIndex),
+            child: _buildInfiniteFeedHeader(
+              context: context,
+              ref: ref,
+              totalCount: 0,
+              isLoading: true,
+              selectedFilterIndex: selectedFilterIndex,
+              subcategories: subcategories,
+              onFilterChanged: onFilterChanged,
+            ),
           ),
         ),
         SliverPadding(
@@ -106,21 +177,34 @@ class HomeInfiniteFeed {
       ],
       error: (_, __) => [const SliverToBoxAdapter(child: SizedBox.shrink())],
       data: (allProducts) {
-        // When default "All" is active, avoid dumping an unorganized mixed grid of all 200 items.
-        // Instead, show Zepto/Blinkit-style "Explore by Category" Bento Grid + End-of-Aisle Search Prompt!
-        if (selectedFilterIndex == 0) {
-          return _buildCategoryBentoFeed(context, ref, scrollController);
-        }
-
-        final categories = ref.read(categoriesProvider).valueOrNull ?? [];
         final filteredProducts = getFilteredGridProducts(
           all: allProducts,
           categories: categories,
           selectedFilterIndex: selectedFilterIndex,
         );
 
-        if (filteredProducts.isEmpty) {
-          return [
+        final visibleProducts = filteredProducts.take(visibleGridCount).toList();
+        final hasMore = visibleGridCount < filteredProducts.length;
+
+        return [
+          // Section Title Header with Dynamic Total Count Badge & SUBCATEGORY Filter Chips
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 26, 16, 14),
+              child: _buildInfiniteFeedHeader(
+                context: context,
+                ref: ref,
+                totalCount: filteredProducts.length,
+                isLoading: false,
+                selectedFilterIndex: selectedFilterIndex,
+                subcategories: subcategories,
+                onFilterChanged: onFilterChanged,
+              ),
+            ),
+          ),
+
+          // Empty State or 2-Column Virtualized Product Grid
+          if (filteredProducts.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
@@ -130,7 +214,7 @@ class HomeInfiniteFeed {
                       const Text('🛍️', style: TextStyle(fontSize: 36)),
                       const SizedBox(height: 8),
                       Text(
-                        'No products found in this collection',
+                        'No products found in this subcategory',
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -139,7 +223,7 @@ class HomeInfiniteFeed {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Try picking another category tab above',
+                        'Try tapping "All" or picking another aisle above',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -150,165 +234,226 @@ class HomeInfiniteFeed {
                   ),
                 ),
               ),
+            )
+          else ...[
+            // 2-Column Virtualized SliverGrid (Ultra-smooth, native 60/120 FPS)
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
+                  childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: false),
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 12,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final product = visibleProducts[index];
+                    return ProductCard(
+                      key: ValueKey('infinite_grid_${product.id}'),
+                      product: product,
+                      isCompact: false,
+                    );
+                  },
+                  childCount: visibleProducts.length,
+                ),
+              ),
             ),
-          ];
-        }
 
-        final visibleProducts = filteredProducts.take(visibleGridCount).toList();
-        final hasMore = visibleGridCount < filteredProducts.length;
-
-        return [
-          // Section Title Header with Dynamic Total Count Badge
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 26, 16, 14),
-              child: _buildInfiniteFeedHeader(
+            // Bottom Load More Indicator or Catalog Completion Badge
+            SliverToBoxAdapter(
+              child: _buildInfiniteFeedFooter(
                 context,
-                ref,
-                filteredProducts.length,
-                isLoading: false,
-                selectedFilterIndex: selectedFilterIndex,
+                scrollController,
+                visibleCount: visibleProducts.length,
+                totalCount: filteredProducts.length,
+                hasMore: hasMore,
               ),
             ),
-          ),
+          ],
 
-          // 2-Column Virtualized SliverGrid (Ultra-smooth, zero jank, only on-screen items kept in memory)
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
-                childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: false),
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 12,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final product = visibleProducts[index];
-                  return ProductCard(
-                    key: ValueKey('infinite_grid_${product.id}'),
-                    product: product,
-                    isCompact: false,
-                  );
-                },
-                childCount: visibleProducts.length,
-              ),
-            ),
-          ),
-
-          // Bottom Load More Indicator or Catalog Completion Badge
+          // End of Aisle Search & Discovery Prompt Card
           SliverToBoxAdapter(
-            child: _buildInfiniteFeedFooter(
-              context,
-              scrollController,
-              visibleCount: visibleProducts.length,
-              totalCount: filteredProducts.length,
-              hasMore: hasMore,
-            ),
+            child: HomeEndOfAisleSearchCard(scrollController: scrollController),
           ),
         ];
       },
     );
   }
 
-  static Widget _buildInfiniteFeedHeader(
-    BuildContext context,
-    WidgetRef ref,
-    int totalCount, {
+  static Widget _buildInfiniteFeedHeader({
+    required BuildContext context,
+    required WidgetRef ref,
+    required int totalCount,
     required bool isLoading,
     required int selectedFilterIndex,
+    required List<Category> subcategories,
+    required ValueChanged<int> onFilterChanged,
   }) {
     final currentHub = ref.watch(currentStoreHubProvider);
     final hubCity = currentHub.city.isNotEmpty ? currentHub.city : currentHub.name;
     String title = 'All Groceries & Essentials';
     String subtitle = '⚡ Fast Delivery from $hubCity darkstore';
-    IconData icon = Icons.auto_awesome_rounded;
+    IconData icon = Icons.flash_on_rounded;
 
-    final categories = ref.read(categoriesProvider).valueOrNull ?? [];
-    final groceryCategories = categories.where((c) {
-      if (c.parentId != null && c.parentId!.isNotEmpty) return false;
-      final slug = c.slug.toLowerCase().trim();
-      final name = c.name.toLowerCase().trim();
-      if (slug == 'restaurant-food' ||
-          slug == 'restaurant' ||
-          slug == 'cafe' ||
-          slug == 'fast-food-kitchen' ||
-          slug.contains('restaurant') ||
-          slug.contains('fastfood') ||
-          name.contains('restaurant') ||
-          name.contains('cafe')) {
-        return false;
-      }
-      return true;
-    }).toList();
-
-    if (selectedFilterIndex > 0 && selectedFilterIndex <= groceryCategories.length) {
-      final selectedCat = groceryCategories[selectedFilterIndex - 1];
-      title = selectedCat.name;
-      subtitle = _getCategorySubtitle(selectedCat.name);
-      icon = Icons.shopping_basket_rounded;
+    if (selectedFilterIndex > 0 && selectedFilterIndex <= subcategories.length) {
+      final selectedSub = subcategories[selectedFilterIndex - 1];
+      title = selectedSub.name;
+      subtitle = _getSubcategorySubtitle(selectedSub.name);
+      icon = Icons.grid_view_rounded;
     }
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        // 1. Header Title & Dynamic Count Badge
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icon, size: 18, color: AppDesignSystem.primary),
-                  const SizedBox(width: 6),
+                  Row(
+                    children: [
+                      Icon(icon, size: 18, color: AppDesignSystem.primary),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: Responsive.scaledFontSize(context, 16.5),
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: -0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
                   Text(
-                    title,
+                    subtitle,
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: Responsive.scaledFontSize(context, 16.5),
-                      fontWeight: FontWeight.w900,
-                      color: AppDesignSystem.textPrimary,
-                      letterSpacing: -0.3,
+                      fontSize: Responsive.scaledFontSize(context, 11),
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF64748B),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: Responsive.scaledFontSize(context, 11),
-                  fontWeight: FontWeight.w500,
-                  color: AppDesignSystem.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (!isLoading)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-            decoration: BoxDecoration(
-              color: AppDesignSystem.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppDesignSystem.primary.withValues(alpha: 0.22),
-                width: 0.8,
-              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.inventory_2_outlined, size: 12, color: AppDesignSystem.primary),
-                const SizedBox(width: 4),
-                Text(
-                  '$totalCount Items',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 10.5),
-                    fontWeight: FontWeight.w800,
-                    color: AppDesignSystem.primary,
+            const SizedBox(width: 8),
+            if (!isLoading)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                decoration: BoxDecoration(
+                  color: AppDesignSystem.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppDesignSystem.primary.withValues(alpha: 0.22),
+                    width: 0.8,
                   ),
                 ),
-              ],
-            ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.inventory_2_outlined, size: 12, color: AppDesignSystem.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$totalCount Items',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                        fontWeight: FontWeight.w800,
+                        color: AppDesignSystem.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        // 2. Horizontal SUBCATEGORY Filter Chips Bar (With [⚡ All] at first!)
+        SizedBox(
+          height: 38,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            itemCount: 1 + subcategories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final isSelected = selectedFilterIndex == index;
+              final String label;
+              if (index == 0) {
+                label = '⚡ All';
+              } else {
+                final sub = subcategories[index - 1];
+                final emoji = _getSubcategoryEmoji(sub.slug, sub.name);
+                label = '$emoji ${sub.name}';
+              }
+
+              return Bounceable(
+                scaleFactor: 0.94,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onFilterChanged(index);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                      width: 1,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                        color: isSelected ? Colors.white : const Color(0xFF334155),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
+        ),
+
+        const SizedBox(height: 14),
+
+        // 3. Dynamic Animated Spotlight Hero Banner (Badi image, pretty animations)
+        HomeAisleSpotlightBanner(
+          selectedSubcategory: (selectedFilterIndex > 0 && selectedFilterIndex <= subcategories.length)
+              ? subcategories[selectedFilterIndex - 1]
+              : null,
+          totalCount: totalCount,
+        ),
       ],
     );
   }
@@ -349,7 +494,7 @@ class HomeInfiniteFeed {
             ),
             const SizedBox(width: 10),
             Text(
-              'Loading next 20 products... ($visibleCount of $totalCount)',
+              'Loading next products... ($visibleCount of $totalCount)',
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 11.5),
                 fontWeight: FontWeight.w600,
@@ -430,230 +575,6 @@ class HomeInfiniteFeed {
           ),
         ],
       ),
-    );
-  }
-
-  static List<Widget> _buildCategoryBentoFeed(
-    BuildContext context,
-    WidgetRef ref,
-    ScrollController scrollController,
-  ) {
-    final categoriesAsync = ref.watch(categoriesProvider);
-    final catalogProducts = ref.watch(homeProductCatalogProvider).valueOrNull ?? [];
-
-    return categoriesAsync.when(
-      loading: () => [
-        const SliverToBoxAdapter(child: SizedBox(height: 20)),
-      ],
-      error: (_, __) => [
-        const SliverToBoxAdapter(child: SizedBox.shrink()),
-      ],
-      data: (categories) {
-        final groceryCategories = categories.where((cat) {
-          final slug = cat.slug.toLowerCase().trim();
-          final name = cat.name.toLowerCase().trim();
-          if (cat.parentId != null && cat.parentId!.isNotEmpty) return false;
-          if (slug == 'all' || slug.contains('restaurant') || slug.contains('cafe')) return false;
-          if (name.contains('restaurant') || name.contains('cafe')) return false;
-          return true;
-        }).toList();
-
-        if (groceryCategories.isEmpty) return [const SliverToBoxAdapter(child: SizedBox.shrink())];
-
-        // Pre-index subcategories by parentId to compute exact recursive product count sums
-        final Map<String, int> categorySumMap = {};
-        for (final parent in groceryCategories) {
-          final parentIdLower = parent.id.toLowerCase().trim();
-          final parentSlugLower = parent.slug.toLowerCase().trim();
-
-          // Find all direct children/subcategories
-          final childCats = categories.where((c) {
-            if (c.parentId == null || c.parentId!.isEmpty) return false;
-            final pId = c.parentId!.toLowerCase().trim();
-            return pId == parentIdLower || pId == parentSlugLower;
-          }).toList();
-
-          int totalCount = parent.productCount ?? 0;
-          for (final sub in childCats) {
-            totalCount += (sub.productCount ?? 0);
-          }
-
-          // Also count loaded catalog products matching this parent category
-          if (catalogProducts.isNotEmpty) {
-            final liveMatches = catalogProducts.where((p) => isProductInGroceryCategory(p, parent)).length;
-            if (liveMatches > totalCount) {
-              totalCount = liveMatches;
-            }
-          }
-
-          categorySumMap[parent.id] = totalCount;
-        }
-
-        final anyHasCount = categorySumMap.values.any((v) => v > 0);
-        final displayCategories = anyHasCount
-            ? groceryCategories.where((c) => (categorySumMap[c.id] ?? 0) > 0).toList()
-            : groceryCategories;
-
-        if (displayCategories.isEmpty) return [const SliverToBoxAdapter(child: SizedBox.shrink())];
-
-        final currentHub = ref.watch(currentStoreHubProvider);
-        final hubCity = currentHub.city.isNotEmpty ? currentHub.city : currentHub.name;
-
-        return [
-          // Section Title Header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 28, 16, 14),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFEF2F2), Color(0xFFFFFBEB)],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFECACA), width: 0.8),
-                    ),
-                    child: const Icon(Icons.grid_view_rounded, size: 18, color: AppDesignSystem.primary),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Explore All Categories',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: Responsive.scaledFontSize(context, 16.5),
-                            fontWeight: FontWeight.w900,
-                            color: AppDesignSystem.textPrimary,
-                            letterSpacing: -0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Browse complete aisles & subcategories in $hubCity',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: Responsive.scaledFontSize(context, 11),
-                            fontWeight: FontWeight.w600,
-                            color: AppDesignSystem.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 2-Column Luxury Bento Grid of Categories (Truncation-Free)
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
-                childAspectRatio: context.isCompact ? 1.80 : 1.90,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final cat = displayCategories[index];
-                  final totalCount = categorySumMap[cat.id] ?? (cat.productCount ?? 0);
-                  final bgTint = CategoryVisualHelper.getSoftColor(cat.slug, cat.name);
-                  final borderTint = CategoryVisualHelper.getBorderColor(cat.slug, cat.name);
-
-                  return Bounceable(
-                    scaleFactor: 0.94,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.push(
-                        context,
-                        FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: borderTint.withValues(alpha: 0.6), width: 1.0),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.035),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          // Luxury Image Container with soft category-calibrated tint
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: bgTint,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: borderTint, width: 0.9),
-                            ),
-                            padding: const EdgeInsets.all(2),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: CategoryVisualHelper.buildAvatarImage(context, cat),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-
-                          // Text Content (Truncation-Free & Clean)
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  cat.name,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: Responsive.scaledFontSize(context, 11),
-                                    fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF0F172A),
-                                    height: 1.15,
-                                    letterSpacing: -0.2,
-                                  ),
-                                  maxLines: 2,
-                                  softWrap: true,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  totalCount > 0 ? '$totalCount+ items' : 'Coming soon',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: FontWeight.w700,
-                                    color: totalCount > 0 ? const Color(0xFF64748B) : AppDesignSystem.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-                childCount: displayCategories.length,
-              ),
-            ),
-          ),
-
-          // End of Aisle Search & Discovery Prompt Card
-          SliverToBoxAdapter(
-            child: HomeEndOfAisleSearchCard(scrollController: scrollController),
-          ),
-        ];
-      },
     );
   }
 }

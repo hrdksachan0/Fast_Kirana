@@ -1,908 +1,946 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
-import { auth } from '@/auth'
-import { requireAdmin } from '@/lib/auth-guard'
-import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
-import { ApiResponder } from '@/lib/api-response'
-import { createProductSchema, validateBody } from '@/lib/validation'
-import { revalidateStorefront } from '@/lib/revalidate'
-import { getCachedSearch, setCachedSearch, getCache, setCache, invalidateProductCache } from '@/lib/search-cache'
-import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
-import { getSemanticAiScore } from '@/lib/vector-search'
-import { normalizeRestaurantId } from '@/lib/restaurant-ids'
-import { extractCityFromStoreName } from '@/lib/store-resolver'
-
-import { SYNONYM_DICTIONARY } from '@/lib/synonyms'
-
-const SEARCH_STOP_WORDS = new Set([
-  'ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from'
-])
-
-export async function GET(request: NextRequest) {
-  const limited = await apiReadLimiter.check(request)
-  if (limited) return limited
-
-  try {
-    const { searchParams } = new URL(request.url)
-    const category = searchParams.get('category')
-    const search = searchParams.get('search')
-    const sort = searchParams.get('sort')
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '100') // default to larger limit for admin viewing
-    // Cursor-based pagination: client passes the last row's createdAt:id as "cursor" instead of a page number.
-    // Falls back to standard offset on page 1 for backwards compatibility.
-    const cursor = searchParams.get('cursor') as string | null
-    const isNextPage = cursor !== null
-    const page1 = !isNextPage && page <= 1
-
-    const [cursorCreatedAt, cursorId] = cursor ? cursor.split(':') : [null, null]
-
-    const hasCursor = Boolean(cursorCreatedAt && cursorId)
-    const trending = searchParams.get('trending') === 'true'
-    const storeId = searchParams.get('storeId')
-    const restaurantId = searchParams.get('restaurantId')
-    const restaurantSlug = searchParams.get('restaurantSlug')
-    const categoryId = searchParams.get('categoryId')
-
-    const session = await auth()
-    const role = session?.user?.role
-    const isWorker = role === 'ADMIN' || role === 'CHEF'
-    const includeUnavailable = searchParams.get('admin') === 'true' || searchParams.get('includeUnavailable') === 'true'
-
-    // Normalize the search query so "Maggi", " maggi ", and "MAGGI" share the
-    // same cache entry (and same Levenshtein comparison). Trim + lowercase +
-    // collapse internal whitespace.
-    const normalizedSearch = search ? search.trim().toLowerCase().replace(/\s+/g, ' ') : ''
-
-    // Cache check for public catalog & search requests
-    const cacheKey = `products:${normalizedSearch || 'all'}:${category || ''}:${categoryId || ''}:${sort || ''}:${page}:${limit}:${storeId || ''}:${restaurantId || ''}:${restaurantSlug || ''}:${trending ? '1' : '0'}`
-    if (!isWorker && !includeUnavailable) {
-      const cached = await getCache<any>(cacheKey)
-      if (cached) {
-        return NextResponse.json(cached, {
-          headers: {
-            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=180',
-            'X-Cache': 'HIT',
-          }
-        })
-      }
-    }
-
-    const where: Prisma.ProductWhereInput = {}
-
-    // Only filter available products for regular users unless includeUnavailable is requested
-    if (!isWorker && !includeUnavailable) {
-      where.isAvailable = true
-    }
-
-    // Filter by restaurant — strictly by restaurantId or restaurant.slug
-    const excludeRestaurant = searchParams.get('excludeRestaurant') === 'true'
-    const includeRestaurants = searchParams.get('all') === 'true' || searchParams.get('includeRestaurants') === 'true' || searchParams.get('type') === 'all'
-    if (restaurantId) {
-      where.restaurantId = restaurantId
-    } else if (restaurantSlug) {
-      where.restaurant = { slug: restaurantSlug }
-    } else if (excludeRestaurant || (!includeRestaurants && !isWorker && !includeUnavailable && !category && !normalizedSearch)) {
-      // In grocery context (no restaurant, no category, NO search query), exclude restaurant products
-      where.restaurantId = null
-    }
-
-    // Strict Store Isolation: Exclude restaurants from other cities and require localized inventory for grocery
-    if (storeId && storeId !== 'all') {
-      const storeScope: Prisma.ProductWhereInput = {
-        OR: [
-          {
-            restaurantId: null,
-            inventories: {
-              some: {
-                storeId,
-                ...(!isWorker && !includeUnavailable ? { stock: { gt: 0 } } : {})
-              }
-            }
-          },
-          {
-            restaurant: {
-              storeId
-            }
-          }
-        ]
-      }
-      where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, storeScope] : [where.AND, storeScope]) : [storeScope]
-    }
-
-    if (categoryId) {
-      const ids = categoryId.split(',').map(s => s.trim()).filter(Boolean)
-      const catOrClause = [
-        { categoryId: { in: ids } },
-        { category: { id: { in: ids } } },
-        { category: { parentId: { in: ids } } },
-      ]
-      where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, { OR: catOrClause }] : [where.AND, { OR: catOrClause }]) : [{ OR: catOrClause }]
-      if (!restaurantId && !restaurantSlug) {
-        where.restaurantId = null
-      }
-    } else if (category) {
-      const slugs = category.split(',').map(s => s.trim()).filter(Boolean)
-      const catOrClause = [
-        { category: { slug: { in: slugs } } },
-        { category: { parent: { slug: { in: slugs } } } },
-        { categoryId: { in: slugs } },
-        { category: { id: { in: slugs } } },
-        { category: { parentId: { in: slugs } } },
-      ]
-      where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, { OR: catOrClause }] : [where.AND, { OR: catOrClause }]) : [{ OR: catOrClause }]
-      // In grocery context (browsing by category without restaurant), enforce grocery only
-      if (!restaurantId && !restaurantSlug) {
-        where.restaurantId = null
-      }
-    }
-
-    let orderBy: any = [
-      { sortOrder: 'desc' },
-      { createdAt: 'desc' }
-    ]
-
-    // Check database for category-specific auto-sorting rule
-    if (category && !category.includes(',')) {
-      try {
-        const sortSetting = await prisma.storeSetting.findUnique({
-          where: { key: `category_sort_${category}` }
-        })
-        if (sortSetting && sortSetting.value !== 'manual') {
-          const rule = sortSetting.value
-          if (rule === 'best-seller') {
-            orderBy = [
-              { isBestSeller: 'desc' },
-              { sortOrder: 'desc' },
-              { createdAt: 'desc' }
-            ]
-          } else if (rule === 'stock-desc') {
-            orderBy = [
-              { stock: 'desc' },
-              { sortOrder: 'desc' },
-              { createdAt: 'desc' }
-            ]
-          } else if (rule === 'price-asc') {
-            orderBy = [
-              { price: 'asc' },
-              { sortOrder: 'desc' }
-            ]
-          } else if (rule === 'price-desc') {
-            orderBy = [
-              { price: 'desc' },
-              { sortOrder: 'desc' }
-            ]
-          } else if (rule === 'newest') {
-            orderBy = [
-              { createdAt: 'desc' }
-            ]
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to fetch category sort rule settings:', err)
-      }
-    }
-
-    if (sort === 'price-asc') {
-      orderBy = { price: 'asc' }
-    } else if (sort === 'price-desc') {
-      orderBy = { price: 'desc' }
-    } else if (sort === 'discount-desc') {
-      orderBy = { discount: 'desc' }
-    }
-
-    const productSelect = {
-      id: true,
-      name: true,
-      slug: true,
-      description: true,
-      imageUrl: true,
-      categoryId: true,
-      mrp: true,
-      price: true,
-      discount: true,
-      unit: true,
-      stock: true,
-      isAvailable: true,
-      tags: true,
-      variants: true,
-      addons: true,
-      minStock: true,
-      expiryDate: true,
-      isFlashDeal: true,
-      isTopPick: true,
-      isBestSeller: true,
-      sortOrder: true,
-      createdAt: true,
-      updatedAt: true,
-      restaurantId: true,
-      vendor: true,
-      vendorId: true,
-      category: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          imageUrl: true,
-          parentId: true,
-          sortOrder: true,
-        }
-      },
-      restaurant: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          logoUrl: true,
-          bannerUrl: true,
-          rating: true,
-          deliveryTime: true,
-          isOpen: true,
-          openTime: true,
-          closeTime: true,
-          lat: true,
-          lng: true,
-          deliveryRadiusKm: true,
-          address: true,
-        }
-      }
-    }
-
-    if (trending) {
-      let trendingOrderItems: any[] = []
-      try {
-        trendingOrderItems = await (prisma.orderItem.groupBy as any)({
-          by: ['productId'],
-          _sum: {
-            quantity: true,
-          },
-          orderBy: {
-            _sum: {
-              quantity: 'desc',
-            },
-          },
-          take: 12,
-        })
-      } catch (err) {
-        console.warn('Failed to fetch trending order items in API:', err)
-      }
-
-      const trendingProductIds = trendingOrderItems
-        .map((item) => item.productId)
-        .filter((id): id is string => id !== null)
-
-      const whereClause: Prisma.ProductWhereInput = {
-        isAvailable: true,
-        NOT: [
-          { tags: { has: 'cafe' } },
-          { category: { slug: 'cafe' } }
-        ],
-        ...(where.AND ? { AND: where.AND } : {})
-      }
-
-      const featuredProducts = await prisma.product.findMany({
-        where: {
-          ...whereClause,
-          OR: [
-            { isTopPick: true },
-            { isBestSeller: true },
-            { id: { in: trendingProductIds } }
-          ]
-        },
-        select: productSelect,
-        take: 12
-      })
-
-      let finalProducts = [...featuredProducts]
-
-      if (finalProducts.length < 8) {
-        const existingIds = finalProducts.map(p => p.id)
-        const popularProducts = await prisma.product.findMany({
-          where: {
-            ...whereClause,
-            tags: { has: 'popular' },
-            id: { notIn: existingIds }
-          },
-          select: productSelect,
-          take: 8 - finalProducts.length
-        })
-        finalProducts = [...finalProducts, ...popularProducts]
-      }
-
-      if (finalProducts.length < 8) {
-        const existingIds = finalProducts.map(p => p.id)
-        const anyProducts = await prisma.product.findMany({
-          where: {
-            ...whereClause,
-            id: { notIn: existingIds }
-          },
-          select: productSelect,
-          take: 8 - finalProducts.length
-        })
-        finalProducts = [...finalProducts, ...anyProducts]
-      }
-
-      // Override stock and availability with localized dark store inventory
-      if (storeId && finalProducts.length > 0) {
-        const inventories = await prisma.storeInventory.findMany({
-          where: {
-            storeId,
-            productId: { in: finalProducts.map(p => p.id) }
-          }
-        })
-        const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
-        finalProducts = finalProducts.map(p => {
-          const isRest = !!p.restaurantId
-          const localStock = isRest ? p.stock : (inventoryMap.get(p.id) ?? 0)
-          return {
-            ...p,
-            stock: localStock,
-            isAvailable: isRest ? p.isAvailable : (p.isAvailable && localStock > 0)
-          }
-        })
-      }
-
-      if (!isWorker && !includeUnavailable) {
-        finalProducts = finalProducts.filter(p => p.isAvailable && (p.stock ?? 0) > 0)
-      }
-
-      const trendingResponseData = {
-        products: finalProducts.slice(0, 8),
-        pagination: {
-          total: finalProducts.length,
-          page: 1,
-          limit: 8,
-          totalPages: 1
-        }
-      }
-
-      if (!isWorker && !includeUnavailable) {
-        await setCache(cacheKey, trendingResponseData, 60)
-      }
-
-      return NextResponse.json(trendingResponseData, {
-        headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=180',
-          'X-Cache': 'MISS',
-        }
-      })
-    }
-
-    let products: any[] = []
-    let total = 0
-    let nextCursor: string | null = null
-    if (normalizedSearch) {
-      // 1. Split query into tokens, filter stop words, expand with synonyms, and build an intersection query
-      const rawWords = normalizedSearch.split(/\s+/).filter(Boolean)
-      const filteredWords = rawWords.filter(w => !SEARCH_STOP_WORDS.has(w))
-      const searchWords = filteredWords.length > 0 ? filteredWords : rawWords
-
-      const wordClauses = searchWords.map(w => {
-        const syns = SYNONYM_DICTIONARY[w] || []
-        const wordOptions = [w, ...syns]
-
-        // Restaurant alias expansions
-        if (w === 'as' || w === 'a.s' || w === 'a.s.') {
-          wordOptions.push('as-restaurant', 'REST-101', 'a.s. restaurant')
-        } else if (w === 'wedson') {
-          wordOptions.push('wedson-restaurant', 'REST-102')
-        } else if (w === 'bal' || w === 'udyan') {
-          wordOptions.push('bal-udyan-restaurant', 'REST-103')
-        } else if (w === 'hot' || w === 'pizza' || w === 'lovers') {
-          wordOptions.push('hot-pizza-lovers', 'REST-104')
-        }
-        
-        return {
-          OR: [
-            ...wordOptions.flatMap(opt => [
-              { name: { contains: opt, mode: 'insensitive' as const } },
-              { tags: { has: opt } },
-              { category: { name: { contains: opt, mode: 'insensitive' as const } } },
-              { restaurant: { name: { contains: opt, mode: 'insensitive' as const } } },
-            ]),
-            ...(w.toLowerCase() === 'veg' ? [
-              { restaurant: { isVeg: true } },
-              { tags: { has: 'veg' } },
-              { tags: { has: 'pure-veg' } }
-            ] : [])
-          ]
-        }
-      })
-
-      const existingAnd = Array.isArray(where.AND) ? where.AND : (where.AND ? [where.AND] : [])
-      const searchWhere: Prisma.ProductWhereInput = {
-        ...(where.category ? { category: where.category } : {}),
-        ...(where.restaurantId !== undefined ? { restaurantId: where.restaurantId } : {}),
-        ...(where.restaurant ? { restaurant: where.restaurant } : {}),
-        ...(!isWorker && !includeUnavailable ? { isAvailable: true } : (where.isAvailable !== undefined ? { isAvailable: where.isAvailable } : {})),
-        ...(existingAnd.length > 0 ? { AND: existingAnd } : {}),
-      }
-
-      const queryOptions: any = {
-        where: {
-          ...searchWhere,
-          AND: [...existingAnd, ...wordClauses]
-        },
-        take: 40,
-      }
-      if (isWorker) {
-        queryOptions.include = { category: true }
-      } else {
-        queryOptions.select = productSelect
-      }
-
-      let matchedProducts = await prisma.product.findMany(queryOptions)
-
-      // If no direct database matches are found, fallback to fetching products to perform typo-tolerant fuzzy search
-      if (matchedProducts.length === 0) {
-        const fallbackOptions: any = {
-          where: searchWhere,
-          take: 50,
-        }
-        if (isWorker) {
-          fallbackOptions.include = { category: true }
-        } else {
-          fallbackOptions.select = productSelect
-        }
-        matchedProducts = await prisma.product.findMany(fallbackOptions)
-      }
-
-      // 2. Score each product using the fuzzy text matcher & Supabase Semantic AI engine (fast: name and tags only)
-      const scoredProducts = matchedProducts.map((p) => {
-        const nameScore = getFuzzyScore(normalizedSearch, p.name)
-        const tagScore = p.tags && Array.isArray(p.tags) && p.tags.some((t: string) => getFuzzyScore(normalizedSearch, t) > 60) ? 85 : 0
-        const semanticAiScore = getSemanticAiScore(normalizedSearch, p)
-        const score = Math.max(nameScore, tagScore, semanticAiScore)
-        return { product: p, score }
-      })
-
-      // 3. Filter products with acceptable match similarity (> 35) and sort by score
-      const matches = scoredProducts
-        .filter((item) => item.score > 35)
-        .sort((a, b) => b.score - a.score)
-
-      total = matches.length
-
-      // Apply sort overrides if requested
-      if (sort === 'price-asc') {
-        matches.sort((a, b) => a.product.price - b.product.price)
-      } else if (sort === 'price-desc') {
-        matches.sort((a, b) => b.product.price - a.product.price)
-      } else if (sort === 'discount-desc') {
-        matches.sort((a, b) => b.product.discount - a.product.discount)
-      }
-
-      // 4. Paginate in memory
-      const memorySkip = (page - 1) * limit
-      products = matches.slice(memorySkip, memorySkip + limit).map((m) => m.product)
-    } else {
-      // Standard database query for normal non-search listings.
-      // For page 1, we still skip/limit for client compatibility; deeper pages
-      // should pass `cursor=createdAt:id` of the last row, which keeps the query
-      // O(limit) regardless of dataset size.
-      const stableOrderBy = Array.isArray(orderBy)
-        ? [...orderBy, { createdAt: 'desc' }, { id: 'desc' }]
-        : [orderBy, { createdAt: 'desc' }, { id: 'desc' }]
-
-      const queryOptions: any = {
-        where,
-        orderBy: stableOrderBy,
-        take: limit + 1,
-      }
-
-      // Cursor pagination takes precedence over skip when supplied.
-      if (hasCursor) {
-        queryOptions.cursor = { id: cursorId }
-        queryOptions.skip = 1 // skip the cursor row itself
-        queryOptions.where = {
-          ...where,
-          OR: [
-            { createdAt: { lt: new Date(cursorCreatedAt!) } },
-            {
-              createdAt: new Date(cursorCreatedAt!),
-              id: { lt: cursorId! },
-            },
-          ],
-        }
-      } else if (page1) {
-        queryOptions.skip = 0
-      } else {
-        // Backwards-compat: legacy callers passing ?page=N keep offset behavior.
-        queryOptions.skip = (page - 1) * limit
-      }
-
-      if (isWorker) {
-        queryOptions.include = { category: true }
-      } else {
-        queryOptions.select = productSelect
-      }
-
-      const dbProducts = await prisma.product.findMany(queryOptions)
-      const hasMore = dbProducts.length > limit
-      products = hasMore ? dbProducts.slice(0, limit) : dbProducts
-      // Cursor mode avoids a count(*) over the full table.
-      total = hasCursor ? -1 : await prisma.product.count({ where })
-      if (hasCursor && hasMore) {
-        const last = products[products.length - 1]
-        nextCursor = `${(last as any).createdAt.toISOString()}:${last.id}`
-      }
-    }
-
-    // Override stock and availability with localized dark store inventory
-    const activeStoreId = storeId || 'hub-209206'
-    if (activeStoreId && products.length > 0) {
-      const inventories = await prisma.storeInventory.findMany({
-        where: {
-          storeId: activeStoreId,
-          productId: { in: products.map(p => p.id) }
-        }
-      })
-      const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
-      products = products.map(p => {
-        const isRest = !!p.restaurantId
-        const localStock = isRest ? p.stock : (inventoryMap.has(p.id) ? inventoryMap.get(p.id)! : p.stock)
-        return {
-          ...p,
-          stock: localStock,
-          isAvailable: isRest ? p.isAvailable : (p.isAvailable && localStock > 0)
-        }
-      })
-    }
-
-    // Automatically sort in-stock products first, out-of-stock products at the end for customer storefronts
-    if (!isWorker && !includeUnavailable && products.length > 0) {
-      products.sort((a: any, b: any) => {
-        const aInStock = (a.isAvailable && (a.stock ?? 0) > 0) ? 1 : 0
-        const bInStock = (b.isAvailable && (b.stock ?? 0) > 0) ? 1 : 0
-        return bInStock - aInStock
-      })
-    }
-
-    const responseData = {
-      products,
-      pagination: {
-        total: total === -1 ? null : total,
-        page,
-        limit,
-        totalPages: total === -1 ? null : Math.ceil(total / limit),
-        nextCursor,
-      },
-    }
-
-    const isCacheable = !isWorker && !includeUnavailable
-    if (isCacheable) {
-      await setCache(cacheKey, responseData, 120)
-    }
-
-    return NextResponse.json(responseData, {
-      headers: {
-        'Cache-Control': isCacheable
-          ? 'public, s-maxage=60, stale-while-revalidate=180'
-          : 'no-store, max-age=0, must-revalidate',
-        'X-Cache': isCacheable ? 'MISS' : 'BYPASS',
-      }
-    })
-  } catch (error: any) {
-    console.error('Products API Error:', error)
-    return ApiResponder.error('Failed to fetch products', 500, 'INTERNAL_ERROR', error?.stack, request)
-  }
-}
-
-// Levenshtein distance string matching algorithm
-function getLevenshteinDistance(a: string, b: string): number {
-  const tmp: number[][] = []
-  let i: number, j: number
-  for (i = 0; i <= a.length; i++) {
-    tmp.push([i])
-  }
-  for (j = 1; j <= b.length; j++) {
-    tmp[0].push(j)
-  }
-  for (i = 1; i <= a.length; i++) {
-    for (j = 1; j <= b.length; j++) {
-      tmp[i][j] = Math.min(
-        tmp[i - 1][j] + 1,
-        tmp[i][j - 1] + 1,
-        tmp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
-      )
-    }
-  }
-  return tmp[a.length][b.length]
-}
-
-// Fuzzy matching text similarity score utility (0 to 100)
-function getFuzzyScore(query: string, target: string): number {
-  const q = query.toLowerCase().trim()
-  const t = target.toLowerCase().trim()
-
-  if (t.includes(q)) return 100 // exact substring matches get highest priority
-
-  const qWords = q.split(/\s+/)
-  const tWords = t.split(/\s+/)
-
-  let totalScore = 0
-  for (const qw of qWords) {
-    let bestWordScore = 0
-    for (const tw of tWords) {
-      if (tw === qw) {
-        bestWordScore = Math.max(bestWordScore, 90)
-      } else if (tw.includes(qw) || qw.includes(tw)) {
-        bestWordScore = Math.max(bestWordScore, 70)
-      } else {
-        const dist = getLevenshteinDistance(qw, tw)
-        const maxLen = Math.max(qw.length, tw.length)
-        if (maxLen > 0) {
-          const sim = 1 - dist / maxLen
-          if (sim > 0.5) {
-            bestWordScore = Math.max(bestWordScore, Math.round(sim * 80))
-          }
-        }
-      }
-    }
-    totalScore += bestWordScore
-  }
-
-  return totalScore / qWords.length
-}
-
-export async function POST(request: NextRequest) {
-  const adminResult = await requireAdmin(request)
-  if (adminResult.error) return adminResult.error
-  const session = adminResult.session
-
-  try {
-    const validation = await validateBody(request, createProductSchema)
-    if (!validation.success) return validation.error
-
-    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId, addons, storeId } = validation.data as any
-
-    let finalCategoryId = categoryId
-    let tagsList = Array.isArray(tags)
-      ? tags.map((t: any) => String(t).trim()).filter((t: string) => t.length > 0)
-      : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0) : [])
-
-    // ── Restaurant product hardening ──
-    // When restaurantId is present, restaurant dishes do NOT require umbrella category (categoryId is null)
-    let finalRestaurantId: string | null = null
-    if (restaurantId) {
-      finalRestaurantId = normalizeRestaurantId(restaurantId)
-      finalCategoryId = null
-
-      // Ensure 'restaurant' tag is present
-      if (!tagsList.map(t => t.toLowerCase()).includes('restaurant')) {
-        tagsList.push('restaurant')
-      }
-      // Remove 'cafe' tag to prevent cross-contamination
-      tagsList = tagsList.filter(t => t.toLowerCase() !== 'cafe')
-    } else if (!finalCategoryId || finalCategoryId === '') {
-      // For grocery products, category is required — use first available category as fallback
-      const firstCat = await prisma.category.findFirst()
-      if (firstCat) {
-        finalCategoryId = firstCat.id
-      }
-    }
-
-    if (!name || (!restaurantId && !finalCategoryId) || mrp === undefined || price === undefined) {
-      return NextResponse.json({ error: 'Missing required fields (name, categoryId, price, mrp)' }, { status: 400 })
-    }
-
-    const finalUnit = (unit && typeof unit === 'string' && unit.trim().length > 0) ? unit.trim() : (restaurantId ? '1 Serving' : '1 pc')
-
-    // Generate slug from name — handles Hindi/non-ASCII names
-    const rawSlug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)+/g, '')
-
-    const randomSuffix = Math.random().toString(36).slice(2, 7)
-    let finalSlug = rawSlug || `item-${Date.now().toString(36)}-${randomSuffix}`
-    let slugExists = await prisma.product.findUnique({ where: { slug: finalSlug } })
-    while (slugExists) {
-      finalSlug = `${rawSlug || 'item'}-${Date.now().toString().slice(-4)}-${Math.random().toString(36).slice(2, 6)}`
-      slugExists = await prisma.product.findUnique({ where: { slug: finalSlug } })
-    }
-
-    let finalMrp = Number(mrp)
-    let finalPrice = Number(price)
-    let sortedVariants = variants
-    let resolvedUnit = finalUnit
-
-    if (variants && Array.isArray(variants) && variants.length > 0) {
-      sortedVariants = [...variants].sort((a: any, b: any) => (Number(a.price) || 0) - (Number(b.price) || 0))
-      finalPrice = Number(sortedVariants[0].price) || 0
-      finalMrp = Number(sortedVariants[0].mrp) || finalPrice
-      if (!unit || unit === '1 pc' || unit === '1 unit' || unit === '1 Serving') {
-        resolvedUnit = sortedVariants[0].name || finalUnit
-      }
-    }
-
-    const calculatedDiscount = finalMrp > finalPrice
-      ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
-      : 0
-
-    // Find highest readableId to increment safely
-    let nextReadableId = 200001
-    try {
-      const lastProduct = await prisma.product.findFirst({
-        where: { readableId: { not: null } },
-        orderBy: { readableId: 'desc' },
-        select: { readableId: true }
-      })
-      if (lastProduct && typeof lastProduct.readableId === 'number') {
-        nextReadableId = lastProduct.readableId + 1
-      }
-    } catch (e) {
-      console.warn('Could not query last readableId:', e)
-    }
-
-    // Unbreakable readableId collision guard
-    while (await prisma.product.findUnique({ where: { readableId: nextReadableId } })) {
-      nextReadableId++
-    }
-
-    // Parse expiry date if provided
-    let parsedExpiry: Date | null = null
-    if (expiryDate && typeof expiryDate === 'string' && expiryDate.trim().length > 0) {
-      const parsedTime = Date.parse(expiryDate)
-      if (!isNaN(parsedTime)) {
-        parsedExpiry = new Date(parsedTime)
-      }
-    }
-
-    const cleanBarcode = (barcode && typeof barcode === 'string' && barcode.trim().length > 0) ? barcode.trim() : null
-    const cleanLocation = (location && typeof location === 'string' && location.trim().length > 0) ? location.trim() : null
-    let cleanVendor = (vendor && typeof vendor === 'string' && vendor.trim().length > 0) ? vendor.trim() : null
-    let cleanVendorId = (vendorId && typeof vendorId === 'string' && vendorId.trim().length > 0) ? vendorId.trim() : null
-
-    // Systematically resolve vendorId from name or vice-versa
-    if (!cleanVendorId && cleanVendor) {
-      try {
-        const matchedVendor = await (prisma as any).vendor.findFirst({
-          where: { name: { equals: cleanVendor, mode: 'insensitive' } }
-        })
-        if (matchedVendor) {
-          cleanVendorId = matchedVendor.id
-        }
-      } catch (_) {}
-    } else if (cleanVendorId) {
-      try {
-        const matchedVendor = await (prisma as any).vendor.findUnique({
-          where: { id: cleanVendorId }
-        })
-        if (matchedVendor) {
-          cleanVendor = cleanVendor || matchedVendor.name
-        } else {
-          // Prevent FK violation P2003
-          cleanVendorId = null
-        }
-      } catch (_) {
-        cleanVendorId = null
-      }
-    }
-
-    // Barcode uniqueness pre-check to prevent P2002 500 error
-    if (cleanBarcode) {
-      try {
-        const existingBarcode = await prisma.product.findUnique({
-          where: { barcode: cleanBarcode },
-          select: { id: true, name: true }
-        })
-        if (existingBarcode) {
-          return NextResponse.json({
-            error: `Barcode "${cleanBarcode}" is already assigned to "${existingBarcode.name}". Leave it blank or enter a unique barcode.`
-          }, { status: 400 })
-        }
-      } catch (bcErr) {
-        console.warn('Barcode uniqueness pre-check:', bcErr)
-      }
-    }
-
-    // Verify category exists to prevent P2003 foreign key violation
-    if (finalCategoryId) {
-      try {
-        const catExists = await prisma.category.findUnique({
-          where: { id: finalCategoryId },
-          select: { id: true }
-        })
-        if (!catExists) {
-          const firstCat = await prisma.category.findFirst({ select: { id: true } })
-          finalCategoryId = firstCat?.id || null
-        }
-      } catch (_) {
-        finalCategoryId = null
-      }
-    }
-
-    const product = await prisma.product.create({
-      data: {
-        name: name.trim(),
-        readableId: nextReadableId,
-        slug: finalSlug,
-        description: description || '',
-        imageUrl: imageUrl || '📦',
-        categoryId: finalCategoryId,
-        restaurantId: finalRestaurantId || null,
-        mrp: finalMrp,
-        price: finalPrice,
-        discount: calculatedDiscount,
-        unit: resolvedUnit,
-        stock: finalRestaurantId ? 99999 : Number(stock || 0),
-        isAvailable: isAvailable !== undefined ? !!isAvailable : true,
-        tags: tagsList,
-        variants: (sortedVariants && Array.isArray(sortedVariants) && sortedVariants.length > 0) ? sortedVariants : undefined,
-        addons: (addons && Array.isArray(addons) && addons.length > 0) ? addons : undefined,
-        minStock: Number(minStock || 0),
-        expiryDate: parsedExpiry,
-        costPrice: Number(costPrice || 0),
-        location: cleanLocation,
-        isFlashDeal: !!isFlashDeal,
-        isTopPick: !!isTopPick,
-        isBestSeller: !!isBestSeller,
-        sortOrder: Number(sortOrder || 0),
-        barcode: cleanBarcode,
-        vendor: cleanVendor,
-        vendorId: cleanVendorId,
-      },
-      include: {
-        category: true,
-      }
-    })
-
-    // Seed store-level inventory
-    try {
-      const initialStockNum = finalRestaurantId ? 99999 : (parseInt(String(stock), 10) || 0)
-      const targetStoreId = (storeId && storeId !== 'all') ? String(storeId).trim() : ((session?.user as any)?.assignedStoreId || null)
-
-      const allStores = await prisma.darkStore.findMany({ select: { id: true } })
-      if (allStores.length > 0) {
-        for (const store of allStores) {
-          const storeStock = (!targetStoreId || targetStoreId === 'all' || store.id === targetStoreId) ? initialStockNum : initialStockNum
-          await prisma.storeInventory.upsert({
-            where: {
-              productId_storeId: {
-                productId: product.id,
-                storeId: store.id,
-              }
-            },
-            create: {
-              productId: product.id,
-              storeId: store.id,
-              stock: storeStock,
-            },
-            update: {
-              stock: storeStock,
-            }
-          })
-        }
-      }
-    } catch (seedErr) {
-      console.warn('Could not seed store_inventories for new product:', seedErr)
-    }
-
-    // Invalidate storefront caches on-demand
-    await invalidateProductCache()
-    revalidateStorefront((product as any).category?.slug)
-
-    return NextResponse.json(product, { status: 201 })
-  } catch (error: any) {
-    console.error('Failed to create product:', error)
-    if (error?.code === 'P2002') {
-      const target = Array.isArray(error?.meta?.target) ? error.meta.target.join(', ') : (error?.meta?.target || 'field')
-      return NextResponse.json({ 
-        error: `A product with this duplicate ${target} already exists. Please use a unique value or leave barcode empty.`,
-        code: 'P2002' 
-      }, { status: 400 })
-    }
-    if (error?.code === 'P2003') {
-      return NextResponse.json({ 
-        error: 'Database error: The selected category, vendor, or store does not exist.',
-        code: 'P2003' 
-      }, { status: 400 })
-    }
-    return NextResponse.json({ 
-      error: error?.message || 'Failed to create product in database',
-      code: error?.code || null 
-    }, { status: 500 })
-  }
-}
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
+import { auth } from '@/auth'
+import { requireAdmin } from '@/lib/auth-guard'
+import { apiReadLimiter, apiWriteLimiter } from '@/lib/rate-limit'
+import { ApiResponder } from '@/lib/api-response'
+import { createProductSchema, validateBody } from '@/lib/validation'
+import { revalidateStorefront } from '@/lib/revalidate'
+import { getCachedSearch, setCachedSearch, getCache, setCache, invalidateProductCache } from '@/lib/search-cache'
+import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID } from '@/lib/constants'
+import { getSemanticAiScore } from '@/lib/vector-search'
+import { normalizeRestaurantId } from '@/lib/restaurant-ids'
+import { extractCityFromStoreName } from '@/lib/store-resolver'
+
+import { SYNONYM_DICTIONARY } from '@/lib/synonyms'
+
+const SEARCH_STOP_WORDS = new Set([
+  'ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from'
+])
+
+export async function GET(request: NextRequest) {
+  const limited = await apiReadLimiter.check(request)
+  if (limited) return limited
+
+  try {
+    const { searchParams } = new URL(request.url)
+    const category = searchParams.get('category')
+    const search = searchParams.get('search')
+    const sort = searchParams.get('sort')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '100') // default to larger limit for admin viewing
+    // Cursor-based pagination: client passes the last row's createdAt:id as "cursor" instead of a page number.
+    // Falls back to standard offset on page 1 for backwards compatibility.
+    const cursor = searchParams.get('cursor') as string | null
+    const isNextPage = cursor !== null
+    const page1 = !isNextPage && page <= 1
+
+    const [cursorCreatedAt, cursorId] = cursor ? cursor.split(':') : [null, null]
+
+    const hasCursor = Boolean(cursorCreatedAt && cursorId)
+    const trending = searchParams.get('trending') === 'true'
+    const storeId = searchParams.get('storeId')
+    const restaurantId = searchParams.get('restaurantId')
+    const restaurantSlug = searchParams.get('restaurantSlug')
+    const categoryId = searchParams.get('categoryId')
+
+    const session = await auth()
+    const role = session?.user?.role
+    const isWorker = role === 'ADMIN' || role === 'CHEF'
+    const includeUnavailable = searchParams.get('admin') === 'true' || searchParams.get('includeUnavailable') === 'true'
+
+    // Normalize the search query so "Maggi", " maggi ", and "MAGGI" share the
+    // same cache entry (and same Levenshtein comparison). Trim + lowercase +
+    // collapse internal whitespace.
+    const normalizedSearch = search ? search.trim().toLowerCase().replace(/\s+/g, ' ') : ''
+
+    // Cache check for public catalog & search requests
+    const cacheKey = `products:${normalizedSearch || 'all'}:${category || ''}:${categoryId || ''}:${sort || ''}:${page}:${limit}:${storeId || ''}:${restaurantId || ''}:${restaurantSlug || ''}:${trending ? '1' : '0'}`
+    if (!isWorker && !includeUnavailable) {
+      const cached = await getCache<any>(cacheKey)
+      if (cached) {
+        return NextResponse.json(cached, {
+          headers: {
+            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=180',
+            'X-Cache': 'HIT',
+          }
+        })
+      }
+    }
+
+    const where: Prisma.ProductWhereInput = {}
+
+    // Only filter available products for regular users unless includeUnavailable is requested
+    if (!isWorker && !includeUnavailable) {
+      where.isAvailable = true
+    }
+
+    // Filter by restaurant — strictly by restaurantId or restaurant.slug
+    const excludeRestaurant = searchParams.get('excludeRestaurant') === 'true'
+    const includeRestaurants = searchParams.get('all') === 'true' || searchParams.get('includeRestaurants') === 'true' || searchParams.get('type') === 'all'
+    if (restaurantId) {
+      where.restaurantId = restaurantId
+    } else if (restaurantSlug) {
+      where.restaurant = { slug: restaurantSlug }
+    } else if (excludeRestaurant || (!includeRestaurants && !isWorker && !includeUnavailable && !category && !normalizedSearch)) {
+      // In grocery context (no restaurant, no category, NO search query), exclude restaurant products
+      where.restaurantId = null
+    }
+
+    // Strict Store Isolation: Exclude restaurants from other cities and require localized inventory for grocery
+    if (storeId && storeId !== 'all') {
+      const storeScope: Prisma.ProductWhereInput = {
+        OR: [
+          {
+            restaurantId: null,
+            inventories: {
+              some: {
+                storeId,
+                ...(!isWorker && !includeUnavailable ? { stock: { gt: 0 } } : {})
+              }
+            }
+          },
+          {
+            restaurant: {
+              storeId
+            }
+          }
+        ]
+      }
+      where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, storeScope] : [where.AND, storeScope]) : [storeScope]
+    }
+
+    if (categoryId) {
+      const ids = categoryId.split(',').map(s => s.trim()).filter(Boolean)
+      // Resolve all child/descendant category IDs from database
+      const childCategories = await prisma.category.findMany({
+        where: { parentId: { in: ids } },
+        select: { id: true }
+      }).catch(() => [])
+      const allCatIds = Array.from(new Set([...ids, ...childCategories.map(c => c.id)]))
+      const catOrClause = [
+        { categoryId: { in: allCatIds } },
+        { category: { id: { in: allCatIds } } },
+        { category: { parentId: { in: ids } } },
+      ]
+      where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, { OR: catOrClause }] : [where.AND, { OR: catOrClause }]) : [{ OR: catOrClause }]
+      if (!restaurantId && !restaurantSlug) {
+        where.restaurantId = null
+      }
+    } else if (category) {
+      const slugs = category.split(',').map(s => s.trim()).filter(Boolean)
+      // Also resolve any categories matching these slugs, plus all their child subcategories
+      const matchingCats = await prisma.category.findMany({
+        where: {
+          OR: [
+            { slug: { in: slugs } },
+            { id: { in: slugs } }
+          ]
+        },
+        select: { id: true, slug: true }
+      }).catch(() => [])
+      const foundIds = matchingCats.map(c => c.id)
+      const childCats = foundIds.length > 0 ? await prisma.category.findMany({
+        where: { parentId: { in: foundIds } },
+        select: { id: true, slug: true }
+      }).catch(() => []) : []
+      const allResolvedIds = Array.from(new Set([...foundIds, ...childCats.map(c => c.id)]))
+      const allResolvedSlugs = Array.from(new Set([...slugs, ...matchingCats.map(c => c.slug), ...childCats.map(c => c.slug)]))
+
+      const catOrClause = [
+        { category: { slug: { in: allResolvedSlugs } } },
+        { category: { parent: { slug: { in: allResolvedSlugs } } } },
+        { categoryId: { in: [...allResolvedSlugs, ...allResolvedIds] } },
+        { category: { id: { in: allResolvedIds } } },
+        { category: { parentId: { in: allResolvedIds } } },
+      ]
+      where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, { OR: catOrClause }] : [where.AND, { OR: catOrClause }]) : [{ OR: catOrClause }]
+      // In grocery context (browsing by category without restaurant), enforce grocery only
+      if (!restaurantId && !restaurantSlug) {
+        where.restaurantId = null
+      }
+    } else if (category) {
+      const slugs = category.split(',').map(s => s.trim()).filter(Boolean)
+      const catOrClause = [
+        { category: { slug: { in: slugs } } },
+        { category: { parent: { slug: { in: slugs } } } },
+        { categoryId: { in: slugs } },
+        { category: { id: { in: slugs } } },
+        { category: { parentId: { in: slugs } } },
+      ]
+      where.AND = where.AND ? (Array.isArray(where.AND) ? [...where.AND, { OR: catOrClause }] : [where.AND, { OR: catOrClause }]) : [{ OR: catOrClause }]
+      // In grocery context (browsing by category without restaurant), enforce grocery only
+      if (!restaurantId && !restaurantSlug) {
+        where.restaurantId = null
+      }
+    }
+
+    let orderBy: any = [
+      { sortOrder: 'desc' },
+      { createdAt: 'desc' }
+    ]
+
+    // Check database for category-specific auto-sorting rule
+    if (category && !category.includes(',')) {
+      try {
+        const sortSetting = await prisma.storeSetting.findUnique({
+          where: { key: `category_sort_${category}` }
+        })
+        if (sortSetting && sortSetting.value !== 'manual') {
+          const rule = sortSetting.value
+          if (rule === 'best-seller') {
+            orderBy = [
+              { isBestSeller: 'desc' },
+              { sortOrder: 'desc' },
+              { createdAt: 'desc' }
+            ]
+          } else if (rule === 'stock-desc') {
+            orderBy = [
+              { stock: 'desc' },
+              { sortOrder: 'desc' },
+              { createdAt: 'desc' }
+            ]
+          } else if (rule === 'price-asc') {
+            orderBy = [
+              { price: 'asc' },
+              { sortOrder: 'desc' }
+            ]
+          } else if (rule === 'price-desc') {
+            orderBy = [
+              { price: 'desc' },
+              { sortOrder: 'desc' }
+            ]
+          } else if (rule === 'newest') {
+            orderBy = [
+              { createdAt: 'desc' }
+            ]
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch category sort rule settings:', err)
+      }
+    }
+
+    if (sort === 'price-asc') {
+      orderBy = { price: 'asc' }
+    } else if (sort === 'price-desc') {
+      orderBy = { price: 'desc' }
+    } else if (sort === 'discount-desc') {
+      orderBy = { discount: 'desc' }
+    }
+
+    const productSelect = {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      imageUrl: true,
+      categoryId: true,
+      mrp: true,
+      price: true,
+      discount: true,
+      unit: true,
+      stock: true,
+      isAvailable: true,
+      tags: true,
+      variants: true,
+      addons: true,
+      minStock: true,
+      expiryDate: true,
+      isFlashDeal: true,
+      isTopPick: true,
+      isBestSeller: true,
+      sortOrder: true,
+      createdAt: true,
+      updatedAt: true,
+      restaurantId: true,
+      vendor: true,
+      vendorId: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          imageUrl: true,
+          parentId: true,
+          sortOrder: true,
+        }
+      },
+      restaurant: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          logoUrl: true,
+          bannerUrl: true,
+          rating: true,
+          deliveryTime: true,
+          isOpen: true,
+          openTime: true,
+          closeTime: true,
+          lat: true,
+          lng: true,
+          deliveryRadiusKm: true,
+          address: true,
+        }
+      }
+    }
+
+    if (trending) {
+      let trendingOrderItems: any[] = []
+      try {
+        trendingOrderItems = await (prisma.orderItem.groupBy as any)({
+          by: ['productId'],
+          _sum: {
+            quantity: true,
+          },
+          orderBy: {
+            _sum: {
+              quantity: 'desc',
+            },
+          },
+          take: 12,
+        })
+      } catch (err) {
+        console.warn('Failed to fetch trending order items in API:', err)
+      }
+
+      const trendingProductIds = trendingOrderItems
+        .map((item) => item.productId)
+        .filter((id): id is string => id !== null)
+
+      const whereClause: Prisma.ProductWhereInput = {
+        isAvailable: true,
+        NOT: [
+          { tags: { has: 'cafe' } },
+          { category: { slug: 'cafe' } }
+        ],
+        ...(where.AND ? { AND: where.AND } : {})
+      }
+
+      const featuredProducts = await prisma.product.findMany({
+        where: {
+          ...whereClause,
+          OR: [
+            { isTopPick: true },
+            { isBestSeller: true },
+            { id: { in: trendingProductIds } }
+          ]
+        },
+        select: productSelect,
+        take: 12
+      })
+
+      let finalProducts = [...featuredProducts]
+
+      if (finalProducts.length < 8) {
+        const existingIds = finalProducts.map(p => p.id)
+        const popularProducts = await prisma.product.findMany({
+          where: {
+            ...whereClause,
+            tags: { has: 'popular' },
+            id: { notIn: existingIds }
+          },
+          select: productSelect,
+          take: 8 - finalProducts.length
+        })
+        finalProducts = [...finalProducts, ...popularProducts]
+      }
+
+      if (finalProducts.length < 8) {
+        const existingIds = finalProducts.map(p => p.id)
+        const anyProducts = await prisma.product.findMany({
+          where: {
+            ...whereClause,
+            id: { notIn: existingIds }
+          },
+          select: productSelect,
+          take: 8 - finalProducts.length
+        })
+        finalProducts = [...finalProducts, ...anyProducts]
+      }
+
+      // Override stock and availability with localized dark store inventory
+      if (storeId && finalProducts.length > 0) {
+        const inventories = await prisma.storeInventory.findMany({
+          where: {
+            storeId,
+            productId: { in: finalProducts.map(p => p.id) }
+          }
+        })
+        const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
+        finalProducts = finalProducts.map(p => {
+          const isRest = !!p.restaurantId
+          const localStock = isRest ? p.stock : (inventoryMap.get(p.id) ?? 0)
+          return {
+            ...p,
+            stock: localStock,
+            isAvailable: isRest ? p.isAvailable : (p.isAvailable && localStock > 0)
+          }
+        })
+      }
+
+      if (!isWorker && !includeUnavailable) {
+        finalProducts = finalProducts.filter(p => p.isAvailable && (p.stock ?? 0) > 0)
+      }
+
+      const trendingResponseData = {
+        products: finalProducts.slice(0, 8),
+        pagination: {
+          total: finalProducts.length,
+          page: 1,
+          limit: 8,
+          totalPages: 1
+        }
+      }
+
+      if (!isWorker && !includeUnavailable) {
+        await setCache(cacheKey, trendingResponseData, 60)
+      }
+
+      return NextResponse.json(trendingResponseData, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=180',
+          'X-Cache': 'MISS',
+        }
+      })
+    }
+
+    let products: any[] = []
+    let total = 0
+    let nextCursor: string | null = null
+    if (normalizedSearch) {
+      // 1. Split query into tokens, filter stop words, expand with synonyms, and build an intersection query
+      const rawWords = normalizedSearch.split(/\s+/).filter(Boolean)
+      const filteredWords = rawWords.filter(w => !SEARCH_STOP_WORDS.has(w))
+      const searchWords = filteredWords.length > 0 ? filteredWords : rawWords
+
+      const wordClauses = searchWords.map(w => {
+        const syns = SYNONYM_DICTIONARY[w] || []
+        const wordOptions = [w, ...syns]
+
+        // Restaurant alias expansions
+        if (w === 'as' || w === 'a.s' || w === 'a.s.') {
+          wordOptions.push('as-restaurant', 'REST-101', 'a.s. restaurant')
+        } else if (w === 'wedson') {
+          wordOptions.push('wedson-restaurant', 'REST-102')
+        } else if (w === 'bal' || w === 'udyan') {
+          wordOptions.push('bal-udyan-restaurant', 'REST-103')
+        } else if (w === 'hot' || w === 'pizza' || w === 'lovers') {
+          wordOptions.push('hot-pizza-lovers', 'REST-104')
+        }
+        
+        return {
+          OR: [
+            ...wordOptions.flatMap(opt => [
+              { name: { contains: opt, mode: 'insensitive' as const } },
+              { tags: { has: opt } },
+              { category: { name: { contains: opt, mode: 'insensitive' as const } } },
+              { restaurant: { name: { contains: opt, mode: 'insensitive' as const } } },
+            ]),
+            ...(w.toLowerCase() === 'veg' ? [
+              { restaurant: { isVeg: true } },
+              { tags: { has: 'veg' } },
+              { tags: { has: 'pure-veg' } }
+            ] : [])
+          ]
+        }
+      })
+
+      const existingAnd = Array.isArray(where.AND) ? where.AND : (where.AND ? [where.AND] : [])
+      const searchWhere: Prisma.ProductWhereInput = {
+        ...(where.category ? { category: where.category } : {}),
+        ...(where.restaurantId !== undefined ? { restaurantId: where.restaurantId } : {}),
+        ...(where.restaurant ? { restaurant: where.restaurant } : {}),
+        ...(!isWorker && !includeUnavailable ? { isAvailable: true } : (where.isAvailable !== undefined ? { isAvailable: where.isAvailable } : {})),
+        ...(existingAnd.length > 0 ? { AND: existingAnd } : {}),
+      }
+
+      const queryOptions: any = {
+        where: {
+          ...searchWhere,
+          AND: [...existingAnd, ...wordClauses]
+        },
+        take: 40,
+      }
+      if (isWorker) {
+        queryOptions.include = { category: true }
+      } else {
+        queryOptions.select = productSelect
+      }
+
+      let matchedProducts = await prisma.product.findMany(queryOptions)
+
+      // If no direct database matches are found, fallback to fetching products to perform typo-tolerant fuzzy search
+      if (matchedProducts.length === 0) {
+        const fallbackOptions: any = {
+          where: searchWhere,
+          take: 50,
+        }
+        if (isWorker) {
+          fallbackOptions.include = { category: true }
+        } else {
+          fallbackOptions.select = productSelect
+        }
+        matchedProducts = await prisma.product.findMany(fallbackOptions)
+      }
+
+      // 2. Score each product using the fuzzy text matcher & Supabase Semantic AI engine (fast: name and tags only)
+      const scoredProducts = matchedProducts.map((p) => {
+        const nameScore = getFuzzyScore(normalizedSearch, p.name)
+        const tagScore = p.tags && Array.isArray(p.tags) && p.tags.some((t: string) => getFuzzyScore(normalizedSearch, t) > 60) ? 85 : 0
+        const semanticAiScore = getSemanticAiScore(normalizedSearch, p)
+        const score = Math.max(nameScore, tagScore, semanticAiScore)
+        return { product: p, score }
+      })
+
+      // 3. Filter products with acceptable match similarity (> 35) and sort by score
+      const matches = scoredProducts
+        .filter((item) => item.score > 35)
+        .sort((a, b) => b.score - a.score)
+
+      total = matches.length
+
+      // Apply sort overrides if requested
+      if (sort === 'price-asc') {
+        matches.sort((a, b) => a.product.price - b.product.price)
+      } else if (sort === 'price-desc') {
+        matches.sort((a, b) => b.product.price - a.product.price)
+      } else if (sort === 'discount-desc') {
+        matches.sort((a, b) => b.product.discount - a.product.discount)
+      }
+
+      // 4. Paginate in memory
+      const memorySkip = (page - 1) * limit
+      products = matches.slice(memorySkip, memorySkip + limit).map((m) => m.product)
+    } else {
+      // Standard database query for normal non-search listings.
+      // For page 1, we still skip/limit for client compatibility; deeper pages
+      // should pass `cursor=createdAt:id` of the last row, which keeps the query
+      // O(limit) regardless of dataset size.
+      const stableOrderBy = Array.isArray(orderBy)
+        ? [...orderBy, { createdAt: 'desc' }, { id: 'desc' }]
+        : [orderBy, { createdAt: 'desc' }, { id: 'desc' }]
+
+      const queryOptions: any = {
+        where,
+        orderBy: stableOrderBy,
+        take: limit + 1,
+      }
+
+      // Cursor pagination takes precedence over skip when supplied.
+      if (hasCursor) {
+        queryOptions.cursor = { id: cursorId }
+        queryOptions.skip = 1 // skip the cursor row itself
+        queryOptions.where = {
+          ...where,
+          OR: [
+            { createdAt: { lt: new Date(cursorCreatedAt!) } },
+            {
+              createdAt: new Date(cursorCreatedAt!),
+              id: { lt: cursorId! },
+            },
+          ],
+        }
+      } else if (page1) {
+        queryOptions.skip = 0
+      } else {
+        // Backwards-compat: legacy callers passing ?page=N keep offset behavior.
+        queryOptions.skip = (page - 1) * limit
+      }
+
+      if (isWorker) {
+        queryOptions.include = { category: true }
+      } else {
+        queryOptions.select = productSelect
+      }
+
+      const dbProducts = await prisma.product.findMany(queryOptions)
+      const hasMore = dbProducts.length > limit
+      products = hasMore ? dbProducts.slice(0, limit) : dbProducts
+      // Cursor mode avoids a count(*) over the full table.
+      total = hasCursor ? -1 : await prisma.product.count({ where })
+      if (hasCursor && hasMore) {
+        const last = products[products.length - 1]
+        nextCursor = `${(last as any).createdAt.toISOString()}:${last.id}`
+      }
+    }
+
+    // Override stock and availability with localized dark store inventory
+    const activeStoreId = storeId || 'hub-209206'
+    if (activeStoreId && products.length > 0) {
+      const inventories = await prisma.storeInventory.findMany({
+        where: {
+          storeId: activeStoreId,
+          productId: { in: products.map(p => p.id) }
+        }
+      })
+      const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv.stock]))
+      products = products.map(p => {
+        const isRest = !!p.restaurantId
+        const localStock = isRest ? p.stock : (inventoryMap.has(p.id) ? inventoryMap.get(p.id)! : p.stock)
+        return {
+          ...p,
+          stock: localStock,
+          isAvailable: isRest ? p.isAvailable : (p.isAvailable && localStock > 0)
+        }
+      })
+    }
+
+    // Automatically sort in-stock products first, out-of-stock products at the end for customer storefronts
+    if (!isWorker && !includeUnavailable && products.length > 0) {
+      products.sort((a: any, b: any) => {
+        const aInStock = (a.isAvailable && (a.stock ?? 0) > 0) ? 1 : 0
+        const bInStock = (b.isAvailable && (b.stock ?? 0) > 0) ? 1 : 0
+        return bInStock - aInStock
+      })
+    }
+
+    const responseData = {
+      products,
+      pagination: {
+        total: total === -1 ? null : total,
+        page,
+        limit,
+        totalPages: total === -1 ? null : Math.ceil(total / limit),
+        nextCursor,
+      },
+    }
+
+    const isCacheable = !isWorker && !includeUnavailable
+    if (isCacheable) {
+      await setCache(cacheKey, responseData, 120)
+    }
+
+    return NextResponse.json(responseData, {
+      headers: {
+        'Cache-Control': isCacheable
+          ? 'public, s-maxage=60, stale-while-revalidate=180'
+          : 'no-store, max-age=0, must-revalidate',
+        'X-Cache': isCacheable ? 'MISS' : 'BYPASS',
+      }
+    })
+  } catch (error: any) {
+    console.error('Products API Error:', error)
+    return ApiResponder.error('Failed to fetch products', 500, 'INTERNAL_ERROR', error?.stack, request)
+  }
+}
+
+// Levenshtein distance string matching algorithm
+function getLevenshteinDistance(a: string, b: string): number {
+  const tmp: number[][] = []
+  let i: number, j: number
+  for (i = 0; i <= a.length; i++) {
+    tmp.push([i])
+  }
+  for (j = 1; j <= b.length; j++) {
+    tmp[0].push(j)
+  }
+  for (i = 1; i <= a.length; i++) {
+    for (j = 1; j <= b.length; j++) {
+      tmp[i][j] = Math.min(
+        tmp[i - 1][j] + 1,
+        tmp[i][j - 1] + 1,
+        tmp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      )
+    }
+  }
+  return tmp[a.length][b.length]
+}
+
+// Fuzzy matching text similarity score utility (0 to 100)
+function getFuzzyScore(query: string, target: string): number {
+  const q = query.toLowerCase().trim()
+  const t = target.toLowerCase().trim()
+
+  if (t.includes(q)) return 100 // exact substring matches get highest priority
+
+  const qWords = q.split(/\s+/)
+  const tWords = t.split(/\s+/)
+
+  let totalScore = 0
+  for (const qw of qWords) {
+    let bestWordScore = 0
+    for (const tw of tWords) {
+      if (tw === qw) {
+        bestWordScore = Math.max(bestWordScore, 90)
+      } else if (tw.includes(qw) || qw.includes(tw)) {
+        bestWordScore = Math.max(bestWordScore, 70)
+      } else {
+        const dist = getLevenshteinDistance(qw, tw)
+        const maxLen = Math.max(qw.length, tw.length)
+        if (maxLen > 0) {
+          const sim = 1 - dist / maxLen
+          if (sim > 0.5) {
+            bestWordScore = Math.max(bestWordScore, Math.round(sim * 80))
+          }
+        }
+      }
+    }
+    totalScore += bestWordScore
+  }
+
+  return totalScore / qWords.length
+}
+
+export async function POST(request: NextRequest) {
+  const adminResult = await requireAdmin(request)
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
+
+  try {
+    const validation = await validateBody(request, createProductSchema)
+    if (!validation.success) return validation.error
+
+    const { name, description, imageUrl, categoryId, restaurantId, mrp, price, unit, stock, isAvailable, tags, minStock, expiryDate, costPrice, variants, location, isFlashDeal, isTopPick, isBestSeller, sortOrder, barcode, vendor, vendorId, addons, storeId } = validation.data as any
+
+    let finalCategoryId = categoryId
+    let tagsList = Array.isArray(tags)
+      ? tags.map((t: any) => String(t).trim()).filter((t: string) => t.length > 0)
+      : (typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0) : [])
+
+    // ── Restaurant product hardening ──
+    // When restaurantId is present, restaurant dishes do NOT require umbrella category (categoryId is null)
+    let finalRestaurantId: string | null = null
+    if (restaurantId) {
+      finalRestaurantId = normalizeRestaurantId(restaurantId)
+      finalCategoryId = null
+
+      // Ensure 'restaurant' tag is present
+      if (!tagsList.map(t => t.toLowerCase()).includes('restaurant')) {
+        tagsList.push('restaurant')
+      }
+      // Remove 'cafe' tag to prevent cross-contamination
+      tagsList = tagsList.filter(t => t.toLowerCase() !== 'cafe')
+    } else if (!finalCategoryId || finalCategoryId === '') {
+      // For grocery products, category is required — use first available category as fallback
+      const firstCat = await prisma.category.findFirst()
+      if (firstCat) {
+        finalCategoryId = firstCat.id
+      }
+    }
+
+    if (!name || (!restaurantId && !finalCategoryId) || mrp === undefined || price === undefined) {
+      return NextResponse.json({ error: 'Missing required fields (name, categoryId, price, mrp)' }, { status: 400 })
+    }
+
+    const finalUnit = (unit && typeof unit === 'string' && unit.trim().length > 0) ? unit.trim() : (restaurantId ? '1 Serving' : '1 pc')
+
+    // Generate slug from name — handles Hindi/non-ASCII names
+    const rawSlug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '')
+
+    const randomSuffix = Math.random().toString(36).slice(2, 7)
+    let finalSlug = rawSlug || `item-${Date.now().toString(36)}-${randomSuffix}`
+    let slugExists = await prisma.product.findUnique({ where: { slug: finalSlug } })
+    while (slugExists) {
+      finalSlug = `${rawSlug || 'item'}-${Date.now().toString().slice(-4)}-${Math.random().toString(36).slice(2, 6)}`
+      slugExists = await prisma.product.findUnique({ where: { slug: finalSlug } })
+    }
+
+    let finalMrp = Number(mrp)
+    let finalPrice = Number(price)
+    let sortedVariants = variants
+    let resolvedUnit = finalUnit
+
+    if (variants && Array.isArray(variants) && variants.length > 0) {
+      sortedVariants = [...variants].sort((a: any, b: any) => (Number(a.price) || 0) - (Number(b.price) || 0))
+      finalPrice = Number(sortedVariants[0].price) || 0
+      finalMrp = Number(sortedVariants[0].mrp) || finalPrice
+      if (!unit || unit === '1 pc' || unit === '1 unit' || unit === '1 Serving') {
+        resolvedUnit = sortedVariants[0].name || finalUnit
+      }
+    }
+
+    const calculatedDiscount = finalMrp > finalPrice
+      ? Math.max(0, Math.round(((finalMrp - finalPrice) / finalMrp) * 100))
+      : 0
+
+    // Find highest readableId to increment safely
+    let nextReadableId = 200001
+    try {
+      const lastProduct = await prisma.product.findFirst({
+        where: { readableId: { not: null } },
+        orderBy: { readableId: 'desc' },
+        select: { readableId: true }
+      })
+      if (lastProduct && typeof lastProduct.readableId === 'number') {
+        nextReadableId = lastProduct.readableId + 1
+      }
+    } catch (e) {
+      console.warn('Could not query last readableId:', e)
+    }
+
+    // Unbreakable readableId collision guard
+    while (await prisma.product.findUnique({ where: { readableId: nextReadableId } })) {
+      nextReadableId++
+    }
+
+    // Parse expiry date if provided
+    let parsedExpiry: Date | null = null
+    if (expiryDate && typeof expiryDate === 'string' && expiryDate.trim().length > 0) {
+      const parsedTime = Date.parse(expiryDate)
+      if (!isNaN(parsedTime)) {
+        parsedExpiry = new Date(parsedTime)
+      }
+    }
+
+    const cleanBarcode = (barcode && typeof barcode === 'string' && barcode.trim().length > 0) ? barcode.trim() : null
+    const cleanLocation = (location && typeof location === 'string' && location.trim().length > 0) ? location.trim() : null
+    let cleanVendor = (vendor && typeof vendor === 'string' && vendor.trim().length > 0) ? vendor.trim() : null
+    let cleanVendorId = (vendorId && typeof vendorId === 'string' && vendorId.trim().length > 0) ? vendorId.trim() : null
+
+    // Systematically resolve vendorId from name or vice-versa
+    if (!cleanVendorId && cleanVendor) {
+      try {
+        const matchedVendor = await (prisma as any).vendor.findFirst({
+          where: { name: { equals: cleanVendor, mode: 'insensitive' } }
+        })
+        if (matchedVendor) {
+          cleanVendorId = matchedVendor.id
+        }
+      } catch (_) {}
+    } else if (cleanVendorId) {
+      try {
+        const matchedVendor = await (prisma as any).vendor.findUnique({
+          where: { id: cleanVendorId }
+        })
+        if (matchedVendor) {
+          cleanVendor = cleanVendor || matchedVendor.name
+        } else {
+          // Prevent FK violation P2003
+          cleanVendorId = null
+        }
+      } catch (_) {
+        cleanVendorId = null
+      }
+    }
+
+    // Barcode uniqueness pre-check to prevent P2002 500 error
+    if (cleanBarcode) {
+      try {
+        const existingBarcode = await prisma.product.findUnique({
+          where: { barcode: cleanBarcode },
+          select: { id: true, name: true }
+        })
+        if (existingBarcode) {
+          return NextResponse.json({
+            error: `Barcode "${cleanBarcode}" is already assigned to "${existingBarcode.name}". Leave it blank or enter a unique barcode.`
+          }, { status: 400 })
+        }
+      } catch (bcErr) {
+        console.warn('Barcode uniqueness pre-check:', bcErr)
+      }
+    }
+
+    // Verify category exists to prevent P2003 foreign key violation
+    if (finalCategoryId) {
+      try {
+        const catExists = await prisma.category.findUnique({
+          where: { id: finalCategoryId },
+          select: { id: true }
+        })
+        if (!catExists) {
+          const firstCat = await prisma.category.findFirst({ select: { id: true } })
+          finalCategoryId = firstCat?.id || null
+        }
+      } catch (_) {
+        finalCategoryId = null
+      }
+    }
+
+    const product = await prisma.product.create({
+      data: {
+        name: name.trim(),
+        readableId: nextReadableId,
+        slug: finalSlug,
+        description: description || '',
+        imageUrl: imageUrl || '📦',
+        categoryId: finalCategoryId,
+        restaurantId: finalRestaurantId || null,
+        mrp: finalMrp,
+        price: finalPrice,
+        discount: calculatedDiscount,
+        unit: resolvedUnit,
+        stock: finalRestaurantId ? 99999 : Number(stock || 0),
+        isAvailable: isAvailable !== undefined ? !!isAvailable : true,
+        tags: tagsList,
+        variants: (sortedVariants && Array.isArray(sortedVariants) && sortedVariants.length > 0) ? sortedVariants : undefined,
+        addons: (addons && Array.isArray(addons) && addons.length > 0) ? addons : undefined,
+        minStock: Number(minStock || 0),
+        expiryDate: parsedExpiry,
+        costPrice: Number(costPrice || 0),
+        location: cleanLocation,
+        isFlashDeal: !!isFlashDeal,
+        isTopPick: !!isTopPick,
+        isBestSeller: !!isBestSeller,
+        sortOrder: Number(sortOrder || 0),
+        barcode: cleanBarcode,
+        vendor: cleanVendor,
+        vendorId: cleanVendorId,
+      },
+      include: {
+        category: true,
+      }
+    })
+
+    // Seed store-level inventory
+    try {
+      const initialStockNum = finalRestaurantId ? 99999 : (parseInt(String(stock), 10) || 0)
+      const targetStoreId = (storeId && storeId !== 'all') ? String(storeId).trim() : ((session?.user as any)?.assignedStoreId || null)
+
+      const allStores = await prisma.darkStore.findMany({ select: { id: true } })
+      if (allStores.length > 0) {
+        for (const store of allStores) {
+          const storeStock = (!targetStoreId || targetStoreId === 'all' || store.id === targetStoreId) ? initialStockNum : initialStockNum
+          await prisma.storeInventory.upsert({
+            where: {
+              productId_storeId: {
+                productId: product.id,
+                storeId: store.id,
+              }
+            },
+            create: {
+              productId: product.id,
+              storeId: store.id,
+              stock: storeStock,
+            },
+            update: {
+              stock: storeStock,
+            }
+          })
+        }
+      }
+    } catch (seedErr) {
+      console.warn('Could not seed store_inventories for new product:', seedErr)
+    }
+
+    // Invalidate storefront caches on-demand
+    await invalidateProductCache()
+    revalidateStorefront((product as any).category?.slug)
+
+    return NextResponse.json(product, { status: 201 })
+  } catch (error: any) {
+    console.error('Failed to create product:', error)
+    if (error?.code === 'P2002') {
+      const target = Array.isArray(error?.meta?.target) ? error.meta.target.join(', ') : (error?.meta?.target || 'field')
+      return NextResponse.json({ 
+        error: `A product with this duplicate ${target} already exists. Please use a unique value or leave barcode empty.`,
+        code: 'P2002' 
+      }, { status: 400 })
+    }
+    if (error?.code === 'P2003') {
+      return NextResponse.json({ 
+        error: 'Database error: The selected category, vendor, or store does not exist.',
+        code: 'P2003' 
+      }, { status: 400 })
+    }
+    return NextResponse.json({ 
+      error: error?.message || 'Failed to create product in database',
+      code: error?.code || null 
+    }, { status: 500 })
+  }
+}

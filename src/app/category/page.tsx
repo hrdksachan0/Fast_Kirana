@@ -69,7 +69,7 @@ async function CategoriesLoader() {
 
 export default function CategoriesPage() {
   return (
-    <div className="container mx-auto px-4 py-4 max-w-7xl">
+    <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-4 max-w-7xl">
       <Suspense
         fallback={
           <div className="flex flex-col items-center justify-center py-20 space-y-4">

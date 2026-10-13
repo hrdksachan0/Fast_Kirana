@@ -494,12 +494,23 @@ async def get_products(
         except Exception as cat_err:
             logger.warning(f"Failed to check closed categories for store {target_store}: {cat_err}")
 
-    # Category matching (Supports both direct category and child subcategories under parent)
+    # Category matching (Supports both direct category and all child/descendant subcategories under parent)
     if categoryId:
         cat_ids = [c.strip() for c in categoryId.split(",") if c.strip()]
+        # Recursively resolve any child/descendant categories
+        curr_ids = list(cat_ids)
+        all_resolved_cat_ids = set(cat_ids)
+        while curr_ids:
+            stmt_subs = select(Category.id).where(Category.parentId.in_(curr_ids))
+            sub_res = await db.execute(stmt_subs)
+            child_ids = [r[0] for r in sub_res.all() if r[0] not in all_resolved_cat_ids]
+            all_resolved_cat_ids.update(child_ids)
+            curr_ids = child_ids
+
+        all_ids_list = list(all_resolved_cat_ids)
         filters.append(or_(
-            Product.categoryId.in_(cat_ids),
-            Product.category.has(Category.id.in_(cat_ids)),
+            Product.categoryId.in_(all_ids_list),
+            Product.category.has(Category.id.in_(all_ids_list)),
             Product.category.has(Category.parentId.in_(cat_ids))
         ))
         if not restaurantId and not restaurantSlug:
@@ -519,10 +530,34 @@ async def get_products(
                 Product.category.has(Category.slug.in_(rest_slugs))
             ))
         else:
+            # Query matching categories by slug or id, plus recursively resolve all their child subcategories
+            stmt_cat = select(Category.id, Category.slug).where(or_(Category.slug.in_(slugs), Category.id.in_(slugs)))
+            c_res = await db.execute(stmt_cat)
+            matching_cats = c_res.all()
+            matched_ids = [c[0] for c in matching_cats]
+            matched_slugs = list(set(slugs + [c[1] for c in matching_cats]))
+
+            curr_ids = list(matched_ids)
+            all_ids = set(matched_ids)
+            all_slugs = set(matched_slugs)
+            while curr_ids:
+                stmt_child = select(Category.id, Category.slug).where(Category.parentId.in_(curr_ids))
+                ch_res = await db.execute(stmt_child)
+                child_cats = ch_res.all()
+                next_ids = [c[0] for c in child_cats if c[0] not in all_ids]
+                for c in child_cats:
+                    all_ids.add(c[0])
+                    all_slugs.add(c[1])
+                curr_ids = next_ids
+
+            all_ids_list = list(all_ids)
+            all_slugs_list = list(all_slugs)
+
             filters.append(or_(
-                Product.category.has(Category.slug.in_(slugs)),
-                Product.category.has(Category.parent.has(Category.slug.in_(slugs))),
-                Product.categoryId.in_(slugs)
+                Product.category.has(Category.slug.in_(all_slugs_list)),
+                Product.category.has(Category.parent.has(Category.slug.in_(all_slugs_list))),
+                Product.category.has(Category.id.in_(all_ids_list)),
+                Product.categoryId.in_(all_ids_list + all_slugs_list)
             ))
             if not restaurantId and not restaurantSlug:
                 filters.append(Product.restaurantId == None)

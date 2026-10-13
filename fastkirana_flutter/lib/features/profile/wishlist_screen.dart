@@ -91,7 +91,7 @@ class WishlistScreen extends ConsumerWidget {
         actions: [
           if (wishlist.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: 14),
               child: Bounceable(
                 onTap: () => _shareWishlist(context, wishlist),
                 child: Container(
@@ -119,26 +119,6 @@ class WishlistScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: Bounceable(
-              onTap: () => _shareApp(context),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppDesignSystem.slate100,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppDesignSystem.slate200),
-                ),
-                child: const Icon(
-                  Icons.share_outlined,
-                  color: slateDark,
-                  size: 17,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
       body: SafeArea(

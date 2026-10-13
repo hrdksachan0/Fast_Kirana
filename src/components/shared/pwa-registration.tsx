@@ -16,8 +16,17 @@ export function PWARegistration() {
   const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
 
   useEffect(() => {
-    // 1. Register Service Worker
+    // 1. Register Service Worker (Disable and unregister in local development to prevent stale caches)
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      if (process.env.NODE_ENV === 'development') {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister()
+          }
+        })
+        return
+      }
+
       const registerSW = () => {
         navigator.serviceWorker
           .register('/sw.js?v=5')
