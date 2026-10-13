@@ -32,7 +32,15 @@ class CartRepository {
 
   Future<bool> syncCart(List<CartItem> items) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      var guestId = prefs.getString('fastkirana_guest_id');
+      if (guestId == null || guestId.isEmpty) {
+        guestId = 'g_app_${DateTime.now().millisecondsSinceEpoch}_${(1000 + DateTime.now().microsecond % 9000)}';
+        await prefs.setString('fastkirana_guest_id', guestId);
+      }
+
       await dio.post('/api/cart', data: {
+        'guestId': guestId,
         'items': items.map((item) => {
           'productId': item.productId,
           'quantity': item.quantity,

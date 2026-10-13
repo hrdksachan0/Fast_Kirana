@@ -2348,7 +2348,7 @@ async def admin_get_live_carts(
             else:
                 pin = storeId.replace("hub-", "")
                 has_pin = u.addresses and any(a.pincode == pin for a in u.addresses if a.pincode)
-                if has_pin or (storeId == "hub-209206" and not u.addresses):
+                if has_pin or not u.addresses:
                     filtered_carts.append(c)
         carts_db = filtered_carts
 

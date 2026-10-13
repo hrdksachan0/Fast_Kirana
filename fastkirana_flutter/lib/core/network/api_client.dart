@@ -91,6 +91,15 @@ final dioProvider = Provider<Dio>((ref) {
             session.toHeaderMap().forEach((headerKey, headerValue) {
               options.headers.putIfAbsent(headerKey, () => headerValue);
             });
+          } else {
+            // Guest Shopper device-level ID for cart sync & live cart tracking
+            final prefs = await SharedPreferences.getInstance();
+            var guestId = prefs.getString('fastkirana_guest_id');
+            if (guestId == null || guestId.isEmpty) {
+              guestId = 'g_app_${DateTime.now().millisecondsSinceEpoch}_${(1000 + DateTime.now().microsecond % 9000)}';
+              await prefs.setString('fastkirana_guest_id', guestId);
+            }
+            options.headers.putIfAbsent('x-guest-id', () => guestId);
           }
         }
 

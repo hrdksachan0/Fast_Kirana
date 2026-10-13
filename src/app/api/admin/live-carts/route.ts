@@ -77,9 +77,10 @@ export async function GET(request: Request) {
     }
 
     if (storeId && storeId !== 'all') {
-      whereClause.user = {
-        assignedStoreId: storeId
-      }
+      whereClause.OR = [
+        { user: { assignedStoreId: storeId } },
+        { user: { assignedStoreId: null } },
+      ]
     }
 
     // Fetch active carts that have at least one item, updated in the past 12 hours

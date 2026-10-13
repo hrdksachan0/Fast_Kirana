@@ -131,18 +131,37 @@ void main() async {
     );
   };
 
-  // System UI Configuration
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // Adaptive Orientation: Allow tablets / foldables (>=600dp) full multi-orientation, phones locked to portrait
+  final view = WidgetsBinding.instance.platformDispatcher.views.firstOrNull;
+  final size = view?.physicalSize;
+  final pixelRatio = view?.devicePixelRatio ?? 1.0;
+  final shortestSide = size != null ? (size.shortestSide / pixelRatio) : 400.0;
+  if (shortestSide >= 600) {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  } else {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
+
+  // Official Edge-to-Edge System UI Mode (Android 15 / API 35+ compliant)
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: AppDesignSystem.surface,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
       systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarContrastEnforced: false,
+      systemStatusBarContrastEnforced: false,
     ),
   );
 

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Header, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import desc, delete
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uuid
+import hashlib
 
 from database import get_db
 from models import Cart, CartItem, Product, User
@@ -81,10 +82,12 @@ async def broadcast_cart_update(cart_id: str, user_id: Optional[str] = None):
 
 @router.get("")
 async def get_cart(
+    request: Request = None,
     storeId: Optional[str] = Query(None),
     x_store_id: Optional[str] = Header(None),
     current_user: Optional[dict] = Depends(get_current_user),
     x_guest_id: Optional[str] = Header(None),
+    x_user_id: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -92,9 +95,14 @@ async def get_cart(
     Supports per-hub localized stock & availability hydration.
     """
     user_id = get_user_id(current_user)
+    if not user_id and x_user_id:
+        user_id = x_user_id
+    if not user_id and request and request.headers.get("x-user-id"):
+        user_id = request.headers.get("x-user-id")
 
-    if not user_id and x_guest_id:
-        guest_user = await get_or_create_guest_user(x_guest_id, db)
+    guest_id = x_guest_id or (request.headers.get("x-guest-id") if request else None)
+    if not user_id and guest_id:
+        guest_user = await get_or_create_guest_user(guest_id, db)
         user_id = guest_user.id if guest_user else None
 
     if not user_id:
@@ -200,8 +208,12 @@ async def get_cart(
 @router.post("")
 async def sync_cart(
     payload: dict = Body(...),
+    request: Request = None,
     current_user: Optional[dict] = Depends(get_current_user),
     x_guest_id: Optional[str] = Header(None),
+    x_user_id: Optional[str] = Header(None),
+    x_user_phone: Optional[str] = Header(None),
+    x_store_id: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -209,7 +221,13 @@ async def sync_cart(
     Expected payload: {"items": [{"productId": "xxx", "quantity": 1, "selectedVariant": null, "notes": ""}]}
     """
     user_id = get_user_id(current_user)
-    guest_id = payload.get("guestId") or x_guest_id
+    if not user_id and x_user_id:
+        user_id = x_user_id
+    if not user_id and request and request.headers.get("x-user-id"):
+        user_id = request.headers.get("x-user-id")
+
+    guest_id = payload.get("guestId") or x_guest_id or (request.headers.get("x-guest-id") if request else None)
+    store_id = x_store_id or (request.headers.get("x-store-id") if request else None) or payload.get("storeId")
     items_data = payload.get("items", [])
 
     if not isinstance(items_data, list):
@@ -217,6 +235,19 @@ async def sync_cart(
 
     if not user_id and guest_id:
         guest_user = await get_or_create_guest_user(str(guest_id), db)
+        if guest_user and store_id:
+            guest_user.assignedStoreId = store_id
+            await db.commit()
+        user_id = guest_user.id if guest_user else None
+
+    # Fallback for unauthenticated client without guest-id header: generate device/IP guest user so cart is NEVER dropped
+    if not user_id and request:
+        client_ip = request.client.host if request.client else "app_client"
+        ip_guest_id = f"g_app_{hashlib.md5(client_ip.encode()).hexdigest()[:12]}"
+        guest_user = await get_or_create_guest_user(ip_guest_id, db)
+        if guest_user and store_id:
+            guest_user.assignedStoreId = store_id
+            await db.commit()
         user_id = guest_user.id if guest_user else None
 
     if not user_id:

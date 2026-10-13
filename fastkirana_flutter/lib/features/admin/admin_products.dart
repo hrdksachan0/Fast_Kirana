@@ -1226,6 +1226,51 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
     });
   }
 
+  void _addPresetVariants(String type) {
+    HapticFeedback.selectionClick();
+    final basePrice = double.tryParse(_priceController.text.trim()) ?? 100.0;
+    final baseMrp = double.tryParse(_mrpController.text.trim()) ?? basePrice;
+    final baseStock = int.tryParse(_stockController.text.trim()) ?? 100;
+
+    setState(() {
+      for (final v in _variantItems) {
+        v.dispose();
+      }
+      _variantItems.clear();
+
+      if (type == 'weight') {
+        _variantItems.addAll([
+          _VariantEditItem(name: '250 g', price: (basePrice * 0.3).roundToDouble(), mrp: (baseMrp * 0.3).roundToDouble(), stock: baseStock),
+          _VariantEditItem(name: '500 g', price: (basePrice * 0.55).roundToDouble(), mrp: (baseMrp * 0.55).roundToDouble(), stock: baseStock),
+          _VariantEditItem(name: '1 kg', price: basePrice, mrp: baseMrp, stock: baseStock),
+        ]);
+      } else if (type == 'bulk') {
+        _variantItems.addAll([
+          _VariantEditItem(name: '1 kg', price: basePrice, mrp: baseMrp, stock: baseStock),
+          _VariantEditItem(name: '2 kg', price: (basePrice * 1.95).roundToDouble(), mrp: (baseMrp * 1.95).roundToDouble(), stock: baseStock),
+          _VariantEditItem(name: '5 kg', price: (basePrice * 4.7).roundToDouble(), mrp: (baseMrp * 4.7).roundToDouble(), stock: baseStock),
+        ]);
+      } else if (type == 'pieces') {
+        _variantItems.addAll([
+          _VariantEditItem(name: '1 pc', price: basePrice, mrp: baseMrp, stock: baseStock),
+          _VariantEditItem(name: 'Pack of 2', price: (basePrice * 1.9).roundToDouble(), mrp: (baseMrp * 2).roundToDouble(), stock: baseStock),
+          _VariantEditItem(name: 'Pack of 4', price: (basePrice * 3.7).roundToDouble(), mrp: (baseMrp * 4).roundToDouble(), stock: baseStock),
+        ]);
+      } else if (type == 'portion') {
+        _variantItems.addAll([
+          _VariantEditItem(name: 'Half', price: (basePrice * 0.6).roundToDouble(), mrp: (baseMrp * 0.6).roundToDouble(), stock: 999),
+          _VariantEditItem(name: 'Full', price: basePrice, mrp: baseMrp, stock: 999),
+        ]);
+      } else if (type == 'pizza') {
+        _variantItems.addAll([
+          _VariantEditItem(name: 'Regular (7")', price: (basePrice * 0.75).roundToDouble(), mrp: (baseMrp * 0.75).roundToDouble(), stock: 999),
+          _VariantEditItem(name: 'Medium (9")', price: basePrice, mrp: baseMrp, stock: 999),
+          _VariantEditItem(name: 'Large (12")', price: (basePrice * 1.45).roundToDouble(), mrp: (baseMrp * 1.45).roundToDouble(), stock: 999),
+        ]);
+      }
+    });
+  }
+
   void _removeVariant(int index) {
     HapticFeedback.mediumImpact();
     setState(() {
@@ -1491,6 +1536,49 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Quick Unit (Weight / Size):',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                      fontWeight: FontWeight.w700,
+                      color: AppDesignSystem.slate500,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 5,
+                    children: [
+                      for (final u in ['100 g', '250 g', '500 g', '1 kg', '2 kg', '5 kg', '200 ml', '500 ml', '1 L', '1 pc', '2 pcs', '4 pcs', '6 pcs', '12 pcs', '1 Pack'])
+                        InkWell(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _unitController.text = u);
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _unitController.text == u ? primaryRed : AppDesignSystem.slate100,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: _unitController.text == u ? primaryRed : AppDesignSystem.slate200,
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              u,
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10),
+                                fontWeight: FontWeight.w700,
+                                color: _unitController.text == u ? Colors.white : AppDesignSystem.slate700,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
 
                   const SizedBox(height: 18),
 
@@ -1615,6 +1703,22 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
                   Text(
                     'Add multiple weight/pack options (e.g. 250g, 500g, 1kg) with custom price & stock.',
                     style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.slate500),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Quick Preset Variant Buttons
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _buildPresetChip('+ Weight (250g / 500g / 1kg)', () => _addPresetVariants('weight')),
+                      _buildPresetChip('+ Bulk (1kg / 2kg / 5kg)', () => _addPresetVariants('bulk')),
+                      _buildPresetChip('+ Pieces (1 / 2 / 4 pcs)', () => _addPresetVariants('pieces')),
+                      if (isRestaurant) ...[
+                        _buildPresetChip('+ Half / Full', () => _addPresetVariants('portion'), isAmber: true),
+                        _buildPresetChip('+ Pizza Sizes (Reg / Med / Large)', () => _addPresetVariants('pizza'), isAmber: true),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 10),
 
@@ -1903,6 +2007,32 @@ class _ProductEditBottomSheetState extends ConsumerState<_ProductEditBottomSheet
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
       ],
+    );
+  }
+
+  Widget _buildPresetChip(String label, VoidCallback onTap, {bool isAmber = false}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isAmber ? const Color(0xFFFEF3C7) : AppDesignSystem.slate100,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isAmber ? const Color(0xFFF59E0B) : AppDesignSystem.slate300,
+            width: 0.8,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: Responsive.scaledFontSize(context, 10.5),
+            fontWeight: FontWeight.w800,
+            color: isAmber ? const Color(0xFFB45309) : AppDesignSystem.slate800,
+          ),
+        ),
+      ),
     );
   }
 }

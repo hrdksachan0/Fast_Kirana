@@ -780,6 +780,8 @@ class _CategoryOfferCardState extends State<CategoryOfferCard>
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
+                  memCacheWidth: 300,
+                  memCacheHeight: 300,
                   placeholder: (_, __) => const Center(
                     child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 1.5)),
                   ),

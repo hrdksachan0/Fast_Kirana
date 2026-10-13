@@ -301,6 +301,8 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                                     ? 'https://www.fastkirana.in${widget.product.imageUrl}'
                                     : widget.product.imageUrl!,
                                 fit: BoxFit.contain,
+                                memCacheWidth: 120,
+                                memCacheHeight: 120,
                                 errorWidget: (_, __, ___) => const Center(
                                   child: Text('🍔', style: TextStyle(fontSize: 22)),
                                 ),

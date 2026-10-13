@@ -926,6 +926,23 @@ export function ProductsTab({
                     onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}
                     className="w-full px-3 py-2 text-xs rounded-xl border bg-muted/20 focus:outline-none focus:border-primary font-semibold"
                   />
+                  {/* Quick Unit Pills */}
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['100 g', '250 g', '500 g', '1 kg', '2 kg', '5 kg', '200 ml', '500 ml', '1 L', '1 pc', '2 pcs', '4 pcs', '6 pcs', '12 pcs', '1 Pack'].map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => setNewProduct({ ...newProduct, unit: u })}
+                        className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                          newProduct.unit === u
+                            ? 'bg-primary text-white shadow-2xs'
+                            : 'bg-muted/40 hover:bg-muted text-text-secondary border border-border/60'
+                        }`}
+                      >
+                        {u}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -1192,6 +1209,88 @@ export function ProductsTab({
 
             {hasVariantsNew && (
               <div className="space-y-3 pt-2 border-t border-border">
+                {/* Quick Presets for Variants */}
+                <div className="flex flex-wrap items-center gap-1.5 bg-muted/30 p-2 rounded-xl border border-border/60">
+                  <span className="text-[10px] font-extrabold text-text-secondary">⚡ Quick Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const baseP = parseFloat(newProduct.price) || 100
+                      const baseMrp = parseFloat(newProduct.mrp) || baseP
+                      setNewProductVariants([
+                        { name: '250 g', price: String(Math.round(baseP * 0.3)), mrp: String(Math.round(baseMrp * 0.3)), costPrice: '0', stock: '100' },
+                        { name: '500 g', price: String(Math.round(baseP * 0.55)), mrp: String(Math.round(baseMrp * 0.55)), costPrice: '0', stock: '100' },
+                        { name: '1 kg', price: String(baseP), mrp: String(baseMrp), costPrice: '0', stock: '100' }
+                      ])
+                    }}
+                    className="px-2 py-0.5 bg-background hover:bg-muted border border-border text-[10px] font-bold rounded-md transition-all cursor-pointer"
+                  >
+                    + Weight (250g / 500g / 1kg)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const baseP = parseFloat(newProduct.price) || 100
+                      const baseMrp = parseFloat(newProduct.mrp) || baseP
+                      setNewProductVariants([
+                        { name: '1 kg', price: String(baseP), mrp: String(baseMrp), costPrice: '0', stock: '100' },
+                        { name: '2 kg', price: String(Math.round(baseP * 1.95)), mrp: String(Math.round(baseMrp * 1.95)), costPrice: '0', stock: '100' },
+                        { name: '5 kg', price: String(Math.round(baseP * 4.7)), mrp: String(Math.round(baseMrp * 4.7)), costPrice: '0', stock: '100' }
+                      ])
+                    }}
+                    className="px-2 py-0.5 bg-background hover:bg-muted border border-border text-[10px] font-bold rounded-md transition-all cursor-pointer"
+                  >
+                    + Bulk Weight (1kg / 2kg / 5kg)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const baseP = parseFloat(newProduct.price) || 100
+                      const baseMrp = parseFloat(newProduct.mrp) || baseP
+                      setNewProductVariants([
+                        { name: '1 pc', price: String(baseP), mrp: String(baseMrp), costPrice: '0', stock: '100' },
+                        { name: 'Pack of 2', price: String(Math.round(baseP * 1.9)), mrp: String(Math.round(baseMrp * 2)), costPrice: '0', stock: '100' },
+                        { name: 'Pack of 4', price: String(Math.round(baseP * 3.7)), mrp: String(Math.round(baseMrp * 4)), costPrice: '0', stock: '100' }
+                      ])
+                    }}
+                    className="px-2 py-0.5 bg-background hover:bg-muted border border-border text-[10px] font-bold rounded-md transition-all cursor-pointer"
+                  >
+                    + Pieces (1 / 2 / 4 pcs)
+                  </button>
+                  {isNewRestaurantMode && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const baseP = parseFloat(newProduct.price) || 100
+                          const baseMrp = parseFloat(newProduct.mrp) || baseP
+                          setNewProductVariants([
+                            { name: 'Half', price: String(Math.round(baseP * 0.6)), mrp: String(Math.round(baseMrp * 0.6)), costPrice: '0', stock: '999' },
+                            { name: 'Full', price: String(baseP), mrp: String(baseMrp), costPrice: '0', stock: '999' }
+                          ])
+                        }}
+                        className="px-2 py-0.5 bg-background hover:bg-muted border border-border text-[10px] font-bold rounded-md transition-all cursor-pointer text-amber-600"
+                      >
+                        + Half / Full
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const baseP = parseFloat(newProduct.price) || 100
+                          const baseMrp = parseFloat(newProduct.mrp) || baseP
+                          setNewProductVariants([
+                            { name: 'Regular (7")', price: String(Math.round(baseP * 0.75)), mrp: String(Math.round(baseMrp * 0.75)), costPrice: '0', stock: '999' },
+                            { name: 'Medium (9")', price: String(baseP), mrp: String(baseMrp), costPrice: '0', stock: '999' },
+                            { name: 'Large (12")', price: String(Math.round(baseP * 1.45)), mrp: String(Math.round(baseMrp * 1.45)), costPrice: '0', stock: '999' }
+                          ])
+                        }}
+                        className="px-2 py-0.5 bg-background hover:bg-muted border border-border text-[10px] font-bold rounded-md transition-all cursor-pointer text-amber-600"
+                      >
+                        + Pizza Sizes (Reg / Med / Large)
+                      </button>
+                    </>
+                  )}
+                </div>
                 {newProductVariants.length > 0 && (
                   <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                     {newProductVariants.map((v, idx) => (

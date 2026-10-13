@@ -58,7 +58,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final imgUrl = widget.product.imageUrl;
     if (imgUrl != null && imgUrl.isNotEmpty && !imgUrl.startsWith('data:')) {
       final resolved = imgUrl.startsWith('/') ? 'https://www.fastkirana.in$imgUrl' : imgUrl;
-      precacheImage(CachedNetworkImageProvider(resolved), context).catchError((_) {});
+      precacheImage(CachedNetworkImageProvider(resolved, maxWidth: 400, maxHeight: 400), context).catchError((_) {});
     }
   }
 
