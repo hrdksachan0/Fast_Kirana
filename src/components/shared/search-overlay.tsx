@@ -4,7 +4,7 @@ import { apiUrl, catalogApiUrl } from '@/lib/api-url';
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Search, X, TrendingUp, History, Loader2, Plus, Minus, Mic, MicOff } from 'lucide-react'
+import { Search, X, TrendingUp, History, Loader2, Plus, Minus, Mic, MicOff, ArrowRight } from 'lucide-react'
 import { useUIStore } from '@/stores/ui-store'
 import { useCart } from '@/hooks/use-cart'
 import { ProductImage } from '@/components/product/product-image'
@@ -555,6 +555,21 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                         )
                       })}
                     </div>
+                    {/* View full search results button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        saveSearchTerm(query)
+                        router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+                        onClose()
+                      }}
+                      className="w-full py-2.5 px-4 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs flex items-center justify-between transition-all duration-200 cursor-pointer shadow-xs active:scale-[0.99]"
+                    >
+                      <span>View all results for &ldquo;{query}&rdquo;</span>
+                      <span className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider">
+                        Full Search <ArrowRight className="h-3.5 w-3.5" />
+                      </span>
+                    </button>
                   </div>
                 ) : (
                   !loading && (
