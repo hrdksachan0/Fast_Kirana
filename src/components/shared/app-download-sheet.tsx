@@ -111,9 +111,9 @@ export function AppDownloadSheet() {
             <div className="rounded-t-3xl bg-white px-5 pb-8 pt-5 shadow-[0_-4px_30px_rgba(0,0,0,0.15)]">
               {/* Icon + Text */}
               <div className="flex flex-col items-center text-center">
-                <div className="h-14 w-14 rounded-2xl overflow-hidden shadow-md border border-zinc-100">
+                <div className="h-14 w-14 rounded-2xl overflow-hidden shadow-md border border-zinc-100 bg-white p-1">
                   <Image
-                    src="/brand/fastkirana_app_icon.png"
+                    src="/brand/fastkirana_app_icon.png?v=20261014_2"
                     alt="FastKirana"
                     width={56}
                     height={56}
