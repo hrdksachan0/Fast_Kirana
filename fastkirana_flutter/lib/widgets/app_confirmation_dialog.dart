@@ -161,51 +161,116 @@ class AppConfirmationDialog extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              // Flow path: Pending Online -> Cash On Delivery
+              // FinTech Payment Transition Card
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.sync_alt_rounded, size: 15, color: Color(0xFF64748B)),
-                    const SizedBox(width: 8),
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Icon(
+                        Icons.swap_horiz_rounded,
+                        size: 20,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: const Color(0xFF64748B)),
-                          children: [
-                            const TextSpan(text: 'Payment: '),
-                            TextSpan(text: 'Online', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF94A3B8), decoration: TextDecoration.lineThrough)),
-                            const TextSpan(text: ' ➔ '),
-                            TextSpan(text: 'Cash on Delivery', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
-                          ],
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'PAYMENT METHOD SWITCH',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Online',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12),
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF94A3B8),
+                                    decoration: TextDecoration.lineThrough,
+                                    decorationColor: const Color(0xFF94A3B8),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 13,
+                                  color: Color(0xFF16A34A),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Cash on Delivery',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              // Kitchen status cue
-              Row(
-                children: [
-                  const Icon(Icons.flash_on_rounded, size: 14, color: Color(0xFF16A34A)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      queueMessage,
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF16A34A),
+              const SizedBox(height: 10),
+              // Kitchen / Delivery status cue badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFDCFCE7)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.flash_on_rounded, size: 14, color: Color(0xFF16A34A)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        queueMessage,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF15803D),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -371,9 +436,9 @@ class AppConfirmationDialog extends StatelessWidget {
       backgroundColor: Colors.white,
       elevation: 20,
       shadowColor: const Color(0xFF0F172A).withValues(alpha: 0.25),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(26),
@@ -444,103 +509,115 @@ class AppConfirmationDialog extends StatelessWidget {
 
             const SizedBox(height: 22),
 
-            // 5. Dual Action Buttons
-            Row(
-              children: [
-                // Cancel Button (Soft Neutral Slate)
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F5F9),
-                        foregroundColor: const Color(0xFF475569),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+            // 5. Dual Action Buttons with Dynamic Flex Allocation
+            Builder(
+              builder: (ctx) {
+                final isLongConfirm = confirmLabel.length > 10;
+                final cancelFlex = isLongConfirm ? 2 : 1;
+                final confirmFlex = isLongConfirm ? 3 : 1;
+
+                return Row(
+                  children: [
+                    // Cancel Button (Soft Neutral Slate)
+                    Expanded(
+                      flex: cancelFlex,
+                      child: SizedBox(
+                        height: 46,
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            backgroundColor: const Color(0xFFF1F5F9),
+                            foregroundColor: const Color(0xFF475569),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                          ),
+                          onPressed: () {
+                            if (onCancel != null) {
+                              onCancel!();
+                            } else {
+                              Navigator.of(context).pop(false);
+                            }
+                          },
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              cancelLabel,
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 13.5),
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF475569),
+                              ),
+                              maxLines: 1,
+                            ),
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
-                      ),
-                      onPressed: () {
-                        if (onCancel != null) {
-                          onCancel!();
-                        } else {
-                          Navigator.of(context).pop(false);
-                        }
-                      },
-                      child: Text(
-                        cancelLabel,
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13.5),
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF475569),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 10),
+                    const SizedBox(width: 10),
 
-                // Confirm Button (Vibrant & Tactile with soft colored shadow)
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _primaryColor.withValues(alpha: 0.30),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _primaryColor,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
+                    // Confirm Button (Vibrant & Tactile with soft colored shadow)
+                    Expanded(
+                      flex: confirmFlex,
+                      child: SizedBox(
+                        height: 46,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _primaryColor.withValues(alpha: 0.30),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                        ),
-                        onPressed: isConfirmLoading ? null : onConfirm,
-                        child: isConfirmLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (confirmIcon != null) ...[
-                                    Icon(confirmIcon, size: 16, color: Colors.white),
-                                    const SizedBox(width: 6),
-                                  ],
-                                  Flexible(
-                                    child: Text(
-                                      confirmLabel,
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 13),
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _primaryColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                            ),
+                            onPressed: isConfirmLoading ? null : onConfirm,
+                            child: isConfirmLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (confirmIcon != null) ...[
+                                          Icon(confirmIcon, size: 16, color: Colors.white),
+                                          const SizedBox(width: 6),
+                                        ],
+                                        Text(
+                                          confirmLabel,
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 13),
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                          maxLines: 1,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
-                              ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ],
         ),
