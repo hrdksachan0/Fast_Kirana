@@ -26,28 +26,33 @@ export async function POST(request: NextRequest) {
     const baseReadable = cleanReadable.replace(/-[GR\d]+$/i, '')
     const now = Date.now()
 
-    // 🛡️ Legacy APK Protection:
-    // If a customer checkout from an older APK version tries to auto-broadcast KOT,
-    // intercept it and return 200 without broadcasting to the kitchen.
     const session = await auth()
-    const headerRole = request.headers.get('x-user-role')?.toUpperCase()
-    const headerPhone = request.headers.get('x-user-phone')
-    const role = (session?.user as any)?.role?.toUpperCase() || headerRole
-    const userPhone = (session?.user as any)?.phone || headerPhone
-    const isAdminOrStaff = role === 'ADMIN' || role === 'RESTAURANT_OWNER' || role === 'CHEF' || userPhone === '8112849854'
+    const internalSecret = process.env.INTERNAL_API_SECRET?.trim()
+    const xInternalSecret = request.headers.get('x-internal-secret')
+    const isInternalService = Boolean(internalSecret && xInternalSecret === internalSecret)
+
+    if (!isInternalService) {
+      if (!session?.user) {
+        return NextResponse.json({ error: 'Unauthorized: Staff login required' }, { status: 401 })
+      }
+      const role = (session.user as any)?.role?.toUpperCase()
+      if (role !== 'ADMIN' && role !== 'SUPER_ADMIN' && role !== 'RESTAURANT_OWNER' && role !== 'CHEF') {
+        return NextResponse.json({ error: 'Forbidden: Staff role required for KOT printing' }, { status: 403 })
+      }
+      const assignedRestId = (session.user as any)?.assignedRestaurantId
+      if (assignedRestId && body.restaurantId && assignedRestId !== body.restaurantId) {
+        return NextResponse.json({ error: 'Forbidden: Cannot dispatch KOT for another restaurant outlet' }, { status: 403 })
+      }
+    }
+
     const isManualAdminDispatch = Boolean(
       body.manual === true ||
       body.isManualAdminDispatch === true ||
       body.source === 'orders_tab' ||
+      body.source === 'order_modal' ||
       body.source === 'admin_console' ||
-      body.source === 'kitchen_console' ||
-      (body.kotText && body.kotText.includes('FASTKIRANA KOT'))
+      body.source === 'kitchen_console'
     )
-
-    if (!isAdminOrStaff && !isManualAdminDispatch) {
-      console.log(`[KOT Broadcast API] 🛡️ Ignored legacy checkout auto-KOT for Order #${cleanReadable || cleanId}`)
-      return NextResponse.json({ success: true, ignored: true, reason: 'Auto-KOT on checkout disabled' })
-    }
 
     const lastBroadcastId = recentBroadcastTimestamps.get(cleanId)
     const lastBroadcastReadable = cleanReadable ? recentBroadcastTimestamps.get(cleanReadable) : undefined

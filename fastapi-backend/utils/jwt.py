@@ -20,12 +20,20 @@ def get_clean_secret(key: str) -> str:
     return val.strip()
 
 
+def validate_auth_secret(secret: Optional[str] = None, env: Optional[str] = None) -> str:
+    s = (secret if secret is not None else get_clean_secret("AUTH_SECRET")).strip()
+    e = (env if env is not None else (os.getenv("APP_ENV") or os.getenv("NODE_ENV") or "")).lower()
+    is_prod = e == "production"
+    if is_prod:
+        if not s:
+            raise RuntimeError("AUTH_SECRET environment variable is required in production and cannot be empty")
+        if s.startswith("ci_test_") or s in ("placeholder", "secret", "changeme"):
+            raise RuntimeError("Insecure placeholder AUTH_SECRET detected in production environment")
+    return s
+
+
 # Get NextAuth secret (must be same as Next.js)
-AUTH_SECRET = get_clean_secret("AUTH_SECRET")
-if not AUTH_SECRET:
-    import warnings
-    warnings.warn("AUTH_SECRET environment variable is not set; falling back to test secret for test isolation.", RuntimeWarning)
-    AUTH_SECRET = "ci_test_auth_secret_key_32chars_long_000"
+AUTH_SECRET = validate_auth_secret()
 
 
 import base64
@@ -47,6 +55,8 @@ def base64url_decode(input_str: str) -> bytes:
 
 
 def decrypt_jwe(token: str, secret_str: str) -> Optional[Dict[str, Any]]:
+    if not secret_str:
+        return None
     try:
         parts = token.split('.')
         if len(parts) != 5:
@@ -89,24 +99,34 @@ def decode_nextauth_jwt(token: str, verify_exp: bool = True) -> Optional[Dict[st
     if not token:
         return None
         
+    secret = get_clean_secret("AUTH_SECRET") or AUTH_SECRET
+    if not secret:
+        return None
+
     # 1. Try plain HS256 JWT decode
     try:
+        options = {
+            "verify_signature": True,
+            "verify_exp": verify_exp,
+        }
+        if verify_exp:
+            options["require"] = ["exp"]
+
         payload = jwt.decode(
             token,
-            AUTH_SECRET,
+            secret,
             algorithms=["HS256"],
-            options={
-                "verify_signature": True,
-                "verify_exp": verify_exp,
-            }
+            options=options
         )
         return payload
     except Exception:
         pass
 
     # 2. Try NextAuth JWE decryption
-    jwe_payload = decrypt_jwe(token, AUTH_SECRET)
+    jwe_payload = decrypt_jwe(token, secret)
     if jwe_payload:
+        if verify_exp and is_token_expired(jwe_payload):
+            return None
         return jwe_payload
 
     return None
@@ -116,11 +136,19 @@ def extract_user_from_token(token: str, verify_exp: bool = True) -> Optional[Dic
     """
     Extract user info from NextAuth JWT.
 
-    Returns dict with: id, email, role, phone, assignedRestaurantId
+    Returns dict with: id, email, role, phone, assignedRestaurantId, scope, type, exp
     or None if token invalid.
     """
     payload = decode_nextauth_jwt(token, verify_exp=verify_exp)
     if not payload:
+        return None
+
+    exp = payload.get("exp")
+    if not exp:
+        return None
+
+    # Reject WebSocket single-purpose tickets from acting as REST/API credentials
+    if payload.get("scope") == "ws_ticket" or payload.get("type") == "ws_ticket":
         return None
 
     # NextAuth.js v4/v5 puts user data directly in token
@@ -134,24 +162,29 @@ def extract_user_from_token(token: str, verify_exp: bool = True) -> Optional[Dic
         "vendorId": payload.get("vendorId"),
         "assignedRestaurantId": payload.get("assignedRestaurantId"),
         "assignedStoreId": payload.get("assignedStoreId"),
-        # Optional: track token expiry
-        "exp": payload.get("exp"),
+        "exp": exp,
+        "scope": payload.get("scope"),
+        "type": payload.get("type"),
+        "channel": payload.get("channel"),
     }
 
 
 def is_token_expired(token_payload: Dict[str, Any]) -> bool:
-    """Check if token is expired (with 30s buffer)."""
+    """Check if token is expired (with 30s buffer). Tokens without exp are expired/invalid."""
     exp = token_payload.get("exp")
     if not exp:
-        return False
+        return True
     try:
         return datetime.now(timezone.utc).timestamp() > (float(exp) - 30)
     except Exception:
-        return False
+        return True
 
 
 def create_access_token(data: dict, expires_delta: Optional[Any] = None) -> str:
     """Create a signed JWT token matching NextAuth and FastAPI auth requirements."""
+    secret = get_clean_secret("AUTH_SECRET") or AUTH_SECRET
+    if not secret:
+        raise RuntimeError("AUTH_SECRET is not configured")
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -160,4 +193,4 @@ def create_access_token(data: dict, expires_delta: Optional[Any] = None) -> str:
     to_encode.update({"exp": int(expire.timestamp())})
     if "id" in to_encode and "sub" not in to_encode:
         to_encode["sub"] = to_encode["id"]
-    return jwt.encode(to_encode, AUTH_SECRET, algorithm="HS256")
+    return jwt.encode(to_encode, secret, algorithm="HS256")

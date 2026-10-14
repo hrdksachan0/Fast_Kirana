@@ -18,6 +18,7 @@ import '../../../core/services/tracer_service.dart';
 import '../../../core/services/customer_sound_service.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../data/models/cart.dart';
+import '../../../data/models/checkout_draft.dart';
 import '../../../data/models/order.dart';
 import '../../../data/models/product.dart';
 import '../../../data/models/store_settings.dart';
@@ -30,6 +31,7 @@ import '../../../providers/store_settings_provider.dart';
 import '../../orders/orders_screen.dart';
 import '../order_success_screen.dart';
 import '../widgets/payment_failed_cod_sheet.dart';
+import '../widgets/payment_pending_reconciliation_sheet.dart';
 import '../widgets/checkout_delivery_instructions.dart';
 
 // ─── State ──────────────────────────────────────────────────────────────────
@@ -119,6 +121,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   double _discountAmount = 0.0;
   String? _couponCode;
   String? _cookingInstruction;
+  double _tipAmount = 0.0;
   String _customDeliveryNotes = '';
 
   CheckoutController(this.ref) : super(const CheckoutState());
@@ -128,11 +131,13 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     double discountAmount = 0.0,
     String? couponCode,
     String? cookingInstruction,
+    double tipAmount = 0.0,
   }) {
     _currentContext = context;
     _discountAmount = discountAmount;
     _couponCode = couponCode;
     _cookingInstruction = cookingInstruction;
+    _tipAmount = tipAmount;
 
     if (cookingInstruction != null && cookingInstruction.trim().isNotEmpty) {
       state = state.copyWith(
@@ -144,6 +149,19 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       onSuccess: _onCashfreeSuccess,
       onError: _onCashfreeError,
     );
+
+    PaymentGatewayHandler.getPendingCfOrderId().then((pendingId) async {
+      final draft = await CheckoutDraft.loadAcceptedDraft();
+      final effectivePendingId = (pendingId != null && pendingId.isNotEmpty) ? pendingId : draft?.cfOrderId;
+      if (effectivePendingId != null && effectivePendingId.isNotEmpty) {
+        final amountStr = await PaymentGatewayHandler.getPendingCfAmount();
+        final amount = amountStr != null ? double.tryParse(amountStr) : null;
+        state = state.copyWith(
+          pendingCashfreeOrderId: effectivePendingId,
+          pendingGrandTotal: amount ?? draft?.grandTotal,
+        );
+      }
+    });
   }
 
   // ─── State Modifiers ───────────────────────────────────────────────────────
@@ -197,8 +215,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
   Future<void> _onCashfreeSuccess(String cfOrderId) async {
     HapticFeedback.heavyImpact();
+    final draft = await CheckoutDraft.loadAcceptedDraft();
     final cart = state.pendingCart ?? ref.read(cartProvider).value;
-    if (cart == null) {
+    if (cart == null && draft == null) {
       state = state.copyWith(isPlacingOrder: false);
       return;
     }
@@ -211,17 +230,61 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     final context = _currentContext;
     if (!verifiedPaid || resolvedPaymentId == null) {
-      debugPrint('❌ Cashfree payment verification failed or user cancelled in UPI app (cfOrderId: $cfOrderId)');
+      debugPrint('❌ Cashfree payment verification status: ${verification.status} (cfOrderId: $cfOrderId)');
+
+      final total = draft?.grandTotal ?? state.pendingGrandTotal ?? cart?.subtotal ?? 0.0;
+
+      // Ambiguous / Pending confirmation: Lock checkout, do NOT wipe orderId, prevent double charge or premature COD
+      if ((verification.isPending || verification.isUnavailable) && context != null && context.mounted) {
+        state = state.copyWith(isPlacingOrder: true, pendingCashfreeOrderId: cfOrderId);
+        await PaymentPendingReconciliationSheet.show(
+          context: context,
+          grandTotal: total,
+          cfOrderId: cfOrderId,
+          onCheckStatus: () async {
+            final recheck = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 2);
+            if (!context.mounted) return;
+            if (recheck.isPaid && recheck.paymentId != null) {
+              Navigator.pop(context);
+              final freshDraft = await CheckoutDraft.loadAcceptedDraft();
+              if (!context.mounted) return;
+              await completeOrderPlacement(
+                context,
+                draft: freshDraft ?? draft,
+                cart: cart ?? Cart.empty(),
+                paymentId: recheck.paymentId,
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: AppDesignSystem.amber600,
+                  content: Text(
+                    recheck.message ?? 'Payment confirmation is still pending with your bank.',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+          onWait: () {
+            // Keep pending Cashfree order ID intact and unblock checkout UI to show recovery banner
+            state = state.copyWith(isPlacingOrder: false, pendingCashfreeOrderId: cfOrderId);
+          },
+        );
+        return;
+      }
+
       state = state.copyWith(isPlacingOrder: false);
 
-      final total = state.pendingGrandTotal ?? cart.subtotal;
+      // Strictly Failed / Cancelled
       if (context != null && context.mounted && total > 0) {
         await PaymentFailedCodSheet.show(
           context: context,
           grandTotal: total,
           onRetryPayment: () {
             state = state.copyWith(pendingCashfreeOrderId: null);
-            handlePlaceOrder(context, cart: cart);
+            handlePlaceOrder(context, cart: cart ?? Cart.empty());
           },
           onCancelOrder: () {
             state = state.copyWith(isPlacingOrder: false);
@@ -239,7 +302,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           },
           onConfirmCod: () async {
             state = state.copyWith(selectedPayment: 'cod', isPlacingOrder: true);
-            await completeOrderPlacement(context, cart: cart);
+            await completeOrderPlacement(context, draft: draft, cart: cart ?? Cart.empty());
           },
         );
       }
@@ -249,7 +312,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     // Always complete order placement to backend API even if UI context was detached/unmounted during UPI app switch
     await completeOrderPlacement(
       _currentContext,
-      cart: cart,
+      draft: draft,
+      cart: cart ?? Cart.empty(),
       paymentId: resolvedPaymentId,
     );
   }
@@ -257,8 +321,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   Future<void> _onCashfreeError(CFErrorResponse errorResponse, String cfOrderId) async {
     HapticFeedback.lightImpact();
 
+    PaymentVerificationResult? fastVerify;
     try {
-      final fastVerify = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 1);
+      fastVerify = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 1);
       if (fastVerify.isPaid) {
         debugPrint('✅ Payment verified as PAID on server despite error callback! Routing to success...');
         await _onCashfreeSuccess(cfOrderId);
@@ -268,11 +333,52 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       debugPrint('Cashfree error verify check note: $vErr');
     }
 
-    state = state.copyWith(isPlacingOrder: false);
-
     final total = state.pendingGrandTotal ?? 0.0;
     final cart = state.pendingCart ?? ref.read(cartProvider).value;
     final context = _currentContext;
+
+    // Ambiguous / Pending confirmation: Lock checkout, do NOT wipe orderId, prevent double charge or premature COD
+    if (fastVerify != null && (fastVerify.isPending || fastVerify.isUnavailable) && context != null && context.mounted && cart != null) {
+      state = state.copyWith(isPlacingOrder: true, pendingCashfreeOrderId: cfOrderId);
+      await PaymentPendingReconciliationSheet.show(
+        context: context,
+        grandTotal: total,
+        cfOrderId: cfOrderId,
+        onCheckStatus: () async {
+          final recheck = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 2);
+          if (!context.mounted) return;
+          if (recheck.isPaid && recheck.paymentId != null) {
+            Navigator.pop(context);
+            final freshDraft = await CheckoutDraft.loadAcceptedDraft();
+            if (!context.mounted) return;
+            await completeOrderPlacement(
+              context,
+              draft: freshDraft,
+              cart: cart,
+              paymentId: recheck.paymentId,
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: AppDesignSystem.amber600,
+                content: Text(
+                  recheck.message ?? 'Payment confirmation is still pending with your bank.',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+        onWait: () {
+          // Keep pending Cashfree order ID intact and unblock checkout UI to show recovery banner
+          state = state.copyWith(isPlacingOrder: false, pendingCashfreeOrderId: cfOrderId);
+        },
+      );
+      return;
+    }
+
+    state = state.copyWith(isPlacingOrder: false);
 
     if (context != null && context.mounted && total > 0 && cart != null) {
       await PaymentFailedCodSheet.show(
@@ -344,6 +450,23 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     String? customDeliveryNotes,
   }) async {
     if (state.isPlacingOrder) return;
+    if (state.pendingCashfreeOrderId != null && state.pendingCashfreeOrderId!.isNotEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppDesignSystem.amber800,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Text(
+              'A payment verification for ₹${(state.pendingGrandTotal ?? 0).toStringAsFixed(2)} is currently pending. Please wait for store verification before placing another order.',
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+        );
+      }
+      return;
+    }
     TracerService.startTrace('customer_checkout_tap', attributes: {
       'cart_subtotal': cart.subtotal,
       'items_count': cart.items.length,
@@ -407,6 +530,26 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final addresses = ref.read(addressesProvider).valueOrNull ?? [];
     final selectedAddress = ref.read(selectedAddressProvider) ??
         (state.selectedAddressIndex < addresses.length ? addresses[state.selectedAddressIndex] : null);
+
+    if (state.deliveryMethod != 'PICKUP' && selectedAddress == null) {
+      state = state.copyWith(isPlacingOrder: false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppDesignSystem.rose600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: const Text(
+              'Please select or add a delivery address to place your order.',
+              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     final subtotal = cart.subtotal;
     RestaurantInfo? cartRestaurant;
     for (final item in cart.items) {
@@ -458,7 +601,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         ? 0.0
         : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
     final packagingFee = state.selectedPackaging == 'PREMIUM' ? 15.0 : basePackagingFee;
-    final grandTotal = (subtotal + deliveryFee + packagingFee - _discountAmount).clamp(0.0, 999999.0);
+    final grandTotal = (subtotal + deliveryFee + packagingFee + _tipAmount - _discountAmount).clamp(0.0, 999999.0);
 
     // 4. Online Payment Gateway Trigger
     if (state.selectedPayment == 'online') {
@@ -513,6 +656,28 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           };
         }).toList();
 
+        final initialDraft = CheckoutDraft(
+          hubId: nearestHub.id,
+          deliveryMethod: state.deliveryMethod,
+          selectedAddress: selectedAddress,
+          selectedAddressIndex: state.selectedAddressIndex,
+          customReceiverName: state.customReceiverName,
+          customReceiverPhone: state.customReceiverPhone,
+          selectedDeliveryInstructions: state.selectedDeliveryInstructions,
+          cookingInstruction: _cookingInstruction,
+          customDeliveryNotes: _customDeliveryNotes,
+          couponCode: _couponCode,
+          discountAmount: _discountAmount,
+          tipAmount: _tipAmount,
+          selectedPackaging: state.selectedPackaging,
+          selectedPayment: state.selectedPayment,
+          isFrozenForPayment: true,
+          activePaymentSessionId: state.pendingCashfreeOrderId,
+          items: itemsPayload,
+          grandTotal: grandTotal,
+          cfOrderId: state.pendingCashfreeOrderId,
+        );
+
         final cfOrderId = await _paymentHandler.launchPayment(
           amount: grandTotal,
           customerPhone: cleanPhone.isNotEmpty ? cleanPhone : rawPhone,
@@ -523,9 +688,25 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           addressId: selectedAddress?.id,
           items: itemsPayload,
           deliveryMethod: state.deliveryMethod,
+          onBeforeLaunch: (launchedOrderId) async {
+            final draftWithId = initialDraft.copyWith(
+              activePaymentSessionId: launchedOrderId,
+              cfOrderId: launchedOrderId,
+            );
+            await CheckoutDraft.saveAcceptedDraft(draftWithId);
+            state = state.copyWith(
+              pendingCashfreeOrderId: launchedOrderId,
+              pendingGrandTotal: grandTotal,
+            );
+          },
         );
 
         if (cfOrderId != null) {
+          final draftWithId = initialDraft.copyWith(
+            activePaymentSessionId: cfOrderId,
+            cfOrderId: cfOrderId,
+          );
+          await CheckoutDraft.saveAcceptedDraft(draftWithId);
           state = state.copyWith(pendingCashfreeOrderId: cfOrderId);
           return;
         }
@@ -586,12 +767,25 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
   Future<void> completeOrderPlacement(
     BuildContext? context, {
-    required Cart cart,
+    Cart? cart,
+    CheckoutDraft? draft,
     String? paymentId,
   }) async {
+    final effectiveCart = cart ?? ref.read(cartProvider).value ?? Cart.empty();
+    final hasDraftItems = draft != null && draft.items.isNotEmpty;
+    final subtotal = hasDraftItems
+        ? draft.items.fold<double>(0.0, (sum, i) => sum + ((i['price'] as num?)?.toDouble() ?? 0.0) * ((i['quantity'] as num?)?.toInt() ?? 1))
+        : effectiveCart.subtotal;
+
+    final effectiveDiscount = draft?.discountAmount ?? _discountAmount;
+    final effectiveTip = draft?.tipAmount ?? _tipAmount;
+    final effectiveCoupon = draft?.couponCode ?? _couponCode;
+    final effectiveDeliveryMethod = draft?.deliveryMethod ?? state.deliveryMethod;
+    final effectivePackaging = draft?.selectedPackaging ?? state.selectedPackaging;
+
     // Anti-Fraud check
     if (state.selectedPayment == 'online') {
-      final isFreePromo = (_discountAmount >= cart.subtotal && cart.subtotal > 0) ||
+      final isFreePromo = (effectiveDiscount >= subtotal && subtotal > 0) ||
           (state.pendingGrandTotal != null && state.pendingGrandTotal! <= 0);
       if ((paymentId == null || paymentId.trim().isEmpty) && !isFreePromo) {
         state = state.copyWith(isPlacingOrder: false);
@@ -611,13 +805,32 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       }
     }
 
-    final subtotal = cart.subtotal;
     final addresses = ref.read(addressesProvider).valueOrNull ?? [];
-    final selectedAddress = ref.read(selectedAddressProvider) ??
+    final selectedAddress = draft?.selectedAddress ??
+        ref.read(selectedAddressProvider) ??
         (state.selectedAddressIndex < addresses.length ? addresses[state.selectedAddressIndex] : null);
 
+    if (effectiveDeliveryMethod != 'PICKUP' && selectedAddress == null) {
+      state = state.copyWith(isPlacingOrder: false);
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppDesignSystem.rose600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: const Text(
+              'Please select or add a delivery address to complete your order.',
+              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     RestaurantInfo? cartRestaurant;
-    for (final item in cart.items) {
+    for (final item in effectiveCart.items) {
       if (item.product.restaurant != null &&
           item.product.restaurant!.lat != null &&
           item.product.restaurant!.lng != null) {
@@ -638,7 +851,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       storeName: cartRestaurant?.name ?? nearestHub.name,
     );
 
-    if (state.deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
+    if (effectiveDeliveryMethod == 'DELIVERY' && !tier.isServiceable) {
       state = state.copyWith(isPlacingOrder: false);
       if (context != null && context.mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -659,18 +872,24 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return;
     }
 
-    final hasGrocery = cart.items.any((i) => !isRestaurantProduct(i.product));
-    final hasRestaurant = cart.items.any((i) => isRestaurantProduct(i.product));
+    final hasGrocery = hasDraftItems
+        ? draft.items.any((i) => (i['restaurantId'] == null || i['restaurantId'].toString().isEmpty))
+        : effectiveCart.items.any((i) => !isRestaurantProduct(i.product));
+    final hasRestaurant = hasDraftItems
+        ? draft.items.any((i) => (i['restaurantId'] != null && i['restaurantId'].toString().isNotEmpty))
+        : effectiveCart.items.any((i) => isRestaurantProduct(i.product));
     final isCombined = hasGrocery && hasRestaurant;
 
-    final deliveryFee = state.deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
-    final basePackagingFee = state.deliveryMethod == 'PICKUP'
+    final deliveryFee = effectiveDeliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
+    final basePackagingFee = effectiveDeliveryMethod == 'PICKUP'
         ? 0.0
         : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
-    final packagingFee = state.selectedPackaging == 'PREMIUM' ? 15.0 : basePackagingFee;
-    final grandTotal = (subtotal + deliveryFee + packagingFee - _discountAmount).clamp(0.0, 999999.0);
+    final packagingFee = effectivePackaging == 'PREMIUM' ? 15.0 : basePackagingFee;
+    final grandTotal = (draft != null && draft.grandTotal > 0)
+        ? draft.grandTotal
+        : (subtotal + deliveryFee + packagingFee + effectiveTip - effectiveDiscount).clamp(0.0, 999999.0);
 
-    final selectedAddr = state.deliveryMethod == 'PICKUP'
+    final selectedAddr = effectiveDeliveryMethod == 'PICKUP'
         ? '🏬 Self Pickup: FastKirana Darkstore Counter'
         : (selectedAddress != null ? selectedAddress.fullAddress : 'Ghatampur Express Zone');
 
@@ -684,34 +903,44 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         ? user!.name!
         : (prefs.getString('user_name') ?? 'FastKirana Customer');
 
-    final isOrderForSomeone = state.customReceiverName?.isNotEmpty == true || state.customReceiverPhone?.isNotEmpty == true;
+    final isOrderForSomeone = (draft?.customReceiverName?.isNotEmpty == true || draft?.customReceiverPhone?.isNotEmpty == true) ||
+        (state.customReceiverName?.isNotEmpty == true || state.customReceiverPhone?.isNotEmpty == true);
 
-    final receiverName = state.customReceiverName?.isNotEmpty == true
-        ? state.customReceiverName!
-        : (user?.name?.isNotEmpty == true
-            ? user!.name!
-            : (selectedAddress != null && !selectedAddress.label.toLowerCase().contains('current')
-                ? selectedAddress.label
-                : 'FastKirana Customer'));
+    final receiverName = draft?.customReceiverName?.isNotEmpty == true
+        ? draft!.customReceiverName!
+        : (state.customReceiverName?.isNotEmpty == true
+            ? state.customReceiverName!
+            : (user?.name?.isNotEmpty == true
+                ? user!.name!
+                : (selectedAddress != null && !selectedAddress.label.toLowerCase().contains('current')
+                    ? selectedAddress.label
+                    : 'FastKirana Customer')));
 
-    final receiverPhone = state.customReceiverPhone?.isNotEmpty == true
-        ? state.customReceiverPhone!
-        : (user?.phone?.isNotEmpty == true
-            ? user!.phone!
-            : (buyerPhone.isNotEmpty ? buyerPhone : (selectedAddress?.phone.isNotEmpty == true ? selectedAddress!.phone : '')));
+    final receiverPhone = draft?.customReceiverPhone?.isNotEmpty == true
+        ? draft!.customReceiverPhone!
+        : (state.customReceiverPhone?.isNotEmpty == true
+            ? state.customReceiverPhone!
+            : (user?.phone?.isNotEmpty == true
+                ? user!.phone!
+                : (buyerPhone.isNotEmpty ? buyerPhone : (selectedAddress?.phone.isNotEmpty == true ? selectedAddress!.phone : ''))));
 
     final instructionLabels = <String>[];
+    final activeInstructions = draft?.selectedDeliveryInstructions ?? state.selectedDeliveryInstructions;
     for (final preset in CheckoutDeliveryInstructions.presets) {
-      if (state.selectedDeliveryInstructions.contains(preset.id)) {
+      if (activeInstructions.contains(preset.id)) {
         instructionLabels.add('${preset.icon} ${preset.title}');
       }
     }
-    final customNote = _customDeliveryNotes.trim();
+    final customNote = (draft?.customDeliveryNotes ?? _customDeliveryNotes).trim();
     if (customNote.isNotEmpty) {
       instructionLabels.add('📍 Note: $customNote');
     }
-    if (_cookingInstruction != null && _cookingInstruction!.trim().isNotEmpty) {
-      instructionLabels.add('🍳 Kitchen: ${_cookingInstruction!.trim()}');
+    final cookingNote = (draft?.cookingInstruction ?? _cookingInstruction)?.trim() ?? '';
+    if (cookingNote.isNotEmpty) {
+      instructionLabels.add('🍳 Kitchen: $cookingNote');
+    }
+    if (effectiveTip > 0) {
+      instructionLabels.add('💰 Delivery Partner Tip: ₹${effectiveTip.toInt()}');
     }
 
     String orderNotes = instructionLabels.isNotEmpty
@@ -722,8 +951,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       orderNotes = '$forStr | $orderNotes';
     }
 
-    if (state.pendingCashfreeOrderId != null && state.pendingCashfreeOrderId!.isNotEmpty) {
-      final cfTag = '[CF_ORDER:${state.pendingCashfreeOrderId}]';
+    final effectiveCfOrderId = draft?.cfOrderId ?? state.pendingCashfreeOrderId;
+    if (effectiveCfOrderId != null && effectiveCfOrderId.isNotEmpty) {
+      final cfTag = '[CF_ORDER:$effectiveCfOrderId]';
       if (!orderNotes.contains(cfTag)) {
         orderNotes = '$orderNotes | $cfTag';
       }
@@ -731,22 +961,32 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     String shopName = 'FastKirana Dark Store';
     String? restaurantId;
-    for (final item in cart.items) {
-      if (item.product.restaurant != null && item.product.restaurant!.name.isNotEmpty) {
-        shopName = item.product.restaurant!.name;
-        restaurantId = item.product.restaurantId ?? item.product.restaurant!.id;
-        break;
-      }
-      if (item.product.restaurantId != null && item.product.restaurantId!.isNotEmpty) {
-        restaurantId = item.product.restaurantId;
-        break;
-      }
-      if (isRestaurantProduct(item.product)) {
-        final reg = RestaurantRegistry.find(getOutletName(item.product));
-        if (reg != null) {
-          shopName = reg.name;
-          restaurantId = reg.id;
+    if (hasDraftItems) {
+      for (final item in draft.items) {
+        if (item['restaurantId'] != null && item['restaurantId'].toString().isNotEmpty) {
+          restaurantId = item['restaurantId'].toString();
+          shopName = 'Restaurant Kitchen';
           break;
+        }
+      }
+    } else {
+      for (final item in effectiveCart.items) {
+        if (item.product.restaurant != null && item.product.restaurant!.name.isNotEmpty) {
+          shopName = item.product.restaurant!.name;
+          restaurantId = item.product.restaurantId ?? item.product.restaurant!.id;
+          break;
+        }
+        if (item.product.restaurantId != null && item.product.restaurantId!.isNotEmpty) {
+          restaurantId = item.product.restaurantId;
+          break;
+        }
+        if (isRestaurantProduct(item.product)) {
+          final reg = RestaurantRegistry.find(getOutletName(item.product));
+          if (reg != null) {
+            shopName = reg.name;
+            restaurantId = reg.id;
+            break;
+          }
         }
       }
     }
@@ -759,6 +999,36 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final isOnlinePaid = paymentId != null && paymentId.isNotEmpty;
     final orderId = 'FK-${(100000 + DateTime.now().millisecondsSinceEpoch % 900000)}';
 
+    final List<OrderItem> orderItemsList = hasDraftItems
+        ? draft.items.map<OrderItem>((i) {
+            final rawId = i['productId']?.toString() ?? 'item_unknown';
+            final cleanId = rawId.startsWith('item_') ? rawId.replaceFirst('item_', '') : rawId;
+            final baseProductId = cleanId.contains('_') ? cleanId.split('_')[0] : cleanId;
+            return OrderItem(
+              id: 'item_${i['productId']}',
+              productId: baseProductId,
+              name: i['name']?.toString() ?? 'Product',
+              price: (i['price'] as num?)?.toDouble() ?? 0.0,
+              quantity: (i['quantity'] as num?)?.toInt() ?? 1,
+              imageUrl: i['imageUrl']?.toString() ?? '',
+              selectedVariant: i['selectedVariant']?.toString(),
+            );
+          }).toList()
+        : effectiveCart.items.map<OrderItem>((i) {
+            final rawId = i.product.id;
+            final cleanId = rawId.startsWith('item_') ? rawId.replaceFirst('item_', '') : rawId;
+            final baseProductId = cleanId.contains('_') ? cleanId.split('_')[0] : cleanId;
+            return OrderItem(
+              id: 'item_${i.product.id}',
+              productId: baseProductId,
+              name: i.product.name,
+              price: i.product.price,
+              quantity: i.quantity,
+              imageUrl: i.product.imageUrl,
+              selectedVariant: i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
+            );
+          }).toList();
+
     final newOrder = Order(
       id: orderId,
       readableId: orderId,
@@ -768,35 +1038,54 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       shopName: shopName,
       status: isOnlinePaid ? OrderStatus.confirmed : OrderStatus.adminPending,
       subtotal: subtotal,
-      discount: _discountAmount,
+      discount: effectiveDiscount,
       deliveryFee: deliveryFee,
       taxes: 0,
-      miscFee: packagingFee,
+      miscFee: packagingFee + effectiveTip,
       total: grandTotal,
       paymentMethod: state.selectedPayment == 'online' ? PaymentMethod.upi : PaymentMethod.cod,
       paymentStatus: isOnlinePaid ? 'PAID' : 'PENDING',
-      deliveryMethod: state.deliveryMethod,
+      deliveryMethod: effectiveDeliveryMethod,
       customerName: receiverName,
       customerPhone: receiverPhone,
       customerAddress: selectedAddr,
       notes: orderNotes,
-      couponCode: _couponCode,
+      couponCode: effectiveCoupon,
       createdAt: DateTime.now(),
-      items: cart.items.map<OrderItem>((i) {
-        final rawId = i.product.id;
-        final cleanId = rawId.startsWith('item_') ? rawId.replaceFirst('item_', '') : rawId;
-        final baseProductId = cleanId.contains('_') ? cleanId.split('_')[0] : cleanId;
-        return OrderItem(
-          id: 'item_${i.product.id}',
-          productId: baseProductId,
-          name: i.product.name,
-          price: i.product.price,
-          quantity: i.quantity,
-          imageUrl: i.product.imageUrl,
-          selectedVariant: i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
-        );
-      }).toList(),
+      items: orderItemsList,
     );
+
+    final List<Map<String, dynamic>> itemsPayload = hasDraftItems
+        ? draft.items
+        : effectiveCart.items.map((i) {
+            final isRest = isRestaurantProduct(i.product);
+            final itemRestId = i.product.restaurantId ??
+                i.product.restaurant?.id ??
+                (isRest ? (RestaurantRegistry.find(getOutletName(i.product))?.id ?? restaurantId) : null);
+            return {
+              'productId': i.product.id,
+              'quantity': i.quantity,
+              'price': i.product.price,
+              'name': i.product.name,
+              'selectedVariant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
+              'variant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
+              'unit': i.product.unit,
+              'restaurantId': itemRestId,
+              'menuSection': i.product.menuSection,
+              'tags': i.product.tags,
+              'product': {
+                'id': i.product.id,
+                'name': i.product.name,
+                'price': i.product.price,
+                'imageUrl': i.product.imageUrl,
+                'slug': i.product.slug,
+                'unit': i.product.unit,
+                'restaurantId': itemRestId,
+                'menuSection': i.product.menuSection,
+                'tags': i.product.tags,
+              }
+            };
+          }).toList();
 
     var placedOrder = newOrder;
     Map<String, dynamic>? apiPayload;
@@ -819,13 +1108,13 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         'paymentMethod': state.selectedPayment == 'online' ? 'UPI' : 'COD',
         'paymentStatus': isOnlinePaid ? 'PAID' : 'PENDING',
         'paymentId': paymentId,
-        'cfOrderId': state.pendingCashfreeOrderId,
+        'cfOrderId': effectiveCfOrderId,
         'traceId': TracerService.activeTraceId,
         'spanId': TracerService.activeSpanId,
-        'deliveryMethod': state.deliveryMethod,
+        'deliveryMethod': effectiveDeliveryMethod,
         'notes': orderNotes,
-        'couponCode': _couponCode,
-        'discount': _discountAmount,
+        'couponCode': effectiveCoupon,
+        'discount': effectiveDiscount,
         'customerAddress': selectedAddr,
         'latitude': selectedAddress?.latitude,
         'longitude': selectedAddress?.longitude,
@@ -833,38 +1122,34 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         'lng': selectedAddress?.longitude,
         'shopName': (hasGrocery && hasRestaurant) ? 'FastKirana Dark Store' : shopName,
         'restaurantId': restaurantId,
-        'packagingOption': state.selectedPackaging,
+        'packagingOption': effectivePackaging,
         'packagingFee': packagingFee,
-        'items': cart.items.map((i) {
-          final isRest = isRestaurantProduct(i.product);
-          final itemRestId = i.product.restaurantId ??
-              i.product.restaurant?.id ??
-              (isRest ? (RestaurantRegistry.find(getOutletName(i.product))?.id ?? restaurantId) : null);
-          return {
-            'productId': i.product.id,
-            'quantity': i.quantity,
-            'price': i.product.price,
-            'name': i.product.name,
-            'selectedVariant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
-            'variant': i.selectedVariant ?? (i.product.unit.isNotEmpty ? i.product.unit : null),
-            'unit': i.product.unit,
-            'restaurantId': itemRestId,
-            'menuSection': i.product.menuSection,
-            'tags': i.product.tags,
-            'product': {
-              'id': i.product.id,
-              'name': i.product.name,
-              'price': i.product.price,
-              'imageUrl': i.product.imageUrl,
-              'slug': i.product.slug,
-              'unit': i.product.unit,
-              'restaurantId': itemRestId,
-              'menuSection': i.product.menuSection,
-              'tags': i.product.tags,
-            }
-          };
-        }).toList(),
+        'tipAmount': effectiveTip,
+        'items': itemsPayload,
       };
+
+      final acceptedDraftToSave = draft ?? CheckoutDraft(
+        hubId: nearestHub.id,
+        deliveryMethod: effectiveDeliveryMethod,
+        selectedAddress: selectedAddress,
+        selectedAddressIndex: state.selectedAddressIndex,
+        customReceiverName: receiverName,
+        customReceiverPhone: receiverPhone,
+        selectedDeliveryInstructions: activeInstructions,
+        cookingInstruction: cookingNote,
+        customDeliveryNotes: customNote,
+        couponCode: effectiveCoupon,
+        discountAmount: effectiveDiscount,
+        tipAmount: effectiveTip,
+        selectedPackaging: effectivePackaging,
+        selectedPayment: state.selectedPayment,
+        isFrozenForPayment: isOnlinePaid,
+        activePaymentSessionId: effectiveCfOrderId,
+        items: itemsPayload,
+        grandTotal: grandTotal,
+        cfOrderId: effectiveCfOrderId,
+      );
+      await CheckoutDraft.saveAcceptedDraft(acceptedDraftToSave);
 
       final res = await ref.read(dioProvider).post('/api/orders', data: apiPayload);
       if (res.data != null) {
@@ -903,11 +1188,30 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
       // 🛡️ EMERGENCY RECOVERY: If paid online, save locally and proceed
       if (isOnlinePaid) {
-        debugPrint('Emergency Payment Recovery: Order $orderId was paid ($paymentId) but backend sync failed. Recovering gracefully.');
+        debugPrint('Emergency Payment Recovery: Order $orderId was paid ($paymentId) but backend sync failed. Retaining recovery reference.');
         await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);
+        state = state.copyWith(
+          isPlacingOrder: false,
+          pendingCashfreeOrderId: state.pendingCashfreeOrderId ?? orderId,
+        );
         if (apiPayload != null) {
-          unawaited(_retryOrderSync(apiPayload));
+          unawaited(_retryOrderSync(
+            apiPayload,
+            localOrder: placedOrder,
+            grandTotal: grandTotal,
+            selectedAddr: selectedAddr,
+            userId: userId,
+          ));
         }
+        if (context != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: AppDesignSystem.amber800,
+              content: Text('Payment received! Finalizing order details with store...'),
+            ),
+          );
+        }
+        return;
       } else {
         state = state.copyWith(isPlacingOrder: false);
         if (context != null && context.mounted) {
@@ -940,18 +1244,52 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       }
     }
 
+    if (context != null && !context.mounted) return;
+    await _finishOrderPlacement(
+      placedOrder: placedOrder,
+      grandTotal: grandTotal,
+      selectedAddr: selectedAddr,
+      userId: userId,
+      orderedItems: itemsPayload,
+      context: context,
+    );
+  }
+
+  Future<void> _finishOrderPlacement({
+    required Order placedOrder,
+    required double grandTotal,
+    required String selectedAddr,
+    required String userId,
+    List<Map<String, dynamic>>? orderedItems,
+    BuildContext? context,
+  }) async {
     // Save primary order locally
     await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);
+
+    // Clear pending payment recovery and accepted draft only after durable order acknowledgement
+    await PaymentGatewayHandler.clearPendingPaymentRecovery();
+    await CheckoutDraft.clearAcceptedDraft();
 
     // Subtle pleasant confirmation chime and haptic sensation
     unawaited(CustomerSoundService.instance.playOrderSuccessSound());
     await Future.delayed(const Duration(milliseconds: 200));
 
-    // Clear cart and invalidate
-    await ref.read(cartProvider.notifier).clearCart();
+    // Clear only draft items if specified, preserving any unrelated newer cart edits
+    if (orderedItems != null && orderedItems.isNotEmpty) {
+      await ref.read(cartProvider.notifier).removeDraftItems(orderedItems);
+    } else {
+      await ref.read(cartProvider.notifier).clearCart();
+    }
     ref.invalidate(ordersProvider(userId));
     ref.invalidate(ordersProvider(''));
     ref.invalidate(ordersProvider('admin'));
+
+    state = state.copyWith(
+      isPlacingOrder: false,
+      pendingCashfreeOrderId: null,
+      pendingGrandTotal: null,
+      pendingCart: null,
+    );
 
     if (context == null || !context.mounted) return;
 
@@ -969,17 +1307,241 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     );
   }
 
-  Future<void> _retryOrderSync(Map<String, dynamic> apiPayload) async {
+  Future<void> _retryOrderSync(
+    Map<String, dynamic> apiPayload, {
+    required Order localOrder,
+    required double grandTotal,
+    required String selectedAddr,
+    required String userId,
+  }) async {
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
         await Future.delayed(Duration(seconds: attempt * 2));
         final res = await ref.read(dioProvider).post('/api/orders', data: apiPayload);
         if (res.statusCode == 200 || res.statusCode == 201) {
           debugPrint('✅ Background order sync succeeded on retry $attempt!');
+          var confirmedOrder = localOrder;
+          if (res.data != null && res.data is Map) {
+            final data = res.data as Map<String, dynamic>;
+            String? serverReadableId = data['readableId']?.toString();
+            String? serverId = data['id']?.toString();
+
+            final created = data['order'] ?? (data['orders'] is List && (data['orders'] as List).isNotEmpty ? data['orders'][0] : null);
+            if (created is Map) {
+              serverReadableId = created['readableId']?.toString() ?? serverReadableId;
+              serverId = created['id']?.toString() ?? serverId;
+            }
+
+            if (serverReadableId != null && serverReadableId.isNotEmpty) {
+              confirmedOrder = confirmedOrder.copyWith(
+                id: serverId ?? confirmedOrder.id,
+                readableId: serverReadableId,
+              );
+            }
+
+            if (data['orders'] is List && (data['orders'] as List).isNotEmpty) {
+              final repo = OrderRepository(ref.read(dioProvider));
+              for (final raw in data['orders']) {
+                if (raw is Map<String, dynamic>) {
+                  try {
+                    final ord = Order.fromJson(raw);
+                    await repo.savePlacedOrderLocally(ord);
+                  } catch (e, _) {
+                    LoggerService.error('CheckoutController: savePlacedOrderLocally', e);
+                  }
+                }
+              }
+            }
+          }
+
+          await _finishOrderPlacement(
+            placedOrder: confirmedOrder,
+            grandTotal: grandTotal,
+            selectedAddr: selectedAddr,
+            userId: userId,
+            context: _currentContext,
+          );
           break;
         }
       } catch (err) {
         debugPrint('Background order sync retry $attempt note: $err');
+      }
+    }
+  }
+
+  Future<void> checkPendingPaymentStatus(BuildContext context) async {
+    final cfOrderId = state.pendingCashfreeOrderId;
+    if (cfOrderId == null || cfOrderId.isEmpty) return;
+
+    state = state.copyWith(isPlacingOrder: true);
+    try {
+      final verification = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 2);
+      if (verification.isPaid && verification.paymentId != null) {
+        final draft = await CheckoutDraft.loadAcceptedDraft();
+        final currentCart = state.pendingCart ?? ref.read(cartProvider).value;
+        if (!context.mounted) return;
+        await completeOrderPlacement(
+          context,
+          draft: draft,
+          cart: currentCart ?? Cart.empty(),
+          paymentId: verification.paymentId,
+        );
+      } else if (verification.isFailed) {
+        await PaymentGatewayHandler.clearPendingPaymentRecovery();
+        await CheckoutDraft.clearAcceptedDraft();
+        state = state.copyWith(
+          isPlacingOrder: false,
+          pendingCashfreeOrderId: null,
+          pendingGrandTotal: null,
+          pendingCart: null,
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppDesignSystem.rose600,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: const Text(
+                'Payment verification failed or was cancelled. You may try again or select Cash on Delivery.',
+                style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+              ),
+            ),
+          );
+        }
+      } else {
+        state = state.copyWith(isPlacingOrder: false);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppDesignSystem.amber800,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Text(
+                verification.message ?? 'Payment confirmation is still pending with your bank. We will continue checking.',
+                style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      state = state.copyWith(isPlacingOrder: false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppDesignSystem.amber800,
+            content: Text('Could not reach payment gateway: $e'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> cancelPendingPaymentSession(BuildContext context) async {
+    final cfOrderId = state.pendingCashfreeOrderId ?? await PaymentGatewayHandler.getPendingCfOrderId();
+    if (cfOrderId == null || cfOrderId.isEmpty) {
+      await PaymentGatewayHandler.clearPendingPaymentRecovery();
+      await CheckoutDraft.clearAcceptedDraft();
+      state = state.copyWith(
+        isPlacingOrder: false,
+        pendingCashfreeOrderId: null,
+        pendingGrandTotal: null,
+        pendingCart: null,
+      );
+      return;
+    }
+
+    state = state.copyWith(isPlacingOrder: true);
+    try {
+      final verification = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 2);
+
+      // 1. If paid, complete the order from draft
+      if (verification.isPaid && verification.paymentId != null) {
+        final draft = await CheckoutDraft.loadAcceptedDraft();
+        if (!context.mounted) return;
+        await completeOrderPlacement(
+          context,
+          draft: draft,
+          cart: state.pendingCart ?? ref.read(cartProvider).value ?? Cart.empty(),
+          paymentId: verification.paymentId,
+        );
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppDesignSystem.emerald600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: const Text(
+              'Payment was already confirmed by your bank. Your order has been placed successfully!',
+              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+        );
+        return;
+      }
+
+      // 2. Terminal failure or explicit cancellation: allow fresh checkout and track cancelled attempt
+      if (verification.isFailed || verification.status == PaymentVerificationStatus.failed) {
+        final prefs = await SharedPreferences.getInstance();
+        final cancelledList = prefs.getStringList('cancelled_payment_attempts') ?? [];
+        if (!cancelledList.contains(cfOrderId)) {
+          cancelledList.add(cfOrderId);
+          await prefs.setStringList('cancelled_payment_attempts', cancelledList);
+        }
+
+        await PaymentGatewayHandler.clearPendingPaymentRecovery();
+        await CheckoutDraft.clearAcceptedDraft();
+        state = state.copyWith(
+          isPlacingOrder: false,
+          pendingCashfreeOrderId: null,
+          pendingGrandTotal: null,
+          pendingCart: null,
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppDesignSystem.slate800,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: const Text(
+                'Pending payment session cleared. You can now place a fresh order.',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      // 3. Unresolved / Still Pending: maintain guard to prevent duplicate fulfillment or double debits
+      state = state.copyWith(isPlacingOrder: false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppDesignSystem.amber800,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: const Text(
+              'Payment status is still pending with your bank. To avoid being charged twice, we cannot cancel yet. Tap "Check Status" in a moment.',
+              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(isPlacingOrder: false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppDesignSystem.amber800,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Text(
+              'Could not reach payment gateway to verify status ($e). Guarding order to prevent duplicate charges.',
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
+        );
       }
     }
   }

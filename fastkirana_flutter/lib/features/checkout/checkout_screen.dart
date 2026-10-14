@@ -29,12 +29,14 @@ class CheckoutScreen extends ConsumerStatefulWidget {
   final double discountAmount;
   final String? couponCode;
   final String? cookingInstruction;
+  final double tipAmount;
 
   const CheckoutScreen({
     super.key,
     this.discountAmount = 0.0,
     this.couponCode,
     this.cookingInstruction,
+    this.tipAmount = 0.0,
   });
 
   @override
@@ -56,6 +58,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         discountAmount: widget.discountAmount,
         couponCode: widget.couponCode,
         cookingInstruction: widget.cookingInstruction,
+        tipAmount: widget.tipAmount,
       );
     });
   }
@@ -130,7 +133,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         : (isCombined
             ? (storeSettings?.combinedMiscFeeLabel ?? 'Combined Packaging Charge')
             : (storeSettings?.miscFeeLabel ?? 'Packaging Charge'));
-    final grandTotal = (subtotal + deliveryFee + packagingFee - widget.discountAmount).clamp(0.0, 999999.0);
+    final grandTotal = (subtotal + deliveryFee + packagingFee + widget.tipAmount - widget.discountAmount).clamp(0.0, 999999.0);
 
     final user = ref.watch(authProvider).value;
     final customerName = checkoutState.customReceiverName?.isNotEmpty == true
@@ -226,6 +229,74 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // 0. Pending Payment Recovery Banner
+                      if (checkoutState.pendingCashfreeOrderId != null && checkoutState.pendingCashfreeOrderId!.isNotEmpty) ...[
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppDesignSystem.amber50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppDesignSystem.amber300),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.info_outline_rounded, color: AppDesignSystem.amber800, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'A payment of ₹${(checkoutState.pendingGrandTotal ?? grandTotal).toStringAsFixed(2)} is pending verification for this order. We are holding your cart safely.',
+                                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppDesignSystem.amber900),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  TextButton(
+                                    onPressed: checkoutState.isPlacingOrder
+                                        ? null
+                                        : () => controller.cancelPendingPaymentSession(context),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: AppDesignSystem.rose600,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    child: Text(
+                                      'Cancel & New Order',
+                                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: checkoutState.isPlacingOrder
+                                        ? null
+                                        : () => controller.checkPendingPaymentStatus(context),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppDesignSystem.amber800,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      elevation: 0,
+                                      visualDensity: VisualDensity.compact,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    child: Text(
+                                      checkoutState.isPlacingOrder ? 'Checking...' : 'Check Status',
+                                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       // 1. Delivery Address Card
                       CheckoutDeliveryAddressCard(
                         selectedAddress: selectedAddress,
@@ -263,6 +334,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       // 6. Packaging Preference
                       CheckoutPackagingSelector(
                         selectedPackaging: checkoutState.selectedPackaging,
+                        standardFee: basePackagingFee,
                         onPackagingChanged: (val) => controller.setPackaging(val),
                       ),
                       const SizedBox(height: 14),
@@ -275,6 +347,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         packagingLabel: packagingLabel,
                         discountAmount: widget.discountAmount,
                         grandTotal: grandTotal,
+                        tipAmount: widget.tipAmount,
                         tier: tier,
                       ),
                       const SizedBox(height: 14),

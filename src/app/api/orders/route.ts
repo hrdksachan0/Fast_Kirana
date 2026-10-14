@@ -24,6 +24,8 @@ import { dispatchOrderNotifications } from '@/lib/order-notification-dispatcher'
 import { getCashfreeOrder, getCashfreeOrderPayments } from '@/lib/cashfree'
 import {
   generateOrderCartSignature,
+  computeRequestFingerprint,
+  getScopedIdempotencyKey,
   acquireIdempotencyLock,
   saveIdempotencyResponse,
   releaseIdempotencyLock,
@@ -137,15 +139,31 @@ export async function POST(request: NextRequest) {
   }
 
   let idempotencyKey: string | null = null
+  let requestFingerprint: string | null = null
   let orderCreatedSuccessfully = false
 
   if (userId) {
+    const rawReqTip = Number(body.tipAmount || body.tip || 0)
+    requestFingerprint = computeRequestFingerprint(
+      userId,
+      body.items || [],
+      body.addressId,
+      body.paymentMethod,
+      body.couponCode,
+      rawReqTip
+    )
     idempotencyKey = request.headers.get('x-idempotency-key') ||
       request.headers.get('idempotency-key') ||
       generateOrderCartSignature(userId, body.items || [], body.addressId, body.paymentMethod)
 
-    const idempotency = await acquireIdempotencyLock(idempotencyKey)
+    const idempotency = await acquireIdempotencyLock(idempotencyKey, 60, prisma, userId, requestFingerprint)
     if (idempotency.isDuplicate) {
+      if (idempotency.status === 403) {
+        return NextResponse.json({ error: idempotency.error || 'Forbidden: Idempotency key belongs to another user' }, { status: 403 })
+      }
+      if (idempotency.status === 409) {
+        return NextResponse.json({ error: idempotency.error || 'Idempotency key already used with different request payload' }, { status: 409 })
+      }
       if (idempotency.cachedResponse) {
         return NextResponse.json({
           ...idempotency.cachedResponse,
@@ -471,6 +489,17 @@ export async function POST(request: NextRequest) {
     const restaurantGroups: Record<string, { restaurant: any; items: any[] }> = {}
     const groceryItems: any[] = []
 
+    // Aggregate quantities for duplicate lines by (productId, variantName)
+    const aggregatedQuantities = new Map<string, number>()
+    for (const item of normalizedItems) {
+      const rawId = item.product.id
+      const isVariant = rawId.includes('_')
+      const [productId, variantNameFromId] = isVariant ? rawId.split('_') : [rawId, null]
+      const variantName = item.selectedVariant || variantNameFromId || null
+      const key = `${productId}:${variantName || ''}`
+      aggregatedQuantities.set(key, (aggregatedQuantities.get(key) || 0) + Number(item.quantity || 1))
+    }
+
     for (const item of normalizedItems) {
       const rawId = item.product.id
       const isVariant = rawId.includes('_')
@@ -531,11 +560,30 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const resolvedRestId = dbProduct.restaurantId || item.product.restaurantId || null
+      // Authoritative database-only restaurant derivation (client cannot convert grocery into restaurant)
+      const resolvedRestId = dbProduct.restaurantId || null
       const isRestaurantItem = !!resolvedRestId
 
       if (isRestaurantItem) {
         dbStock = 999999
+      }
+
+      const aggKey = `${productId}:${variantName || ''}`
+      const totalRequestedQuantity = aggregatedQuantities.get(aggKey) || Number(item.quantity || 1)
+
+      if (!isRestaurantItem && dbStock < totalRequestedQuantity) {
+        const nameSuffix = variantName ? ` (${variantName})` : ''
+        return NextResponse.json({
+          error: `Insufficient stock for product "${dbProduct.name}${nameSuffix}". Available: ${dbStock}, requested: ${totalRequestedQuantity}.`,
+        }, { status: 400 })
+      }
+
+      const productLimit = getProductLimit(dbProduct)
+      if (totalRequestedQuantity > productLimit) {
+        const nameSuffix = variantName ? ` (${variantName})` : ''
+        return NextResponse.json({
+          error: `Maximum order limit of ${productLimit} units exceeded for product "${dbProduct.name}${nameSuffix}".`,
+        }, { status: 400 })
       }
 
       const itemWithDb = {
@@ -1055,24 +1103,39 @@ export async function POST(request: NextRequest) {
     const isCombinedOrder = groceryItems.length > 0 && restaurantData.length > 0
     const applicableMiscFee = isCombinedOrder ? serverCombinedMiscFee : serverMiscFee
     const requestedPackagingFee = typeof body.packagingFee === 'number' ? body.packagingFee : (parseFloat(body.packagingFee || '0') || 0)
-    const isPremiumPackaging = packagingOption === 'PREMIUM' || requestedPackagingFee >= 15 || packagingFee === 15
+    const isPremiumPackaging = packagingOption === 'PREMIUM'
     const resolvedPackagingFee = isPremiumPackaging ? 15 : (requestedPackagingFee > 0 ? requestedPackagingFee : applicableMiscFee)
 
+    // Support driver tip add-on accurately across backend calculations (strictly reject negative or non-finite tip)
+    const rawTip = body.tip !== undefined ? body.tip : body.tipAmount
+    let tipAmount = 0
+    if (rawTip !== undefined && rawTip !== null && rawTip !== '') {
+      const parsedTip = typeof rawTip === 'number' ? rawTip : Number(rawTip)
+      if (isNaN(parsedTip) || !isFinite(parsedTip) || parsedTip < 0) {
+        return NextResponse.json({ error: 'Invalid tip amount: tip must be a non-negative finite number' }, { status: 400 })
+      }
+      tipAmount = Math.round(parsedTip * 100) / 100
+    }
+    let remainingTip = tipAmount
     let hasChargedMiscFee = false
 
     if (groceryItems.length > 0) {
       const groceryDiscount = combinedSubtotal > 0 ? (grocerySubtotal / combinedSubtotal) * combinedDiscount : 0
       const groceryTaxes = (grocerySubtotal - groceryDiscount) * serverTaxRate
       
-      // Standard packaging charge (₹5) or Premium packaging (₹15) on delivery orders
-      const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee) ? resolvedPackagingFee : 0
-      if (appliedMiscFee > 0) hasChargedMiscFee = true
+      // Standard packaging charge (₹5) or Premium packaging (₹15) on delivery orders + driver tip
+      const packagingPart = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee) ? resolvedPackagingFee : 0
+      const tipPart = remainingTip
+      remainingTip = 0
+      const appliedMiscFee = packagingPart + tipPart
+      if (packagingPart > 0) hasChargedMiscFee = true
 
       const groceryTotal = Math.max(0, Math.round((grocerySubtotal - groceryDiscount + groceryDeliveryFee + groceryTaxes + appliedMiscFee) * 100) / 100)
 
+      const gTipNote = tipPart > 0 ? `💰 Delivery Partner Tip: ₹${tipPart}` : null
       const gSurgeNote = (hubSurgeFee > 0 && groceryDeliveryFee > 0) ? `⚡ Surge Fee Applied: ₹${hubSurgeFee} (${hubSurgeReason})` : null
       const gPackagingNote = isPremiumPackaging ? '✨ Premium Thermal Packaging Requested (+₹15)' : null
-      const gCombinedNotes = [body.notes, gPackagingNote, gSurgeNote].filter(Boolean).join(' | ')
+      const gCombinedNotes = [body.notes, gPackagingNote, gSurgeNote, gTipNote].filter(Boolean).join(' | ')
 
       ordersToCreate.push({
         type: 'GROCERY',
@@ -1094,17 +1157,21 @@ export async function POST(request: NextRequest) {
       const isFirstRestOrder = restaurantData.indexOf(rData) === 0
       const rPackagingFee = isFirstRestOrder ? resolvedPackagingFee : 0
 
-      // If packaging/handling fee hasn't been charged on grocery, charge on restaurant order
-      const appliedMiscFee = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee)
+      // If packaging/handling fee hasn't been charged on grocery, charge on restaurant order + remaining driver tip
+      const packagingPart = (deliveryMethod !== 'PICKUP' && !hasChargedMiscFee)
         ? (rPackagingFee > 0 ? rPackagingFee : resolvedPackagingFee)
         : 0
-      if (appliedMiscFee > 0) hasChargedMiscFee = true
+      const tipPart = remainingTip
+      remainingTip = 0
+      const appliedMiscFee = packagingPart + tipPart
+      if (packagingPart > 0) hasChargedMiscFee = true
 
       const rTotal = Math.max(0, Math.round((rData.subtotal - rDiscount + rData.deliveryFee + rTaxes + appliedMiscFee) * 100) / 100)
 
+      const rTipNote = tipPart > 0 ? `💰 Delivery Partner Tip: ₹${tipPart}` : null
       const rSurgeNote = (hubSurgeFee > 0 && rData.deliveryFee > 0) ? `⚡ Surge Fee Applied: ₹${hubSurgeFee} (${hubSurgeReason})` : null
       const rPackagingNote = isPremiumPackaging ? '✨ Premium Thermal Packaging Requested (+₹15)' : null
-      const rCombinedNotes = [body.notes, rPackagingNote, rSurgeNote].filter(Boolean).join(' | ')
+      const rCombinedNotes = [body.notes, rPackagingNote, rSurgeNote, rTipNote].filter(Boolean).join(' | ')
 
       ordersToCreate.push({
         type: 'RESTAURANT',
@@ -1130,8 +1197,7 @@ export async function POST(request: NextRequest) {
 
     let isOnlinePaid = false
     const paymentId = String(body.paymentId || body.cfPaymentId || body.razorpayPaymentId || body.razorpay_payment_id || '').trim()
-    const notesCfMatch = typeof body.notes === 'string' ? body.notes.match(/\[CF_ORDER:([^\]]+)\]/)?.[1] : null
-    const cfCheckId = body.cfOrderId || notesCfMatch || (paymentId.startsWith('CF_') ? paymentId.replace(/^CF_/, '') : (paymentId.startsWith('cf_') ? paymentId : null))
+    const cfCheckId = body.cfOrderId || (paymentId.startsWith('CF_') ? paymentId.replace(/^CF_/, '') : (paymentId.startsWith('cf_') ? paymentId : null))
 
     // 🛡️ [DATABASE IDEMPOTENCY CHECK] Prevent duplicate order creation if Cashfree order was already recorded
     if (cfCheckId) {
@@ -1141,8 +1207,7 @@ export async function POST(request: NextRequest) {
             OR: [
               { id: cfCheckId },
               { readableId: cfCheckId },
-              { notes: { contains: `[CF_ORDER:${cfCheckId}]` } },
-              { notes: { contains: cfCheckId } },
+              { cfOrderId: cfCheckId },
             ],
           },
           include: { items: true, address: true },
@@ -1151,6 +1216,10 @@ export async function POST(request: NextRequest) {
 
         if (existingOrders.length > 0) {
           const firstOrder = existingOrders[0]
+          if (firstOrder.userId !== userId) {
+            console.error(`[Payment Security] CF ID ${cfCheckId} belongs to user ${firstOrder.userId}, caller is ${userId}`)
+            return NextResponse.json({ error: "Payment reference belongs to another user's order." }, { status: 403 })
+          }
           let allOrders = existingOrders
           if (firstOrder.combinedId) {
             allOrders = await prisma.order.findMany({
@@ -1170,7 +1239,8 @@ export async function POST(request: NextRequest) {
             idempotencyReplayed: true,
           }, { status: 200 })
         }
-      } catch (idempErr) {
+      } catch (idempErr: any) {
+        if (idempErr?.status === 403) throw idempErr
         console.warn('Idempotency check warning:', idempErr)
       }
     }
@@ -1180,17 +1250,38 @@ export async function POST(request: NextRequest) {
     } else if (isStaffSession && body.paymentStatus === 'PAID') {
       isOnlinePaid = true
     } else if (isOnlineRequested || body.paymentStatus === 'PAID' || paymentId) {
+      // 0. Verify initiating user from draft intent
+      if (cfCheckId) {
+        try {
+          const { cache } = await import('@/lib/redis-client')
+          const draftRaw = await cache.get(`draft_cf_order:${cfCheckId}`) || await cache.get(`cf_pending:${cfCheckId}`)
+          if (draftRaw) {
+            const draft = typeof draftRaw === 'string' ? JSON.parse(draftRaw) : draftRaw
+            const draftUid = draft.userId
+            if (draftUid && draftUid !== userId && !String(draftUid).startsWith('guest_')) {
+              console.error(`[Payment Security] cfCheckId ${cfCheckId} draft initiated by ${draftUid}, caller is ${userId}`)
+              return NextResponse.json({ error: "Payment was initiated by a different user." }, { status: 403 })
+            }
+          }
+        } catch (_) {}
+      }
+
       // 1. Check Redis cache first (in case Cashfree webhook fired before client /api/orders request)
       if (cfCheckId) {
         try {
           const { cache } = await import('@/lib/redis-client')
-          let cachedPaid = await cache.get(`cf_paid:${cfCheckId}`)
+          let cachedPaid: any = await cache.get(`cf_paid:${cfCheckId}`)
           if (!cachedPaid && cfCheckId.includes('_r')) {
             const cleanCf = cfCheckId.replace(/_r\d+$/, '')
             cachedPaid = await cache.get(`cf_paid:${cleanCf}`)
           }
-          if (cachedPaid) {
-            isOnlinePaid = true
+          if (cachedPaid && (cachedPaid.paid === true || cachedPaid === true)) {
+            const cachedAmount = typeof cachedPaid === 'object' && cachedPaid.amount !== undefined ? Number(cachedPaid.amount) : null
+            if (cachedAmount !== null && !isNaN(cachedAmount) && Math.abs(cachedAmount - overallTotal) <= 0.05) {
+              isOnlinePaid = true
+            } else {
+              console.warn(`[Payment Security] Cached Cashfree amount ₹${cachedAmount} invalid or != order overallTotal ₹${overallTotal}`)
+            }
           }
         } catch (_) {}
       }
@@ -1200,12 +1291,22 @@ export async function POST(request: NextRequest) {
         try {
           const cfOrder = await getCashfreeOrder(cfCheckId)
           if (cfOrder && cfOrder.order_status === 'PAID') {
-            isOnlinePaid = true
+            const cfAmt = Number(cfOrder.order_amount)
+            if (!isNaN(cfAmt) && Math.abs(cfAmt - overallTotal) <= 0.05) {
+              isOnlinePaid = true
+            } else {
+              console.warn(`[Payment Security] Cashfree order amount ₹${cfAmt} != order overallTotal ₹${overallTotal}`)
+            }
           } else {
             const payments = await getCashfreeOrderPayments(cfCheckId)
             const successfulPayment = payments.find(p => p.payment_status === 'SUCCESS')
             if (successfulPayment) {
-              isOnlinePaid = true
+              const payAmt = Number(successfulPayment.payment_amount)
+              if (!isNaN(payAmt) && Math.abs(payAmt - overallTotal) <= 0.05) {
+                isOnlinePaid = true
+              } else {
+                console.warn(`[Payment Security] Cashfree payment amount ₹${payAmt} != order overallTotal ₹${overallTotal}`)
+              }
             }
           }
         } catch (cfErr) {
@@ -1503,6 +1604,7 @@ export async function POST(request: NextRequest) {
               readableId: orderReadableId,
               addressId: orderAddressId,
               combinedId: combinedId,
+              cfOrderId: cfCheckId ? String(cfCheckId).trim() : null,
               orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
               status: initialOrderStatus,
               confirmedAt: (isOnlinePaid || initialOrderStatus === OrderStatus.CONFIRMED) ? now : null,
@@ -1566,6 +1668,39 @@ export async function POST(request: NextRequest) {
             usedCount: {
               increment: 1,
             },
+          },
+        })
+      }
+
+      // Save completed idempotency record atomically in the exact same transaction
+      if (idempotencyKey) {
+        const scopedKey = getScopedIdempotencyKey(idempotencyKey, userId, 'checkout')
+        const mainOrder = results.find((o) => !o.restaurantId) || results[0]
+        const prePayload = {
+          ...mainOrder,
+          order: mainOrder,
+          orders: results,
+          readableId: mainOrder?.readableId,
+          id: mainOrder?.id,
+        }
+        await tx.idempotencyRecord.upsert({
+          where: { key: scopedKey },
+          create: {
+            key: scopedKey,
+            userId: userId || null,
+            requestHash: requestFingerprint || null,
+            status: 'COMPLETED',
+            response: prePayload,
+            orderId: mainOrder?.id || null,
+            expiresAt: new Date(Date.now() + 86400 * 1000),
+          },
+          update: {
+            status: 'COMPLETED',
+            userId: userId || undefined,
+            requestHash: requestFingerprint || undefined,
+            response: prePayload,
+            orderId: mainOrder?.id || null,
+            expiresAt: new Date(Date.now() + 86400 * 1000),
           },
         })
       }
@@ -1672,7 +1807,7 @@ export async function POST(request: NextRequest) {
 
     orderCreatedSuccessfully = true
     if (idempotencyKey) {
-      await saveIdempotencyResponse(idempotencyKey, responsePayload)
+      await saveIdempotencyResponse(idempotencyKey, responsePayload, 86400, prisma, userId, requestFingerprint || undefined)
     }
 
     // 🔄 Auto-reconcile orphan payments — if webhook arrived before order creation,
@@ -1726,7 +1861,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message || 'Failed to place order' }, { status: 500 })
   } finally {
     if (!orderCreatedSuccessfully && idempotencyKey) {
-      await releaseIdempotencyLock(idempotencyKey)
+      await releaseIdempotencyLock(idempotencyKey, prisma, userId)
     }
   }
 }

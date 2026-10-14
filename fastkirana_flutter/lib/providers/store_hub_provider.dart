@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/store_hub.dart';
 import '../core/services/logger_service.dart';
 import '../core/services/supabase_service.dart';
@@ -124,6 +125,7 @@ final nearestHubResultProvider = Provider<NearestHubResult>((ref) {
     address: '${resolvedHub.name}, ${resolvedHub.city}',
     id: resolvedHub.id,
   );
+  SharedPreferences.getInstance().then((p) => p.setString('selected_hub_id', resolvedHub.id));
 
   return NearestHubResult(
     hub: resolvedHub,

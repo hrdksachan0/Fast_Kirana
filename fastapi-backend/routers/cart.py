@@ -4,6 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy import desc, delete
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+import os
 import uuid
 import hashlib
 
@@ -95,10 +96,12 @@ async def get_cart(
     Supports per-hub localized stock & availability hydration.
     """
     user_id = get_user_id(current_user)
-    if not user_id and x_user_id:
-        user_id = x_user_id
-    if not user_id and request and request.headers.get("x-user-id"):
-        user_id = request.headers.get("x-user-id")
+    x_internal_secret = request.headers.get("x-internal-secret") if request else None
+    internal_secret = os.getenv("INTERNAL_API_SECRET", "").strip()
+    is_internal_service = bool(internal_secret and x_internal_secret == internal_secret)
+
+    if not user_id and is_internal_service:
+        user_id = x_user_id or (request.headers.get("x-user-id") if request else None)
 
     guest_id = x_guest_id or (request.headers.get("x-guest-id") if request else None)
     if not user_id and guest_id:
@@ -221,10 +224,12 @@ async def sync_cart(
     Expected payload: {"items": [{"productId": "xxx", "quantity": 1, "selectedVariant": null, "notes": ""}]}
     """
     user_id = get_user_id(current_user)
-    if not user_id and x_user_id:
-        user_id = x_user_id
-    if not user_id and request and request.headers.get("x-user-id"):
-        user_id = request.headers.get("x-user-id")
+    x_internal_secret = request.headers.get("x-internal-secret") if request else None
+    internal_secret = os.getenv("INTERNAL_API_SECRET", "").strip()
+    is_internal_service = bool(internal_secret and x_internal_secret == internal_secret)
+
+    if not user_id and is_internal_service:
+        user_id = x_user_id or (request.headers.get("x-user-id") if request else None)
 
     guest_id = payload.get("guestId") or x_guest_id or (request.headers.get("x-guest-id") if request else None)
     store_id = x_store_id or (request.headers.get("x-store-id") if request else None) or payload.get("storeId")

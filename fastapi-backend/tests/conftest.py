@@ -5,6 +5,7 @@ import os
 os.environ.setdefault("AUTH_SECRET", "ci_test_auth_secret_key_32chars_long_000")
 os.environ.setdefault("INTERNAL_API_SECRET", "ci_test_secret_32chars_long_key_00")
 os.environ.setdefault("CASHFREE_ENV", "TEST")
+os.environ["TESTING"] = "1"
 
 import pytest
 import pytest_asyncio
@@ -38,11 +39,25 @@ TestingSessionLocal = async_sessionmaker(
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def prepare_database():
+    os.environ["AUTH_SECRET"] = "ci_test_auth_secret_key_32chars_long_000"
+    os.environ["INTERNAL_API_SECRET"] = "ci_test_secret_32chars_long_key_00"
+    try:
+        from utils.idempotency import _memory_locks
+        _memory_locks.clear()
+    except Exception:
+        pass
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    try:
+        from utils.idempotency import _memory_locks
+        _memory_locks.clear()
+    except Exception:
+        pass
+    os.environ["AUTH_SECRET"] = "ci_test_auth_secret_key_32chars_long_000"
+    os.environ["INTERNAL_API_SECRET"] = "ci_test_secret_32chars_long_key_00"
 
 async def override_get_db():
     async with TestingSessionLocal() as session:

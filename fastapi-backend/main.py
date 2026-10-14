@@ -294,8 +294,16 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def global_exception_handler(request: Request, exc: Exception):
     correlation_id = getattr(request.state, "request_id", str(uuid.uuid4()))
     logger.error(f"CRITICAL ERROR [ReqID: {correlation_id}] on {request.url}: {exc}")
-    if settings.SENTRY_DSN:
-        sentry_sdk.capture_exception(exc)
+    if sentry_sdk and settings.SENTRY_DSN:
+        try:
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("request_id", correlation_id)
+                scope.set_extra("url", str(request.url))
+                scope.set_extra("method", request.method)
+                scope.set_extra("client_ip", request.client.host if request.client else "unknown")
+                sentry_sdk.capture_exception(exc)
+        except Exception as sentry_err:
+            logger.warning(f"Failed capturing exception to Sentry: {sentry_err}")
     err_str = str(exc) or "An internal server error occurred. Please contact support."
     return ORJSONResponse(
         status_code=500,

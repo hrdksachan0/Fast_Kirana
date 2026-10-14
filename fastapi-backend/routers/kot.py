@@ -12,11 +12,13 @@ import asyncio
 import httpx
 import websockets
 from datetime import datetime, timezone, timedelta
+import os
 
 from database import get_db
 from models import Order, Restaurant, User
 from config import settings
 from routers.websockets import manager
+from routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -173,10 +175,13 @@ def generate_standard_kot_text(
 
 
 @router.post("/kot-broadcast")
+@router.post("/kot/broadcast")
 @router.post("/api/kot-broadcast")
+@router.post("/api/kot/broadcast")
 async def broadcast_kot(
     req: KotBroadcastRequest,
     request: Request,
+    current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     if not req.orderId:
@@ -188,24 +193,41 @@ async def broadcast_kot(
     base_readable = re.sub(r"-[GR\d]+$", "", clean_readable, flags=re.IGNORECASE) if clean_readable else ""
     now = time.time()
 
-    # 🛡️ Legacy Checkout Auto-KOT Interceptor:
-    # Do NOT trigger kitchen prints from automated customer checkouts!
-    # Only manual dispatch from Admin Orders Tab, Order Modal, Kitchen Console, or authorized Staff is permitted.
-    header_role = (request.headers.get("x-user-role") or "").upper()
-    header_phone = request.headers.get("x-user-phone") or ""
-    is_admin_or_staff = (
-        header_role in ["ADMIN", "RESTAURANT_OWNER", "CHEF", "SUPER_ADMIN", "SUPERADMIN"] or
-        "8112849854" in header_phone
-    )
-    is_manual_admin_dispatch = bool(
-        req.manual is True or
-        req.source in ["orders_tab", "order_modal", "admin_console", "kitchen_console", "orders_tab_fallback", "flutter_app"] or
-        (req.kotText and "FASTKIRANA KOT" in req.kotText)
-    )
+    # Authenticate caller: either verified internal service or authenticated staff member
+    x_internal_secret = request.headers.get("x-internal-secret")
+    internal_secret = os.getenv("INTERNAL_API_SECRET", "").strip()
+    is_internal_service = bool(internal_secret and x_internal_secret == internal_secret)
 
-    if not is_admin_or_staff and not is_manual_admin_dispatch:
-        logger.info(f"[KOT Broadcast API] 🛡️ Ignored checkout auto-KOT for Order #{clean_readable or clean_id}")
-        return {"success": True, "ignored": True, "reason": "Auto-KOT on checkout disabled"}
+    if not is_internal_service:
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized: Authentication required for kitchen operations"
+            )
+        role = (current_user.get("role") or "").upper()
+        if role not in ["ADMIN", "SUPER_ADMIN", "RESTAURANT_OWNER", "CHEF"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Staff role required for KOT printing"
+            )
+        assigned_rest = current_user.get("assignedRestaurantId")
+        if role not in ["ADMIN", "SUPER_ADMIN"]:
+            if not assigned_rest:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Forbidden: Staff has no assigned restaurant outlet"
+                )
+            if req.restaurantId and req.restaurantId != assigned_rest:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Forbidden: Cannot dispatch KOT for another restaurant outlet"
+                )
+        elif role == "ADMIN" and assigned_rest:
+            if req.restaurantId and req.restaurantId != assigned_rest:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Forbidden: Admin assigned to restaurant cannot dispatch KOT for another restaurant"
+                )
 
     # Dynamic debounce window: 15 seconds to prevent multiple slips on multi-tap / slow internet
     cooldown_window = 15.0
@@ -225,7 +247,9 @@ async def broadcast_kot(
     if base_readable and base_readable != "FK":
         recent_broadcast_timestamps[base_readable] = now
 
-    target_restaurant_id = req.restaurantId
+    assigned_rest = current_user.get("assignedRestaurantId") if current_user else None
+    role = (current_user.get("role") or "").upper() if current_user else ""
+    target_restaurant_id = assigned_rest if (role not in ["ADMIN", "SUPER_ADMIN"] and assigned_rest) else req.restaurantId
     target_readable = clean_readable
     target_items = req.items or []
     customer_name = req.customerName
@@ -243,6 +267,18 @@ async def broadcast_kot(
         res = await db.execute(stmt)
         order_obj = res.scalar_one_or_none()
         if order_obj:
+            if role != "SUPER_ADMIN" and assigned_rest:
+                if order_obj.restaurantId != assigned_rest:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Forbidden: Cannot dispatch KOT for another restaurant outlet's order"
+                    )
+            elif role not in ["ADMIN", "SUPER_ADMIN"]:
+                if not order_obj.restaurantId:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Forbidden: Cannot dispatch KOT for non-restaurant grocery orders"
+                    )
             if not target_restaurant_id:
                 target_restaurant_id = order_obj.restaurantId
             if not target_readable:
@@ -272,6 +308,8 @@ async def broadcast_kot(
                     }
                     for it in order_obj.items
                 ]
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning(f"[KOT Broadcast] DB order enrichment note: {e}")
 
@@ -386,10 +424,7 @@ async def broadcast_kot(
         await db.rollback()
 
     # 2. Supabase Realtime WebSocket Broadcast (Direct zero-latency delivery to PC Printer Bridge & Web KDS)
-    topics_to_send = [
-        "realtime:restaurant-orders-live",
-        "restaurant-orders-live",
-    ]
+    topics_to_send = []
     if target_restaurant_id:
         topics_to_send.extend([
             f"realtime:restaurant-orders-{target_restaurant_id}",
@@ -413,8 +448,6 @@ async def broadcast_kot(
             await manager.broadcast_to_channel(f"restaurant_{target_restaurant_id}", kot_evt)
             await manager.broadcast_to_channel(f"restaurant-orders-{target_restaurant_id}", kot_evt)
             await manager.broadcast_to_channel(f"kitchen_{target_restaurant_id}", kot_evt)
-        await manager.broadcast_to_channel("restaurant-orders-live", kot_evt)
-        await manager.broadcast(kot_evt)
     except Exception as ws_err:
         logger.warning(f"[KOT Broadcast] Internal WebSocket broadcast note: {ws_err}")
 

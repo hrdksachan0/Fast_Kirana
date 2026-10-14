@@ -61,54 +61,31 @@ export const authConfig = {
       }
       if (trigger === 'update' && session) {
         if (session.name) token.name = session.name
-        if (session.phone) token.phone = session.phone
-        if (session.email) token.email = session.email
+        // Phone and email cannot be updated client-side through session update to prevent privilege escalation
       }
 
       // Ensure token always has real-time DB role, phone, and assignedStoreId
-      if (token.id || user?.id || user?.email) {
+      // Identity is strictly anchored to token.id (or initial user.id)
+      const authenticatedUserId = (token.id || user?.id) as string
+      if (authenticatedUserId) {
         try {
           const { prisma } = require('@/lib/prisma')
-          const userId = (token.id || user?.id) as string
-          const userEmail = (token.email || user?.email) as string
-          const dbUser = await prisma.user.findFirst({
-            where: {
-              OR: [
-                userId ? { id: userId } : null,
-                userEmail ? { email: userEmail.toLowerCase() } : null
-              ].filter(Boolean)
-            },
-            select: { id: true, email: true, role: true, assignedRestaurantId: true, assignedStoreId: true, phone: true }
+          const dbUser = await prisma.user.findUnique({
+            where: { id: authenticatedUserId },
+            select: { id: true, email: true, role: true, assignedRestaurantId: true, assignedStoreId: true, phone: true, isBlocked: true }
           })
-          if (dbUser) {
+          if (dbUser && !dbUser.isBlocked) {
             token.id = dbUser.id
-            const isMasterAdmin =
-              isRootAdminAccount({
-                email: dbUser.email || userEmail,
-                phone: dbUser.phone || (token.phone as string),
-                role: dbUser.role || (token.role as string),
-              }) ||
-              isRootAdminAccount({ email: token.email as string, phone: token.phone as string })
-
-            token.role = isMasterAdmin ? 'ADMIN' : dbUser.role
+            token.role = dbUser.role || 'USER'
             token.assignedRestaurantId = dbUser.assignedRestaurantId
             token.assignedStoreId = dbUser.assignedStoreId
             if (dbUser.phone) token.phone = dbUser.phone
+            if (dbUser.email) token.email = dbUser.email
           } else {
-            const isMasterAdmin = isRootAdminAccount({ email: token.email as string, phone: token.phone as string, role: token.role as string })
-            if (isMasterAdmin) {
-              token.role = 'ADMIN'
-            } else if (!token.role) {
-              token.role = 'USER'
-            }
-          }
-        } catch (e) {
-          const isMasterAdmin = isRootAdminAccount({ email: token.email as string, phone: token.phone as string, role: token.role as string })
-          if (isMasterAdmin) {
-            token.role = 'ADMIN'
-          } else if (!token.role) {
             token.role = 'USER'
           }
+        } catch (e) {
+          if (!token.role) token.role = 'USER'
         }
       }
 

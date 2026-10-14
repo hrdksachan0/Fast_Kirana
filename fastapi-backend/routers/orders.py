@@ -24,7 +24,15 @@ from routers.auth import require_auth, get_current_user
 from routers.websockets import manager
 from utils.firebase import send_fcm_notification, send_fcm_topic_notification
 from routers.orders_service import generate_id, get_last_10_digits, get_distance_km, validate_order_status_transition
-from utils.idempotency import generate_order_cart_signature, acquire_idempotency_lock, save_idempotency_response, release_idempotency_lock
+from utils.idempotency import (
+    generate_order_cart_signature,
+    compute_request_fingerprint,
+    acquire_idempotency_lock_async,
+    save_idempotency_response_async,
+    record_idempotency_result_db_async,
+    publish_idempotency_cache_async,
+    release_idempotency_lock_async,
+)
 from services.order_calculation_service import (
     get_delivery_rules,
     get_product_type,
@@ -93,6 +101,10 @@ async def send_whatsapp_alert(phone: str, text: str, dedupe_key: Optional[str] =
     phone_id = re.sub(r'\s+', '', os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip().strip('"').strip("'"))
     template_name = os.getenv("WHATSAPP_ORDER_TEMPLATE_NAME", "fastkirana_otp").strip().strip('"').strip("'")
     template_lang = os.getenv("WHATSAPP_TEMPLATE_LANG", "en").strip().strip('"').strip("'")
+
+    if os.getenv("TESTING") == "1" or os.getenv("PYTEST_CURRENT_TEST"):
+        logger.info(f"[WHATSAPP TEST MOCK] Suppressed live WhatsApp alert to {phone} during automated test run: {text}")
+        return True
 
     if not token or not phone_id:
         logger.info(f"[WHATSAPP MOCK] To {phone}: {text}")
@@ -471,6 +483,88 @@ async def dispatch_isolated_status_update_notifications(
         logger.error(f"Failed to dispatch isolated status FCM push notification: {str(e)}")
 
 
+def _build_replayed_order_payload(main_match: Any, all_matches: List[Any]) -> Dict[str, Any]:
+    matched_user = main_match.user
+    matched_addr = main_match.address
+    matched_items = [
+        {
+            "id": item.id,
+            "productId": item.productId,
+            "name": item.name,
+            "price": float(item.price),
+            "quantity": item.quantity,
+            "imageUrl": item.imageUrl,
+            "selectedVariant": item.selectedVariant,
+            "costPrice": float(item.costPrice or 0),
+            "variants": item.variants,
+            "notes": item.notes,
+        }
+        for item in (main_match.items or [])
+    ]
+
+    return {
+        "id": main_match.id,
+        "readableId": main_match.readableId,
+        "userId": main_match.userId,
+        "type": main_match.type.value if hasattr(main_match.type, "value") else str(main_match.type),
+        "restaurantId": main_match.restaurantId,
+        "status": main_match.status.value if hasattr(main_match.status, "value") else str(main_match.status),
+        "subtotal": float(main_match.subtotal or 0),
+        "discount": float(main_match.discount or 0),
+        "deliveryFee": float(main_match.deliveryFee or 0),
+        "taxes": float(main_match.taxes or 0),
+        "miscFee": float(main_match.miscFee or 0),
+        "packagingFee": float(main_match.miscFee or 0),
+        "total": float(main_match.total or 0),
+        "paymentMethod": main_match.paymentMethod.value if hasattr(main_match.paymentMethod, "value") else str(main_match.paymentMethod),
+        "paymentStatus": main_match.paymentStatus.value if hasattr(main_match.paymentStatus, "value") else str(main_match.paymentStatus),
+        "estimatedDelivery": to_iso_utc(main_match.estimatedDelivery),
+        "deliveryMethod": main_match.deliveryMethod,
+        "isB2B": main_match.isB2B,
+        "shopName": main_match.shopName,
+        "shopPhone": main_match.shopPhone,
+        "notes": main_match.notes,
+        "couponCode": main_match.couponCode,
+        "customerName": matched_user.name if matched_user else None,
+        "customerPhone": (matched_user.phone if matched_user else None) or (matched_addr.phone if matched_addr else None),
+        "customerAddress": f"{matched_addr.houseNo or ''}, {matched_addr.street or ''}, {matched_addr.area or ''}, {matched_addr.city or ''}, {matched_addr.pincode or ''}" if matched_addr else None,
+        "createdAt": to_iso_utc(main_match.createdAt),
+        "updatedAt": to_iso_utc(main_match.updatedAt),
+        "confirmedAt": to_iso_utc(main_match.confirmedAt),
+        "packedAt": to_iso_utc(main_match.packedAt),
+        "shippedAt": to_iso_utc(main_match.shippedAt),
+        "deliveredAt": to_iso_utc(main_match.deliveredAt),
+        "items": matched_items,
+        "address": {
+            "id": matched_addr.id,
+            "houseNo": matched_addr.houseNo,
+            "street": matched_addr.street,
+            "area": matched_addr.area,
+            "city": matched_addr.city,
+            "pincode": matched_addr.pincode,
+            "phone": matched_addr.phone,
+            "label": matched_addr.label,
+        } if matched_addr else None,
+        "order": {
+            "id": main_match.id,
+            "readableId": main_match.readableId,
+            "status": main_match.status.value if hasattr(main_match.status, "value") else str(main_match.status),
+            "total": float(main_match.total or 0),
+            "restaurantId": main_match.restaurantId,
+            "shopName": main_match.shopName,
+        },
+        "orders": [{
+            "id": o.id,
+            "readableId": o.readableId,
+            "status": o.status.value if hasattr(o.status, "value") else str(o.status),
+            "total": float(o.total or 0),
+            "restaurantId": o.restaurantId,
+            "shopName": o.shopName,
+        } for o in all_matches],
+        "idempotencyReplayed": True,
+    }
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_order(
     request: Request,
@@ -521,13 +615,28 @@ async def create_order(
         else:
             user_id = user_obj.id
 
-    # H2 FIX: Idempotency lock check
+    # H2 FIX: Idempotency lock check with canonical request fingerprint
+    raw_req_items = payload.get("items", [])
+    raw_req_addr = payload.get("addressId")
+    raw_req_pm = payload.get("paymentMethod")
+    raw_req_coupon = payload.get("couponCode")
+    raw_req_tip = float(payload.get("tipAmount") or payload.get("tip") or 0.0)
+    request_fingerprint = compute_request_fingerprint(
+        user_id=user_id,
+        items=raw_req_items,
+        address_id=raw_req_addr,
+        payment_method=raw_req_pm,
+        coupon_code=raw_req_coupon,
+        tip_amount=raw_req_tip,
+    )
     idempotency_key = (
         request.headers.get("x-idempotency-key")
         or request.headers.get("idempotency-key")
-        or generate_order_cart_signature(user_id, payload.get("items", []), payload.get("addressId"), payload.get("paymentMethod"))
+        or generate_order_cart_signature(user_id, raw_req_items, raw_req_addr, raw_req_pm)
     )
-    is_dup, is_proc, cached_resp = acquire_idempotency_lock(idempotency_key)
+    is_dup, is_proc, cached_resp = await acquire_idempotency_lock_async(
+        idempotency_key, db=db, user_id=user_id, request_hash=request_fingerprint
+    )
     if is_dup:
         if cached_resp:
             return {**cached_resp, "idempotencyReplayed": True}
@@ -872,7 +981,14 @@ async def create_order(
         return True
 
     # Load products and validate quantities
-    product_ids = [i["product"]["id"].split("_")[0] for i in items if i.get("product", {}).get("id")]
+    product_ids = []
+    for i in items:
+        pid = i.get("product", {}).get("id") or i.get("productId")
+        if pid:
+            pid_str = str(pid)
+            product_ids.append(pid_str)
+            if "_" in pid_str:
+                product_ids.append(pid_str.split("_")[0])
     product_slugs = [i["product"]["slug"] for i in items if i.get("product", {}).get("slug")]
 
     p_stmt = select(Product).options(selectinload(Product.category)).where(
@@ -880,6 +996,7 @@ async def create_order(
     ).with_for_update()
     p_res = await db.execute(p_stmt)
     db_products = p_res.scalars().all()
+    db_product_ids = {p.id for p in db_products}
 
     # Query localized store inventory (e.g. Ghatampur hub-209206)
     effective_store_id = store_id or "hub-209206"
@@ -888,7 +1005,7 @@ async def create_order(
         from models import StoreInventory
         store_inv_stmt = select(StoreInventory).where(
             StoreInventory.storeId == effective_store_id,
-            StoreInventory.productId.in_(product_ids)
+            StoreInventory.productId.in_(list(db_product_ids))
         )
         store_inv_res = await db.execute(store_inv_stmt)
         store_inv_map = {inv.productId: inv for inv in store_inv_res.scalars().all()}
@@ -896,14 +1013,36 @@ async def create_order(
     grocery_items = []
     restaurant_groups = {}
 
+    # Aggregate quantities for duplicate lines by (productId, variantName)
+    aggregated_quantities = {}
     for item in items:
         prod_payload = item["product"]
         raw_id = str(prod_payload.get("id") or item.get("productId") or "")
-        is_variant = "_" in raw_id
-        if is_variant:
+        if raw_id in db_product_ids:
+            p_id = raw_id
+            v_name = item.get("selectedVariant") or prod_payload.get("selectedVariant")
+        elif "_" in raw_id:
+            parts = raw_id.split("_")
+            p_id = parts[0]
+            v_name = parts[1] if len(parts) > 1 and parts[1] != "addons" else None
+        else:
+            p_id = raw_id
+            v_name = item.get("selectedVariant") or prod_payload.get("selectedVariant")
+        key = (p_id, v_name)
+        aggregated_quantities[key] = aggregated_quantities.get(key, 0) + int(item.get("quantity", 1))
+
+    for item in items:
+        prod_payload = item["product"]
+        raw_id = str(prod_payload.get("id") or item.get("productId") or "")
+        if raw_id in db_product_ids:
+            product_id = raw_id
+            variant_name = item.get("selectedVariant") or prod_payload.get("selectedVariant")
+            is_variant = bool(variant_name)
+        elif "_" in raw_id:
             parts = raw_id.split("_")
             product_id = parts[0]
             variant_name = parts[1] if len(parts) > 1 and parts[1] != "addons" else None
+            is_variant = True
         else:
             product_id = raw_id
             variant_name = item.get("selectedVariant") or prod_payload.get("selectedVariant")
@@ -932,11 +1071,8 @@ async def create_order(
         else:
             db_stock = local_inv.stock if local_inv else db_prod.stock
 
-        resolved_rest_id = (
-            db_prod.restaurantId
-            or item.get("restaurantId")
-            or (item.get("product") or {}).get("restaurantId")
-        )
+        # Authoritative database-only restaurant derivation (client cannot convert grocery into restaurant)
+        resolved_rest_id = db_prod.restaurantId
         is_restaurant = bool(resolved_rest_id)
         if is_restaurant:
             if db_prod.stock is not None and db_prod.stock <= 0:
@@ -944,15 +1080,22 @@ async def create_order(
             else:
                 db_stock = 999999
 
-        if db_stock < int(item["quantity"]):
+        total_requested_qty = aggregated_quantities.get((product_id, variant_name), int(item["quantity"]))
+        if not is_restaurant and db_stock < total_requested_qty:
             name_suffix = f" ({variant_name})" if variant_name else ""
-            raise HTTPException(status_code=400, detail=f"Insufficient stock for product \"{db_prod.name}{name_suffix}\"")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient stock for product \"{db_prod.name}{name_suffix}\". Available: {db_stock}, requested: {total_requested_qty}"
+            )
 
         # Limits check
         limit = get_product_limit(db_prod)
-        if int(item["quantity"]) > limit:
+        if total_requested_qty > limit:
             name_suffix = f" ({variant_name})" if variant_name else ""
-            raise HTTPException(status_code=400, detail=f"Maximum order limit of {limit} units exceeded for product \"{db_prod.name}{name_suffix}\"")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Maximum order limit of {limit} units exceeded for product \"{db_prod.name}{name_suffix}\""
+            )
 
         item["dbProduct"] = db_prod
         item_with_db = item
@@ -1026,8 +1169,20 @@ async def create_order(
     combined_subtotal = 0.0
     for item in items:
         prod_payload = item["product"]
-        is_variant = "_" in prod_payload["id"]
-        product_id, variant_name = prod_payload["id"].split("_") if is_variant else (prod_payload["id"], None)
+        raw_pid = str(prod_payload.get("id") or item.get("productId") or "")
+        if raw_pid in db_product_ids:
+            product_id = raw_pid
+            variant_name = item.get("selectedVariant") or prod_payload.get("selectedVariant")
+            is_variant = bool(variant_name)
+        elif "_" in raw_pid:
+            parts = raw_pid.split("_")
+            product_id = parts[0]
+            variant_name = parts[1] if len(parts) > 1 and parts[1] != "addons" else None
+            is_variant = True
+        else:
+            product_id = raw_pid
+            variant_name = item.get("selectedVariant") or prod_payload.get("selectedVariant")
+            is_variant = bool(variant_name)
 
         db_prod = next((p for p in db_products if p.id == product_id), None)
         if not db_prod and prod_payload.get("slug"):
@@ -1280,8 +1435,20 @@ async def create_order(
     def get_order_subtotal(item_list: list) -> float:
         sub = 0.0
         for it in item_list:
-            is_var = "_" in it["product"]["id"]
-            p_id, var_name = it["product"]["id"].split("_") if is_var else (it["product"]["id"], None)
+            raw_id = str(it["product"]["id"])
+            if raw_id in db_product_ids:
+                p_id = raw_id
+                var_name = it.get("selectedVariant") or it["product"].get("selectedVariant")
+                is_var = bool(var_name)
+            elif "_" in raw_id:
+                parts = raw_id.split("_")
+                p_id = parts[0]
+                var_name = parts[1] if len(parts) > 1 and parts[1] != "addons" else None
+                is_var = True
+            else:
+                p_id = raw_id
+                var_name = it.get("selectedVariant") or it["product"].get("selectedVariant")
+                is_var = bool(var_name)
             item_price = it["dbProduct"].price
             if is_var and it["dbProduct"].variants:
                 variant = next((v for v in it["dbProduct"].variants if v.get("name") == var_name), None)
@@ -1316,9 +1483,21 @@ async def create_order(
     server_misc_fee = float(settings_map.get("misc_fee", 5.0))
     server_combined_misc_fee = float(settings_map.get("combined_misc_fee", server_misc_fee))
     packaging_fee_input = float(payload.get("packagingFee", payload.get("packaging_fee", 0.0)))
-    is_premium_packaging = packaging_option == "PREMIUM" or packaging_fee == 15.0 or packaging_fee_input >= 15.0
+    is_premium_packaging = packaging_option == "PREMIUM"
     applicable_misc_fee = server_combined_misc_fee if is_combined else server_misc_fee
     resolved_packaging_fee = 15.0 if is_premium_packaging else (packaging_fee_input if packaging_fee_input > 0 else (applicable_misc_fee if (restaurant_id or is_combined) else 5.0))
+
+    # Support driver tip add-on accurately across backend calculations (strictly reject negative or non-finite tip)
+    raw_tip = payload.get("tip") if payload.get("tip") is not None else payload.get("tipAmount")
+    tip_amount = 0.0
+    if raw_tip is not None and str(raw_tip).strip() != "":
+        try:
+            parsed_tip = float(raw_tip)
+            if not math.isfinite(parsed_tip) or parsed_tip < 0:
+                raise HTTPException(status_code=400, detail="Invalid tip amount: tip must be a non-negative finite number")
+            tip_amount = round(parsed_tip, 2)
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Invalid tip amount: tip must be a valid number")
 
     # Calculate unified order amounts
     subtotal = combined_subtotal
@@ -1332,14 +1511,17 @@ async def create_order(
         if subtotal < free_delivery_threshold:
             delivery_fee_charge = delivery_rules["deliveryFee"] if delivery_rules else delivery_fee_val
 
-    misc_fee_charge = resolved_packaging_fee if delivery_method != "PICKUP" else 0.0
-    final_total = max(0.0, subtotal - discount + delivery_fee_charge + misc_fee_charge)
+    misc_fee_charge = (resolved_packaging_fee if delivery_method != "PICKUP" else 0.0) + tip_amount
+    final_total = max(0.0, round(subtotal - discount + delivery_fee_charge + misc_fee_charge, 2))
 
     # 6. Create Orders (ID-wise splitting for Combined Orders)
     created_orders = []
     try:
-        seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')::int as nextval"))
-        readable_id = str(seq_res.scalar())
+        try:
+            seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')::int as nextval"))
+            readable_id = str(seq_res.scalar())
+        except Exception:
+            readable_id = f"FK-{int(time.time() * 1000) % 1000000:06d}"
 
         combined_id = f"combined_{uuid.uuid4().hex[:9]}_{int(datetime.utcnow().timestamp())}" if is_combined else None
 
@@ -1378,11 +1560,7 @@ async def create_order(
         incoming_payment_id = str(payload.get("paymentId") or payload.get("cfPaymentId") or "").strip()
         incoming_cf_order_id = str(payload.get("cfOrderId") or "").strip()
         if not incoming_cf_order_id:
-            incoming_notes_str = str(payload.get("notes") or "")
-            cf_match = re.search(r"\[CF_ORDER:([^\]]+)\]", incoming_notes_str)
-            if cf_match:
-                incoming_cf_order_id = cf_match.group(1).strip()
-            elif incoming_payment_id.startswith("CF_"):
+            if incoming_payment_id.startswith("CF_"):
                 incoming_cf_order_id = incoming_payment_id.replace("CF_", "")
             elif incoming_payment_id.startswith("cf_"):
                 incoming_cf_order_id = incoming_payment_id
@@ -1390,19 +1568,21 @@ async def create_order(
         # 🛡️ [DATABASE IDEMPOTENCY CHECK] Prevent duplicate order creation if Cashfree order was already placed
         if incoming_cf_order_id:
             try:
-                cf_match_pat = f"%{incoming_cf_order_id}%"
                 exist_res = await db.execute(
                     select(Order).where(
                         or_(
                             Order.id == incoming_cf_order_id,
                             Order.readableId == incoming_cf_order_id,
-                            Order.notes.ilike(cf_match_pat),
+                            Order.cfOrderId == incoming_cf_order_id,
                         )
                     ).options(selectinload(Order.items), selectinload(Order.address), selectinload(Order.user)).order_by(Order.createdAt.asc())
                 )
                 existing_matched = exist_res.scalars().all()
                 if existing_matched:
                     first_match = existing_matched[0]
+                    if first_match.userId != user_id:
+                        logger.error(f"[Payment Security] Order #{first_match.readableId} belongs to user '{first_match.userId}', but caller is '{user_id}'. Replay rejected.")
+                        raise HTTPException(status_code=403, detail="Payment reference belongs to another user's order.")
                     all_matches = list(existing_matched)
                     if first_match.combinedId:
                         comb_res = await db.execute(
@@ -1413,94 +1593,32 @@ async def create_order(
                         all_matches = comb_res.scalars().all()
                     main_match = next((o for o in all_matches if not o.restaurantId), all_matches[0])
                     logger.info(f"🛡️ [IDEMPOTENCY] FastAPI returning existing order #{main_match.readableId} for CF ID {incoming_cf_order_id}")
-                    
-                    matched_user = main_match.user
-                    matched_addr = main_match.address
-                    matched_items = [
-                        {
-                            "id": item.id,
-                            "productId": item.productId,
-                            "name": item.name,
-                            "price": float(item.price),
-                            "quantity": item.quantity,
-                            "imageUrl": item.imageUrl,
-                            "selectedVariant": item.selectedVariant,
-                            "costPrice": float(item.costPrice or 0),
-                            "variants": item.variants,
-                            "notes": item.notes,
-                        }
-                        for item in main_match.items
-                    ]
-                    
-                    replayed_payload = {
-                        "id": main_match.id,
-                        "readableId": main_match.readableId,
-                        "userId": main_match.userId,
-                        "type": main_match.type.value if hasattr(main_match.type, "value") else str(main_match.type),
-                        "restaurantId": main_match.restaurantId,
-                        "status": main_match.status.value if hasattr(main_match.status, "value") else str(main_match.status),
-                        "subtotal": float(main_match.subtotal or 0),
-                        "discount": float(main_match.discount or 0),
-                        "deliveryFee": float(main_match.deliveryFee or 0),
-                        "taxes": float(main_match.taxes or 0),
-                        "miscFee": float(main_match.miscFee or 0),
-                        "packagingFee": float(main_match.miscFee or 0),
-                        "total": float(main_match.total or 0),
-                        "paymentMethod": main_match.paymentMethod.value if hasattr(main_match.paymentMethod, "value") else str(main_match.paymentMethod),
-                        "paymentStatus": main_match.paymentStatus.value if hasattr(main_match.paymentStatus, "value") else str(main_match.paymentStatus),
-                        "estimatedDelivery": to_iso_utc(main_match.estimatedDelivery),
-                        "deliveryMethod": main_match.deliveryMethod,
-                        "isB2B": main_match.isB2B,
-                        "shopName": main_match.shopName,
-                        "shopPhone": main_match.shopPhone,
-                        "notes": main_match.notes,
-                        "couponCode": main_match.couponCode,
-                        "customerName": matched_user.name if matched_user else None,
-                        "customerPhone": (matched_user.phone if matched_user else None) or (matched_addr.phone if matched_addr else None),
-                        "customerAddress": f"{matched_addr.houseNo or ''}, {matched_addr.street or ''}, {matched_addr.area or ''}, {matched_addr.city or ''}, {matched_addr.pincode or ''}" if matched_addr else None,
-                        "createdAt": to_iso_utc(main_match.createdAt),
-                        "updatedAt": to_iso_utc(main_match.updatedAt),
-                        "confirmedAt": to_iso_utc(main_match.confirmedAt),
-                        "packedAt": to_iso_utc(main_match.packedAt),
-                        "shippedAt": to_iso_utc(main_match.shippedAt),
-                        "deliveredAt": to_iso_utc(main_match.deliveredAt),
-                        "items": matched_items,
-                        "address": {
-                            "id": matched_addr.id,
-                            "houseNo": matched_addr.houseNo,
-                            "street": matched_addr.street,
-                            "area": matched_addr.area,
-                            "city": matched_addr.city,
-                            "pincode": matched_addr.pincode,
-                            "phone": matched_addr.phone,
-                            "label": matched_addr.label,
-                        } if matched_addr else None,
-                        "order": {
-                            "id": main_match.id,
-                            "readableId": main_match.readableId,
-                            "status": main_match.status.value if hasattr(main_match.status, "value") else str(main_match.status),
-                            "total": float(main_match.total or 0),
-                            "restaurantId": main_match.restaurantId,
-                            "shopName": main_match.shopName,
-                        },
-                        "orders": [{
-                            "id": o.id,
-                            "readableId": o.readableId,
-                            "status": o.status.value if hasattr(o.status, "value") else str(o.status),
-                            "total": float(o.total or 0),
-                            "restaurantId": o.restaurantId,
-                            "shopName": o.shopName,
-                        } for o in all_matches],
-                        "idempotencyReplayed": True,
-                    }
+                    replayed_payload = _build_replayed_order_payload(main_match, all_matches)
                     if idempotency_key:
-                        save_idempotency_response(idempotency_key, replayed_payload)
+                        await save_idempotency_response_async(idempotency_key, replayed_payload, db=db)
                     return replayed_payload
+            except HTTPException:
+                raise
             except Exception as idemp_err:
                 logger.warning(f"FastAPI idempotency check error: {idemp_err}")
 
         if payment_method != "COD":
             if incoming_cf_order_id:
+                # 0. Check pending session intent binding to verify initiating user
+                try:
+                    from utils.cache import get_cache
+                    p_clean = re.sub(r"_r\d+$", "", incoming_cf_order_id)
+                    p_intent = await get_cache(f"cf_pending:{incoming_cf_order_id}") or await get_cache(f"cf_pending:{p_clean}")
+                    if p_intent and isinstance(p_intent, dict):
+                        intent_uid = str(p_intent.get("userId") or "")
+                        if intent_uid and intent_uid != user_id and not intent_uid.startswith("guest_"):
+                            logger.error(f"[Payment Security] cfOrderId '{incoming_cf_order_id}' was initiated by user '{intent_uid}', but caller is '{user_id}'. Rejecting.")
+                            raise HTTPException(status_code=403, detail="Payment intent was initiated by a different user.")
+                except HTTPException:
+                    raise
+                except Exception as intent_e:
+                    logger.warning(f"Pending intent check notice: {intent_e}")
+
                 # 1. Check Redis cache first (in case webhook fired before client checkout completed)
                 try:
                     from utils.cache import get_cache
@@ -1509,7 +1627,13 @@ async def create_order(
                         clean_check = re.sub(r"_r\d+$", "", incoming_cf_order_id)
                         cached_val = await get_cache(f"cf_paid:{clean_check}")
                     if cached_val:
-                        is_online_paid = True
+                        cached_amount = None
+                        if isinstance(cached_val, dict):
+                            cached_amount = cached_val.get("amount")
+                        if cached_amount is not None and abs(float(cached_amount) - float(final_total)) <= 0.05:
+                            is_online_paid = True
+                        else:
+                            logger.warning(f"[Payment Security] Cached Cashfree amount {cached_amount} invalid or != final_total {final_total}")
                 except Exception:
                     pass
 
@@ -1524,7 +1648,17 @@ async def create_order(
                             if cf_res.status_code == 200:
                                 cf_data = cf_res.json()
                                 if cf_data.get("order_status") == "PAID":
-                                    is_online_paid = True
+                                    cf_amt = cf_data.get("order_amount")
+                                    if cf_amt is not None:
+                                        try:
+                                            if abs(float(cf_amt) - float(final_total)) <= 0.05:
+                                                is_online_paid = True
+                                            else:
+                                                logger.warning(f"[Payment Security] Cashfree order amount ₹{cf_amt} != final_total ₹{final_total}")
+                                        except (ValueError, TypeError):
+                                            pass
+                                    else:
+                                        logger.warning(f"[Payment Security] Cashfree order missing order_amount")
                     except Exception as cf_e:
                         logger.warning(f"Error checking Cashfree for new order: {cf_e}")
         auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
@@ -1532,8 +1666,9 @@ async def create_order(
         # Online Paid orders go straight to CONFIRMED
         initial_order_status = OrderStatus.CONFIRMED if is_online_paid else (OrderStatus.PENDING if is_auto_approve else OrderStatus.ADMIN_PENDING)
 
-        # Construct notes
-        incoming_notes = (payload.get("notes") or "").strip()
+        # Construct notes — strip any injected fake gateway markers like [CF_ORDER:...] from customer text
+        raw_notes = (payload.get("notes") or "").strip()
+        incoming_notes = re.sub(r"\[CF_[A-Z0-9_:]+\]", "", raw_notes, flags=re.IGNORECASE).strip()
         is_order_for_someone = bool(payload.get("isOrderForSomeone"))
         receiver_name = (payload.get("receiverName") or "").strip()
         receiver_phone = (payload.get("receiverPhone") or "").strip()
@@ -1562,6 +1697,9 @@ async def create_order(
             cf_note_ref = f"Cashfree PG Paid (Ref: {incoming_payment_id})" if incoming_payment_id else "Cashfree PG Paid"
             notes_parts.append(cf_note_ref)
 
+        if tip_amount > 0 and not any("Delivery Partner Tip" in p for p in notes_parts):
+            notes_parts.append(f"💰 Delivery Partner Tip: ₹{tip_amount:.2f}")
+
         final_order_notes = " | ".join(notes_parts) if notes_parts else None
 
         # Calculate discount apportionment
@@ -1580,7 +1718,7 @@ async def create_order(
         # Plan sub-order specifications
         order_specs = []
         if is_combined:
-            # 1. Grocery Companion Order (takes the combined packaging fee configured by admin)
+            # 1. Grocery Companion Order (takes the combined packaging fee configured by admin + tip)
             grocery_misc = misc_fee_charge
             order_specs.append({
                 "type": OrderType.GROCERY,
@@ -1619,12 +1757,12 @@ async def create_order(
                 "subtotal": round(combined_subtotal, 2),
                 "discount": round(combined_discount, 2),
                 "deliveryFee": round(delivery_fee_charge, 2),
-                "miscFee": round(resolved_packaging_fee, 2),
-                "total": max(0.0, round(combined_subtotal - combined_discount + delivery_fee_charge + resolved_packaging_fee, 2)),
+                "miscFee": round(misc_fee_charge, 2),
+                "total": max(0.0, round(combined_subtotal - combined_discount + delivery_fee_charge + misc_fee_charge, 2)),
                 "items": restaurant_data[0]["items"]
             })
         else:
-            grocery_misc = server_misc_fee if delivery_method != "PICKUP" else 0.0
+            grocery_misc = misc_fee_charge
             order_specs.append({
                 "type": OrderType.GROCERY,
                 "readableId": f"{readable_id}-G",
@@ -1639,6 +1777,56 @@ async def create_order(
                 "items": grocery_items
             })
 
+        clean_cf_order_id = incoming_cf_order_id.strip() if incoming_cf_order_id else None
+        cons_rec = None
+        if clean_cf_order_id:
+            from models import IdempotencyRecord
+            consumed_key = f"consumed_payment:{clean_cf_order_id}"
+            try:
+                cons_rec = IdempotencyRecord(
+                    key=consumed_key,
+                    userId=user_id,
+                    status="PROCESSING",
+                    createdAt=datetime.utcnow(),
+                    expiresAt=datetime.utcnow() + timedelta(days=7)
+                )
+                db.add(cons_rec)
+                await db.flush()
+            except Exception:
+                await db.rollback()
+                exist_res = await db.execute(
+                    select(Order).where(
+                        or_(
+                            Order.id == clean_cf_order_id,
+                            Order.readableId == clean_cf_order_id,
+                            Order.cfOrderId == clean_cf_order_id,
+                        )
+                    ).options(selectinload(Order.items), selectinload(Order.address), selectinload(Order.user)).order_by(Order.createdAt.asc())
+                )
+                existing_matched = exist_res.scalars().all()
+                if existing_matched:
+                    first_match = existing_matched[0]
+                    if first_match.userId != user_id:
+                        raise HTTPException(status_code=403, detail="Payment reference belongs to another user's order.")
+                    all_matches = list(existing_matched)
+                    if first_match.combinedId:
+                        comb_res = await db.execute(
+                            select(Order).where(Order.combinedId == first_match.combinedId)
+                            .options(selectinload(Order.items), selectinload(Order.address), selectinload(Order.user))
+                            .order_by(Order.createdAt.asc())
+                        )
+                        all_matches = comb_res.scalars().all()
+                    main_match = next((o for o in all_matches if not o.restaurantId), all_matches[0])
+                    replayed_payload = _build_replayed_order_payload(main_match, all_matches)
+                    if idempotency_key:
+                        await save_idempotency_response_async(idempotency_key, replayed_payload, db=db)
+                    return replayed_payload
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Payment is currently being processed or already claimed by another request."
+                    )
+
         for spec in order_specs:
             ord_obj = Order(
                 id=generate_id("ord_"),
@@ -1646,6 +1834,7 @@ async def create_order(
                 userId=user_id,
                 addressId=order_address_id,
                 combinedId=combined_id,
+                cfOrderId=clean_cf_order_id,
                 orderType=spec["type"],
                 status=initial_order_status,
                 subtotal=spec["subtotal"],
@@ -1713,26 +1902,51 @@ async def create_order(
                 # Stock deduction for grocery items
                 if not prod.restaurantId and spec["type"] == OrderType.GROCERY:
                     qty = int(item["quantity"])
-                    prev_stock = prod.stock
-                    new_stock = max(0, prev_stock - qty)
 
-                    if var_name and prod.variants and isinstance(prod.variants, list):
+                    # Row-lock product to ensure serialize concurrent stock deduction
+                    p_lock_stmt = select(Product).where(Product.id == prod.id).with_for_update()
+                    p_lock_res = await db.execute(p_lock_stmt)
+                    locked_prod = p_lock_res.scalars().first()
+                    if not locked_prod:
+                        raise HTTPException(status_code=400, detail=f"Product '{prod.name}' not found")
+
+                    prev_stock = locked_prod.stock or 0
+
+                    if var_name and locked_prod.variants and isinstance(locked_prod.variants, list):
                         updated_variants = []
-                        for v in prod.variants:
+                        variant_found = False
+                        for v in locked_prod.variants:
                             v_copy = dict(v)
                             if v_copy.get("name") == var_name:
-                                v_copy["stock"] = max(0, int(v_copy.get("stock", 0)) - qty)
+                                variant_found = True
+                                v_stock = int(v_copy.get("stock", 0))
+                                if v_stock < qty:
+                                    raise HTTPException(
+                                        status_code=400,
+                                        detail=f"Insufficient stock for \"{locked_prod.name} ({var_name})\". Available: {v_stock}, requested: {qty}."
+                                    )
+                                v_copy["stock"] = v_stock - qty
                             updated_variants.append(v_copy)
-                        prod.variants = updated_variants
-                        prod.stock = sum(int(v.get("stock", 0)) for v in updated_variants)
+                        if not variant_found and prev_stock < qty:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Insufficient stock for \"{locked_prod.name}\". Available: {prev_stock}, requested: {qty}."
+                            )
+                        locked_prod.variants = updated_variants
+                        locked_prod.stock = sum(int(v.get("stock", 0)) for v in updated_variants)
                     else:
-                        prod.stock = new_stock
+                        if prev_stock < qty:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Insufficient stock for \"{locked_prod.name}\". Available: {prev_stock}, requested: {qty}."
+                            )
+                        locked_prod.stock = prev_stock - qty
 
                     if store_id:
                         try:
                             from models import StoreInventory
                             inv_stmt = select(StoreInventory).where(
-                                StoreInventory.productId == prod.id,
+                                StoreInventory.productId == locked_prod.id,
                                 StoreInventory.storeId == store_id
                             ).with_for_update()
                             inv_res = await db.execute(inv_stmt)
@@ -1741,21 +1955,21 @@ async def create_order(
                                 if existing_inv.stock < qty:
                                     raise HTTPException(
                                         status_code=400,
-                                        detail=f"Insufficient hub stock for \"{prod.name}\". Only {existing_inv.stock} available."
+                                        detail=f"Insufficient hub stock for \"{locked_prod.name}\". Available: {existing_inv.stock}, requested: {qty}."
                                     )
-                                existing_inv.stock = max(0, existing_inv.stock - qty)
+                                existing_inv.stock = existing_inv.stock - qty
                         except HTTPException:
                             raise
                         except Exception as inv_err:
-                            logger.warning(f"Could not decrement StoreInventory for product {prod.id} at store {store_id}: {inv_err}")
+                            logger.warning(f"Could not decrement StoreInventory for product {locked_prod.id} at store {store_id}: {inv_err}")
 
                     log = StockLog(
                         id=generate_id("sl_"),
-                        productId=prod.id,
+                        productId=locked_prod.id,
                         quantity=-qty,
                         type="ONLINE_ORDER",
                         prevStock=prev_stock,
-                        newStock=prod.stock
+                        newStock=locked_prod.stock
                     )
                     db.add(log)
 
@@ -1783,7 +1997,113 @@ async def create_order(
         if cart:
             await db.execute(text("DELETE FROM cart_items WHERE \"cartId\" = :cart_id"), {"cart_id": cart.id})
 
+        main_order = next((o for o in created_orders if not o.restaurantId), created_orders[0])
+
+        # Build in-memory items payload safely without triggering async lazy-loading DetachedInstanceError
+        order_items_payload = []
+        for it in items:
+            p_data = it.get("product") or {}
+            raw_id = str(p_data.get("id") or it.get("productId") or "")
+            var_name = it.get("selectedVariant") or (raw_id.split("_")[1] if "_" in raw_id else None)
+            db_p = it.get("dbProduct")
+            order_items_payload.append({
+                "id": str(it.get("productId") or raw_id),
+                "name": str(p_data.get("name") or getattr(db_p, "name", "Item")),
+                "quantity": int(it.get("quantity", 1)),
+                "price": float(it.get("price") or getattr(db_p, "price", 0.0)),
+                "imageUrl": getattr(db_p, "imageUrl", None) or p_data.get("imageUrl"),
+                "selectedVariant": var_name
+            })
+
+        result_payload = {
+            "id": main_order.id,
+            "readableId": main_order.readableId,
+            "traceId": trace_id,
+            "userId": main_order.userId,
+            "addressId": main_order.addressId,
+            "restaurantId": main_order.restaurantId,
+            "status": main_order.status.value,
+            "subtotal": float(main_order.subtotal or 0),
+            "discount": float(main_order.discount or 0),
+            "deliveryFee": float(main_order.deliveryFee or 0),
+            "taxes": float(main_order.taxes or 0),
+            "miscFee": float(main_order.miscFee or 0),
+            "packagingFee": float(main_order.miscFee or 0),
+            "total": float(main_order.total or 0),
+            "paymentMethod": main_order.paymentMethod.value,
+            "paymentStatus": main_order.paymentStatus.value,
+            "estimatedDelivery": to_iso_utc(main_order.estimatedDelivery),
+            "deliveryMethod": main_order.deliveryMethod,
+            "isB2B": main_order.isB2B,
+            "shopName": main_order.shopName,
+            "shopPhone": main_order.shopPhone,
+            "notes": main_order.notes,
+            "couponCode": main_order.couponCode,
+            "customerName": user_obj.name if user_obj else None,
+            "customerPhone": (user_obj.phone if user_obj else None) or (address.phone if address else None),
+            "customerAddress": f"{address.houseNo or ''}, {address.street or ''}, {address.area or ''}, {address.city or ''}, {address.pincode or ''}" if address else None,
+            "createdAt": to_iso_utc(main_order.createdAt),
+            "updatedAt": to_iso_utc(main_order.updatedAt),
+            "confirmedAt": to_iso_utc(main_order.confirmedAt),
+            "packedAt": to_iso_utc(main_order.packedAt),
+            "shippedAt": to_iso_utc(main_order.shippedAt),
+            "deliveredAt": to_iso_utc(main_order.deliveredAt),
+            "items": order_items_payload,
+            "address": {
+                "id": address.id,
+                "houseNo": address.houseNo,
+                "street": address.street,
+                "area": address.area,
+                "city": address.city,
+                "pincode": address.pincode,
+                "phone": address.phone,
+                "label": address.label,
+            } if address else None,
+            # Universal Web & Flutter compatibility wrappers
+            "order": {
+                "id": main_order.id,
+                "readableId": main_order.readableId,
+                "status": main_order.status.value,
+                "total": float(main_order.total or 0),
+                "restaurantId": main_order.restaurantId,
+                "shopName": main_order.shopName,
+            },
+            "orders": [{
+                "id": o.id,
+                "readableId": o.readableId,
+                "status": o.status.value,
+                "total": float(o.total or 0),
+                "restaurantId": o.restaurantId,
+                "shopName": o.shopName,
+            } for o in created_orders]
+        }
+
+        # Atomically stage idempotency COMPLETED record in the exact same transaction before commit
+        if idempotency_key:
+            await record_idempotency_result_db_async(
+                idempotency_key,
+                result_payload,
+                db=db,
+                user_id=user_id,
+                request_hash=request_fingerprint,
+                order_id=main_order.id
+            )
+
+        if cons_rec:
+            cons_rec.status = "COMPLETED"
+            cons_rec.orderId = main_order.id
+
         await db.commit()
+
+        # Publish to Redis and memory cache only AFTER successful business transaction commit
+        if idempotency_key:
+            await publish_idempotency_cache_async(
+                idempotency_key,
+                result_payload,
+                user_id=user_id,
+                request_hash=request_fingerprint,
+                order_id=main_order.id
+            )
 
         # Dispatch real-time WebSocket alerts
         for order in created_orders:
@@ -1997,101 +2317,18 @@ async def create_order(
         except Exception as wa_err:
             logger.warning(f"Error scheduling consolidated WhatsApp admin alert: {wa_err}")
 
-        # Build in-memory items payload safely without triggering async lazy-loading DetachedInstanceError
-        order_items_payload = []
-        for it in items:
-            p_data = it.get("product") or {}
-            raw_id = str(p_data.get("id") or it.get("productId") or "")
-            var_name = it.get("selectedVariant") or (raw_id.split("_")[1] if "_" in raw_id else None)
-            db_p = it.get("dbProduct")
-            order_items_payload.append({
-                "id": str(it.get("productId") or raw_id),
-                "name": str(p_data.get("name") or getattr(db_p, "name", "Item")),
-                "quantity": int(it.get("quantity", 1)),
-                "price": float(it.get("price") or getattr(db_p, "price", 0.0)),
-                "imageUrl": getattr(db_p, "imageUrl", None) or p_data.get("imageUrl"),
-                "selectedVariant": var_name
-            })
-
-        result_payload = {
-            "id": main_order.id,
-            "readableId": main_order.readableId,
-            "traceId": trace_id,
-            "userId": main_order.userId,
-            "addressId": main_order.addressId,
-            "restaurantId": main_order.restaurantId,
-            "status": main_order.status.value,
-            "subtotal": float(main_order.subtotal or 0),
-            "discount": float(main_order.discount or 0),
-            "deliveryFee": float(main_order.deliveryFee or 0),
-            "taxes": float(main_order.taxes or 0),
-            "miscFee": float(main_order.miscFee or 0),
-            "packagingFee": float(main_order.miscFee or 0),
-            "total": float(main_order.total or 0),
-            "paymentMethod": main_order.paymentMethod.value,
-            "paymentStatus": main_order.paymentStatus.value,
-            "estimatedDelivery": to_iso_utc(main_order.estimatedDelivery),
-            "deliveryMethod": main_order.deliveryMethod,
-            "isB2B": main_order.isB2B,
-            "shopName": main_order.shopName,
-            "shopPhone": main_order.shopPhone,
-            "notes": main_order.notes,
-            "couponCode": main_order.couponCode,
-            "customerName": user_obj.name if user_obj else None,
-            "customerPhone": (user_obj.phone if user_obj else None) or (address.phone if address else None),
-            "customerAddress": f"{address.houseNo or ''}, {address.street or ''}, {address.area or ''}, {address.city or ''}, {address.pincode or ''}" if address else None,
-            "createdAt": to_iso_utc(main_order.createdAt),
-            "updatedAt": to_iso_utc(main_order.updatedAt),
-            "confirmedAt": to_iso_utc(main_order.confirmedAt),
-            "packedAt": to_iso_utc(main_order.packedAt),
-            "shippedAt": to_iso_utc(main_order.shippedAt),
-            "deliveredAt": to_iso_utc(main_order.deliveredAt),
-            "items": order_items_payload,
-            "address": {
-                "id": address.id,
-                "houseNo": address.houseNo,
-                "street": address.street,
-                "area": address.area,
-                "city": address.city,
-                "pincode": address.pincode,
-                "phone": address.phone,
-                "label": address.label,
-            } if address else None,
-            # Universal Web & Flutter compatibility wrappers
-            "order": {
-                "id": main_order.id,
-                "readableId": main_order.readableId,
-                "status": main_order.status.value,
-                "total": float(main_order.total or 0),
-                "restaurantId": main_order.restaurantId,
-                "shopName": main_order.shopName,
-            },
-            "orders": [{
-                "id": o.id,
-                "readableId": o.readableId,
-                "status": o.status.value,
-                "total": float(o.total or 0),
-                "restaurantId": o.restaurantId,
-                "shopName": o.shopName,
-            } for o in created_orders]
-        }
-
-        # Save idempotency cache
-        if idempotency_key:
-            save_idempotency_response(idempotency_key, result_payload)
-
         return result_payload
 
     except HTTPException:
         await db.rollback()
         if "idempotency_key" in locals() and idempotency_key:
-            release_idempotency_lock(idempotency_key)
+            await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
         raise
     except Exception as e:
         await db.rollback()
         logger.error(f"Failed to place order: {str(e)}")
         if "idempotency_key" in locals() and idempotency_key:
-            release_idempotency_lock(idempotency_key)
+            await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
         raise HTTPException(status_code=500, detail=f"Failed to place order: {str(e)}")
 
 

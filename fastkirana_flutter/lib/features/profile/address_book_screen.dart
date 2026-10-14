@@ -8,6 +8,7 @@ import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../location/map_picker_screen.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../widgets/app_confirmation_dialog.dart';
 
 class AddressBookScreen extends ConsumerStatefulWidget {
@@ -64,22 +65,27 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
           Expanded(
             child: addressesAsync.when(
               data: (addresses) {
-                if (addresses.isEmpty) {
+                // Filter out any internal store pickup addresses
+                final userAddresses = addresses
+                    .where((a) => !a.label.toUpperCase().startsWith('STORE_PICKUP'))
+                    .toList();
+
+                if (userAddresses.isEmpty) {
                   return _buildEmptyState();
                 }
 
                 return RefreshIndicator(
                   onRefresh: () => ref.read(addressesProvider.notifier).loadAddresses(),
                   child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    itemCount: addresses.length,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                    itemCount: userAddresses.length,
                     itemBuilder: (context, index) {
-                      final addr = addresses[index];
+                      final addr = userAddresses[index];
                       final isHome = addr.label.toLowerCase() == 'home';
                       final isWork = addr.label.toLowerCase() == 'work';
                       final isSelected = selectedAddress?.id == addr.id;
 
-                      return GestureDetector(
+                      return Bounceable(
                         onTap: () {
                           ref.read(selectedAddressProvider.notifier).state = addr;
                           HapticFeedback.selectionClick();
@@ -91,13 +97,15 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isSelected ? primaryRed : AppDesignSystem.slate200,
-                              width: isSelected ? 1.5 : 1.0,
+                              color: isSelected ? primaryRed : const Color(0xFFF1F5F9),
+                              width: isSelected ? 1.6 : 1.2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: isSelected ? primaryRed.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
-                                blurRadius: 12,
+                                color: isSelected
+                                    ? primaryRed.withValues(alpha: 0.12)
+                                    : Colors.black.withValues(alpha: 0.03),
+                                blurRadius: isSelected ? 14 : 10,
                                 offset: const Offset(0, 3),
                               ),
                             ],
@@ -106,27 +114,38 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(12),
+                                width: 44,
+                                height: 44,
                                 decoration: BoxDecoration(
                                   color: isHome
-                                      ? AppDesignSystem.statusCancelled
+                                      ? const Color(0xFFFEF2F2)
                                       : isWork
-                                          ? AppDesignSystem.blue50
-                                          : AppDesignSystem.green50,
+                                          ? const Color(0xFFEFF6FF)
+                                          : const Color(0xFFF0FDF4),
                                   borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isHome
+                                        ? const Color(0xFFFECACA)
+                                        : isWork
+                                            ? const Color(0xFFBFDBFE)
+                                            : const Color(0xFFBBF7D0),
+                                    width: 1,
+                                  ),
                                 ),
-                                child: Icon(
-                                  isHome
-                                      ? Icons.home_rounded
-                                      : isWork
-                                          ? Icons.work_rounded
-                                          : Icons.location_on_rounded,
-                                  size: 22,
-                                  color: isHome
-                                      ? AppDesignSystem.red600
-                                      : isWork
-                                          ? AppDesignSystem.blue600
-                                          : AppDesignSystem.green600,
+                                child: Center(
+                                  child: Icon(
+                                    isHome
+                                        ? Icons.home_rounded
+                                        : isWork
+                                            ? Icons.work_rounded
+                                            : Icons.location_on_rounded,
+                                    size: 22,
+                                    color: isHome
+                                        ? AppDesignSystem.red600
+                                        : isWork
+                                            ? AppDesignSystem.blue600
+                                            : AppDesignSystem.green600,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 14),
@@ -136,12 +155,19 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                   children: [
                                     Row(
                                       children: [
-                                        Text(
-                                          addr.label,
-                                          style: GoogleFonts.inter(
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: Responsive.scaledFontSize(context, 14.5),
-                                            color: AppDesignSystem.slate900,
+                                        Flexible(
+                                          child: Text(
+                                            addr.label.toUpperCase().startsWith('STORE_PICKUP')
+                                                ? 'Store Pickup Location'
+                                                : addr.label,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: Responsive.scaledFontSize(context, 14.5),
+                                              color: AppDesignSystem.slate900,
+                                              letterSpacing: -0.2,
+                                            ),
                                           ),
                                         ),
                                         if (addr.isDefault || isSelected) ...[
@@ -149,15 +175,24 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: isSelected ? primaryRed.withValues(alpha: 0.1) : AppDesignSystem.slate100,
+                                              color: isSelected
+                                                  ? primaryRed.withValues(alpha: 0.1)
+                                                  : AppDesignSystem.slate100,
                                               borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? primaryRed.withValues(alpha: 0.25)
+                                                    : AppDesignSystem.slate200,
+                                                width: 0.8,
+                                              ),
                                             ),
                                             child: Text(
                                               isSelected ? 'ACTIVE' : 'DEFAULT',
                                               style: GoogleFonts.inter(
                                                 fontSize: Responsive.scaledFontSize(context, 9),
-                                                fontWeight: FontWeight.w800,
+                                                fontWeight: FontWeight.w900,
                                                 color: isSelected ? primaryRed : AppDesignSystem.slate500,
+                                                letterSpacing: 0.3,
                                               ),
                                             ),
                                           ),
@@ -171,31 +206,46 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                         fontSize: Responsive.scaledFontSize(context, 12),
                                         fontWeight: FontWeight.w500,
                                         color: AppDesignSystem.slate600,
-                                        height: 1.3,
+                                        height: 1.35,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Row(
+                                    const SizedBox(height: 6),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
-                                        if (addr.phone.isNotEmpty) ...[
-                                          const Icon(Icons.phone_outlined, size: 12, color: AppDesignSystem.slate400),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            addr.phone,
-                                            style: GoogleFonts.inter(
-                                              fontSize: Responsive.scaledFontSize(context, 11),
-                                              fontWeight: FontWeight.w600,
-                                              color: AppDesignSystem.slate500,
-                                            ),
+                                        if (addr.phone.isNotEmpty)
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.phone_outlined, size: 12, color: AppDesignSystem.slate400),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                addr.phone,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppDesignSystem.slate500,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(width: 10),
-                                        ],
-                                        Text(
-                                          '•  Pincode: ${addr.pincode}',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 11),
-                                            fontWeight: FontWeight.w600,
-                                            color: AppDesignSystem.cyan600,
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF0FDF4),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: const Color(0xFFBBF7D0), width: 0.8),
+                                          ),
+                                          child: Text(
+                                            'PIN: ${addr.pincode}',
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 10),
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFF15803D),
+                                              letterSpacing: 0.2,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -204,7 +254,8 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
                                 ),
                               ),
                               PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert_rounded, size: 18, color: AppDesignSystem.slate500),
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(Icons.more_vert_rounded, size: 19, color: AppDesignSystem.slate400),
                                 onSelected: (val) async {
                                   if (val == 'edit') {
                                     final updated = await Navigator.push<Address>(
@@ -304,52 +355,69 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
           ),
 
           // 3. Add New Address Action Bar
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryRed,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 2,
-                ),
-                onPressed: () async {
-                  HapticFeedback.lightImpact();
-                  final newAddr = await Navigator.push<Address>(
-                    context,
-                    FadeSlideRoute(page: const MapPickerScreen()),
-                  );
-                  if (newAddr != null && mounted) {
-                    ref.read(addressesProvider.notifier).loadAddresses();
-                  }
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.add_location_alt_rounded, size: 19, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Add New Delivery Address',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 13.5),
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: 0.2,
+          SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: Bounceable(
+                  onTap: () async {
+                    HapticFeedback.lightImpact();
+                    final newAddr = await Navigator.push<Address>(
+                      context,
+                      FadeSlideRoute(page: const MapPickerScreen()),
+                    );
+                    if (newAddr != null && mounted) {
+                      ref.read(addressesProvider.notifier).loadAddresses();
+                    }
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF5722), Color(0xFFFF8A00)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF5722).withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.add_location_alt_rounded, size: 20, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Add New Delivery Address',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 14),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

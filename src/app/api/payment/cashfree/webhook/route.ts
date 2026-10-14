@@ -21,13 +21,15 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('x-webhook-signature') || ''
     const timestamp = req.headers.get('x-webhook-timestamp') || ''
 
-    // Verify signature if configured
-    if (signature && timestamp) {
-      const isValid = verifyCashfreeWebhookSignature(rawBody, timestamp, signature)
-      if (!isValid) {
-        console.warn('Cashfree webhook signature mismatch')
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
-      }
+    if (!signature || !timestamp) {
+      console.warn('[Cashfree Webhook Security] Missing signature headers on webhook request')
+      return NextResponse.json({ error: 'Signature headers required' }, { status: 401 })
+    }
+
+    const isValid = verifyCashfreeWebhookSignature(rawBody, timestamp, signature)
+    if (!isValid) {
+      console.warn('[Cashfree Webhook Security] Cashfree webhook signature mismatch')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
     let event: any = {}
@@ -53,29 +55,40 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ received: true, status: 'already_processing' })
         }
 
-        // Cache payment success so if client creates the order slightly later, it's immediately recognized as PAID
-        try {
-          await cache.set(`cf_paid:${cleanId}`, 'true', { ex: 3600 })
-          if (rawId && rawId !== cleanId) {
-            await cache.set(`cf_paid:${rawId}`, 'true', { ex: 3600 })
-          }
-        } catch (_) {}
-
         const orders: any[] = await prisma.$queryRaw`
-          SELECT o.id, o."combinedId", o."readableId", o.status::text as status,
+          SELECT o.id, o."combinedId", o."readableId", o."cfOrderId", o.status::text as status,
                  o.total, o."paymentStatus"::text as "paymentStatus", o."paymentMethod"::text as "paymentMethod",
                  o."restaurantId", o."shopName",
                  u.name as "userName", u.phone as "userPhone"
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
-          WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId}
-             OR (o.notes IS NOT NULL AND o.notes ILIKE ${'%' + cleanId + '%'})
+          WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId} OR o."cfOrderId" = ${cleanId} OR o."cfOrderId" = ${rawId}
           LIMIT 1
         `
 
         if (orders.length > 0) {
           const order = orders[0]
           const wasCod = (order.paymentMethod || '').toUpperCase() === 'COD'
+
+          // Symmetric payment amount verification
+          const cfAmount = Number(orderData?.order_amount ?? paymentData?.payment_amount)
+          let expectedTotal = Number(order.total || 0)
+          if (order.combinedId) {
+            const combRes: any[] = await prisma.$queryRaw`
+              SELECT COALESCE(SUM(total), 0) as total FROM orders WHERE "combinedId" = ${order.combinedId}
+            `
+            if (combRes[0]?.total) expectedTotal = Number(combRes[0].total)
+          }
+
+          if (isNaN(cfAmount) || cfAmount <= 0 || expectedTotal <= 0) {
+            console.error(`[CashfreeWebhook] Invalid payment amount: received ${cfAmount}, expected ${expectedTotal}`)
+            return NextResponse.json({ error: 'Invalid or missing payment amount' }, { status: 400 })
+          }
+
+          if (Math.abs(cfAmount - expectedTotal) > 0.05) {
+            console.error(`[CashfreeWebhook] Amount mismatch: Gateway ₹${cfAmount} != Expected ₹${expectedTotal}`)
+            return NextResponse.json({ error: 'Payment amount mismatch' }, { status: 400 })
+          }
 
           // Build Cashfree audit note with real payment reference
           const cfPayId = paymentData?.cf_payment_id || paymentData?.payment_id || ''
@@ -118,6 +131,15 @@ export async function POST(req: NextRequest) {
             }
 
             console.log(`✅ Cashfree webhook: Order #${order.readableId || order.id} marked PAID! (wasCod: ${wasCod})`)
+
+            // Cache payment success post-commit with verified amount
+            try {
+              const cachePayload = { paid: true, amount: expectedTotal, cfPaymentId: cfPayId }
+              await cache.set(`cf_paid:${cleanId}`, cachePayload, { ex: 3600 })
+              if (rawId && rawId !== cleanId) {
+                await cache.set(`cf_paid:${rawId}`, cachePayload, { ex: 3600 })
+              }
+            } catch (_) {}
 
             // Fire full notification suite
             try {
@@ -318,6 +340,15 @@ export async function POST(req: NextRequest) {
             console.error('Failed to save orphan payment record:', orphanErr)
           }
 
+          // Cache payment success post-commit for auto-reconciliation
+          try {
+            const cachePayload = { paid: true, amount: paymentAmount, cfPaymentId: cfPayId }
+            await cache.set(`cf_paid:${cleanId}`, cachePayload, { ex: 3600 })
+            if (rawId && rawId !== cleanId) {
+              await cache.set(`cf_paid:${rawId}`, cachePayload, { ex: 3600 })
+            }
+          } catch (_) {}
+
           // 🚨 Send URGENT admin alerts — WhatsApp + Push
           try {
             const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'
@@ -356,7 +387,7 @@ export async function POST(req: NextRequest) {
           UPDATE orders
           SET "paymentStatus" = 'FAILED'::"PaymentStatus",
               "updatedAt" = NOW()
-          WHERE (id = ${cleanId} OR "readableId" = ${cleanId} OR id = ${rawId} OR (notes IS NOT NULL AND notes ILIKE ${'%' + cleanId + '%'}))
+          WHERE (id = ${cleanId} OR "readableId" = ${cleanId} OR id = ${rawId})
             AND "paymentStatus" != 'PAID'::"PaymentStatus"
             AND "paymentMethod" != 'COD'::"PaymentMethod"
         `.catch((err: any) => console.error('Error updating failed payment status:', err))

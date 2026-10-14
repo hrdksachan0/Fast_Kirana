@@ -1,16 +1,23 @@
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import '../../data/models/user_session.dart';
 
 /// Secure storage wrapper for sensitive data (auth tokens, user credentials).
 ///
-/// Falls back to SharedPreferences for one-time migration of legacy auth keys
+/// Authentication credentials (auth_token, refresh_token) are stored strictly
+/// in encrypted FlutterSecureStorage. Plaintext SharedPreferences is never used
+/// for new credentials. Existing legacy preferences are safely migrated and deleted.
 class SecureStorage {
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
+
+  static const _sensitiveKeys = <String>{
+    'auth_token',
+    'refresh_token',
+  };
 
   static const _legacyPrefsKeys = <String>{
     'auth_token',
@@ -40,21 +47,25 @@ class SecureStorage {
   /// Returns true if the in-memory cache has been populated.
   static bool get isCacheLoaded => _isCacheLoaded;
 
-  /// Load all auth fields into the in-memory cache once.
-  /// Uses instant SharedPreferences first (<1ms) and syncs with encrypted storage.
+  /// Load all auth fields into the in-memory cache.
+  /// Always reads sensitive tokens via encrypted secure storage with safe legacy migration.
   static Future<void> loadCache() async {
     if (_isCacheLoaded) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      _cachedToken = prefs.getString('auth_token') ?? await read('auth_token');
-      _cachedRefreshToken = prefs.getString('refresh_token') ?? await read('refresh_token');
-      _cachedUserId = prefs.getString('user_id') ?? await read('user_id');
-      _cachedUserPhone = prefs.getString('user_phone') ?? await read('user_phone');
-      _cachedUserEmail = prefs.getString('user_email') ?? await read('user_email');
-      _cachedUserName = prefs.getString('user_name') ?? await read('user_name');
-      _cachedUserRole = prefs.getString('user_role') ?? await read('user_role');
 
-      final raw = prefs.getString('user_data') ?? await read('user_data');
+      // Sensitive credentials must be read from secure storage (migrating legacy prefs if present)
+      _cachedToken = await read('auth_token');
+      _cachedRefreshToken = await read('refresh_token');
+
+      // Non-sensitive profile metadata
+      _cachedUserId = await read('user_id') ?? prefs.getString('user_id');
+      _cachedUserPhone = await read('user_phone') ?? prefs.getString('user_phone');
+      _cachedUserEmail = await read('user_email') ?? prefs.getString('user_email');
+      _cachedUserName = await read('user_name') ?? prefs.getString('user_name');
+      _cachedUserRole = await read('user_role') ?? prefs.getString('user_role');
+
+      final raw = await read('user_data') ?? prefs.getString('user_data');
       if (raw != null && raw.isNotEmpty) {
         try {
           _cachedUserData = Map<String, String>.from(
@@ -67,15 +78,16 @@ class SecureStorage {
           _cachedUserPhone ??= _cachedUserData?['phone'];
           _cachedUserEmail ??= _cachedUserData?['email'];
           _cachedUserName ??= _cachedUserData?['name'];
-        } catch (e) { LoggerService.error('SecureStorageService: loadCache parse user_data', e);
+        } catch (e) {
+          LoggerService.error('SecureStorageService: loadCache parse user_data', e);
           _cachedUserData = null;
         }
       }
 
-      if (_cachedToken != null || _cachedUserId != null) {
-        _isCacheLoaded = true;
-      }
-    } catch (e, _) { LoggerService.error('SecureStorageService: loadCache', e); }
+      _isCacheLoaded = true;
+    } catch (e, _) {
+      LoggerService.error('SecureStorageService: loadCache', e);
+    }
   }
 
   /// Invalidate the cache. Call on logout or when user data changes.
@@ -93,14 +105,14 @@ class SecureStorage {
 
   /// Quick update for new auth token in memory & storage
   static Future<void> saveAuthToken(String token) async {
-    _cachedToken = token;
     await write('auth_token', token);
+    _cachedToken = token;
   }
 
   /// Quick update for refresh token in memory & storage
   static Future<void> saveRefreshToken(String token) async {
-    _cachedRefreshToken = token;
     await write('refresh_token', token);
+    _cachedRefreshToken = token;
   }
 
   /// Save FCM device token for push notifications
@@ -132,31 +144,34 @@ class SecureStorage {
     );
   }
 
-  /// Save or update user session synchronously in memory & persisted storage
+  /// Save or update user session in memory & persisted storage
   static Future<void> saveUserSession(UserSession session) async {
-    _cachedUserId = session.id;
-    _cachedUserName = session.name;
-    _cachedUserEmail = session.email;
-    _cachedUserPhone = session.phone;
-    _cachedUserRole = session.role;
-    _cachedUserData = {
+    final map = {
       'id': session.id,
       if (session.name != null) 'name': session.name!,
       if (session.email != null) 'email': session.email!,
       if (session.phone != null) 'phone': session.phone!,
       'role': session.role,
     };
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_id', session.id);
-    if (session.name != null) await prefs.setString('user_name', session.name!);
-    if (session.email != null) await prefs.setString('user_email', session.email!);
-    if (session.phone != null) await prefs.setString('user_phone', session.phone!);
-    await prefs.setString('user_role', session.role);
-    await prefs.setString('user_data', jsonEncode(_cachedUserData));
+
+    // Save session metadata
+    await write('user_id', session.id);
+    if (session.name != null) await write('user_name', session.name!);
+    if (session.email != null) await write('user_email', session.email!);
+    if (session.phone != null) await write('user_phone', session.phone!);
+    await write('user_role', session.role);
+    await write('user_data', jsonEncode(map));
+
+    _cachedUserId = session.id;
+    _cachedUserName = session.name;
+    _cachedUserEmail = session.email;
+    _cachedUserPhone = session.phone;
+    _cachedUserRole = session.role;
+    _cachedUserData = map;
+    _isCacheLoaded = true;
   }
 
   /// Parse user_data JSON once from cache and extract fields.
-  /// Returns a map with keys: id, email, name, role, phone
   static Map<String, String>? getParsedUserData() {
     if (_cachedUserData == null) return null;
     final result = <String, String>{};
@@ -166,48 +181,95 @@ class SecureStorage {
     return result;
   }
 
-  // ─── Async reads (still used for initial load, migrations, etc.) ───
+  // ─── Async reads with safe one-time migration ───
   static Future<String?> read(String key) async {
     try {
       final value = await _storage.read(key: key);
-      if (value != null && value.isNotEmpty) return value;
+      if (value != null && value.isNotEmpty) {
+        // If encrypted storage has the value and a legacy plaintext copy exists in prefs, purge it
+        if (_sensitiveKeys.contains(key)) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            if (prefs.containsKey(key)) {
+              await prefs.remove(key);
+            }
+          } catch (_) {}
+        }
+        return value;
+      }
     } catch (e) {
-      LoggerService.error('SecureStorageService: read storage failed, trying prefs', e);
+      LoggerService.error('SecureStorageService: read storage failed, checking migration', e);
     }
 
-    // Always fall back to SharedPreferences if secure storage returned null or failed.
-    // NEVER call prefs.remove(key) here — SharedPreferences acts as a permanent persistent backup
-    // against Android Keystore corruption, OS updates, and process restarts.
+    // Migration fallback: If key exists in legacy SharedPreferences, migrate to encrypted storage
     try {
       final prefs = await SharedPreferences.getInstance();
-      final fallback = prefs.getString(key);
-      if (fallback != null && fallback.isNotEmpty) {
+      final legacyValue = prefs.getString(key);
+      if (legacyValue != null && legacyValue.isNotEmpty) {
         try {
-          await _storage.write(key: key, value: fallback);
-        } catch (_) {}
-        return fallback;
+          await _storage.write(key: key, value: legacyValue);
+          final readback = await _storage.read(key: key);
+          if (readback == legacyValue) {
+            // Write to encrypted storage verified; purge legacy plaintext copy
+            await prefs.remove(key);
+            return legacyValue;
+          }
+        } catch (e) {
+          LoggerService.error('SecureStorageService: migration write verification failed', e);
+        }
+        // Fail-closed migration policy: do not return unverified plaintext credentials
+        LoggerService.error('SecureStorageService: migration verification failed, failing closed for $key', null);
+        return null;
       }
     } catch (e, _) {
-      LoggerService.error('SecureStorageService: read fallback error', e);
+      LoggerService.error('SecureStorageService: migration read fallback error', e);
     }
     return null;
   }
 
+  /// Write a key-value pair.
+  /// Sensitive keys ('auth_token', 'refresh_token') are written EXCLUSIVELY to encrypted storage
+  /// and verified with readback. They are NEVER written to ordinary SharedPreferences.
   static Future<void> write(String key, String value) async {
-    if (key == 'auth_token') _cachedToken = value;
-    if (key == 'refresh_token') _cachedRefreshToken = value;
-    if (key == 'user_id') _cachedUserId = value;
-    if (key == 'user_phone') _cachedUserPhone = value;
-    if (key == 'user_email') _cachedUserEmail = value;
-    if (key == 'user_name') _cachedUserName = value;
-    if (key == 'user_role') _cachedUserRole = value;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(key, value);
-    } catch (_) {}
-    try {
+    final isSensitive = _sensitiveKeys.contains(key);
+
+    if (isSensitive) {
+      // 1. Write exclusively to encrypted storage
       await _storage.write(key: key, value: value);
-    } catch (e) { LoggerService.error('SecureStorageService: write', e); }
+
+      // 2. Verify write succeeded with readback
+      final verified = await _storage.read(key: key);
+      if (verified != value) {
+        throw Exception('Secure storage write verification failed for $key');
+      }
+
+      // 3. Purge any legacy plaintext copy from SharedPreferences
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(key);
+      } catch (_) {}
+
+      // 4. Update in-memory caches ONLY after verified persistence
+      if (key == 'auth_token') _cachedToken = value;
+      if (key == 'refresh_token') _cachedRefreshToken = value;
+    } else {
+      // Non-sensitive metadata (user name, phone, etc.) can be persisted in both
+      try {
+        await _storage.write(key: key, value: value);
+      } catch (e) {
+        LoggerService.error('SecureStorageService: metadata secure write', e);
+      }
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(key, value);
+      } catch (_) {}
+
+      if (key == 'user_id') _cachedUserId = value;
+      if (key == 'user_phone') _cachedUserPhone = value;
+      if (key == 'user_email') _cachedUserEmail = value;
+      if (key == 'user_name') _cachedUserName = value;
+      if (key == 'user_role') _cachedUserRole = value;
+    }
   }
 
   static Future<void> delete(String key) async {
@@ -219,13 +281,18 @@ class SecureStorage {
     if (key == 'user_name') _cachedUserName = null;
     if (key == 'user_role') _cachedUserRole = null;
     if (key == 'user_data') _cachedUserData = null;
+
     try {
       await _storage.delete(key: key);
-    } catch (e, _) { LoggerService.error('SecureStorageService: delete', e); }
+    } catch (e, _) {
+      LoggerService.error('SecureStorageService: delete', e);
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(key);
-    } catch (e, _) { LoggerService.error('SecureStorageService: delete fallback', e); }
+    } catch (e, _) {
+      LoggerService.error('SecureStorageService: delete fallback', e);
+    }
   }
 
   static Future<void> deleteAll() async {
@@ -235,13 +302,17 @@ class SecureStorage {
         await _storage.delete(key: key);
       }
       await _storage.deleteAll();
-    } catch (e, _) { LoggerService.error('SecureStorageService: deleteAll', e); }
+    } catch (e, _) {
+      LoggerService.error('SecureStorageService: deleteAll', e);
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
       for (final key in _legacyPrefsKeys) {
         await prefs.remove(key);
       }
-    } catch (e, _) { LoggerService.error('SecureStorageService: deleteAll fallback', e); }
+    } catch (e, _) {
+      LoggerService.error('SecureStorageService: deleteAll fallback', e);
+    }
   }
 
   static Future<Map<String, String>> readMany(Iterable<String> keys) async {
@@ -254,4 +325,35 @@ class SecureStorage {
     }
     return result;
   }
+
+  static Future<String?> getAuthToken() async {
+    return _cachedToken ?? await read('auth_token');
+  }
+
+  static Future<void> setAuthToken(String token) async {
+    await write('auth_token', token);
+  }
+
+  static Future<String?> getRefreshToken() async {
+    return _cachedRefreshToken ?? await read('refresh_token');
+  }
+
+  static Future<void> setRefreshToken(String token) async {
+    await write('refresh_token', token);
+  }
+}
+
+/// Service instance interface for dependency-injected or instance-based consumers
+class SecureStorageService {
+  static final SecureStorageService instance = SecureStorageService._();
+  SecureStorageService._();
+
+  Future<String?> getAuthToken() => SecureStorage.getAuthToken();
+  Future<void> setAuthToken(String token) => SecureStorage.setAuthToken(token);
+  Future<String?> getRefreshToken() => SecureStorage.getRefreshToken();
+  Future<void> setRefreshToken(String token) => SecureStorage.setRefreshToken(token);
+  Future<String?> read(String key) => SecureStorage.read(key);
+  Future<void> write(String key, String value) => SecureStorage.write(key, value);
+  Future<void> delete(String key) => SecureStorage.delete(key);
+  Future<void> deleteAll() => SecureStorage.deleteAll();
 }

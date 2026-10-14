@@ -198,7 +198,6 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
         await prefs.setString('user_phone', phone);
         await prefs.setString('user_role', roleUpper);
         await prefs.setString('user_data', jsonEncode(user.toJson()));
-        await prefs.setString('auth_token', response.token!);
 
         await SecureStorage.write('user_id', user.id);
         await SecureStorage.write('user_phone', phone);
@@ -308,7 +307,6 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
         final user = User.fromJson(userData);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_data', jsonEncode(user.toJson()));
-        await prefs.setString('auth_token', token);
         await prefs.setString('user_role', role);
         await prefs.setString('user_phone', phone);
 

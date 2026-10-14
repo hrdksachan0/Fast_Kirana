@@ -8,6 +8,7 @@ import '../../../core/theme/design_system.dart';
 import '../../../core/routes/page_transitions.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../core/services/location_service.dart';
+import '../../../core/services/secure_storage_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/store_settings_provider.dart';
@@ -25,6 +26,7 @@ class CartBottomCheckoutBar extends ConsumerWidget {
   final double couponDiscount;
   final String? appliedCoupon;
   final String cookingInstruction;
+  final double selectedTip;
   final VoidCallback onViewBreakdown;
 
   const CartBottomCheckoutBar({
@@ -37,6 +39,7 @@ class CartBottomCheckoutBar extends ConsumerWidget {
     required this.couponDiscount,
     required this.appliedCoupon,
     required this.cookingInstruction,
+    this.selectedTip = 0.0,
     required this.onViewBreakdown,
   });
 
@@ -203,7 +206,10 @@ class CartBottomCheckoutBar extends ConsumerWidget {
 
                     final user = ref.read(authProvider).value;
                     final prefs = await SharedPreferences.getInstance();
-                    final token = prefs.getString('auth_token');
+                    final secureToken = await SecureStorageService.instance.getAuthToken();
+                    final token = (secureToken != null && secureToken.isNotEmpty)
+                        ? secureToken
+                        : prefs.getString('auth_token');
 
                     if (!context.mounted) return;
 
@@ -215,7 +221,10 @@ class CartBottomCheckoutBar extends ConsumerWidget {
 
                       final updatedUser = ref.read(authProvider).value;
                       final updatedPrefs = await SharedPreferences.getInstance();
-                      final updatedToken = updatedPrefs.getString('auth_token');
+                      final updatedSecureToken = await SecureStorageService.instance.getAuthToken();
+                      final updatedToken = (updatedSecureToken != null && updatedSecureToken.isNotEmpty)
+                          ? updatedSecureToken
+                          : updatedPrefs.getString('auth_token');
 
                       if (!context.mounted) return;
 
@@ -231,6 +240,7 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                           cookingInstruction: cookingInstruction.isNotEmpty ? cookingInstruction : null,
                           couponCode: appliedCoupon,
                           discountAmount: couponDiscount,
+                          tipAmount: selectedTip,
                         ),
                       ),
                     );

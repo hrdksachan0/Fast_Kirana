@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { auth, verifiedAuth } from '@/auth'
-import { isSuperadminPhone, isRootAdminAccount } from '@/lib/superadmin-config'
+import { isRootAdminAccount } from '@/lib/superadmin-config'
 import { logger } from '@/lib/logger'
 
 export interface VerifiedGuardUser {
@@ -88,6 +88,9 @@ export async function verifyCampaignBearer(authorization: string): Promise<{ use
       algorithms: ['HS256'],
       requiredClaims: ['exp'],
     })
+    if (payload.scope === 'ws_ticket' || payload.type === 'ws_ticket') {
+      return null
+    }
     const userId = payload.id || payload.sub
     return typeof userId === 'string' && userId.trim() ? { userId } : null
   } catch {
@@ -145,23 +148,42 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
     const { verifyFastKiranaJWT } = await import('@/lib/jwt')
     const jwtPayload = await verifyFastKiranaJWT(authHeader)
     if (jwtPayload) {
-      const userRole = jwtPayload.role?.toUpperCase() || 'USER'
-      const phoneDigits = (jwtPayload.phone || '').replace(/\D/g, '').slice(-10)
-      const isSuper = isSuperadminPhone(phoneDigits) || 
-        (userRole === 'ADMIN' && !jwtPayload.assignedStoreId) ||
-        isRootAdminAccount({ email: jwtPayload.email, phone: jwtPayload.phone, role: userRole })
+      let dbUser: any = null
+      try {
+        const { prisma } = await import('@/lib/prisma')
+        dbUser = await prisma.user.findUnique({
+          where: { id: jwtPayload.userId },
+          select: { id: true, role: true, email: true, phone: true, isBlocked: true, deletedAt: true, assignedStoreId: true, assignedRestaurantId: true }
+        })
+      } catch (err) {
+        console.error('requireRole Bearer DB lookup error:', err)
+        return { error: NextResponse.json({ error: 'Service Unavailable: Authentication service degraded' }, { status: 503 }), session: null }
+      }
+
+      if (!dbUser || dbUser.isBlocked || dbUser.deletedAt) {
+        return { error: NextResponse.json({ error: 'Unauthorized: Account is unavailable or blocked' }, { status: 401 }), session: null }
+      }
+
+      const userRole = (dbUser.role || 'USER').toUpperCase()
+      const userPhone = dbUser.phone || jwtPayload.phone || ''
+      const userEmail = dbUser.email || jwtPayload.email || ''
+      const assignedStoreId = dbUser.assignedStoreId ?? null
+      const assignedRestaurantId = dbUser.assignedRestaurantId ?? null
+
+      const isSuper = (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') &&
+        isRootAdminAccount({ email: userEmail, phone: userPhone, role: userRole, assignedStoreId })
 
       if (isSuper || allowedRoles.includes(userRole) || userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
         return {
           error: null,
           session: {
             user: {
-              id: jwtPayload.userId,
+              id: dbUser.id,
               role: userRole as any,
-              phone: jwtPayload.phone,
-              email: jwtPayload.email,
-              assignedStoreId: jwtPayload.assignedStoreId,
-              assignedRestaurantId: jwtPayload.assignedRestaurantId,
+              phone: userPhone,
+              email: userEmail,
+              assignedStoreId,
+              assignedRestaurantId,
             }
           }
         }
@@ -178,92 +200,46 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
     let phoneDigits = userPhone.replace(/\D/g, '').slice(-10)
     let assignedStoreId = session.user.assignedStoreId
 
-    // Always ensure assignedStoreId is fresh from DB for staff roles
-    if (session.user.id) {
-      try {
-        const { prisma } = await import('@/lib/prisma')
-        const dbUser = await prisma.user.findUnique({
-          where: { id: session.user.id },
-          select: { id: true, role: true, email: true, phone: true, assignedStoreId: true, assignedRestaurantId: true }
-        })
-        if (dbUser) {
-          sessionRole = dbUser.role?.toUpperCase() || sessionRole
-          session.user.role = sessionRole as any
-          session.user.assignedStoreId = dbUser.assignedStoreId || null
-          session.user.assignedRestaurantId = dbUser.assignedRestaurantId || null
-          assignedStoreId = dbUser.assignedStoreId || null
-          if (dbUser.phone) session.user.phone = dbUser.phone
-        }
-      } catch (_) {}
+    // Always ensure assignedStoreId is fresh from DB for staff roles and verify active status
+    if (!session.user.id) {
+      return { error: NextResponse.json({ error: 'Unauthorized: Session missing user ID' }, { status: 401 }), session: null }
     }
 
-    const isSuper = isRootAdminAccount({
-      email: userEmail,
-      phone: userPhone,
-      role: sessionRole,
-      assignedStoreId,
-    }) || isSuperadminPhone(phoneDigits)
+    try {
+      const { prisma } = await import('@/lib/prisma')
+        const dbUser = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { id: true, role: true, email: true, phone: true, isBlocked: true, deletedAt: true, assignedStoreId: true, assignedRestaurantId: true }
+        })
+        if (!dbUser || dbUser.isBlocked || dbUser.deletedAt !== null) {
+          return { error: NextResponse.json({ error: 'Unauthorized: Account is unavailable or blocked' }, { status: 401 }), session: null }
+        }
+        sessionRole = dbUser.role?.toUpperCase() || sessionRole
+        session.user.role = sessionRole as any
+        session.user.assignedStoreId = dbUser.assignedStoreId || null
+        session.user.assignedRestaurantId = dbUser.assignedRestaurantId || null
+        assignedStoreId = dbUser.assignedStoreId || null
+        if (dbUser.phone) session.user.phone = dbUser.phone
+      } catch (err) {
+        console.error('requireRole session DB lookup error:', err)
+        return { error: NextResponse.json({ error: 'Service Unavailable: Authentication service degraded' }, { status: 503 }), session: null }
+      }
+
+    const isSuper = (sessionRole === 'ADMIN' || sessionRole === 'SUPER_ADMIN') &&
+      isRootAdminAccount({
+        email: userEmail,
+        phone: userPhone,
+        role: sessionRole,
+        assignedStoreId,
+      })
 
     if (isSuper || (sessionRole && (allowedRoles.includes(sessionRole) || sessionRole === 'ADMIN' || sessionRole === 'SUPER_ADMIN'))) {
       return { error: null, session }
     }
   }
 
-  // 4. Fallback from request x-user-id / x-user-email / x-user-phone headers (for API / dashboard calls)
-  if (reqHeaders) {
-    const rawUserId = reqHeaders.get('x-user-id')
-    const rawUserEmail = reqHeaders.get('x-user-email')
-    const rawUserPhone = reqHeaders.get('x-user-phone')
-    const rawUserRole = (reqHeaders.get('x-user-role') || '').toUpperCase()
-
-    if (rawUserId || rawUserEmail || rawUserPhone) {
-      try {
-        const { prisma } = await import('@/lib/prisma')
-        const conditions: any[] = []
-        if (rawUserId && !rawUserId.startsWith('mock-id-')) conditions.push({ id: rawUserId })
-        if (rawUserEmail) conditions.push({ email: rawUserEmail.toLowerCase().trim() })
-        if (rawUserPhone) {
-          const digits = rawUserPhone.replace(/\D/g, '').slice(-10)
-          if (digits) {
-            conditions.push({ phone: { contains: digits } })
-          }
-        }
-
-        let dbUser = null
-        if (conditions.length > 0) {
-          dbUser = await prisma.user.findFirst({
-            where: { OR: conditions },
-            select: { id: true, role: true, email: true, phone: true, isBlocked: true, assignedStoreId: true, assignedRestaurantId: true }
-          })
-        }
-
-        if (dbUser && !dbUser.isBlocked) {
-          const dbRole = dbUser.role?.toUpperCase() || 'USER'
-          const dbEmail = (dbUser.email || '').toLowerCase()
-          const dbPhone = (dbUser.phone || '').replace(/\D/g, '').slice(-10)
-          const isDbSuper = isRootAdminAccount({ email: dbEmail, phone: dbPhone, role: dbRole }) ||
-            isSuperadminPhone(dbPhone) ||
-            (dbRole === 'ADMIN' && !dbUser.assignedStoreId)
-
-          if (isDbSuper || (dbRole && (allowedRoles.includes(dbRole) || dbRole === 'ADMIN' || dbRole === 'SUPER_ADMIN'))) {
-            return {
-              error: null,
-              session: {
-                user: {
-                  id: dbUser.id,
-                  role: dbRole as any,
-                  phone: dbUser.phone,
-                  email: dbUser.email,
-                  assignedStoreId: dbUser.assignedStoreId,
-                  assignedRestaurantId: dbUser.assignedRestaurantId,
-                }
-              }
-            }
-          }
-        }
-      } catch (_) {}
-    }
-  }
+  // Insecure header-based identity fallbacks (x-user-*) are explicitly rejected.
+  // Authentication requires either a valid cryptographic Bearer token or a verified NextAuth session.
 
   if (!session?.user) {
     return { error: NextResponse.json({ error: 'Unauthorized: Staff login required' }, { status: 401 }), session: null }
@@ -295,9 +271,9 @@ export async function requireOrderAccess(orderUserId: string, extraRoles: string
       const { prisma } = await import('@/lib/prisma')
       const dbUser = await prisma.user.findUnique({
         where: { id: jwtPayload.userId },
-        select: { id: true, role: true, phone: true, email: true, isBlocked: true, assignedStoreId: true, assignedRestaurantId: true }
+        select: { id: true, role: true, phone: true, email: true, isBlocked: true, deletedAt: true, assignedStoreId: true, assignedRestaurantId: true }
       })
-      if (dbUser && !dbUser.isBlocked) {
+      if (dbUser && !dbUser.isBlocked && !dbUser.deletedAt) {
         const staffRoles = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER', ...extraRoles]
         const isOwner = orderUserId === dbUser.id
         const isStaff = staffRoles.includes(dbUser.role)
@@ -375,12 +351,13 @@ export function getEffectiveStoreId(session: any, requestedStoreId?: string | nu
   const phone = (user.phone || '').replace(/\D/g, '').slice(-10)
   const role = (user.role || '').toUpperCase()
 
-  const isSuper = isRootAdminAccount({
-    email,
-    phone,
-    role,
-    assignedStoreId: null,
-  }) || isSuperadminPhone(phone)
+  const isSuper = (role === 'ADMIN' || role === 'SUPER_ADMIN') &&
+    isRootAdminAccount({
+      email,
+      phone,
+      role,
+      assignedStoreId: null,
+    })
 
   if (isSuper) {
     return requestedStoreId && requestedStoreId !== 'ALL' && requestedStoreId !== 'all'

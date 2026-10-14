@@ -9,6 +9,7 @@ import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfupipayment.dart';
 import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cftheme/cftheme.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/app_config.dart';
 
 typedef PaymentSuccessCallback = void Function(String cfOrderId);
@@ -43,6 +44,7 @@ class PaymentGatewayHandler {
     String? addressId,
     List<Map<String, dynamic>>? items,
     String? deliveryMethod,
+    Future<void> Function(String cfOrderId)? onBeforeLaunch,
   }) async {
     final cleanPhone = customerPhone.replaceAll(RegExp(r'[^\d]'), '');
     final phone10 = cleanPhone.length >= 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
@@ -68,6 +70,22 @@ class PaymentGatewayHandler {
       if (cfRes.data != null && cfRes.data['paymentSessionId'] != null) {
         final paymentSessionId = cfRes.data['paymentSessionId'].toString();
         final cfOrderId = cfRes.data['orderId']?.toString() ?? 'cf_${DateTime.now().millisecondsSinceEpoch}';
+
+        // Persist pending attempt before launching external SDK
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('active_pending_cf_order_id', cfOrderId);
+          await prefs.setString('active_pending_cf_amount', amount.toString());
+        } catch (_) {}
+
+        // Durably record accepted draft before launching external payment SDK
+        if (onBeforeLaunch != null) {
+          try {
+            await onBeforeLaunch(cfOrderId);
+          } catch (e) {
+            debugPrint('PaymentGatewayHandler: Error in onBeforeLaunch draft callback: $e');
+          }
+        }
 
         const env = AppConfig.cashfreeEnv == 'SANDBOX' ? CFEnvironment.SANDBOX : CFEnvironment.PRODUCTION;
         final session = CFSessionBuilder()
@@ -124,37 +142,135 @@ class PaymentGatewayHandler {
 
   /// Verifies payment on backend with up to [maxAttempts] retries
   Future<PaymentVerificationResult> verifyPayment(String cfOrderId, {int maxAttempts = 3}) async {
+    bool hadNetworkOrTimeoutError = false;
+    String? lastKnownStatus;
+    String? lastMessage;
+
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
       if (attempt > 0) {
-        await Future.delayed(const Duration(milliseconds: 400));
+        await Future.delayed(const Duration(milliseconds: 600));
       }
       try {
         final verifyRes = await dio.post(
           '/api/payment/cashfree/verify',
           data: {'orderId': cfOrderId, 'cfOrderId': cfOrderId},
           options: Options(
-            sendTimeout: const Duration(seconds: 4),
-            receiveTimeout: const Duration(seconds: 4),
+            sendTimeout: const Duration(seconds: 5),
+            receiveTimeout: const Duration(seconds: 5),
           ),
         );
+        hadNetworkOrTimeoutError = false;
         if (verifyRes.statusCode == 200 && verifyRes.data != null) {
           final data = verifyRes.data;
           if (data['isPaid'] == true || data['paymentStatus'] == 'PAID') {
             final paymentId = data['cfPaymentId']?.toString() ?? 'CF_$cfOrderId';
-            return PaymentVerificationResult(isPaid: true, paymentId: paymentId);
+            // Do NOT clear active_pending_cf_order_id here; keep recovery intact until backend order placement ACK
+            return PaymentVerificationResult(
+              status: PaymentVerificationStatus.paid,
+              paymentId: paymentId,
+            );
+          }
+          lastKnownStatus = data['paymentStatus']?.toString().toUpperCase();
+          lastMessage = data['message']?.toString();
+
+          if (lastKnownStatus == 'FAILED' ||
+              lastKnownStatus == 'CANCELLED' ||
+              lastKnownStatus == 'USER_DROPPED') {
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('active_pending_cf_order_id');
+              await prefs.remove('active_pending_cf_amount');
+            } catch (_) {}
+            return PaymentVerificationResult(
+              status: PaymentVerificationStatus.failed,
+              message: lastMessage ?? 'Payment was cancelled or failed.',
+            );
+          }
+
+          if (lastKnownStatus == 'PENDING' || lastKnownStatus == 'ACTIVE') {
+            // Still in flight, continue polling attempts
+            continue;
           }
         }
+      } on DioException catch (dioErr) {
+        debugPrint('Cashfree verification DioException attempt $attempt: $dioErr');
+        hadNetworkOrTimeoutError = true;
       } catch (e) {
         debugPrint('Cashfree verification check attempt $attempt note: $e');
+        hadNetworkOrTimeoutError = true;
       }
     }
-    return const PaymentVerificationResult(isPaid: false);
+
+    if (hadNetworkOrTimeoutError) {
+      return const PaymentVerificationResult(
+        status: PaymentVerificationStatus.verificationUnavailable,
+        message: 'Network issue or timeout while verifying payment status.',
+      );
+    }
+
+    if (lastKnownStatus == 'PENDING' || lastKnownStatus == 'ACTIVE') {
+      return const PaymentVerificationResult(
+        status: PaymentVerificationStatus.pending,
+        message: 'Payment is awaiting confirmation from your bank/UPI app.',
+      );
+    }
+
+    return PaymentVerificationResult(
+      status: PaymentVerificationStatus.failed,
+      message: lastMessage ?? 'Payment was not completed.',
+    );
+  }
+
+  /// Clears persisted pending recovery data after the order has been durably placed
+  static Future<void> clearPendingPaymentRecovery() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('active_pending_cf_order_id');
+      await prefs.remove('active_pending_cf_amount');
+    } catch (_) {}
+  }
+
+  /// Reads persisted pending Cashfree order ID if any exists
+  static Future<String?> getPendingCfOrderId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('active_pending_cf_order_id');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Reads persisted pending Cashfree order amount if any exists
+  static Future<String?> getPendingCfAmount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('active_pending_cf_amount');
+    } catch (_) {
+      return null;
+    }
   }
 }
 
-class PaymentVerificationResult {
-  final bool isPaid;
-  final String? paymentId;
+enum PaymentVerificationStatus {
+  paid,
+  pending,
+  failed,
+  verificationUnavailable,
+}
 
-  const PaymentVerificationResult({required this.isPaid, this.paymentId});
+class PaymentVerificationResult {
+  final PaymentVerificationStatus status;
+  final String? paymentId;
+  final String? message;
+
+  const PaymentVerificationResult({
+    required this.status,
+    this.paymentId,
+    this.message,
+  });
+
+  bool get isPaid => status == PaymentVerificationStatus.paid;
+  bool get isPending => status == PaymentVerificationStatus.pending;
+  bool get isFailed => status == PaymentVerificationStatus.failed;
+  bool get isUnavailable => status == PaymentVerificationStatus.verificationUnavailable;
 }

@@ -7,9 +7,21 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from httpx import AsyncClient, ASGITransport
 from main import app
 from utils.jwt import create_access_token
+from tests.conftest import TestingSessionLocal
+from models import User
 
 @pytest.mark.asyncio
 async def test_all_api_routes():
+    async with TestingSessionLocal() as session:
+        admin_user = User(
+            id="test_admin_id",
+            email="admin@fastkirana.in",
+            role="ADMIN",
+            isBlocked=False,
+        )
+        session.add(admin_user)
+        await session.commit()
+
     # Create test JWT headers for authenticated routes
     test_token = create_access_token({"id": "test_admin_id", "email": "admin@fastkirana.in", "role": "ADMIN"})
     auth_headers = {"Authorization": f"Bearer {test_token}"}

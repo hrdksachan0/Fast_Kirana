@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:fastkirana_flutter/data/models/product.dart';
+import 'package:fastkirana_flutter/data/models/cart.dart';
 import 'package:fastkirana_flutter/data/repositories/cart_repository.dart';
 import 'package:fastkirana_flutter/providers/cart_provider.dart';
 
@@ -116,4 +117,30 @@ void main() {
     expect(syncCallCount, equals(1));
     expect(await cartRepo.hasPendingSync(), isFalse);
   });
+
+  test('Restart Resilience: loadCart reconciles pending offline edits without stale server overwrite', () async {
+    final product = makeTestProduct('p103', 'Aashirvaad Atta', 240);
+    final offlineItem = CartItem(
+      id: 'item_p103',
+      cartId: 'cart_active',
+      productId: 'p103',
+      product: product,
+      quantity: 5,
+    );
+
+    // Save offline items and mark pending sync = true
+    await cartRepo.saveLocalCart([offlineItem], isDirty: true);
+    await cartRepo.setPendingSync(true);
+
+    // Restart application: instantiate fresh notifier
+    shouldNetworkFail = false;
+    final restartedNotifier = CartNotifier(cartRepo);
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // Verify local quantity 5 was preserved and not overwritten
+    expect(restartedNotifier.getQuantity('p103'), equals(5));
+    // Verify sync to server was attempted to reconcile
+    expect(syncCallCount, greaterThanOrEqualTo(1));
+  });
 }
+

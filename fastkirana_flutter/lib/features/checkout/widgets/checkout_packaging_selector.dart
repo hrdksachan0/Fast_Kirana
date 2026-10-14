@@ -5,11 +5,13 @@ import '../../../core/theme/design_system.dart';
 
 class CheckoutPackagingSelector extends StatelessWidget {
   final String selectedPackaging;
+  final double standardFee;
   final ValueChanged<String> onPackagingChanged;
 
   const CheckoutPackagingSelector({
     super.key,
     required this.selectedPackaging,
+    this.standardFee = 5.0,
     required this.onPackagingChanged,
   });
 
@@ -115,7 +117,7 @@ class CheckoutPackagingSelector extends StatelessWidget {
                       borderRadius: BorderRadius.circular(5),
                     ),
                     child: Text(
-                      '₹5',
+                      '₹${standardFee.toInt()}',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w900,

@@ -22,19 +22,19 @@ class _CheckoutPlacingOrderOverlayState extends State<CheckoutPlacingOrderOverla
 
   static const List<Map<String, dynamic>> _steps = [
     {
-      'title': 'Locking Fresh Items',
-      'subtitle': 'Reserved from nearest express hub',
-      'icon': Icons.inventory_2_rounded,
+      'title': 'Submitting Order',
+      'subtitle': 'Securing your cart items',
+      'icon': Icons.shopping_bag_outlined,
     },
     {
-      'title': 'Calculating Fastest Route',
-      'subtitle': 'Zero-traffic delivery path mapped',
-      'icon': Icons.navigation_rounded,
+      'title': 'Verifying Details',
+      'subtitle': 'Checking store availability & route',
+      'icon': Icons.verified_outlined,
     },
     {
-      'title': 'Assigning Express Rider',
-      'subtitle': 'Partner preparing for pickup',
-      'icon': Icons.two_wheeler_rounded,
+      'title': 'Confirming with Store',
+      'subtitle': 'Sending request to fulfillment partner',
+      'icon': Icons.storefront_outlined,
     },
   ];
 

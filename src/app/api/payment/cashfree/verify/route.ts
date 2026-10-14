@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const cleanId = rawId.replace(/_r\d+$/, '')
 
     let orders: any[] = await prisma.$queryRaw`
-      SELECT o.id, o."userId", o."combinedId", o."readableId",
+      SELECT o.id, o."userId", o."combinedId", o."readableId", o."cfOrderId",
              o.status::text as status,
              o.total, o."paymentStatus"::text as "paymentStatus",
              o."paymentMethod"::text as "paymentMethod",
@@ -32,25 +32,9 @@ export async function POST(req: NextRequest) {
              u.name as "userName", u.phone as "userPhone", u.email as "userEmail"
       FROM orders o
       LEFT JOIN users u ON o."userId" = u.id
-      WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId}
+      WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId} OR o."cfOrderId" = ${cleanId} OR o."cfOrderId" = ${rawId}
       LIMIT 1
     `
-
-    if (!orders || orders.length === 0) {
-      orders = await prisma.$queryRaw`
-        SELECT o.id, o."userId", o."combinedId", o."readableId",
-               o.status::text as status,
-               o.total, o."paymentStatus"::text as "paymentStatus",
-               o."paymentMethod"::text as "paymentMethod",
-               o."shopName", o."restaurantId",
-               o."createdAt", o.notes,
-               u.name as "userName", u.phone as "userPhone", u.email as "userEmail"
-        FROM orders o
-        LEFT JOIN users u ON o."userId" = u.id
-        WHERE o.notes IS NOT NULL AND o.notes ILIKE ${'%' + cleanId + '%'}
-        LIMIT 1
-      `
-    }
 
     if (!orders || orders.length === 0) {
       // Check if this is a preflight Cashfree order before DB record creation (e.g. Flutter mobile checkout)
@@ -58,24 +42,32 @@ export async function POST(req: NextRequest) {
         const checkId = cfOrderId || cleanId
         const cfOrder = await getCashfreeOrder(checkId)
         if (cfOrder && cfOrder.order_status === 'PAID') {
+          const amt = Number(cfOrder.order_amount)
+          if (isNaN(amt) || amt <= 0) {
+            return NextResponse.json({ error: 'Gateway payment missing valid amount' }, { status: 400 })
+          }
           try {
             const { cache } = await import('@/lib/redis-client')
-            await cache.set(`cf_paid:${checkId}`, 'true', { ex: 3600 })
+            await cache.set(`cf_paid:${checkId}`, JSON.stringify({ paid: true, amount: amt }), { ex: 3600 })
           } catch (_) {}
           return NextResponse.json({
             success: true,
             orderId: cleanId,
             paymentStatus: 'PAID',
             isPaid: true,
-            orderAmount: cfOrder.order_amount,
+            orderAmount: amt,
           })
         }
         const payments = await getCashfreeOrderPayments(checkId)
         const successfulPayment = payments.find(p => p.payment_status === 'SUCCESS')
         if (successfulPayment) {
+          const amt = Number(successfulPayment.payment_amount)
+          if (isNaN(amt) || amt <= 0) {
+            return NextResponse.json({ error: 'Gateway payment missing valid amount' }, { status: 400 })
+          }
           try {
             const { cache } = await import('@/lib/redis-client')
-            await cache.set(`cf_paid:${checkId}`, 'true', { ex: 3600 })
+            await cache.set(`cf_paid:${checkId}`, JSON.stringify({ paid: true, amount: amt }), { ex: 3600 })
           } catch (_) {}
           return NextResponse.json({
             success: true,
@@ -83,6 +75,7 @@ export async function POST(req: NextRequest) {
             paymentStatus: 'PAID',
             isPaid: true,
             cfPaymentId: String(successfulPayment.cf_payment_id || ''),
+            orderAmount: amt,
           })
         }
         if (cfOrder) {
@@ -118,14 +111,27 @@ export async function POST(req: NextRequest) {
     let isPaid = false
     let cfPaymentId = ''
     let paymentMode = 'UPI'
+    let verifiedAmount: number | null = null
 
-    const noteMatches = [
-      order.notes?.match(/\[CF_ORDER:([^\]]+)\]/)?.[1],
-      order.notes?.match(/Cashfree Order:\s*(cf_[a-zA-Z0-9_-]+)/i)?.[1],
-      order.notes?.match(/Ref:\s*(?:CF_)?(cf_[a-zA-Z0-9_-]+)/i)?.[1],
-    ].filter(Boolean) as string[]
+    const boundCfId = (order as any).cfOrderId || null
+    const validCandidates = new Set<string>([cleanId, rawId, order.id, order.readableId, order.combinedId, boundCfId].filter(Boolean) as string[])
+    if (cfOrderId) {
+      if (
+        cfOrderId === order.id ||
+        cfOrderId === order.readableId ||
+        cfOrderId === order.combinedId ||
+        cfOrderId === boundCfId ||
+        cfOrderId.replace(/_r\d+$/, '') === order.id ||
+        cfOrderId.replace(/_r\d+$/, '') === order.readableId ||
+        cfOrderId.replace(/_r\d+$/, '') === boundCfId
+      ) {
+        validCandidates.add(cfOrderId)
+      } else {
+        console.warn(`[Payment Security] Untrusted client cfOrderId '${cfOrderId}' does not match order #${order.id} identifiers. Ignored.`)
+      }
+    }
 
-    const idsToCheck = Array.from(new Set([cfOrderId, ...noteMatches, rawId, order.id].filter(Boolean))) as string[]
+    const idsToCheck = Array.from(validCandidates)
 
     for (const idToCheck of idsToCheck) {
       if (isPaid) break
@@ -133,6 +139,9 @@ export async function POST(req: NextRequest) {
         const cfOrder = await getCashfreeOrder(idToCheck)
         if (cfOrder && cfOrder.order_status === 'PAID') {
           isPaid = true
+          if (cfOrder.order_amount !== undefined && cfOrder.order_amount !== null) {
+            verifiedAmount = Number(cfOrder.order_amount)
+          }
           break
         }
       } catch (cfErr) {
@@ -145,6 +154,9 @@ export async function POST(req: NextRequest) {
         if (successfulPayment) {
           isPaid = true
           cfPaymentId = String(successfulPayment.cf_payment_id || '')
+          if (successfulPayment.payment_amount !== undefined && successfulPayment.payment_amount !== null) {
+            verifiedAmount = Number(successfulPayment.payment_amount)
+          }
           if (successfulPayment.payment_method) {
             paymentMode = 'UPI'
           }
@@ -160,6 +172,31 @@ export async function POST(req: NextRequest) {
         success: false,
         paymentStatus: 'PENDING',
         message: 'Payment has not been completed or is still processing.'
+      }, { status: 400 })
+    }
+
+    // Symmetric amount verification
+    let expectedTotal = Number(order.total || 0)
+    if (order.combinedId) {
+      const combRes: any[] = await prisma.$queryRaw`
+        SELECT COALESCE(SUM(total), 0) as total FROM orders WHERE "combinedId" = ${order.combinedId}
+      `
+      if (combRes[0]?.total) expectedTotal = Number(combRes[0].total)
+    }
+
+    if (verifiedAmount === null || isNaN(verifiedAmount) || verifiedAmount <= 0 || expectedTotal <= 0) {
+      return NextResponse.json({
+        error: 'Unable to verify payment: gateway did not report a valid payment amount.',
+        success: false,
+        isPaid: false,
+      }, { status: 400 })
+    }
+
+    if (Math.abs(verifiedAmount - expectedTotal) > 0.05) {
+      return NextResponse.json({
+        error: `Payment amount mismatch: gateway received ₹${verifiedAmount.toFixed(2)}, expected ₹${expectedTotal.toFixed(2)}. Payment rejected.`,
+        success: false,
+        isPaid: false,
       }, { status: 400 })
     }
 

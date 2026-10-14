@@ -15,6 +15,8 @@ import '../../core/network/api_client.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../core/routes/page_transitions.dart';
+import '../../core/services/location_service.dart';
+import '../../providers/address_provider.dart';
 import '../delivery/delivery_dashboard.dart';
 import '../admin/admin_dashboard.dart';
 import '../admin/vendor_console_screen.dart';
@@ -217,10 +219,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
             rawName.toLowerCase() != 'customer' &&
             rawName != 'FastKirana Customer';
 
-        // 1. Immediately persist auth token & credentials FIRST so Dio interceptor
-        // has valid Authorization header for subsequent API calls.
+        // 1. Immediately persist auth token & credentials to encrypted SecureStorage FIRST
+        // so Dio interceptor has valid Authorization header for subsequent API calls.
         if (response.token != null && response.token!.isNotEmpty) {
-          await prefs.setString('auth_token', response.token!);
           await SecureStorage.write('auth_token', response.token!);
         }
         await prefs.setString('user_id', user.id);
@@ -233,12 +234,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
         await SecureStorage.loadCache();
         await ref.read(authProvider.notifier).setUser(user);
 
-        // 2. If new customer -> Prompt Full Name (Skip for Staff)
+        // 2. If new customer -> 2-Step Onboarding (Step 1: Name, Step 2: Single-Line Address with Auto GPS)
         if (!isExistingUser && !isStaffRole) {
           if (!mounted) return;
-          final enteredName = await _showNameBottomSheet(context);
-          if (enteredName != null && enteredName.trim().isNotEmpty) {
-            final validName = enteredName.trim();
+          final onboardingResult = await _showNewUserOnboardingBottomSheet(context);
+          if (onboardingResult != null) {
+            final validName = onboardingResult.name.trim();
             user = user.copyWith(name: validName);
 
             // Immediately persist updated name locally in storage & Riverpod state
@@ -252,6 +253,31 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
             authRepo.updateName(validName).catchError((e) {
               debugPrint('Profile update background error: $e');
             });
+
+            // Save single-line address with auto-detected GPS location
+            final loc = onboardingResult.location;
+            final addressData = {
+              'label': onboardingResult.tag,
+              'houseNo': onboardingResult.addressLine.trim(),
+              'street': '',
+              'area': (loc != null && loc.area.isNotEmpty) ? loc.area : 'Ghatampur',
+              'city': (loc != null && loc.city.isNotEmpty) ? loc.city : 'Ghatampur',
+              'pincode': (loc != null && loc.pincode.isNotEmpty) ? loc.pincode : '209206',
+              'lat': loc?.latitude ?? 26.1534185,
+              'lng': loc?.longitude ?? 80.1714024,
+              'latitude': loc?.latitude ?? 26.1534185,
+              'longitude': loc?.longitude ?? 80.1714024,
+              'isDefault': true,
+            };
+
+            try {
+              final newAddress = await ref.read(addressesProvider.notifier).addAddress(addressData);
+              ref.read(selectedAddressProvider.notifier).state = newAddress;
+            } catch (e) {
+              debugPrint('Address creation background notice: $e');
+            }
+
+            await prefs.setBool('has_chosen_location', true);
           }
         }
         HapticFeedback.heavyImpact();
@@ -304,10 +330,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
           return;
         }
 
-        // Customer Navigation: Compulsory Delivery Location Setup
+        // Customer Navigation: Seamless entry (direct to /main if location chosen)
         if (mounted) {
+          final hasChosenLocation = prefs.getBool('has_chosen_location') ?? false;
           Navigator.of(context).pushNamedAndRemoveUntil(
-            '/location',
+            hasChosenLocation ? '/main' : '/location',
             (route) => false,
             arguments: true,
           );
@@ -343,298 +370,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
     }
   }
 
-  Future<String?> _showNameBottomSheet(BuildContext context) async {
-    final nameCtrl = TextEditingController();
-    String? errorText;
-
-    return showModalBottomSheet<String>(
+  Future<_NewUserOnboardingResult?> _showNewUserOnboardingBottomSheet(BuildContext context) async {
+    return showModalBottomSheet<_NewUserOnboardingResult>(
       context: context,
       isDismissible: false,
       enableDrag: false,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setModalState) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x1F0F172A),
-                    blurRadius: 32,
-                    offset: Offset(0, -8),
-                  ),
-                ],
-              ),
-              padding: EdgeInsets.only(
-                left: 22,
-                right: 22,
-                top: 14,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Elegant drag pill
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 4.5,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFCBD5E1),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Eyebrow pill
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1F2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFFFE4E6), width: 1.1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('👋', style: TextStyle(fontSize: 12)),
-                        const SizedBox(width: 6),
-                        Text(
-                          'WELCOME TO FASTKIRANA',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: primaryRed,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Text(
-                    'What should we call you?',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: Responsive.scaledFontSize(context, 19),
-                      fontWeight: FontWeight.w900,
-                      color: slateDark,
-                      letterSpacing: -0.4,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Your name personalizes your orders & helps delivery riders find you.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: Responsive.scaledFontSize(context, 12.5),
-                      fontWeight: FontWeight.w500,
-                      color: slateMuted,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Doppelrand (Double-Bezel) input architecture
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: errorText != null ? primaryRed : const Color(0xFFE2E8F0),
-                        width: errorText != null ? 1.6 : 1.2,
-                      ),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.02),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF1F2),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.person_outline_rounded, size: 18, color: primaryRed),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: nameCtrl,
-                              autofocus: true,
-                              textCapitalization: TextCapitalization.words,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: Responsive.scaledFontSize(context, 14.5),
-                                fontWeight: FontWeight.w800,
-                                color: slateDark,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: 'Enter your first & last name',
-                                hintStyle: GoogleFonts.plusJakartaSans(
-                                  fontSize: Responsive.scaledFontSize(context, 13),
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF94A3B8),
-                                ),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              onChanged: (_) {
-                                if (errorText != null) {
-                                  setModalState(() => errorText = null);
-                                } else {
-                                  setModalState(() {});
-                                }
-                              },
-                              onSubmitted: (val) {
-                                if (val.trim().isEmpty) {
-                                  setModalState(() => errorText = 'Please enter your name');
-                                } else {
-                                  Navigator.pop(ctx, val.trim());
-                                }
-                              },
-                            ),
-                          ),
-                          if (nameCtrl.text.isNotEmpty)
-                            GestureDetector(
-                              onTap: () {
-                                nameCtrl.clear();
-                                setModalState(() {});
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFE2E8F0),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.close_rounded, size: 14, color: slateMuted),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  if (errorText != null) ...[
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline_rounded, size: 14, color: primaryRed),
-                          const SizedBox(width: 6),
-                          Text(
-                            errorText!,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: primaryRed,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 20),
-
-                  // Island Button Architecture with nested circle trailing arrow
-                  Bounceable(
-                    onTap: () {
-                      final val = nameCtrl.text.trim();
-                      if (val.isEmpty) {
-                        setModalState(() => errorText = 'Please enter your name');
-                      } else {
-                        Navigator.pop(ctx, val);
-                      }
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      height: 52,
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFE11D48), Color(0xFFF43F5E)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFE11D48).withValues(alpha: 0.35),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const SizedBox(width: 28),
-                          Text(
-                            'Continue to Delivery Address',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: Responsive.scaledFontSize(context, 14),
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.22),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.lock_outline_rounded, size: 12, color: Color(0xFF94A3B8)),
-                        const SizedBox(width: 5),
-                        Text(
-                          'Your details are securely encrypted and private',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF94A3B8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (ctx) => const _NewUserOnboardingSheet(
+        primaryColor: primaryRed,
+        slateDark: slateDark,
+        slateMuted: slateMuted,
+      ),
     );
   }
 
@@ -1346,6 +1093,839 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
           ),
         ),
       ),
+    );
+  }
+}
+
+class _NewUserOnboardingResult {
+  final String name;
+  final String addressLine;
+  final String tag;
+  final LocationDetails? location;
+
+  const _NewUserOnboardingResult({
+    required this.name,
+    required this.addressLine,
+    required this.tag,
+    this.location,
+  });
+}
+
+class _NewUserOnboardingSheet extends StatefulWidget {
+  final Color primaryColor;
+  final Color slateDark;
+  final Color slateMuted;
+
+  const _NewUserOnboardingSheet({
+    required this.primaryColor,
+    required this.slateDark,
+    required this.slateMuted,
+  });
+
+  @override
+  State<_NewUserOnboardingSheet> createState() => _NewUserOnboardingSheetState();
+}
+
+class _NewUserOnboardingSheetState extends State<_NewUserOnboardingSheet> {
+  int _step = 1;
+  final _nameCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
+  final _nameFocusNode = FocusNode();
+  final _addressFocusNode = FocusNode();
+
+  String? _nameError;
+  String? _addressError;
+  String _selectedTag = 'Home';
+
+  bool _isFetchingLocation = true;
+  LocationDetails? _detectedLocation;
+  String? _locationStatusText;
+
+  @override
+  void initState() {
+    super.initState();
+    _startLocationDetection();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _addressCtrl.dispose();
+    _nameFocusNode.dispose();
+    _addressFocusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _startLocationDetection() async {
+    if (!mounted) return;
+    setState(() {
+      _isFetchingLocation = true;
+      _locationStatusText = 'Auto-detecting your location...';
+    });
+
+    try {
+      final details = await LocationService.fetchCurrentLocationDetails();
+      if (!mounted) return;
+      setState(() {
+        _isFetchingLocation = false;
+        _detectedLocation = details;
+        if (details != null) {
+          _locationStatusText = '${details.area}, ${details.city} (${details.pincode})';
+        } else {
+          _locationStatusText = 'Ghatampur, Kanpur Nagar (209206)';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isFetchingLocation = false;
+        _locationStatusText = 'Ghatampur, Kanpur Nagar (209206)';
+      });
+    }
+  }
+
+  void _proceedToStep2() {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = 'Please enter your name');
+      return;
+    }
+    setState(() {
+      _nameError = null;
+      _step = 2;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _addressFocusNode.requestFocus();
+    });
+  }
+
+  void _submitOnboarding() {
+    final address = _addressCtrl.text.trim();
+    if (address.isEmpty) {
+      setState(() => _addressError = 'Please enter your house/flat number & street');
+      return;
+    }
+
+    HapticFeedback.mediumImpact();
+    Navigator.pop(
+      context,
+      _NewUserOnboardingResult(
+        name: _nameCtrl.text.trim(),
+        addressLine: address,
+        tag: _selectedTag,
+        location: _detectedLocation,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x1F0F172A),
+            blurRadius: 32,
+            offset: Offset(0, -8),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.only(
+        left: 22,
+        right: 22,
+        top: 14,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle pill
+            Center(
+              child: Container(
+                width: 44,
+                height: 4.5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Top Header & Step Progress Badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (_step == 2)
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _step = 1;
+                        _addressError = null;
+                      });
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) _nameFocusNode.requestFocus();
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.arrow_back_rounded, size: 16, color: Color(0xFF475569)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Edit Name',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF475569),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1F2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFFFE4E6), width: 1.1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('👋', style: TextStyle(fontSize: 12)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'WELCOME TO FASTKIRANA',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: widget.primaryColor,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Step Status Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: _step == 1 ? widget.primaryColor : const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _step == 1 ? 'Step 1 of 2: Name' : 'Step 2 of 2: Address',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: widget.slateDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            if (_step == 1) _buildStep1(context) else _buildStep2(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep1(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'What should we call you?',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: Responsive.scaledFontSize(context, 19),
+            fontWeight: FontWeight.w900,
+            color: widget.slateDark,
+            letterSpacing: -0.4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Your name personalizes your orders & helps delivery riders find you.',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: Responsive.scaledFontSize(context, 12.5),
+            fontWeight: FontWeight.w500,
+            color: widget.slateMuted,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 18),
+
+        // Double-Bezel Name Input
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: _nameError != null ? widget.primaryColor : const Color(0xFFE2E8F0),
+              width: _nameError != null ? 1.6 : 1.2,
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF1F2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.person_outline_rounded, size: 18, color: widget.primaryColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _nameCtrl,
+                    focusNode: _nameFocusNode,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: Responsive.scaledFontSize(context, 14.5),
+                      fontWeight: FontWeight.w800,
+                      color: widget.slateDark,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Enter your first & last name',
+                      hintStyle: GoogleFonts.plusJakartaSans(
+                        fontSize: Responsive.scaledFontSize(context, 13),
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onChanged: (_) {
+                      if (_nameError != null) {
+                        setState(() => _nameError = null);
+                      } else {
+                        setState(() {});
+                      }
+                    },
+                    onSubmitted: (_) => _proceedToStep2(),
+                  ),
+                ),
+                if (_nameCtrl.text.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      _nameCtrl.clear();
+                      setState(() {});
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE2E8F0),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.close_rounded, size: 14, color: widget.slateMuted),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+
+        if (_nameError != null) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline_rounded, size: 14, color: widget.primaryColor),
+                const SizedBox(width: 6),
+                Text(
+                  _nameError!,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: widget.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 18),
+
+        // Action Button: Step 1 -> Step 2
+        Bounceable(
+          onTap: _proceedToStep2,
+          child: Container(
+            width: double.infinity,
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFE11D48), Color(0xFFF43F5E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFE11D48).withValues(alpha: 0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox(width: 28),
+                Text(
+                  'Continue to Delivery Address',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: Responsive.scaledFontSize(context, 14),
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.22),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+        Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.lock_outline_rounded, size: 12, color: Color(0xFF94A3B8)),
+              const SizedBox(width: 5),
+              Text(
+                'Your details are securely encrypted and private',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF94A3B8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep2(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Live GPS Auto-Detection Status Badge
+        if (_isFetchingLocation)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFEDD5)),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: widget.primaryColor),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Auto-detecting your GPS location...',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFC2410C),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (_detectedLocation != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFDCFCE7)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF10B981)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '📍 Auto-detected: ${_detectedLocation!.area}, ${_detectedLocation!.city} (${_detectedLocation!.pincode})',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF047857),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.location_on_rounded, size: 16, color: widget.primaryColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '📍 Location: ${_locationStatusText ?? 'Ghatampur (209206)'}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: widget.slateDark,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _startLocationDetection,
+                  child: Text(
+                    'Retry GPS',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: widget.primaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        const SizedBox(height: 12),
+
+        Text(
+          'Where should we deliver?',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: Responsive.scaledFontSize(context, 19),
+            fontWeight: FontWeight.w900,
+            color: widget.slateDark,
+            letterSpacing: -0.4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Enter your single-line address. We\'ve auto-detected your location.',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: Responsive.scaledFontSize(context, 12.5),
+            fontWeight: FontWeight.w500,
+            color: widget.slateMuted,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Strictly ONE Single-Line Address Field
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: _addressError != null ? widget.primaryColor : const Color(0xFFE2E8F0),
+              width: _addressError != null ? 1.6 : 1.2,
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF1F2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.home_outlined, size: 18, color: widget.primaryColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _addressCtrl,
+                    focusNode: _addressFocusNode,
+                    maxLines: 1,
+                    textInputAction: TextInputAction.done,
+                    textCapitalization: TextCapitalization.words,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: Responsive.scaledFontSize(context, 14),
+                      fontWeight: FontWeight.w700,
+                      color: widget.slateDark,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'House / Flat No., Landmark, Street',
+                      hintStyle: GoogleFonts.plusJakartaSans(
+                        fontSize: Responsive.scaledFontSize(context, 12.5),
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onChanged: (_) {
+                      if (_addressError != null) {
+                        setState(() => _addressError = null);
+                      } else {
+                        setState(() {});
+                      }
+                    },
+                    onSubmitted: (_) => _submitOnboarding(),
+                  ),
+                ),
+                if (_addressCtrl.text.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      _addressCtrl.clear();
+                      setState(() {});
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE2E8F0),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.close_rounded, size: 14, color: widget.slateMuted),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+
+        if (_addressError != null) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline_rounded, size: 14, color: widget.primaryColor),
+                const SizedBox(width: 6),
+                Text(
+                  _addressError!,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: widget.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 14),
+
+        // Quick Tag Chips (Home / Work / Other)
+        Row(
+          children: ['Home', 'Work', 'Other'].map((tag) {
+            final isSelected = _selectedTag == tag;
+            IconData icon;
+            if (tag == 'Home') {
+              icon = Icons.home_rounded;
+            } else if (tag == 'Work') {
+              icon = Icons.business_rounded;
+            } else {
+              icon = Icons.location_on_rounded;
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedTag = tag),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFFFF1F2) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected ? widget.primaryColor : const Color(0xFFE2E8F0),
+                      width: isSelected ? 1.4 : 1.0,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        icon,
+                        size: 14,
+                        color: isSelected ? widget.primaryColor : const Color(0xFF64748B),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        tag,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          color: isSelected ? widget.primaryColor : const Color(0xFF475569),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+
+        const SizedBox(height: 18),
+
+        // Submit Button: Save & Start Shopping
+        Bounceable(
+          onTap: _submitOnboarding,
+          child: Container(
+            width: double.infinity,
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFE11D48), Color(0xFFF43F5E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFE11D48).withValues(alpha: 0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox(width: 28),
+                Text(
+                  'Save & Start Shopping',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: Responsive.scaledFontSize(context, 14),
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.22),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+        Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.bolt_rounded, size: 13, color: Color(0xFFF59E0B)),
+              const SizedBox(width: 4),
+              Text(
+                '10-minute instant delivery to your doorstep',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF94A3B8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

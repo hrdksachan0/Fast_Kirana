@@ -5,6 +5,7 @@ from sqlalchemy import func, and_, desc, or_, text, not_
 from sqlalchemy.orm import selectinload
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+import os
 import re
 import uuid
 import logging
@@ -23,7 +24,7 @@ picker_router = APIRouter(prefix="/picker", tags=["Picker & Chef Operations"])
 
 def require_picker_or_chef(current_user: dict) -> dict:
     role = current_user.get("role")
-    if role not in ["PICKER", "CHEF", "RESTAURANT_OWNER", "ADMIN"]:
+    if role not in ["PICKER", "CHEF", "RESTAURANT_OWNER", "ADMIN", "SUPER_ADMIN"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     return current_user
 
@@ -32,28 +33,33 @@ async def get_current_picker_or_admin(
     request: Request,
     current_user: Optional[dict] = Depends(get_current_user)
 ) -> dict:
-    """Authenticate picker, admin, or staff via JWT or x-user-role header."""
-    if current_user:
-        role = current_user.get("role")
-        if role in ["PICKER", "ADMIN", "CHEF", "RESTAURANT_OWNER"]:
-            return current_user
-    header_role = (request.headers.get("x-user-role") or "").upper()
-    if header_role in ["PICKER", "ADMIN", "CHEF", "RESTAURANT_OWNER", "SUPER_ADMIN", "SUPERADMIN"]:
+    """Authenticate picker, admin, or staff via verified DB account or internal service principal."""
+    # 1. Verified internal service principal with explicit scope
+    x_internal_secret = request.headers.get("x-internal-secret")
+    internal_secret = os.getenv("INTERNAL_API_SECRET", "").strip()
+    if internal_secret and x_internal_secret and x_internal_secret == internal_secret:
         return {
-            "id": request.headers.get("x-user-id") or "staff-picker",
-            "role": "ADMIN" if "ADMIN" in header_role else header_role,
-            "email": request.headers.get("x-user-email") or "staff@fastkirana.com",
-            "name": "Kitchen Staff",
-            "assignedStoreId": request.headers.get("x-store-id") or None
+            "id": "service_internal_principal",
+            "role": "ADMIN",
+            "email": "service@internal.fastkirana.in",
+            "name": "Internal Service Worker",
+            "assignedStoreId": None
         }
+
+    # 2. Strict caller authentication via DB-backed current_user
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized: Picker or Admin access required"
+            detail="Unauthorized: Picker, Chef, or Admin login required"
         )
+
+    role = (current_user.get("role") or "").upper()
+    if role in ["PICKER", "ADMIN", "SUPER_ADMIN", "CHEF", "RESTAURANT_OWNER"]:
+        return current_user
+
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Forbidden: Picker or Admin role required"
+        detail="Forbidden: Insufficient permissions for picker/kitchen operations"
     )
 
 
@@ -119,7 +125,20 @@ async def get_picker_products(
     Strictly restricted to grocery items (restaurantId is None).
     Supports per-store inventory overlay (e.g. Ghatampur hub-209206).
     """
-    effective_store_id = storeId or user.get("assignedStoreId") or "hub-209206"
+    user_role = str(user.get("role") or "").upper()
+    user_store = user.get("assignedStoreId")
+    if user_role not in ["ADMIN", "SUPER_ADMIN"]:
+        if not user_store:
+            raise HTTPException(status_code=403, detail="Forbidden: Picker is not assigned to any dark store")
+        if storeId and storeId != user_store:
+            raise HTTPException(status_code=403, detail="Forbidden: Picker cannot query inventory of another store")
+        effective_store_id = user_store
+    elif user_role == "ADMIN" and user_store:
+        if storeId and storeId != user_store:
+            raise HTTPException(status_code=403, detail=f"Forbidden: Admin assigned to store '{user_store}' cannot query store '{storeId}'")
+        effective_store_id = user_store
+    else:
+        effective_store_id = storeId or user_store or "hub-209206"
 
     filters = [Product.restaurantId.is_(None)]
 
@@ -288,8 +307,22 @@ async def create_picker_product(
     db.add(product)
     await db.flush()
 
-    # Seed store_inventories for local hub (Ghatampur hub-209206 or payload storeId)
-    target_store_id = payload.get("storeId") or user.get("assignedStoreId") or "hub-209206"
+    # Seed store_inventories for local hub with strict picker store isolation
+    user_role = str(user.get("role") or "").upper()
+    user_store = user.get("assignedStoreId")
+    requested_store = payload.get("storeId")
+    if user_role not in ["ADMIN", "SUPER_ADMIN"]:
+        if not user_store:
+            raise HTTPException(status_code=403, detail="Forbidden: Picker is not assigned to any dark store")
+        if requested_store and requested_store != user_store:
+            raise HTTPException(status_code=403, detail=f"Forbidden: Picker assigned to store '{user_store}' cannot modify store '{requested_store}'")
+        target_store_id = user_store
+    elif user_role == "ADMIN" and user_store:
+        if requested_store and requested_store != user_store:
+            raise HTTPException(status_code=403, detail=f"Forbidden: Admin assigned to store '{user_store}' cannot modify store '{requested_store}'")
+        target_store_id = user_store
+    else:
+        target_store_id = requested_store or user_store or "hub-209206"
     try:
         await db.execute(text("""
             INSERT INTO store_inventories ("productId", "storeId", stock, "isAvailable", "minStockAlert", "aisleLocation", "updatedAt")
@@ -444,8 +477,22 @@ async def update_picker_product(
     if payload.get("location") is not None:
         product.location = str(payload["location"]).strip() or None
 
-    # Sync to store_inventories for local hub (Ghatampur hub-209206 or payload storeId)
-    target_store_id = payload.get("storeId") or user.get("assignedStoreId") or "hub-209206"
+    # Sync to store_inventories for local hub with strict picker store isolation
+    user_role = str(user.get("role") or "").upper()
+    user_store = user.get("assignedStoreId")
+    requested_store = payload.get("storeId")
+    if user_role not in ["ADMIN", "SUPER_ADMIN"]:
+        if not user_store:
+            raise HTTPException(status_code=403, detail="Forbidden: Picker is not assigned to any dark store")
+        if requested_store and requested_store != user_store:
+            raise HTTPException(status_code=403, detail=f"Forbidden: Picker assigned to store '{user_store}' cannot modify store '{requested_store}'")
+        target_store_id = user_store
+    elif user_role == "ADMIN" and user_store:
+        if requested_store and requested_store != user_store:
+            raise HTTPException(status_code=403, detail=f"Forbidden: Admin assigned to store '{user_store}' cannot modify store '{requested_store}'")
+        target_store_id = user_store
+    else:
+        target_store_id = requested_store or user_store or "hub-209206"
     try:
         await db.execute(text("""
             INSERT INTO store_inventories ("productId", "storeId", stock, "isAvailable", "priceOverride", "aisleLocation", "updatedAt")
@@ -498,18 +545,28 @@ async def get_picker_orders(
     is_admin = user_role in ["ADMIN", "SUPER_ADMIN", "SUPERADMIN"]
     assigned_restaurant_id = current_user.get("assignedRestaurantId")
     assigned_store_id = current_user.get("assignedStoreId")
-    # Fully dynamic store resolution:
-    # 1. Staff/Picker assignedStoreId from database
-    # 2. Or explicit x-store-id request header
-    # 3. Or query param storeId
-    effective_store_id = assigned_store_id or request.headers.get("x-store-id") or storeId
-
-    # Resolve target restaurant: if admin, allow restaurantId query param; otherwise lock to assigned restaurant
-    target_rest_id = (
-        (restaurantId or assigned_restaurant_id)
-        if is_admin
-        else (assigned_restaurant_id or restaurantId)
-    )
+    if not is_admin:
+        if not assigned_store_id and not assigned_restaurant_id:
+            raise HTTPException(status_code=403, detail="Forbidden: Staff has no assigned outlet")
+        if storeId and assigned_store_id and storeId != assigned_store_id:
+            raise HTTPException(status_code=403, detail="Forbidden: Picker cannot view orders from another store")
+        if restaurantId and assigned_restaurant_id and restaurantId != assigned_restaurant_id:
+            raise HTTPException(status_code=403, detail="Forbidden: Chef cannot view orders from another restaurant")
+        effective_store_id = assigned_store_id
+        target_rest_id = assigned_restaurant_id
+    elif user_role == "ADMIN" and assigned_store_id:
+        if storeId and storeId != assigned_store_id:
+            raise HTTPException(status_code=403, detail=f"Forbidden: Admin assigned to store '{assigned_store_id}' cannot view orders from another store")
+        effective_store_id = assigned_store_id
+        target_rest_id = restaurantId or assigned_restaurant_id
+    elif user_role == "ADMIN" and assigned_restaurant_id:
+        if restaurantId and restaurantId != assigned_restaurant_id:
+            raise HTTPException(status_code=403, detail=f"Forbidden: Admin assigned to restaurant '{assigned_restaurant_id}' cannot view orders from another restaurant")
+        effective_store_id = assigned_store_id or storeId or request.headers.get("x-store-id")
+        target_rest_id = assigned_restaurant_id
+    else:
+        effective_store_id = assigned_store_id or storeId or request.headers.get("x-store-id")
+        target_rest_id = restaurantId or assigned_restaurant_id
 
     # Staff checks
     if user_role in ["CHEF", "RESTAURANT_OWNER"]:

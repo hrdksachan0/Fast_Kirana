@@ -108,10 +108,10 @@ class RiderLocationService {
       locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 15, // Battery-efficient: Trigger only after 15 meters of movement
-        intervalDuration: const Duration(seconds: 5), // 5s interval to preserve phone battery & prevent heating
+        intervalDuration: const Duration(seconds: 15), // 15s battery-optimized interval to prevent phone heating & battery drain
         foregroundNotificationConfig: const ForegroundNotificationConfig(
           notificationTitle: 'FastKirana Delivery Partner 🛵',
-          notificationText: 'Sharing live location with customer',
+          notificationText: 'Sharing live location with customer (Battery Optimized)',
           notificationChannelName: 'Live Delivery Tracking',
           notificationIcon: AndroidResource(
             name: 'ic_launcher',
@@ -150,7 +150,7 @@ class RiderLocationService {
     return true;
   }
 
-  /// Handle incoming GPS fix with adaptive stationary throttling to save battery
+  /// Handle incoming GPS fix with battery-optimized 15-second debounce
   void _handleNewPosition(Position position) {
     final now = DateTime.now();
 
@@ -166,16 +166,14 @@ class RiderLocationService {
         position.longitude,
       );
 
-      // If stationary: send heartbeat only every 25s or if moved >= 15m
-      if (isStationary) {
-        if (elapsedMs < 25000 && distanceMoved < 15.0) {
-          return;
-        }
-      } else {
-        // If actively moving: broadcast every 5s or if moved >= 15m
-        if (elapsedMs < 5000 && distanceMoved < 15.0) {
-          return;
-        }
+      // Battery-optimized 15s debounce:
+      // Stationary rider: update every 30s or on moving >= 20m
+      // Moving rider: 15s debounce or on moving >= 15m
+      final requiredIntervalMs = isStationary ? 30000 : 15000;
+      final minDistanceMeters = isStationary ? 20.0 : 15.0;
+
+      if (elapsedMs < requiredIntervalMs && distanceMoved < minDistanceMeters) {
+        return;
       }
     }
 
@@ -225,10 +223,10 @@ class RiderLocationService {
 
     debugPrint('[RiderLocation] Live GPS: Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}, Heading: ${position.heading.toStringAsFixed(1)}°, Speed: ${position.speed.toStringAsFixed(1)}m/s');
 
-    // 1. Post to /api/delivery/location (adaptively throttled: 25s when stationary, 8s when moving actively)
+    // 1. Post to /api/delivery/location (15s debounce when moving, 30s when stationary)
     final now = DateTime.now();
     final isStationary = position.speed < 1.0;
-    final minHttpIntervalMs = isStationary ? 25000 : 8000;
+    final minHttpIntervalMs = isStationary ? 30000 : 15000;
     final shouldPostHttp = _lastDbInsertTime == null || now.difference(_lastDbInsertTime!).inMilliseconds >= minHttpIntervalMs;
 
     if (shouldPostHttp && _dio != null) {

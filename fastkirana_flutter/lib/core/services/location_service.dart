@@ -330,7 +330,17 @@ class LocationService {
     bool isRestaurant = false,
   }) {
     if (address == null || address.latitude == null || address.longitude == null || (address.latitude == 0.0 && address.longitude == 0.0)) {
-      return getDeliveryTier(1.0, subtotal, maxRadius: maxRadius, settings: settings, storeName: storeName, pendingOrders: pendingOrders, isRestaurant: isRestaurant);
+      final fee = settings?.deliveryFee ?? 25.0;
+      return DeliveryTierInfo(
+        distanceKm: 0.0,
+        deliveryFee: fee,
+        baseFee: fee,
+        freeDeliveryThreshold: (settings?.freeDeliveryThreshold ?? 199.0),
+        isServiceable: false,
+        tierName: 'Select Address',
+        freeDeliveryLabel: 'Select address to check free delivery',
+        feeDescription: 'Please select a delivery address to verify coverage and delivery fee.',
+      );
     }
     final dist = getDistanceKm(
       address.latitude!,
@@ -340,6 +350,7 @@ class LocationService {
     );
     return getDeliveryTier(dist, subtotal, maxRadius: maxRadius, settings: settings, storeName: storeName, pendingOrders: pendingOrders, isRestaurant: isRestaurant);
   }
+
 
   /// Check & request location permission, then fetch current GPS location
   static Future<Position?> getCurrentPosition() async {

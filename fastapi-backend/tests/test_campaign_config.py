@@ -385,3 +385,4 @@ async def test_campaign_auth_database_outage_and_missing_secret_fail_closed(monk
         await campaigns.require_campaign_admin(credentials, db)
     assert error.value.status_code == 503
     db.execute.assert_not_awaited()
+    monkeypatch.setenv("AUTH_SECRET", "ci_test_auth_secret_key_32chars_long_000")

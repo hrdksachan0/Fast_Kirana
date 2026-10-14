@@ -6,15 +6,23 @@ import { ApiResponder } from '@/lib/api-response'
 import { createAddressSchema, updateAddressSchema, patchAddressSchema, deleteAddressSchema, validateBody, validateBodyLegacy } from '@/lib/validation'
 
 async function resolveUserId(request: NextRequest | Request, session: any): Promise<string | null> {
-  let userId = session?.user?.id || (request.headers as any).get?.('x-user-id')
+  let userId = session?.user?.id
+
+  const internalSecret = process.env.INTERNAL_API_SECRET?.trim()
+  const headerInternalSecret = (request.headers as any).get?.('x-internal-secret')?.trim()
+  const isInternalService = Boolean(internalSecret && headerInternalSecret === internalSecret)
+
+  if (!userId && isInternalService) {
+    userId = (request.headers as any).get?.('x-user-id')
+  }
 
   // Verify userId actually exists in the database
   if (userId) {
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true },
+      select: { id: true, isBlocked: true },
     })
-    if (dbUser) return dbUser.id
+    if (dbUser && !dbUser.isBlocked) return dbUser.id
     userId = null
   }
 
@@ -23,9 +31,9 @@ async function resolveUserId(request: NextRequest | Request, session: any): Prom
     const cleanEmail = session.user.email.trim().toLowerCase()
     const dbUser = await prisma.user.findFirst({
       where: { email: { equals: cleanEmail, mode: 'insensitive' } },
-      select: { id: true },
+      select: { id: true, isBlocked: true },
     })
-    if (dbUser) return dbUser.id
+    if (dbUser && !dbUser.isBlocked) return dbUser.id
   }
 
   // Fallback to session phone lookup
@@ -40,37 +48,39 @@ async function resolveUserId(request: NextRequest | Request, session: any): Prom
             { phone: { contains: cleanPhone } },
           ],
         },
-        select: { id: true },
+        select: { id: true, isBlocked: true },
       })
-      if (dbUser) return dbUser.id
+      if (dbUser && !dbUser.isBlocked) return dbUser.id
     }
   }
 
-  // Fallback to header x-user-phone (mobile / API clients)
-  const headerPhone = (request.headers as any).get?.('x-user-phone')
-  if (headerPhone) {
-    const cleanPhone = getLast10Digits(headerPhone)
-    let dbUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { phone: cleanPhone },
-          { phone: `+91${cleanPhone}` },
-          { phone: { contains: cleanPhone } },
-        ],
-      },
-      select: { id: true },
-    })
-    if (!dbUser && cleanPhone.length === 10) {
-      dbUser = await prisma.user.create({
-        data: {
-          phone: `+91${cleanPhone}`,
-          name: `Customer ${cleanPhone.slice(-4)}`,
-          role: 'USER',
+  // Fallback to header x-user-phone ONLY for verified internal service callers
+  if (isInternalService) {
+    const headerPhone = (request.headers as any).get?.('x-user-phone')
+    if (headerPhone) {
+      const cleanPhone = getLast10Digits(headerPhone)
+      let dbUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: cleanPhone },
+            { phone: `+91${cleanPhone}` },
+            { phone: { contains: cleanPhone } },
+          ],
         },
-        select: { id: true },
+        select: { id: true, isBlocked: true },
       })
+      if (!dbUser && cleanPhone.length === 10) {
+        dbUser = await prisma.user.create({
+          data: {
+            phone: `+91${cleanPhone}`,
+            name: `Customer ${cleanPhone.slice(-4)}`,
+            role: 'USER',
+          },
+          select: { id: true, isBlocked: true },
+        })
+      }
+      if (dbUser && !dbUser.isBlocked) return dbUser.id
     }
-    if (dbUser) return dbUser.id
   }
 
   return null
@@ -87,7 +97,9 @@ export async function GET(request: NextRequest) {
     const addresses = await prisma.address.findMany({
       where: {
         userId,
-        label: { notIn: ['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE'] },
+        NOT: [
+          { label: { startsWith: 'STORE_PICKUP' } },
+        ],
       },
       orderBy: [{ isDefault: 'desc' }, { id: 'desc' }],
     })

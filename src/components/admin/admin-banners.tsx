@@ -60,9 +60,11 @@ interface PromoBanner {
   gridImages?: string[] | null
   hasWireframeGrid?: boolean
   rawCode?: string
-  placement?: 'hero' | 'brand_card'
+  placement?: 'hero' | 'brand_card' | 'sponsored_ad'
   platform?: 'all' | 'mobile' | 'web'
   storeId?: string | null
+  discountText?: string | null
+  actionText?: string | null
 }
 
 // Predefined Gradient Options
@@ -502,8 +504,8 @@ export function AdminBanners({
   const [presetCategoryFilter, setPresetCategoryFilter] = useState<'all' | 'food' | 'grocery'>('all')
   const [isGeneratingGemini, setIsGeneratingGemini] = useState(false)
 
-  // Placement & Target Platform States (Defaults to Hero Slider for main storefront)
-  const [placement, setPlacement] = useState<'hero' | 'brand_card'>('brand_card')
+  // Placement & Target Platform States (Defaults to Brand Card for storefront)
+  const [placement, setPlacement] = useState<'hero' | 'brand_card' | 'sponsored_ad'>('brand_card')
   const [platform, setPlatform] = useState<'all' | 'mobile' | 'web'>('all')
   const [storeId, setStoreId] = useState<string>(() => propStoreId || stores[0]?.id || 'hub-209206')
 
@@ -516,8 +518,12 @@ export function AdminBanners({
   }, [propStoreId, stores])
 
   // Registered List Filtering Tabs
-  const [activeListTab, setActiveListTab] = useState<'hero' | 'brand_card'>('brand_card')
+  const [activeListTab, setActiveListTab] = useState<'all' | 'brand_card' | 'hero' | 'sponsored_ad'>('all')
   const [activePlatformFilter, setActivePlatformFilter] = useState<'all' | 'mobile' | 'web'>('all')
+
+  // Sponsored Partner Ad Specific Fields
+  const [discountText, setDiscountText] = useState('')
+  const [actionText, setActionText] = useState('')
 
   // Form States
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -953,7 +959,9 @@ export function AdminBanners({
     setIsActive(true)
     setSortOrder('0')
 
-    // Reset multi-card fields
+    // Reset sponsored & multi-card fields
+    setDiscountText('')
+    setActionText('')
     setEyebrowTag('')
     setPrimaryBrand('')
     setSecondaryBrand('')
@@ -982,9 +990,18 @@ export function AdminBanners({
     else if (b.cardType === 'editorial' || b.type === 'editorial') fmt = 'editorial'
     setCardFormat(fmt)
 
-    const isBrandCard = b.placement === 'brand_card' || ['dark_showcase', 'bento_grid', 'editorial', 'brand_offer'].includes(b.type)
-    setPlacement('brand_card')
-    setActiveListTab('brand_card')
+    const isSponsoredAd = b.type === 'sponsored_ad' || b.placement === 'sponsored_ad'
+    if (isSponsoredAd) {
+      setPlacement('sponsored_ad')
+      setType('sponsored_ad')
+      setActiveListTab('sponsored_ad')
+    } else if (b.placement === 'hero') {
+      setPlacement('hero')
+      setActiveListTab('hero')
+    } else {
+      setPlacement('brand_card')
+      setActiveListTab('brand_card')
+    }
     setPlatform(b.platform || 'all')
     setStoreId(b.storeId || propStoreId || stores[0]?.id || 'hub-209206')
 
@@ -998,7 +1015,9 @@ export function AdminBanners({
     setPreviewMediaTab(b.videoUrl ? 'video' : 'image')
     setLinkUrl(b.linkUrl || '')
     
-    // Populate multi-card fields
+    // Populate sponsored ad & multi-card fields
+    setDiscountText(b.discountText || (b as any).eyebrowTag || '')
+    setActionText(b.actionText || b.ctaText || '')
     setEyebrowTag(b.eyebrowTag || '')
     setPrimaryBrand(b.primaryBrand || '')
     setSecondaryBrand(b.secondaryBrand || '')
@@ -1034,7 +1053,7 @@ export function AdminBanners({
     } else if (link.startsWith('/category/')) {
       setLinkType('category')
       const slug = link.replace('/category/', '')
-      setSelectedCategory(slug)
+      setSelectedCategory('')
       setSelectedProduct('')
       setSelectedRestaurant('')
       setCustomLinkUrl('')
@@ -1087,11 +1106,12 @@ export function AdminBanners({
   // Submit banner (Create or Edit)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const finalTitle = title.trim() || (placement === 'brand_card' ? 'Curated Brand Offer' : 'Promo Banner')
-    const finalDesc = description.trim() || (placement === 'brand_card' ? 'Curated Brand Media Card' : 'Media banner')
+    const isSponsoredAd = placement === 'sponsored_ad'
+    const finalTitle = title.trim() || (isSponsoredAd ? 'Special Partner Offer' : (placement === 'brand_card' ? 'Curated Brand Offer' : 'Promo Banner'))
+    const finalDesc = description.trim() || (isSponsoredAd ? 'Tap to explore exclusive partner deals and savings' : (placement === 'brand_card' ? 'Curated Brand Media Card' : 'Media banner'))
 
     if (!imageUrl.trim() && !videoUrl.trim() && !title.trim()) {
-      toast.error(placement === 'brand_card' ? 'Please upload a photo or looping video for the Brand Card' : 'Please upload a photo or video for the banner')
+      toast.error(isSponsoredAd ? 'Please provide a title and partner image for the Sponsored Ad' : (placement === 'brand_card' ? 'Please upload a photo or looping video for the Brand Card' : 'Please upload a photo or video for the banner'))
       return
     }
 
@@ -1116,20 +1136,22 @@ export function AdminBanners({
       const payload = {
         id: editingId || undefined,
         placement,
-        platform,
+        platform: isSponsoredAd ? 'mobile' : platform,
         storeId: storeId,
         title: finalTitle,
         description: finalDesc,
         code: code.trim().toUpperCase(),
         gradient,
-        type: cardFormat === 'standard' ? type : cardFormat,
-        cardType: cardFormat,
-        eyebrowTag: eyebrowTag.trim() || null,
+        type: isSponsoredAd ? 'sponsored_ad' : (cardFormat === 'standard' ? type : cardFormat),
+        cardType: isSponsoredAd ? 'sponsored_ad' : cardFormat,
+        eyebrowTag: isSponsoredAd ? (eyebrowTag.trim() || 'SPONSORED PARTNER') : (eyebrowTag.trim() || null),
+        discountText: isSponsoredAd ? (discountText.trim() || 'EXCLUSIVE PROMO') : (discountText.trim() || null),
+        actionText: isSponsoredAd ? (actionText.trim() || 'View Details') : (actionText.trim() || null),
         primaryBrand: primaryBrand.trim() || null,
         secondaryBrand: secondaryBrand.trim() || null,
         hasWireframeGrid,
         disclaimerText: disclaimerText.trim() || null,
-        ctaText: ctaText.trim() || null,
+        ctaText: (isSponsoredAd ? (actionText.trim() || 'View Details') : ctaText.trim()) || null,
         ctaUrl: ctaUrl.trim() || computedLinkUrl || null,
         ctaBgColorHex: ctaBgColorHex.trim() || null,
         ctaTextColorHex: ctaTextColorHex.trim() || null,
@@ -1155,7 +1177,7 @@ export function AdminBanners({
         throw new Error(errorData.error || 'Failed to save banner')
       }
 
-      toast.success(editingId ? 'Banner updated successfully!' : 'New Banner created successfully!')
+      toast.success(editingId ? (isSponsoredAd ? 'Sponsored Partner Ad updated!' : 'Banner updated successfully!') : (isSponsoredAd ? 'Sponsored Partner Ad published!' : 'New Banner created successfully!'))
       resetForm()
       fetchBanners()
     } catch (err: any) {
@@ -1275,25 +1297,32 @@ export function AdminBanners({
               
               {/* Placement / Mode / Platform / Store Hub Selectors */}
               <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-card border border-border/60 rounded-2xl">
-                {/* 1. Curated Brand Card (Only Brand Card Enabled) */}
+                {/* 1. Placement / Format Selector */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-wider text-text-secondary block">
-                    1. Card Format
+                    1. Card Placement *
                   </label>
-                  <div className="p-2.5 rounded-xl bg-card border border-primary/20 flex items-center justify-between shadow-2xs">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm font-black border border-primary/25">
-                        💳
-                      </div>
-                      <div>
-                        <span className="text-xs font-black text-text-primary block">Curated Brand Card</span>
-                        <span className="text-[10px] text-text-muted font-medium">Zepto & Blinkit full-bleed visual card</span>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
-                      BRAND ONLY
-                    </span>
-                  </div>
+                  <select
+                    value={placement}
+                    onChange={(e) => {
+                      const val = e.target.value as 'brand_card' | 'hero' | 'sponsored_ad'
+                      setPlacement(val)
+                      if (val === 'sponsored_ad') {
+                        setType('sponsored_ad')
+                        setPlatform('mobile')
+                        if (!eyebrowTag) setEyebrowTag('SPONSORED PARTNER')
+                        if (!discountText) setDiscountText('EXCLUSIVE PROMO')
+                        if (!actionText) setActionText('View Details')
+                      } else if (type === 'sponsored_ad') {
+                        setType('grocery')
+                      }
+                    }}
+                    className="w-full py-2.5 px-3 text-[11px] font-bold rounded-xl bg-card border border-border text-text-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs cursor-pointer"
+                  >
+                    <option value="brand_card">💳 Curated Brand Card</option>
+                    <option value="hero">🌟 Hero Banner Slider</option>
+                    <option value="sponsored_ad">⭐ Sponsored Partner Ad</option>
+                  </select>
                 </div>
 
                 {/* 2. Target Mode Selector */}
@@ -1304,9 +1333,9 @@ export function AdminBanners({
                   <div className="grid grid-cols-2 gap-1 bg-muted/50 p-1 rounded-xl border border-border">
                     <button
                       type="button"
-                      onClick={() => setType('grocery')}
+                      onClick={() => setType(placement === 'sponsored_ad' ? 'sponsored_ad' : 'grocery')}
                       className={`py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                        type === 'grocery' || type === 'express-delivery'
+                        type === 'grocery' || type === 'express-delivery' || (placement === 'sponsored_ad' && type === 'sponsored_ad')
                           ? 'bg-emerald-600 text-white shadow-xs font-black'
                           : 'text-text-muted hover:text-text-primary hover:bg-card/60'
                       }`}
@@ -1402,9 +1431,97 @@ export function AdminBanners({
                 </div>
               </div>
 
+              {placement === 'sponsored_ad' ? (
+                /* SPONSORED PARTNER AD MODE: ORDER TRACKING SCREEN PLACEMENT */
+                <>
+                  <div className="md:col-span-2 p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-yellow-500/15 to-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-amber-500/20 text-amber-500 shrink-0">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div className="text-left space-y-0.5">
+                      <h4 className="text-xs font-black text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
+                        <span>⭐ Order Tracking Partner Ad Placement</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500 text-black font-black uppercase">Flutter Mobile</span>
+                      </h4>
+                      <p className="text-[11px] text-amber-800/80 dark:text-amber-200/80">
+                        This ad card is displayed <strong>strictly between the Delivery Address card and the Bill Details card</strong> on the mobile tracking screen. If deactivated or deleted, it smoothly collapses with zero empty space.
+                      </p>
+                    </div>
+                  </div>
 
-              
-              {placement === 'brand_card' ? (
+                  {/* Partner Ad Title */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-text-primary">
+                      Partner Ad Title *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Special Partner Offer or A.S. Restaurant"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-amber-500 font-bold"
+                    />
+                  </div>
+
+                  {/* Subtitle / Offer Description */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-text-primary">
+                      Offer Description / Subtitle *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Flat 20% off on all items! Use code PARTNER20 on next visit."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-amber-500 font-medium"
+                    />
+                  </div>
+
+                  {/* Left Badge Text (eyebrowTag) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-text-primary">
+                      Left Badge Tag
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. SPONSORED PARTNER"
+                      value={eyebrowTag}
+                      onChange={(e) => setEyebrowTag(e.target.value.toUpperCase())}
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-amber-500 font-bold"
+                    />
+                  </div>
+
+                  {/* Right Promo Tag (discountText) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-text-primary">
+                      Right Promo Tag
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. EXCLUSIVE PROMO or FLAT 20% OFF"
+                      value={discountText}
+                      onChange={(e) => setDiscountText(e.target.value.toUpperCase())}
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-amber-500 font-bold text-amber-600 dark:text-amber-400"
+                    />
+                  </div>
+
+                  {/* Action Button Text */}
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-xs font-bold text-text-primary">
+                      Action Button Text
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. View Details or Order Now"
+                      value={actionText}
+                      onChange={(e) => setActionText(e.target.value)}
+                      className="w-full bg-card border border-border px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-amber-500 font-bold"
+                    />
+                  </div>
+                </>
+              ) : placement === 'brand_card' ? (
                 /* BRAND CARD MODE: CLEAN, INTENTIONAL, PURE MEDIA ONLY */
                 <div className="space-y-1.5 md:col-span-2">
                   <label className="text-xs font-bold text-text-primary flex items-center justify-between">
@@ -1942,8 +2059,89 @@ export function AdminBanners({
                   </span>
                 </div>
 
-                {/* Hero Banner Slide Mockup */}
-                {placement === 'hero' ? (
+                {/* Live Preview Display by Placement */}
+                {placement === 'sponsored_ad' ? (
+                  /* Mobile Order Tracking Screen Context (Between Delivery Address & Bill Details) */
+                  <div className="space-y-2 text-left">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-black text-amber-400 tracking-tight flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        Order Tracking Preview
+                      </span>
+                      <span className="text-[8px] font-bold text-zinc-400 font-mono">#FK-8821</span>
+                    </div>
+
+                    {/* Preceding Card: Delivery Address */}
+                    <div className="p-2.5 rounded-xl bg-zinc-900/90 border border-white/10 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-black text-white flex items-center gap-1">
+                          📍 Delivery Address
+                        </span>
+                        <span className="text-[7.5px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold uppercase">
+                          Confirmed
+                        </span>
+                      </div>
+                      <p className="text-[8px] text-zinc-400 line-clamp-1">
+                        Home • Shop No 4, Main Market, Ghatampur
+                      </p>
+                    </div>
+
+                    {/* SPONSORED PARTNER AD (Strictly positioned in the middle) */}
+                    <div className="relative overflow-hidden rounded-2xl p-3 border-2 border-amber-400/50 bg-gradient-to-br from-amber-500/20 via-yellow-500/15 to-amber-600/25 shadow-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1 bg-amber-500/25 border border-amber-500/40 px-2 py-0.5 rounded-full">
+                          <Sparkles className="w-2.5 h-2.5 text-amber-400 animate-pulse" />
+                          <span className="text-[8px] font-black uppercase text-amber-300 tracking-wider">
+                            {eyebrowTag || 'SPONSORED PARTNER'}
+                          </span>
+                        </div>
+                        <span className="bg-amber-500 text-black text-[8px] font-black uppercase px-2 py-0.5 rounded shadow-xs">
+                          {discountText || 'EXCLUSIVE PROMO'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex-1 space-y-1 text-left min-w-0">
+                          <h5 className="text-[11px] font-black text-amber-100 truncate">
+                            {title || 'Special Partner Offer'}
+                          </h5>
+                          <p className="text-[8.5px] text-amber-200/80 line-clamp-2 leading-tight">
+                            {description || 'Tap to explore exclusive partner deals and savings'}
+                          </p>
+                          <div className="inline-flex items-center gap-1 mt-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-[8px] font-black uppercase tracking-wider shadow-xs">
+                            <span>{actionText || 'View Details'}</span>
+                            <span>→</span>
+                          </div>
+                        </div>
+
+                        <div className="w-14 h-14 rounded-xl overflow-hidden border border-amber-400/40 bg-black/40 shrink-0 flex items-center justify-center">
+                          {imageUrl ? (
+                            <img src={imageUrl} alt="Ad preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <Gift className="w-6 h-6 text-amber-400" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Succeeding Card: Bill Details */}
+                    <div className="p-2.5 rounded-xl bg-zinc-900/90 border border-white/10 space-y-1">
+                      <div className="flex items-center justify-between text-white text-[9px] font-bold">
+                        <span>🧾 Bill Details</span>
+                        <span className="text-emerald-400 font-black">₹249</span>
+                      </div>
+                      <p className="text-[8px] text-zinc-400">
+                        Item total, Delivery fee & taxes paid
+                      </p>
+                    </div>
+
+                    <div className="text-center pt-0.5">
+                      <span className="text-[7.5px] text-amber-400/90 font-mono font-bold">
+                        ⭐ Placed between Address & Bill cards
+                      </span>
+                    </div>
+                  </div>
+                ) : placement === 'hero' ? (
                   <div className="relative w-full h-[125px] rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shadow-lg">
                     {previewMediaTab === 'video' && videoUrl ? (
                       <AdminVideoPreview src={videoUrl} />
@@ -2030,7 +2228,60 @@ export function AdminBanners({
                 </div>
 
                 {/* Hero Banner Slide Mockup */}
-                {placement === 'hero' ? (
+                {placement === 'sponsored_ad' ? (
+                  /* Web view of sponsored ad */
+                  <div className="space-y-3 p-2 text-left">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-amber-400" />
+                        Sponsored Partner Ad Preview (Customer Tracking View)
+                      </span>
+                      <span className="text-[10px] font-bold text-zinc-400 font-mono">Mobile App Placement</span>
+                    </div>
+
+                    <div className="relative overflow-hidden rounded-2xl p-4 border-2 border-amber-400/50 bg-gradient-to-br from-amber-500/20 via-yellow-500/15 to-amber-600/25 shadow-xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 bg-amber-500/25 border border-amber-500/40 px-2.5 py-0.5 rounded-full">
+                          <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
+                          <span className="text-[10px] font-black uppercase text-amber-300 tracking-wider">
+                            {eyebrowTag || 'SPONSORED PARTNER'}
+                          </span>
+                        </div>
+                        <span className="bg-amber-500 text-black text-[9px] font-black uppercase px-2.5 py-0.5 rounded shadow-xs">
+                          {discountText || 'EXCLUSIVE PROMO'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 space-y-1.5 text-left min-w-0">
+                          <h4 className="text-sm font-black text-amber-100 truncate">
+                            {title || 'Special Partner Offer'}
+                          </h4>
+                          <p className="text-xs text-amber-200/80 line-clamp-2 leading-relaxed">
+                            {description || 'Tap to explore exclusive partner deals and savings'}
+                          </p>
+                          <div className="inline-flex items-center gap-1.5 mt-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-xs font-black uppercase tracking-wider shadow-md">
+                            <span>{actionText || 'View Details'}</span>
+                            <span>→</span>
+                          </div>
+                        </div>
+
+                        <div className="w-20 h-20 rounded-2xl overflow-hidden border border-amber-400/40 bg-black/40 shrink-0 flex items-center justify-center shadow-md">
+                          {imageUrl ? (
+                            <img src={imageUrl} alt="Ad preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <Gift className="w-8 h-8 text-amber-400" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-400 flex items-center justify-between font-mono">
+                      <span>📌 Placement Position:</span>
+                      <span className="text-amber-400 font-bold">Directly between Address Card & Bill Card</span>
+                    </div>
+                  </div>
+                ) : placement === 'hero' ? (
                   <div className="relative w-full aspect-[3.2/1] rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shadow-lg">
                     {previewMediaTab === 'video' && videoUrl ? (
                       <AdminVideoPreview src={videoUrl} />
@@ -2142,16 +2393,59 @@ export function AdminBanners({
             </div>
           </div>
 
-          {/* Header: Live Brand & Offer Cards Only */}
-          <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-xl border border-border/60">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">💳</span>
-              <span className="text-xs font-black text-text-primary">
-                Live Brand & Offer Cards ({banners.length})
-              </span>
+          {/* Header & Filter Tabs for List */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActiveListTab('all')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
+                  activeListTab === 'all'
+                    ? 'bg-card text-text-primary shadow-xs border border-border'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                All ({banners.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveListTab('brand_card')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
+                  activeListTab === 'brand_card'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                💳 Brand Cards ({banners.filter((b) => b.placement === 'brand_card' || (!b.placement && b.type !== 'sponsored_ad')).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveListTab('hero')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
+                  activeListTab === 'hero'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                🌟 Hero ({banners.filter((b) => b.placement === 'hero').length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveListTab('sponsored_ad')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                  activeListTab === 'sponsored_ad'
+                    ? 'bg-amber-500 text-black shadow-xs font-black'
+                    : 'text-amber-500/80 hover:text-amber-500'
+                }`}
+              >
+                <span>⭐ Sponsored Ads</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-400/20 text-current">
+                  {banners.filter((b) => b.type === 'sponsored_ad' || b.placement === 'sponsored_ad').length}
+                </span>
+              </button>
             </div>
-            <span className="text-[10px] font-bold text-text-muted">
-              Auto-syncs across Web & Flutter Mobile App
+            <span className="text-[10px] font-medium text-text-muted hidden sm:inline">
+              Auto-syncs across Web & Mobile
             </span>
           </div>
 
@@ -2163,13 +2457,22 @@ export function AdminBanners({
             const filteredBanners = banners.filter(b => {
               const bPlatform = b.platform || 'all'
               const matchesPlatform = activePlatformFilter === 'all' || bPlatform === 'all' || bPlatform === activePlatformFilter
-              return matchesPlatform
+              if (!matchesPlatform) return false
+
+              const isSponsored = b.type === 'sponsored_ad' || b.placement === 'sponsored_ad'
+              const isHero = b.placement === 'hero'
+              const isBrand = !isSponsored && !isHero
+
+              if (activeListTab === 'sponsored_ad') return isSponsored
+              if (activeListTab === 'hero') return isHero
+              if (activeListTab === 'brand_card') return isBrand
+              return true
             })
 
             if (filteredBanners.length === 0) {
               return (
                 <div className="py-12 text-center text-xs text-text-secondary bg-muted/20 border border-dashed border-border rounded-xl">
-                  No Brand Cards registered for {activePlatformFilter === 'all' ? 'All Devices' : activePlatformFilter} yet.
+                  No banners registered for selected filter.
                 </div>
               )
             }
@@ -2177,7 +2480,9 @@ export function AdminBanners({
             return (
               <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
                 <AnimatePresence initial={false}>
-                  {filteredBanners.map((b) => (
+                  {filteredBanners.map((b) => {
+                    const isSponsored = b.type === 'sponsored_ad' || b.placement === 'sponsored_ad'
+                    return (
                     <motion.div
                       key={b.id}
                       layout
@@ -2185,27 +2490,41 @@ export function AdminBanners({
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       className={`p-3 border rounded-xl flex items-center justify-between gap-3 ${
-                        b.isActive ? 'bg-card border-border' : 'bg-muted/10 border-border-light opacity-60'
+                        isSponsored
+                          ? (b.isActive ? 'bg-amber-500/5 border-amber-400/40 shadow-xs' : 'bg-muted/10 border-border-light opacity-60')
+                          : (b.isActive ? 'bg-card border-border' : 'bg-muted/10 border-border-light opacity-60')
                       }`}
                     >
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`inline-block h-2 w-2 rounded-full ${b.isActive ? 'bg-accent' : 'bg-text-muted'}`} />
+                          <span className={`inline-block h-2 w-2 rounded-full ${b.isActive ? (isSponsored ? 'bg-amber-500' : 'bg-accent') : 'bg-text-muted'}`} />
                           <strong className="text-xs text-text-primary block font-black truncate">{b.title}</strong>
                           
                           {/* Section Tag */}
-                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                            '💳 BRAND CARD'
-                          </span>
+                          {isSponsored ? (
+                            <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                              ⭐ SPONSORED PARTNER AD
+                            </span>
+                          ) : b.placement === 'hero' ? (
+                            <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                              🌟 HERO SLIDER
+                            </span>
+                          ) : (
+                            <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                              💳 BRAND CARD
+                            </span>
+                          )}
 
                           {/* Mode Tag */}
-                          <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
-                            b.type === 'food' || b.type === 'cafe'
-                              ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                              : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                          }`}>
-                            {b.type === 'food' || b.type === 'cafe' ? '🍕 FOOD' : '🛍️ GROCERY'}
-                          </span>
+                          {!isSponsored && (
+                            <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                              b.type === 'food' || b.type === 'cafe'
+                                ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                            }`}>
+                              {b.type === 'food' || b.type === 'cafe' ? '🍕 FOOD' : '🛍️ GROCERY'}
+                            </span>
+                          )}
 
                           {/* Platform Badge */}
                           <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-muted text-text-secondary border border-border">
@@ -2225,14 +2544,24 @@ export function AdminBanners({
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          {b.eyebrowTag && (
+                            <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded font-mono">
+                              Tag: {b.eyebrowTag}
+                            </span>
+                          )}
+                          {b.discountText && (
+                            <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono">
+                              Promo: {b.discountText}
+                            </span>
+                          )}
+                          {(b.actionText || b.ctaText) && (
+                            <span className="text-[9px] font-bold text-indigo-500 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded font-mono">
+                              CTA: {b.actionText || b.ctaText}
+                            </span>
+                          )}
                           {b.code && (
                             <span className="text-[9px] font-bold text-text-secondary bg-muted/40 border px-1.5 py-0.5 rounded font-mono">
                               Code: {b.code}
-                            </span>
-                          )}
-                          {b.ctaText && (
-                            <span className="text-[9px] font-bold text-indigo-500 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded font-mono">
-                              CTA: {b.ctaText}
                             </span>
                           )}
                           {(b.linkUrl || b.ctaUrl) && (
@@ -2295,7 +2624,8 @@ export function AdminBanners({
                       </button>
                     </div>
                   </motion.div>
-                ))}
+                )
+              })}
               </AnimatePresence>
             </div>
           )

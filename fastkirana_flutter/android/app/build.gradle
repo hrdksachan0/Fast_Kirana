@@ -76,7 +76,11 @@ android {
                 keystoreProperties['keyAlias']) {
                 signingConfig = signingConfigs.release
             } else {
-                signingConfig = signingConfigs.debug
+                boolean isReleaseRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
+                if (isReleaseRequested && (System.getenv("CI") != null || System.getenv("ENFORCE_SIGNING") == "true")) {
+                    throw new GradleException("Release build requested but keystore properties or release signing keys are missing. Failing closed to prevent unsigned release publication.")
+                }
+                logger.warn("Notice: No keystore properties found for release signing. Build will be unsigned unless configured.")
             }
 
             minifyEnabled true

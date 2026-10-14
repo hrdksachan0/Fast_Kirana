@@ -67,7 +67,6 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_data', jsonEncode(adminUser.toJson()));
-      await prefs.setString('auth_token', token);
       await prefs.setString('user_role', 'ADMIN');
 
       await SecureStorage.write('user_data', jsonEncode(adminUser.toJson()));

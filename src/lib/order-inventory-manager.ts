@@ -32,12 +32,22 @@ export async function deductOrderInventory(
       // 1. Variant stock deduction from product.variants JSON array
       if (dbProd && dbProd.variants && Array.isArray(dbProd.variants)) {
         const prevStock = dbProd.stock
+        let variantFound = false
         const updatedVariants = (dbProd.variants as any[]).map((v) => {
           if (v.name === item.selectedVariant) {
-            return { ...v, stock: Math.max(0, v.stock - item.quantity) }
+            variantFound = true
+            if (v.stock < item.quantity) {
+              throw new Error(`Insufficient stock for "${dbProd.name} (${v.name})". Available: ${v.stock}, requested: ${item.quantity}.`)
+            }
+            return { ...v, stock: v.stock - item.quantity }
           }
           return v
         })
+
+        if (!variantFound && dbProd.stock < item.quantity) {
+          throw new Error(`Insufficient stock for "${dbProd.name}". Available: ${dbProd.stock}, requested: ${item.quantity}.`)
+        }
+
         const newTotalStock = updatedVariants.reduce((sum, v) => sum + (v.stock || 0), 0)
 
         await tx.product.update({
@@ -73,6 +83,11 @@ export async function deductOrderInventory(
       let remainingToDeduct = item.quantity
 
       if (batches.length > 0) {
+        const totalBatchQty = batches.reduce((sum: number, b: any) => sum + (b.quantity || 0), 0)
+        if (totalBatchQty < item.quantity) {
+          throw new Error(`Insufficient batch stock for "${dbProd?.name || 'Product'}". Available: ${totalBatchQty}, requested: ${item.quantity}.`)
+        }
+
         for (const batch of batches) {
           if (remainingToDeduct <= 0) break
           const deductFromThisBatch = Math.min(batch.quantity, remainingToDeduct)
@@ -93,9 +108,13 @@ export async function deductOrderInventory(
       })
 
       const prevStock = dbProd ? dbProd.stock : 0
+      if (prevStock < item.quantity) {
+        throw new Error(`Insufficient stock for product "${dbProd?.name || 'Product'}". Available: ${prevStock}, requested: ${item.quantity}.`)
+      }
+
       const newTotalStock = activeBatches.length > 0
         ? activeBatches.reduce((sum: number, b: any) => sum + b.quantity, 0)
-        : Math.max(0, prevStock - item.quantity)
+        : prevStock - item.quantity
       const newEarliestExpiry = activeBatches.length > 0 ? activeBatches[0].expiryDate : null
 
       if (activeBatches.length > 0 || batches.length > 0) {
@@ -107,10 +126,14 @@ export async function deductOrderInventory(
           },
         })
       } else {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        })
+        const updatedRows = await tx.$executeRaw`
+          UPDATE products
+          SET stock = stock - ${item.quantity}, "updatedAt" = NOW()
+          WHERE id = ${item.productId} AND stock >= ${item.quantity}
+        `
+        if (updatedRows === 0) {
+          throw new Error(`Insufficient stock for product "${dbProd?.name || 'Product'}". Available: ${prevStock}, requested: ${item.quantity}.`)
+        }
       }
 
       await tx.stockLog.create({
@@ -127,29 +150,26 @@ export async function deductOrderInventory(
     // 3. Localized Store Inventory deduction (if storeId is provided)
     if (storeId) {
       try {
-        const existingStoreInv = await tx.storeInventory.findUnique({
-          where: {
-            productId_storeId: {
-              productId: item.productId,
-              storeId: storeId,
-            }
-          }
-        })
-
-        if (existingStoreInv) {
-          await tx.storeInventory.update({
+        const updatedStoreRows = await tx.$executeRaw`
+          UPDATE store_inventories
+          SET stock = stock - ${item.quantity}, "updatedAt" = NOW()
+          WHERE "productId" = ${item.productId} AND "storeId" = ${storeId} AND stock >= ${item.quantity}
+        `
+        if (updatedStoreRows === 0) {
+          const existing = await tx.storeInventory.findUnique({
             where: {
               productId_storeId: {
                 productId: item.productId,
                 storeId: storeId,
               }
-            },
-            data: {
-              stock: { decrement: item.quantity }
             }
           })
+          if (existing && existing.stock < item.quantity) {
+            throw new Error(`Insufficient hub stock for product "${dbProd?.name || 'Product'}". Available: ${existing.stock}, requested: ${item.quantity}.`)
+          }
         }
-      } catch (storeInvErr) {
+      } catch (storeInvErr: any) {
+        if (storeInvErr.message?.includes('Insufficient hub stock')) throw storeInvErr
         console.warn(`Could not decrement localized StoreInventory for product ${item.productId} at store ${storeId}:`, storeInvErr)
       }
     }

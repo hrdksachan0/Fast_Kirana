@@ -74,7 +74,6 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
         final userMap = data['user'] is Map ? data['user'] : null;
 
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('auth_token', token);
         await prefs.setString('user_phone', phone);
         await prefs.setString('user_id', userMap?['id'] ?? 'rider_$phone');
         await prefs.setString('user_role', 'DELIVERY');

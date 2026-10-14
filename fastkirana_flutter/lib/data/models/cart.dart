@@ -19,6 +19,25 @@ class CartItem {
     this.notes,
   });
 
+  CartItem copyWith({
+    String? id,
+    String? cartId,
+    String? productId,
+    Product? product,
+    int? quantity,
+    String? selectedVariant,
+    String? notes,
+  }) =>
+      CartItem(
+        id: id ?? this.id,
+        cartId: cartId ?? this.cartId,
+        productId: productId ?? this.productId,
+        product: product ?? this.product,
+        quantity: quantity ?? this.quantity,
+        selectedVariant: selectedVariant ?? this.selectedVariant,
+        notes: notes ?? this.notes,
+      );
+
   factory CartItem.fromJson(Map<String, dynamic> json) => CartItem(
         id: json['id'] as String? ?? '',
         cartId: json['cartId'] as String? ?? '',
@@ -80,6 +99,15 @@ class Cart {
             ? DateTime.parse(json['updatedAt'] as String)
             : DateTime.now(),
         hubId: json['hubId']?.toString() ?? json['storeId']?.toString(),
+      );
+
+  factory Cart.empty() => Cart(
+        id: 'cart_empty',
+        userId: '',
+        items: const [],
+        couponDiscount: 0.0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{

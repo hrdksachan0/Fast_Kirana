@@ -144,53 +144,103 @@ class CartBillDetailsCard extends StatelessWidget {
   static void showModal({
     required BuildContext context,
     required double subtotal,
+    required double itemSavings,
     required double deliveryFee,
-    required double savings,
+    required double packagingFee,
+    String packagingLabel = 'Standard Packaging',
+    double couponDiscount = 0.0,
+    required double totalSavings,
     required double grandTotal,
     required int selectedTip,
+    Map<String, dynamic>? freeGiftDetails,
   }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(22),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 38,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppDesignSystem.slate300,
-                  borderRadius: BorderRadius.circular(2),
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4.5,
+                  decoration: BoxDecoration(
+                    color: AppDesignSystem.slate300,
+                    borderRadius: BorderRadius.circular(2.5),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'Bill Summary',
-              style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 16.5),
-                fontWeight: FontWeight.w900,
-                color: AppDesignSystem.slate900,
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Bill Summary',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 16.5),
+                      fontWeight: FontWeight.w900,
+                      color: AppDesignSystem.slate900,
+                    ),
+                  ),
+                  if (totalSavings > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                      ),
+                      child: Text(
+                        'SAVED ₹${totalSavings.toInt()}',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF15803D),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ),
-            const SizedBox(height: 14),
-            CartBillRow('Item Total', '₹${subtotal.toInt()}'),
-            if (savings > 0) CartBillRow('Total Savings', '-₹${savings.toInt()}', isGreen: true),
-            CartBillRow('Delivery Fee', deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}', isGreen: deliveryFee == 0),
-            if (selectedTip > 0) CartBillRow('Delivery Partner Tip', '₹$selectedTip', isGreen: false),
-            const CartBillRow('Handling & Taxes', '₹0', isGreen: true),
-            const Divider(height: 22, color: AppDesignSystem.slate300),
-            CartBillRow('To Pay', '₹${grandTotal.toInt()}', isBold: true),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 14),
+              CartBillRow('Item Total (MRP)', '₹${(subtotal + itemSavings).toInt()}'),
+              if (itemSavings > 0)
+                CartBillRow('Product Savings', '-₹${itemSavings.toInt()}', isGreen: true),
+              if (freeGiftDetails != null)
+                CartBillRow(
+                  '🎁 ${freeGiftDetails['name']} (BOGO Gift)',
+                  'FREE (-₹${((freeGiftDetails['originalPrice'] as num?)?.toDouble() ?? 0.0).toInt()})',
+                  isGreen: true,
+                ),
+              if (couponDiscount > 0)
+                CartBillRow('Coupon Discount', '-₹${couponDiscount.toInt()}', isGreen: true),
+              CartBillRow(
+                'Delivery Fee',
+                deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}',
+                isGreen: deliveryFee == 0,
+              ),
+              CartBillRow(
+                packagingLabel,
+                packagingFee == 0 ? 'FREE' : '₹${packagingFee.toInt()}',
+                isGreen: packagingFee == 0,
+              ),
+              if (selectedTip > 0)
+                CartBillRow('Delivery Partner Tip', '₹$selectedTip', isGreen: false),
+              const CartBillRow('Handling & Taxes', '₹0', isGreen: true),
+              const Divider(height: 22, color: AppDesignSystem.slate300),
+              CartBillRow('To Pay', '₹${grandTotal.toInt()}', isBold: true),
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
       ),
     );

@@ -124,12 +124,8 @@ class _MainShellState extends ConsumerState<MainShell>
     final role = (user?.role ?? 'USER').toUpperCase();
     final isCustomerMode = ref.watch(staffCustomerModeProvider);
 
-    final isMasterAdmin = (user?.email == 'admin@fastkirana.com' ||
-        user?.email == 'superadmin@fastkirana.com' ||
-        (user?.phone ?? '').contains('7054470303') ||
-        (user?.phone ?? '').contains('9170942500') ||
-        role == 'ADMIN');
-    final isAdmin = isMasterAdmin;
+    final isAdmin = role == 'ADMIN' || role == 'SUPER_ADMIN';
+
     final isRiderOnly = !isAdmin &&
         !isCustomerMode &&
         (role == 'RIDER' || role == 'DELIVERY' || role == 'DELIVERY_PARTNER');

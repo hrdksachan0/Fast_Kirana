@@ -18,41 +18,71 @@ class CartRepository {
     }
   }
 
-  static const String _pendingSyncKey = 'has_pending_cart_sync';
+  Future<String> _getPendingSyncKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final owner = cleanPhone.isNotEmpty ? cleanPhone : 'guest';
+    final hubId = prefs.getString('selected_hub_id') ?? 'default';
+    return 'has_pending_cart_sync_${owner}_$hubId';
+  }
+
+  Future<String> getPendingSyncKeyForCurrentScope() => _getPendingSyncKey();
 
   Future<bool> hasPendingSync() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_pendingSyncKey) ?? false;
+    final key = await _getPendingSyncKey();
+    final hubId = prefs.getString('selected_hub_id') ?? 'default';
+    return prefs.getBool(key) ?? prefs.getBool('has_pending_cart_sync_$hubId') ?? prefs.getBool('has_pending_cart_sync') ?? false;
   }
 
-  Future<void> setPendingSync(bool pending) async {
+  Future<void> setPendingSync(bool pending, {String? targetKey}) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_pendingSyncKey, pending);
+    final key = targetKey ?? await _getPendingSyncKey();
+    await prefs.setBool(key, pending);
+    if (!pending) {
+      await prefs.remove(key);
+      await prefs.remove('has_pending_cart_sync');
+    }
   }
 
-  Future<bool> syncCart(List<CartItem> items) async {
+  Future<bool> syncCart(
+    List<CartItem> items, {
+    String? targetSyncKey,
+    bool clearPendingOnSuccess = true,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = targetSyncKey ?? await _getPendingSyncKey();
     try {
-      final prefs = await SharedPreferences.getInstance();
       var guestId = prefs.getString('fastkirana_guest_id');
       if (guestId == null || guestId.isEmpty) {
         guestId = 'g_app_${DateTime.now().millisecondsSinceEpoch}_${(1000 + DateTime.now().microsecond % 9000)}';
         await prefs.setString('fastkirana_guest_id', guestId);
       }
 
-      await dio.post('/api/cart', data: {
-        'guestId': guestId,
-        'items': items.map((item) => {
-          'productId': item.productId,
-          'quantity': item.quantity,
-          'selectedVariant': item.selectedVariant,
-          'notes': item.notes,
-        }).toList(),
-      });
-      await setPendingSync(false);
+      if (items.isEmpty) {
+        await dio.delete('/api/cart');
+      } else {
+        await dio.post('/api/cart', data: {
+          'guestId': guestId,
+          'items': items.map((item) => {
+            'productId': item.productId,
+            'quantity': item.quantity,
+            'selectedVariant': item.selectedVariant,
+            'notes': item.notes,
+          }).toList(),
+        });
+      }
+      if (clearPendingOnSuccess) {
+        await prefs.setBool(key, false);
+        await prefs.remove(key);
+        await prefs.remove('has_pending_cart_sync');
+      }
       return true;
-    } catch (e) { LoggerService.error('CartRepository: syncCart failed', e);
-      // Offline / network failure -> mark for auto-sync when online
-      await setPendingSync(true);
+    } catch (e) {
+      LoggerService.error('CartRepository: syncCart failed', e);
+      // Offline / network failure -> mark specific target owner/hub for auto-sync when online
+      await prefs.setBool(key, true);
       return false;
     }
   }
@@ -67,11 +97,14 @@ class CartRepository {
 
   Future<void> clearCart() async {
     try {
-      await setPendingSync(false);
       await saveLocalCart([]);
-      await dio.delete('/api/cart');
-    } catch (e) { LoggerService.error('CartRepository: clearCart failed', e);
-      // Network error on server cart delete shouldn't block local cart wipe
+      final success = await syncCart([]);
+      if (!success) {
+        await setPendingSync(true);
+      }
+    } catch (e) {
+      LoggerService.error('CartRepository: clearCart failed', e);
+      await setPendingSync(true);
     }
   }
 
@@ -92,42 +125,71 @@ class CartRepository {
     final prefs = await SharedPreferences.getInstance();
     final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
-    return 'local_cart_${cleanPhone.isNotEmpty ? cleanPhone : 'guest'}';
+    final hubId = prefs.getString('selected_hub_id') ?? 'default';
+    return 'local_cart_${cleanPhone.isNotEmpty ? cleanPhone : 'guest'}_$hubId';
   }
 
-  // Local cart persistence (isolated per user phone)
-  Future<void> saveLocalCart(List<CartItem> items) async {
+  // Local cart persistence (isolated per user phone and darkstore hub with versioned envelope)
+  Future<void> saveLocalCart(List<CartItem> items, {int version = 1, bool isDirty = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final cacheKey = await _getCartCacheKey();
     if (items.isEmpty) {
-      await prefs.remove(cacheKey);
+      final envelope = {
+        'version': version,
+        'isDirty': isDirty,
+        'isCleared': true,
+        'updatedAt': DateTime.now().toIso8601String(),
+        'items': <dynamic>[],
+      };
+      await prefs.setString(cacheKey, jsonEncode(envelope));
       await prefs.remove('local_cart_guest');
       return;
     }
-    final data = items.map((item) => item.toJson()).toList();
-    await prefs.setString(cacheKey, jsonEncode(data));
+    final envelope = {
+      'version': version,
+      'isDirty': isDirty,
+      'isCleared': false,
+      'updatedAt': DateTime.now().toIso8601String(),
+      'items': items.map((item) => item.toJson()).toList(),
+    };
+    await prefs.setString(cacheKey, jsonEncode(envelope));
   }
 
   Future<List<CartItem>> getLocalCart() async {
     final prefs = await SharedPreferences.getInstance();
     final cacheKey = await _getCartCacheKey();
-    final data = prefs.getString(cacheKey);
-    if (data == null) return [];
+    var data = prefs.getString(cacheKey);
+    if (data == null) {
+      // Backward compatibility: check un-suffixed key if newly scoped key not found
+      final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
+      final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      final legacyKey = 'local_cart_${cleanPhone.isNotEmpty ? cleanPhone : 'guest'}';
+      data = prefs.getString(legacyKey);
+      if (data == null) return [];
+    }
     try {
-      final list = jsonDecode(data) as List;
-      final items = list
+      final decoded = jsonDecode(data);
+      if (decoded is Map && decoded['isCleared'] == true) {
+        return [];
+      }
+      final List rawList = (decoded is Map && decoded['items'] is List)
+          ? decoded['items'] as List
+          : (decoded is List ? decoded : []);
+      final items = rawList
           .map((json) => CartItem.fromJson(json as Map<String, dynamic>))
           .where((i) => i.product.name != 'FastKirana Item' && i.product.name.trim().isNotEmpty)
           .toList();
       // If mock items were filtered out, save clean cart
-      if (items.length != list.length) {
+      if (items.length != rawList.length) {
         await saveLocalCart(items);
       }
       return items;
-    } catch (e) { LoggerService.error('CartRepository: getLocalCart failed', e);
+    } catch (e) {
+      LoggerService.error('CartRepository: getLocalCart failed', e);
       return [];
     }
   }
+
 
   Exception _handleError(DioException e) {
     if (e.response != null) {

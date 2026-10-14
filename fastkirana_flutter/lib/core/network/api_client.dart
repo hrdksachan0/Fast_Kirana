@@ -47,11 +47,7 @@ final dioProvider = Provider<Dio>((ref) {
         // ─── In-memory auth headers (instant, zero I/O) with boot fallback ──
         var token = SecureStorage.cachedToken;
         if (token == null || token.isEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          token = prefs.getString('auth_token');
-          if (token != null && token.isNotEmpty) {
-            await SecureStorage.loadCache();
-          }
+          token = await SecureStorage.getAuthToken();
         }
 
         final isOtpRoute = options.path.contains('/api/auth/otp');
@@ -263,12 +259,10 @@ Future<String?> _refreshToken() async {
     var refreshToken = SecureStorage.cachedRefreshToken;
 
     if (refreshToken == null || refreshToken.isEmpty) {
-      final prefs = await SharedPreferences.getInstance();
-      refreshToken = prefs.getString('refresh_token') ?? await SecureStorage.read('refresh_token');
+      refreshToken = await SecureStorage.getRefreshToken();
     }
     if (currentToken == null || currentToken.isEmpty) {
-      final prefs = await SharedPreferences.getInstance();
-      currentToken = prefs.getString('auth_token') ?? await SecureStorage.read('auth_token');
+      currentToken = await SecureStorage.getAuthToken();
     }
     refreshToken ??= currentToken;
 

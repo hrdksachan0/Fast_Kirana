@@ -50,18 +50,20 @@ class CheckoutDeliveryAddressCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppDesignSystem.orange50,
+                  color: selectedAddress == null ? AppDesignSystem.rose50 : AppDesignSystem.orange50,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppDesignSystem.orange200),
+                  border: Border.all(color: selectedAddress == null ? AppDesignSystem.rose200 : AppDesignSystem.orange200),
                 ),
                 child: Icon(
-                  selectedAddress?.label.toLowerCase().contains('work') == true
-                      ? Icons.work_rounded
-                      : (selectedAddress?.label.toLowerCase().contains('current') == true
-                          ? Icons.my_location_rounded
-                          : Icons.home_rounded),
+                  selectedAddress == null
+                      ? Icons.add_location_alt_rounded
+                      : (selectedAddress?.label.toLowerCase().contains('work') == true
+                          ? Icons.work_rounded
+                          : (selectedAddress?.label.toLowerCase().contains('current') == true
+                              ? Icons.my_location_rounded
+                              : Icons.home_rounded)),
                   size: 18,
-                  color: AppDesignSystem.orange600,
+                  color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.orange600,
                 ),
               ),
               const SizedBox(width: 10),
@@ -70,11 +72,11 @@ class CheckoutDeliveryAddressCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'DELIVER TO',
+                      selectedAddress == null ? 'DELIVERY ADDRESS REQUIRED' : 'DELIVER TO',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 10),
                         fontWeight: FontWeight.w800,
-                        color: slateMuted,
+                        color: selectedAddress == null ? AppDesignSystem.rose600 : slateMuted,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -84,31 +86,33 @@ class CheckoutDeliveryAddressCard extends StatelessWidget {
                         if (selectedAddress == null ||
                             selectedAddress!.label.trim().isEmpty ||
                             selectedAddress!.label.trim() == '.') {
-                          return 'Home';
+                          return 'No Address Selected';
                         }
                         final clean = selectedAddress!.label.replaceAll('📍', '').trim();
-                        return clean.isNotEmpty ? clean : 'Home';
+                        return clean.isNotEmpty ? clean : 'Delivery Address';
                       }(),
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 13.5),
                         fontWeight: FontWeight.w900,
-                        color: slateDark,
+                        color: selectedAddress == null ? AppDesignSystem.rose700 : slateDark,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 1),
                     Text(
-                      (selectedAddress?.area != null &&
-                              selectedAddress!.area.trim().isNotEmpty &&
-                              selectedAddress!.area.trim() != '.' &&
-                              selectedAddress!.area.trim().toLowerCase() != 'n/a')
-                          ? selectedAddress!.area.trim()
-                          : 'Ghatampur Zone',
+                      selectedAddress == null
+                          ? 'Tap to select delivery location'
+                          : ((selectedAddress?.area != null &&
+                                  selectedAddress!.area.trim().isNotEmpty &&
+                                  selectedAddress!.area.trim() != '.' &&
+                                  selectedAddress!.area.trim().toLowerCase() != 'n/a')
+                              ? selectedAddress!.area.trim()
+                              : ''),
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w700,
-                        color: AppDesignSystem.orange600,
+                        color: selectedAddress == null ? AppDesignSystem.rose500 : AppDesignSystem.orange600,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -131,24 +135,31 @@ class CheckoutDeliveryAddressCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppDesignSystem.orange50,
+                    color: selectedAddress == null ? AppDesignSystem.rose50 : AppDesignSystem.orange50,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppDesignSystem.orange300, width: 1.1),
+                    border: Border.all(
+                      color: selectedAddress == null ? AppDesignSystem.rose300 : AppDesignSystem.orange300,
+                      width: 1.1,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'CHANGE',
+                        selectedAddress == null ? 'SELECT' : 'CHANGE',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w900,
-                          color: AppDesignSystem.orange600,
+                          color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.orange600,
                           letterSpacing: 0.3,
                         ),
                       ),
                       const SizedBox(width: 2),
-                      const Icon(Icons.keyboard_arrow_down_rounded, size: 15, color: AppDesignSystem.orange600),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 15,
+                        color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.orange600,
+                      ),
                     ],
                   ),
                 ),
@@ -158,30 +169,35 @@ class CheckoutDeliveryAddressCard extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Full Exact Address Text (Cleaned of stray dots & commas)
+          // Full Exact Address Text
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppDesignSystem.slate50,
+              color: selectedAddress == null ? AppDesignSystem.rose50.withValues(alpha: 0.5) : AppDesignSystem.slate50,
               borderRadius: BorderRadius.circular(12),
+              border: selectedAddress == null ? Border.all(color: AppDesignSystem.rose200) : null,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.location_on_outlined, size: 16, color: AppDesignSystem.slate500),
+                Icon(
+                  selectedAddress == null ? Icons.warning_amber_rounded : Icons.location_on_outlined,
+                  size: 16,
+                  color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.slate500,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    (selectedAddress != null && selectedAddress!.fullAddress.isNotEmpty
-                            ? selectedAddress!.fullAddress
-                            : 'Near Ghatampur Central Market, Uttar Pradesh 209206')
-                        .replaceAll(RegExp(r'^[.,\s]+'), '')
-                        .replaceAll(RegExp(r',\s*,+'), ', ')
-                        .trim(),
+                    selectedAddress != null && selectedAddress!.fullAddress.isNotEmpty
+                        ? selectedAddress!.fullAddress
+                            .replaceAll(RegExp(r'^[.,\s]+'), '')
+                            .replaceAll(RegExp(r',\s*,+'), ', ')
+                            .trim()
+                        : '⚠️ Please select a delivery address to verify serviceability and place your order.',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 12),
-                      fontWeight: FontWeight.w600,
-                      color: AppDesignSystem.slate700,
+                      fontWeight: selectedAddress == null ? FontWeight.w700 : FontWeight.w600,
+                      color: selectedAddress == null ? AppDesignSystem.rose700 : AppDesignSystem.slate700,
                       height: 1.35,
                     ),
                     maxLines: 2,
@@ -191,6 +207,7 @@ class CheckoutDeliveryAddressCard extends StatelessWidget {
               ],
             ),
           ),
+
 
           const SizedBox(height: 10),
 

@@ -758,49 +758,74 @@ export default function CartPage() {
           )}
 
           {/* Coupon entry */}
-          <div className="bg-card border border-border p-3.5 min-[375px]:p-4 rounded-2xl shadow-sm space-y-3">
-            <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
-              <Ticket className="h-4 w-4 text-primary" />
-              Apply Coupon Code
-            </h2>
+          <div className="bg-card border border-border/80 p-3.5 min-[375px]:p-4 rounded-2xl shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-primary">
+                  <Ticket className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-extrabold text-text-primary leading-tight">
+                    Apply Coupon
+                  </h2>
+                  <p className="text-[11px] text-text-secondary font-medium">
+                    Save extra with vouchers & deals
+                  </p>
+                </div>
+              </div>
+            </div>
             
             {appliedCoupon ? (
-              <div className="flex items-center justify-between border border-accent/30 bg-accent/5 p-3 rounded-xl">
-                <div>
-                  <span className="text-xs font-black text-accent bg-accent/10 px-2.5 py-0.5 rounded border border-accent/20">
-                    {appliedCoupon.code}
-                  </span>
-                  <p className="text-[10px] text-accent font-semibold mt-1">Saved ₹{appliedCoupon.discountAmount.toFixed(0)}</p>
+              <div className="flex items-center justify-between border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-xl">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-black">
+                    ✓
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700/50">
+                      {appliedCoupon.code}
+                    </span>
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-0.5">
+                      🎉 Saved ₹{appliedCoupon.discountAmount.toFixed(0)} with this coupon!
+                    </p>
+                  </div>
                 </div>
                 <Button
                   onClick={handleRemoveCoupon}
                   variant="ghost"
-                  className="text-xs text-danger hover:text-danger hover:bg-danger/10 px-2 h-7"
+                  className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 px-2.5 h-7 font-bold border border-rose-200 dark:border-rose-800 rounded-lg"
                 >
                   Remove
                 </Button>
               </div>
             ) : (
-              <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                <Input
-                  placeholder="Enter Coupon Code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  disabled={isCouponLoading}
-                  className="uppercase h-10 text-xs font-bold"
-                />
+              <form onSubmit={handleApplyCoupon} className="flex gap-2 relative">
+                <div className="relative flex-1">
+                  <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
+                  <Input
+                    placeholder="Enter coupon code"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    disabled={isCouponLoading}
+                    className="uppercase h-11 pl-9 pr-3 text-xs font-extrabold tracking-wider border-border/80 focus-visible:border-primary focus-visible:ring-primary/20 bg-muted/30 rounded-xl"
+                  />
+                </div>
                 <Button
                   type="submit"
                   disabled={isCouponLoading || !couponCode.trim()}
-                  className="bg-primary text-white hover:bg-primary/95 text-xs font-bold h-10 px-4 min-w-[80px]"
+                  className={`h-11 px-5 text-xs font-black tracking-wider rounded-xl transition-all ${
+                    couponCode.trim()
+                      ? 'bg-gradient-to-r from-orange-600 to-amber-500 text-white shadow-md shadow-orange-500/25 hover:opacity-95'
+                      : 'bg-muted text-text-muted border border-border/50 cursor-not-allowed'
+                  }`}
                 >
                   {isCouponLoading ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
                       Checking
                     </>
                   ) : (
-                    'Apply'
+                    'APPLY'
                   )}
                 </Button>
               </form>

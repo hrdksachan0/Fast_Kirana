@@ -24,6 +24,8 @@ export function AdminPushNotifications() {
   const [linkUrl, setLinkUrl] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [subscriberCount, setSubscriberCount] = useState<number | null>(null)
+  const [mobileCount, setMobileCount] = useState<number | null>(null)
+  const [webCount, setWebCount] = useState<number | null>(null)
   const [history, setHistory] = useState<PushNotificationHistory[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(true)
 
@@ -38,6 +40,8 @@ export function AdminPushNotifications() {
         const data = await res.json()
         setHistory(data.notifications || [])
         setSubscriberCount(data.subscriptionCount ?? 0)
+        setMobileCount(data.mobileDeviceCount ?? 0)
+        setWebCount(data.webSubscriptionCount ?? 0)
       } else {
         console.error('Failed to fetch notifications history')
       }
@@ -71,7 +75,8 @@ export function AdminPushNotifications() {
       if (res.ok) {
         const newLog = await res.json()
         setHistory([newLog, ...history])
-        toast.success(`Notification broadcast completed! Sent successfully to ${newLog.successCount} devices.`)
+        const fcmMsg = typeof newLog.fcmSuccessCount === 'number' ? ` (${newLog.fcmSuccessCount} Mobile, ${newLog.webSuccessCount ?? 0} Web)` : ''
+        toast.success(`Notification broadcast completed! Sent successfully to ${newLog.successCount} devices${fcmMsg}.`)
         setTitle('')
         setBody('')
         setImageUrl('')
@@ -108,6 +113,11 @@ export function AdminPushNotifications() {
                   <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
                 )}
               </h3>
+              {mobileCount !== null && webCount !== null && (
+                <p className="text-[10.5px] font-bold text-text-secondary mt-1">
+                  📱 {mobileCount} Mobile App • 💻 {webCount} Web
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -221,7 +231,7 @@ export function AdminPushNotifications() {
 
             <button
               type="submit"
-              disabled={isSending || subscriberCount === 0}
+              disabled={isSending}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-white text-xs font-extrabold rounded-xl shadow-sm hover:shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSending ? (
@@ -236,12 +246,6 @@ export function AdminPushNotifications() {
                 </>
               )}
             </button>
-
-            {subscriberCount === 0 && (
-              <p className="text-[10px] text-amber-500 font-bold text-center">
-                ⚠️ No subscribed users in the database to receive push notifications.
-              </p>
-            )}
           </form>
         </div>
 

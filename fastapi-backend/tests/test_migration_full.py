@@ -7,10 +7,22 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from main import app
 from utils.jwt import create_access_token
+from tests.conftest import TestingSessionLocal
+from models import User
 
 
 @pytest.mark.asyncio
 async def test_full_migration_suite():
+    async with TestingSessionLocal() as session:
+        admin_user = User(
+            id="test_admin_user",
+            email="admin@fastkirana.in",
+            role="ADMIN",
+            isBlocked=False,
+        )
+        session.add(admin_user)
+        await session.commit()
+
     admin_token = create_access_token({
         "id": "test_admin_user",
         "email": "admin@fastkirana.in",
@@ -101,7 +113,7 @@ async def test_full_migration_suite():
             "readableId": "FK-TEST-1",
             "restaurantId": "REST-104",
             "kotText": "FASTKIRANA KOT UNIT TEST"
-        })
+        }, headers=auth_headers)
         assert r.status_code == 200
         kot_data = r.json()
         assert kot_data.get("success") is True

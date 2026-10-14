@@ -340,17 +340,21 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                           );
                         });
                       },
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF2F2),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: const Color(0xFFFECDD3), width: 0.8),
+                      child: Semantics(
+                        button: true,
+                        label: 'Voice search',
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: const Color(0xFFFECDD3), width: 0.8),
+                          ),
+                          child: const Icon(Icons.mic_rounded,
+                              size: 16, color: AppDesignSystem.primary),
                         ),
-                        child: const Icon(Icons.mic_rounded,
-                            size: 16, color: AppDesignSystem.primary),
                       ),
                     ),
                   ],

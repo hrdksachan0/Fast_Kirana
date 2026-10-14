@@ -30,6 +30,7 @@ import { JsonLdSchema } from '@/components/seo/json-ld'
 import { UnserviceableLocationBanner } from '@/components/layout/unserviceable-banner'
 import { PhoneEnforcementModal } from '@/components/auth/phone-enforcement-modal'
 import { NetworkLivenessBanner } from '@/components/shared/network-liveness-banner'
+import { AppDownloadSheet } from '@/components/shared/app-download-sheet'
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -56,6 +57,17 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'),
   alternates: {
     canonical: 'https://www.fastkirana.in',
+  },
+  appLinks: {
+    android: {
+      package: 'com.fastkirana.app',
+      app_name: 'FastKirana: Deliver in Minutes',
+      url: 'https://play.google.com/store/apps/details?id=com.fastkirana.app',
+    },
+    web: {
+      url: 'https://www.fastkirana.in/',
+      should_fallback: true,
+    },
   },
   robots: {
     index: true,
@@ -160,6 +172,7 @@ export default function RootLayout({
                 <SwipeToBack />
                 <PhoneEnforcementModal />
                 <NetworkLivenessBanner />
+                <AppDownloadSheet />
 
                 </PushNotificationProvider>
               </CartSyncProvider>

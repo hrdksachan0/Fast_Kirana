@@ -2,7 +2,6 @@ import 'package:collection/collection.dart';
 import 'package:fastkirana_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -41,6 +40,9 @@ import 'widgets/tracking_preparing_card.dart';
 import 'widgets/tracking_cancel_card.dart';
 import 'widgets/tracking_review_card.dart';
 import '../../widgets/app_confirmation_dialog.dart';
+import 'utils/geo_math_utils.dart';
+import 'utils/map_marker_generator.dart';
+import 'services/route_polyline_service.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -786,13 +788,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   /// Calculate bearing between two geographic coordinates (degrees 0-360)
   double _calculateBearing(double lat1, double lng1, double lat2, double lng2) {
-    final dLng = (lng2 - lng1) * math.pi / 180.0;
-    final lat1Rad = lat1 * math.pi / 180.0;
-    final lat2Rad = lat2 * math.pi / 180.0;
-    final y = math.sin(dLng) * math.cos(lat2Rad);
-    final x = math.cos(lat1Rad) * math.sin(lat2Rad) - math.sin(lat1Rad) * math.cos(lat2Rad) * math.cos(dLng);
-    final bearing = math.atan2(y, x) * 180.0 / math.pi;
-    return (bearing + 360) % 360;
+    return GeoMathUtils.calculateBearing(lat1, lng1, lat2, lng2);
   }
 
   /// Smoothly animate rider marker between positions with jitter rejection
@@ -849,7 +845,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   void _interpolateRiderMarker() {
-    if (_prevRiderPosition == null || _targetRiderPosition == null) return;
+    if (!mounted || _prevRiderPosition == null || _targetRiderPosition == null) return;
     final rawProgress = _riderAnimController.value;
     final progress = Curves.easeInOut.transform(rawProgress);
     final curLat = _prevRiderPosition!.latitude + (_targetRiderPosition!.latitude - _prevRiderPosition!.latitude) * progress;
@@ -877,6 +873,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         zIndexInt: 10,
       ));
     }
+    if (!mounted) return;
     setState(() {});
 
     // Dynamic route truncation behind rider (100% on device, 0 API calls)
@@ -1033,186 +1030,30 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   double _getHaversineDistance(LatLng pos1, LatLng pos2) {
-    const p = 0.017453292519943295; // Math.PI / 180
-    const c = math.cos;
-    final a = 0.5 -
-        c((pos2.latitude - pos1.latitude) * p) / 2 +
-        c(pos1.latitude * p) * c(pos2.latitude * p) * (1 - c((pos2.longitude - pos1.longitude) * p)) / 2;
-    return 12742 * math.asin(math.sqrt(a)); // 2 * R; R = 6371 km
+    return GeoMathUtils.getHaversineDistance(pos1, pos2);
   }
 
   Future<void> _initCustomMarkers() async {
     try {
-      _storeMarkerIcon = await _createCustomMarkerBitmap(
-        label: 'STORE',
-        emoji: '🏪',
-        color: const Color(0xFF16A34A),
-      );
-      _restaurantMarkerIcon = await _createCustomMarkerBitmap(
-        label: 'FOOD',
-        emoji: '🍽️',
-        color: const Color(0xFF7C3AED),
-      );
-      _riderMarkerIcon = await _createRiderMarkerBitmap();
-      _customerMarkerIcon = await _createCustomMarkerBitmap(
-        label: 'HOME',
-        emoji: '🏠',
-        color: const Color(0xFFDC2626),
-      );
+      final markers = await MapMarkerGenerator.initCustomMarkers(context);
+      _storeMarkerIcon = markers['store'];
+      _restaurantMarkerIcon = markers['restaurant'];
+      _riderMarkerIcon = markers['rider'];
+      _customerMarkerIcon = markers['customer'];
       if (mounted) {
         setState(() {
           _refreshMapElements();
         });
       }
-    } catch (e) { LoggerService.error("Bare catch", e); }
-  }
-
-  /// Circular oriented rider marker optimized for smooth Google Maps rotation & heading (Blinkit/Swiggy style)
-  Future<BitmapDescriptor> _createRiderMarkerBitmap() async {
-    final pictureRecorder = ui.PictureRecorder();
-    final canvas = Canvas(pictureRecorder);
-    const size = 72.0;
-    const center = Offset(36, 36);
-
-    // 1. Radiant emerald pulse glow
-    final glowPaint = Paint()
-      ..color = const Color(0xFF16A34A).withValues(alpha: 0.28)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    canvas.drawCircle(center, 30, glowPaint);
-
-    // 2. High-contrast White Disc Base
-    final whitePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 24, whitePaint);
-
-    // 3. Crisp Forest/Emerald Border Ring
-    final borderPaint = Paint()
-      ..color = const Color(0xFF15803D)
-      ..strokeWidth = 3.0
-      ..style = PaintingStyle.stroke;
-    canvas.drawCircle(center, 24, borderPaint);
-
-    // 4. Direction pointer chevron at top (pointing north/forward)
-    final arrowPaint = Paint()
-      ..color = const Color(0xFF15803D)
-      ..style = PaintingStyle.fill;
-    final arrowPath = Path()
-      ..moveTo(36, 4)
-      ..lineTo(42, 13)
-      ..lineTo(36, 10)
-      ..lineTo(30, 13)
-      ..close();
-    canvas.drawPath(arrowPath, arrowPaint);
-
-    // 5. Centered Scooter Emoji
-    final emojiPainter = TextPainter(
-      text: const TextSpan(
-        text: '🛵',
-        style: TextStyle(fontSize: 21),
-      ),
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    )..layout();
-    emojiPainter.paint(canvas, Offset(36 - emojiPainter.width / 2, 36 - emojiPainter.height / 2));
-
-    final picture = pictureRecorder.endRecording();
-    final img = await picture.toImage(size.toInt(), size.toInt());
-    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
-  }
-
-  Future<BitmapDescriptor> _createCustomMarkerBitmap({
-    required String label,
-    required String emoji,
-    required Color color,
-  }) async {
-    final pictureRecorder = ui.PictureRecorder();
-    final canvas = Canvas(pictureRecorder);
-    const size = 72.0;
-    const center = Offset(36, 28);
-
-    // 1. Soft Drop Shadow
-    final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.18)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawCircle(center.translate(0, 3), 22, shadowPaint);
-
-    // 2. White Disc Fill
-    final whitePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 22, whitePaint);
-
-    // 3. Compact Pointer Pin at bottom
-    final pinPath = Path()
-      ..moveTo(29, 45)
-      ..lineTo(43, 45)
-      ..lineTo(36, 58)
-      ..close();
-    canvas.drawPath(pinPath, whitePaint);
-
-    // 4. Colored Border Ring
-    final borderPaint = Paint()
-      ..color = color
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
-    canvas.drawCircle(center, 22, borderPaint);
-    canvas.drawPath(pinPath, borderPaint);
-
-    // 5. Centered Emoji Icon (compact)
-    final emojiPainter = TextPainter(
-      text: TextSpan(
-        text: emoji,
-        style: const TextStyle(fontSize: 20),
-      ),
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    )..layout();
-    emojiPainter.paint(canvas, Offset(36 - emojiPainter.width / 2, 28 - emojiPainter.height / 2));
-
-    final picture = pictureRecorder.endRecording();
-    final img = await picture.toImage(size.toInt(), (size + 2).toInt());
-    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
+    } catch (e) {
+      LoggerService.error("Init custom markers error", e);
+    }
   }
 
   List<LatLng> _roadPolylinePoints = [];
   LatLng? _lastRouteStart;
   LatLng? _lastRouteEnd;
   bool _isFetchingRoute = false;
-  static final Map<String, List<LatLng>> _routeCache = {};
-
-  /// Decodes Google Maps encoded polyline algorithm into a List<LatLng>
-  List<LatLng> _decodeGooglePolyline(String encoded) {
-    final List<LatLng> poly = [];
-    int index = 0, len = encoded.length;
-    int lat = 0, lng = 0;
-
-    while (index < len) {
-      int b, shift = 0, result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      final int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lat += dlat;
-
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      final int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lng += dlng;
-
-      poly.add(LatLng(lat / 1e5, lng / 1e5));
-    }
-    return poly;
-  }
 
   void _applyRoutePoints(List<LatLng> points, LatLng start, LatLng end) {
     if (!mounted || points.isEmpty) return;
@@ -1250,16 +1091,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   Future<void> _fetchRoadRoute(LatLng start, LatLng end) async {
     if (_isFetchingRoute) return;
 
-    // 1. In-memory cache check: ZERO network / ZERO cost if already fetched for these coordinates
-    final cacheKey = '${start.latitude.toStringAsFixed(4)},${start.longitude.toStringAsFixed(4)}->${end.latitude.toStringAsFixed(4)},${end.longitude.toStringAsFixed(4)}';
-    if (_routeCache.containsKey(cacheKey)) {
-      final cached = _routeCache[cacheKey]!;
-      if (cached.isNotEmpty) {
-        _applyRoutePoints(cached, start, end);
-        return;
-      }
-    }
-
     if (_lastRouteStart != null && _lastRouteEnd != null) {
       final dStart = _getHaversineDistance(_lastRouteStart!, start);
       final dEnd = _getHaversineDistance(_lastRouteEnd!, end);
@@ -1269,100 +1100,25 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
 
     _isFetchingRoute = true;
-    final dio = Dio();
-
-    // 2. TIER 1: Open-source OSRM routing (100% Free, ₹0 cloud cost)
     try {
-      final osrmUrl = 'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson';
-      final response = await dio.get(osrmUrl).timeout(const Duration(seconds: 4));
-
-      if (response.statusCode == 200 && response.data != null) {
-        final routes = response.data['routes'] as List?;
-        if (routes != null && routes.isNotEmpty) {
-          final geometry = routes.first['geometry'] as Map<String, dynamic>?;
-          final coordinates = geometry?['coordinates'] as List?;
-          if (coordinates != null && coordinates.isNotEmpty) {
-            final points = <LatLng>[];
-            for (final coord in coordinates) {
-              if (coord is List && coord.length >= 2) {
-                final lng = (coord[0] as num).toDouble();
-                final lat = (coord[1] as num).toDouble();
-                points.add(LatLng(lat, lng));
-              }
-            }
-            if (points.isNotEmpty) {
-              _routeCache[cacheKey] = points;
-              _applyRoutePoints(points, start, end);
-              _isFetchingRoute = false;
-              return;
-            }
-          }
-        }
+      final points = await RoutePolylineService.fetchRoadRoute(
+        start: start,
+        end: end,
+        backendDio: ref.read(dioProvider),
+      );
+      if (points != null && points.isNotEmpty) {
+        _applyRoutePoints(points, start, end);
+      } else {
+        _applyRoutePoints([start, end], start, end);
       }
     } catch (e) {
-      LoggerService.info('OSRM route fetch unavailable, attempting fallback: $e');
-    }
-
-    // 3. TIER 2: Google Maps Directions API (Fallback if OSRM is down, single-call cached)
-    if (AppConfig.googleMapsApiKey.isNotEmpty) {
-      try {
-        final gmapsUrl = 'https://maps.googleapis.com/maps/api/directions/json?origin=${start.latitude},${start.longitude}&destination=${end.latitude},${end.longitude}&mode=driving&key=${AppConfig.googleMapsApiKey}';
-        final response = await dio.get(gmapsUrl).timeout(const Duration(seconds: 5));
-
-        if (response.statusCode == 200 && response.data != null) {
-          final routes = response.data['routes'] as List?;
-          if (routes != null && routes.isNotEmpty) {
-            final overview = routes.first['overview_polyline'] as Map<String, dynamic>?;
-            final pointsStr = overview?['points'] as String?;
-            if (pointsStr != null && pointsStr.isNotEmpty) {
-              final decodedPoints = _decodeGooglePolyline(pointsStr);
-              if (decodedPoints.isNotEmpty) {
-                _routeCache[cacheKey] = decodedPoints;
-                _applyRoutePoints(decodedPoints, start, end);
-                _isFetchingRoute = false;
-                return;
-              }
-            }
-          }
-        }
-      } catch (e) {
-        LoggerService.error('Google Directions API fallback error', e);
+      LoggerService.info('Road route fetch fallback: $e');
+      _applyRoutePoints([start, end], start, end);
+    } finally {
+      if (mounted) {
+        _isFetchingRoute = false;
       }
     }
-
-    // 4. TIER 3: Backend Directions Proxy (/api/directions)
-    try {
-      final backendDio = ref.read(dioProvider);
-      final res = await backendDio.get('/api/directions', queryParameters: {
-        'origin': '${start.latitude},${start.longitude}',
-        'destination': '${end.latitude},${end.longitude}',
-      }).timeout(const Duration(seconds: 5));
-
-      if (res.statusCode == 200 && res.data != null) {
-        final pointsData = res.data['points'] as List?;
-        if (pointsData != null && pointsData.isNotEmpty) {
-          final points = <LatLng>[];
-          for (final p in pointsData) {
-            if (p is List && p.length >= 2) {
-              points.add(LatLng((p[0] as num).toDouble(), (p[1] as num).toDouble()));
-            } else if (p is Map && p['lat'] != null && p['lng'] != null) {
-              points.add(LatLng((p['lat'] as num).toDouble(), (p['lng'] as num).toDouble()));
-            }
-          }
-          if (points.isNotEmpty) {
-            _routeCache[cacheKey] = points;
-            _applyRoutePoints(points, start, end);
-            _isFetchingRoute = false;
-            return;
-          }
-        }
-      }
-    } catch (_) {}
-
-    // 5. TIER 4: Geodesic direct line fallback (Prevents UI lock, 0 cost)
-    final directLine = [start, end];
-    _applyRoutePoints(directLine, start, end);
-    _isFetchingRoute = false;
   }
 
   /// Build Google Map markers and polyline
@@ -1944,11 +1700,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           const SizedBox(height: 12),
                         ],
 
-                        // 5. Order Items & Receipt Card
-                        TrackingReceiptCard(order: _order),
-                        const SizedBox(height: 14),
-
-                        // 6. Sponsored Partner Ad Banner (Placed at the bottom for clean UX)
+                        // 5. Sponsored Partner Ad Banner (Placed between Address and Bill Details)
                         Consumer(
                           builder: (context, ref, _) {
                             final bannersAsync = ref.watch(bannersProvider('sponsored_ad'));
@@ -1956,17 +1708,32 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                               data: (banners) {
                                 final activeBanner = banners.where((b) => b.isActive).firstOrNull;
                                 if (activeBanner != null) {
-                                  return SponsoredAdCard(
-                                    title: activeBanner.title,
-                                    subtitle: activeBanner.subtitle ?? 'Special Partner Offer on FastKirana',
-                                    imageUrl: activeBanner.imageUrl,
-                                    discountText: 'EXCLUSIVE PROMO',
-                                    actionText: 'View Details',
-                                    onTap: () {
-                                      if (activeBanner.link != null && activeBanner.link!.isNotEmpty) {
-                                        AppUrlLauncher.launchString(activeBanner.link!, context: context, mode: LaunchMode.externalApplication);
-                                      }
-                                    },
+                                  final extra = activeBanner.extraData;
+                                  final discountTag = extra?['discountText']?.toString() ??
+                                      extra?['eyebrowTag']?.toString() ??
+                                      'EXCLUSIVE PROMO';
+                                  final btnText = extra?['actionText']?.toString() ??
+                                      extra?['ctaText']?.toString() ??
+                                      'View Details';
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 14),
+                                    child: SponsoredAdCard(
+                                      title: activeBanner.title,
+                                      subtitle: activeBanner.subtitle ?? 'Special Partner Offer on FastKirana',
+                                      imageUrl: activeBanner.imageUrl,
+                                      discountText: discountTag,
+                                      actionText: btnText,
+                                      onTap: () {
+                                        if (activeBanner.link != null && activeBanner.link!.isNotEmpty) {
+                                          AppUrlLauncher.launchString(
+                                            activeBanner.link!,
+                                            context: context,
+                                            mode: LaunchMode.externalApplication,
+                                          );
+                                        }
+                                      },
+                                    ),
                                   );
                                 }
                                 return const SizedBox.shrink();
@@ -1976,7 +1743,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                             );
                           },
                         ),
-                        const SizedBox(height: 12),
+
+                        // 6. Order Items & Receipt Card (Bill Details)
+                        TrackingReceiptCard(order: _order),
+                        const SizedBox(height: 14),
 
                         // 7. Review Card (If delivered)
                         if (isDelivered) ...[

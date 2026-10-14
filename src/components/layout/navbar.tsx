@@ -88,13 +88,10 @@ export function Navbar() {
     const phone = ((session.user as any).phone || '').replace(/\D/g, '')
 
     if (
-      role === 'ADMIN' ||
+      (role as string) === 'ADMIN' ||
+      (role as string) === 'SUPER_ADMIN' ||
       email === 'admin@fastkirana.com' ||
-      email === 'superadmin@fastkirana.com' ||
-      email.startsWith('admin') ||
-      email.startsWith('superadmin') ||
-      phone.endsWith('7054470303') ||
-      phone.endsWith('9170942500')
+      email === 'superadmin@fastkirana.com'
     ) {
       return '/admin'
     }

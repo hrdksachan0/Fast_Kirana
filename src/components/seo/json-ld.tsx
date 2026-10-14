@@ -60,9 +60,37 @@ export function JsonLdSchema() {
       },
     ],
     sameAs: [
+      'https://play.google.com/store/apps/details?id=com.fastkirana.app',
       'https://www.facebook.com/fastkirana',
       'https://www.instagram.com/fastkirana',
     ],
+  }
+
+  const mobileAppSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'MobileApplication',
+    '@id': `${baseUrl}/#mobileapp`,
+    name: 'FastKirana: Deliver in Minutes',
+    alternateName: ['FastKirana', 'Fast Kirana', 'Fast Kirana App', 'FastKirana App'],
+    operatingSystem: 'Android',
+    applicationCategory: 'ShoppingApplication',
+    identifier: 'com.fastkirana.app',
+    url: 'https://play.google.com/store/apps/details?id=com.fastkirana.app',
+    downloadUrl: 'https://play.google.com/store/apps/details?id=com.fastkirana.app',
+    installUrl: 'https://play.google.com/store/apps/details?id=com.fastkirana.app',
+    image: `${baseUrl}/brand/fastkirana_app_icon.png`,
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'INR',
+    },
+    author: {
+      '@type': 'Organization',
+      name: 'Fastkirana Services',
+      url: baseUrl,
+    },
+    description:
+      'Official FastKirana (Fast Kirana) app for instant grocery, daily milk, fresh fruits & vegetables, snacks, and restaurant food delivery in Ghatampur, Kanpur Nagar.',
   }
 
   const websiteSchema = {
@@ -120,6 +148,10 @@ export function JsonLdSchema() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppSchema) }}
       />
       <script
         type="application/ld+json"

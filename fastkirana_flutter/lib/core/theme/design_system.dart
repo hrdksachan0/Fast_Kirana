@@ -250,6 +250,7 @@ class AppDesignSystem {
   static const Color rose500 = Color(0xFFE11D48);
   static const Color rose500alt = Color(0xFFFF2D55);
   static const Color rose600 = Color(0xFFBE123C);
+  static const Color rose700 = Color(0xFFBE123C);
   static const Color rose800 = Color(0xFF9F1239);
   static const Color rose900 = Color(0xFF881337);
   static const Color rose200 = Color(0xFFFECDD3);
@@ -286,6 +287,8 @@ class AppDesignSystem {
   static const Color lime100 = Color(0xFFF7FEE7);
   static const Color lime500 = Color(0xFF22C55E);
   static const Color amber50 = Color(0xFFFFFBEB);
+  static const Color amber200 = Color(0xFFFDE68A);
+  static const Color amber300 = Color(0xFFFCD34D);
   static const Color amber400 = Color(0xFFFBBF24);
   static const Color amber700 = Color(0xFFB45309);
   static const Color amber800 = Color(0xFF9A3412);

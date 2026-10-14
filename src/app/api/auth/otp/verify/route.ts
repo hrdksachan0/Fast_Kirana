@@ -157,9 +157,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    if (user && user.isBlocked) {
+    if (user && (user.isBlocked || (user as any).deletedAt !== null)) {
       return NextResponse.json({
-        error: `Your account has been blocked. ${user.blockReason ? `Reason: ${user.blockReason}` : 'Please contact customer support.'}`
+        error: `Your account has been deactivated or blocked. ${user.blockReason ? `Reason: ${user.blockReason}` : 'Please contact customer support.'}`
       }, { status: 403 })
     }
 

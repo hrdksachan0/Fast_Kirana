@@ -89,7 +89,14 @@ async def edit_order(
     allowed_fields = ["notes", "addressId"]
     for field in allowed_fields:
         if field in data:
-            setattr(order, field, data[field])
+            val = data[field]
+            if field == "notes" and isinstance(val, str):
+                import re
+                val = re.sub(r"\[CF_ORDER:[^\]]*\]", "", val)
+                val = re.sub(r"Cashfree Order:[^\n|]*", "", val, flags=re.IGNORECASE)
+                val = re.sub(r"Cashfree PG Paid[^\n|]*", "", val, flags=re.IGNORECASE)
+                val = val.strip()
+            setattr(order, field, val)
 
     await db.commit()
     await db.refresh(order)

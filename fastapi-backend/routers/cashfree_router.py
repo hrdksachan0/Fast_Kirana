@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request, Response
 import asyncio
 from datetime import datetime, timedelta
 import uuid
-from sqlalchemy import text
+from sqlalchemy import text, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -55,12 +55,88 @@ class CashfreeCreateOrderRequest(BaseModel):
     addressId: Optional[str] = None
     items: Optional[List[Dict[str, Any]]] = None
     cartPayload: Optional[Dict[str, Any]] = None
+    orderPayload: Optional[Dict[str, Any]] = None
     deliveryMethod: Optional[str] = None
+    storeId: Optional[str] = None
 
 
 class CashfreeVerifyRequest(BaseModel):
     orderId: Optional[str] = None
     cfOrderId: Optional[str] = None
+
+
+async def _save_pending_checkout_intent(
+    db: AsyncSession,
+    order_id: str,
+    cf_order_id: Optional[str],
+    amount: float,
+    user_id: Optional[str],
+    address_id: Optional[str],
+    customer_phone: str,
+    customer_name: str,
+    customer_email: Optional[str],
+    items: Any,
+    delivery_method: str = "DELIVERY",
+    store_id: Optional[str] = "hub-209206"
+):
+    """
+    Persist pending checkout intent in both Redis cache and durable database (IdempotencyRecord).
+    Ensures payment auto-recovery reconstructs exact ordered items, delivery details, and buyer
+    even if Redis restarts or cache is evicted.
+    Fails closed (HTTP 503) if persistent DB recording fails.
+    """
+    from utils.cache import set_cache
+    from models import IdempotencyRecord
+    pending_payload = {
+        "orderId": order_id,
+        "cfOrderId": cf_order_id,
+        "amount": float(amount),
+        "userId": user_id,
+        "addressId": address_id,
+        "customerPhone": customer_phone,
+        "customerName": customer_name,
+        "customerEmail": customer_email,
+        "items": items,
+        "deliveryMethod": delivery_method,
+        "storeId": store_id or "hub-209206",
+        "createdAt": time.time(),
+    }
+    try:
+        await set_cache(f"cf_pending:{order_id}", pending_payload, ttl_seconds=86400)
+        if cf_order_id and cf_order_id != order_id:
+            await set_cache(f"cf_pending:{cf_order_id}", pending_payload, ttl_seconds=86400)
+    except Exception as cache_err:
+        logger.warning(f"[Cashfree] Pending session intent cache notice: {cache_err}")
+
+    try:
+        intent_expiry = datetime.utcnow() + timedelta(days=2)
+        intent_rec = IdempotencyRecord(
+            key=f"cf_intent:{order_id}",
+            userId=user_id,
+            status="PENDING",
+            response=pending_payload,
+            createdAt=datetime.utcnow(),
+            expiresAt=intent_expiry
+        )
+        await db.merge(intent_rec)
+        if cf_order_id and cf_order_id != order_id:
+            intent_cf_rec = IdempotencyRecord(
+                key=f"cf_intent:{cf_order_id}",
+                userId=user_id,
+                status="PENDING",
+                response=pending_payload,
+                createdAt=datetime.utcnow(),
+                expiresAt=intent_expiry
+            )
+            await db.merge(intent_cf_rec)
+        await db.commit()
+    except Exception as db_err:
+        await db.rollback()
+        logger.error(f"[Cashfree] Failed to establish durable checkout intent in database: {db_err}")
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to establish recoverable checkout session. Please try again."
+        )
 
 
 @router.post("/payment/cashfree/create-order")
@@ -72,9 +148,53 @@ async def create_cashfree_order(
     total_amount = 0.0
     resolved_order_id = req.orderId or f"cf_{int(time.time() * 1000)}"
     customer_id = "guest_customer"
-    resolved_phone = req.customerPhone or "9999999999"
-    resolved_email = req.customerEmail
-    resolved_name = req.customerName or "FastKirana Customer"
+    order_payload = req.orderPayload if isinstance(req.orderPayload, dict) else {}
+    cart_payload = req.cartPayload if isinstance(req.cartPayload, dict) else {}
+
+    effective_items = (
+        req.items
+        or order_payload.get("items")
+        or cart_payload.get("items")
+        or None
+    )
+    effective_address_id = (
+        req.addressId
+        or order_payload.get("addressId")
+        or cart_payload.get("addressId")
+        or None
+    )
+    effective_delivery_method = (
+        req.deliveryMethod
+        or order_payload.get("deliveryMethod")
+        or cart_payload.get("deliveryMethod")
+        or "DELIVERY"
+    )
+    effective_store_id = (
+        req.storeId
+        or order_payload.get("storeId")
+        or cart_payload.get("storeId")
+        or "hub-209206"
+    )
+    effective_user_id = (
+        req.userId
+        or order_payload.get("userId")
+        or cart_payload.get("userId")
+        or None
+    )
+
+    resolved_phone = (
+        req.customerPhone
+        or order_payload.get("phone")
+        or order_payload.get("userPhone")
+        or "9999999999"
+    )
+    resolved_email = req.customerEmail or order_payload.get("userEmail") or order_payload.get("customerEmail")
+    resolved_name = (
+        req.customerName
+        or order_payload.get("customerName")
+        or order_payload.get("userName")
+        or "FastKirana Customer"
+    )
 
     if req.orderId:
         clean_order_id = req.orderId.strip()
@@ -164,11 +284,26 @@ async def create_cashfree_order(
     }
 
     if settings.CASHFREE_ENV.upper() in ["TEST", "MOCK"]:
+        mock_cf_order_id = f"cf_{int(time.time() * 1000)}"
+        await _save_pending_checkout_intent(
+            db=db,
+            order_id=sanitized_order_id,
+            cf_order_id=mock_cf_order_id,
+            amount=float(round(total_amount, 2)),
+            user_id=customer_id if customer_id != "guest_customer" else effective_user_id,
+            address_id=effective_address_id,
+            customer_phone=clean_phone,
+            customer_name=resolved_name,
+            customer_email=resolved_email,
+            items=effective_items,
+            delivery_method=effective_delivery_method,
+            store_id=effective_store_id
+        )
         return {
             "success": True,
             "paymentSessionId": f"session_mock_test_{int(time.time())}",
             "orderId": sanitized_order_id,
-            "cfOrderId": f"cf_{int(time.time())}",
+            "cfOrderId": mock_cf_order_id,
             "orderAmount": round(total_amount, 2),
             "orderCurrency": "INR",
         }
@@ -185,6 +320,20 @@ async def create_cashfree_order(
             if get_res.status_code == 200:
                 existing_data = get_res.json()
                 if existing_data.get("order_status") == "ACTIVE" and existing_data.get("payment_session_id"):
+                    await _save_pending_checkout_intent(
+                        db=db,
+                        order_id=existing_data.get("order_id") or sanitized_order_id,
+                        cf_order_id=existing_data.get("cf_order_id"),
+                        amount=float(existing_data.get("order_amount") or total_amount),
+                        user_id=customer_id if customer_id != "guest_customer" else effective_user_id,
+                        address_id=effective_address_id,
+                        customer_phone=clean_phone,
+                        customer_name=resolved_name,
+                        customer_email=resolved_email,
+                        items=effective_items,
+                        delivery_method=effective_delivery_method,
+                        store_id=effective_store_id
+                    )
                     return {
                         "success": True,
                         "paymentSessionId": existing_data.get("payment_session_id"),
@@ -202,6 +351,20 @@ async def create_cashfree_order(
             retry_res = await client.post(f"{CASHFREE_BASE_URL}/orders", headers=headers, json=payload)
             retry_data = retry_res.json()
             if retry_res.status_code in [200, 201] and retry_data.get("payment_session_id"):
+                await _save_pending_checkout_intent(
+                    db=db,
+                    order_id=retry_data.get("order_id") or retry_id,
+                    cf_order_id=retry_data.get("cf_order_id"),
+                    amount=float(retry_data.get("order_amount") or total_amount),
+                    user_id=customer_id if customer_id != "guest_customer" else effective_user_id,
+                    address_id=effective_address_id,
+                    customer_phone=clean_phone,
+                    customer_name=resolved_name,
+                    customer_email=resolved_email,
+                    items=effective_items,
+                    delivery_method=effective_delivery_method,
+                    store_id=effective_store_id
+                )
                 return {
                     "success": True,
                     "paymentSessionId": retry_data.get("payment_session_id"),
@@ -218,26 +381,21 @@ async def create_cashfree_order(
                 detail=f"Cashfree order creation failed: {error_msg}"
             )
 
-        # Cache pending order intent so webhook can auto-recover if client drops
-        try:
-            from utils.cache import set_cache
-            pending_payload = {
-                "orderId": data.get("order_id") or sanitized_order_id,
-                "amount": float(data.get("order_amount") or total_amount),
-                "userId": customer_id if customer_id != "guest_customer" else req.userId,
-                "addressId": req.addressId,
-                "customerPhone": clean_phone,
-                "customerName": resolved_name,
-                "customerEmail": resolved_email,
-                "items": req.items or (req.cartPayload.get("items") if isinstance(req.cartPayload, dict) else None),
-                "deliveryMethod": req.deliveryMethod or "DELIVERY",
-                "createdAt": time.time(),
-            }
-            await set_cache(f"cf_pending:{data.get('order_id') or sanitized_order_id}", pending_payload, ttl_seconds=86400)
-            if data.get("cf_order_id"):
-                await set_cache(f"cf_pending:{data.get('cf_order_id')}", pending_payload, ttl_seconds=86400)
-        except Exception as cache_err:
-            logger.warning(f"[Cashfree] Pending session cache notice: {cache_err}")
+        # Cache and persist pending order intent so webhook can auto-recover if client drops
+        await _save_pending_checkout_intent(
+            db=db,
+            order_id=data.get("order_id") or sanitized_order_id,
+            cf_order_id=data.get("cf_order_id"),
+            amount=float(data.get("order_amount") or total_amount),
+            user_id=customer_id if customer_id != "guest_customer" else effective_user_id,
+            address_id=effective_address_id,
+            customer_phone=clean_phone,
+            customer_name=resolved_name,
+            customer_email=resolved_email,
+            items=effective_items,
+            delivery_method=effective_delivery_method,
+            store_id=effective_store_id
+        )
 
         return {
             "success": True,
@@ -272,12 +430,6 @@ async def verify_cashfree_payment(
     )
     res = await db.execute(stmt)
     order = res.scalars().first()
-
-    if not order:
-        # Fallback to ILIKE notes search only if indexed lookup missed
-        stmt_notes = select(Order).where(Order.notes.ilike(f"%{clean_id}%"))
-        res_notes = await db.execute(stmt_notes)
-        order = res_notes.scalars().first()
 
     if order and order.paymentStatus == PaymentStatus.PAID:
         # Also ensure companion orders are synced to PAID
@@ -314,44 +466,75 @@ async def verify_cashfree_payment(
 
     headers = _get_cashfree_headers()
     candidate_ids = []
-    if req.cfOrderId:
-        candidate_ids.append(req.cfOrderId)
-    if raw_id:
-        candidate_ids.append(raw_id)
-    if clean_id and clean_id not in candidate_ids:
-        candidate_ids.append(clean_id)
+    valid_order_candidates = set()
 
     if order:
-        if order.id not in candidate_ids:
-            candidate_ids.append(order.id)
+        if getattr(order, "cfOrderId", None):
+            valid_order_candidates.add(order.cfOrderId)
+            valid_order_candidates.add(re.sub(r"[^a-zA-Z0-9_-]", "_", order.cfOrderId)[:45])
+            if order.cfOrderId not in candidate_ids:
+                candidate_ids.append(order.cfOrderId)
+
+        valid_order_candidates.add(order.id)
+        valid_order_candidates.add(re.sub(r"[^a-zA-Z0-9_-]", "_", order.id)[:45])
         if order.readableId:
-            if order.readableId not in candidate_ids:
-                candidate_ids.append(order.readableId)
+            valid_order_candidates.add(order.readableId)
+            valid_order_candidates.add(re.sub(r"[^a-zA-Z0-9_-]", "_", order.readableId)[:45])
             base_rid = order.readableId.split("-")[0]
-            if base_rid and base_rid not in candidate_ids:
-                candidate_ids.append(base_rid)
-        if order.notes:
-            cf_matches = re.findall(r"\[CF_ORDER:([^\]]+)\]", order.notes)
-            cf_matches += re.findall(r"Cashfree Order:\s*(cf_[a-zA-Z0-9_-]+)", order.notes, re.IGNORECASE)
-            cf_matches += re.findall(r"Ref:\s*(?:CF_)?(cf_[a-zA-Z0-9_-]+)", order.notes, re.IGNORECASE)
-            for m in cf_matches:
-                if m and m not in candidate_ids:
-                    candidate_ids.append(m)
+            if base_rid:
+                valid_order_candidates.add(base_rid)
+                valid_order_candidates.add(re.sub(r"[^a-zA-Z0-9_-]", "_", base_rid)[:45])
         if order.combinedId:
-            if order.combinedId not in candidate_ids:
-                candidate_ids.append(order.combinedId)
+            valid_order_candidates.add(order.combinedId)
+            valid_order_candidates.add(re.sub(r"[^a-zA-Z0-9_-]", "_", order.combinedId)[:45])
             comb_stmt = select(Order).where(Order.combinedId == order.combinedId)
             comb_res = await db.execute(comb_stmt)
             for co in comb_res.scalars().all():
-                if co.id not in candidate_ids:
-                    candidate_ids.append(co.id)
-                if co.readableId and co.readableId not in candidate_ids:
-                    candidate_ids.append(co.readableId)
-                if co.notes:
-                    co_cf_matches = re.findall(r"\[CF_ORDER:([^\]]+)\]", co.notes)
-                    for cm in co_cf_matches:
-                        if cm and cm not in candidate_ids:
-                            candidate_ids.append(cm)
+                if getattr(co, "cfOrderId", None):
+                    valid_order_candidates.add(co.cfOrderId)
+                    valid_order_candidates.add(re.sub(r"[^a-zA-Z0-9_-]", "_", co.cfOrderId)[:45])
+                valid_order_candidates.add(co.id)
+                valid_order_candidates.add(re.sub(r"[^a-zA-Z0-9_-]", "_", co.id)[:45])
+                if co.readableId:
+                    valid_order_candidates.add(co.readableId)
+                    valid_order_candidates.add(re.sub(r"[^a-zA-Z0-9_-]", "_", co.readableId)[:45])
+
+        # Also check Redis pending session cache and durable DB intent for caller's cfOrderId to see if it was created for this order
+        if req.cfOrderId:
+            cf_cand = req.cfOrderId.strip()
+            clean_cf_cand = re.sub(r"_r\d+$", "", cf_cand)
+            try:
+                from utils.cache import get_cache
+                cached_intent = await get_cache(f"cf_pending:{cf_cand}") or await get_cache(f"cf_pending:{clean_cf_cand}")
+                if not cached_intent:
+                    from models import IdempotencyRecord
+                    db_intent_stmt = select(IdempotencyRecord).where(
+                        IdempotencyRecord.key.in_([f"cf_intent:{cf_cand}", f"cf_intent:{clean_cf_cand}"])
+                    )
+                    db_intent_res = await db.execute(db_intent_stmt)
+                    db_intent_rec = db_intent_res.scalars().first()
+                    if db_intent_rec and isinstance(db_intent_rec.response, dict):
+                        cached_intent = db_intent_rec.response
+                if isinstance(cached_intent, dict):
+                    cached_oid = str(cached_intent.get("orderId", "")).strip()
+                    if cached_oid in valid_order_candidates or re.sub(r"[^a-zA-Z0-9_-]", "_", cached_oid)[:45] in valid_order_candidates:
+                        valid_order_candidates.add(cf_cand)
+                        valid_order_candidates.add(clean_cf_cand)
+            except Exception:
+                pass
+
+        # Build candidate_ids strictly from validated order candidates
+        for voc in valid_order_candidates:
+            if voc and voc not in candidate_ids:
+                candidate_ids.append(voc)
+    else:
+        # Preflight checkout check without DB order yet
+        if req.cfOrderId:
+            candidate_ids.append(req.cfOrderId)
+        if raw_id and raw_id not in candidate_ids:
+            candidate_ids.append(raw_id)
+        if clean_id and clean_id not in candidate_ids:
+            candidate_ids.append(clean_id)
 
     cf_order = None
     successful_payment = None
@@ -396,13 +579,39 @@ async def verify_cashfree_payment(
     if not order:
         # Preflight checkout check (e.g. Flutter mobile calls verify before order insertion)
         if is_paid:
+            cf_amount = None
+            if cf_order and cf_order.get("order_amount") is not None:
+                try:
+                    cf_amount = float(cf_order.get("order_amount"))
+                except (ValueError, TypeError):
+                    pass
+            elif successful_payment and successful_payment.get("payment_amount") is not None:
+                try:
+                    cf_amount = float(successful_payment.get("payment_amount"))
+                except (ValueError, TypeError):
+                    pass
+
+            if cf_amount is None or cf_amount <= 0:
+                logger.error(f"[Cashfree Security] Preflight verification rejected: missing/invalid payment amount.")
+                raise HTTPException(status_code=400, detail="Gateway payment missing valid amount.")
+
+            from utils.cache import get_cache
+            check_cf = req.cfOrderId or clean_id
+            clean_check_cf = re.sub(r"_r\d+$", "", check_cf)
+            pending_intent = await get_cache(f"cf_pending:{check_cf}") or await get_cache(f"cf_pending:{clean_check_cf}")
+            if pending_intent and isinstance(pending_intent, dict):
+                expected_p_amt = float(pending_intent.get("amount") or 0)
+                if expected_p_amt > 0 and abs(cf_amount - expected_p_amt) > 0.05:
+                    logger.error(f"[Cashfree Security] Preflight amount mismatch: Paid ₹{cf_amount:.2f} != Expected ₹{expected_p_amt:.2f}")
+                    raise HTTPException(status_code=400, detail="Gateway payment amount does not match checkout session amount.")
+
             return {
                 "success": True,
                 "orderId": clean_id,
                 "paymentStatus": "PAID",
                 "isPaid": True,
                 "cfPaymentId": str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}",
-                "orderAmount": cf_order.get("order_amount") if cf_order else None,
+                "orderAmount": cf_amount,
             }
         return {
             "success": False,
@@ -412,13 +621,84 @@ async def verify_cashfree_payment(
             "message": "Payment has not been completed on Cashfree gateway.",
         }
 
+    # Verify gateway order identity strictly binds to this order
+    if order and cf_order:
+        cf_gateway_id = str(cf_order.get("order_id", "")).strip()
+        cf_gateway_clean = re.sub(r"_r\d+$", "", cf_gateway_id)
+        if (cf_gateway_id not in valid_order_candidates and 
+            cf_gateway_clean not in valid_order_candidates and
+            re.sub(r"[^a-zA-Z0-9_-]", "_", cf_gateway_clean)[:45] not in valid_order_candidates):
+            logger.error(
+                f"[Cashfree Security] Payment binding mismatch: Gateway order_id '{cf_gateway_id}' does not match order '{order.id}'."
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="Payment gateway order binding mismatch: the payment does not belong to this order."
+            )
+
     if is_paid:
+        # SECURITY & INTEGRITY: Strictly verify that the gateway paid amount matches the local order total!
+        # Prevents unrelated or partial payments (e.g. paying ₹1 or paying for a different order).
+        cf_amount = None
+        if cf_order and cf_order.get("order_amount") is not None:
+            try:
+                cf_amount = float(cf_order.get("order_amount"))
+            except (ValueError, TypeError):
+                pass
+        elif successful_payment and successful_payment.get("payment_amount") is not None:
+            try:
+                cf_amount = float(successful_payment.get("payment_amount"))
+            except (ValueError, TypeError):
+                pass
+
+        expected_total = float(order.total or 0.0)
+        # If companion orders exist under a combined checkout, check against sum of combined totals
+        if order.combinedId:
+            comb_check = await db.execute(select(func.sum(Order.total)).where(Order.combinedId == order.combinedId))
+            sum_comb = comb_check.scalar()
+            if sum_comb:
+                expected_total = float(sum_comb)
+
+        if cf_amount is None or expected_total <= 0:
+            logger.error(f"[Cashfree Security] Payment verification rejected: missing amount (cf_amount={cf_amount}, expected={expected_total}).")
+            raise HTTPException(
+                status_code=400,
+                detail="Unable to verify payment: gateway did not report a valid payment amount."
+            )
+
+        if abs(cf_amount - expected_total) > 0.05:
+            logger.error(
+                f"[Cashfree Security] Payment amount mismatch: Gateway paid ₹{cf_amount:.2f} but Order expects ₹{expected_total:.2f}. Rejecting."
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Payment amount mismatch: gateway received ₹{cf_amount:.2f}, expected ₹{expected_total:.2f}. Payment rejected."
+            )
+
         payment_id_str = str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}"
         order.paymentStatus = PaymentStatus.PAID
         order.paymentMethod = PaymentMethod.UPI
         cf_note = f"Cashfree PG Paid (Ref: {payment_id_str})"
         if not order.notes or "Cashfree PG Paid" not in order.notes:
             order.notes = f"{order.notes} | {cf_note}" if order.notes else cf_note
+
+        cf_order_key = str(cf_order.get("order_id") if cf_order else (req.cfOrderId or clean_id)).strip()
+        if not getattr(order, "cfOrderId", None) and cf_order_key:
+            order.cfOrderId = cf_order_key
+
+        try:
+            from models import IdempotencyRecord
+            cons_rec = IdempotencyRecord(
+                key=f"consumed_payment:{cf_order_key}",
+                userId=order.userId,
+                status="COMPLETED",
+                orderId=order.id,
+                createdAt=datetime.utcnow(),
+                expiresAt=datetime.utcnow() + timedelta(days=7)
+            )
+            await db.merge(cons_rec)
+        except Exception:
+            pass
 
         if order.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
             order.status = OrderStatus.CONFIRMED
@@ -563,15 +843,93 @@ async def auto_recover_unplaced_cashfree_order(
     """
     try:
         from utils.cache import get_cache
-        from sqlalchemy import text
+        from sqlalchemy import text, or_
         import uuid
 
-        # 1. Check pending checkout cache (supports both FastAPI cf_pending and Next.js draft_cf_order)
+        # 0. Check if order already recovered or created with this cfOrderId / clean_id
+        # Authoritative lookup strictly uses explicit order fields — NEVER free-text notes
+        existing_stmt = select(Order).options(
+            selectinload(Order.address),
+            selectinload(Order.user)
+        ).where(
+            or_(
+                Order.cfOrderId == cf_order_id,
+                Order.cfOrderId == clean_id,
+                Order.id == clean_id,
+                Order.readableId == clean_id
+            )
+        )
+        existing_res = await db.execute(existing_stmt)
+        existing_order = existing_res.scalars().first()
+        if existing_order:
+            # Verify that existing_order belongs to the same buyer if customer info is provided in payment data
+            cust_details = order_data.get("customer_details") or {}
+            raw_phone = cust_details.get("customer_phone")
+            if raw_phone and existing_order.user and existing_order.user.phone:
+                clean_pay_phone = re.sub(r"\D", "", str(raw_phone))[-10:]
+                clean_user_phone = re.sub(r"\D", "", str(existing_order.user.phone))[-10:]
+                if clean_pay_phone and clean_user_phone and clean_pay_phone != clean_user_phone:
+                    logger.error(
+                        f"[Cashfree Security] Cross-buyer recovery rejected: Payment phone '{clean_pay_phone}' "
+                        f"does not match existing order buyer '{clean_user_phone}'"
+                    )
+                    return None
+
+            logger.info(f"[Cashfree Recovery] Order already recovered or exists for {cf_order_id}: #{existing_order.readableId or existing_order.id}")
+            if not getattr(existing_order, "cfOrderId", None):
+                existing_order.cfOrderId = cf_order_id
+                await db.commit()
+            return existing_order
+
+        # 0.5 Atomic payment fulfillment lock to prevent concurrent duplicate recovery across workers
+        consumed_key = f"consumed_payment:{cf_order_id}"
+        cons_rec = None
+        from models import IdempotencyRecord
+        try:
+            cons_rec = IdempotencyRecord(
+                key=consumed_key,
+                userId=None,
+                status="PROCESSING",
+                createdAt=datetime.utcnow(),
+                expiresAt=datetime.utcnow() + timedelta(days=7)
+            )
+            db.add(cons_rec)
+            await db.flush()
+        except Exception:
+            # Another worker already inserted or is recovering this payment
+            await db.rollback()
+            existing_res = await db.execute(existing_stmt)
+            existing_order = existing_res.scalars().first()
+            if existing_order:
+                return existing_order
+            rec_stmt = select(IdempotencyRecord).where(IdempotencyRecord.key == consumed_key)
+            rec_res = await db.execute(rec_stmt)
+            rec_found = rec_res.scalars().first()
+            if rec_found and rec_found.orderId:
+                ord_res = await db.execute(
+                    select(Order).options(selectinload(Order.address), selectinload(Order.user)).where(Order.id == rec_found.orderId)
+                )
+                recovered = ord_res.scalars().first()
+                if recovered:
+                    return recovered
+            return None
+
+        # 1. Check pending checkout cache (supports FastAPI cf_pending, Next.js draft_cf_order, and durable cf_intent DB snapshot)
         pending_data = await get_cache(f"cf_pending:{clean_id}")
         if not pending_data:
             pending_data = await get_cache(f"draft_cf_order:{clean_id}")
         if not pending_data and cf_order_id != clean_id:
             pending_data = (await get_cache(f"cf_pending:{cf_order_id}")) or (await get_cache(f"draft_cf_order:{cf_order_id}"))
+
+        if not pending_data:
+            intent_keys = [f"cf_intent:{clean_id}"]
+            if cf_order_id and cf_order_id != clean_id:
+                intent_keys.append(f"cf_intent:{cf_order_id}")
+            intent_stmt = select(IdempotencyRecord).where(IdempotencyRecord.key.in_(intent_keys))
+            intent_res = await db.execute(intent_stmt)
+            intent_rec = intent_res.scalars().first()
+            if intent_rec and isinstance(intent_rec.response, dict):
+                pending_data = intent_rec.response
 
         # 2. Extract customer details
         cust_details = order_data.get("customer_details") or {}
@@ -650,17 +1008,30 @@ async def auto_recover_unplaced_cashfree_order(
         target_restaurant_id = None
         target_shop_name = "FastKirana Express"
 
+        recovered_delivery_method = str(pending_data.get("deliveryMethod") or "DELIVERY").upper() if pending_data else "DELIVERY"
+        recovered_store_id = str(pending_data.get("storeId") or "hub-209206") if pending_data else "hub-209206"
+
         # Check pending cache items first
         cached_items = pending_data.get("items") if pending_data else None
         if cached_items and isinstance(cached_items, list):
+            prod_ids = [str(it.get("productId") or (it.get("product") or {}).get("id") or "").strip() for it in cached_items]
+            prod_ids = [pid for pid in prod_ids if pid]
+            db_products = {}
+            if prod_ids:
+                p_res = await db.execute(select(Product).where(Product.id.in_(prod_ids)))
+                for p in p_res.scalars().all():
+                    db_products[p.id] = p
+
             for it in cached_items:
                 prod = it.get("product") or it
-                p_id = str(it.get("productId") or prod.get("id") or "").split("_")[0]
-                p_name = it.get("name") or prod.get("name") or "Product"
-                p_price = float(it.get("price") or prod.get("price") or 0.0)
+                p_id = str(it.get("productId") or prod.get("id") or "").strip()
+                db_prod = db_products.get(p_id)
+
+                p_name = (db_prod.name if db_prod else (it.get("name") or prod.get("name"))) or "Product"
+                p_price = float((db_prod.price if db_prod else None) or it.get("price") or prod.get("price") or 0.0)
                 p_qty = int(it.get("quantity") or 1)
-                p_rest_id = it.get("restaurantId") or prod.get("restaurantId")
-                p_img = it.get("imageUrl") or prod.get("imageUrl")
+                p_rest_id = (db_prod.restaurantId if db_prod else None) or it.get("restaurantId") or prod.get("restaurantId")
+                p_img = (db_prod.imageUrl if db_prod else None) or it.get("imageUrl") or prod.get("imageUrl")
                 p_var = it.get("selectedVariant") or prod.get("selectedVariant")
                 if p_rest_id:
                     is_restaurant = True
@@ -725,10 +1096,13 @@ async def auto_recover_unplaced_cashfree_order(
             target_shop_name = "Restaurant"
 
         # 6. Allocate Next Order Readable ID Sequence
-        seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')"))
-        next_seq = seq_res.scalar()
         order_suffix = "-R" if is_restaurant else "-G"
-        readable_id = f"{next_seq}{order_suffix}"
+        try:
+            seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')"))
+            next_seq = seq_res.scalar()
+            readable_id = f"{next_seq}{order_suffix}"
+        except Exception:
+            readable_id = f"FK-{int(time.time() * 1000) % 1000000:06d}{order_suffix}"
         new_order_id = f"ord_{uuid.uuid4().hex[:20]}"
 
         calculated_subtotal = sum(it["price"] * it["quantity"] for it in items_to_create)
@@ -743,6 +1117,7 @@ async def auto_recover_unplaced_cashfree_order(
             userId=user_id,
             addressId=address.id,
             combinedId=None,
+            cfOrderId=cf_order_id,
             restaurantId=target_restaurant_id if is_restaurant else None,
             orderType=OrderType.RESTAURANT if is_restaurant else OrderType.GROCERY,
             status=OrderStatus.CONFIRMED,
@@ -757,11 +1132,11 @@ async def auto_recover_unplaced_cashfree_order(
             estimatedDelivery=datetime.utcnow() + timedelta(minutes=25),
             deliveryLat=address.lat,
             deliveryLng=address.lng,
-            deliveryMethod="DELIVERY",
+            deliveryMethod=recovered_delivery_method,
             isB2B=False,
             shopName=target_shop_name,
             shopPhone="+918112849854",
-            storeId="hub-209206",
+            storeId=recovered_store_id,
             createdAt=datetime.utcnow(),
             updatedAt=datetime.utcnow(),
             confirmedAt=datetime.utcnow(),
@@ -811,7 +1186,7 @@ async def auto_recover_unplaced_cashfree_order(
                     "            FASTKIRANA KOT\n"
                     "======================================\n"
                     f"TOKEN : #{readable_id} | {customer_name}\n"
-                    "TYPE  : DELIVERY\n"
+                    f"TYPE  : {recovered_delivery_method}\n"
                     f"Print : {datetime.now().strftime('%d %b %Y %I:%M %p')}\n"
                     "--------------------------------------\n"
                     "QTY   ITEM\n"
@@ -829,7 +1204,7 @@ async def auto_recover_unplaced_cashfree_order(
                     "items": kot_items,
                     "notes": order_notes,
                     "customerName": customer_name,
-                    "deliveryMethod": "DELIVERY",
+                    "deliveryMethod": recovered_delivery_method,
                     "shopName": target_shop_name,
                     "printedAt": datetime.utcnow().isoformat(),
                     "manual": True,
@@ -848,6 +1223,11 @@ async def auto_recover_unplaced_cashfree_order(
                 })
             except Exception as kot_err:
                 logger.warning(f"[Auto-Recovery] KOT enqueue error: {kot_err}")
+
+        if cons_rec:
+            cons_rec.status = "COMPLETED"
+            cons_rec.orderId = order.id
+            cons_rec.userId = user_id
 
         await db.commit()
         logger.info(f"🎉 [Auto-Recovery SUCCESS] Reconstructed and placed Order #{readable_id} for {customer_name} (₹{order_amount})!")
@@ -958,25 +1338,16 @@ async def cashfree_webhook(
     # ── 1. PAYMENT SUCCESS FLOW ──────────────────────────────────────────
     if event_type == "PAYMENT_SUCCESS_WEBHOOK" or payment_status == "SUCCESS":
         cf_ref = payment_data.get("cf_payment_id") or cf_order_id
-        # Pre-cache payment success in Redis in case webhook arrives before order insertion
-        try:
-            from utils.cache import set_cache
-            await set_cache(f"cf_paid:{clean_id}", {"paid": True, "paymentId": cf_ref}, ttl_seconds=3600)
-            if str(cf_order_id) != clean_id:
-                await set_cache(f"cf_paid:{cf_order_id}", {"paid": True, "paymentId": cf_ref}, ttl_seconds=3600)
-        except Exception as e:
-            logger.warning(f"[Cashfree Webhook] Redis pre-caching failed: {e}")
 
         stmt = select(Order).options(
             selectinload(Order.address),
-            selectinload(Order.user),
-            selectinload(Order.restaurant)
+            selectinload(Order.user)
         ).where(
             (Order.id == clean_id) | 
             (Order.readableId == clean_id) | 
             (Order.id == cf_order_id) |
-            (Order.notes.ilike(f"%{clean_id}%")) |
-            (Order.notes.ilike(f"%{cf_order_id}%"))
+            (Order.cfOrderId == cf_order_id) |
+            (Order.cfOrderId == clean_id)
         )
         res = await db.execute(stmt)
         order = res.scalars().first()
@@ -993,6 +1364,33 @@ async def cashfree_webhook(
             )
 
         if order and order.paymentStatus != PaymentStatus.PAID:
+            # Payment amount verification
+            cf_amount = None
+            try:
+                if order_data.get("order_amount") is not None:
+                    cf_amount = float(order_data.get("order_amount"))
+                elif payment_data.get("payment_amount") is not None:
+                    cf_amount = float(payment_data.get("payment_amount"))
+            except (ValueError, TypeError):
+                pass
+
+            expected_total = float(order.total or 0.0)
+            if order.combinedId:
+                comb_check = await db.execute(select(func.sum(Order.total)).where(Order.combinedId == order.combinedId))
+                sum_comb = comb_check.scalar()
+                if sum_comb:
+                    expected_total = float(sum_comb)
+
+            if cf_amount is None or expected_total <= 0:
+                logger.error(f"[Cashfree Webhook] Amount missing or invalid total (cf_amount={cf_amount}, expected={expected_total}). Rejecting.")
+                return Response(status_code=400, content="Invalid or missing payment amount")
+
+            if abs(cf_amount - expected_total) > 0.05:
+                logger.error(
+                    f"[Cashfree Webhook] Amount mismatch: Gateway ₹{cf_amount:.2f} != Expected ₹{expected_total:.2f}. Rejecting payment."
+                )
+                return Response(status_code=400, content="Payment amount mismatch")
+
             was_cod = (order.paymentMethod == PaymentMethod.COD)
             order.paymentStatus = PaymentStatus.PAID
             order.paymentMethod = PaymentMethod.UPI
@@ -1009,8 +1407,7 @@ async def cashfree_webhook(
             if order.combinedId:
                 comb_stmt = select(Order).options(
                     selectinload(Order.address),
-                    selectinload(Order.user),
-                    selectinload(Order.restaurant)
+                    selectinload(Order.user)
                 ).where(Order.combinedId == order.combinedId)
                 comb_res = await db.execute(comb_stmt)
                 comb_orders = comb_res.scalars().all()
@@ -1051,6 +1448,16 @@ async def cashfree_webhook(
                     co.notes = f"{co.notes} [CF_PAID_ALERT_SENT]" if co.notes else "[CF_PAID_ALERT_SENT]"
 
             await db.commit()
+
+            # Safely set payment confirmation cache ONLY AFTER order is committed and amount verified
+            try:
+                from utils.cache import set_cache
+                paid_payload = {"paid": True, "paymentId": str(cf_ref), "amount": cf_amount, "currency": "INR"}
+                await set_cache(f"cf_paid:{clean_id}", paid_payload, ttl_seconds=3600)
+                if str(cf_order_id) != clean_id:
+                    await set_cache(f"cf_paid:{cf_order_id}", paid_payload, ttl_seconds=3600)
+            except Exception as e:
+                logger.warning(f"[Cashfree Webhook] Redis caching failed: {e}")
 
             # ── Realtime Broadcast & Multi-Channel Notifications ──────────────────
             if not already_notified:
@@ -1118,9 +1525,7 @@ async def cashfree_webhook(
         stmt = select(Order).where(
             (Order.id == clean_id) | 
             (Order.readableId == clean_id) | 
-            (Order.id == cf_order_id) |
-            (Order.notes.ilike(f"%{clean_id}%")) |
-            (Order.notes.ilike(f"%{cf_order_id}%"))
+            (Order.id == cf_order_id)
         )
         res = await db.execute(stmt)
         order = res.scalars().first()

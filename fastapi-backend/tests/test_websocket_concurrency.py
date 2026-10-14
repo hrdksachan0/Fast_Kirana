@@ -6,14 +6,31 @@ from main import app
 from routers.websockets import manager
 
 
+import jwt
+from utils.jwt import AUTH_SECRET
+
+
+import uuid
+
+
+def _make_ticket(channel: str, sub: str = "test_client", role: str = "RIDER") -> str:
+    return jwt.encode(
+        {"jti": f"wst_{uuid.uuid4().hex}", "sub": sub, "role": role, "channel": channel, "type": "ws_ticket", "scope": "ws_ticket", "exp": 9999999999},
+        AUTH_SECRET,
+        algorithm="HS256"
+    )
+
+
 def test_websocket_channel_isolation_and_broadcast():
     """Verify WebSocket manager connects, isolates channels, and broadcasts cleanly."""
     client = TestClient(app)
+    t1 = _make_ticket("rider_rider_101", "rider_101")
+    t2 = _make_ticket("rider_rider_102", "rider_102")
     
     # 1. Connect rider 1
-    with client.websocket_connect("/ws/rider/rider_101") as ws_rider:
+    with client.websocket_connect(f"/ws/rider/rider_101?ticket={t1}") as ws_rider:
         # 2. Connect rider 2
-        with client.websocket_connect("/ws/rider/rider_102") as ws_other:
+        with client.websocket_connect(f"/ws/rider/rider_102?ticket={t2}") as ws_other:
             # Send telemetry on rider 101
             payload = {
                 "event": "GPS_TELEMETRY",
@@ -35,8 +52,9 @@ def test_order_tracking_websocket_lifecycle():
     """Verify live order tracking websocket sends and broadcasts status and GPS."""
     client = TestClient(app)
     order_id = "test_order_concurrency_99"
+    ticket = _make_ticket(f"order_{order_id}", "customer_1")
 
-    with client.websocket_connect(f"/ws/orders/{order_id}") as ws:
+    with client.websocket_connect(f"/ws/orders/{order_id}?ticket={ticket}") as ws:
         # Send location update
         ws.send_text(json.dumps({
             "event": "LOCATION_UPDATE",

@@ -70,11 +70,15 @@ async def get_banners(
             ]))
         elif type == "festive":
             stmt = stmt.where(PromoBanner.type == "festive")
+        elif type == "sponsored_ad":
+            stmt = stmt.where(PromoBanner.type == "sponsored_ad")
         elif type == "grocery":
             stmt = stmt.where(and_(
-                not_(PromoBanner.type.in_(["cafe", "food"])),
+                not_(PromoBanner.type.in_(["cafe", "food", "sponsored_ad"])),
                 not_(PromoBanner.linkUrl.ilike("/restaurant%"))
             ))
+        elif type:
+            stmt = stmt.where(PromoBanner.type == type)
 
         stmt = stmt.order_by(PromoBanner.sortOrder.asc())
 

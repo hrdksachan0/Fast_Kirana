@@ -41,6 +41,8 @@ async def require_campaign_admin(
         payload = jwt.decode(credentials.credentials, secret, algorithms=["HS256"], options={"require": ["exp"]})
     except jwt.PyJWTError as error:
         raise HTTPException(status_code=401, detail="Invalid or expired Bearer token") from error
+    if payload.get("scope") == "ws_ticket" or payload.get("type") == "ws_ticket":
+        raise HTTPException(status_code=401, detail="WebSocket single-purpose tickets cannot be used for REST endpoints")
     user_id = payload.get("id") or payload.get("sub")
     if not isinstance(user_id, str) or not user_id.strip() or user_id.startswith("mock-id-"):
         raise HTTPException(status_code=401, detail="An authenticated user ID is required")

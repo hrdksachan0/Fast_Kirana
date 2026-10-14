@@ -18,7 +18,10 @@ class AddressesNotifier extends StateNotifier<AsyncValue<List<Address>>> {
     state = const AsyncValue.loading();
     try {
       final addresses = await _repo.getAddresses();
-      state = AsyncValue.data(addresses);
+      final filtered = addresses
+          .where((a) => !a.label.toUpperCase().startsWith('STORE_PICKUP'))
+          .toList();
+      state = AsyncValue.data(filtered);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }

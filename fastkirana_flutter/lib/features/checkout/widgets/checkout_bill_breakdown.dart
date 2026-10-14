@@ -10,6 +10,7 @@ class CheckoutBillBreakdown extends StatelessWidget {
   final String packagingLabel;
   final double discountAmount;
   final double grandTotal;
+  final double tipAmount;
   final DeliveryTierInfo? tier;
 
   const CheckoutBillBreakdown({
@@ -20,6 +21,7 @@ class CheckoutBillBreakdown extends StatelessWidget {
     required this.packagingLabel,
     required this.discountAmount,
     required this.grandTotal,
+    this.tipAmount = 0.0,
     this.tier,
   });
 
@@ -78,6 +80,10 @@ class CheckoutBillBreakdown extends StatelessWidget {
             packagingFee == 0.0 ? 'FREE (₹0)' : '+₹${packagingFee.toInt()}',
             isFree: packagingFee == 0.0,
           ),
+          if (tipAmount > 0) ...[
+            const SizedBox(height: 7),
+            _buildRow(context, 'Delivery Partner Tip', '₹${tipAmount.toInt()}'),
+          ],
           if (discountAmount > 0) ...[
             const SizedBox(height: 7),
             _buildRow(context, 'Discount', '-₹${discountAmount.toInt()}', isDiscount: true),

@@ -86,6 +86,11 @@ export function isRootAdminAccount(identifier?: {
   const role = (identifier.role || '').toUpperCase().trim()
   const assignedStoreId = identifier.assignedStoreId
 
+  // Database role is authoritative: MUST have an explicit persisted admin role before root/global-scope recognition!
+  if (!role || (role !== 'ADMIN' && role !== 'SUPER_ADMIN')) {
+    return false
+  }
+
   // If explicitly assigned to a specific store hub, this is a Hub Branch Admin, NEVER Root/SuperAdmin!
   if (assignedStoreId) {
     return false

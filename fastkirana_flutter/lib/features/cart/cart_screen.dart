@@ -481,7 +481,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           children: [
             SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 150 + MediaQuery.of(context).padding.bottom),
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 32 + MediaQuery.of(context).padding.bottom),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -648,13 +648,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 couponDiscount: _couponDiscount,
                 appliedCoupon: _appliedCoupon,
                 cookingInstruction: _cookingInstructionsController.text.trim(),
+                selectedTip: _selectedTip.toDouble(),
                 onViewBreakdown: () => CartBillDetailsCard.showModal(
                   context: context,
                   subtotal: subtotal,
+                  itemSavings: itemSavings,
                   deliveryFee: deliveryFee,
-                  savings: totalSavings,
+                  packagingFee: packagingFee,
+                  packagingLabel: packagingLabel,
+                  couponDiscount: _couponDiscount,
+                  totalSavings: totalSavings,
                   grandTotal: grandTotal,
                   selectedTip: _selectedTip,
+                  freeGiftDetails: _freeGiftDetails,
                 ),
               ),
             ),

@@ -13,15 +13,18 @@ export async function proxy(req: NextRequest) {
   }
 
   const isLoggedIn = !!token
+  const tokenRole = (token?.role as string | undefined) || 'USER'
+  const isRoleAdmin = tokenRole === 'ADMIN' || tokenRole === 'SUPER_ADMIN'
   const isMasterAdmin =
+    isRoleAdmin &&
     isRootAdminAccount({
       email: token?.email as string,
       phone: token?.phone as string,
-      role: token?.role as string,
+      role: tokenRole,
       assignedStoreId: (token as any)?.assignedStoreId,
     })
 
-  const effectiveRole = isMasterAdmin ? 'ADMIN' : (token?.role as string | undefined)
+  const effectiveRole = isRoleAdmin ? (isMasterAdmin ? 'ADMIN' : tokenRole) : tokenRole
   const userRole = effectiveRole
   const { nextUrl } = req
 

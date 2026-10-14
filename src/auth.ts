@@ -37,28 +37,37 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { role: true, assignedRestaurantId: true, assignedStoreId: true, phone: true }
+            select: { role: true, assignedRestaurantId: true, assignedStoreId: true, phone: true, isBlocked: true, deletedAt: true }
           })
-          if (dbUser) {
-            token.role = dbUser.role
-            token.assignedRestaurantId = dbUser.assignedRestaurantId
-            token.assignedStoreId = dbUser.assignedStoreId
-            if (dbUser.phone) token.phone = dbUser.phone
+          if (!dbUser || dbUser.isBlocked || dbUser.deletedAt !== null) {
+            const rawToken = token as Record<string, unknown>
+            rawToken.role = 'BLOCKED'
+            rawToken.isBlocked = true
+            session.user = null as any
+            return session
           }
+          token.role = dbUser.role
+          token.assignedRestaurantId = dbUser.assignedRestaurantId
+          token.assignedStoreId = dbUser.assignedStoreId
+          if (dbUser.phone) token.phone = dbUser.phone
         } catch (e) {
           console.error('Session DB sync error:', e)
+          session.user = null as any
+          return session
         }
       }
 
       if (token) {
         session.user.id = token.id as string
-        const isMaster = isRootAdminAccount({
+        const dbRole = (token.role as string) || 'USER'
+        const isRoleAdmin = dbRole === 'ADMIN' || dbRole === 'SUPER_ADMIN'
+        const isMaster = isRoleAdmin && isRootAdminAccount({
           email: (token.email || session.user?.email) as string,
           phone: (token.phone || (session.user as any)?.phone) as string,
-          role: token.role as string,
+          role: dbRole,
           assignedStoreId: token.assignedStoreId as string,
         })
-        session.user.role = isMaster ? 'ADMIN' : (token.role as any)
+        session.user.role = (isRoleAdmin ? (isMaster ? 'ADMIN' : dbRole) : dbRole) as any
         session.user.phone = token.phone as string
         session.user.assignedRestaurantId = token.assignedRestaurantId as string
         session.user.assignedStoreId = token.assignedStoreId as string
@@ -241,17 +250,11 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         const isValid = await bcrypt.compare(password, user.passwordHash)
         if (!isValid) return null
 
-        const isMaster = isRootAdminAccount({
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-        }) || isRootAdminAccount({ email: input })
-
         return {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: isMaster ? 'ADMIN' : user.role,
+          role: user.role,
           phone: user.phone,
           image: user.image,
           assignedRestaurantId: user.assignedRestaurantId,
@@ -455,49 +458,9 @@ export async function auth(...args: any[]) {
       }
     }
 
-    const userId = headersList.get('x-user-id')
-
-    if (!userId) return null;
-
-    // SECURITY: Reject mock-id prefix and ensure user exists in database
-    if (userId.startsWith('mock-id-')) {
-      console.warn('[auth] Rejecting header-based auth with mock-id prefix')
-      return null
-    }
-
-    let assignedStoreId: string | null = headersList.get('x-user-store-id') || null
-    let assignedRestaurantId: string | null = null
-    let dbRole: string | null = null
-
-    try {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { assignedStoreId: true, assignedRestaurantId: true, role: true, isBlocked: true }
-      })
-      if (dbUser) {
-        if (dbUser.isBlocked) return null
-        if (dbUser.assignedStoreId) assignedStoreId = dbUser.assignedStoreId
-        if (dbUser.assignedRestaurantId) assignedRestaurantId = dbUser.assignedRestaurantId
-        dbRole = dbUser.role
-      } else {
-        return null
-      }
-    } catch (e) {
-      return null
-    }
-
-    return {
-      user: {
-        id: userId,
-        role: dbRole as any,
-        email: headersList.get('x-user-email'),
-        name: headersList.get('x-user-name'),
-        phone: headersList.get('x-user-phone'),
-        assignedStoreId,
-        assignedRestaurantId,
-      },
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    };
+    // Require verified cryptographic session cookies or Bearer tokens.
+    // Insecure x-user-* identity headers are rejected to prevent auth bypass.
+    return null
   } catch (err) {
     // Suppress errors (not inside request context)
   }

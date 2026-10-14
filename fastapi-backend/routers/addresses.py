@@ -35,7 +35,7 @@ async def get_addresses(
     try:
         stmt = select(Address).where(
             Address.userId == user_id,
-            not_(Address.label.in_(['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE']))
+            not_(Address.label.startswith('STORE_PICKUP'))
         ).order_by(Address.isDefault.desc())
         
         res = await db.execute(stmt)
@@ -248,7 +248,7 @@ async def delete_address(
         # 1. Enforce: user must keep at least 1 delivery address
         count_stmt = select(func.count(Address.id)).where(
             Address.userId == user_id,
-            not_(Address.label.in_(['STORE_PICKUP', 'STORE_PICKUP_RESTAURANT', 'STORE_PICKUP_CAFE']))
+            not_(Address.label.startswith('STORE_PICKUP'))
         )
         count_res = await db.execute(count_stmt)
         user_address_count = count_res.scalar()

@@ -62,13 +62,17 @@ else:
     if use_ssl:
         connect_args["ssl"] = "require"
 
+    pool_size = int(os.getenv("DB_POOL_SIZE", "10"))
+    max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+    pool_timeout = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+
     engine = create_async_engine(
         async_db_url,
         echo=False,
         future=True,
-        pool_size=10,
-        max_overflow=10,
-        pool_timeout=20,
+        pool_size=pool_size,
+        max_overflow=max_overflow,
+        pool_timeout=pool_timeout,
         pool_recycle=180,
         pool_pre_ping=True,
         connect_args=connect_args

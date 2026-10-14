@@ -37,14 +37,18 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db)
 ) -> Optional[Dict[str, Any]]:
     """Extract and validate current user from JWT token, NextAuth session cookie, or verified x-user-id header."""
+    user = None
+
     # 1. Check Bearer Token
     if credentials and credentials.credentials:
-        user = extract_user_from_token(credentials.credentials)
-        if user and not is_token_expired(user):
-            return user
+        candidate = extract_user_from_token(credentials.credentials)
+        if candidate and not is_token_expired(candidate):
+            # Reject WebSocket single-purpose tickets from acting as REST credentials
+            if candidate.get("scope") != "ws_ticket" and candidate.get("type") != "ws_ticket":
+                user = candidate
 
     # 2. Check direct FastAPI token cookie or NextAuth Session Cookie
-    if request is not None:
+    if not user and request is not None:
         session_cookie = (
             request.cookies.get("fastapi_token") or
             request.cookies.get("__Secure-authjs.session-token") or
@@ -60,68 +64,78 @@ async def get_current_user(
                     break
 
         if session_cookie:
-            user = extract_user_from_token(session_cookie)
-            if user and not is_token_expired(user):
-                return user
+            candidate = extract_user_from_token(session_cookie)
+            if candidate and not is_token_expired(candidate):
+                if candidate.get("scope") != "ws_ticket" and candidate.get("type") != "ws_ticket":
+                    user = candidate
 
-        # 3. Check x-user-* headers with DB verification (internal server-to-server calls)
-        x_user_id = request.headers.get("x-user-id")
-        x_user_email = request.headers.get("x-user-email")
-        x_user_phone = request.headers.get("x-user-phone")
-        x_user_role = request.headers.get("x-user-role")
+    # If user was extracted from token or cookie, verify active status directly in database
+    if user:
+        user_id = user.get("id") or user.get("sub")
+        if not user_id:
+            return None
+        try:
+            stmt = select(User).where(User.id == user_id)
+            res = await db.execute(stmt)
+            db_user = res.scalars().first()
+            if not db_user or db_user.isBlocked or db_user.deletedAt is not None:
+                return None
+            role_str = db_user.role.value if hasattr(db_user.role, "value") else str(db_user.role or "USER")
+            user["role"] = role_str
+            user["assignedStoreId"] = db_user.assignedStoreId
+            user["assignedRestaurantId"] = db_user.assignedRestaurantId
+        except Exception as e:
+            logger.error(f"Error querying db_user in get_current_user token validation: {e}")
+            return None
+        return user
+
+    if request is not None:
+
+        # 3. Check x-user-* headers ONLY for verified internal service callers
         x_internal_secret = request.headers.get("x-internal-secret")
-        internal_secret = os.getenv("INTERNAL_API_SECRET", "")
+        internal_secret = os.getenv("INTERNAL_API_SECRET", "").strip()
 
-        trust_headers = False
-        if internal_secret and x_internal_secret == internal_secret:
-            trust_headers = True  # Secure mode: internal server-to-server secret verified
-        elif not internal_secret:
-            trust_headers = True  # Grace period: secret not configured yet
-        elif x_user_id or x_user_email or x_user_phone:
-            # Next.js proxy rewrites / authenticated frontend:
-            # Verify user existence and strict role directly against PostgreSQL database
-            trust_headers = True
+        # Strictly reject public callers claiming x-user-* headers without a matching internal secret
+        if internal_secret and x_internal_secret and x_internal_secret == internal_secret:
+            x_user_id = request.headers.get("x-user-id")
+            x_user_email = request.headers.get("x-user-email")
+            x_user_phone = request.headers.get("x-user-phone")
 
-        if trust_headers and (x_user_id or x_user_email or x_user_phone):
-            try:
-                conditions = []
-                if x_user_id:
-                    conditions.append(User.id == x_user_id)
-                if x_user_email:
-                    conditions.append(func.lower(User.email) == x_user_email.lower().strip())
-                if x_user_phone:
-                    clean_phone = x_user_phone.strip()
-                    conditions.append(User.phone == clean_phone)
-                    if not clean_phone.startswith("+91"):
-                        conditions.append(User.phone == f"+91{clean_phone}")
+            if x_user_id or x_user_email or x_user_phone:
+                try:
+                    conditions = []
+                    if x_user_id:
+                        conditions.append(User.id == x_user_id)
+                    if x_user_email:
+                        conditions.append(func.lower(User.email) == x_user_email.lower().strip())
+                    if x_user_phone:
+                        clean_phone = x_user_phone.strip()
+                        conditions.append(User.phone == clean_phone)
+                        if not clean_phone.startswith("+91"):
+                            conditions.append(User.phone == f"+91{clean_phone}")
 
-                stmt = select(User).where(or_(*conditions))
-                res = await db.execute(stmt)
-                db_user = res.scalars().first()
+                    stmt = select(User).where(or_(*conditions))
+                    res = await db.execute(stmt)
+                    db_user = res.scalars().first()
 
-                if db_user:
-                    role_str = db_user.role.value if hasattr(db_user.role, "value") else str(db_user.role or "USER")
-                    effective_role = role_str
-                    if x_user_role and x_user_role in ["ADMIN", "CHEF", "RESTAURANT_OWNER", "PICKER", "DELIVERY", "VENDOR"]:
-                        if role_str == "ADMIN":
-                            effective_role = "ADMIN"
-                        else:
-                            effective_role = x_user_role
-
-                    return {
-                        "id": db_user.id,
-                        "sub": db_user.id,
-                        "email": db_user.email,
-                        "name": db_user.name,
-                        "role": effective_role,
-                        "phone": db_user.phone,
-                        "assignedRestaurantId": db_user.assignedRestaurantId,
-                        "assignedStoreId": db_user.assignedStoreId,
-                    }
-            except Exception as e:
-                logger.error(f"Error querying db_user in get_current_user: {e}")
+                    if db_user and not db_user.isBlocked and db_user.deletedAt is None:
+                        # Role is strictly derived from the verified database record; x-user-role header cannot elevate privileges
+                        role_str = db_user.role.value if hasattr(db_user.role, "value") else str(db_user.role or "USER")
+                        return {
+                            "id": db_user.id,
+                            "sub": db_user.id,
+                            "email": db_user.email,
+                            "name": db_user.name,
+                            "role": role_str,
+                            "phone": db_user.phone,
+                            "assignedRestaurantId": db_user.assignedRestaurantId,
+                            "assignedStoreId": db_user.assignedStoreId,
+                        }
+                except Exception as e:
+                    logger.error(f"Error querying db_user in get_current_user internal call: {e}")
 
     return None
+
 
 
 # Alias for backward compatibility
@@ -258,6 +272,10 @@ async def send_whatsapp_otp(phone: str, otp: str) -> bool:
     phone_id = (os.getenv("WHATSAPP_PHONE_NUMBER_ID") or "").strip().strip('"').strip("'")
     template_name = (os.getenv("WHATSAPP_TEMPLATE_NAME") or "verify_otp").strip().strip('"').strip("'")
     template_lang = (os.getenv("WHATSAPP_TEMPLATE_LANG") or "en").strip().strip('"').strip("'")
+
+    if os.getenv("TESTING") == "1" or os.getenv("PYTEST_CURRENT_TEST"):
+        logger.info(f"[WHATSAPP OTP TEST MOCK] Suppressed live WhatsApp OTP to {phone} during test run")
+        return True
 
     if not token or not phone_id:
         return False
@@ -534,10 +552,10 @@ async def login(
     if not user or not user.passwordHash:
         raise HTTPException(status_code=401, detail="Invalid email/phone or password")
 
-    if user.isBlocked:
+    if user.isBlocked or getattr(user, "deletedAt", None) is not None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Account blocked: {user.blockReason or 'Contact admin'}"
+            detail=f"Account blocked or deactivated: {user.blockReason or 'Contact admin'}"
         )
 
     # Verify password — no backdoors, no master passwords
@@ -652,11 +670,16 @@ async def refresh_token(
             detail="No token provided for refresh"
         )
 
-    user_info = extract_user_from_token(raw_token, verify_exp=False)
+    user_info = extract_user_from_token(raw_token, verify_exp=True)
     if not user_info or not user_info.get("id"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or unparseable token"
+            detail="Invalid or expired token"
+        )
+    if user_info.get("scope") == "ws_ticket" or user_info.get("type") == "ws_ticket":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="WebSocket tickets cannot be refreshed or used as credentials"
         )
 
     user_id = user_info["id"]
@@ -670,10 +693,10 @@ async def refresh_token(
             detail="User account no longer exists"
         )
 
-    if user.isBlocked:
+    if user.isBlocked or (hasattr(user, "deletedAt") and user.deletedAt is not None):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Account blocked: {user.blockReason or 'Contact support'}"
+            detail=f"Account blocked or deactivated: {user.blockReason or 'Contact support'}"
         )
 
     role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
@@ -966,6 +989,10 @@ async def verify_otp(
             role=Role.USER.value,
             isBlocked=False
         )
+    if user and (getattr(user, "isBlocked", False) or getattr(user, "deletedAt", None) is not None):
+        block_msg = getattr(user, "blockReason", None) or "Your account has been deactivated or blocked"
+        logger.warning(f"[OTP-VERIFY] Blocked or deleted user {user.id} rejected")
+        raise HTTPException(status_code=403, detail=block_msg)
 
     role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
     # Admin role from database — no hardcoded phone overrides
@@ -1024,18 +1051,15 @@ class UpdateProfileRequest(BaseModel):
 @router.post("/profile/update", response_model=SessionResponse)
 async def update_profile(
     body: UpdateProfileRequest,
-    current_user: Optional[dict] = Depends(get_current_user),
+    current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
-    user_id = current_user.get("id") or current_user.get("sub") if current_user else None
-    if not user_id and body.phone:
-        res = await db.execute(select(User).where(User.phone == normalize_phone(body.phone)))
-        user = res.scalars().first()
-    elif user_id:
-        res = await db.execute(select(User).where(User.id == user_id))
-        user = res.scalars().first()
-    else:
-        raise HTTPException(status_code=400, detail="User identification required")
+    user_id = current_user.get("id") or current_user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required to update profile")
+
+    res = await db.execute(select(User).where(User.id == user_id))
+    user = res.scalars().first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1116,33 +1140,40 @@ async def google_auth(
     photo_url = body.photoUrl
     token_to_verify = body.id_token or body.credential
 
-    # Verify ID token with Google if provided
-    if token_to_verify:
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                res = await client.get(
-                    f"https://oauth2.googleapis.com/tokeninfo?id_token={token_to_verify}"
-                )
-                if res.status_code == 200:
-                    token_info = res.json()
-                    verified_email = token_info.get("email")
-                    if verified_email:
-                        email = verified_email.strip().lower()
-                        name = name or token_info.get("name")
-                        photo_url = photo_url or token_info.get("picture")
-                else:
-                    logger.warning(f"Google token verification failed with status {res.status_code}")
-                    if not email:
-                        raise HTTPException(status_code=400, detail="Invalid Google OAuth token")
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.warning(f"Google tokeninfo fetch exception: {e}")
-            if not email:
-                raise HTTPException(status_code=400, detail="Could not verify Google token")
+    # SECURITY: Require verified Google credential/id_token.
+    # An unverified caller-supplied email must NEVER be trusted for authentication.
+    if not token_to_verify:
+        raise HTTPException(
+            status_code=400,
+            detail="Google ID token or credential is required for Google authentication"
+        )
 
-    if not email:
-        raise HTTPException(status_code=400, detail="Email is required for Google authentication")
+    verified_email = None
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            res = await client.get(
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={token_to_verify}"
+            )
+            if res.status_code == 200:
+                token_info = res.json()
+                raw_email = token_info.get("email")
+                if raw_email:
+                    verified_email = raw_email.strip().lower()
+                    name = name or token_info.get("name")
+                    photo_url = photo_url or token_info.get("picture")
+            else:
+                logger.warning(f"Google token verification failed with status {res.status_code}")
+                raise HTTPException(status_code=400, detail="Invalid Google OAuth token")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Google tokeninfo fetch exception: {e}")
+        raise HTTPException(status_code=400, detail="Could not verify Google token with provider")
+
+    if not verified_email:
+        raise HTTPException(status_code=400, detail="Verified email not present in Google token")
+
+    email = verified_email
 
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
@@ -1165,8 +1196,8 @@ async def google_auth(
         user.image = photo_url
         await db.commit()
 
-    if user.isBlocked:
-        raise HTTPException(status_code=403, detail=f"Account blocked: {user.blockReason or 'Contact support'}")
+    if user.isBlocked or getattr(user, "deletedAt", None) is not None:
+        raise HTTPException(status_code=403, detail=f"Account blocked or deactivated: {user.blockReason or 'Contact support'}")
 
     role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
     token = create_access_token({

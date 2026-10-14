@@ -70,27 +70,71 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     );
   }
 
+  int _lastAcknowledgedVersion = 0;
+  int get lastAcknowledgedVersion => _lastAcknowledgedVersion;
+  bool _isSyncing = false;
+  List<CartItem>? _latestPendingItems;
+
   /// Monotonic sequence sync queue:
   /// Immediately increments local cart version and debounces server sync by 300ms.
-  /// Prevents race conditions and server state overwrites from rapid button tapping (+ + + -).
-  void _scheduleDebouncedSync(List<CartItem> items) {
+  /// Serializes whole-cart writes so older requests never overwrite newer snapshots.
+  void _scheduleDebouncedSync(List<CartItem> items) async {
     _cartVersion++;
-    final currentVersion = _cartVersion;
+    _latestPendingItems = items;
+    final capturedKey = await repository.getPendingSyncKeyForCurrentScope();
+    await repository.setPendingSync(true, targetKey: capturedKey);
+
     _debounceSyncTimer?.cancel();
     _debounceSyncTimer = Timer(const Duration(milliseconds: 300), () async {
-      try {
-        await repository.syncCart(items);
-      } catch (e, st) {
-        LoggerService.error('CartProvider: debounced sync failed for version $currentVersion', e, st);
-      }
+      await _flushPendingSync(capturedKey);
     });
   }
+
+  Future<void> _flushPendingSync([String? capturedKey]) async {
+    if (_isSyncing) {
+      while (_isSyncing) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+    }
+    final itemsToSync = _latestPendingItems;
+    final versionToSync = _cartVersion;
+    if (itemsToSync == null) return;
+    if (_lastAcknowledgedVersion >= versionToSync) return;
+
+    _isSyncing = true;
+    final targetKey = capturedKey ?? await repository.getPendingSyncKeyForCurrentScope();
+    try {
+      final success = await repository.syncCart(
+        itemsToSync,
+        targetSyncKey: targetKey,
+        clearPendingOnSuccess: false,
+      );
+      if (success) {
+        _lastAcknowledgedVersion = versionToSync;
+        if (_cartVersion == versionToSync) {
+          await repository.setPendingSync(false, targetKey: targetKey);
+        } else {
+          await repository.setPendingSync(true, targetKey: targetKey);
+        }
+      }
+    } catch (e, st) {
+      LoggerService.error('CartProvider: serialized sync failed for version $versionToSync', e, st);
+    } finally {
+      _isSyncing = false;
+      // Only flush if newer edits occurred while this attempt was in flight
+      if (_cartVersion > versionToSync && _latestPendingItems != null) {
+        _flushPendingSync();
+      }
+    }
+  }
+
 
   @override
   void dispose() {
     _debounceSyncTimer?.cancel();
     super.dispose();
   }
+
 
   /// Checks if the cart is bound to a different darkstore hub than the target hubId.
   String? checkHubConflict(String newHubId) {
@@ -176,6 +220,18 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       } else {
         state = AsyncValue.data(_emptyCart());
       }
+
+      final hasPending = await r.hasPendingSync();
+      if (hasPending) {
+        // Local has unsynced offline edits! Reconcile by syncing to server rather than overwriting with stale server cart.
+        try {
+          await r.syncCart(localItems);
+        } catch (e, st) {
+          LoggerService.error('CartProvider: background reconciliation of pending offline cart failed', e, st);
+        }
+        return;
+      }
+
       try {
         final serverCart = await r.getCart();
         if (serverCart.items.isNotEmpty) {
@@ -189,6 +245,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       state = AsyncValue.error(e, st);
     }
   }
+
 
   bool addProduct(Product product, [int quantity = 1, String? selectedVariant]) {
     HapticFeedback.lightImpact();
@@ -334,9 +391,53 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   Future<void> clearCart() async {
     _debounceSyncTimer?.cancel();
     _cartVersion++;
+    _latestPendingItems = [];
     state = AsyncValue.data(_emptyCart());
     await repository.saveLocalCart([]);
-    repository.clearCart();
+    final targetKey = await repository.getPendingSyncKeyForCurrentScope();
+    await repository.setPendingSync(true, targetKey: targetKey);
+    await _flushPendingSync(targetKey);
+  }
+
+  /// Removes only items matching the accepted checkout draft from the cart,
+  /// preserving any newer items added to the cart while payment was in-flight.
+  Future<void> removeDraftItems(List<Map<String, dynamic>> draftItems) async {
+    final cart = _cart;
+    if (cart == null || cart.items.isEmpty) return;
+
+    final currentItems = List<CartItem>.from(cart.items);
+    for (final draftItem in draftItems) {
+      final pId = draftItem['productId']?.toString();
+      final draftQty = (draftItem['quantity'] as num?)?.toInt() ?? 1;
+      final variant = draftItem['selectedVariant']?.toString();
+
+      final idx = currentItems.indexWhere((i) {
+        final matchesProduct = i.productId == pId || i.product.id == pId;
+        if (!matchesProduct) return false;
+        if (variant != null && variant.isNotEmpty) {
+          return i.selectedVariant == variant;
+        }
+        return true;
+      });
+
+      if (idx != -1) {
+        final existing = currentItems[idx];
+        if (existing.quantity <= draftQty) {
+          currentItems.removeAt(idx);
+        } else {
+          currentItems[idx] = existing.copyWith(quantity: existing.quantity - draftQty);
+        }
+      }
+    }
+
+    _debounceSyncTimer?.cancel();
+    _cartVersion++;
+    _latestPendingItems = currentItems;
+    _setState(currentItems, cart);
+    await repository.saveLocalCart(currentItems);
+    final targetKey = await repository.getPendingSyncKeyForCurrentScope();
+    await repository.setPendingSync(true, targetKey: targetKey);
+    await _flushPendingSync(targetKey);
   }
 
   Future<void> clearRestaurantItems() async {
@@ -359,7 +460,14 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
 
   Future<void> syncPending([CartRepository? repo]) async {
     final r = repo ?? repository;
-    await r.syncPendingCartIfNeeded();
+    final pending = await r.hasPendingSync();
+    if (!pending) return;
+
+    final localItems = await r.getLocalCart();
+    _cartVersion++;
+    _latestPendingItems = localItems;
+    final targetKey = await r.getPendingSyncKeyForCurrentScope();
+    await _flushPendingSync(targetKey);
   }
 
   Future<void> syncPendingCart([CartRepository? repo]) => syncPending(repo);

@@ -168,26 +168,30 @@ class AddToCartButton extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Decrement Button
-          InkWell(
-            borderRadius: BorderRadius.horizontal(left: Radius.circular(s(8))),
-            onTap: () {
-              HapticFeedback.lightImpact();
-              if (hasVariants) {
-                // If only 1 variant item is in the cart, decrement it directly
-                if (matchingItems.length == 1) {
-                  ref.read(cartProvider.notifier).decrement(matchingItems.first.productId);
+          Semantics(
+            button: true,
+            label: 'Decrease quantity',
+            child: InkWell(
+              borderRadius: BorderRadius.horizontal(left: Radius.circular(s(8))),
+              onTap: () {
+                HapticFeedback.lightImpact();
+                if (hasVariants) {
+                  // If only 1 variant item is in the cart, decrement it directly
+                  if (matchingItems.length == 1) {
+                    ref.read(cartProvider.notifier).decrement(matchingItems.first.productId);
+                  } else {
+                    VariantSelectorSheet.show(context, product);
+                  }
                 } else {
-                  VariantSelectorSheet.show(context, product);
+                  ref.read(cartProvider.notifier).decrement(product.id);
                 }
-              } else {
-                ref.read(cartProvider.notifier).decrement(product.id);
-              }
-            },
-            child: SizedBox(
-              width: s(26),
-              height: s(31),
-              child: Center(
-                child: Icon(Icons.remove_rounded, size: s(14), color: Colors.white),
+              },
+              child: SizedBox(
+                width: s(28),
+                height: s(31),
+                child: Center(
+                  child: Icon(Icons.remove_rounded, size: s(14), color: Colors.white),
+                ),
               ),
             ),
           ),
@@ -211,43 +215,47 @@ class AddToCartButton extends ConsumerWidget {
           ),
 
           // Increment Button
-          InkWell(
-            borderRadius: BorderRadius.horizontal(right: Radius.circular(s(8))),
-            onTap: () {
-              if (hasVariants) {
-                // If only 1 variant item is in the cart, increment it directly
-                if (matchingItems.length == 1) {
-                  final singleItem = matchingItems.first;
-                  if (singleItem.product.stock > 0 && inCartQty >= singleItem.product.stock) {
+          Semantics(
+            button: true,
+            label: 'Increase quantity',
+            child: InkWell(
+              borderRadius: BorderRadius.horizontal(right: Radius.circular(s(8))),
+              onTap: () {
+                if (hasVariants) {
+                  // If only 1 variant item is in the cart, increment it directly
+                  if (matchingItems.length == 1) {
+                    final singleItem = matchingItems.first;
+                    if (singleItem.product.stock > 0 && inCartQty >= singleItem.product.stock) {
+                      HapticFeedback.heavyImpact();
+                      _showStockLimitSnackbar(ref);
+                      return;
+                    }
+                    HapticFeedback.lightImpact();
+                    ref.read(cartProvider.notifier).addProduct(singleItem.product, 1, singleItem.selectedVariant);
+                  } else {
+                    VariantSelectorSheet.show(context, product);
+                  }
+                } else {
+                  if (product.stock > 0 && inCartQty >= product.stock) {
                     HapticFeedback.heavyImpact();
                     _showStockLimitSnackbar(ref);
                     return;
                   }
-                  HapticFeedback.lightImpact();
-                  ref.read(cartProvider.notifier).addProduct(singleItem.product, 1, singleItem.selectedVariant);
-                } else {
-                  VariantSelectorSheet.show(context, product);
+                  final conflict = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
+                  if (conflict != null) {
+                    _showConflictDialog(context, ref);
+                  } else {
+                    HapticFeedback.lightImpact();
+                    ref.read(cartProvider.notifier).increment(product);
+                  }
                 }
-              } else {
-                if (product.stock > 0 && inCartQty >= product.stock) {
-                  HapticFeedback.heavyImpact();
-                  _showStockLimitSnackbar(ref);
-                  return;
-                }
-                final conflict = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
-                if (conflict != null) {
-                  _showConflictDialog(context, ref);
-                } else {
-                  HapticFeedback.lightImpact();
-                  ref.read(cartProvider.notifier).increment(product);
-                }
-              }
-            },
-            child: SizedBox(
-              width: s(26),
-              height: s(31),
-              child: Center(
-                child: Icon(Icons.add_rounded, size: s(14), color: Colors.white),
+              },
+              child: SizedBox(
+                width: s(28),
+                height: s(31),
+                child: Center(
+                  child: Icon(Icons.add_rounded, size: s(14), color: Colors.white),
+                ),
               ),
             ),
           ),

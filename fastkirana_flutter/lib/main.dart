@@ -97,7 +97,9 @@ void main() async {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    details.exceptionAsString(),
+                    kReleaseMode
+                        ? 'We encountered an unexpected display issue. Please try refreshing or restarting the app.'
+                        : details.exceptionAsString(),
                     textAlign: TextAlign.center,
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
@@ -247,10 +249,10 @@ class FastKiranaApp extends StatelessWidget {
       initialRoute: '/splash',
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
-        // Industry-standard mobile clamping (prevents severe card blowout & truncation on high-DPI / large OS font devices)
+        // Accessible mobile text scaling (supports up to 1.5x scaling without catastrophic overflow)
         final clampedTextScaler = mediaQuery.textScaler.clamp(
           minScaleFactor: 0.85,
-          maxScaleFactor: 1.15,
+          maxScaleFactor: 1.5,
         );
         return MediaQuery(
           data: mediaQuery.copyWith(textScaler: clampedTextScaler),

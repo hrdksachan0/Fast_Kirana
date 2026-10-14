@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/secure_storage_service.dart';
 import '../../widgets/brand_logo.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/banner_provider.dart';
@@ -128,7 +129,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     try {
       final p = prefs ?? await SharedPreferences.getInstance();
-      final token = p.getString('auth_token') ?? p.getString('user_id');
+      final secureToken = await SecureStorageService.instance.getAuthToken();
+      final token = (secureToken != null && secureToken.isNotEmpty)
+          ? secureToken
+          : (p.getString('auth_token') ?? p.getString('user_id'));
       final hasChosenLocation = p.getBool('has_chosen_location') ?? false;
 
       if (!mounted) return;

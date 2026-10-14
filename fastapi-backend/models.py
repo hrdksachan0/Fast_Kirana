@@ -246,6 +246,7 @@ class Order(Base):
     shopPhone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     storeId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     couponCode: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    cfOrderId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -265,6 +266,7 @@ class Order(Base):
     assignedChef = relationship("User", foreign_keys=[assignedChefId], back_populates="chefOrders")
     address = relationship("Address", back_populates="orders")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    restaurant = relationship("Restaurant", foreign_keys=[restaurantId], primaryjoin="Order.restaurantId == Restaurant.id")
 
     __table_args__ = (
         Index("idx_orders_store_status_created", "storeId", "status", "createdAt"),
@@ -822,3 +824,34 @@ class DishVariant(Base):
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     dish = relationship("FoodDish", back_populates="variants")
+
+
+class IdempotencyRecord(Base):
+    __tablename__ = "idempotency_records"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    userId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    requestHash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String, default="PROCESSING")  # PROCESSING, COMPLETED
+    response: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True)  # JSON payload
+    orderId: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    expiresAt: Mapped[datetime] = mapped_column(DateTime, index=True)
+
+
+class OrphanPayment(Base):
+    __tablename__ = "orphan_payments"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    cfOrderId: Mapped[str] = mapped_column(String, unique=True, index=True)
+    cfPaymentId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    amount: Mapped[float] = mapped_column(Float, default=0.0)
+    customerPhone: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    customerName: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    customerEmail: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    rawPayload: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="UNRESOLVED", index=True)
+    resolvedOrderId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    resolvedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

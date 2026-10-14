@@ -41,24 +41,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         }
       }
 
-      final isMasterAdmin = (user.phone != null && (user.phone!.contains('7054470303') || user.phone!.contains('9170942500'))) ||
-          user.email.toLowerCase().startsWith('admin@') ||
-          user.email.toLowerCase().startsWith('superadmin@');
-      if (isMasterAdmin && user.role != 'ADMIN') {
-        user = user.copyWith(role: 'ADMIN');
-        await SecureStorage.write('user_role', 'ADMIN');
-      }
-
-      // Ensure store managers with known numbers have assignedStoreId populated if null
-      if (user.phone != null && (user.assignedStoreId == null || user.assignedStoreId!.isEmpty)) {
-        if (user.phone!.contains('7054470303')) {
-          user = user.copyWith(assignedStoreId: 'hub-209206');
-        } else if (user.phone!.contains('9696678006')) {
-          user = user.copyWith(assignedStoreId: 'hub-224122');
-        } else if (user.phone!.contains('7633898577')) {
-          user = user.copyWith(assignedStoreId: 'hub-816107');
-        }
-      }
+      // Role and assignedStoreId are provided securely by the authenticated server session/token.
       if (mounted) state = AsyncValue.data(user);
 
       // Register device FCM push token on startup with user role and restaurant ID
@@ -81,9 +64,9 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     // Write user data to SecureStorage and SharedPreferences (for background isolates)
     await SecureStorage.write('user_data', jsonEncode(user.toJson()));
     final prefs = await SharedPreferences.getInstance();
-    final existingToken = prefs.getString('auth_token') ?? '';
+    final existingToken = (await SecureStorage.getAuthToken()) ?? prefs.getString('auth_token') ?? '';
     if (existingToken.isNotEmpty) {
-      await SecureStorage.write('auth_token', existingToken);
+      await SecureStorage.setAuthToken(existingToken);
     }
     await SecureStorage.write('user_id', user.id);
     await prefs.setString('user_id', user.id);
