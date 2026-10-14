@@ -114,19 +114,31 @@ class _StoreServiceabilitySheetState extends State<StoreServiceabilitySheet> {
 
   Future<void> _submitToggle(String action) async {
     setState(() => _isLoading = true);
-    try {
-      final response = await widget.dio.post(
-        '/api/admin/serviceability/toggle',
-        data: {
-          'targetType': widget.targetType,
-          'targetId': widget.targetId,
-          'action': action,
-          'pauseMinutes': action == 'PAUSE' ? _selectedDuration : null,
-          'reason': _selectedReason,
-          'customReasonText':
-              _selectedReason == 'OTHER' ? _customReasonCtrl.text.trim() : null,
-        },
-      );
+      Response response;
+      final payload = {
+        'targetType': widget.targetType,
+        'targetId': widget.targetId,
+        'action': action,
+        'pauseMinutes': action == 'PAUSE' ? _selectedDuration : null,
+        'reason': _selectedReason,
+        'customReasonText':
+            _selectedReason == 'OTHER' ? _customReasonCtrl.text.trim() : null,
+      };
+      try {
+        response = await widget.dio.post(
+          '/api/admin/serviceability/toggle',
+          data: payload,
+        );
+      } on DioException catch (dioErr) {
+        if (dioErr.response?.statusCode == 404) {
+          response = await widget.dio.post(
+            '/api/settings/serviceability/toggle',
+            data: payload,
+          );
+        } else {
+          rethrow;
+        }
+      }
 
       if (response.statusCode == 200) {
         final data = response.data;

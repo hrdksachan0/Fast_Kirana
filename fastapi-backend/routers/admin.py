@@ -21,7 +21,7 @@ from schemas import CashDepositRequest, FinancialSummaryOut
 from routers.auth import require_admin
 from routers.websockets import manager
 from routers.stores_service import clear_stores_cache
-from routers.settings import clear_settings_cache
+from routers.settings import clear_settings_cache, toggle_serviceability, ServiceabilityToggleRequest
 import logging
 
 logger = logging.getLogger(__name__)
@@ -38,6 +38,18 @@ def to_iso_utc(dt: Any) -> Optional[str]:
     return iso if iso.endswith("Z") else f"{iso}Z"
 
 router = APIRouter(prefix="/admin", tags=["Admin Reconciliation & Reports"])
+
+
+@router.post("/serviceability/toggle")
+async def admin_toggle_serviceability_alias(
+    body: ServiceabilityToggleRequest,
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Direct alias for /api/admin/serviceability/toggle matching FastKirana Flutter OPS client.
+    """
+    return await toggle_serviceability(body, current_admin, db)
 
 
 @router.get("/rider-cash")
