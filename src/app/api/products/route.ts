@@ -470,7 +470,7 @@ export async function GET(request: NextRequest) {
         queryOptions.select = productSelect
       }
 
-      let matchedProducts = await prisma.product.findMany(queryOptions)
+      let matchedProducts: any[] = await prisma.product.findMany(queryOptions)
 
       // If no direct database matches are found, fallback to fetching products to perform typo-tolerant fuzzy search
       if (matchedProducts.length === 0) {
@@ -487,13 +487,13 @@ export async function GET(request: NextRequest) {
       }
 
       // 2. Score each product using the fuzzy text matcher & Supabase Semantic AI engine (fast: name and tags only)
-      const scoredProducts = matchedProducts.map((p) => {
+      const scoredProducts = matchedProducts.map((p: any) => {
         let nameScore = getFuzzyScore(normalizedSearch, p.name)
         let tagScore = p.tags && Array.isArray(p.tags) && p.tags.some((t: string) => getFuzzyScore(normalizedSearch, t) > 60) ? 85 : 0
         const semanticAiScore = getSemanticAiScore(normalizedSearch, p)
 
-        const pNameLower = p.name.toLowerCase()
-        const catSlug = (p.category?.slug || '').toLowerCase()
+        const pNameLower = (p.name || '').toLowerCase()
+        const catSlug = ((p.category?.slug || p.categorySlug || '') as string).toLowerCase()
         const isNoodleQuery = ['maggi', 'maggie', 'magi', 'megi', 'noodle', 'instant noodle'].some(k => normalizedSearch.includes(k))
         if (isNoodleQuery) {
           if (catSlug.includes('sauce') || pNameLower.includes('ketchup') || pNameLower.includes('masala') || pNameLower.includes('seasoning')) {

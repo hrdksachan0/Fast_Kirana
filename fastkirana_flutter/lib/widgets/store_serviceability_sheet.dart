@@ -114,6 +114,7 @@ class _StoreServiceabilitySheetState extends State<StoreServiceabilitySheet> {
 
   Future<void> _submitToggle(String action) async {
     setState(() => _isLoading = true);
+    try {
       Response response;
       final payload = {
         'targetType': widget.targetType,
