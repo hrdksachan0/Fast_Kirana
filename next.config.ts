@@ -77,7 +77,7 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.fastkirana.in';
-    const useFastApiProxy = process.env.USE_FASTAPI_PROXY !== 'false';
+    const useFastApiProxy = process.env.USE_FASTAPI_PROXY === 'true';
 
     const fastApiRewrites = [
       // Auth Refresh -> Railway FastAPI
