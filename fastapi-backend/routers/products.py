@@ -264,6 +264,19 @@ SYNONYM_DICTIONARY = {
     'diapers': ['diaper', 'pampers', 'huggies', 'mamy poko', 'baby'],
     'pampers': ['diaper', 'diapers', 'baby', 'huggies'],
     'huggies': ['diaper', 'diapers', 'baby', 'pampers'],
+
+    # 🍕 Fast Food & Cafe / Restaurant
+    'pizza': ['margherita', 'cheese pizza', 'paneer pizza', 'hot pizza', 'capsicum pizza', 'onion pizza'],
+    'burger': ['veg burger', 'cheese burger', 'aloo tikki burger'],
+    'chowmein': ['noodles', 'hakka noodles', 'veg chowmein', 'chilli potato'],
+    'momo': ['momos', 'veg momos', 'fried momos', 'paneer momos'],
+    'momos': ['momo', 'veg momos', 'fried momos', 'paneer momos'],
+    'sandwich': ['sandwitch', 'grilled sandwich', 'cheese sandwich', 'paneer sandwich'],
+    'sandwitch': ['sandwich', 'grilled sandwich', 'cheese sandwich'],
+    'thali': ['meal', 'special thali', 'deluxe thali', 'falahaar thali', 'paneer'],
+    'dosa': ['masala dosa', 'plain dosa', 'butter masala dosa', 'south indian'],
+    'shake': ['milkshake', 'cold coffee', 'chocolate shake', 'oreo shake'],
+    'roll': ['paneer roll', 'veg roll', 'spring roll', 'kathi roll'],
 }
 
 # Stop words for product search (Hinglish + English)
@@ -450,7 +463,7 @@ async def get_products(
                 filters.append(Product.restaurantId == res_id)
             else:
                 filters.append(Product.restaurantId == restaurantSlug)
-    elif excludeRestaurant or (not is_worker and not includeUnavailable and not category):
+    elif excludeRestaurant or (not is_worker and not includeUnavailable and not category and not normalized_search):
         filters.append(Product.restaurantId == None)
 
     # Store ID Isolation: Customers only see in-stock products in target store.
@@ -741,11 +754,12 @@ async def get_products(
             cat_name = (p.category.name if p.category else "").lower()
             is_noodle_query = any(k in normalized_search for k in ['maggi', 'maggie', 'magi', 'megi', 'noodle', 'instant noodle'])
             if is_noodle_query:
-                if 'sauce' in cat_slug or 'ketchup' in p_name_lower or 'sauces' in cat_name:
-                    name_score = min(name_score, 80.0)
-                    syn_score = min(syn_score, 80.0)
+                if 'sauce' in cat_slug or 'ketchup' in p_name_lower or 'sauces' in cat_name or 'masala' in p_name_lower or 'seasoning' in p_name_lower:
+                    name_score = min(name_score, 45.0)
+                    syn_score = min(syn_score, 45.0)
+                    tag_score = min(tag_score, 45.0)
                 elif 'breakfast' in cat_slug or p_name_lower == 'maggi' or 'noodle' in p_name_lower or 'noodles' in p_name_lower:
-                    name_score = max(name_score, 135.0)
+                    name_score = max(name_score, 180.0)
 
             score = max(name_score, tag_score, desc_score, syn_score)
             if score > 35:
