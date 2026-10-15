@@ -1,4 +1,14 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Large Screen Devices (Tablets, Foldables, Chromebooks) Support -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:anyDensity="true"
+        android:resizeable="true" />
 
     <!-- Essential Permissions ─────────────────────────────────────────── -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -103,6 +113,20 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!-- Remove hardcoded portrait restrictions from Cashfree SDK for Play Console tablet / large screen compliance -->
+        <activity
+            android:name="com.cashfree.pg.ui.hidden.checkout.CashfreeNativeCheckoutActivity"
+            tools:remove="android:screenOrientation" />
+        <activity
+            android:name="com.cashfree.pg.core.api.ui.CashfreeCoreNativeVerificationActivity"
+            tools:remove="android:screenOrientation" />
+        <activity
+            android:name="com.cashfree.pg.core.api.ui.CashfreeSubscriptionVerificationActivity"
+            tools:remove="android:screenOrientation" />
+        <activity
+            android:name="com.cashfree.pg.core.api.ui.CashfreeSubscriptionCheckoutActivity"
+            tools:remove="android:screenOrientation" />
     </application>
 
     <!-- Required for UPI Payment Apps (Cashfree / PhonePe / GPay / Paytm) -->

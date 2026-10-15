@@ -48,6 +48,7 @@ android {
         versionCode flutter.versionCode
         versionName flutter.versionName
         multiDexEnabled true
+        vectorDrawables.useSupportLibrary = true
         manifestPlaceholders += [
             MAPS_API_KEY: mapsApiKey
         ]
@@ -124,5 +125,6 @@ configurations.all {
 
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    implementation 'androidx.activity:activity-ktx:1.9.3'
 }
 

@@ -9,11 +9,12 @@ import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import io.flutter.embedding.android.FlutterActivity
+import androidx.activity.enableEdgeToEdge
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     private val VOICE_CHANNEL = "com.fastkirana.app/voice_search"
     private val BATTERY_CHANNEL = "com.fastkirana.app/battery"
     private val DEEP_LINK_CHANNEL = "com.fastkirana.app/deep_link"
@@ -23,6 +24,7 @@ class MainActivity : FlutterActivity() {
     private var initialDeepLink: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         // Capture deep link that launched the app
         initialDeepLink = intent?.data?.toString()

@@ -4,11 +4,14 @@
 # ──────────────────────────────────────────────
 # Flutter Engine & Plugins
 # ──────────────────────────────────────────────
--keep class io.flutter.** { *; }
 -keep class io.flutter.app.** { *; }
 -keep class io.flutter.plugin.** { *; }
--keep class io.flutter.plugins.** { *; }
--keep class io.flutter.embedding.** { *; }
+-keep class io.flutter.util.PathUtils { *; }
+-keep class io.flutter.embedding.engine.FlutterJNI { *; }
+-keep class io.flutter.view.** { *; }
+-keepclasseswithmembers class * {
+    native <methods>;
+}
 -dontwarn io.flutter.embedding.**
 -dontwarn io.flutter.app.**
 -dontwarn com.google.android.play.core.**
@@ -17,12 +20,8 @@
 # ──────────────────────────────────────────────
 # Firebase & FCM
 # ──────────────────────────────────────────────
--keep class com.google.firebase.** { *; }
--keep class com.google.android.gms.** { *; }
--keepattributes Signature
--keepattributes *Annotation*
+-keepattributes Signature, *Annotation*
 -keep class com.google.firebase.messaging.FirebaseMessagingService { *; }
--keep class com.google.firebase.messaging.** { *; }
 -dontwarn com.google.firebase.**
 
 # ──────────────────────────────────────────────
@@ -74,19 +73,11 @@
 -keepattributes *Annotation*
 
 # ──────────────────────────────────────────────
-# Google Sign-In & Play Services Auth
+# Google Sign-In, Play Services & Location
 # ──────────────────────────────────────────────
--keep class com.google.android.gms.auth.** { *; }
--keep class com.google.android.gms.common.** { *; }
--keep class com.google.api.client.** { *; }
+-keep class com.google.android.gms.maps.** { *; }
 -dontwarn com.google.api.client.**
 -dontwarn com.google.android.gms.**
-
-# ──────────────────────────────────────────────
-# Geocoding & Location Services
-# ──────────────────────────────────────────────
--keep class com.google.android.gms.location.** { *; }
--dontwarn com.google.android.gms.location.**
 
 # ──────────────────────────────────────────────
 # Local Notifications
