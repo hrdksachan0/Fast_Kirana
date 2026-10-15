@@ -518,6 +518,18 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     );
   }
 
+  String _buildSearchHintText(String name) {
+    // Strip redundant business nouns to avoid search bar clipping
+    final cleanName = name
+        .replaceAll(RegExp(r'\s*\b(Restaurant|Cafe|Kitchen|Dhaba|Bhojnalaya|Outlet)\b', caseSensitive: false), '')
+        .trim();
+    final outlet = cleanName.isNotEmpty ? cleanName : name;
+    if (outlet.length > 16) {
+      return 'Search dishes...';
+    }
+    return 'Search in $outlet...';
+  }
+
   @override
   Widget build(BuildContext context) {
     final menuAsync = ref.watch(restaurantMenuProvider(widget.restaurantId));
@@ -655,9 +667,10 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                               textInputAction: TextInputAction.search,
                               onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
                               decoration: InputDecoration(
-                                hintText: 'Search dishes in $restaurantName...',
+                                hintText: _buildSearchHintText(restaurantName),
+                                hintMaxLines: 1,
                                 hintStyle: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13),
+                                  fontSize: Responsive.scaledFontSize(context, 12.5),
                                   color: AppDesignSystem.slate400,
                                   fontWeight: FontWeight.w400,
                                 ),
