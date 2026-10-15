@@ -1001,7 +1001,7 @@ async def test_concurrent_workers_idempotency_with_redis_down():
             responses = [f.result() for f in futures]
 
         status_codes = [r.status_code for r in responses]
-        assert any(c in (200, 201) for c in status_codes), f"STATUS_CODES: {status_codes} TEXTS: {[r.text for r in responses]}"
+        assert any(c in (200, 201) for c in status_codes)
         for code in status_codes:
             assert code in (200, 201, 409)
 

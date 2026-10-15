@@ -2343,10 +2343,11 @@ async def create_order(
         return result_payload
 
     except HTTPException as he:
-        await db.rollback()
-        if locals().get("lock_acquired") and he.status_code != 409:
-            if "idempotency_key" in locals() and idempotency_key:
-                await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
+        if locals().get("lock_acquired"):
+            await db.rollback()
+            if he.status_code != 409:
+                if "idempotency_key" in locals() and idempotency_key:
+                    await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
         raise
     except Exception as e:
         await db.rollback()
