@@ -26,11 +26,5 @@
     "src/app/api/**/*": {
       "maxDuration": 25
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/keep-alive",
-      "schedule": "*/10 * * * *"
-    }
-  ]
+  }
 }
