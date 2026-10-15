@@ -15,6 +15,15 @@ class FastKiranaCustomerUser(HttpUser):
 
     def on_start(self):
         """Initialize simulated user credentials and headers."""
+        # SAFETY GUARD: Prevent accidental load tests against production domain to avoid Railway abuse triggers
+        target_host = str(self.host or "").lower()
+        if "fastkirana.in" in target_host and not os.environ.get("FORCE_PROD_LOAD_TEST"):
+            raise RuntimeError(
+                f"[CRITICAL SAFETY BLOCK] Locust is configured to target live production ({self.host}). "
+                "Direct high-concurrency load testing against production is disabled to protect against provider bans. "
+                "Target localhost:8000 or a dedicated staging environment instead."
+            )
+
         self.user_id = f"stress_user_{uuid.uuid4().hex[:12]}"
         self.auth_token = None
         self.headers = {
