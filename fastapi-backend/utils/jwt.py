@@ -22,8 +22,14 @@ def get_clean_secret(key: str) -> str:
 
 def validate_auth_secret(secret: Optional[str] = None, env: Optional[str] = None) -> str:
     s = (secret if secret is not None else get_clean_secret("AUTH_SECRET")).strip()
-    e = (env if env is not None else (os.getenv("APP_ENV") or os.getenv("NODE_ENV") or "")).lower()
-    is_prod = e == "production"
+    e_raw = env if env is not None else (
+        os.getenv("APP_ENV")
+        or os.getenv("NODE_ENV")
+        or os.getenv("ENVIRONMENT")
+        or ("production" if str(os.getenv("PRODUCTION", "")).lower() in ("true", "1") else "")
+        or ""
+    )
+    is_prod = str(e_raw).strip().lower() in ("production", "prod", "true", "1")
     if is_prod:
         if not s:
             raise RuntimeError("AUTH_SECRET environment variable is required in production and cannot be empty")

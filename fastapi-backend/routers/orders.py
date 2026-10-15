@@ -634,6 +634,7 @@ async def create_order(
         or request.headers.get("idempotency-key")
         or generate_order_cart_signature(user_id, raw_req_items, raw_req_addr, raw_req_pm)
     )
+    lock_acquired = False
     is_dup, is_proc, cached_resp = await acquire_idempotency_lock_async(
         idempotency_key, db=db, user_id=user_id, request_hash=request_fingerprint
     )
@@ -644,6 +645,7 @@ async def create_order(
             status_code=409,
             detail="An order with these items is already being processed. Please wait a moment."
         )
+    lock_acquired = True
 
     # Check if account is blocked
     user_stmt = select(User).where(User.id == user_id)
@@ -1565,6 +1567,17 @@ async def create_order(
             elif incoming_payment_id.startswith("cf_"):
                 incoming_cf_order_id = incoming_payment_id
 
+        canonical_cf_order_id = None
+        if incoming_cf_order_id:
+            # Reject malformed references containing special characters
+            if re.search(r"[^a-zA-Z0-9_-]", incoming_cf_order_id):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid payment reference format: payment ID must contain only alphanumeric characters, underscores, and hyphens."
+                )
+            canonical_cf_order_id = re.sub(r"[^a-zA-Z0-9_-]", "_", incoming_cf_order_id)[:45]
+            incoming_cf_order_id = canonical_cf_order_id
+
         # 🛡️ [DATABASE IDEMPOTENCY CHECK] Prevent duplicate order creation if Cashfree order was already placed
         if incoming_cf_order_id:
             try:
@@ -2319,16 +2332,18 @@ async def create_order(
 
         return result_payload
 
-    except HTTPException:
+    except HTTPException as he:
         await db.rollback()
-        if "idempotency_key" in locals() and idempotency_key:
-            await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
+        if locals().get("lock_acquired") and he.status_code != 409:
+            if "idempotency_key" in locals() and idempotency_key:
+                await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
         raise
     except Exception as e:
         await db.rollback()
         logger.error(f"Failed to place order: {str(e)}")
-        if "idempotency_key" in locals() and idempotency_key:
-            await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
+        if locals().get("lock_acquired"):
+            if "idempotency_key" in locals() and idempotency_key:
+                await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
         raise HTTPException(status_code=500, detail=f"Failed to place order: {str(e)}")
 
 

@@ -198,15 +198,20 @@ async def _consume_ws_ticket(jti: str, exp: float) -> bool:
     ttl = max(1, math.ceil(exp - now))
     
     from config import settings
-    app_env = str(
-        os.environ.get("APP_ENV")
-        or os.environ.get("NODE_ENV")
-        or getattr(settings, "APP_ENV", "")
-        or os.environ.get("ENVIRONMENT")
-        or os.environ.get("PRODUCTION")
-        or ""
-    ).lower()
-    is_prod = app_env in ("production", "prod", "true", "1")
+    env_candidates = [
+        os.environ.get("APP_ENV"),
+        os.environ.get("NODE_ENV"),
+        os.environ.get("ENVIRONMENT"),
+        os.environ.get("PRODUCTION"),
+    ]
+    is_prod = any(
+        str(val).strip().lower() in ("production", "prod", "true", "1")
+        for val in env_candidates if val is not None
+    )
+    if not is_prod:
+        sett_env = getattr(settings, "APP_ENV", "")
+        if sett_env and str(sett_env).strip().lower() in ("production", "prod", "true", "1"):
+            is_prod = True
 
     # 1. Local process-memory check for quick rejection
     if jti in consumed_ws_tickets:
