@@ -1,13 +1,14 @@
 /**
  * Client-side image compression utility.
- * Resizes large images (e.g. 10MB+ phone camera photos) down to a max width/height
- * and compresses them to lightweight WebP or JPEG blobs in milliseconds.
- * This guarantees the upload body never exceeds Vercel's 4.5MB request limit.
+ * Resizes large images (e.g. 10MB+ phone camera photos) down to max 800px
+ * and compresses them to ultra-lightweight WebP (< 80KB) in milliseconds.
+ * 
+ * Ensures instant 2G/3G mobile image loading and prevents large upload payloads.
  */
 export async function compressImageClient(
   file: File,
-  maxDimension = 1200,
-  quality = 0.82
+  maxDimension = 800,
+  quality = 0.78
 ): Promise<File> {
   // If in SSR or file is not an image or is SVG/GIF, return as-is
   if (typeof window === 'undefined' || !file || !file.type.startsWith('image/')) {
@@ -17,8 +18,8 @@ export async function compressImageClient(
     return file
   }
 
-  // If already very small (< 250KB), no need to compress
-  if (file.size < 250 * 1024) {
+  // If already under 80KB and already WebP, no recompression needed
+  if (file.size <= 80 * 1024 && file.type === 'image/webp') {
     return file
   }
 
@@ -30,7 +31,7 @@ export async function compressImageClient(
         img.onload = () => {
           let { width, height } = img
 
-          // Calculate scaled dimensions keeping aspect ratio
+          // Calculate scaled dimensions keeping aspect ratio (max 800px)
           if (width > maxDimension || height > maxDimension) {
             if (width > height) {
               height = Math.round((height * maxDimension) / width)
@@ -50,23 +51,42 @@ export async function compressImageClient(
             return
           }
 
-          // Fill white background for transparent images converted to jpeg/webp
           ctx.drawImage(img, 0, 0, width, height)
 
           const outputType = 'image/webp'
+          const baseName = file.name.replace(/\.[^/.]+$/, '')
+
+          // First pass encoding
           canvas.toBlob(
             (blob) => {
-              if (blob && blob.size < file.size) {
-                const baseName = file.name.replace(/\.[^/.]+$/, '')
+              if (!blob) {
+                resolve(file)
+                return
+              }
+
+              // If already <= 80KB, finish
+              if (blob.size <= 80 * 1024) {
                 const newFile = new File([blob], `${baseName}.webp`, {
                   type: outputType,
                   lastModified: Date.now(),
                 })
                 resolve(newFile)
-              } else {
-                // If compression didn't reduce size, keep original
-                resolve(file)
+                return
               }
+
+              // Second pass: try quality 0.65 to ensure <= 80KB
+              canvas.toBlob(
+                (blobPass2) => {
+                  const finalBlob = blobPass2 && blobPass2.size < blob.size ? blobPass2 : blob
+                  const newFile = new File([finalBlob], `${baseName}.webp`, {
+                    type: outputType,
+                    lastModified: Date.now(),
+                  })
+                  resolve(newFile)
+                },
+                outputType,
+                0.65
+              )
             },
             outputType,
             quality

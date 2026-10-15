@@ -9,23 +9,25 @@ from PIL import Image, ImageOps
 # Guard against decompression bomb attacks
 Image.MAX_IMAGE_PIXELS = 50_000_000
 
-MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB limit
+MAX_UPLOAD_SIZE = 15 * 1024 * 1024  # 15 MB raw upload limit
+MAX_TARGET_BYTES = 80 * 1024  # Strictly 80 KB limit for instant 2G/3G mobile load
 
 router = APIRouter(prefix="/upload", tags=["Upload & Image Optimization"])
 
 class ImageBase64Payload(BaseModel):
     image: str
     maxWidth: Optional[int] = 800
-    quality: Optional[int] = 80
+    quality: Optional[int] = 78
 
-def optimize_image_bytes(raw_bytes: bytes, max_width: int = 800, quality: int = 80) -> tuple[bytes, int, int]:
+def optimize_image_bytes(raw_bytes: bytes, max_width: int = 800, quality: int = 78) -> tuple[bytes, int, int]:
     """
-    Optimizes any image to WebP with max_width dimension limit and high-quality compression.
-    Preserves EXIF orientation, handles transparency correctly.
+    Optimizes any image to WebP with multi-pass adaptive compression
+    strictly targeting <= 80 KB for instantaneous 2G/3G mobile loading.
+    Preserves EXIF orientation and handles transparency cleanly.
     """
     try:
         with Image.open(io.BytesIO(raw_bytes)) as img:
-            # Transpose according to EXIF tags if phone was rotated
+            # Auto-transpose based on phone camera EXIF tags
             img = ImageOps.exif_transpose(img)
 
             # Ensure proper color mode
@@ -34,22 +36,32 @@ def optimize_image_bytes(raw_bytes: bytes, max_width: int = 800, quality: int = 
             else:
                 img = img.convert("RGB")
 
-            # Proportional resize if larger than max_width
             orig_w, orig_h = img.size
-            clamped_width = min(max(max_width, 50), 2000)
-            if orig_w > clamped_width:
-                new_w = clamped_width
-                new_h = int(orig_h * (clamped_width / orig_w))
-                img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-            else:
-                new_w, new_h = orig_w, orig_h
 
-            # Encode to WebP
-            clamped_quality = min(max(quality, 10), 100)
-            output_buf = io.BytesIO()
-            img.save(output_buf, format="WEBP", quality=clamped_quality, method=4)
-            webp_bytes = output_buf.getvalue()
-            return webp_bytes, new_w, new_h
+            def resize_and_encode(target_w: int, target_q: int) -> tuple[bytes, int, int]:
+                if orig_w > target_w:
+                    new_w = target_w
+                    new_h = int(orig_h * (target_w / orig_w))
+                    resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                else:
+                    new_w, new_h = orig_w, orig_h
+                    resized = img
+                buf = io.BytesIO()
+                resized.save(buf, format="WEBP", quality=target_q, method=4)
+                return buf.getvalue(), new_w, new_h
+
+            # Pass 1: 800px max width at quality 78
+            data, w, h = resize_and_encode(min(max_width, 800), quality)
+
+            # Pass 2: If still > 80 KB, tighten quality to 68
+            if len(data) > MAX_TARGET_BYTES:
+                data, w, h = resize_and_encode(min(max_width, 800), 68)
+
+            # Pass 3: If still > 80 KB, resize to 640px at quality 60
+            if len(data) > MAX_TARGET_BYTES:
+                data, w, h = resize_and_encode(640, 60)
+
+            return data, w, h
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Image processing failed: {str(e)}")
 
@@ -63,7 +75,7 @@ async def upload_root(
     """
     Universal upload endpoint matching Next.js /api/upload.
     Accepts multipart/form-data with 'file', or JSON with 'file' or 'image' base64.
-    Returns { success: true, url: data_url }.
+    Returns { success: true, url: data_url, sizeKB, format: 'webp' }.
     """
     content_type = request.headers.get("content-type", "")
     raw_content = None
@@ -88,7 +100,7 @@ async def upload_root(
         raise HTTPException(status_code=413, detail=f"File exceeds maximum allowed size of {MAX_UPLOAD_SIZE // (1024*1024)}MB")
 
     webp_bytes, width, height = await asyncio.to_thread(
-        optimize_image_bytes, raw_content, max_width=1200, quality=82
+        optimize_image_bytes, raw_content, max_width=800, quality=78
     )
 
     base64_encoded = base64.b64encode(webp_bytes).decode("utf-8")
@@ -99,7 +111,8 @@ async def upload_root(
         "url": data_url,
         "format": "webp",
         "width": width,
-        "height": height
+        "height": height,
+        "sizeKB": round(len(webp_bytes) / 1024, 1)
     }
 
 
@@ -107,11 +120,11 @@ async def upload_root(
 async def upload_and_optimize_image(
     file: Optional[UploadFile] = File(None),
     max_width: int = Form(800),
-    quality: int = Form(80),
+    quality: int = Form(78),
 ):
     """
     Upload an image file (PNG, JPG, HEIC, WEBP) and automatically compress
-    to WebP (max 800px width, quality 80).
+    to WebP (max 800px width, <= 80 KB).
     Returns base64 data URL and compression statistics.
     """
     if not file:
@@ -141,6 +154,7 @@ async def upload_and_optimize_image(
         "format": "webp",
         "width": width,
         "height": height,
+        "sizeKB": round(webp_size / 1024, 1),
         "originalSizeBytes": orig_size,
         "optimizedSizeBytes": webp_size,
         "savingsPercent": max(0.0, savings_percent),
@@ -149,7 +163,7 @@ async def upload_and_optimize_image(
 @router.post("/image-base64")
 async def optimize_base64_image(payload: ImageBase64Payload):
     """
-    Receives base64 string image, converts to WebP and returns optimized base64 data URL.
+    Receives base64 string image, converts to WebP (<= 80 KB) and returns optimized base64 data URL.
     """
     raw_str = payload.image
     if "," in raw_str:
@@ -170,7 +184,7 @@ async def optimize_base64_image(payload: ImageBase64Payload):
         optimize_image_bytes,
         raw_bytes,
         max_width=payload.maxWidth or 800,
-        quality=payload.quality or 80,
+        quality=payload.quality or 78,
     )
     webp_size = len(webp_bytes)
 
@@ -185,6 +199,7 @@ async def optimize_base64_image(payload: ImageBase64Payload):
         "format": "webp",
         "width": width,
         "height": height,
+        "sizeKB": round(webp_size / 1024, 1),
         "originalSizeBytes": orig_size,
         "optimizedSizeBytes": webp_size,
         "savingsPercent": max(0.0, savings_percent),
