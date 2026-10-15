@@ -582,6 +582,16 @@ async def create_order(
     from services.tracer_service import TracerService
     trace_id = getattr(request.state, "trace_id", None) or payload.get("traceId") or payload.get("trace_id") or TracerService.generate_trace_id()
 
+    # ── VALIDATE PAYMENT REFERENCE IDENTIFIERS ──
+    raw_cf_order = str(payload.get("cfOrderId") or "").strip()
+    raw_payment_id = str(payload.get("paymentId") or payload.get("cfPaymentId") or "").strip()
+    check_ref = raw_cf_order or (raw_payment_id.replace("CF_", "") if raw_payment_id.startswith("CF_") else (raw_payment_id if raw_payment_id.startswith("cf_") else ""))
+    if check_ref and re.search(r"[^a-zA-Z0-9_-]", check_ref):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid payment reference format: payment ID must contain only alphanumeric characters, underscores, and hyphens."
+        )
+
     # ── RESILIENT USER RESOLUTION (Supports Web, Flutter, Guests) ──
     user_obj = None
     if user_id:

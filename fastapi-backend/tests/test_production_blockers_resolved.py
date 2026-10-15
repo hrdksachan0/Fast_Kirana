@@ -1001,7 +1001,7 @@ async def test_concurrent_workers_idempotency_with_redis_down():
             responses = [f.result() for f in futures]
 
         status_codes = [r.status_code for r in responses]
-        assert any(c in (200, 201) for c in status_codes)
+        assert any(c in (200, 201) for c in status_codes), f"STATUS_CODES: {status_codes} TEXTS: {[r.text for r in responses]}"
         for code in status_codes:
             assert code in (200, 201, 409)
 
@@ -1733,28 +1733,277 @@ async def test_auto_recovery_restores_pickup_delivery_method_store_and_authorita
 
 @pytest.mark.asyncio
 async def test_kot_supabase_topics_do_not_contain_unscoped_global_channels():
-    """Verify that reprint_kot / KOT broadcasting only includes restaurant-scoped topics
-    and excludes public unscoped 'realtime:restaurant-orders-live'."""
+    """Verify that broadcast_kot dispatches to restaurant-scoped topics
+    and strictly excludes public unscoped 'realtime:restaurant-orders-live'."""
+    from routers.kot import broadcast_kot, KotBroadcastRequest
+    import uuid
+
     target_rest = "rest_taj_99"
-    topics_to_send = []
-    if target_rest:
-        topics_to_send.extend([
-            f"realtime:restaurant-orders-{target_rest}",
-            f"restaurant-orders-{target_rest}",
-            f"realtime:restaurant_{target_rest}",
-            f"restaurant_{target_rest}",
-        ])
+    req = KotBroadcastRequest(
+        orderId=f"ord_{uuid.uuid4().hex[:8]}",
+        readableId="FK-TEST-101-R",
+        restaurantId=target_rest,
+        customerName="Test Chef",
+        deliveryMethod="DELIVERY",
+        shopName="Taj Kitchen",
+        items=[{"name": "Paneer Tikka", "quantity": 1, "price": 250.0}]
+    )
 
-    assert "realtime:restaurant-orders-live" not in topics_to_send
-    assert "restaurant-orders-live" not in topics_to_send
-    assert f"realtime:restaurant-orders-{target_rest}" in topics_to_send
+    mock_request = MagicMock()
+    mock_request.headers = {"x-internal-secret": "test_internal"}
+
+    async with TestingSessionLocal() as session:
+        with patch("routers.kot.send_supabase_realtime_broadcast", new=AsyncMock()) as mock_bcast, \
+             patch.dict(os.environ, {"INTERNAL_API_SECRET": "test_internal"}):
+            await broadcast_kot(
+                req=req,
+                request=mock_request,
+                current_user={"id": "admin_1", "role": "SUPER_ADMIN"},
+                db=session
+            )
+            assert mock_bcast.called
+            topics_called = mock_bcast.call_args[0][0]
+            assert "realtime:restaurant-orders-live" not in topics_called
+            assert "restaurant-orders-live" not in topics_called
+            assert f"realtime:restaurant-orders-{target_rest}" in topics_called
+            assert f"restaurant-orders-{target_rest}" in topics_called
 
 
+@pytest.mark.asyncio
+async def test_auto_recovery_rejects_underpayment_and_enforces_stock_reconciliation():
+    """P1 Verification: Verify that when catalog price is ₹500, stock is 0, requested quantity is 2,
+    and gateway paid amount is ₹1:
+    1. Status is quarantined to ADMIN_PENDING (not CONFIRMED / PAID).
+    2. Notes flag [RECONCILIATION_REQUIRED] with underpayment and stock deficiency details.
+    3. Stock is NOT decremented (remains 0).
+    4. confirmedAt remains None."""
+    import uuid
+    from models import Product, Category, IdempotencyRecord, Order, OrderStatus
+    from routers.cashfree_router import auto_recover_unplaced_cashfree_order
+
+    cf_order_id = f"cf_underpaid_{uuid.uuid4().hex[:10]}"
+    p_id = f"prod_saffron_{uuid.uuid4().hex[:8]}"
+
+    async with TestingSessionLocal() as session:
+        cat = Category(id=f"cat_{uuid.uuid4().hex[:6]}", name="Spices", slug=f"spices_{uuid.uuid4().hex[:6]}")
+        session.add(cat)
+        await session.flush()
+
+        prod = Product(
+            id=p_id,
+            name="Kashmir Saffron 5g",
+            price=500.0,
+            mrp=600.0,
+            costPrice=400.0,
+            categoryId=cat.id,
+            unit="5g",
+            slug=f"saffron-{uuid.uuid4().hex[:6]}",
+            isAvailable=True,
+            stock=0  # Out of stock!
+        )
+        session.add(prod)
+        await session.flush()
+
+        # Buyer attempts to order 2 units (authoritative catalog subtotal = ₹1000.0) but only paid ₹1.0
+        intent_payload = {
+            "orderId": f"ord_intent_{uuid.uuid4().hex[:8]}",
+            "cfOrderId": cf_order_id,
+            "amount": 1.0,
+            "userId": "usr_adversary",
+            "customerPhone": "9123456789",
+            "customerName": "Adversary Buyer",
+            "customerEmail": "adversary@test.in",
+            "items": [
+                {"productId": p_id, "name": "Kashmir Saffron 5g", "price": 0.5, "quantity": 2}
+            ],
+            "deliveryMethod": "DELIVERY",
+            "storeId": None,
+            "createdAt": time.time(),
+        }
+        intent_rec = IdempotencyRecord(
+            key=f"cf_intent:{cf_order_id}",
+            userId="usr_adversary",
+            status="PENDING",
+            response=intent_payload,
+            createdAt=datetime.utcnow(),
+            expiresAt=datetime.utcnow() + timedelta(days=2)
+        )
+        session.add(intent_rec)
+        await session.commit()
+
+        # Run auto_recover_unplaced_cashfree_order with gateway paid ₹1.0
+        recovered_order = await auto_recover_unplaced_cashfree_order(
+            cf_order_id=cf_order_id,
+            clean_id=cf_order_id,
+            cf_ref="cf_ref_underpaid_1",
+            order_data={"cf_order_id": cf_order_id, "order_amount": 1.0},
+            payment_data={"payment_status": "SUCCESS", "payment_amount": 1.0, "cf_payment_id": "cf_pay_underpaid"},
+            db=session
+        )
+
+        assert recovered_order is not None
+        # Must be quarantined into ADMIN_PENDING, NOT CONFIRMED
+        assert recovered_order.status == OrderStatus.ADMIN_PENDING
+        assert recovered_order.confirmedAt is None
+        assert recovered_order.subtotal == 1000.0  # Authoritative 2 * ₹500
+        assert "[RECONCILIATION_REQUIRED]" in recovered_order.notes
+        assert "Underpaid:" in recovered_order.notes
+        assert "Insufficient inventory" in recovered_order.notes
+
+        # Stock must NOT be decremented below 0
+        refreshed_prod = (await session.execute(select(Product).where(Product.id == p_id))).scalar_one()
+        assert refreshed_prod.stock == 0
 
 
+@pytest.mark.asyncio
+async def test_auto_recovery_grocery_to_restaurant_spoofing_prevented():
+    """P1/P2 Verification: Verify that when a database product has restaurantId=None (pure grocery),
+    recovery maintains authoritative null restaurantId and GROCERY order type, even if the caller
+    or client payload passed restaurantId='REST-SPOOF'."""
+    import uuid
+    from models import Product, Category, IdempotencyRecord, Order, OrderType
+    from routers.cashfree_router import auto_recover_unplaced_cashfree_order
+
+    cf_order_id = f"cf_spoof_{uuid.uuid4().hex[:10]}"
+    p_id = f"prod_flour_{uuid.uuid4().hex[:8]}"
+
+    async with TestingSessionLocal() as session:
+        cat = Category(id=f"cat_{uuid.uuid4().hex[:6]}", name="Atta & Flours", slug=f"atta_{uuid.uuid4().hex[:6]}")
+        session.add(cat)
+        await session.flush()
+
+        prod = Product(
+            id=p_id,
+            name="Authoritative Wheat Flour 10kg",
+            price=350.0,
+            mrp=400.0,
+            costPrice=300.0,
+            categoryId=cat.id,
+            unit="10kg",
+            slug=f"flour-{uuid.uuid4().hex[:6]}",
+            isAvailable=True,
+            stock=20,
+            restaurantId=None  # Legitimate pure grocery product
+        )
+        session.add(prod)
+        await session.flush()
+
+        # Intent attempts to spoof routing to REST-SPOOF
+        intent_payload = {
+            "orderId": f"ord_intent_{uuid.uuid4().hex[:8]}",
+            "cfOrderId": cf_order_id,
+            "amount": 350.0,
+            "userId": "usr_spoof_attacker",
+            "restaurantId": "REST-SPOOF",
+            "customerPhone": "9123456789",
+            "customerName": "Attacker",
+            "customerEmail": "attacker@test.in",
+            "items": [
+                {
+                    "productId": p_id,
+                    "name": "Wheat Flour 10kg",
+                    "price": 350.0,
+                    "quantity": 1,
+                    "restaurantId": "REST-SPOOF"
+                }
+            ],
+            "deliveryMethod": "DELIVERY",
+            "createdAt": time.time(),
+        }
+        intent_rec = IdempotencyRecord(
+            key=f"cf_intent:{cf_order_id}",
+            userId="usr_spoof_attacker",
+            status="PENDING",
+            response=intent_payload,
+            createdAt=datetime.utcnow(),
+            expiresAt=datetime.utcnow() + timedelta(days=2)
+        )
+        session.add(intent_rec)
+        await session.commit()
+
+        recovered_order = await auto_recover_unplaced_cashfree_order(
+            cf_order_id=cf_order_id,
+            clean_id=cf_order_id,
+            cf_ref="cf_ref_spoof_1",
+            order_data={"cf_order_id": cf_order_id, "order_amount": 350.0},
+            payment_data={"payment_status": "SUCCESS", "payment_amount": 350.0, "cf_payment_id": "cf_pay_spoof"},
+            db=session
+        )
+
+        assert recovered_order is not None
+        # Enforce that grocery product remains grocery routing
+        assert recovered_order.restaurantId is None
+        assert recovered_order.orderType == OrderType.GROCERY
+        
+        from models import OrderItem
+        item_rows = (await session.execute(select(OrderItem).where(OrderItem.orderId == recovered_order.id))).scalars().all()
+        assert len(item_rows) == 1
+        assert item_rows[0].productId == p_id
 
 
+@pytest.mark.asyncio
+async def test_order_creation_rejects_payment_reference_aliases_and_special_chars():
+    """P1 Verification: Verify that /api/orders rejects payment reference aliases containing special characters
+    with HTTP 400 Bad Request, preventing distinct consumption keys for sanitized aliases."""
+    import uuid
+
+    malformed_references = [
+        "cf_paid!123",
+        "cf_paid?123",
+        "cf_paid$123",
+        "cf_order#hack",
+        "cf_order;DROP TABLE",
+    ]
+
+    token = create_access_token(data={"sub": f"usr_{uuid.uuid4().hex[:8]}", "role": "USER"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    for bad_ref in malformed_references:
+        resp = client.post("/api/orders", json={
+            "userId": "usr_test_buyer",
+            "paymentMethod": "CASHFREE",
+            "cfOrderId": bad_ref,
+            "items": [{"productId": "p1", "quantity": 1, "price": 50.0}],
+            "subtotal": 50.0,
+            "total": 50.0,
+        }, headers=headers)
+        assert resp.status_code == 400
+        res_data = resp.json()
+        err_msg = res_data.get("detail") or res_data.get("error") or ""
+        assert "Invalid payment reference format" in err_msg
 
 
+@pytest.mark.asyncio
+async def test_websocket_ticket_fails_closed_on_db_ledger_failure_across_all_production_envs():
+    """Environment Verification: Verify that when database ledger fails, _consume_ws_ticket
+    fails closed (returns False) across all production environment flags (APP_ENV, NODE_ENV,
+    ENVIRONMENT, PRODUCTION) even if Redis distributed cache is healthy."""
+    from routers.websockets import _consume_ws_ticket
+    from database import get_db
+    import uuid
+    import time
 
+    prod_environments = [
+        {"APP_ENV": "production"},
+        {"NODE_ENV": "production"},
+        {"ENVIRONMENT": "production"},
+        {"PRODUCTION": "true"},
+    ]
+
+    for env_dict in prod_environments:
+        with patch.dict(os.environ, env_dict, clear=False):
+            # Healthy Redis mock that acquires the lock
+            mock_redis = AsyncMock()
+            mock_redis.set = AsyncMock(return_value=True)
+
+            async def failing_db_override():
+                raise Exception("DB persistent ledger unavailable")
+                yield None
+
+            with patch("utils.cache.get_redis_connection", new=AsyncMock(return_value=mock_redis)), \
+                 patch.dict(app.dependency_overrides, {get_db: failing_db_override}):
+                jti = f"ws_ticket_{uuid.uuid4().hex}"
+                exp = time.time() + 300
+                ticket_accepted = await _consume_ws_ticket(jti, exp)
+                assert ticket_accepted is False, f"Ticket should fail closed when DB ledger fails under {env_dict}"
 

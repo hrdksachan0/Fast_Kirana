@@ -146,6 +146,7 @@ async def create_cashfree_order(
     db: AsyncSession = Depends(get_db)
 ):
     total_amount = 0.0
+    order = None
     resolved_order_id = req.orderId or f"cf_{int(time.time() * 1000)}"
     customer_id = "guest_customer"
     order_payload = req.orderPayload if isinstance(req.orderPayload, dict) else {}
@@ -196,6 +197,50 @@ async def create_cashfree_order(
         or "FastKirana Customer"
     )
 
+    authoritative_items_subtotal = 0.0
+    has_items_validated = False
+    if effective_items and isinstance(effective_items, list) and not (req.orderId and order):
+        raw_pids = [
+            str(it.get("productId") or (it.get("product") or {}).get("id") or "").strip()
+            for it in effective_items
+        ]
+        raw_pids = [pid for pid in raw_pids if pid]
+        db_p_map = {}
+        if raw_pids:
+            p_stmt = select(Product).where(Product.id.in_(raw_pids))
+            p_res = await db.execute(p_stmt)
+            for p in p_res.scalars().all():
+                db_p_map[p.id] = p
+
+        for it in effective_items:
+            prod_info = it.get("product") or it
+            p_id = str(it.get("productId") or prod_info.get("id") or "").strip()
+            p_qty = int(it.get("quantity") or 1)
+            sel_var = it.get("selectedVariant") or prod_info.get("selectedVariant")
+            db_p = db_p_map.get(p_id)
+            if db_p:
+                item_price = float(db_p.price or 0.0)
+                if sel_var and db_p.variants and isinstance(db_p.variants, list):
+                    v_match = next((v for v in db_p.variants if isinstance(v, dict) and v.get("name") == sel_var), None)
+                    if v_match and "price" in v_match:
+                        item_price = float(v_match["price"])
+                    if not db_p.restaurantId and v_match:
+                        if int(v_match.get("stock", 0)) < p_qty:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Insufficient stock for \"{db_p.name} ({sel_var})\". Available: {v_match.get('stock', 0)}, requested: {p_qty}."
+                            )
+                else:
+                    if not db_p.restaurantId and (db_p.stock or 0) < p_qty:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Insufficient stock for \"{db_p.name}\". Available: {db_p.stock or 0}, requested: {p_qty}."
+                        )
+                authoritative_items_subtotal += item_price * p_qty
+            else:
+                authoritative_items_subtotal += float(it.get("price") or prod_info.get("price") or 0.0) * p_qty
+        has_items_validated = True
+
     if req.orderId:
         clean_order_id = req.orderId.strip()
         stmt = select(Order).where(
@@ -238,10 +283,19 @@ async def create_cashfree_order(
             raise HTTPException(status_code=404, detail="Order not found")
     elif req.amount:
         total_amount = float(req.amount)
+    elif has_items_validated and authoritative_items_subtotal > 0:
+        total_amount = authoritative_items_subtotal
     else:
         raise HTTPException(status_code=400, detail="orderId or amount is required")
 
-    if req.amount and float(req.amount) > total_amount:
+    # Enforce authoritative server catalog pricing against client underpayment
+    if has_items_validated and authoritative_items_subtotal > 0:
+        if total_amount < (authoritative_items_subtotal - 0.05):
+            logger.warning(
+                f"[Cashfree Security] Client attempted underpayment: client amount={total_amount} < authoritative subtotal={authoritative_items_subtotal}. Overriding with server price."
+            )
+            total_amount = authoritative_items_subtotal
+    elif req.amount and float(req.amount) > total_amount:
         total_amount = float(req.amount)
 
     if total_amount < 1.0:
@@ -846,6 +900,8 @@ async def auto_recover_unplaced_cashfree_order(
         from sqlalchemy import text, or_
         import uuid
 
+        clean_cf_id = re.sub(r"[^a-zA-Z0-9_-]", "_", str(cf_order_id).strip())[:45]
+
         # 0. Check if order already recovered or created with this cfOrderId / clean_id
         # Authoritative lookup strictly uses explicit order fields — NEVER free-text notes
         existing_stmt = select(Order).options(
@@ -854,6 +910,7 @@ async def auto_recover_unplaced_cashfree_order(
         ).where(
             or_(
                 Order.cfOrderId == cf_order_id,
+                Order.cfOrderId == clean_cf_id,
                 Order.cfOrderId == clean_id,
                 Order.id == clean_id,
                 Order.readableId == clean_id
@@ -877,12 +934,12 @@ async def auto_recover_unplaced_cashfree_order(
 
             logger.info(f"[Cashfree Recovery] Order already recovered or exists for {cf_order_id}: #{existing_order.readableId or existing_order.id}")
             if not getattr(existing_order, "cfOrderId", None):
-                existing_order.cfOrderId = cf_order_id
+                existing_order.cfOrderId = clean_cf_id
                 await db.commit()
             return existing_order
 
         # 0.5 Atomic payment fulfillment lock to prevent concurrent duplicate recovery across workers
-        consumed_key = f"consumed_payment:{cf_order_id}"
+        consumed_key = f"consumed_payment:{clean_cf_id}"
         cons_rec = None
         from models import IdempotencyRecord
         try:
@@ -1011,12 +1068,16 @@ async def auto_recover_unplaced_cashfree_order(
         recovered_delivery_method = str(pending_data.get("deliveryMethod") or "DELIVERY").upper() if pending_data else "DELIVERY"
         recovered_store_id = str(pending_data.get("storeId") or "hub-209206") if pending_data else "hub-209206"
 
+        has_underpaid_conflict = False
+        has_stock_conflict = False
+        has_missing_product = False
+        db_products = {}
+
         # Check pending cache items first
         cached_items = pending_data.get("items") if pending_data else None
         if cached_items and isinstance(cached_items, list):
             prod_ids = [str(it.get("productId") or (it.get("product") or {}).get("id") or "").strip() for it in cached_items]
             prod_ids = [pid for pid in prod_ids if pid]
-            db_products = {}
             if prod_ids:
                 p_res = await db.execute(select(Product).where(Product.id.in_(prod_ids)))
                 for p in p_res.scalars().all():
@@ -1027,12 +1088,34 @@ async def auto_recover_unplaced_cashfree_order(
                 p_id = str(it.get("productId") or prod.get("id") or "").strip()
                 db_prod = db_products.get(p_id)
 
+                if db_prod is None and p_id:
+                    has_missing_product = True
+
                 p_name = (db_prod.name if db_prod else (it.get("name") or prod.get("name"))) or "Product"
-                p_price = float((db_prod.price if db_prod else None) or it.get("price") or prod.get("price") or 0.0)
                 p_qty = int(it.get("quantity") or 1)
-                p_rest_id = (db_prod.restaurantId if db_prod else None) or it.get("restaurantId") or prod.get("restaurantId")
                 p_img = (db_prod.imageUrl if db_prod else None) or it.get("imageUrl") or prod.get("imageUrl")
                 p_var = it.get("selectedVariant") or prod.get("selectedVariant")
+
+                # Authoritative pricing & routing
+                if db_prod is not None:
+                    # Legitimate grocery products have restaurantId=None and MUST remain None!
+                    p_rest_id = db_prod.restaurantId
+                    p_price = float(db_prod.price or 0.0)
+                    if p_var and db_prod.variants and isinstance(db_prod.variants, list):
+                        v_obj = next((v for v in db_prod.variants if isinstance(v, dict) and v.get("name") == p_var), None)
+                        if v_obj and "price" in v_obj:
+                            p_price = float(v_obj["price"])
+                        if not p_rest_id:
+                            v_stk = int(v_obj.get("stock", 0)) if v_obj else 0
+                            if v_stk < p_qty:
+                                has_stock_conflict = True
+                    elif not p_rest_id:
+                        if (db_prod.stock or 0) < p_qty:
+                            has_stock_conflict = True
+                else:
+                    p_rest_id = it.get("restaurantId") or prod.get("restaurantId")
+                    p_price = float(it.get("price") or prod.get("price") or 0.0)
+
                 if p_rest_id:
                     is_restaurant = True
                     target_restaurant_id = p_rest_id
@@ -1059,9 +1142,18 @@ async def auto_recover_unplaced_cashfree_order(
                     prod = ci.product
                     p_id = prod.id if prod else ci.productId
                     p_name = prod.name if prod else "Product"
-                    p_price = float(ci.price or (prod.price if prod else 0.0))
                     p_qty = int(ci.quantity or 1)
-                    p_rest_id = prod.restaurantId if prod else None
+                    if prod is not None:
+                        db_products[prod.id] = prod
+                        p_rest_id = prod.restaurantId
+                        p_price = float(ci.price or (prod.price or 0.0))
+                        if not p_rest_id and (prod.stock or 0) < p_qty:
+                            has_stock_conflict = True
+                    else:
+                        p_rest_id = None
+                        p_price = float(ci.price or 0.0)
+                        if p_id:
+                            has_missing_product = True
                     if p_rest_id:
                         is_restaurant = True
                         target_restaurant_id = p_rest_id
@@ -1108,7 +1200,22 @@ async def auto_recover_unplaced_cashfree_order(
         calculated_subtotal = sum(it["price"] * it["quantity"] for it in items_to_create)
         misc_fee = max(0.0, round(order_amount - calculated_subtotal, 2)) if order_amount > calculated_subtotal else 0.0
 
-        order_notes = f"[CF_ORDER:{cf_order_id}] | Cashfree PG Paid (Ref: {cf_ref}) | Auto-Reconciled from Webhook"
+        if items_to_create and (order_amount < (calculated_subtotal - 0.05)):
+            has_underpaid_conflict = True
+
+        if has_underpaid_conflict or has_stock_conflict or has_missing_product:
+            reconcile_reasons = []
+            if has_underpaid_conflict:
+                reconcile_reasons.append(f"Underpaid: paid ₹{order_amount:.2f} < catalog subtotal ₹{calculated_subtotal:.2f}")
+            if has_stock_conflict:
+                reconcile_reasons.append("Insufficient inventory for one or more items")
+            if has_missing_product:
+                reconcile_reasons.append("One or more items not found in database catalog")
+            order_status = OrderStatus.ADMIN_PENDING
+            order_notes = f"[RECONCILIATION_REQUIRED] {'; '.join(reconcile_reasons)} | [CF_ORDER:{cf_order_id}] Cashfree PG Paid (Ref: {cf_ref})"
+        else:
+            order_status = OrderStatus.CONFIRMED
+            order_notes = f"[CF_ORDER:{cf_order_id}] | Cashfree PG Paid (Ref: {cf_ref}) | Auto-Reconciled from Webhook"
 
         # 7. Create Order Row
         order = Order(
@@ -1117,10 +1224,10 @@ async def auto_recover_unplaced_cashfree_order(
             userId=user_id,
             addressId=address.id,
             combinedId=None,
-            cfOrderId=cf_order_id,
+            cfOrderId=clean_cf_id,
             restaurantId=target_restaurant_id if is_restaurant else None,
             orderType=OrderType.RESTAURANT if is_restaurant else OrderType.GROCERY,
-            status=OrderStatus.CONFIRMED,
+            status=order_status,
             subtotal=calculated_subtotal if calculated_subtotal > 0 else order_amount,
             discount=0.0,
             deliveryFee=0.0,
@@ -1139,7 +1246,7 @@ async def auto_recover_unplaced_cashfree_order(
             storeId=recovered_store_id,
             createdAt=datetime.utcnow(),
             updatedAt=datetime.utcnow(),
-            confirmedAt=datetime.utcnow(),
+            confirmedAt=datetime.utcnow() if order_status == OrderStatus.CONFIRMED else None,
             notes=order_notes,
             refundAmount=0.0
         )
@@ -1166,6 +1273,60 @@ async def auto_recover_unplaced_cashfree_order(
             )
             db.add(oi)
 
+        # 8.5 Enforce stock deduction ONLY if order is CONFIRMED (adequately paid and stock available)
+        if order_status == OrderStatus.CONFIRMED:
+            for it in items_to_create:
+                p_id = it.get("productId")
+                if not p_id or not db_products.get(p_id):
+                    continue
+                db_p = db_products[p_id]
+                if db_p.restaurantId:
+                    continue
+                qty = it["quantity"]
+                sel_var = it.get("selectedVariant")
+                prev_stock = db_p.stock or 0
+                if sel_var and db_p.variants and isinstance(db_p.variants, list):
+                    updated_variants = []
+                    for v in db_p.variants:
+                        if isinstance(v, dict) and v.get("name") == sel_var:
+                            v_copy = dict(v)
+                            v_copy["stock"] = max(0, int(v_copy.get("stock", 0)) - qty)
+                            updated_variants.append(v_copy)
+                        else:
+                            updated_variants.append(v)
+                    db_p.variants = updated_variants
+                    db_p.stock = sum(int(v.get("stock", 0)) for v in updated_variants if isinstance(v, dict))
+                else:
+                    db_p.stock = max(0, prev_stock - qty)
+
+                if recovered_store_id:
+                    try:
+                        from models import StoreInventory
+                        inv_stmt = select(StoreInventory).where(
+                            StoreInventory.productId == db_p.id,
+                            StoreInventory.storeId == recovered_store_id
+                        )
+                        inv_res = await db.execute(inv_stmt)
+                        existing_inv = inv_res.scalars().first()
+                        if existing_inv:
+                            existing_inv.stock = max(0, existing_inv.stock - qty)
+                    except Exception as inv_err:
+                        logger.warning(f"[Cashfree Recovery] StoreInventory update notice: {inv_err}")
+
+                try:
+                    from models import StockLog
+                    log = StockLog(
+                        id=f"sl_{uuid.uuid4().hex[:16]}",
+                        productId=db_p.id,
+                        quantity=-qty,
+                        type="ONLINE_ORDER_RECOVERY",
+                        prevStock=prev_stock,
+                        newStock=db_p.stock
+                    )
+                    db.add(log)
+                except Exception:
+                    pass
+
         # 9. Clear user's cart if used
         if user:
             cart_stmt = select(Cart).where(Cart.userId == user.id)
@@ -1174,8 +1335,8 @@ async def auto_recover_unplaced_cashfree_order(
             if cart:
                 await db.execute(text("DELETE FROM cart_items WHERE \"cartId\" = :cart_id"), {"cart_id": cart.id})
 
-        # 10. Enqueue Kitchen KOT for printing
-        if is_restaurant and target_restaurant_id:
+        # 10. Enqueue Kitchen KOT for printing ONLY if CONFIRMED
+        if is_restaurant and target_restaurant_id and order_status == OrderStatus.CONFIRMED:
             try:
                 kot_items = [
                     {"name": it["name"], "quantity": it["quantity"], "restaurantId": target_restaurant_id, "isRestaurantItem": True}
@@ -1235,19 +1396,28 @@ async def auto_recover_unplaced_cashfree_order(
         # 11. Async Alerts: WhatsApp & FCM & WebSockets
         try:
             from routers.orders import send_whatsapp_alert
-            admin_msg = (
-                f"🚨 *AUTO-RECONCILED ONLINE ORDER* #{readable_id}\n"
-                f"Customer: {customer_name} ({clean_phone})\n"
-                f"Total: ₹{order_amount:.0f} (PAID via Cashfree)\n"
-                f"Client dropped before sync — Order recovered and dispatched automatically! ✅"
-            )
+            if order_status == OrderStatus.CONFIRMED:
+                admin_msg = (
+                    f"🚨 *AUTO-RECONCILED ONLINE ORDER* #{readable_id}\n"
+                    f"Customer: {customer_name} ({clean_phone})\n"
+                    f"Total: ₹{order_amount:.0f} (PAID via Cashfree)\n"
+                    f"Client dropped before sync — Order recovered and dispatched automatically! ✅"
+                )
+            else:
+                admin_msg = (
+                    f"⚠️ *RECONCILIATION REQUIRED ONLINE ORDER* #{readable_id}\n"
+                    f"Customer: {customer_name} ({clean_phone})\n"
+                    f"Paid: ₹{order_amount:.0f} (PAID via Cashfree) | Status: ADMIN_PENDING\n"
+                    f"Reason: {order_notes}\n"
+                    f"Review required before dispatch! ⚠️"
+                )
             for ap in ["7054470303", "8112849854"]:
                 asyncio.create_task(send_whatsapp_alert(ap, admin_msg, readable_id))
         except Exception as wa_e:
             logger.warning(f"[Auto-Recovery] WhatsApp alert failed: {wa_e}")
 
         # FCM to Restaurant
-        if target_restaurant_id:
+        if target_restaurant_id and order_status == OrderStatus.CONFIRMED:
             try:
                 from utils.firebase import send_fcm_topic_notification
                 asyncio.create_task(send_fcm_topic_notification(
