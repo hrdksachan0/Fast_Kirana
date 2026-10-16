@@ -14,6 +14,41 @@ from routers.auth import get_current_user
 router = APIRouter(prefix="/coupons", tags=["Coupons"])
 
 
+def filter_items_by_menu_section(item_list: List[Dict[str, Any]], menu_section_str: Optional[str]) -> List[Dict[str, Any]]:
+    if not menu_section_str or not item_list:
+        return item_list
+    sec_filters = [s.strip().lower() for s in menu_section_str.split(",") if s.strip()]
+    if not sec_filters:
+        return item_list
+
+    known_sections = [
+        'burger', 'sandwich', 'pasta', 'maggie', 'maggi', 'calzone',
+        'garlic', 'beverage', 'drink', 'dessert', 'icecream', 'biryani',
+        'pizza', 'shake', 'momos', 'fries', 'chaat', 'rolls', 'bread',
+        'appetizer', 'main course', 'starter', 'combos', 'combo'
+    ]
+    filtered = []
+    for it in item_list:
+        m_sec = str(it.get("menuSection") or (it.get("product") or {}).get("menuSection") or "").lower()
+        tags = [str(t).lower() for t in (it.get("tags") or (it.get("product") or {}).get("tags") or [])]
+        name = str(it.get("name") or (it.get("product") or {}).get("name") or "").lower()
+        slug = str(it.get("slug") or (it.get("product") or {}).get("slug") or "").lower()
+
+        matches = False
+        for f in sec_filters:
+            if f in m_sec or any(f in t for t in tags) or f in slug:
+                matches = True
+                break
+            other_sections = [s for s in known_sections if f not in s and s not in f]
+            has_conflict = any(any(s in t for t in tags) for s in other_sections) or any(s in m_sec for s in other_sections)
+            if not has_conflict and f in name:
+                matches = True
+                break
+        if matches:
+            filtered.append(it)
+    return filtered
+
+
 @router.post("/validate")
 async def validate_coupon(
     payload: Dict[str, Any] = Body(...),
@@ -96,6 +131,26 @@ async def validate_coupon(
             )
         eligible_subtotal = id_subtotal
 
+    # Menu Section Restriction (e.g. "pizza", "burger", "beverages")
+    elif coupon.menuSection and coupon.menuSection.strip():
+        if not items:
+            raise HTTPException(status_code=400, detail="Cart items are required for this coupon.")
+        pool = restaurant_items if coupon.restaurantId else items
+        section_items = filter_items_by_menu_section(pool, coupon.menuSection)
+        section_subtotal = sum(float(i.get("price", 0.0)) * int(i.get("quantity", 1)) for i in section_items)
+
+        if section_subtotal == 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"This coupon is only valid for items in the '{coupon.menuSection}' menu section."
+            )
+        if section_subtotal < coupon.minOrder:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Minimum order of ₹{coupon.minOrder:.2f} in the '{coupon.menuSection}' menu section is required."
+            )
+        eligible_subtotal = section_subtotal
+
     # Category Restriction
     elif coupon.categoryId:
         if not items:
@@ -177,28 +232,7 @@ async def validate_coupon(
                 if (it.get("productId") or it.get("id") or (it.get("product") or {}).get("id") or "").split("_")[0] == coupon.bogoDishId
             ]
         elif coupon.menuSection:
-            sec_filters = [s.strip().lower() for s in coupon.menuSection.split(",") if s.strip()]
-            if sec_filters:
-                known_sections = ['burger', 'sandwich', 'pasta', 'maggie', 'maggi', 'calzone', 'garlic', 'beverage', 'drink', 'dessert', 'icecream', 'biryani', 'pizza', 'shake']
-                filtered_bogo = []
-                for it in bogo_items:
-                    m_sec = str(it.get("menuSection") or (it.get("product") or {}).get("menuSection") or "").lower()
-                    tags = [str(t).lower() for t in (it.get("tags") or (it.get("product") or {}).get("tags") or [])]
-                    name = str(it.get("name") or (it.get("product") or {}).get("name") or "").lower()
-
-                    matches = False
-                    for f in sec_filters:
-                        if f in m_sec or any(f in t for t in tags):
-                            matches = True
-                            break
-                        other_sections = [s for s in known_sections if f not in s and s not in f]
-                        has_conflict = any(any(s in t for t in tags) for s in other_sections) or any(s in m_sec for s in other_sections)
-                        if not has_conflict and f in name:
-                            matches = True
-                            break
-                    if matches:
-                        filtered_bogo.append(it)
-                bogo_items = filtered_bogo
+            bogo_items = filter_items_by_menu_section(bogo_items, coupon.menuSection)
 
         if coupon.bogoType == "BUY_LARGE_GET_SMALL":
             trigger_var = (coupon.triggerVariant or "large").lower().strip()

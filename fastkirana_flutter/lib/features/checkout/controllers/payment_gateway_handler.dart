@@ -11,6 +11,7 @@ import 'package:flutter_cashfree_pg_sdk/api/cftheme/cftheme.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/app_config.dart';
+import '../../../data/models/checkout_draft.dart';
 
 typedef PaymentSuccessCallback = void Function(String cfOrderId);
 typedef PaymentErrorCallback = void Function(CFErrorResponse errorResponse, String cfOrderId);
@@ -44,6 +45,13 @@ class PaymentGatewayHandler {
     String? addressId,
     List<Map<String, dynamic>>? items,
     String? deliveryMethod,
+    String? storeId,
+    String? couponCode,
+    double? discount,
+    double? tipAmount,
+    double? deliveryFee,
+    double? packagingFee,
+    String? packagingOption,
     Future<void> Function(String cfOrderId)? onBeforeLaunch,
   }) async {
     final cleanPhone = customerPhone.replaceAll(RegExp(r'[^\d]'), '');
@@ -63,6 +71,13 @@ class PaymentGatewayHandler {
           if (addressId != null) 'addressId': addressId,
           if (items != null) 'items': items,
           if (deliveryMethod != null) 'deliveryMethod': deliveryMethod,
+          if (storeId != null) 'storeId': storeId,
+          if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
+          if (discount != null) 'discount': discount,
+          if (tipAmount != null) 'tipAmount': tipAmount,
+          if (deliveryFee != null) 'deliveryFee': deliveryFee,
+          if (packagingFee != null) 'packagingFee': packagingFee,
+          if (packagingOption != null) 'packagingOption': packagingOption,
         },
         options: Options(sendTimeout: const Duration(seconds: 12), receiveTimeout: const Duration(seconds: 12)),
       );
@@ -84,6 +99,15 @@ class PaymentGatewayHandler {
             await onBeforeLaunch(cfOrderId);
           } catch (e) {
             debugPrint('PaymentGatewayHandler: Error in onBeforeLaunch draft callback: $e');
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('active_pending_cf_order_id');
+              await prefs.remove('active_pending_cf_amount');
+            } catch (_) {}
+            try {
+              await CheckoutDraft.clearAcceptedDraft();
+            } catch (_) {}
+            return null;
           }
         }
 

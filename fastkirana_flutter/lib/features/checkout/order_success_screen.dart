@@ -11,7 +11,6 @@ import '../../core/routes/page_transitions.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
-import '../../providers/cart_provider.dart';
 import '../orders/order_tracking_screen.dart';
 
 class OrderSuccessScreen extends ConsumerStatefulWidget {
@@ -178,12 +177,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
     _fetchLiveOrderStatus();
     _syncTimer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchLiveOrderStatus());
 
-    // ─── Post-Order Cart Clear Guarantee ───
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        ref.read(cartProvider.notifier).clearCart();
-      } catch (e, _) { LoggerService.error('OrderSuccessScreen: silent catch', e); }
-    });
+
   }
 
   @override

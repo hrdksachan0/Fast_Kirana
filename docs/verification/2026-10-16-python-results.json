@@ -1,0 +1,22 @@
+{
+  "exit_code": 0,
+  "collected": 228,
+  "passed": 228,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "failed_tests": [],
+  "initial_hashes": {
+    "routers/orders.py": "64075036d6e094c66939fa807656178a93ec34a9315327208cc1fead3f5bee3d",
+    "routers/cashfree_router.py": "fb3912eceaad63375e5a1b8134616b7fce8e47c4bdf1217b81bc308e7dc3de00",
+    "utils/idempotency.py": "62271ca7cd1c2158de0fe78bd44ec52cb0c2a9b177b4d66e8150ddffc9083897",
+    "tests/test_production_blockers_resolved.py": "e9279fd5c8a5a13d25f957182f346f7862fd51df9296fc4757e0f73ff17c60ee"
+  },
+  "final_hashes": {
+    "routers/orders.py": "64075036d6e094c66939fa807656178a93ec34a9315327208cc1fead3f5bee3d",
+    "routers/cashfree_router.py": "fb3912eceaad63375e5a1b8134616b7fce8e47c4bdf1217b81bc308e7dc3de00",
+    "utils/idempotency.py": "62271ca7cd1c2158de0fe78bd44ec52cb0c2a9b177b4d66e8150ddffc9083897",
+    "tests/test_production_blockers_resolved.py": "e9279fd5c8a5a13d25f957182f346f7862fd51df9296fc4757e0f73ff17c60ee"
+  },
+  "scope": "offline SQLite; dummy credentials; external sockets blocked; test_migration_full.py excluded"
+}

@@ -669,6 +669,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           couponCode: _couponCode,
           discountAmount: _discountAmount,
           tipAmount: _tipAmount,
+          deliveryFee: deliveryFee,
+          packagingFee: packagingFee,
           selectedPackaging: state.selectedPackaging,
           selectedPayment: state.selectedPayment,
           isFrozenForPayment: true,
@@ -688,6 +690,13 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           addressId: selectedAddress?.id,
           items: itemsPayload,
           deliveryMethod: state.deliveryMethod,
+          storeId: nearestHub.id,
+          couponCode: _couponCode,
+          discount: _discountAmount,
+          tipAmount: _tipAmount,
+          deliveryFee: deliveryFee,
+          packagingFee: packagingFee,
+          packagingOption: state.selectedPackaging,
           onBeforeLaunch: (launchedOrderId) async {
             final draftWithId = initialDraft.copyWith(
               activePaymentSessionId: launchedOrderId,
@@ -782,9 +791,12 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final effectiveCoupon = draft?.couponCode ?? _couponCode;
     final effectiveDeliveryMethod = draft?.deliveryMethod ?? state.deliveryMethod;
     final effectivePackaging = draft?.selectedPackaging ?? state.selectedPackaging;
+    final effectivePayment = (draft != null && draft.selectedPayment.isNotEmpty)
+        ? draft.selectedPayment
+        : state.selectedPayment;
 
     // Anti-Fraud check
-    if (state.selectedPayment == 'online') {
+    if (effectivePayment == 'online') {
       final isFreePromo = (effectiveDiscount >= subtotal && subtotal > 0) ||
           (state.pendingGrandTotal != null && state.pendingGrandTotal! <= 0);
       if ((paymentId == null || paymentId.trim().isEmpty) && !isFreePromo) {
@@ -880,11 +892,15 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         : effectiveCart.items.any((i) => isRestaurantProduct(i.product));
     final isCombined = hasGrocery && hasRestaurant;
 
-    final deliveryFee = effectiveDeliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
+    final deliveryFee = (draft != null && draft.hasFeeBreakdown)
+        ? draft.deliveryFee
+        : (effectiveDeliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee);
     final basePackagingFee = effectiveDeliveryMethod == 'PICKUP'
         ? 0.0
         : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
-    final packagingFee = effectivePackaging == 'PREMIUM' ? 15.0 : basePackagingFee;
+    final packagingFee = (draft != null && draft.hasFeeBreakdown)
+        ? draft.packagingFee
+        : (effectivePackaging == 'PREMIUM' ? 15.0 : basePackagingFee);
     final grandTotal = (draft != null && draft.grandTotal > 0)
         ? draft.grandTotal
         : (subtotal + deliveryFee + packagingFee + effectiveTip - effectiveDiscount).clamp(0.0, 999999.0);
@@ -1043,7 +1059,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       taxes: 0,
       miscFee: packagingFee + effectiveTip,
       total: grandTotal,
-      paymentMethod: state.selectedPayment == 'online' ? PaymentMethod.upi : PaymentMethod.cod,
+      paymentMethod: effectivePayment == 'online' ? PaymentMethod.upi : PaymentMethod.cod,
       paymentStatus: isOnlinePaid ? 'PAID' : 'PENDING',
       deliveryMethod: effectiveDeliveryMethod,
       customerName: receiverName,
@@ -1103,9 +1119,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         'customerName': receiverName,
         'customerPhone': receiverPhone,
         'phone': buyerPhone.isNotEmpty ? buyerPhone : receiverPhone,
-        'storeId': nearestHub.id,
+        'storeId': (draft != null && draft.hubId != null && draft.hubId!.isNotEmpty) ? draft.hubId! : nearestHub.id,
         'addressId': selectedAddress?.id ?? 'addr_default',
-        'paymentMethod': state.selectedPayment == 'online' ? 'UPI' : 'COD',
+        'paymentMethod': effectivePayment == 'online' ? 'UPI' : 'COD',
         'paymentStatus': isOnlinePaid ? 'PAID' : 'PENDING',
         'paymentId': paymentId,
         'cfOrderId': effectiveCfOrderId,
@@ -1129,7 +1145,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       };
 
       final acceptedDraftToSave = draft ?? CheckoutDraft(
-        hubId: nearestHub.id,
+        hubId: (draft != null && draft.hubId != null && draft.hubId!.isNotEmpty) ? draft.hubId! : nearestHub.id,
         deliveryMethod: effectiveDeliveryMethod,
         selectedAddress: selectedAddress,
         selectedAddressIndex: state.selectedAddressIndex,
@@ -1141,8 +1157,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         couponCode: effectiveCoupon,
         discountAmount: effectiveDiscount,
         tipAmount: effectiveTip,
+        deliveryFee: deliveryFee,
+        packagingFee: packagingFee,
         selectedPackaging: effectivePackaging,
-        selectedPayment: state.selectedPayment,
+        selectedPayment: effectivePayment,
         isFrozenForPayment: isOnlinePaid,
         activePaymentSessionId: effectiveCfOrderId,
         items: itemsPayload,
@@ -1297,7 +1315,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       orderId: placedOrder.displayId,
       totalAmount: grandTotal,
       deliveryAddress: selectedAddr,
-      paymentMethod: state.selectedPayment == 'online' ? 'CASHFREE (PAID)' : 'CASH ON DELIVERY',
+      paymentMethod: placedOrder.paymentMethod == PaymentMethod.upi ? 'CASHFREE (PAID)' : 'CASH ON DELIVERY',
       order: placedOrder,
     );
 
@@ -1359,6 +1377,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             grandTotal: grandTotal,
             selectedAddr: selectedAddr,
             userId: userId,
+            orderedItems: (apiPayload['items'] as List?)?.cast<Map<String, dynamic>>(),
             context: _currentContext,
           );
           break;

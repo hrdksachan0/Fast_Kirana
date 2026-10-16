@@ -211,7 +211,106 @@ async def acquire_lock(key: str, ttl_seconds: int = 3600) -> bool:
     return True
 
 
+# ─── Atomic Lua Script for Inventory Pre-Reservation ───────────────────────────
+# KEYS[1] = Stock Key (e.g. stock:hub-209206:prod_123 or stock:global:prod_123)
+# ARGV[1] = Requested Quantity
+# ARGV[2] = Initial Stock if key does not exist yet (seed value from DB)
+_ATOMIC_RESERVE_STOCK_LUA = """
+local current = redis.call('get', KEYS[1])
+if not current then
+    if ARGV[2] and ARGV[2] ~= '' then
+        current = tonumber(ARGV[2])
+        redis.call('set', KEYS[1], current, 'EX', 86400)
+    else
+        return -2 -- Key missing and no seed provided
+    end
+else
+    current = tonumber(current)
+end
+
+local requested = tonumber(ARGV[1])
+if current >= requested then
+    local remaining = current - requested
+    redis.call('set', KEYS[1], remaining, 'KEEPTTL')
+    return remaining
+else
+    return -1 -- Insufficient stock
+end
+"""
+
+_ATOMIC_RELEASE_STOCK_LUA = """
+local current = redis.call('get', KEYS[1])
+if current then
+    local updated = tonumber(current) + tonumber(ARGV[1])
+    redis.call('set', KEYS[1], updated, 'KEEPTTL')
+    return updated
+end
+return 0
+"""
+
+
+async def atomic_reserve_inventory(
+    stock_key: str,
+    requested_qty: int,
+    initial_seed_stock: Optional[int] = None
+) -> int:
+    """
+    Atomically pre-reserves inventory in Redis using an ACID Lua script.
+    Returns:
+      >= 0 : Remaining stock after successful deduction
+        -1 : Insufficient stock
+        -2 : Stock key uninitialized (caller should fallback to DB lock)
+    If Redis is down or unavailable, returns -2 gracefully for DB fallback.
+    """
+    try:
+        redis = await get_redis_connection()
+    except Exception:
+        return -2
+
+    if not redis:
+        return -2
+
+    try:
+        res = await redis.eval(
+            _ATOMIC_RESERVE_STOCK_LUA,
+            1,
+            stock_key,
+            str(requested_qty),
+            str(initial_seed_stock) if initial_seed_stock is not None else ""
+        )
+        return int(res)
+    except Exception as e:
+        logger.warning(f"[Cache] Redis Lua inventory reservation notice for {stock_key}: {e}")
+        return -2
+
+
+async def release_reserved_inventory(stock_key: str, quantity_to_refund: int) -> int:
+    """
+    Atomically refunds pre-reserved stock in Redis if subsequent DB transaction fails.
+    """
+    try:
+        redis = await get_redis_connection()
+    except Exception:
+        return 0
+
+    if not redis:
+        return 0
+
+    try:
+        res = await redis.eval(
+            _ATOMIC_RELEASE_STOCK_LUA,
+            1,
+            stock_key,
+            str(quantity_to_refund)
+        )
+        return int(res)
+    except Exception as e:
+        logger.warning(f"[Cache] Redis Lua inventory refund notice for {stock_key}: {e}")
+        return 0
+
+
 # Backward-compatible function aliases
 get_cache = get_cached
 set_cache = set_cached
+
 

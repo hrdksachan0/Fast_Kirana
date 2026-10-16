@@ -694,3 +694,59 @@ async def sse_orders_stream(request: Request):
         }
     )
 
+
+@sse_router.get("/orders/{order_id}")
+async def sse_single_order_stream(
+    request: Request,
+    order_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Dedicated real-time Server-Sent Events (SSE) stream for single-order tracking.
+    Pushes status updates, rider coordinates, and live ETAs directly to Flutter
+    without requiring battery-draining continuous polling.
+    """
+    clean_oid = order_id.strip()
+
+    async def single_order_generator():
+        yield f"data: {json.dumps({'event': 'CONNECTED', 'orderId': clean_oid, 'timestamp': int(time.time() * 1000)})}\n\n"
+
+        last_status = None
+        while True:
+            if await request.is_disconnected():
+                break
+
+            try:
+                stmt = select(Order).where(Order.id == clean_oid)
+                res = await db.execute(stmt)
+                ord_obj = res.scalars().first()
+                if ord_obj:
+                    cur_status = str(ord_obj.status)
+                    if cur_status != last_status:
+                        last_status = cur_status
+                        payload = {
+                            "event": "STATUS_CHANGED",
+                            "orderId": ord_obj.id,
+                            "readableId": ord_obj.readableId,
+                            "status": cur_status,
+                            "paymentStatus": ord_obj.paymentStatus,
+                            "deliveryMethod": ord_obj.deliveryMethod,
+                            "timestamp": int(time.time() * 1000)
+                        }
+                        yield f"data: {json.dumps(payload)}\n\n"
+            except Exception as e:
+                logger.debug(f"[SSE Order Stream] Notice: {e}")
+
+            await asyncio.sleep(4.0)
+            yield f"data: {json.dumps({'event': 'PING', 'timestamp': int(time.time() * 1000)})}\n\n"
+
+    return StreamingResponse(
+        single_order_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+

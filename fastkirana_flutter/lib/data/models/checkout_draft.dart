@@ -15,6 +15,8 @@ class CheckoutDraft {
   final String? couponCode;
   final double discountAmount;
   final double tipAmount;
+  final double deliveryFee;
+  final double packagingFee;
   final String selectedPackaging; // 'NORMAL' | 'PREMIUM'
   final String selectedPayment; // 'cod' | 'online'
   final bool isFrozenForPayment;
@@ -22,6 +24,7 @@ class CheckoutDraft {
   final List<Map<String, dynamic>> items;
   final double grandTotal;
   final String? cfOrderId;
+  final bool hasFeeBreakdown;
 
   const CheckoutDraft({
     this.hubId,
@@ -36,6 +39,8 @@ class CheckoutDraft {
     this.couponCode,
     this.discountAmount = 0.0,
     this.tipAmount = 0.0,
+    this.deliveryFee = 0.0,
+    this.packagingFee = 0.0,
     this.selectedPackaging = 'NORMAL',
     this.selectedPayment = 'cod',
     this.isFrozenForPayment = false,
@@ -43,6 +48,7 @@ class CheckoutDraft {
     this.items = const [],
     this.grandTotal = 0.0,
     this.cfOrderId,
+    this.hasFeeBreakdown = true,
   });
 
   CheckoutDraft copyWith({
@@ -61,6 +67,8 @@ class CheckoutDraft {
     bool clearCoupon = false,
     double? discountAmount,
     double? tipAmount,
+    double? deliveryFee,
+    double? packagingFee,
     String? selectedPackaging,
     String? selectedPayment,
     bool? isFrozenForPayment,
@@ -70,6 +78,7 @@ class CheckoutDraft {
     double? grandTotal,
     String? cfOrderId,
     bool clearCfOrderId = false,
+    bool? hasFeeBreakdown,
   }) {
     return CheckoutDraft(
       hubId: hubId ?? this.hubId,
@@ -84,6 +93,8 @@ class CheckoutDraft {
       couponCode: clearCoupon ? null : (couponCode ?? this.couponCode),
       discountAmount: clearCoupon ? 0.0 : (discountAmount ?? this.discountAmount),
       tipAmount: tipAmount ?? this.tipAmount,
+      deliveryFee: deliveryFee ?? this.deliveryFee,
+      packagingFee: packagingFee ?? this.packagingFee,
       selectedPackaging: selectedPackaging ?? this.selectedPackaging,
       selectedPayment: selectedPayment ?? this.selectedPayment,
       isFrozenForPayment: isFrozenForPayment ?? this.isFrozenForPayment,
@@ -91,6 +102,7 @@ class CheckoutDraft {
       items: items ?? this.items,
       grandTotal: grandTotal ?? this.grandTotal,
       cfOrderId: clearCfOrderId ? null : (cfOrderId ?? this.cfOrderId),
+      hasFeeBreakdown: hasFeeBreakdown ?? this.hasFeeBreakdown,
     );
   }
 
@@ -107,6 +119,8 @@ class CheckoutDraft {
     'couponCode': couponCode,
     'discountAmount': discountAmount,
     'tipAmount': tipAmount,
+    'deliveryFee': deliveryFee,
+    'packagingFee': packagingFee,
     'selectedPackaging': selectedPackaging,
     'selectedPayment': selectedPayment,
     'isFrozenForPayment': isFrozenForPayment,
@@ -114,6 +128,7 @@ class CheckoutDraft {
     'items': items,
     'grandTotal': grandTotal,
     'cfOrderId': cfOrderId,
+    'hasFeeBreakdown': hasFeeBreakdown,
   };
 
   factory CheckoutDraft.fromJson(Map<String, dynamic> json) {
@@ -135,6 +150,8 @@ class CheckoutDraft {
       couponCode: json['couponCode'] as String?,
       discountAmount: (json['discountAmount'] as num?)?.toDouble() ?? 0.0,
       tipAmount: (json['tipAmount'] as num?)?.toDouble() ?? 0.0,
+      deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
+      packagingFee: (json['packagingFee'] as num?)?.toDouble() ?? 0.0,
       selectedPackaging: json['selectedPackaging'] as String? ?? 'NORMAL',
       selectedPayment: json['selectedPayment'] as String? ?? 'cod',
       isFrozenForPayment: json['isFrozenForPayment'] as bool? ?? false,
@@ -145,6 +162,7 @@ class CheckoutDraft {
           const [],
       grandTotal: (json['grandTotal'] as num?)?.toDouble() ?? 0.0,
       cfOrderId: json['cfOrderId'] as String?,
+      hasFeeBreakdown: json['hasFeeBreakdown'] as bool? ?? (json.containsKey('deliveryFee') || json.containsKey('packagingFee')),
     );
   }
 
@@ -162,7 +180,18 @@ class CheckoutDraft {
   static Future<void> saveAcceptedDraft(CheckoutDraft draft) async {
     final prefs = await SharedPreferences.getInstance();
     final key = await _getDraftKey();
-    await prefs.setString(key, jsonEncode(draft.toJson()));
+    try {
+      final ok = await prefs.setString(key, jsonEncode(draft.toJson()));
+      if (!ok) {
+        await prefs.remove(key);
+        throw StateError('Failed to durably persist accepted checkout draft to local storage');
+      }
+    } catch (_) {
+      try {
+        await prefs.remove(key);
+      } catch (_) {}
+      rethrow;
+    }
   }
 
   static Future<CheckoutDraft?> loadAcceptedDraft() async {

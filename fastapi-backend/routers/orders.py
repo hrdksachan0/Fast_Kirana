@@ -1258,6 +1258,41 @@ async def create_order(
                             meets_min_order = False
                         eligible_subtotal = id_subtotal
 
+                    elif coupon.menuSection and coupon.menuSection.strip():
+                        pool = rest_items if coupon.restaurantId else items
+                        sec_filters = [s.strip().lower() for s in coupon.menuSection.split(",") if s.strip()]
+                        known_sections = [
+                            'burger', 'sandwich', 'pasta', 'maggie', 'maggi', 'calzone',
+                            'garlic', 'beverage', 'drink', 'dessert', 'icecream', 'biryani',
+                            'pizza', 'shake', 'momos', 'fries', 'chaat', 'rolls', 'bread',
+                            'appetizer', 'main course', 'starter', 'combos', 'combo'
+                        ]
+                        sec_items = []
+                        for it in pool:
+                            base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
+                            m_sec = str((it.get("product") or {}).get("menuSection") or getattr(base_p, "menuSection", "") or "").lower()
+                            tags = [str(t).lower() for t in (base_p.tags if base_p and base_p.tags else [])]
+                            name = str(base_p.name if base_p else (it.get("product") or {}).get("name") or "").lower()
+                            slug = str(getattr(base_p, "slug", "") or "").lower()
+
+                            matches = False
+                            for f in sec_filters:
+                                if f in m_sec or any(f in t for t in tags) or f in slug:
+                                    matches = True
+                                    break
+                                other_sections = [s for s in known_sections if f not in s and s not in f]
+                                has_conflict = any(any(s in t for t in tags) for s in other_sections) or any(s in m_sec for s in other_sections)
+                                if not has_conflict and f in name:
+                                    matches = True
+                                    break
+                            if matches:
+                                sec_items.append(it)
+
+                        sec_subtotal = sum(float(i.get("price", 0.0)) * int(i.get("quantity", 1)) for i in sec_items)
+                        if sec_subtotal == 0 or sec_subtotal < coupon.minOrder:
+                            meets_min_order = False
+                        eligible_subtotal = sec_subtotal
+
                     elif coupon.categoryId:
                         cat_items = [i for i in items if next((p.categoryId for p in db_products if p.id == (i.get("product") or {}).get("id", "").split("_")[0]), None) == coupon.categoryId]
                         cat_subtotal = sum(float(i.get("price", 0.0)) * int(i.get("quantity", 1)) for i in cat_items)
@@ -1589,14 +1624,18 @@ async def create_order(
             incoming_cf_order_id = canonical_cf_order_id
 
         # 🛡️ [DATABASE IDEMPOTENCY CHECK] Prevent duplicate order creation if Cashfree order was already placed
+        base_cf_order_id = re.sub(r"_r\d+$", "", incoming_cf_order_id.strip()) if incoming_cf_order_id else None
         if incoming_cf_order_id:
             try:
                 exist_res = await db.execute(
                     select(Order).where(
                         or_(
                             Order.id == incoming_cf_order_id,
+                            Order.id == base_cf_order_id,
                             Order.readableId == incoming_cf_order_id,
+                            Order.readableId == base_cf_order_id,
                             Order.cfOrderId == incoming_cf_order_id,
+                            Order.cfOrderId == base_cf_order_id,
                         )
                     ).options(selectinload(Order.items), selectinload(Order.address), selectinload(Order.user)).order_by(Order.createdAt.asc())
                 )
@@ -1648,7 +1687,10 @@ async def create_order(
                     cached_val = await get_cache(f"cf_paid:{incoming_cf_order_id}")
                     if not cached_val and "_r" in incoming_cf_order_id:
                         clean_check = re.sub(r"_r\d+$", "", incoming_cf_order_id)
-                        cached_val = await get_cache(f"cf_paid:{clean_check}")
+                        # Verify intent binding before authorizing retry suffix from base payment cache
+                        intent_cf = (p_intent.get("cfOrderId") or p_intent.get("orderId")) if p_intent and isinstance(p_intent, dict) else None
+                        if intent_cf and (intent_cf == incoming_cf_order_id or intent_cf == clean_check or re.sub(r"_r\d+$", "", str(intent_cf)) == clean_check):
+                            cached_val = await get_cache(f"cf_paid:{clean_check}")
                     if cached_val:
                         cached_amount = None
                         if isinstance(cached_val, dict):
@@ -1801,10 +1843,11 @@ async def create_order(
             })
 
         clean_cf_order_id = incoming_cf_order_id.strip() if incoming_cf_order_id else None
+        base_cf_order_id = re.sub(r"_r\d+$", "", clean_cf_order_id) if clean_cf_order_id else None
         cons_rec = None
         if clean_cf_order_id:
             from models import IdempotencyRecord
-            consumed_key = f"consumed_payment:{clean_cf_order_id}"
+            consumed_key = f"consumed_payment:{base_cf_order_id}"
             try:
                 cons_rec = IdempotencyRecord(
                     key=consumed_key,
@@ -1821,8 +1864,11 @@ async def create_order(
                     select(Order).where(
                         or_(
                             Order.id == clean_cf_order_id,
+                            Order.id == base_cf_order_id,
                             Order.readableId == clean_cf_order_id,
+                            Order.readableId == base_cf_order_id,
                             Order.cfOrderId == clean_cf_order_id,
+                            Order.cfOrderId == base_cf_order_id,
                         )
                     ).options(selectinload(Order.items), selectinload(Order.address), selectinload(Order.user)).order_by(Order.createdAt.asc())
                 )
@@ -1857,7 +1903,7 @@ async def create_order(
                 userId=user_id,
                 addressId=order_address_id,
                 combinedId=combined_id,
-                cfOrderId=clean_cf_order_id,
+                cfOrderId=base_cf_order_id,
                 orderType=spec["type"],
                 status=initial_order_status,
                 subtotal=spec["subtotal"],
@@ -1926,7 +1972,17 @@ async def create_order(
                 if not prod.restaurantId and spec["type"] == OrderType.GROCERY:
                     qty = int(item["quantity"])
 
-                    # Row-lock product to ensure serialize concurrent stock deduction
+                    # 1. Fast in-memory pre-deduction via Redis Lua script (Swiggy/Blinkit high-throughput pattern)
+                    from utils.cache import atomic_reserve_inventory
+                    stock_cache_key = f"stock:{store_id or 'default'}:{prod.id}:{var_name or 'base'}"
+                    lua_res = await atomic_reserve_inventory(stock_cache_key, qty, initial_seed_stock=prod.stock)
+                    if lua_res == -1:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Insufficient inventory for \"{prod.name}\". Requested {qty} units."
+                        )
+
+                    # 2. Row-lock product in DB to ensure persistent multi-worker synchronization
                     p_lock_stmt = select(Product).where(Product.id == prod.id).with_for_update()
                     p_lock_res = await db.execute(p_lock_stmt)
                     locked_prod = p_lock_res.scalars().first()

@@ -144,7 +144,38 @@ export function CouponsTab({
   const [restaurants, setRestaurants] = useState<Array<{ id: string; name: string; slug: string; menuSections?: any }>>([])
   const [previewTab, setPreviewTab] = useState<'card' | 'menu' | 'cart'>('card')
   const [restaurantDishes, setRestaurantDishes] = useState<Array<{ id: string; name: string; price: number; imageUrl?: string | null }>>([])
+  const [restaurantSections, setRestaurantSections] = useState<Array<{ id: string; title: string; tag: string; emoji?: string }>>([])
   const [martProducts, setMartProducts] = useState<Array<{ id: string; name: string; price: number; imageUrl?: string | null }>>([])
+
+  const commonSectionPresets = useMemo(() => [
+    { label: 'Pizzas', tag: 'pizza', emoji: '🍕' },
+    { label: 'Burgers', tag: 'burger', emoji: '🍔' },
+    { label: 'Sandwiches', tag: 'sandwich', emoji: '🥪' },
+    { label: 'Pasta', tag: 'pasta', emoji: '🍝' },
+    { label: 'Beverages', tag: 'beverage', emoji: '🥤' },
+    { label: 'Desserts', tag: 'dessert', emoji: '🍨' },
+    { label: 'Biryani', tag: 'biryani', emoji: '🍚' },
+    { label: 'Snacks / Starters', tag: 'starter', emoji: '🍟' },
+    { label: 'Breads', tag: 'bread', emoji: '🫓' },
+  ], [])
+
+  const toggleSectionTag = (targetTag: string, isEditing: boolean) => {
+    const raw = isEditing ? (couponEditForm.menuSection || '') : (newCoupon.menuSection || '')
+    const current = raw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+    const normalized = targetTag.trim().toLowerCase()
+    let updated: string[]
+    if (current.includes(normalized)) {
+      updated = current.filter((s) => s !== normalized)
+    } else {
+      updated = [...current, normalized]
+    }
+    const joined = updated.join(', ')
+    if (isEditing) {
+      setCouponEditForm({ ...couponEditForm, menuSection: joined, bogoDishId: '' })
+    } else {
+      setNewCoupon({ ...newCoupon, menuSection: joined, bogoDishId: '' })
+    }
+  }
 
   useEffect(() => {
     fetch(`${apiUrl()}/api/restaurants?all=true`)
@@ -173,6 +204,7 @@ export function CouponsTab({
     const targetRestId = editingCoupon ? couponEditForm.restaurantId : newCoupon.restaurantId
     if (!targetRestId) {
       setRestaurantDishes([])
+      setRestaurantSections([])
       return
     }
     const fastToken = typeof window !== 'undefined' ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token')) : null
@@ -185,11 +217,21 @@ export function CouponsTab({
       .then((res) => res.json())
       .then((data) => {
         if (data?.sections && Array.isArray(data.sections)) {
+          setRestaurantSections(
+            data.sections.map((s: any) => ({
+              id: s.id,
+              title: s.title || s.name || 'Section',
+              tag: (s.tag || s.slug || s.title || s.name || '').toLowerCase().replace(/[^a-z0-9]/g, ''),
+              emoji: s.emoji || '🍽️'
+            }))
+          )
           const dishes = data.sections.flatMap((s: any) => s.dishes || [])
           setRestaurantDishes(dishes)
         } else if (Array.isArray(data?.dishes)) {
+          setRestaurantSections([])
           setRestaurantDishes(data.dishes)
         } else {
+          setRestaurantSections([])
           setRestaurantDishes([])
         }
       })
@@ -411,14 +453,18 @@ export function CouponsTab({
                   </div>
                 </div>
 
-                {/* ID-wise Item Selector (Strict ID-wise, NO tag-wise) */}
-                <div className="mt-3 p-3 rounded-2xl bg-muted/20 border border-border space-y-2">
+                {/* Target Scope Selection: All Items vs Menu Section(s) vs Single Dish ID */}
+                <div className="mt-3 p-3.5 rounded-2xl bg-muted/20 border border-border space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="text-[11px] font-black text-text-primary flex items-center gap-1.5">
-                      <span>🎯 Target Item / Dish (ID-wise Restriction)</span>
+                      <span>🎯 Target Scope</span>
                       {newCoupon.bogoDishId ? (
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-500 text-white font-mono">
-                          ID: {newCoupon.bogoDishId}
+                          Dish ID: {newCoupon.bogoDishId}
+                        </span>
+                      ) : newCoupon.menuSection ? (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500 text-white">
+                          Section: {newCoupon.menuSection}
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-muted text-text-muted">
@@ -426,44 +472,178 @@ export function CouponsTab({
                         </span>
                       )}
                     </label>
-                    {newCoupon.bogoDishId && (
+                    {(newCoupon.bogoDishId || newCoupon.menuSection) && (
                       <button
                         type="button"
                         onClick={() => setNewCoupon({ ...newCoupon, bogoDishId: '', menuSection: '' })}
-                        className="text-[10px] font-bold text-orange-600 hover:underline"
+                        className="text-[10px] font-bold text-orange-600 hover:underline cursor-pointer"
                       >
-                        Reset to All Items
+                        Reset to Entire Store
                       </button>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <select
-                      value={newCoupon.bogoDishId || ''}
-                      onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value, menuSection: '' })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  {/* 3 Scope Mode Tabs */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setNewCoupon({ ...newCoupon, bogoDishId: '', menuSection: '' })}
+                      className={cn(
+                        "py-1.5 px-2 rounded-xl text-xs font-black transition-all border cursor-pointer text-center",
+                        !newCoupon.bogoDishId && !newCoupon.menuSection
+                          ? "bg-orange-500 text-white border-orange-600 shadow-2xs"
+                          : "bg-background/80 hover:bg-muted text-text-secondary border-border"
+                      )}
                     >
-                      <option value="">-- Apply to All Items in Outlet --</option>
-                      {availableItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          [ID: {item.id}] {item.name} — ₹{item.price}
-                        </option>
-                      ))}
-                    </select>
-
-                    <input
-                      type="text"
-                      placeholder="Or enter Item / Dish ID manually..."
-                      value={newCoupon.bogoDishId || ''}
-                      onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value.trim(), menuSection: '' })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-mono font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
+                      🌟 Entire Store
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultSec = restaurantSections[0]?.tag || 'pizza'
+                        setNewCoupon({ ...newCoupon, bogoDishId: '', menuSection: newCoupon.menuSection || defaultSec })
+                      }}
+                      className={cn(
+                        "py-1.5 px-2 rounded-xl text-xs font-black transition-all border cursor-pointer text-center",
+                        !newCoupon.bogoDishId && newCoupon.menuSection
+                          ? "bg-emerald-600 text-white border-emerald-700 shadow-2xs"
+                          : "bg-background/80 hover:bg-muted text-text-secondary border-border"
+                      )}
+                    >
+                      📂 Menu Section(s)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const firstDishId = availableItems[0]?.id || ''
+                        setNewCoupon({ ...newCoupon, menuSection: '', bogoDishId: newCoupon.bogoDishId || firstDishId })
+                      }}
+                      className={cn(
+                        "py-1.5 px-2 rounded-xl text-xs font-black transition-all border cursor-pointer text-center",
+                        newCoupon.bogoDishId
+                          ? "bg-blue-600 text-white border-blue-700 shadow-2xs"
+                          : "bg-background/80 hover:bg-muted text-text-secondary border-border"
+                      )}
+                    >
+                      🎯 Single Item ID
+                    </button>
                   </div>
-                  <p className="text-[9.5px] text-text-muted">
-                    {newCoupon.bogoDishId
-                      ? `Offer will strictly apply ONLY to Item ID: "${newCoupon.bogoDishId}" (ID-wise, no tag matching).`
-                      : "Offer applies across all products/dishes from this outlet."}
-                  </p>
+
+                  {/* Scope 2: Menu Section Chips & Input */}
+                  {!newCoupon.bogoDishId && newCoupon.menuSection && (
+                    <div className="p-3 rounded-xl bg-background/90 border border-emerald-500/20 space-y-2.5 animate-slide-down">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
+                          Select Menu Sections / Categories
+                        </span>
+                        <span className="text-[9px] text-text-muted">Click tags to toggle</span>
+                      </div>
+
+                      {/* Display restaurant dynamic sections if available */}
+                      {restaurantSections.length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold text-text-muted block">Outlet Menu Sections:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {restaurantSections.map((sec) => {
+                              const activeTags = (newCoupon.menuSection || '').split(',').map((s) => s.trim().toLowerCase())
+                              const isSelected = activeTags.includes(sec.tag.toLowerCase())
+                              return (
+                                <button
+                                  key={sec.id}
+                                  type="button"
+                                  onClick={() => toggleSectionTag(sec.tag, false)}
+                                  className={cn(
+                                    "px-2.5 py-1 text-xs rounded-lg font-bold border transition-all cursor-pointer flex items-center gap-1",
+                                    isSelected
+                                      ? "bg-emerald-600 text-white border-emerald-700 shadow-2xs"
+                                      : "bg-muted/40 hover:bg-muted text-text-secondary border-border"
+                                  )}
+                                >
+                                  <span>{sec.emoji || '🍽️'}</span>
+                                  <span>{sec.title}</span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Common Section Presets */}
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-bold text-text-muted block">Common Category Presets:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {commonSectionPresets.map((preset) => {
+                            const activeTags = (newCoupon.menuSection || '').split(',').map((s) => s.trim().toLowerCase())
+                            const isSelected = activeTags.includes(preset.tag)
+                            return (
+                              <button
+                                key={preset.tag}
+                                type="button"
+                                onClick={() => toggleSectionTag(preset.tag, false)}
+                                className={cn(
+                                  "px-2 py-0.5 text-[11px] rounded-md font-bold border transition-all cursor-pointer flex items-center gap-1",
+                                  isSelected
+                                    ? "bg-emerald-600 text-white border-emerald-700 shadow-2xs"
+                                    : "bg-muted/20 hover:bg-muted text-text-secondary border-border/80"
+                                )}
+                              >
+                                <span>{preset.emoji}</span>
+                                <span>{preset.label}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Manual Section Input */}
+                      <div>
+                        <label className="text-[9.5px] font-bold text-text-secondary block mb-1">
+                          Active Target Sections (comma-separated):
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. pizza, burger, pasta"
+                          value={newCoupon.menuSection || ''}
+                          onChange={(e) => setNewCoupon({ ...newCoupon, menuSection: e.target.value, bogoDishId: '' })}
+                          className="w-full px-3 py-1.5 text-xs rounded-xl border bg-background font-mono font-bold text-emerald-600 dark:text-emerald-400"
+                        />
+                      </div>
+                      <p className="text-[9.5px] text-text-muted">
+                        💡 All items belonging to or tagged with these sections will automatically qualify for this offer!
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Scope 3: Specific Dish Selector */}
+                  {newCoupon.bogoDishId && (
+                    <div className="space-y-2 p-2.5 rounded-xl bg-background/90 border border-blue-500/20 animate-slide-down">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <select
+                          value={newCoupon.bogoDishId || ''}
+                          onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value, menuSection: '' })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="">-- Choose Target Dish / Item --</option>
+                          {availableItems.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              [ID: {item.id}] {item.name} — ₹{item.price}
+                            </option>
+                          ))}
+                        </select>
+
+                        <input
+                          type="text"
+                          placeholder="Or enter Item / Dish ID manually..."
+                          value={newCoupon.bogoDishId || ''}
+                          onChange={(e) => setNewCoupon({ ...newCoupon, bogoDishId: e.target.value.trim(), menuSection: '' })}
+                          className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-mono font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                      <p className="text-[9.5px] text-text-muted">
+                        Offer will strictly apply ONLY to Item ID: &quot;{newCoupon.bogoDishId}&quot;.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1249,6 +1429,11 @@ export function CouponsTab({
                               <span>🎯 Item ID:</span>
                               <span className="font-extrabold">{c.bogoDishId}</span>
                             </div>
+                          ) : c.menuSection ? (
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <span>📂 Sections:</span>
+                              <span className="font-extrabold">{c.menuSection}</span>
+                            </div>
                           ) : (
                             <span className="block text-[9px] text-text-muted">
                               (Store-wide)
@@ -1435,14 +1620,18 @@ export function CouponsTab({
                   </select>
                 </div>
 
-                {/* Specific Item / Dish ID restriction (ID-wise) */}
-                <div className="md:col-span-2 p-3 rounded-xl bg-muted/20 border border-border space-y-2">
+                {/* Target Scope Selection: All Items vs Menu Section(s) vs Single Dish ID */}
+                <div className="md:col-span-2 p-3 rounded-xl bg-muted/20 border border-border space-y-2.5">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-bold text-text-primary flex items-center gap-1.5">
-                      <span>🎯 Target Item / Dish (ID-wise Restriction)</span>
+                      <span>🎯 Target Scope</span>
                       {couponEditForm.bogoDishId ? (
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-500 text-white font-mono">
-                          ID: {couponEditForm.bogoDishId}
+                          Dish ID: {couponEditForm.bogoDishId}
+                        </span>
+                      ) : couponEditForm.menuSection ? (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500 text-white">
+                          Section: {couponEditForm.menuSection}
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-muted text-text-muted">
@@ -1450,42 +1639,174 @@ export function CouponsTab({
                         </span>
                       )}
                     </label>
-                    {couponEditForm.bogoDishId && (
+                    {(couponEditForm.bogoDishId || couponEditForm.menuSection) && (
                       <button
                         type="button"
                         onClick={() => setCouponEditForm({ ...couponEditForm, bogoDishId: '', menuSection: '' })}
-                        className="text-[10px] font-bold text-orange-600 hover:underline"
+                        className="text-[10px] font-bold text-orange-600 hover:underline cursor-pointer"
                       >
-                        Reset to All Items
+                        Reset to Entire Store
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <select
-                      value={couponEditForm.bogoDishId || ''}
-                      onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value, menuSection: '' })}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
+
+                  {/* 3 Scope Mode Tabs */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setCouponEditForm({ ...couponEditForm, bogoDishId: '', menuSection: '' })}
+                      className={cn(
+                        "py-1 px-2 rounded-lg text-xs font-black transition-all border cursor-pointer text-center",
+                        !couponEditForm.bogoDishId && !couponEditForm.menuSection
+                          ? "bg-orange-500 text-white border-orange-600 shadow-2xs"
+                          : "bg-background/80 hover:bg-muted text-text-secondary border-border"
+                      )}
                     >
-                      <option value="">-- Apply to All Items in Outlet --</option>
-                      {availableItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          [ID: {item.id}] {item.name} — ₹{item.price}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Or enter Item / Dish ID manually..."
-                      value={couponEditForm.bogoDishId || ''}
-                      onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value.trim(), menuSection: '' })}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-mono font-bold"
-                    />
+                      🌟 Entire Store
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultSec = restaurantSections[0]?.tag || 'pizza'
+                        setCouponEditForm({ ...couponEditForm, bogoDishId: '', menuSection: couponEditForm.menuSection || defaultSec })
+                      }}
+                      className={cn(
+                        "py-1 px-2 rounded-lg text-xs font-black transition-all border cursor-pointer text-center",
+                        !couponEditForm.bogoDishId && couponEditForm.menuSection
+                          ? "bg-emerald-600 text-white border-emerald-700 shadow-2xs"
+                          : "bg-background/80 hover:bg-muted text-text-secondary border-border"
+                      )}
+                    >
+                      📂 Menu Section(s)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const firstDishId = availableItems[0]?.id || ''
+                        setCouponEditForm({ ...couponEditForm, menuSection: '', bogoDishId: couponEditForm.bogoDishId || firstDishId })
+                      }}
+                      className={cn(
+                        "py-1 px-2 rounded-lg text-xs font-black transition-all border cursor-pointer text-center",
+                        couponEditForm.bogoDishId
+                          ? "bg-blue-600 text-white border-blue-700 shadow-2xs"
+                          : "bg-background/80 hover:bg-muted text-text-secondary border-border"
+                      )}
+                    >
+                      🎯 Single Item ID
+                    </button>
                   </div>
-                  <p className="text-[9.5px] text-text-muted">
-                    {couponEditForm.bogoDishId
-                      ? `Offer applies strictly to Item ID: "${couponEditForm.bogoDishId}".`
-                      : "Offer applies across all products/dishes from this outlet."}
-                  </p>
+
+                  {/* Scope 2: Menu Section Chips & Input */}
+                  {!couponEditForm.bogoDishId && couponEditForm.menuSection && (
+                    <div className="p-2.5 rounded-lg bg-background/90 border border-emerald-500/20 space-y-2 animate-slide-down">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
+                          Select Menu Sections / Categories
+                        </span>
+                        <span className="text-[9px] text-text-muted">Click tags to toggle</span>
+                      </div>
+
+                      {/* Display restaurant dynamic sections if available */}
+                      {restaurantSections.length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold text-text-muted block">Outlet Menu Sections:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {restaurantSections.map((sec) => {
+                              const activeTags = (couponEditForm.menuSection || '').split(',').map((s) => s.trim().toLowerCase())
+                              const isSelected = activeTags.includes(sec.tag.toLowerCase())
+                              return (
+                                <button
+                                  key={sec.id}
+                                  type="button"
+                                  onClick={() => toggleSectionTag(sec.tag, true)}
+                                  className={cn(
+                                    "px-2 py-0.5 text-xs rounded font-bold border transition-all cursor-pointer flex items-center gap-1",
+                                    isSelected
+                                      ? "bg-emerald-600 text-white border-emerald-700 shadow-2xs"
+                                      : "bg-muted/40 hover:bg-muted text-text-secondary border-border"
+                                  )}
+                                >
+                                  <span>{sec.emoji || '🍽️'}</span>
+                                  <span>{sec.title}</span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Common Section Presets */}
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-bold text-text-muted block">Common Category Presets:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {commonSectionPresets.map((preset) => {
+                            const activeTags = (couponEditForm.menuSection || '').split(',').map((s) => s.trim().toLowerCase())
+                            const isSelected = activeTags.includes(preset.tag)
+                            return (
+                              <button
+                                key={preset.tag}
+                                type="button"
+                                onClick={() => toggleSectionTag(preset.tag, true)}
+                                className={cn(
+                                  "px-2 py-0.5 text-[10px] rounded font-bold border transition-all cursor-pointer flex items-center gap-1",
+                                  isSelected
+                                    ? "bg-emerald-600 text-white border-emerald-700 shadow-2xs"
+                                    : "bg-muted/20 hover:bg-muted text-text-secondary border-border/80"
+                                )}
+                              >
+                                <span>{preset.emoji}</span>
+                                <span>{preset.label}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Manual Section Input */}
+                      <div>
+                        <label className="text-[9px] font-bold text-text-secondary block mb-1">
+                          Active Target Sections (comma-separated):
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. pizza, burger, pasta"
+                          value={couponEditForm.menuSection || ''}
+                          onChange={(e) => setCouponEditForm({ ...couponEditForm, menuSection: e.target.value, bogoDishId: '' })}
+                          className="w-full px-2.5 py-1 text-xs rounded-lg border bg-background font-mono font-bold text-emerald-600 dark:text-emerald-400"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scope 3: Specific Dish Selector */}
+                  {couponEditForm.bogoDishId && (
+                    <div className="space-y-2 p-2 rounded-lg bg-background/90 border border-blue-500/20 animate-slide-down">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <select
+                          value={couponEditForm.bogoDishId || ''}
+                          onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value, menuSection: '' })}
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-semibold"
+                        >
+                          <option value="">-- Apply to All Items in Outlet --</option>
+                          {availableItems.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              [ID: {item.id}] {item.name} — ₹{item.price}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Or enter Item / Dish ID manually..."
+                          value={couponEditForm.bogoDishId || ''}
+                          onChange={(e) => setCouponEditForm({ ...couponEditForm, bogoDishId: e.target.value.trim(), menuSection: '' })}
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border bg-background font-mono font-bold"
+                        />
+                      </div>
+                      <p className="text-[9.5px] text-text-muted">
+                        Offer applies strictly to Item ID: &quot;{couponEditForm.bogoDishId}&quot;.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Discount Type */}

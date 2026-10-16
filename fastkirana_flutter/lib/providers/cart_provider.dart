@@ -213,8 +213,13 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
 
   Future<void> loadCart([CartRepository? repo]) async {
     final r = repo ?? repository;
+    final initialVersion = _cartVersion;
     try {
       final localItems = await r.getLocalCart();
+      // If user performed in-memory mutations while getLocalCart was awaiting, do not overwrite them
+      if (_cartVersion > initialVersion || _latestPendingItems != null) {
+        return;
+      }
       if (localItems.isNotEmpty) {
         state = AsyncValue.data(_buildCart(localItems));
       } else {
@@ -223,9 +228,15 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
 
       final hasPending = await r.hasPendingSync();
       if (hasPending) {
-        // Local has unsynced offline edits! Reconcile by syncing to server rather than overwriting with stale server cart.
+        if (_cartVersion > initialVersion || _latestPendingItems != null) {
+          return;
+        }
+        // Local has unsynced offline edits! Reconcile through the versioned queue rather than unversioned sync
         try {
-          await r.syncCart(localItems);
+          final targetKey = await r.getPendingSyncKeyForCurrentScope();
+          _cartVersion++;
+          _latestPendingItems = localItems;
+          await _flushPendingSync(targetKey);
         } catch (e, st) {
           LoggerService.error('CartProvider: background reconciliation of pending offline cart failed', e, st);
         }
@@ -234,7 +245,8 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
 
       try {
         final serverCart = await r.getCart();
-        if (serverCart.items.isNotEmpty) {
+        // Guard against startup race: only hydrate from server if local has no items and no mutations occurred
+        if (_cartVersion == 0 && localItems.isEmpty && serverCart.items.isNotEmpty && _latestPendingItems == null) {
           state = AsyncValue.data(serverCart);
           await r.saveLocalCart(serverCart.items);
         }
@@ -242,7 +254,9 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
         LoggerService.error('CartProvider: background cart sync failed', e, st);
       }
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (_cartVersion == initialVersion && _latestPendingItems == null) {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 
@@ -415,9 +429,11 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
         final matchesProduct = i.productId == pId || i.product.id == pId;
         if (!matchesProduct) return false;
         if (variant != null && variant.isNotEmpty) {
-          return i.selectedVariant == variant;
+          return i.selectedVariant == variant ||
+              (i.selectedVariant == null && (variant == i.product.unit || variant.isEmpty));
         }
-        return true;
+        return i.selectedVariant == null ||
+            (i.product.unit.isNotEmpty && i.selectedVariant == i.product.unit);
       });
 
       if (idx != -1) {

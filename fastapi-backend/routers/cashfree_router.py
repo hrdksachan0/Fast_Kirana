@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any, List
 import httpx
 import json
 import logging
+import math
 import os
 import re
 import time
@@ -28,6 +29,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Cashfree Payment Gateway"])
 
 CASHFREE_BASE_URL = "https://api.cashfree.com/pg" if settings.CASHFREE_ENV.upper() == "PRODUCTION" else "https://sandbox.cashfree.com/pg"
+
+
+def validate_positive_quantity(val: Any) -> Optional[int]:
+    """Validates that a quantity is a positive finite integer. Returns int or None if invalid."""
+    if val is None:
+        return 1
+    try:
+        f_val = float(val)
+        if not math.isfinite(f_val):
+            return None
+        i_val = int(f_val)
+        if f_val != i_val or i_val <= 0 or i_val > 1000:
+            return None
+        return i_val
+    except (ValueError, TypeError):
+        return None
 
 
 def _get_cashfree_headers() -> Dict[str, str]:
@@ -58,6 +75,12 @@ class CashfreeCreateOrderRequest(BaseModel):
     orderPayload: Optional[Dict[str, Any]] = None
     deliveryMethod: Optional[str] = None
     storeId: Optional[str] = None
+    couponCode: Optional[str] = None
+    discount: Optional[float] = None
+    tipAmount: Optional[float] = None
+    deliveryFee: Optional[float] = None
+    packagingFee: Optional[float] = None
+    packagingOption: Optional[str] = None
 
 
 class CashfreeVerifyRequest(BaseModel):
@@ -77,7 +100,8 @@ async def _save_pending_checkout_intent(
     customer_email: Optional[str],
     items: Any,
     delivery_method: str = "DELIVERY",
-    store_id: Optional[str] = "hub-209206"
+    store_id: Optional[str] = "hub-209206",
+    validated_quote: Optional[Dict[str, Any]] = None
 ):
     """
     Persist pending checkout intent in both Redis cache and durable database (IdempotencyRecord).
@@ -101,6 +125,14 @@ async def _save_pending_checkout_intent(
         "storeId": store_id or "hub-209206",
         "createdAt": time.time(),
     }
+    if validated_quote:
+        pending_payload["validated_quote"] = validated_quote
+        pending_payload["discount"] = float(validated_quote.get("discount", 0.0))
+        pending_payload["couponCode"] = validated_quote.get("couponCode")
+        pending_payload["deliveryFee"] = float(validated_quote.get("deliveryFee", 0.0))
+        pending_payload["packagingFee"] = float(validated_quote.get("packagingFee", 0.0))
+        pending_payload["tipAmount"] = float(validated_quote.get("tipAmount", 0.0))
+        pending_payload["subtotal"] = float(validated_quote.get("subtotal", 0.0))
     try:
         await set_cache(f"cf_pending:{order_id}", pending_payload, ttl_seconds=86400)
         if cf_order_id and cf_order_id != order_id:
@@ -215,7 +247,12 @@ async def create_cashfree_order(
         for it in effective_items:
             prod_info = it.get("product") or it
             p_id = str(it.get("productId") or prod_info.get("id") or "").strip()
-            p_qty = int(it.get("quantity") or 1)
+            p_qty = validate_positive_quantity(it.get("quantity"))
+            if p_qty is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid item quantity '{it.get('quantity')}'. Quantity must be a positive integer."
+                )
             sel_var = it.get("selectedVariant") or prod_info.get("selectedVariant")
             db_p = db_p_map.get(p_id)
             if db_p:
@@ -277,25 +314,103 @@ async def create_cashfree_order(
                 addr = a_res.scalars().first()
                 if addr and addr.phone:
                     resolved_phone = addr.phone
-        elif req.amount:
+        elif req.amount is not None:
             total_amount = float(req.amount)
         else:
             raise HTTPException(status_code=404, detail="Order not found")
-    elif req.amount:
+    elif req.amount is not None:
         total_amount = float(req.amount)
     elif has_items_validated and authoritative_items_subtotal > 0:
         total_amount = authoritative_items_subtotal
     else:
         raise HTTPException(status_code=400, detail="orderId or amount is required")
 
-    # Enforce authoritative server catalog pricing against client underpayment
+    # Enforce authoritative server catalog pricing and build validated quote
+    validated_quote_dict = None
     if has_items_validated and authoritative_items_subtotal > 0:
-        if total_amount < (authoritative_items_subtotal - 0.05):
+        validated_discount = 0.0
+        payload_dict = req.orderPayload or req.cartPayload or {}
+        coupon_code = req.couponCode or payload_dict.get("couponCode") or payload_dict.get("coupon")
+        delivery_method = req.deliveryMethod or payload_dict.get("deliveryMethod") or "DELIVERY"
+        store_id = req.storeId or payload_dict.get("storeId") or "hub-209206"
+
+        if delivery_method == "PICKUP":
+            delivery_fee = 0.0
+            misc_fee = 0.0
+        else:
+            if req.deliveryFee is not None:
+                delivery_fee = float(req.deliveryFee)
+            elif payload_dict.get("deliveryFee") is not None:
+                delivery_fee = float(payload_dict.get("deliveryFee"))
+            else:
+                delivery_fee = 25.0 if authoritative_items_subtotal < 149.0 else 0.0
+
+            if req.packagingFee is not None:
+                misc_fee = float(req.packagingFee)
+            elif payload_dict.get("packagingFee") is not None:
+                misc_fee = float(payload_dict.get("packagingFee"))
+            elif payload_dict.get("miscFee") is not None:
+                misc_fee = float(payload_dict.get("miscFee"))
+            else:
+                misc_fee = 5.0
+            if req.packagingOption == "PREMIUM" or payload_dict.get("packagingOption") == "PREMIUM":
+                misc_fee = 15.0
+
+        tip_amount = 0.0
+        raw_tip = req.tipAmount if req.tipAmount is not None else (payload_dict.get("tipAmount") or payload_dict.get("tip"))
+        if raw_tip is not None and str(raw_tip).strip() != "":
+            try:
+                parsed_tip = float(raw_tip)
+                if math.isfinite(parsed_tip) and parsed_tip >= 0:
+                    tip_amount = round(parsed_tip, 2)
+            except (ValueError, TypeError):
+                pass
+
+        c_code_clean = None
+        if coupon_code:
+            from models import Coupon
+            c_code_clean = str(coupon_code).strip().upper()
+            c_stmt = select(Coupon).where(Coupon.code == c_code_clean, Coupon.isActive == True)
+            c_res = await db.execute(c_stmt)
+            c_obj = c_res.scalars().first()
+            if c_obj:
+                has_expired = c_obj.expiresAt and c_obj.expiresAt < datetime.utcnow()
+                limit_reached = c_obj.maxUses and c_obj.usedCount >= c_obj.maxUses
+                if not has_expired and not limit_reached:
+                    if authoritative_items_subtotal >= (c_obj.minOrder or 0.0):
+                        if c_obj.discountType in ("PERCENT", "PERCENTAGE"):
+                            disc = (authoritative_items_subtotal * float(c_obj.value)) / 100.0
+                            if c_obj.maxDiscount and c_obj.maxDiscount > 0:
+                                disc = min(disc, float(c_obj.maxDiscount))
+                            validated_discount = round(min(disc, authoritative_items_subtotal), 2)
+                        elif c_obj.discountType == "FLAT":
+                            validated_discount = round(min(float(c_obj.value), authoritative_items_subtotal), 2)
+                        elif c_obj.discountType == "FREE_DELIVERY":
+                            delivery_fee = 0.0
+
+        expected_quote_total = max(1.0, round(authoritative_items_subtotal - validated_discount + (0.0 if delivery_method == "PICKUP" else delivery_fee) + tip_amount + (0.0 if delivery_method == "PICKUP" else misc_fee), 2))
+        if total_amount is not None and abs(float(total_amount) - expected_quote_total) <= 0.05:
+            total_amount = expected_quote_total
+        elif total_amount is not None and float(total_amount) < (expected_quote_total - 0.05):
             logger.warning(
-                f"[Cashfree Security] Client attempted underpayment: client amount={total_amount} < authoritative subtotal={authoritative_items_subtotal}. Overriding with server price."
+                f"[Cashfree Security] Client attempted underpayment: client amount={total_amount} < expected_quote_total={expected_quote_total}. Overriding with server price."
             )
-            total_amount = authoritative_items_subtotal
-    elif req.amount and float(req.amount) > total_amount:
+            total_amount = expected_quote_total
+        elif total_amount is None:
+            total_amount = expected_quote_total
+
+        validated_quote_dict = {
+            "subtotal": round(authoritative_items_subtotal, 2),
+            "discount": round(validated_discount, 2),
+            "couponCode": c_code_clean if (coupon_code and validated_discount > 0) else None,
+            "deliveryFee": 0.0 if delivery_method == "PICKUP" else round(delivery_fee, 2),
+            "packagingFee": 0.0 if delivery_method == "PICKUP" else round(misc_fee, 2),
+            "tipAmount": round(tip_amount, 2),
+            "total": round(total_amount, 2),
+            "deliveryMethod": delivery_method,
+            "storeId": store_id,
+        }
+    elif req.amount is not None and float(req.amount) > (total_amount or 0.0):
         total_amount = float(req.amount)
 
     if total_amount < 1.0:
@@ -351,7 +466,8 @@ async def create_cashfree_order(
             customer_email=resolved_email,
             items=effective_items,
             delivery_method=effective_delivery_method,
-            store_id=effective_store_id
+            store_id=effective_store_id,
+            validated_quote=validated_quote_dict
         )
         return {
             "success": True,
@@ -386,7 +502,8 @@ async def create_cashfree_order(
                         customer_email=resolved_email,
                         items=effective_items,
                         delivery_method=effective_delivery_method,
-                        store_id=effective_store_id
+                        store_id=effective_store_id,
+                        validated_quote=validated_quote_dict
                     )
                     return {
                         "success": True,
@@ -417,7 +534,8 @@ async def create_cashfree_order(
                     customer_email=resolved_email,
                     items=effective_items,
                     delivery_method=effective_delivery_method,
-                    store_id=effective_store_id
+                    store_id=effective_store_id,
+                    validated_quote=validated_quote_dict
                 )
                 return {
                     "success": True,
@@ -448,7 +566,8 @@ async def create_cashfree_order(
             customer_email=resolved_email,
             items=effective_items,
             delivery_method=effective_delivery_method,
-            store_id=effective_store_id
+            store_id=effective_store_id,
+            validated_quote=validated_quote_dict
         )
 
         return {
@@ -737,13 +856,14 @@ async def verify_cashfree_payment(
             order.notes = f"{order.notes} | {cf_note}" if order.notes else cf_note
 
         cf_order_key = str(cf_order.get("order_id") if cf_order else (req.cfOrderId or clean_id)).strip()
-        if not getattr(order, "cfOrderId", None) and cf_order_key:
-            order.cfOrderId = cf_order_key
+        base_order_key = re.sub(r"_r\d+$", "", cf_order_key)
+        if not getattr(order, "cfOrderId", None) and base_order_key:
+            order.cfOrderId = base_order_key
 
         try:
             from models import IdempotencyRecord
             cons_rec = IdempotencyRecord(
-                key=f"consumed_payment:{cf_order_key}",
+                key=f"consumed_payment:{base_order_key}",
                 userId=order.userId,
                 status="COMPLETED",
                 orderId=order.id,
@@ -904,16 +1024,21 @@ async def auto_recover_unplaced_cashfree_order(
 
         # 0. Check if order already recovered or created with this cfOrderId / clean_id
         # Authoritative lookup strictly uses explicit order fields — NEVER free-text notes
+        base_cf_id = re.sub(r"_r\d+$", "", clean_cf_id)
         existing_stmt = select(Order).options(
-            selectinload(Order.address),
-            selectinload(Order.user)
+            selectinload(Order.items),
+            selectinload(Order.user),
+            selectinload(Order.address)
         ).where(
             or_(
                 Order.cfOrderId == cf_order_id,
                 Order.cfOrderId == clean_cf_id,
                 Order.cfOrderId == clean_id,
+                Order.cfOrderId == base_cf_id,
                 Order.id == clean_id,
-                Order.readableId == clean_id
+                Order.id == base_cf_id,
+                Order.readableId == clean_id,
+                Order.readableId == base_cf_id,
             )
         )
         existing_res = await db.execute(existing_stmt)
@@ -934,12 +1059,12 @@ async def auto_recover_unplaced_cashfree_order(
 
             logger.info(f"[Cashfree Recovery] Order already recovered or exists for {cf_order_id}: #{existing_order.readableId or existing_order.id}")
             if not getattr(existing_order, "cfOrderId", None):
-                existing_order.cfOrderId = clean_cf_id
+                existing_order.cfOrderId = base_cf_id
                 await db.commit()
             return existing_order
 
         # 0.5 Atomic payment fulfillment lock to prevent concurrent duplicate recovery across workers
-        consumed_key = f"consumed_payment:{clean_cf_id}"
+        consumed_key = f"consumed_payment:{base_cf_id}"
         cons_rec = None
         from models import IdempotencyRecord
         try:
@@ -1068,9 +1193,17 @@ async def auto_recover_unplaced_cashfree_order(
         recovered_delivery_method = str(pending_data.get("deliveryMethod") or "DELIVERY").upper() if pending_data else "DELIVERY"
         recovered_store_id = str(pending_data.get("storeId") or "hub-209206") if pending_data else "hub-209206"
 
+        val_quote = (pending_data.get("validated_quote") or {}) if pending_data else {}
+        recovered_discount = float(val_quote.get("discount") if "discount" in val_quote else (pending_data.get("discount") or 0.0)) if pending_data else 0.0
+        recovered_coupon = str(val_quote.get("couponCode") or pending_data.get("couponCode") or "").strip() or None if pending_data else None
+        recovered_delivery_fee = float(val_quote.get("deliveryFee") if "deliveryFee" in val_quote else (pending_data.get("deliveryFee") or 0.0)) if pending_data else 0.0
+        recovered_packaging_fee = float(val_quote.get("packagingFee") if "packagingFee" in val_quote else (pending_data.get("packagingFee") or 0.0)) if pending_data else 0.0
+        recovered_tip = float(val_quote.get("tipAmount") if "tipAmount" in val_quote else (pending_data.get("tipAmount") or 0.0)) if pending_data else 0.0
+
         has_underpaid_conflict = False
         has_stock_conflict = False
         has_missing_product = False
+        has_invalid_quantity = False
         db_products = {}
 
         # Check pending cache items first
@@ -1079,9 +1212,42 @@ async def auto_recover_unplaced_cashfree_order(
             prod_ids = [str(it.get("productId") or (it.get("product") or {}).get("id") or "").strip() for it in cached_items]
             prod_ids = [pid for pid in prod_ids if pid]
             if prod_ids:
-                p_res = await db.execute(select(Product).where(Product.id.in_(prod_ids)))
+                p_res = await db.execute(select(Product).where(Product.id.in_(prod_ids)).with_for_update())
                 for p in p_res.scalars().all():
                     db_products[p.id] = p
+
+            from models import StoreInventory
+            store_inv_map = {}
+            if recovered_store_id and recovered_store_id != "all" and prod_ids:
+                try:
+                    inv_stmt = select(StoreInventory).where(
+                        StoreInventory.storeId == recovered_store_id,
+                        StoreInventory.productId.in_(prod_ids)
+                    ).with_for_update()
+                    inv_res = await db.execute(inv_stmt)
+                    for inv in inv_res.scalars().all():
+                        store_inv_map[inv.productId] = inv
+                except Exception as e:
+                    logger.warning(f"[Cashfree Recovery] Could not load StoreInventory: {e}")
+
+            # Aggregate demand across lines:
+            # 1. By productId (total units demanded of this product across all variants)
+            # 2. By (productId, selectedVariant) (units demanded of this specific variant)
+            aggregated_product_demand = {}
+            aggregated_variant_demand = {}
+            for it in cached_items:
+                prod = it.get("product") or it
+                p_id = str(it.get("productId") or prod.get("id") or "").strip()
+                p_var = it.get("selectedVariant") or prod.get("selectedVariant")
+                valid_qty = validate_positive_quantity(it.get("quantity"))
+                if valid_qty is None:
+                    has_invalid_quantity = True
+                    p_qty = 1
+                else:
+                    p_qty = valid_qty
+                aggregated_product_demand[p_id] = aggregated_product_demand.get(p_id, 0) + p_qty
+                var_key = (p_id, p_var)
+                aggregated_variant_demand[var_key] = aggregated_variant_demand.get(var_key, 0) + p_qty
 
             for it in cached_items:
                 prod = it.get("product") or it
@@ -1092,7 +1258,12 @@ async def auto_recover_unplaced_cashfree_order(
                     has_missing_product = True
 
                 p_name = (db_prod.name if db_prod else (it.get("name") or prod.get("name"))) or "Product"
-                p_qty = int(it.get("quantity") or 1)
+                valid_qty = validate_positive_quantity(it.get("quantity"))
+                if valid_qty is None:
+                    has_invalid_quantity = True
+                    p_qty = 1
+                else:
+                    p_qty = valid_qty
                 p_img = (db_prod.imageUrl if db_prod else None) or it.get("imageUrl") or prod.get("imageUrl")
                 p_var = it.get("selectedVariant") or prod.get("selectedVariant")
 
@@ -1101,17 +1272,25 @@ async def auto_recover_unplaced_cashfree_order(
                     # Legitimate grocery products have restaurantId=None and MUST remain None!
                     p_rest_id = db_prod.restaurantId
                     p_price = float(db_prod.price or 0.0)
+                    total_prod_demanded = aggregated_product_demand.get(p_id, p_qty)
+                    total_var_demanded = aggregated_variant_demand.get((p_id, p_var), p_qty)
+
+                    if not p_rest_id:
+                        # 1. Product-level hub inventory check (enforced for BOTH variants and plain products)
+                        local_inv = store_inv_map.get(db_prod.id)
+                        hub_or_global_stock = local_inv.stock if local_inv is not None else (db_prod.stock or 0)
+                        if hub_or_global_stock < total_prod_demanded:
+                            has_stock_conflict = True
+
                     if p_var and db_prod.variants and isinstance(db_prod.variants, list):
                         v_obj = next((v for v in db_prod.variants if isinstance(v, dict) and v.get("name") == p_var), None)
                         if v_obj and "price" in v_obj:
                             p_price = float(v_obj["price"])
                         if not p_rest_id:
+                            # 2. Variant-level specific stock check
                             v_stk = int(v_obj.get("stock", 0)) if v_obj else 0
-                            if v_stk < p_qty:
+                            if v_stk < total_var_demanded:
                                 has_stock_conflict = True
-                    elif not p_rest_id:
-                        if (db_prod.stock or 0) < p_qty:
-                            has_stock_conflict = True
                 else:
                     p_rest_id = it.get("restaurantId") or prod.get("restaurantId")
                     p_price = float(it.get("price") or prod.get("price") or 0.0)
@@ -1142,16 +1321,29 @@ async def auto_recover_unplaced_cashfree_order(
                     prod = ci.product
                     p_id = prod.id if prod else ci.productId
                     p_name = prod.name if prod else "Product"
-                    p_qty = int(ci.quantity or 1)
+                    valid_qty = validate_positive_quantity(ci.quantity)
+                    if valid_qty is None:
+                        has_invalid_quantity = True
+                        p_qty = 1
+                    else:
+                        p_qty = valid_qty
                     if prod is not None:
                         db_products[prod.id] = prod
                         p_rest_id = prod.restaurantId
-                        p_price = float(ci.price or (prod.price or 0.0))
+                        p_price = float(prod.price or 0.0)
+                        if ci.selectedVariant and prod.variants and isinstance(prod.variants, list):
+                            v_obj = next((v for v in prod.variants if isinstance(v, dict) and v.get("name") == ci.selectedVariant), None)
+                            if v_obj and "price" in v_obj:
+                                p_price = float(v_obj["price"])
+                            if not p_rest_id:
+                                v_stk = int(v_obj.get("stock", 0)) if v_obj else 0
+                                if v_stk < p_qty:
+                                    has_stock_conflict = True
                         if not p_rest_id and (prod.stock or 0) < p_qty:
                             has_stock_conflict = True
                     else:
                         p_rest_id = None
-                        p_price = float(ci.price or 0.0)
+                        p_price = 0.0
                         if p_id:
                             has_missing_product = True
                     if p_rest_id:
@@ -1198,19 +1390,24 @@ async def auto_recover_unplaced_cashfree_order(
         new_order_id = f"ord_{uuid.uuid4().hex[:20]}"
 
         calculated_subtotal = sum(it["price"] * it["quantity"] for it in items_to_create)
-        misc_fee = max(0.0, round(order_amount - calculated_subtotal, 2)) if order_amount > calculated_subtotal else 0.0
+        expected_total = max(0.0, round(calculated_subtotal - recovered_discount + recovered_delivery_fee + recovered_packaging_fee + recovered_tip, 2))
+        order_misc_fee = max(0.0, round(recovered_packaging_fee + recovered_tip, 2))
 
-        if items_to_create and (order_amount < (calculated_subtotal - 0.05)):
+        # Check underpayment against the complete authoritative expected total (or calculated subtotal if no quote)
+        threshold_total = expected_total if (val_quote or recovered_discount > 0 or recovered_delivery_fee > 0 or recovered_packaging_fee > 0) else calculated_subtotal
+        if items_to_create and (order_amount < (threshold_total - 0.05)):
             has_underpaid_conflict = True
 
-        if has_underpaid_conflict or has_stock_conflict or has_missing_product:
+        if has_underpaid_conflict or has_stock_conflict or has_missing_product or has_invalid_quantity:
             reconcile_reasons = []
             if has_underpaid_conflict:
-                reconcile_reasons.append(f"Underpaid: paid ₹{order_amount:.2f} < catalog subtotal ₹{calculated_subtotal:.2f}")
+                reconcile_reasons.append(f"Underpaid: paid ₹{order_amount:.2f} < expected total ₹{threshold_total:.2f}")
             if has_stock_conflict:
                 reconcile_reasons.append("Insufficient inventory for one or more items")
             if has_missing_product:
                 reconcile_reasons.append("One or more items not found in database catalog")
+            if has_invalid_quantity:
+                reconcile_reasons.append("Invalid or non-positive item quantity")
             order_status = OrderStatus.ADMIN_PENDING
             order_notes = f"[RECONCILIATION_REQUIRED] {'; '.join(reconcile_reasons)} | [CF_ORDER:{cf_order_id}] Cashfree PG Paid (Ref: {cf_ref})"
         else:
@@ -1229,10 +1426,10 @@ async def auto_recover_unplaced_cashfree_order(
             orderType=OrderType.RESTAURANT if is_restaurant else OrderType.GROCERY,
             status=order_status,
             subtotal=calculated_subtotal if calculated_subtotal > 0 else order_amount,
-            discount=0.0,
-            deliveryFee=0.0,
+            discount=recovered_discount,
+            deliveryFee=recovered_delivery_fee,
             taxes=0.0,
-            miscFee=misc_fee,
+            miscFee=order_misc_fee,
             total=order_amount,
             paymentMethod=PaymentMethod.UPI,
             paymentStatus=PaymentStatus.PAID,
@@ -1244,6 +1441,7 @@ async def auto_recover_unplaced_cashfree_order(
             shopName=target_shop_name,
             shopPhone="+918112849854",
             storeId=recovered_store_id,
+            couponCode=recovered_coupon,
             createdAt=datetime.utcnow(),
             updatedAt=datetime.utcnow(),
             confirmedAt=datetime.utcnow() if order_status == OrderStatus.CONFIRMED else None,
@@ -1327,13 +1525,49 @@ async def auto_recover_unplaced_cashfree_order(
                 except Exception:
                     pass
 
-        # 9. Clear user's cart if used
-        if user:
+        # 9. Clear ordered items from user's cart (preserving any newer cart edits)
+        if user and items_to_create:
             cart_stmt = select(Cart).where(Cart.userId == user.id)
             cart_res = await db.execute(cart_stmt)
             cart = cart_res.scalars().first()
             if cart:
-                await db.execute(text("DELETE FROM cart_items WHERE \"cartId\" = :cart_id"), {"cart_id": cart.id})
+                for it in items_to_create:
+                    p_id = it.get("productId")
+                    p_qty = int(it.get("quantity") or 1)
+                    p_var = it.get("selectedVariant")
+                    if not p_id:
+                        continue
+                    db_p = db_products.get(p_id)
+                    unit_val = str(db_p.unit or "").strip() if db_p else ""
+                    if p_var:
+                        stmt_ci = select(CartItem).where(
+                            CartItem.cartId == cart.id,
+                            CartItem.productId == p_id,
+                            CartItem.selectedVariant == p_var
+                        )
+                    else:
+                        conditions = [
+                            CartItem.selectedVariant.is_(None),
+                            CartItem.selectedVariant == ""
+                        ]
+                        if unit_val:
+                            conditions.append(CartItem.selectedVariant == unit_val)
+                        stmt_ci = select(CartItem).where(
+                            CartItem.cartId == cart.id,
+                            CartItem.productId == p_id,
+                            or_(*conditions)
+                        )
+                    ci_res = await db.execute(stmt_ci)
+                    remaining_to_deduct = p_qty
+                    for matched_ci in ci_res.scalars().all():
+                        if remaining_to_deduct <= 0:
+                            break
+                        if matched_ci.quantity <= remaining_to_deduct:
+                            remaining_to_deduct -= matched_ci.quantity
+                            await db.delete(matched_ci)
+                        else:
+                            matched_ci.quantity -= remaining_to_deduct
+                            remaining_to_deduct = 0
 
         # 10. Enqueue Kitchen KOT for printing ONLY if CONFIRMED
         if is_restaurant and target_restaurant_id and order_status == OrderStatus.CONFIRMED:

@@ -349,17 +349,28 @@ async def acquire_idempotency_lock_async(
                             return True, True, None
             else:
                 try:
-                    async with db.begin_nested():
-                        new_rec = IdempotencyRecord(
-                            key=scoped_key,
-                            userId=user_id,
-                            requestHash=request_hash,
-                            status="PROCESSING",
-                            createdAt=now_dt,
-                            expiresAt=now_dt + timedelta(seconds=ttl_seconds)
-                        )
+                    dialect_name = ""
+                    try:
+                        bind = db.get_bind()
+                        dialect_name = bind.dialect.name if bind else ""
+                    except Exception:
+                        pass
+
+                    new_rec = IdempotencyRecord(
+                        key=scoped_key,
+                        userId=user_id,
+                        requestHash=request_hash,
+                        status="PROCESSING",
+                        createdAt=now_dt,
+                        expiresAt=now_dt + timedelta(seconds=ttl_seconds)
+                    )
+                    if dialect_name == "sqlite":
                         db.add(new_rec)
                         await db.flush()
+                    else:
+                        async with db.begin_nested():
+                            db.add(new_rec)
+                            await db.flush()
                     return False, False, None
                 except Exception:
                     # Concurrently inserted by another worker; check record state
