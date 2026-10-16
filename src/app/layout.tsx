@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     'dark store Ghatampur 209206',
     'fast delivery Ghatampur'
   ],
-  manifest: '/manifest.json?v=3',
+  manifest: '/manifest.json?v=5',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'),
   alternates: {
     canonical: 'https://www.fastkirana.in',

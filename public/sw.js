@@ -3,10 +3,10 @@
  * Featuring Offline Catalog Browsing & Instant Stale-While-Revalidate Engine
  */
 
-const CACHE_STATIC = 'fastkirana-static-v6'
-const CACHE_CATALOG = 'fastkirana-catalog-v6'
-const CACHE_IMAGES = 'fastkirana-images-v6'
-const CACHE_PAGES = 'fastkirana-pages-v6'
+const CACHE_STATIC = 'fastkirana-static-v7'
+const CACHE_CATALOG = 'fastkirana-catalog-v7'
+const CACHE_IMAGES = 'fastkirana-images-v7'
+const CACHE_PAGES = 'fastkirana-pages-v7'
 
 const ALL_CACHES = [CACHE_STATIC, CACHE_CATALOG, CACHE_IMAGES, CACHE_PAGES]
 
