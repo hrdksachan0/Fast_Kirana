@@ -51,6 +51,8 @@ export async function POST(request: Request) {
 
   try {
     const { 
+      id: rawId,
+      couponId: rawCouponId,
       code, 
       discountType, 
       bogoType,
@@ -96,59 +98,101 @@ export async function POST(request: Request) {
       }
     }
 
-    // Insert coupon using raw SQL to ensure proper enum casting
-    await prisma.$executeRaw`
-      INSERT INTO coupons (
-        id, 
-        code, 
-        "discountType", 
-        "bogoType",
-        "triggerVariant",
-        "rewardVariant",
-        "defaultFreeDishId",
-        "maxFreeItems",
-        "bogoDishId",
-        "autoApply",
-        "badgeText",
-        "menuSection",
-        value, 
-        "minOrder", 
-        "maxDiscount", 
-        "maxUses", 
-        "usedCount", 
-        "isActive", 
-        "expiresAt", 
-        "createdAt", 
-        "categoryId", 
-        "restaurantId",
-        "oncePerCustomer"
-      )
-      VALUES (
-        gen_random_uuid()::text,
-        ${cleanCode},
-        ${discountType}::"DiscountType",
-        ${bogoType ? bogoType : null}::"BogoType",
-        ${triggerVariant || null},
-        ${rewardVariant || null},
-        ${defaultFreeDishId || null},
-        ${maxFreeItems ? parseInt(String(maxFreeItems)) : 3},
-        ${bogoDishId || null},
-        ${autoApply === true},
-        ${effectiveBadge},
-        ${menuSection || null},
-        ${parseFloat(String(value)) || 0},
-        ${parseFloat(String(minOrder)) || 0},
-        ${maxDiscount ? parseFloat(String(maxDiscount)) : null},
-        ${maxUses ? parseInt(String(maxUses)) : null},
-        0,
-        ${isActive !== false},
-        ${expiresAt ? new Date(expiresAt) : null},
-        NOW(),
-        ${categoryId || null},
-        ${restaurantId || null},
-        ${oncePerCustomer === true}
-      )
-    `
+    // ID-wise Upsert: Check if coupon exists by ID or by Code
+    const targetId = (rawId || rawCouponId)?.trim() || null
+    let existingCoupon = null
+    if (targetId) {
+      existingCoupon = await prisma.coupon.findUnique({
+        where: { id: targetId }
+      })
+    }
+    if (!existingCoupon) {
+      existingCoupon = await prisma.coupon.findFirst({
+        where: { code: cleanCode }
+      })
+    }
+
+    if (existingCoupon) {
+      // Update existing coupon by ID
+      await prisma.$executeRaw`
+        UPDATE coupons SET
+          code = ${cleanCode},
+          "discountType" = ${discountType}::"DiscountType",
+          "bogoType" = ${bogoType ? bogoType : null}::"BogoType",
+          "triggerVariant" = ${triggerVariant || null},
+          "rewardVariant" = ${rewardVariant || null},
+          "defaultFreeDishId" = ${defaultFreeDishId || null},
+          "maxFreeItems" = ${maxFreeItems ? parseInt(String(maxFreeItems)) : 3},
+          "bogoDishId" = ${bogoDishId || null},
+          "autoApply" = ${autoApply === true},
+          "badgeText" = ${effectiveBadge},
+          "menuSection" = ${menuSection || null},
+          value = ${parseFloat(String(value)) || 0},
+          "minOrder" = ${parseFloat(String(minOrder)) || 0},
+          "maxDiscount" = ${maxDiscount ? parseFloat(String(maxDiscount)) : null},
+          "maxUses" = ${maxUses ? parseInt(String(maxUses)) : null},
+          "isActive" = ${isActive !== false},
+          "expiresAt" = ${expiresAt ? new Date(expiresAt) : null},
+          "categoryId" = ${categoryId || null},
+          "restaurantId" = ${restaurantId || null},
+          "oncePerCustomer" = ${oncePerCustomer === true}
+        WHERE id = ${existingCoupon.id}
+      `
+    } else {
+      // Insert coupon using raw SQL to ensure proper enum casting
+      await prisma.$executeRaw`
+        INSERT INTO coupons (
+          id, 
+          code, 
+          "discountType", 
+          "bogoType",
+          "triggerVariant",
+          "rewardVariant",
+          "defaultFreeDishId",
+          "maxFreeItems",
+          "bogoDishId",
+          "autoApply",
+          "badgeText",
+          "menuSection",
+          value, 
+          "minOrder", 
+          "maxDiscount", 
+          "maxUses", 
+          "usedCount", 
+          "isActive", 
+          "expiresAt", 
+          "createdAt", 
+          "categoryId", 
+          "restaurantId",
+          "oncePerCustomer"
+        )
+        VALUES (
+          gen_random_uuid()::text,
+          ${cleanCode},
+          ${discountType}::"DiscountType",
+          ${bogoType ? bogoType : null}::"BogoType",
+          ${triggerVariant || null},
+          ${rewardVariant || null},
+          ${defaultFreeDishId || null},
+          ${maxFreeItems ? parseInt(String(maxFreeItems)) : 3},
+          ${bogoDishId || null},
+          ${autoApply === true},
+          ${effectiveBadge},
+          ${menuSection || null},
+          ${parseFloat(String(value)) || 0},
+          ${parseFloat(String(minOrder)) || 0},
+          ${maxDiscount ? parseFloat(String(maxDiscount)) : null},
+          ${maxUses ? parseInt(String(maxUses)) : null},
+          0,
+          ${isActive !== false},
+          ${expiresAt ? new Date(expiresAt) : null},
+          NOW(),
+          ${categoryId || null},
+          ${restaurantId || null},
+          ${oncePerCustomer === true}
+        )
+      `
+    }
 
     // Auto-sync restaurant storefront ribbon if requested
     if (restaurantId && syncRestaurantBadge && effectiveBadge) {

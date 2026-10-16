@@ -250,11 +250,14 @@ export function useAdminReviewsCoupons({
         body: JSON.stringify(payload),
       })
 
-      if (res.ok) {
         const rawCreated = await res.json()
         const created = rawCreated?.coupon || rawCreated
-        setCoupons([created, ...coupons])
-        toast.success(`Coupon "${created.code}" created!`)
+        setCoupons((prev: any[]) => {
+          const list = Array.isArray(prev) ? prev : []
+          const filtered = list.filter((c: any) => c.id !== created.id && c.code !== created.code)
+          return [created, ...filtered]
+        })
+        toast.success(`Coupon "${created.code}" saved successfully!`)
         setShowAddCoupon(false)
         setNewCoupon({
           code: '',

@@ -1214,13 +1214,14 @@ async def admin_get_user_cart(
 # COUPONS
 # ============================================================
 
-@router.get("/coupons")
-async def admin_get_coupons(
-    current_admin: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Coupon).order_by(desc(Coupon.createdAt)))
-    coupons = result.scalars().all()
+def safe_enum_str(val: Any, fallback: str = "") -> str:
+    if val is None:
+        return fallback
+    if hasattr(val, "value"):
+        return str(val.value)
+    return str(val)
+
+
 def serialize_coupon(c: Coupon) -> Dict[str, Any]:
     return {
         "id": c.id,
@@ -1296,31 +1297,67 @@ async def admin_create_coupon(
     raw_val = data.get("value")
     val = float(raw_val) if raw_val is not None and str(raw_val).strip() != "" else (0.0 if discount_type in ('BOGO', 'FREE_DELIVERY') else 0.0)
 
-    coupon = Coupon(
-        id=f"cpn_{uuid.uuid4().hex[:12]}",
-        code=code,
-        discountType=discount_type,
-        value=val,
-        minOrder=float(data.get("minOrder", 0) or 0),
-        maxDiscount=float(data["maxDiscount"]) if data.get("maxDiscount") and str(data["maxDiscount"]).strip() != "" else None,
-        maxUses=int(data["maxUses"]) if data.get("maxUses") and str(data["maxUses"]).strip() != "" else None,
-        usedCount=0,
-        isActive=data.get("isActive", True) is not False,
-        expiresAt=parse_safe_iso_datetime(data.get("expiresAt")),
-        categoryId=clean_fk("categoryId"),
-        restaurantId=clean_fk("restaurantId"),
-        oncePerCustomer=bool(data.get("oncePerCustomer", False)),
-        bogoType=clean_fk("bogoType"),
-        triggerVariant=clean_fk("triggerVariant"),
-        rewardVariant=clean_fk("rewardVariant"),
-        defaultFreeDishId=clean_fk("defaultFreeDishId"),
-        bogoDishId=clean_fk("bogoDishId"),
-        maxFreeItems=int(data["maxFreeItems"]) if data.get("maxFreeItems") and str(data["maxFreeItems"]).strip() != "" else 1,
-        badgeText=clean_fk("badgeText"),
-        menuSection=clean_fk("menuSection"),
-        autoApply=bool(data.get("autoApply", False)),
-    )
-    db.add(coupon)
+    # ID-wise Upsert: Check if coupon ID or code already exists
+    coupon_id = clean_fk("id") or clean_fk("couponId")
+    coupon = None
+    if coupon_id:
+        existing_res = await db.execute(select(Coupon).where(Coupon.id == coupon_id))
+        coupon = existing_res.scalars().first()
+    if not coupon:
+        existing_stmt = select(Coupon).where(func.upper(Coupon.code) == code)
+        existing_res = await db.execute(existing_stmt)
+        coupon = existing_res.scalars().first()
+
+    if coupon:
+        # Update existing coupon by ID
+        coupon.code = code
+        coupon.discountType = discount_type
+        coupon.value = val
+        coupon.minOrder = float(data.get("minOrder", 0) or 0)
+        coupon.maxDiscount = float(data["maxDiscount"]) if data.get("maxDiscount") and str(data["maxDiscount"]).strip() != "" else None
+        coupon.maxUses = int(data["maxUses"]) if data.get("maxUses") and str(data["maxUses"]).strip() != "" else None
+        coupon.isActive = data.get("isActive", True) is not False
+        if "expiresAt" in data:
+            coupon.expiresAt = parse_safe_iso_datetime(data.get("expiresAt"))
+        coupon.categoryId = clean_fk("categoryId")
+        coupon.restaurantId = clean_fk("restaurantId")
+        coupon.oncePerCustomer = bool(data.get("oncePerCustomer", False))
+        coupon.bogoType = clean_fk("bogoType")
+        coupon.triggerVariant = clean_fk("triggerVariant")
+        coupon.rewardVariant = clean_fk("rewardVariant")
+        coupon.defaultFreeDishId = clean_fk("defaultFreeDishId")
+        coupon.bogoDishId = clean_fk("bogoDishId")
+        coupon.maxFreeItems = int(data["maxFreeItems"]) if data.get("maxFreeItems") and str(data["maxFreeItems"]).strip() != "" else 1
+        coupon.badgeText = clean_fk("badgeText")
+        coupon.menuSection = clean_fk("menuSection")
+        coupon.autoApply = bool(data.get("autoApply", False))
+    else:
+        coupon = Coupon(
+            id=f"cpn_{uuid.uuid4().hex[:12]}",
+            code=code,
+            discountType=discount_type,
+            value=val,
+            minOrder=float(data.get("minOrder", 0) or 0),
+            maxDiscount=float(data["maxDiscount"]) if data.get("maxDiscount") and str(data["maxDiscount"]).strip() != "" else None,
+            maxUses=int(data["maxUses"]) if data.get("maxUses") and str(data["maxUses"]).strip() != "" else None,
+            usedCount=0,
+            isActive=data.get("isActive", True) is not False,
+            expiresAt=parse_safe_iso_datetime(data.get("expiresAt")),
+            categoryId=clean_fk("categoryId"),
+            restaurantId=clean_fk("restaurantId"),
+            oncePerCustomer=bool(data.get("oncePerCustomer", False)),
+            bogoType=clean_fk("bogoType"),
+            triggerVariant=clean_fk("triggerVariant"),
+            rewardVariant=clean_fk("rewardVariant"),
+            defaultFreeDishId=clean_fk("defaultFreeDishId"),
+            bogoDishId=clean_fk("bogoDishId"),
+            maxFreeItems=int(data["maxFreeItems"]) if data.get("maxFreeItems") and str(data["maxFreeItems"]).strip() != "" else 1,
+            badgeText=clean_fk("badgeText"),
+            menuSection=clean_fk("menuSection"),
+            autoApply=bool(data.get("autoApply", False)),
+        )
+        db.add(coupon)
+
     await db.commit()
     await db.refresh(coupon)
     res_dict = serialize_coupon(coupon)
@@ -3689,11 +3726,6 @@ async def create_admin_coupon(
     if discount_type not in valid_types:
         raise HTTPException(status_code=400, detail="Invalid discount type")
 
-    # Check unique
-    existing = (await db.execute(select(Coupon).where(Coupon.code == code))).scalars().first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Coupon code already exists")
-
     badge = payload.get("badgeText") or (
         f"{payload.get('value', 0)}% OFF" if discount_type == "PERCENT" else
         f"FLAT ₹{payload.get('value', 0)} OFF" if discount_type == "FLAT" else
@@ -3703,6 +3735,40 @@ async def create_admin_coupon(
     bogo_type = payload.get("bogoType")
     if bogo_type:
         bogo_type = str(bogo_type).strip() or None
+
+    # Check unique: if ID or code exists, perform ID-wise update
+    coupon_id = payload.get("id") or payload.get("couponId")
+    existing = None
+    if coupon_id:
+        existing = (await db.execute(select(Coupon).where(Coupon.id == str(coupon_id).strip()))).scalars().first()
+    if not existing:
+        existing = (await db.execute(select(Coupon).where(func.upper(Coupon.code) == code))).scalars().first()
+
+    if existing:
+        existing.code = code
+        existing.discountType = discount_type
+        existing.bogoType = bogo_type
+        existing.triggerVariant = payload.get("triggerVariant") or None
+        existing.rewardVariant = payload.get("rewardVariant") or None
+        existing.defaultFreeDishId = payload.get("defaultFreeDishId") or None
+        existing.maxFreeItems = int(payload.get("maxFreeItems") or 3)
+        existing.bogoDishId = payload.get("bogoDishId") or None
+        existing.autoApply = bool(payload.get("autoApply", False))
+        existing.badgeText = badge or None
+        existing.menuSection = payload.get("menuSection") or None
+        existing.value = float(payload.get("value") or 0.0)
+        existing.minOrder = float(payload.get("minOrder") or 0.0)
+        existing.maxDiscount = float(payload["maxDiscount"]) if payload.get("maxDiscount") is not None else None
+        existing.maxUses = int(payload["maxUses"]) if payload.get("maxUses") is not None else None
+        existing.isActive = bool(payload.get("isActive", True))
+        if payload.get("expiresAt"):
+            existing.expiresAt = datetime.fromisoformat(payload["expiresAt"])
+        existing.categoryId = payload.get("categoryId") or None
+        existing.restaurantId = payload.get("restaurantId") or None
+        existing.oncePerCustomer = bool(payload.get("oncePerCustomer", False))
+        await db.commit()
+        await db.refresh(existing)
+        return existing
 
     new_coupon = Coupon(
         id=f"cpn_{uuid.uuid4().hex[:12]}",

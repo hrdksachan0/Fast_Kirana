@@ -163,9 +163,15 @@ export function CouponsTab({
     const raw = isEditing ? (couponEditForm.menuSection || '') : (newCoupon.menuSection || '')
     const current = raw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
     const normalized = targetTag.trim().toLowerCase()
+
+    const matchingSec = restaurantSections.find(
+      (s) => s.id.toLowerCase() === normalized || s.tag.toLowerCase() === normalized
+    )
+    const aliases = matchingSec ? [matchingSec.id.toLowerCase(), matchingSec.tag.toLowerCase()] : [normalized]
+
     let updated: string[]
-    if (current.includes(normalized)) {
-      updated = current.filter((s) => s !== normalized)
+    if (current.some((c) => aliases.includes(c))) {
+      updated = current.filter((s) => !aliases.includes(s))
     } else {
       updated = [...current, normalized]
     }
@@ -539,21 +545,51 @@ export function CouponsTab({
                         <span className="text-[9px] text-text-muted">Click tags to toggle</span>
                       </div>
 
-                      {/* Display restaurant dynamic sections if available */}
+                      {/* Display restaurant dynamic sections dropdown & chips if available */}
                       {restaurantSections.length > 0 && (
-                        <div className="space-y-1">
-                          <span className="text-[9px] font-bold text-text-muted block">Outlet Menu Sections:</span>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-[9.5px] font-bold text-text-secondary block mb-1">
+                              Choose Menu Section by ID &amp; Name:
+                            </label>
+                            <select
+                              value={
+                                restaurantSections.find(s => 
+                                  (newCoupon.menuSection || '').toLowerCase().includes(s.id.toLowerCase()) || 
+                                  (newCoupon.menuSection || '').toLowerCase().includes(s.tag.toLowerCase())
+                                )?.id || ''
+                              }
+                              onChange={(e) => {
+                                const chosen = restaurantSections.find(s => s.id === e.target.value)
+                                if (chosen) {
+                                  setNewCoupon({ ...newCoupon, menuSection: chosen.id, bogoDishId: '' })
+                                } else {
+                                  setNewCoupon({ ...newCoupon, menuSection: e.target.value, bogoDishId: '' })
+                                }
+                              }}
+                              className="w-full px-3 py-2 text-xs rounded-xl border bg-background font-bold text-text-primary"
+                            >
+                              <option value="">Select Menu Section ID...</option>
+                              {restaurantSections.map((sec) => (
+                                <option key={sec.id} value={sec.id}>
+                                  [ID: {sec.id}] {sec.title} ({sec.tag})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <span className="text-[9px] font-bold text-text-muted block">Outlet Menu Sections (Click ID to toggle):</span>
                           <div className="flex flex-wrap gap-1.5">
                             {restaurantSections.map((sec) => {
                               const activeTags = (newCoupon.menuSection || '').split(',').map((s) => s.trim().toLowerCase())
-                              const isSelected = activeTags.includes(sec.tag.toLowerCase())
+                              const isSelected = activeTags.includes(sec.tag.toLowerCase()) || activeTags.includes(sec.id.toLowerCase())
                               return (
                                 <button
                                   key={sec.id}
                                   type="button"
-                                  onClick={() => toggleSectionTag(sec.tag, false)}
+                                  onClick={() => toggleSectionTag(sec.id, false)}
                                   className={cn(
-                                    "px-2.5 py-1 text-xs rounded-lg font-bold border transition-all cursor-pointer flex items-center gap-1",
+                                    "px-2.5 py-1 text-xs rounded-lg font-bold border transition-all cursor-pointer flex items-center gap-1.5",
                                     isSelected
                                       ? "bg-emerald-600 text-white border-emerald-700 shadow-2xs"
                                       : "bg-muted/40 hover:bg-muted text-text-secondary border-border"
@@ -561,6 +597,12 @@ export function CouponsTab({
                                 >
                                   <span>{sec.emoji || '🍽️'}</span>
                                   <span>{sec.title}</span>
+                                  <span className={cn(
+                                    "text-[9px] font-mono px-1 py-0.5 rounded",
+                                    isSelected ? "bg-white/20 text-white" : "bg-muted text-text-muted"
+                                  )}>
+                                    ID: {sec.id}
+                                  </span>
                                 </button>
                               )
                             })}
@@ -598,11 +640,11 @@ export function CouponsTab({
                       {/* Manual Section Input */}
                       <div>
                         <label className="text-[9.5px] font-bold text-text-secondary block mb-1">
-                          Active Target Sections (comma-separated):
+                          Active Target Menu Section IDs / Tags (comma-separated):
                         </label>
                         <input
                           type="text"
-                          placeholder="e.g. pizza, burger, pasta"
+                          placeholder="e.g. sec_pizza_mu2pffns, sec_burger_mu0xwtq4, pizza"
                           value={newCoupon.menuSection || ''}
                           onChange={(e) => setNewCoupon({ ...newCoupon, menuSection: e.target.value, bogoDishId: '' })}
                           className="w-full px-3 py-1.5 text-xs rounded-xl border bg-background font-mono font-bold text-emerald-600 dark:text-emerald-400"
@@ -1431,8 +1473,8 @@ export function CouponsTab({
                             </div>
                           ) : c.menuSection ? (
                             <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                              <span>📂 Sections:</span>
-                              <span className="font-extrabold">{c.menuSection}</span>
+                              <span>📂 Section ID / Tag:</span>
+                              <span className="font-extrabold font-mono">{c.menuSection}</span>
                             </div>
                           ) : (
                             <span className="block text-[9px] text-text-muted">
@@ -1706,21 +1748,51 @@ export function CouponsTab({
                         <span className="text-[9px] text-text-muted">Click tags to toggle</span>
                       </div>
 
-                      {/* Display restaurant dynamic sections if available */}
+                      {/* Display restaurant dynamic sections dropdown & chips if available */}
                       {restaurantSections.length > 0 && (
-                        <div className="space-y-1">
-                          <span className="text-[9px] font-bold text-text-muted block">Outlet Menu Sections:</span>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-[9.5px] font-bold text-text-secondary block mb-1">
+                              Choose Menu Section by ID &amp; Name:
+                            </label>
+                            <select
+                              value={
+                                restaurantSections.find(s => 
+                                  (couponEditForm.menuSection || '').toLowerCase().includes(s.id.toLowerCase()) || 
+                                  (couponEditForm.menuSection || '').toLowerCase().includes(s.tag.toLowerCase())
+                                )?.id || ''
+                              }
+                              onChange={(e) => {
+                                const chosen = restaurantSections.find(s => s.id === e.target.value)
+                                if (chosen) {
+                                  setCouponEditForm({ ...couponEditForm, menuSection: chosen.id, bogoDishId: '' })
+                                } else {
+                                  setCouponEditForm({ ...couponEditForm, menuSection: e.target.value, bogoDishId: '' })
+                                }
+                              }}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-background font-bold text-text-primary"
+                            >
+                              <option value="">Select Menu Section ID...</option>
+                              {restaurantSections.map((sec) => (
+                                <option key={sec.id} value={sec.id}>
+                                  [ID: {sec.id}] {sec.title} ({sec.tag})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <span className="text-[9px] font-bold text-text-muted block">Outlet Menu Sections (Click ID to toggle):</span>
                           <div className="flex flex-wrap gap-1.5">
                             {restaurantSections.map((sec) => {
                               const activeTags = (couponEditForm.menuSection || '').split(',').map((s) => s.trim().toLowerCase())
-                              const isSelected = activeTags.includes(sec.tag.toLowerCase())
+                              const isSelected = activeTags.includes(sec.tag.toLowerCase()) || activeTags.includes(sec.id.toLowerCase())
                               return (
                                 <button
                                   key={sec.id}
                                   type="button"
-                                  onClick={() => toggleSectionTag(sec.tag, true)}
+                                  onClick={() => toggleSectionTag(sec.id, true)}
                                   className={cn(
-                                    "px-2 py-0.5 text-xs rounded font-bold border transition-all cursor-pointer flex items-center gap-1",
+                                    "px-2 py-0.5 text-xs rounded font-bold border transition-all cursor-pointer flex items-center gap-1.5",
                                     isSelected
                                       ? "bg-emerald-600 text-white border-emerald-700 shadow-2xs"
                                       : "bg-muted/40 hover:bg-muted text-text-secondary border-border"
@@ -1728,6 +1800,12 @@ export function CouponsTab({
                                 >
                                   <span>{sec.emoji || '🍽️'}</span>
                                   <span>{sec.title}</span>
+                                  <span className={cn(
+                                    "text-[9px] font-mono px-1 py-0.5 rounded",
+                                    isSelected ? "bg-white/20 text-white" : "bg-muted text-text-muted"
+                                  )}>
+                                    ID: {sec.id}
+                                  </span>
                                 </button>
                               )
                             })}
@@ -1765,11 +1843,11 @@ export function CouponsTab({
                       {/* Manual Section Input */}
                       <div>
                         <label className="text-[9px] font-bold text-text-secondary block mb-1">
-                          Active Target Sections (comma-separated):
+                          Active Target Menu Section IDs / Tags (comma-separated):
                         </label>
                         <input
                           type="text"
-                          placeholder="e.g. pizza, burger, pasta"
+                          placeholder="e.g. sec_pizza_mu2pffns, sec_burger_mu0xwtq4, pizza"
                           value={couponEditForm.menuSection || ''}
                           onChange={(e) => setCouponEditForm({ ...couponEditForm, menuSection: e.target.value, bogoDishId: '' })}
                           className="w-full px-2.5 py-1 text-xs rounded-lg border bg-background font-mono font-bold text-emerald-600 dark:text-emerald-400"

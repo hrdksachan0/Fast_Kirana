@@ -1270,14 +1270,23 @@ async def create_order(
                         sec_items = []
                         for it in pool:
                             base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
-                            m_sec = str((it.get("product") or {}).get("menuSection") or getattr(base_p, "menuSection", "") or "").lower()
+                            prod_dict = it.get("product") if isinstance(it.get("product"), dict) else {}
+                            m_sec = str(prod_dict.get("menuSection") or getattr(base_p, "menuSection", "") or "").lower()
+                            m_sec_id = str(prod_dict.get("menuSectionId") or prod_dict.get("sectionId") or getattr(base_p, "menuSectionId", "") or "").lower()
                             tags = [str(t).lower() for t in (base_p.tags if base_p and base_p.tags else [])]
-                            name = str(base_p.name if base_p else (it.get("product") or {}).get("name") or "").lower()
+                            name = str(base_p.name if base_p else prod_dict.get("name") or "").lower()
                             slug = str(getattr(base_p, "slug", "") or "").lower()
 
                             matches = False
                             for f in sec_filters:
-                                if f in m_sec or any(f in t for t in tags) or f in slug:
+                                clean_f = f.replace("-", "").replace("_", "")
+                                if (m_sec_id and (f == m_sec_id or clean_f in m_sec_id.replace("-", "").replace("_", "") or m_sec_id.replace("-", "").replace("_", "") in clean_f)):
+                                    matches = True
+                                    break
+                                if any(f == t or clean_f in t.replace("-", "").replace("_", "") or t.replace("-", "").replace("_", "") in clean_f for t in tags):
+                                    matches = True
+                                    break
+                                if f in m_sec or f in slug:
                                     matches = True
                                     break
                                 other_sections = [s for s in known_sections if f not in s and s not in f]
@@ -1327,12 +1336,22 @@ async def create_order(
                                     filtered_bogo = []
                                     for it in bogo_items:
                                         base_p = next((p for p in db_products if p.id == it["product"]["id"].split("_")[0]), None)
-                                        m_sec = str((it.get("product") or {}).get("menuSection") or "").lower()
+                                        prod_dict = it.get("product") if isinstance(it.get("product"), dict) else {}
+                                        m_sec = str(prod_dict.get("menuSection") or getattr(base_p, "menuSection", "") or "").lower()
+                                        m_sec_id = str(prod_dict.get("menuSectionId") or prod_dict.get("sectionId") or getattr(base_p, "menuSectionId", "") or "").lower()
                                         tags = [str(t).lower() for t in (base_p.tags if base_p and base_p.tags else [])]
-                                        name = str(base_p.name if base_p else (it.get("product") or {}).get("name") or "").lower()
+                                        name = str(base_p.name if base_p else prod_dict.get("name") or "").lower()
+                                        slug = str(getattr(base_p, "slug", "") or "").lower()
                                         matches = False
                                         for f in sec_filters:
-                                            if f in m_sec or any(f in t for t in tags):
+                                            clean_f = f.replace("-", "").replace("_", "")
+                                            if (m_sec_id and (f == m_sec_id or clean_f in m_sec_id.replace("-", "").replace("_", "") or m_sec_id.replace("-", "").replace("_", "") in clean_f)):
+                                                matches = True
+                                                break
+                                            if any(f == t or clean_f in t.replace("-", "").replace("_", "") or t.replace("-", "").replace("_", "") in clean_f for t in tags):
+                                                matches = True
+                                                break
+                                            if f in m_sec or f in slug:
                                                 matches = True
                                                 break
                                             other_sections = [s for s in known_sections if f not in s and s not in f]

@@ -29,14 +29,25 @@ def filter_items_by_menu_section(item_list: List[Dict[str, Any]], menu_section_s
     ]
     filtered = []
     for it in item_list:
-        m_sec = str(it.get("menuSection") or (it.get("product") or {}).get("menuSection") or "").lower()
-        tags = [str(t).lower() for t in (it.get("tags") or (it.get("product") or {}).get("tags") or [])]
-        name = str(it.get("name") or (it.get("product") or {}).get("name") or "").lower()
-        slug = str(it.get("slug") or (it.get("product") or {}).get("slug") or "").lower()
+        prod = it.get("product") if isinstance(it.get("product"), dict) else {}
+        m_sec = str(it.get("menuSection") or prod.get("menuSection") or "").lower()
+        m_sec_id = str(it.get("menuSectionId") or prod.get("menuSectionId") or it.get("sectionId") or prod.get("sectionId") or "").lower()
+        raw_tags = it.get("tags") or prod.get("tags") or []
+        tags = [str(t).lower() for t in raw_tags]
+        name = str(it.get("name") or prod.get("name") or "").lower()
+        slug = str(it.get("slug") or prod.get("slug") or "").lower()
 
         matches = False
         for f in sec_filters:
-            if f in m_sec or any(f in t for t in tags) or f in slug:
+            clean_f = f.replace("-", "").replace("_", "")
+            # Direct match on Section ID or Tag
+            if (m_sec_id and (f == m_sec_id or clean_f in m_sec_id.replace("-", "").replace("_", "") or m_sec_id.replace("-", "").replace("_", "") in clean_f)):
+                matches = True
+                break
+            if any(f == t or clean_f in t.replace("-", "").replace("_", "") or t.replace("-", "").replace("_", "") in clean_f for t in tags):
+                matches = True
+                break
+            if f in m_sec or f in slug:
                 matches = True
                 break
             other_sections = [s for s in known_sections if f not in s and s not in f]

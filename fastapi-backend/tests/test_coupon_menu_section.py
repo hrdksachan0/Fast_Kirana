@@ -244,3 +244,42 @@ async def test_menu_section_multi_section_matching():
         assert resp.status_code == 200, resp.text
         data = resp.json()
         assert data["coupon"]["discountAmount"] == 27.0
+
+
+@pytest.mark.asyncio
+async def test_menu_section_id_matching():
+    """Verify coupon configured with specific Section ID (e.g. sec_pizza_mu2pffns) matches product tags and section ID."""
+    sec_id = "sec_pizza_mu2pffns"
+    async with TestingSessionLocal() as session:
+        coupon = Coupon(
+            id=f"cpn_secid_{uuid.uuid4().hex[:8]}",
+            code="PIZZAID50",
+            discountType="FLAT",
+            value=50.0,
+            minOrder=100.0,
+            menuSection=sec_id,
+            isActive=True,
+        )
+        session.add(coupon)
+        await session.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        payload = {
+            "code": "PIZZAID50",
+            "subtotal": 250.0,
+            "items": [
+                {
+                    "id": "prod_sec_p1",
+                    "name": "Special Cheese Pizza",
+                    "price": 250.0,
+                    "quantity": 1,
+                    "menuSectionId": sec_id,
+                    "tags": [sec_id, "pizza", "restaurant"],
+                }
+            ]
+        }
+        resp = await ac.post("/api/coupons/validate", json=payload)
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["coupon"]["discountAmount"] == 50.0
+        assert data["coupon"]["code"] == "PIZZAID50"

@@ -293,6 +293,8 @@ export const createCouponSchema = z.object({
 })
 
 export const adminCouponPostSchema = z.object({
+  id: z.string().nullable().optional(),
+  couponId: z.string().nullable().optional(),
   code: z.string().min(1, 'Coupon code is required').transform((c) => c.toUpperCase().trim()),
   discountType: z.enum(['FLAT', 'PERCENT', 'BOGO', 'FREE_DELIVERY']),
   bogoType: z.string().nullable().optional(),

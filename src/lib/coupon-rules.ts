@@ -61,18 +61,19 @@ export function isProductEligibleForCoupon(product: any, coupon: CouponRuleTarge
       .map((s) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
       .filter(Boolean)
 
-    if (secFilters.length > 0) {
       const pTags = (product.tags || []).map((t: string) => String(t).toLowerCase().replace(/[^a-z0-9]/g, ''))
-      const pSec = String(product.menuSection || product.sectionId || product.sectionTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+      const pSec = String(product.menuSection || product.sectionTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+      const pSecId = String((product as any).menuSectionId || (product as any).sectionId || '').toLowerCase().replace(/[^a-z0-9]/g, '')
       const pCatSlug = String(product.category?.slug || '').toLowerCase().replace(/[^a-z0-9]/g, '')
       const pCatName = String(product.category?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
       const pName = String(product.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
       const pSlug = String(product.slug || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
       const matches = secFilters.some((filter) => {
-        // Direct tag or explicit menu section match
+        // Direct Section ID match, tag match, or explicit menu section match
         const directMatch =
-          pTags.some((t: string) => t.includes(filter) || filter.includes(t)) ||
+          (pSecId && (pSecId === filter || pSecId.includes(filter) || filter.includes(pSecId))) ||
+          pTags.some((t: string) => t === filter || t.includes(filter) || filter.includes(t)) ||
           pSec.includes(filter) ||
           pCatSlug.includes(filter) ||
           pCatName.includes(filter)
