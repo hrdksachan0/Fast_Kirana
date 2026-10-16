@@ -171,15 +171,19 @@ class EmptyState extends StatelessWidget {
   factory EmptyState.offline({
     Key? key,
     VoidCallback? onRetry,
+    bool isCompact = false,
   }) {
     return EmptyState(
       key: key,
+      icon: Icons.wifi_off_rounded,
+      iconColor: AppDesignSystem.red600,
       emoji: '📡',
-      title: 'Connection Issue',
-      subtitle: 'Unable to reach FastKirana servers.\nPlease check your internet connection and retry.',
-      ctaLabel: 'Retry',
+      title: 'You are Offline',
+      subtitle: 'Unable to reach FastKirana servers.\nPlease check your Wi-Fi or cellular connection and retry.',
+      ctaLabel: 'Try Again',
       onCta: onRetry,
-      bgTint: AppDesignSystem.slate50,
+      bgTint: AppDesignSystem.statusCancelled,
+      isCompact: isCompact,
     );
   }
 

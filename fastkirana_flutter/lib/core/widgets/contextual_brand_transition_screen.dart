@@ -8,6 +8,8 @@ enum TransitionContextType {
   grocery,      // Fresh fruits, milk, kraft bag, green sparkles
   cafe,         // Gourmet burger, fries, steaming latte, food coral
   essentials,   // Smartwatch, electric trimmer, earbuds, cyan glow (Blinkit-plus style)
+  beauty,       // Compact blush powder, fluffy makeup brush, soft rose glow (Blinkit Beauty)
+  pharmacy,     // Blister pack, 3D medicine capsule, sky blue glow (Blinkit Pharmacy)
   checkout,     // Delivery box, lightning badge, GPS pin, gold amber
   storeFinder,  // Radar scanner, delivery scooter, map pin, indigo
 }
@@ -130,6 +132,10 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
         return AppDesignSystem.primary; // FastKirana Red / Coral
       case TransitionContextType.essentials:
         return AppDesignSystem.cyan600; // Cyan / Electric Blue
+      case TransitionContextType.beauty:
+        return const Color(0xFFE11D48); // Rose 600
+      case TransitionContextType.pharmacy:
+        return const Color(0xFF0284C7); // Sky 600
       case TransitionContextType.checkout:
         return AppDesignSystem.amber600; // Amber Gold
       case TransitionContextType.storeFinder:
@@ -145,14 +151,16 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
         return AppDesignSystem.rose100alt;
       case TransitionContextType.essentials:
         return AppDesignSystem.cyan100;
+      case TransitionContextType.beauty:
+        return const Color(0xFFFFF1F2); // Rose 50
+      case TransitionContextType.pharmacy:
+        return const Color(0xFFF0F9FF); // Sky 50
       case TransitionContextType.checkout:
         return AppDesignSystem.statusPending;
       case TransitionContextType.storeFinder:
         return AppDesignSystem.indigo50;
     }
   }
-
-
 
   String get _defaultTitle {
     switch (widget.contextType) {
@@ -162,6 +170,10 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
         return 'Hot & fresh food from\nnearby restaurants delivered!';
       case TransitionContextType.essentials:
         return 'Everything you need,\ndelivered at your doorstep!';
+      case TransitionContextType.beauty:
+        return 'Everything you need,\ndelivered at your doorstep'; // Exact 1:1 Blinkit match
+      case TransitionContextType.pharmacy:
+        return 'Medicines & wellness,\ndelivered in minutes!';
       case TransitionContextType.checkout:
         return 'Confirming order & routing\nto nearest delivery partner...';
       case TransitionContextType.storeFinder:
@@ -177,6 +189,10 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
         return 'NEARBY RESTAURANTS';
       case TransitionContextType.essentials:
         return 'FASTKIRANA QUICK COMMERCE';
+      case TransitionContextType.beauty:
+        return 'FASTKIRANA BEAUTY STORE';
+      case TransitionContextType.pharmacy:
+        return 'FASTKIRANA PHARMACY EXPRESS';
       case TransitionContextType.checkout:
         return 'FASTKIRANA PRIORITY FULFILLMENT';
       case TransitionContextType.storeFinder:
@@ -389,6 +405,16 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
           size: const Size(160, 140),
           painter: _EssentialsBackPainter(),
         );
+      case TransitionContextType.beauty:
+        return CustomPaint(
+          size: const Size(160, 140),
+          painter: _BeautyBackPainter(),
+        );
+      case TransitionContextType.pharmacy:
+        return CustomPaint(
+          size: const Size(160, 140),
+          painter: _PharmacyBackPainter(),
+        );
       case TransitionContextType.checkout:
         return CustomPaint(
           size: const Size(160, 140),
@@ -418,6 +444,16 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
         return CustomPaint(
           size: const Size(160, 140),
           painter: _EssentialsFrontPainter(),
+        );
+      case TransitionContextType.beauty:
+        return CustomPaint(
+          size: const Size(160, 140),
+          painter: _BeautyFrontPainter(),
+        );
+      case TransitionContextType.pharmacy:
+        return CustomPaint(
+          size: const Size(160, 140),
+          painter: _PharmacyFrontPainter(),
         );
       case TransitionContextType.checkout:
         return CustomPaint(
@@ -767,3 +803,225 @@ class _StoreFinderFrontPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. BEAUTY & COSMETICS PAINTERS (Blinkit 1:1: Blush Compact & Makeup Brush)
+// ─────────────────────────────────────────────────────────────────────────────
+class _BeautyBackPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // 1. Soft Floor Shadow
+    final shadowPaint = Paint()
+      ..color = const Color(0xFFF1F5F9)
+      ..style = PaintingStyle.fill;
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(center.dx, center.dy + 38), width: 110, height: 16),
+      shadowPaint,
+    );
+
+    // 2. Open Round Compact Lid (Angled up-left behind the base)
+    final lidCenter = Offset(center.dx - 18, center.dy - 10);
+    // Outer Lid rim (vibrant rose/pink)
+    canvas.drawCircle(lidCenter, 27, Paint()..color = const Color(0xFFE11D48));
+    // Inner Mirror circle (soft off-white / light blush glass sheen)
+    canvas.drawCircle(lidCenter, 22, Paint()..color = const Color(0xFFFFF1F2));
+    // Mirror glass diagonal reflection sheen
+    final sheenPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(lidCenter.dx - 12, lidCenter.dy + 6),
+      Offset(lidCenter.dx + 4, lidCenter.dy - 12),
+      sheenPaint,
+    );
+
+    // 3. Round Compact Base Container (Pink Tray)
+    final baseCenter = Offset(center.dx - 16, center.dy + 14);
+    // Outer compact casing (rich strawberry rose)
+    canvas.drawCircle(baseCenter, 29, Paint()..color = const Color(0xFFE11D48));
+    // Inner rim accent ring
+    canvas.drawCircle(baseCenter, 27, Paint()..color = const Color(0xFFF43F5E));
+    // Pressed Powder Pan (soft coral blush cake)
+    canvas.drawCircle(baseCenter, 23, Paint()..color = const Color(0xFFFB7185));
+    // Concentric shimmer swirl inside powder cake
+    final shimmerArc = Paint()
+      ..color = const Color(0xFFFDA4AF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCircle(center: baseCenter, radius: 15),
+      -math.pi / 4,
+      math.pi * 0.9,
+      false,
+      shimmerArc,
+    );
+    // Center embossed brand dot
+    canvas.drawCircle(baseCenter, 4, Paint()..color = const Color(0xFFFECDD3));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _BeautyFrontPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // Standing Fluffy Cosmetic Powder Brush (Right side of compact)
+    final brushX = center.dx + 20;
+    final brushY = center.dy - 2;
+
+    // 1. Natural Wooden / Rose-Gold Wand Handle
+    final handleRect = RRect.fromRectAndCorners(
+      Rect.fromLTWH(brushX - 5.5, brushY + 12, 11, 34),
+      bottomLeft: const Radius.circular(5.5),
+      bottomRight: const Radius.circular(5.5),
+      topLeft: const Radius.circular(2),
+      topRight: const Radius.circular(2),
+    );
+    canvas.drawRRect(handleRect, Paint()..color = const Color(0xFF9A3412)); // Warm wooden terracotta
+    // Highlight streak down the handle
+    canvas.drawLine(
+      Offset(brushX - 1.5, brushY + 15),
+      Offset(brushX - 1.5, brushY + 40),
+      Paint()..color = const Color(0xFFD97706).withValues(alpha: 0.4)..strokeWidth = 1.8,
+    );
+
+    // 2. Metallic Golden Ferrule (Holds bristles to handle)
+    final ferruleRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(brushX - 7, brushY + 3, 14, 11),
+      const Radius.circular(2.5),
+    );
+    canvas.drawRRect(ferruleRect, Paint()..color = const Color(0xFFF59E0B)); // Bright warm gold
+    // Ferrule shine band
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(brushX - 3, brushY + 3, 6, 11),
+        const Radius.circular(1),
+      ),
+      Paint()..color = const Color(0xFFFDE68A),
+    );
+
+    // 3. Fluffy Dome Powder Bristles
+    final bristlePath = Path()
+      ..moveTo(brushX - 7, brushY + 3)
+      ..quadraticBezierTo(brushX - 15, brushY - 14, brushX, brushY - 30) // Left flare to rounded dome
+      ..quadraticBezierTo(brushX + 15, brushY - 14, brushX + 7, brushY + 3) // Right flare from dome
+      ..close();
+
+    // Base Bristle Color (soft cream champagne)
+    canvas.drawPath(bristlePath, Paint()..color = const Color(0xFFFDE68A));
+
+    // Dip Powder Tip (top of bristles dusted in soft pink/rose blush)
+    final tipPath = Path()
+      ..moveTo(brushX - 10, brushY - 18)
+      ..quadraticBezierTo(brushX, brushY - 32, brushX + 10, brushY - 18)
+      ..quadraticBezierTo(brushX, brushY - 22, brushX - 10, brushY - 18)
+      ..close();
+    canvas.drawPath(tipPath, Paint()..color = const Color(0xFFFB7185).withValues(alpha: 0.9));
+
+    // Fine texture bristle strands
+    final bristlePaint = Paint()
+      ..color = const Color(0xFFF59E0B).withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(brushX - 3, brushY + 2), Offset(brushX - 5, brushY - 16), bristlePaint);
+    canvas.drawLine(Offset(brushX, brushY + 2), Offset(brushX, brushY - 20), bristlePaint);
+    canvas.drawLine(Offset(brushX + 3, brushY + 2), Offset(brushX + 5, brushY - 16), bristlePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. PHARMACY & WELLNESS PAINTERS (Blister Pack & 3D Two-Tone Capsule)
+// ─────────────────────────────────────────────────────────────────────────────
+class _PharmacyBackPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // Blister foil strip (angled on left)
+    final blisterX = center.dx - 22;
+    final blisterY = center.dy + 6;
+
+    final stripRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(blisterX, blisterY), width: 44, height: 56),
+      const Radius.circular(8),
+    );
+    canvas.drawRRect(stripRect, Paint()..color = const Color(0xFFE2E8F0));
+    canvas.drawRRect(stripRect, Paint()..color = const Color(0xFFCBD5E1)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+
+    // 4 blister bubble pills
+    final pillPaint = Paint()..color = const Color(0xFF38BDF8);
+    canvas.drawCircle(Offset(blisterX - 11, blisterY - 14), 6, pillPaint);
+    canvas.drawCircle(Offset(blisterX + 11, blisterY - 14), 6, pillPaint);
+    canvas.drawCircle(Offset(blisterX - 11, blisterY + 14), 6, pillPaint);
+    canvas.drawCircle(Offset(blisterX + 11, blisterY + 14), 6, pillPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PharmacyFrontPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // Floating Two-Tone Capsule Pill (Right side)
+    final capX = center.dx + 20;
+    final capY = center.dy - 6;
+
+    canvas.save();
+    canvas.translate(capX, capY);
+    canvas.rotate(-0.4); // Tilted capsule
+
+    // Left half (Sky Blue)
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        const Rect.fromLTWH(-18, -8, 18, 16),
+        topLeft: const Radius.circular(8),
+        bottomLeft: const Radius.circular(8),
+      ),
+      Paint()..color = const Color(0xFF0284C7),
+    );
+
+    // Right half (Clean White)
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        const Rect.fromLTWH(0, -8, 18, 16),
+        topRight: const Radius.circular(8),
+        bottomRight: const Radius.circular(8),
+      ),
+      Paint()..color = Colors.white,
+    );
+
+    // Capsule border
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(-18, -8, 36, 16), const Radius.circular(8)),
+      Paint()..color = const Color(0xFF0369A1)..style = PaintingStyle.stroke..strokeWidth = 1.2,
+    );
+
+    // Gloss sheen reflection along top
+    canvas.drawLine(
+      const Offset(-12, -4),
+      const Offset(12, -4),
+      Paint()..color = Colors.white.withValues(alpha: 0.65)..strokeWidth = 2..strokeCap = StrokeCap.round,
+    );
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+

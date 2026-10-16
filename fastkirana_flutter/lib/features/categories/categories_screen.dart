@@ -4,12 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/routes/page_transitions.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
-import 'category_products_screen.dart';
 import '../../widgets/voice_search_sheet.dart';
 import '../home/utils/category_visual_helper.dart';
+import '../../core/utils/category_transition_helper.dart';
 
 class CategoriesScreen extends ConsumerStatefulWidget {
   const CategoriesScreen({super.key});
@@ -453,11 +452,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        Navigator.push(
+        CategoryTransitionHelper.pushCategoryWithTransition(
           context,
-          FadeSlideRoute(
-            page: CategoryProductsScreen(category: category),
-          ),
+          ref,
+          category,
         );
       },
       child: Container(

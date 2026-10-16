@@ -9,6 +9,7 @@ import '../core/utils/app_connectivity.dart';
 class OfflineBanner extends ConsumerStatefulWidget {
   final VoidCallback? onRetry;
   final String? offlineText;
+  final String? onlineText;
   final bool showBackOnlineNotification;
   final bool showCachedNotice;
 
@@ -16,6 +17,7 @@ class OfflineBanner extends ConsumerStatefulWidget {
     super.key,
     this.onRetry,
     this.offlineText,
+    this.onlineText,
     this.showBackOnlineNotification = true,
     this.showCachedNotice = true,
   });
@@ -28,11 +30,26 @@ class _OfflineBannerState extends ConsumerState<OfflineBanner> with SingleTicker
   bool _showOnlineNotice = false;
   Timer? _onlineNoticeTimer;
   bool _previousOnlineState = true;
+  bool _isRetrying = false;
 
   @override
   void dispose() {
     _onlineNoticeTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _handleRetry() async {
+    if (_isRetrying) return;
+    HapticFeedback.lightImpact();
+    setState(() => _isRetrying = true);
+    try {
+      await ref.read(connectivityProvider).checkConnection();
+      widget.onRetry?.call();
+    } catch (_) {
+      // Keep banner accessible on failure
+    } finally {
+      if (mounted) setState(() => _isRetrying = false);
+    }
   }
 
   @override
@@ -98,6 +115,7 @@ class _OfflineBannerState extends ConsumerState<OfflineBanner> with SingleTicker
           ],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               width: 8,
@@ -121,57 +139,86 @@ class _OfflineBannerState extends ConsumerState<OfflineBanner> with SingleTicker
                 children: [
                   Text(
                     isOffline
-                        ? (widget.offlineText ?? '⚡ Offline Mode • Browsing Cached Products')
-                        : '🟢 Back Online • Live Cart & Catalog Synced',
+                        ? (widget.offlineText ?? 'Offline Mode • Browsing Cached Products')
+                        : (widget.onlineText ?? 'Back Online • Live Cart & Catalog Synced'),
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w800,
                       color: isOffline ? const Color(0xFF991B1B) : const Color(0xFF166534),
+                      height: 1.25,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
                   ),
-                  if (isOffline && widget.showCachedNotice)
+                  if (isOffline && widget.showCachedNotice) ...[
+                    const SizedBox(height: 2),
                     Text(
                       'Items added to cart will sync as soon as you reconnect.',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 9.5),
                         fontWeight: FontWeight.w500,
                         color: const Color(0xFFB91C1C),
+                        height: 1.25,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
                     ),
+                  ] else if (!isOffline) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Your cart and live prices are verified and up to date.',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 9.5),
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF15803D),
+                        height: 1.25,
+                      ),
+                      softWrap: true,
+                    ),
+                  ],
                 ],
               ),
             ),
             if (isOffline && widget.onRetry != null) ...[
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  widget.onRetry?.call();
-                },
+                onTap: _isRetrying ? null : _handleRetry,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: const Color(0xFFFCA5A5)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.refresh_rounded, size: 12, color: AppDesignSystem.red600),
-                      const SizedBox(width: 3),
-                      Text(
-                        'Retry',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 10.5),
-                          fontWeight: FontWeight.w800,
-                          color: AppDesignSystem.red600,
+                      if (_isRetrying)
+                        const SizedBox(
+                          width: 11,
+                          height: 11,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: AppDesignSystem.red600,
+                          ),
+                        )
+                      else ...[
+                        const Icon(Icons.refresh_rounded, size: 12, color: AppDesignSystem.red600),
+                        const SizedBox(width: 3),
+                        Text(
+                          'Retry',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w800,
+                            color: AppDesignSystem.red600,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

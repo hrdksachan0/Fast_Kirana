@@ -148,14 +148,14 @@ class _CartCouponCardState extends ConsumerState<CartCouponCard> {
                     ),
                     const SizedBox(height: 1),
                     Text(
-                      'Save extra with promo codes & vouchers',
+                      'Save extra with promo codes',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w500,
                         color: AppDesignSystem.slate500,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                      softWrap: true,
                     ),
                   ],
                 ),

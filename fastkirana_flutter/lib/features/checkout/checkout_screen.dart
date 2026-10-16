@@ -11,7 +11,9 @@ import '../../providers/address_provider.dart';
 import '../../providers/store_settings_provider.dart';
 import '../../core/services/location_service.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/zepto_connectivity_pill.dart';
 import '../../providers/store_hub_provider.dart';
+import '../../core/utils/app_connectivity.dart';
 import 'controllers/checkout_controller.dart';
 import 'widgets/checkout_trust_badges.dart';
 import 'widgets/checkout_delivery_address_card.dart';
@@ -45,6 +47,7 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final TextEditingController _deliveryNotesController = TextEditingController();
+  bool _isCheckingConnection = false;
 
   static const Color slateDark = AppDesignSystem.slate900;
   static const Color slateMuted = AppDesignSystem.slate500;
@@ -362,6 +365,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 // Processing Overlay
                 if (checkoutState.isPlacingOrder)
                   const Positioned.fill(child: CheckoutPlacingOrderOverlay()),
+
+                // Floating Dynamic Island connectivity pill
+                const ZeptoConnectivityPill(),
               ],
             ),
           ),
@@ -385,10 +391,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               heightFactor: 1.0,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: Responsive.defaultMaxContentWidth),
-                child: CheckoutBottomBar(
-                  grandTotal: grandTotal,
-                  isPlacingOrder: checkoutState.isPlacingOrder,
-                  onProceedToPay: () {
+                child: Builder(
+                  builder: (context) {
                     final activeCart = cart ?? Cart(
                       id: 'c',
                       userId: 'u',
@@ -397,18 +401,45 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       createdAt: DateTime.now(),
                       updatedAt: DateTime.now(),
                     );
-                    CheckoutPaymentSelectorSheet.show(
-                      context: context,
-                      selectedPayment: checkoutState.selectedPayment,
+
+                    void openPaymentSheet() {
+                      CheckoutPaymentSelectorSheet.show(
+                        context: context,
+                        selectedPayment: checkoutState.selectedPayment,
+                        grandTotal: grandTotal,
+                        isPlacingOrder: checkoutState.isPlacingOrder,
+                        onPaymentChanged: (method) {
+                          controller.setPaymentMethod(method);
+                        },
+                        onConfirm: () {
+                          controller.updateNotes(_deliveryNotesController.text);
+                          controller.handlePlaceOrder(context, cart: activeCart);
+                        },
+                      );
+                    }
+
+                    Future<void> retryConnectionAndProceed() async {
+                      if (_isCheckingConnection) return;
+                      setState(() => _isCheckingConnection = true);
+                      try {
+                        final isOnline = await ref.read(connectivityProvider).checkConnection();
+                        if (isOnline && mounted) {
+                          openPaymentSheet();
+                        }
+                      } catch (_) {
+                        // Keep offline state on error
+                      } finally {
+                        if (mounted) setState(() => _isCheckingConnection = false);
+                      }
+                    }
+
+                    return CheckoutBottomBar(
                       grandTotal: grandTotal,
                       isPlacingOrder: checkoutState.isPlacingOrder,
-                      onPaymentChanged: (method) {
-                        controller.setPaymentMethod(method);
-                      },
-                      onConfirm: () {
-                        controller.updateNotes(_deliveryNotesController.text);
-                        controller.handlePlaceOrder(context, cart: activeCart);
-                      },
+                      isOffline: !ref.watch(connectivityProvider).isOnline,
+                      isCheckingConnection: _isCheckingConnection,
+                      onRetryConnection: retryConnectionAndProceed,
+                      onProceedToPay: openPaymentSheet,
                     );
                   },
                 ),

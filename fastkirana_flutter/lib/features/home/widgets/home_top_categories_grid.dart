@@ -5,12 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../../core/theme/design_system.dart';
-import '../../../core/routes/page_transitions.dart';
 import '../../../data/models/category.dart';
 import '../../../providers/product_provider.dart';
-import '../../categories/category_products_screen.dart';
 import '../main_shell.dart';
 import '../utils/category_visual_helper.dart';
+import '../../../core/utils/category_transition_helper.dart';
 
 class HomeTopCategoriesGrid extends ConsumerWidget {
   const HomeTopCategoriesGrid({super.key});
@@ -126,6 +125,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                         Expanded(
                           child: _buildHeroCard(
                             context,
+                            ref,
                             bento.heroes[h].category,
                             bento.heroes[h].customName,
                           ),
@@ -138,7 +138,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
 
                 // 3. Compact 4-Column Grid (Symmetric Rows)
                 if (bento.compacts.isNotEmpty) ...[
-                  _buildCompactGrid(context, bento.compacts),
+                  _buildCompactGrid(context, ref, bento.compacts),
                 ],
               ],
             ),
@@ -153,6 +153,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
   // ─── HERO CARD (50% WIDTH, WIDE LUXURY APPETIZING CONTAINER) ───
   Widget _buildHeroCard(
     BuildContext context,
+    WidgetRef ref,
     Category cat,
     String? customDisplayName,
   ) {
@@ -165,10 +166,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
       scaleFactor: 0.95,
       onTap: () {
         HapticFeedback.lightImpact();
-        Navigator.push(
-          context,
-          FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
-        );
+        CategoryTransitionHelper.pushCategoryWithTransition(context, ref, cat);
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -265,6 +263,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
   // ─── COMPACT GRID (CLEAN SQUIRCLE PODS) ───
   Widget _buildCompactGrid(
     BuildContext context,
+    WidgetRef ref,
     List<_CategorySlot> compacts,
   ) {
     final int crossAxisCount = (compacts.length % 3 == 0) ? 3 : 4;
@@ -291,6 +290,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                   Expanded(
                     child: _buildCompactCard(
                       context,
+                      ref,
                       rows[r][c].category,
                       rows[r][c].customName,
                     ),
@@ -308,6 +308,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
   // ─── COMPACT CARD (25% WIDTH, LUXURY SQUIRCLE CONTAINER) ───
   Widget _buildCompactCard(
     BuildContext context,
+    WidgetRef ref,
     Category cat,
     String? customDisplayName,
   ) {
@@ -320,10 +321,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
       scaleFactor: 0.95,
       onTap: () {
         HapticFeedback.lightImpact();
-        Navigator.push(
-          context,
-          FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
-        );
+        CategoryTransitionHelper.pushCategoryWithTransition(context, ref, cat);
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,

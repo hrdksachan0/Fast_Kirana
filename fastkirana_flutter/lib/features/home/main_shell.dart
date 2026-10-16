@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/floating_cart_bar.dart';
 import '../../widgets/floating_order_tracking_bar.dart';
+import '../../widgets/zepto_connectivity_pill.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/notification_service.dart';
@@ -230,6 +231,9 @@ class _MainShellState extends ConsumerState<MainShell>
               // Slim Modern Floating Sticky Cart Bar (Docked right above Bottom Navigation, hidden on Profile tab)
               if (selectedIndex != 3)
                 const FloatingCartBar(bottomOffset: cartBottomOffset),
+
+              // Global Zepto/Blinkit-style Floating Dynamic Island Connectivity Pill
+              const ZeptoConnectivityPill(),
             ],
           ),
         ),

@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+import 'dart:async';import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/routes/page_transitions.dart';
+import '../../core/utils/app_connectivity.dart';
+import '../../core/widgets/contextual_brand_transition_screen.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
@@ -33,14 +35,21 @@ class _SubcatItem {
 
 class CategoryProductsScreen extends ConsumerStatefulWidget {
   final Category category;
-  const CategoryProductsScreen({super.key, required this.category});
+  final TransitionContextType? loadingContext;
+  final Duration loadingTimeout;
+  const CategoryProductsScreen({super.key, required this.category,
+      this.loadingContext,
+      this.loadingTimeout = const Duration(milliseconds: 1200)});
 
   @override
   ConsumerState<CategoryProductsScreen> createState() => _CategoryProductsScreenState();
 }
 
 class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen> {
-  int _selectedSubcatIndex = 0;
+  String _selectedSubcatId = 'all';
+  bool _showContextualLoader = false;
+  Timer? _loadingDelay;
+  Timer? _loadingLimit;
   String _selectedSort = 'Popularity';
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
@@ -54,6 +63,15 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    if (widget.loadingContext != null &&
+        widget.loadingTimeout > const Duration(milliseconds: 180)) {
+      _loadingDelay = Timer(const Duration(milliseconds: 180), () {
+        if (mounted) setState(() => _showContextualLoader = true);
+      });
+      _loadingLimit = Timer(widget.loadingTimeout, () {
+        if (mounted) setState(() => _showContextualLoader = false);
+      });
+    }
   }
 
   void _onScroll() {
@@ -78,6 +96,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
 
   @override
   void dispose() {
+    _loadingDelay?.cancel();
+    _loadingLimit?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _searchController.dispose();
@@ -92,6 +112,25 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
         ? widget.category.id
         : (widget.category.slug.isNotEmpty ? widget.category.slug : widget.category.id);
     final productsAsync = ref.watch(productsProvider(catKey));
+    final isOnline = ref.watch(connectivityProvider).isOnline;
+    final cachedPreview = ref
+        .read(productRepositoryProvider)
+        .peekCachedProducts(
+            categoryKey: catKey,
+            storeId: ref.watch(currentStoreHubProvider).id);
+    final visibleProductsAsync =
+        !productsAsync.hasValue && (cachedPreview?.isNotEmpty ?? false)
+            ? AsyncValue<List<Product>>.data(cachedPreview!)
+            : productsAsync;
+    if (_showContextualLoader &&
+        widget.loadingContext != null &&
+        !visibleProductsAsync.hasValue &&
+        productsAsync.isLoading &&
+        isOnline &&
+        !MediaQuery.disableAnimationsOf(context)) {
+      return ContextualBrandTransitionScreen(
+          contextType: widget.loadingContext!);
+    }
     final catalogProducts = ref.watch(homeProductCatalogProvider).valueOrNull ?? [];
     final categoriesAsync = ref.watch(categoriesProvider);
     final cartCount = ref.watch(cartProvider).value?.totalItems ?? 0;
@@ -188,12 +227,12 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                   itemCount: subcats.length,
                   itemBuilder: (context, idx) {
                     final item = subcats[idx];
-                    final isSelected = _selectedSubcatIndex == idx;
+                    final isSelected = _selectedSubcatId == item.id;
 
                     return GestureDetector(
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        _selectedSubcatIndex = idx;
+                            _selectedSubcatId = item.id;
                         _resetPagination();
                       },
                       child: Container(
@@ -272,6 +311,22 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
               Expanded(
                 child: Column(
                   children: [
+                    if ((!isOnline && visibleProductsAsync.valueOrNull?.isNotEmpty == true) ||
+                          (visibleProductsAsync.hasValue &&
+                              productsAsync.isLoading))
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                          child: Text(
+                            !isOnline
+                                ? 'Saved products · Prices and availability may have changed.'
+                                : 'Updating prices and availability…',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                    color: AppDesignSystem.textSecondary),
+                          ),
+                        ),
                     // Search & Filter Header
                     Container(
                       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
@@ -456,7 +511,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
 
                     // Products Grid
                     Expanded(
-                      child: productsAsync.when(
+                      child: visibleProductsAsync.when(
+                          skipLoadingOnRefresh: true,
                         data: (products) {
                           var list = List<Product>.from(products);
 
@@ -474,8 +530,10 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               final unitMatch = p.unit.toLowerCase().contains(_searchQuery);
                               return nameMatch || tagMatch || descMatch || unitMatch;
                             }).toList();
-                          } else if (_selectedSubcatIndex > 0 && _selectedSubcatIndex < subcats.length) {
-                            final selectedSubcat = subcats[_selectedSubcatIndex];
+                          } else if (_selectedSubcatId != 'all' && subcats.any(
+                                    (item) => item.id == _selectedSubcatId)) {
+                            final selectedSubcat = subcats.firstWhere(
+                                  (item) => item.id == _selectedSubcatId);
                             if (selectedSubcat.id != 'all') {
                               list = list.where((p) => isProductInGroceryCategory(p, selectedSubcat)).toList();
                             }
@@ -520,6 +578,23 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                           });
 
                           if (list.isEmpty) {
+                              if (!isOnline) {
+                                return Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(24),
+                                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                      const Icon(Icons.wifi_off_rounded, size: 36, color: AppDesignSystem.textSecondary),
+                                      const SizedBox(height: 12),
+                                      const Text('Connect to load this category', textAlign: TextAlign.center),
+                                      const SizedBox(height: 12),
+                                      TextButton(onPressed: () async {
+                                        final reachable = await ref.read(connectivityProvider).checkConnection();
+                                        if (mounted && reachable) ref.invalidate(productsProvider(catKey));
+                                      }, child: const Text('Try again')),
+                                    ]),
+                                  ),
+                                );
+                              }
                             final currentHub = ref.watch(currentStoreHubProvider);
                             final hubCity = currentHub.city.isNotEmpty ? currentHub.city : currentHub.name;
                             return Center(
@@ -583,6 +658,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                               ref.invalidate(productsProvider(widget.category.id));
                             },
                             child: CustomScrollView(
+                                    key: PageStorageKey(
+                                        'category-products-$catKey'),
                               controller: _scrollController,
                               physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                                 slivers: [
@@ -617,20 +694,13 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                       ),
                                     ),
                                   ),
-                                  if (hasMore)
-                                    const SliverToBoxAdapter(
-                                      child: Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 16),
+                                  if (hasMore) SliverToBoxAdapter(
                                         child: Center(
-                                          child: SizedBox(
-                                            width: 22,
-                                            height: 22,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2.2,
-                                              color: primaryRed,
+                                          child: TextButton(
+                                            onPressed: () => setState(() => _visibleCount += 12),
+                                            child: const Text('Show more products'
                                             ),
-                                          ),
-                                        ),
+                                          )
                                       ),
                                     ),
                                   SliverToBoxAdapter(
@@ -642,16 +712,27 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                           },
                         );
                         },
-                        loading: () => GridView.builder(
+                        loading: () =>
+                              LayoutBuilder(builder: (context, constraints) {
+                            final columns = (constraints.maxWidth / 140)
+                                .floor()
+                                .clamp(2, 6);
+                            final cardWidth = (constraints.maxWidth -
+                                    12 -
+                                    (columns - 1) * 8) /
+                                columns;
+                            return GridView.builder(
                           padding: const EdgeInsets.fromLTRB(6, 6, 6, 20),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, smallTablet: 3, tablet: 4, desktop: 5),
+                            crossAxisCount: columns,
                             childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
                             crossAxisSpacing: 8,
                             mainAxisSpacing: 10,
                           ),
                           itemCount: 6,
-                          itemBuilder: (_, __) => const ProductCardSkeleton(isCompact: true),
+                          itemBuilder: (_, __) => ProductCardSkeleton(isCompact: true, width: cardWidth),
+                            );
+                          }
                         ),
                         error: (e, _) => Center(
                           child: Padding(

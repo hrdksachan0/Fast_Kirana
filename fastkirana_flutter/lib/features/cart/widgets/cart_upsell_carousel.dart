@@ -52,60 +52,70 @@ class CartUpsellCarousel extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      hasFoodItem ? '🥤' : '🛒',
-                      style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14)),
-                    ),
-                    const SizedBox(width: 6),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                Expanded(
+                  child: Row(
+                    children: [
+                      Text(
+                        hasFoodItem ? '🥤' : '🛒',
+                        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14)),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              hasFoodItem ? 'Aap Ye Bhool Gaye?' : 'Frequently bought together',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13),
-                                fontWeight: FontWeight.w900,
-                                color: AppDesignSystem.slate900,
-                              ),
-                            ),
-                            if (hasFoodItem) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.rose50,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: AppDesignSystem.red100, width: 0.8),
-                                ),
-                                child: Text(
-                                  '1-TAP ADD',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 8.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: AppDesignSystem.primary,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    hasFoodItem ? 'Aap Ye Bhool Gaye?' : 'Frequently bought together',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 13),
+                                      fontWeight: FontWeight.w900,
+                                      color: AppDesignSystem.slate900,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                if (hasFoodItem) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: AppDesignSystem.rose50,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: AppDesignSystem.red100, width: 0.8),
+                                    ),
+                                    child: Text(
+                                      '1-TAP ADD',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: AppDesignSystem.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            Text(
+                              hasFoodItem
+                                  ? 'Chilled Coke, Thums Up & Ice Cream'
+                                  : 'Add essentials for your home',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                fontWeight: FontWeight.w600,
+                                color: AppDesignSystem.slate500,
                               ),
-                            ],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ],
                         ),
-                        Text(
-                          hasFoodItem
-                              ? 'Chilled Coke, Thums Up & Ice Cream'
-                              : 'Add essentials for your home',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 10.5),
-                            fontWeight: FontWeight.w600,
-                            color: AppDesignSystem.slate500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
                 Text(
                   'Slide →',

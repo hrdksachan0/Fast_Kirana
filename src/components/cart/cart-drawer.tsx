@@ -503,7 +503,7 @@ export function CartDrawer() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
             onClick={() => setCartOpen(false)}
           />
 
@@ -521,7 +521,7 @@ export function CartDrawer() {
                 setCartOpen(false)
               }
             }}
-            className="gpu-accelerated fixed bottom-0 left-0 right-0 sm:left-auto sm:right-0 sm:top-0 z-50 h-[88vh] max-h-[88dvh] sm:h-full w-full max-w-full sm:w-[420px] bg-white dark:bg-zinc-950 rounded-t-3xl sm:rounded-none shadow-2xl flex flex-col focus:outline-none border-t sm:border-t-0 sm:border-l border-zinc-100 dark:border-zinc-900/50 overflow-visible sm:overflow-x-hidden"
+            className="gpu-accelerated fixed bottom-0 left-0 right-0 sm:left-auto sm:right-0 sm:top-0 z-[70] h-[88vh] max-h-[88dvh] sm:h-full w-full max-w-full sm:w-[420px] bg-white dark:bg-zinc-950 rounded-t-3xl sm:rounded-none shadow-2xl flex flex-col focus:outline-none border-t sm:border-t-0 sm:border-l border-zinc-100 dark:border-zinc-900/50 overflow-visible sm:overflow-x-hidden"
           >
             {/* Swiggy-style Floating Close Button (Mobile Top-Center above bottom sheet) */}
             <button

@@ -53,6 +53,28 @@ class ProductRepository {
     }
   }
 
+  /// Read-only preview from this hub's cache while a live request runs.
+  List<Product>? peekCachedProducts({String? categoryKey, required String storeId}) {
+    final resolved = categoryKey == null ? null : resolveCategoryId(categoryKey);
+    final isId = resolved != null &&
+        (resolved.toUpperCase().startsWith('CAT-') || resolved.toUpperCase().startsWith('SUB-'));
+    final categoryCache = _categoryCachedProducts['$storeId|$resolved|${isId ? '' : categoryKey ?? ''}'];
+    final cached = categoryCache ?? _hubCachedProducts[storeId];
+    if (cached == null) return null;
+    return _filterProducts(List<Product>.of(cached), category: resolved)
+        .where((product) => product.restaurantId == null || product.restaurantId!.isEmpty)
+        .toList();
+  }
+
+  Future<List<Product>> getCachedProducts({String? categoryKey, required String storeId}) async {
+    final memory = peekCachedProducts(categoryKey: categoryKey, storeId: storeId);
+    if (memory != null) return memory;
+    final disk = await _loadProductsFromDisk(storeId);
+    if (disk == null) return [];
+    _hubCachedProducts[storeId] = disk;
+    return peekCachedProducts(categoryKey: categoryKey, storeId: storeId) ?? [];
+  }
+
   /// Public preload to warm up in-memory cache during main() initialization
   static Future<void> preloadDiskCache([String? hubId]) async {
     if (_preloadComplete) return;
@@ -337,13 +359,13 @@ class ProductRepository {
             lastCatTime != null &&
             now.difference(lastCatTime).inMinutes < _cacheTTLMinutes) {
           debugPrint('[ProductRepo] category cache HIT for $catCacheKey: ${cachedCatProds.length} items');
-          return _filterProducts(cachedCatProds, category: category, search: search, restaurantId: restaurantId);
+          return _filterProducts(cachedCatProds, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
         }
 
         final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, categoryId: resolvedId, storeId: effectiveStoreId, limit: limit);
         if (_inFlightFetches.containsKey(key) && !forceRefresh) {
           final products = await _inFlightFetches[key]!;
-          return _filterProducts(products, category: category, search: search, restaurantId: restaurantId);
+          return _filterProducts(products, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
         }
 
         final future = _fetchLiveProducts(
@@ -364,7 +386,7 @@ class ProductRepository {
           _categoryLastFetchTime[catCacheKey] = DateTime.now();
         }
 
-        return _filterProducts(liveProducts, category: category, search: search, restaurantId: restaurantId);
+        return _filterProducts(liveProducts, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
       }
 
       // Case B: Full Catalog / Search / Restaurant Query
@@ -380,7 +402,7 @@ class ProductRepository {
           lastTime != null &&
           now.difference(lastTime).inMinutes < _cacheTTLMinutes) {
         debugPrint('[ProductRepo] in-memory cache HIT for hub $effectiveStoreId: ${cached.length} items');
-        return _filterProducts(cached, category: category, search: search, restaurantId: restaurantId);
+        return _filterProducts(cached, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
       }
 
       // 2. Disk cache hit for this specific hub (survives app restarts, customers only)
@@ -392,7 +414,7 @@ class ProductRepository {
           if (diskFresh) {
             _hubLastFetchTime[effectiveStoreId] = DateTime.now();
             debugPrint('[ProductRepo] disk cache HIT & FRESH for hub $effectiveStoreId: ${diskProducts.length} items');
-            return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
+            return _filterProducts(diskProducts, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
           }
           debugPrint('[ProductRepo] disk cache HIT but stale for hub $effectiveStoreId: revalidating in background');
           _fetchLiveProducts(
@@ -406,7 +428,7 @@ class ProductRepository {
             admin: admin,
             includeUnavailable: includeUnavailable,
           ).catchError((_) => <Product>[]);
-          return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
+          return _filterProducts(diskProducts, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
         }
       }
 
@@ -414,7 +436,7 @@ class ProductRepository {
       final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, categoryId: resolvedId, storeId: effectiveStoreId, limit: limit);
       if (_inFlightFetches.containsKey(key) && !forceRefresh && !admin) {
         final products = await _inFlightFetches[key]!;
-        return _filterProducts(products, category: category, search: search, restaurantId: restaurantId);
+        return _filterProducts(products, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
       }
 
       // 4. Fetch from network
@@ -436,7 +458,7 @@ class ProductRepository {
       if (search != null && search.isNotEmpty) {
         return liveProducts;
       }
-      return _filterProducts(liveProducts, category: category, search: search, restaurantId: restaurantId);
+      return _filterProducts(liveProducts, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
     } catch (e, st) {
       LoggerService.error('ProductRepository: fetchProducts failed ($search, cat=$category, catId=$resolvedId, rid=$restaurantId, store=$effectiveStoreId)', e, st);
       _inFlightFetches.remove(_cacheKey(search: search, restaurantId: restaurantId, category: category, categoryId: resolvedId, storeId: effectiveStoreId, limit: limit));
@@ -446,21 +468,21 @@ class ProductRepository {
         final catCacheKey = '$effectiveStoreId|$resolvedId|${category ?? ''}';
         final cachedCatProds = _categoryCachedProducts[catCacheKey];
         if (cachedCatProds != null && cachedCatProds.isNotEmpty) {
-          return _filterProducts(cachedCatProds, category: category, search: search, restaurantId: restaurantId);
+          return _filterProducts(cachedCatProds, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
         }
       }
 
       final memFallback = _hubCachedProducts[effectiveStoreId];
       if (memFallback != null && memFallback.isNotEmpty) {
-        return _filterProducts(memFallback, category: category, search: search, restaurantId: restaurantId);
+        return _filterProducts(memFallback, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
       }
       final diskProducts = await _loadProductsFromDisk(effectiveStoreId);
       if (diskProducts != null && diskProducts.isNotEmpty) {
         _hubCachedProducts[effectiveStoreId] = diskProducts;
         _hubLastFetchTime[effectiveStoreId] = DateTime.now();
-        return _filterProducts(diskProducts, category: category, search: search, restaurantId: restaurantId);
+        return _filterProducts(diskProducts, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
       }
-      return _filterProducts(_getStaticFallbackProducts(), category: category, search: search, restaurantId: restaurantId);
+      return _filterProducts(_getStaticFallbackProducts(), category: category ?? resolvedId, search: search, restaurantId: restaurantId);
     }
   }
 

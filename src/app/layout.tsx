@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     'dark store Ghatampur 209206',
     'fast delivery Ghatampur'
   ],
-  manifest: '/manifest.json?v=2',
+  manifest: '/manifest.json?v=3',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'),
   alternates: {
     canonical: 'https://www.fastkirana.in',
@@ -87,10 +87,11 @@ export const metadata: Metadata = {
     siteName: 'Fast Kirana',
     images: [
       {
-        url: '/brand/fastkirana_app_icon.png',
-        width: 512,
-        height: 512,
+        url: '/brand/fastkirana_app_icon.png?v=3',
+        width: 1024,
+        height: 1024,
         alt: 'Fast Kirana Ghatampur Logo',
+        type: 'image/png',
       },
     ],
     locale: 'en_IN',
@@ -100,7 +101,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Fast Kirana - Online Grocery Delivery in Ghatampur',
     description: 'Order groceries online and get them delivered fast in Ghatampur, Kanpur.',
-    images: ['/brand/fastkirana_app_icon.png'],
+    images: ['/brand/fastkirana_app_icon.png?v=3'],
   },
 }
 

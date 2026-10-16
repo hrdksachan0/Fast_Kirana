@@ -1485,7 +1485,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           onRetry: () {
                             _fetchLiveOrder();
                           },
-                          offlineText: 'Offline • Connecting to live delivery tracker...',
+                          offlineText: 'Offline • Live tracking paused',
+                          onlineText: 'Back Online • Live tracking updated',
                         ),
 
                         // 0. Cancelled Order Alert Card

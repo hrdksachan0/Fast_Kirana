@@ -17,6 +17,7 @@ import '../../../core/services/logger_service.dart';
 import '../../../core/services/tracer_service.dart';
 import '../../../core/services/customer_sound_service.dart';
 import '../../../core/utils/restaurant_utils.dart';
+import '../../../core/utils/app_connectivity.dart';
 import '../../../data/models/cart.dart';
 import '../../../data/models/checkout_draft.dart';
 import '../../../data/models/order.dart';
@@ -477,6 +478,20 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     HapticFeedback.heavyImpact();
     _currentContext = context;
     if (customDeliveryNotes != null) _customDeliveryNotes = customDeliveryNotes;
+
+    // Confirm API reachability immediately before either COD or payment begins.
+    final reachable = await ref.read(connectivityProvider).checkConnection();
+    if (!mounted) return;
+    if (!context.mounted || !reachable) {
+      state = state.copyWith(isPlacingOrder: false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Connect to the internet to confirm prices and place your order.'),
+        ));
+      }
+      return;
+    }
 
     final settings = ref.read(storeSettingsProvider).valueOrNull ?? const StoreSettings();
     final hasGrocery = cart.items.any((i) => !isRestaurantProduct(i.product));

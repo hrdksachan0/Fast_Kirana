@@ -4,6 +4,7 @@ import '../data/models/product.dart';
 import '../data/models/category.dart';
 import '../data/repositories/product_repository.dart';
 import '../core/network/api_client.dart';
+import '../core/utils/app_connectivity.dart';
 import '../core/utils/restaurant_utils.dart';
 import 'cart_provider.dart';
 import 'store_hub_provider.dart';
@@ -14,26 +15,51 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) {
   return ProductRepository(ref.read(dioProvider));
 });
 
+final catalogRecoveryEpochProvider = StateProvider<int>((ref) => 0);
+
+/// Refresh cached providers in place without replacing routes or clearing carts.
+final catalogRecoveryProvider = Provider<void>((ref) {
+  var wasOnline = ref.read(connectivityProvider).isOnline;
+  ref.listen(connectivityProvider, (_, connection) {
+    final recovered = !wasOnline && connection.isOnline;
+    wasOnline = connection.isOnline;
+    if (!recovered) return;
+    ref.read(catalogRecoveryEpochProvider.notifier).state++;
+    ref.invalidate(homeProductCatalogProvider);
+    ref.invalidate(categoriesProvider);
+    ref.invalidate(productsProvider);
+    ref.invalidate(trendingProductsProvider);
+    ref.invalidate(searchProductsProvider);
+  });
+});
+
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
-  return repo.getCategories(storeId: hub.id);
+  return repo.getCategories(storeId: hub.id,
+      forceRefresh: ref.read(catalogRecoveryEpochProvider) > 0);
 });
 
 final trendingProductsProvider = FutureProvider<List<Product>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
-  return repo.getProducts(limit: 10, storeId: hub.id);
+  return repo.getProducts(limit: 10, storeId: hub.id,
+      forceRefresh: ref.read(catalogRecoveryEpochProvider) > 0);
 });
 
 final productsProvider = FutureProvider.family<List<Product>, String?>((ref, categoryKey) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
+  final forceRefresh = ref.read(catalogRecoveryEpochProvider) > 0;
+  if (!ref.read(connectivityProvider).isOnline) {
+    return repo.getCachedProducts(categoryKey: categoryKey, storeId: hub.id);
+  }
   if (categoryKey == null || categoryKey.isEmpty) {
-    return repo.getProducts(limit: 500, storeId: hub.id, includeRestaurants: false);
+    return repo.getProducts(limit: 500, storeId: hub.id, includeRestaurants: false,
+        forceRefresh: forceRefresh);
   }
   final resolvedId = ProductRepository.resolveCategoryId(categoryKey);
   final isId = resolvedId.toUpperCase().startsWith('CAT-') || resolvedId.toUpperCase().startsWith('SUB-');
@@ -43,6 +69,7 @@ final productsProvider = FutureProvider.family<List<Product>, String?>((ref, cat
     limit: 500,
     storeId: hub.id,
     includeRestaurants: false,
+    forceRefresh: forceRefresh,
   );
 });
 
@@ -225,4 +252,3 @@ void refreshAllCatalogProviders(WidgetRef ref) {
   ref.invalidate(restaurantsProvider);
   ref.invalidate(homeRestaurantsProvider);
 }
-

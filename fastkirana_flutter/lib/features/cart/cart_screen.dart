@@ -490,7 +490,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     onRetry: () {
                       ref.read(cartProvider.notifier).loadCart();
                     },
-                    offlineText: 'Offline • Reconnecting cart sync...',
+                    offlineText: 'Offline • Cart saved locally',
+                    onlineText: 'Back Online • Cart synced',
                   ),
 
                   // 0. Dynamic Distance-Tiered Delivery Progress Bar

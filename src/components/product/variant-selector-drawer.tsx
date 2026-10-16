@@ -449,7 +449,7 @@ export function VariantSelectorDrawer() {
         {isOpen && activeProduct && (
           <motion.div
             key="variant-drawer-root"
-            className="fixed inset-0 z-50 flex items-end justify-center select-none"
+            className="fixed inset-0 z-[70] flex items-end justify-center select-none"
           >
             {/* Dark Backdrop */}
             <motion.div

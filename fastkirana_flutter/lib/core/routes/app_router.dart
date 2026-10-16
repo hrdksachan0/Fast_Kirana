@@ -22,6 +22,7 @@ import '../../features/location/delivery_location_screen.dart';
 import '../../features/location/map_picker_screen.dart';
 import '../../features/cafe/restaurant_dashboard.dart';
 import '../widgets/contextual_brand_transition_screen.dart';
+import '../../features/offline/offline_zero_signal_screen.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -159,6 +160,28 @@ class AppRouter {
             },
           ),
         );
+      case '/beauty-loading':
+      case '/cosmetics-loading':
+        return FadeThroughRoute(
+          page: ContextualBrandTransitionScreen(
+            contextType: TransitionContextType.beauty,
+            autoDismissDuration: const Duration(milliseconds: 1300),
+            onFinished: () {
+              AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
+            },
+          ),
+        );
+      case '/pharmacy-loading':
+      case '/medicine-loading':
+        return FadeThroughRoute(
+          page: ContextualBrandTransitionScreen(
+            contextType: TransitionContextType.pharmacy,
+            autoDismissDuration: const Duration(milliseconds: 1300),
+            onFinished: () {
+              AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
+            },
+          ),
+        );
       case '/essentials-loading':
       case '/quick-loading':
         return FadeThroughRoute(
@@ -190,6 +213,9 @@ class AppRouter {
             },
           ),
         );
+      case '/offline':
+      case '/no-internet':
+        return FadeSlideRoute(page: const OfflineZeroSignalScreen());
       default:
         debugPrint('[AppRouter] Unrecognized route: ${settings.name}, falling back to MainShell');
         return FadeThroughRoute(page: const MainShell());

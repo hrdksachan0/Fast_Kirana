@@ -24,6 +24,11 @@ export function CartStickyBar() {
 
   const toggleCart = useUIStore((s) => s.toggleCart)
   const isCartOpen = useUIStore((s) => s.isCartOpen)
+  const activeVariantProduct = useUIStore((s) => s.activeVariantProduct)
+  const isLocationPickerOpen = useUIStore((s) => s.isLocationPickerOpen)
+  const isSearchOpen = useUIStore((s) => s.isSearchOpen)
+  const isMobileMenuOpen = useUIStore((s) => s.isMobileMenuOpen)
+  const pendingConflictProduct = useUIStore((s) => s.pendingConflictProduct)
   const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
   const isLocationServiceable = useUIStore((s) => s.isLocationServiceable)
   const settings = useUIStore((s) => s.settings) || {}
@@ -61,7 +66,15 @@ export function CartStickyBar() {
     pathname.startsWith('/cafe-kitchen') ||
     pathname.startsWith('/delivery')
 
-  if (!mounted || items.length === 0 || isCartOpen || isIgnoredPage) return null
+  const isModalOrDrawerOpen =
+    isCartOpen ||
+    !!activeVariantProduct ||
+    isLocationPickerOpen ||
+    isSearchOpen ||
+    isMobileMenuOpen ||
+    !!pendingConflictProduct
+
+  if (!mounted || items.length === 0 || isModalOrDrawerOpen || isIgnoredPage) return null
 
   const subtotal = getSubtotal()
 

@@ -80,8 +80,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
     try {
       final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
       final text = clipboardData?.text?.trim() ?? '';
-      final digits = text.replaceAll(RegExp(r'\D'), '');
-      if (digits.length == 6 && digits != _clipboardOtp) {
+      if (text.isEmpty) return;
+      final match = RegExp(r'\b\d{6}\b').firstMatch(text);
+      final digits = match != null ? match.group(0)! : text.replaceAll(RegExp(r'\D'), '');
+      if (digits.length == 6 && digits != _clipboardOtp && digits != _currentOtp) {
         if (mounted) {
           setState(() => _clipboardOtp = digits);
         }
@@ -92,7 +94,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
   String get _currentOtp => _controllers.map((c) => c.text).join();
 
   void _fillOtp(String code) {
-    final clean = code.replaceAll(RegExp(r'\D'), '');
+    String clean = code.replaceAll(RegExp(r'\D'), '');
+    if (_clipboardOtp != null && _clipboardOtp!.length == 6 && clean.contains(_clipboardOtp!)) {
+      clean = _clipboardOtp!;
+    } else if (clean.length > 6) {
+      clean = clean.substring(clean.length - 6);
+    }
     for (int i = 0; i < 6; i++) {
       if (i < clean.length) {
         _controllers[i].text = clean[i];
@@ -125,14 +132,38 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
   void _onDigitChanged(int index, String value) {
     final digits = value.replaceAll(RegExp(r'\D'), '');
 
-    // Handle full paste into a single box
-    if (digits.length > 1) {
-      _fillOtp(digits);
+    // Handle full paste or multi-digit paste into any box
+    if (digits.length >= 3) {
+      String otpToFill = digits;
+      if (_clipboardOtp != null && _clipboardOtp!.length == 6 && digits.contains(_clipboardOtp!)) {
+        otpToFill = _clipboardOtp!;
+      } else if (digits.length > 6) {
+        otpToFill = digits.substring(digits.length - 6);
+      }
+      _fillOtp(otpToFill);
+      return;
+    }
+
+    if (digits.length == 2) {
+      final singleDigit = digits[digits.length - 1];
+      _controllers[index].text = singleDigit;
+      _controllers[index].selection = const TextSelection.collapsed(offset: 1);
+      HapticFeedback.selectionClick();
+      if (index < 5) {
+        _focusNodes[index + 1].requestFocus();
+      } else {
+        _focusNodes[index].unfocus();
+        if (_currentOtp.length == 6 && !_isLoading && !_isVerifying) {
+          _handleVerifyOtp();
+        }
+      }
+      setState(() {});
       return;
     }
 
     if (digits.isNotEmpty) {
       _controllers[index].text = digits[0];
+      _controllers[index].selection = const TextSelection.collapsed(offset: 1);
       HapticFeedback.selectionClick();
       if (index < 5) {
         _focusNodes[index + 1].requestFocus();
@@ -833,6 +864,43 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                       ],
 
 
+                      // Auto-detected Clipboard OTP Chip
+                      if (_clipboardOtp != null && _currentOtp != _clipboardOtp) ...[
+                        Center(
+                          child: InkWell(
+                            onTap: () {
+                              HapticFeedback.mediumImpact();
+                              _fillOtp(_clipboardOtp!);
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 14),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.paste_rounded, size: 15, color: Color(0xFF2563EB)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Paste OTP: $_clipboardOtp',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1D4ED8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+
                       // 6 Tactile, High-End OTP Boxes
                       LayoutBuilder(
                         builder: (context, constraints) {
@@ -886,7 +954,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                                     focusNode: focusNode,
                                     keyboardType: TextInputType.number,
                                     textAlign: TextAlign.center,
-                                    maxLength: 1,
+                                    autofillHints: const [AutofillHints.oneTimeCode],
+                                    enableInteractiveSelection: true,
                                     showCursor: hasFocus && !hasValue,
                                     cursorColor: primaryRed,
                                     cursorWidth: 2.2,
@@ -906,6 +975,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
                                     ],
                                     onChanged: (val) => _onDigitChanged(index, val),
                                     onTap: () {
+                                      _checkClipboard();
                                       controller.selection = TextSelection(
                                         baseOffset: 0,
                                         extentOffset: controller.text.length,
