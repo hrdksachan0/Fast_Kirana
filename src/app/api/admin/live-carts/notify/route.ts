@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     let fcmTopicsCount = 0
     let webPushCount = 0
 
-    // Collect all related user IDs (original userId, resolved user.id, and any user matching cleanPhone)
+    // Collect related user IDs
     const targetUserIds = new Set<string>([userId])
     if (user?.id) targetUserIds.add(user.id)
 
@@ -59,9 +59,10 @@ export async function POST(request: NextRequest) {
     const allUserIds = Array.from(targetUserIds)
 
     // 2. Send Firebase FCM Push Notification to Flutter mobile app
+    // STRICT ANTI-DUPLICATION: Send via Device Token OR Topic Fallback (NEVER BOTH!)
     if (fcmMessaging) {
       try {
-        const collapseTag = `cart_${cleanPhone || userId}`
+        const collapseTag = `cart_alert`
         const fcmPayload = {
           notification: {
             title,
@@ -97,45 +98,48 @@ export async function POST(request: NextRequest) {
           },
         }
 
-        // Direct delivery to all active device FCM tokens
+        // Check for active device tokens first
         const fcmRecords = await prisma.fcmToken.findMany({
           where: { userId: { in: allUserIds } },
           select: { token: true },
           orderBy: { createdAt: 'desc' },
-          take: 10,
+          take: 5,
         })
 
-        for (const rec of fcmRecords) {
-          try {
-            await fcmMessaging.send({
-              token: rec.token,
-              ...fcmPayload,
-            })
-            fcmTokensCount++
-          } catch (tokErr) {
-            console.warn('[FCM] Token dispatch warning:', tokErr)
+        const uniqueTokens = Array.from(new Set(fcmRecords.map((r) => r.token).filter(Boolean)))
+
+        if (uniqueTokens.length > 0) {
+          // Direct delivery: send ONLY to active device tokens (prevents 2x/3x topic duplicates!)
+          for (const tok of uniqueTokens) {
+            try {
+              await fcmMessaging.send({
+                token: tok,
+                ...fcmPayload,
+              })
+              fcmTokensCount++
+            } catch (tokErr) {
+              console.warn('[FCM] Token dispatch warning:', tokErr)
+            }
           }
-        }
-
-        // Broadcast to mobile topic channels for instant fallback receipt
-        if (cleanPhone.length === 10) {
-          try {
-            await fcmMessaging.send({
-              topic: `phone_${cleanPhone}`,
-              ...fcmPayload,
-            })
-            fcmTopicsCount++
-          } catch (_) {}
-        }
-
-        for (const uid of allUserIds) {
-          try {
-            await fcmMessaging.send({
-              topic: `user_${uid}`,
-              ...fcmPayload,
-            })
-            fcmTopicsCount++
-          } catch (_) {}
+        } else {
+          // Fallback ONLY when user has no registered device token in database
+          if (cleanPhone.length === 10) {
+            try {
+              await fcmMessaging.send({
+                topic: `phone_${cleanPhone}`,
+                ...fcmPayload,
+              })
+              fcmTopicsCount++
+            } catch (_) {}
+          } else {
+            try {
+              await fcmMessaging.send({
+                topic: `user_${userId}`,
+                ...fcmPayload,
+              })
+              fcmTopicsCount++
+            } catch (_) {}
+          }
         }
       } catch (fcmErr) {
         console.error('FCM cart dispatch error:', fcmErr)
@@ -143,12 +147,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Send WebPush Notification (for Web PWA / Browser users)
+    // Send to primary userId only to avoid duplicate WebPush across alias IDs
     const webPushOptions = {
       title,
       body: contentBody,
       icon: '/icons/icon-192.png',
       badge: '/icons/badge.png',
-      tag: `cart_alert_${cleanPhone || userId}`,
+      tag: `cart_alert`,
       data: {
         url: '/cart',
       },
@@ -158,6 +163,7 @@ export async function POST(request: NextRequest) {
       try {
         await sendPushNotification(uid, webPushOptions)
         webPushCount++
+        break // Stop after first matched user ID so the browser only receives 1 notification
       } catch (wpErr) {
         console.warn(`[WebPush] Dispatch error for user ${uid}:`, wpErr)
       }

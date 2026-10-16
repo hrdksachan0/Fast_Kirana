@@ -555,9 +555,13 @@ class NotificationService {
     final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
     // Foreground Deduplication within 30 seconds: exactly ONE notification per order
+    final isCartAlert = (data['type'] ?? '').toString().toUpperCase() == 'CART_ALERT' ||
+        title.toString().toLowerCase().contains('cart') ||
+        body.toString().toLowerCase().contains('cart');
+
     final dedupKey = (cleanOrderId != null && cleanOrderId.isNotEmpty)
         ? 'order_$cleanOrderId'
-        : (message.messageId ?? '${title}_${body.hashCode}');
+        : (isCartAlert ? 'cart_alert' : '${title}_${body.toString().trim()}');
 
     final now = DateTime.now().millisecondsSinceEpoch;
     _recentMessageTimes.removeWhere((_, time) => now - time > 30000);
@@ -616,8 +620,10 @@ class NotificationService {
 
     final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
         ? (cleanOrderId.hashCode & 0x7FFFFFFF)
-        : message.hashCode;
-    final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
+        : (isCartAlert ? 8888 : ('${title}_$body'.hashCode & 0x7FFFFFFF));
+    final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty)
+        ? 'order_$cleanOrderId'
+        : (isCartAlert ? 'cart_alert' : 'general_alert');
 
     final channelId = isOrderAlert
         ? 'fastkirana_order_buzzer_v2'

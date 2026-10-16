@@ -2540,20 +2540,20 @@ async def admin_notify_live_carts(
         }
 
         if tokens:
+            # Direct delivery to active device tokens only (prevents topic duplication)
             res = await send_fcm_notification(tokens, title, body_text, fcm_data)
             fcm_tokens_sent = res.get("success", 0)
-
-        if clean_phone and len(clean_phone) == 10:
+        elif clean_phone and len(clean_phone) == 10:
+            # Fallback ONLY when no device token is registered
             if await send_fcm_topic_notification(f"phone_{clean_phone}", title, body_text, fcm_data):
                 fcm_topics_sent += 1
-
-        for uid in all_user_ids:
-            if await send_fcm_topic_notification(f"user_{uid}", title, body_text, fcm_data):
+        elif all_user_ids:
+            if await send_fcm_topic_notification(f"user_{all_user_ids[0]}", title, body_text, fcm_data):
                 fcm_topics_sent += 1
     except Exception as e:
         logger.error(f"FCM live cart notify error: {e}")
 
-    # 2. Bridge WebPush notification
+    # 2. Bridge WebPush notification (send once to primary user ID)
     webpush_sent = 0
     try:
         for uid in all_user_ids:
@@ -2565,6 +2565,7 @@ async def admin_notify_live_carts(
             )
             if sent:
                 webpush_sent += 1
+                break  # Stop after first user to avoid duplicate WebPush across alias IDs
     except Exception as e:
         logger.error(f"WebPush bridge error: {e}")
 
