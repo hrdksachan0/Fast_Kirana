@@ -1363,9 +1363,42 @@ async def create_order(
                                             filtered_bogo.append(it)
                                     bogo_items = filtered_bogo
 
+                            SIZE_ALIASES = {
+                                'large': {'large', 'full', 'big', 'jumbo'},
+                                'full': {'large', 'full', 'big', 'jumbo'},
+                                'big': {'large', 'full', 'big', 'jumbo'},
+                                'jumbo': {'large', 'full', 'big', 'jumbo'},
+                                'medium': {'medium', 'regular', 'med', 'mid'},
+                                'regular': {'medium', 'regular', 'med', 'mid'},
+                                'med': {'medium', 'regular', 'med', 'mid'},
+                                'mid': {'medium', 'regular', 'med', 'mid'},
+                                'small': {'small', 'half', 'mini'},
+                                'half': {'small', 'half', 'mini'},
+                                'mini': {'small', 'half', 'mini'},
+                            }
+
+                            def get_variant_tokens(var_str):
+                                if not var_str:
+                                    return set()
+                                s = str(var_str).lower().strip()
+                                match = re.search(r'\b(medium|large|small|regular|half|full|mini|jumbo)\b', s, re.I)
+                                if match:
+                                    sz = match.group(1).lower()
+                                    aliases = set(SIZE_ALIASES.get(sz, {sz}))
+                                    aliases.add(s)
+                                    return aliases
+                                return {s}
+
+                            def item_matches_variant(text, var_str):
+                                if not var_str:
+                                    return True
+                                tokens = get_variant_tokens(var_str)
+                                text_lower = str(text or "").lower()
+                                return any(tok in text_lower for tok in tokens)
+
                             def parse_trigger_variant(raw):
                                 raw_str = str(raw or "").strip()
-                                size_match = re.search(r'\b(medium|large|small|regular|half|full)\b', raw_str, re.I)
+                                size_match = re.search(r'\b(medium|large|small|regular|half|full|mini|jumbo)\b', raw_str, re.I)
                                 trigger_sz = size_match.group(1).lower() if size_match else None
                                 num_match = re.search(r'\b\d+\b', raw_str)
                                 min_qty = int(num_match.group(0)) if num_match else (int(raw_str) if raw_str and not trigger_sz else 1)
@@ -1382,10 +1415,10 @@ async def create_order(
                                 return f"{var_name} {unit_str} {nm} {sel} {var}".lower()
 
                             if coupon.bogoType == "BUY_LARGE_GET_SMALL":
-                                trigger_var = (coupon.triggerVariant or "large").lower().strip()
-                                reward_var = (coupon.rewardVariant or "small").lower().strip()
+                                trigger_var = coupon.triggerVariant or "large"
+                                reward_var = coupon.rewardVariant or "small"
 
-                                trigger_items = [it for it in bogo_items if trigger_var in get_item_vtext(it)]
+                                trigger_items = [it for it in bogo_items if item_matches_variant(get_item_vtext(it), trigger_var)]
                                 total_trig_qty = sum(int(it.get("quantity", 1)) for it in trigger_items)
 
                                 reward_pool = bogo_items if coupon.bogoDishId else (bogo_items if coupon.menuSection else (rest_items if coupon.restaurantId else items))
@@ -1395,7 +1428,7 @@ async def create_order(
                                         if it["product"]["id"].split("_")[0] == coupon.defaultFreeDishId
                                     ]
                                 else:
-                                    reward_items = [it for it in reward_pool if reward_var in get_item_vtext(it)]
+                                    reward_items = [it for it in reward_pool if item_matches_variant(get_item_vtext(it), reward_var)]
 
                                 if total_trig_qty > 0 and reward_items:
                                     allowed_free = min(total_trig_qty, coupon.maxFreeItems or 3)
@@ -1414,7 +1447,7 @@ async def create_order(
 
                             elif coupon.bogoType == "FREE_GIFT":
                                 min_trig, trigger_size = parse_trigger_variant(coupon.triggerVariant)
-                                qualifying_items = [it for it in bogo_items if trigger_size in get_item_vtext(it)] if trigger_size else bogo_items
+                                qualifying_items = [it for it in bogo_items if item_matches_variant(get_item_vtext(it), trigger_size)] if trigger_size else bogo_items
                                 total_trig = sum(int(it.get("quantity", 1)) for it in qualifying_items)
 
                                 if total_trig >= min_trig:
@@ -1432,7 +1465,7 @@ async def create_order(
                                             m_sec = str((it.get("product") or {}).get("menuSection") or "").lower()
                                             tags = [str(t).lower() for t in (base_p.tags if base_p and base_p.tags else [])]
                                             v_text = get_item_vtext(it)
-                                            if reward_tag in name or any(reward_tag in t for t in tags) or reward_tag in m_sec or reward_tag in v_text:
+                                            if reward_tag in name or any(reward_tag in t for t in tags) or reward_tag in m_sec or reward_tag in v_text or item_matches_variant(v_text, coupon.rewardVariant):
                                                 matching_gift = it
                                                 break
                                     if matching_gift:

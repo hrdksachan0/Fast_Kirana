@@ -371,10 +371,19 @@ export default function CartPage() {
       const totalQualifyingQty = qualifyingCafeItems.reduce((acc, it) => acc + (it.quantity || 1), 0)
 
       if (appliedCoupon.bogoType === 'BUY_LARGE_GET_SMALL') {
-        const rewardVar = (appliedCoupon.rewardVariant || 'small').toLowerCase()
+        const rewardVar = (appliedCoupon.rewardVariant || 'small').toLowerCase().trim()
+        const aliases: Record<string, string[]> = {
+          large: ['large', 'full', 'big', 'jumbo'],
+          full: ['large', 'full', 'big', 'jumbo'],
+          medium: ['medium', 'regular', 'med', 'mid'],
+          regular: ['medium', 'regular', 'med', 'mid'],
+          small: ['small', 'half', 'mini'],
+          half: ['small', 'half', 'mini'],
+        }
+        const rewardTokens = aliases[rewardVar] || [rewardVar]
         const smallItems = qualifyingCafeItems.filter((it) => {
           const text = `${it.product.unit || ''} ${it.product.name || ''} ${(it.product as any).selectedVariant || ''}`.toLowerCase()
-          return text.includes(rewardVar)
+          return rewardTokens.some((t) => text.includes(t))
         })
         if (smallItems.length > 0) {
           const sorted = [...smallItems].sort((a, b) => a.product.price - b.product.price)

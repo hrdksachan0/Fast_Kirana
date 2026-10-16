@@ -60,6 +60,42 @@ def filter_items_by_menu_section(item_list: List[Dict[str, Any]], menu_section_s
     return filtered
 
 
+SIZE_ALIASES = {
+    'large': {'large', 'full', 'big', 'jumbo'},
+    'full': {'large', 'full', 'big', 'jumbo'},
+    'big': {'large', 'full', 'big', 'jumbo'},
+    'jumbo': {'large', 'full', 'big', 'jumbo'},
+    'medium': {'medium', 'regular', 'med', 'mid'},
+    'regular': {'medium', 'regular', 'med', 'mid'},
+    'med': {'medium', 'regular', 'med', 'mid'},
+    'mid': {'medium', 'regular', 'med', 'mid'},
+    'small': {'small', 'half', 'mini'},
+    'half': {'small', 'half', 'mini'},
+    'mini': {'small', 'half', 'mini'},
+}
+
+
+def get_variant_tokens(var_str: Optional[str]) -> set:
+    if not var_str:
+        return set()
+    s = str(var_str).lower().strip()
+    match = re.search(r'\b(medium|large|small|regular|half|full|mini|jumbo)\b', s, re.I)
+    if match:
+        sz = match.group(1).lower()
+        aliases = set(SIZE_ALIASES.get(sz, {sz}))
+        aliases.add(s)
+        return aliases
+    return {s}
+
+
+def item_matches_variant(text: str, var_str: Optional[str]) -> bool:
+    if not var_str:
+        return True
+    tokens = get_variant_tokens(var_str)
+    text_lower = str(text or "").lower()
+    return any(tok in text_lower for tok in tokens)
+
+
 @router.post("/validate")
 async def validate_coupon(
     payload: Dict[str, Any] = Body(...),
@@ -221,7 +257,7 @@ async def validate_coupon(
 
     def parse_trigger_variant(raw):
         raw_str = str(raw or "").strip()
-        size_match = re.search(r'\b(medium|large|small|regular|half|full)\b', raw_str, re.I)
+        size_match = re.search(r'\b(medium|large|small|regular|half|full|mini|jumbo)\b', raw_str, re.I)
         trigger_sz = size_match.group(1).lower() if size_match else None
         num_match = re.search(r'\b\d+\b', raw_str)
         min_qty = int(num_match.group(0)) if num_match else (int(raw_str) if raw_str and not trigger_sz else 1)
@@ -246,10 +282,10 @@ async def validate_coupon(
             bogo_items = filter_items_by_menu_section(bogo_items, coupon.menuSection)
 
         if coupon.bogoType == "BUY_LARGE_GET_SMALL":
-            trigger_var = (coupon.triggerVariant or "large").lower().strip()
-            reward_var = (coupon.rewardVariant or "small").lower().strip()
+            trigger_var = coupon.triggerVariant or "large"
+            reward_var = coupon.rewardVariant or "small"
 
-            trigger_items = [it for it in bogo_items if trigger_var in get_variant_text(it)]
+            trigger_items = [it for it in bogo_items if item_matches_variant(get_variant_text(it), trigger_var)]
             total_trigger_qty = sum(int(it.get("quantity", 1)) for it in trigger_items)
             if total_trigger_qty == 0:
                 sec_label = f" ({coupon.menuSection})" if coupon.menuSection else ""
@@ -266,7 +302,7 @@ async def validate_coupon(
                     if (it.get("productId") or it.get("id") or (it.get("product") or {}).get("id") or "").split("_")[0] == coupon.defaultFreeDishId
                 ]
             else:
-                reward_items = [it for it in reward_pool if reward_var in get_variant_text(it)]
+                reward_items = [it for it in reward_pool if item_matches_variant(get_variant_text(it), reward_var)]
 
             allowed_free = min(total_trigger_qty, coupon.maxFreeItems or 3)
             if not reward_items:
@@ -294,7 +330,7 @@ async def validate_coupon(
 
         elif coupon.bogoType == "FREE_GIFT":
             min_trigger, trigger_size = parse_trigger_variant(coupon.triggerVariant)
-            qualifying_items = [it for it in bogo_items if trigger_size in get_variant_text(it)] if trigger_size else bogo_items
+            qualifying_items = [it for it in bogo_items if item_matches_variant(get_variant_text(it), trigger_size)] if trigger_size else bogo_items
             total_trigger = sum(int(it.get("quantity", 1)) for it in qualifying_items)
 
             if total_trigger < min_trigger:
@@ -326,7 +362,7 @@ async def validate_coupon(
                     m_sec = str(it.get("menuSection") or (it.get("product") or {}).get("menuSection") or "").lower()
                     tags = [str(t).lower() for t in (it.get("tags") or (it.get("product") or {}).get("tags") or [])]
                     v_text = get_variant_text(it)
-                    if reward_tag in name or any(reward_tag in t for t in tags) or reward_tag in m_sec or reward_tag in v_text:
+                    if reward_tag in name or any(reward_tag in t for t in tags) or reward_tag in m_sec or reward_tag in v_text or item_matches_variant(v_text, coupon.rewardVariant):
                         matching_gift_in_cart = it
                         break
 

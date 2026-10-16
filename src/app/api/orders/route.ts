@@ -827,6 +827,39 @@ export async function POST(request: NextRequest) {
                   }
                 }
 
+                const SIZE_ALIASES: Record<string, string[]> = {
+                  large: ['large', 'full', 'big', 'jumbo'],
+                  full: ['large', 'full', 'big', 'jumbo'],
+                  big: ['large', 'full', 'big', 'jumbo'],
+                  jumbo: ['large', 'full', 'big', 'jumbo'],
+                  medium: ['medium', 'regular', 'med', 'mid'],
+                  regular: ['medium', 'regular', 'med', 'mid'],
+                  med: ['medium', 'regular', 'med', 'mid'],
+                  mid: ['medium', 'regular', 'med', 'mid'],
+                  small: ['small', 'half', 'mini'],
+                  half: ['small', 'half', 'mini'],
+                  mini: ['small', 'half', 'mini'],
+                }
+
+                const getVariantTokens = (varStr?: string | null): string[] => {
+                  if (!varStr) return []
+                  const s = String(varStr).toLowerCase().trim()
+                  const match = s.match(/\b(medium|large|small|regular|half|full|mini|jumbo)\b/i)
+                  if (match) {
+                    const sz = match[1].toLowerCase()
+                    const aliases = SIZE_ALIASES[sz] || [sz]
+                    return Array.from(new Set([...aliases, s]))
+                  }
+                  return [s]
+                }
+
+                const itemMatchesVariant = (text: string, varStr?: string | null): boolean => {
+                  if (!varStr) return true
+                  const tokens = getVariantTokens(varStr)
+                  const lower = String(text || '').toLowerCase()
+                  return tokens.some((t) => lower.includes(t))
+                }
+
                 const getItemVarText = (it: any) => {
                   const name = (it.product?.name || '').toLowerCase()
                   const baseId = (it.product?.id || it.productId || it.id || '')
@@ -835,11 +868,11 @@ export async function POST(request: NextRequest) {
                 }
 
                 if (coupon.bogoType === 'BUY_LARGE_GET_SMALL') {
-                  const triggerVariant = (coupon.triggerVariant || 'large').toLowerCase().trim()
-                  const rewardVariant = (coupon.rewardVariant || 'small').toLowerCase().trim()
+                  const triggerVariant = coupon.triggerVariant || 'large'
+                  const rewardVariant = coupon.rewardVariant || 'small'
 
                   const triggerItems = bogoItems.filter((it: any) => {
-                    return getItemVarText(it).includes(triggerVariant)
+                    return itemMatchesVariant(getItemVarText(it), triggerVariant)
                   })
                   const totalTriggerQty = triggerItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
 
@@ -851,7 +884,7 @@ export async function POST(request: NextRequest) {
                         return baseId === defaultGiftId
                       })
                     : rewardPool.filter((it: any) => {
-                        return getItemVarText(it).includes(rewardVariant)
+                        return itemMatchesVariant(getItemVarText(it), rewardVariant)
                       })
 
                   const allowedFree = Math.min(totalTriggerQty, maxFreeCap)
@@ -886,14 +919,14 @@ export async function POST(request: NextRequest) {
                   }
                 } else if (coupon.bogoType === 'FREE_GIFT') {
                   const rawTrigger = (coupon.triggerVariant || '').trim()
-                  const sizeMatch = rawTrigger.match(/\b(medium|large|small|regular|half|full)\b/i)
+                  const sizeMatch = rawTrigger.match(/\b(medium|large|small|regular|half|full|mini|jumbo)\b/i)
                   const triggerSize = sizeMatch ? sizeMatch[1].toLowerCase() : null
 
                   const numMatch = rawTrigger.match(/\b\d+\b/)
                   const minTriggerQty = numMatch ? parseInt(numMatch[0]) : (rawTrigger && !sizeMatch ? parseInt(rawTrigger) || 1 : 1)
 
                   const qualifyingTriggerItems = triggerSize
-                    ? bogoItems.filter((it: any) => getItemVarText(it).includes(triggerSize))
+                    ? bogoItems.filter((it: any) => itemMatchesVariant(getItemVarText(it), triggerSize))
                     : bogoItems
 
                   const totalTriggerQty = qualifyingTriggerItems.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0)
@@ -910,7 +943,7 @@ export async function POST(request: NextRequest) {
                         const tags = (it.product?.tags || []).map((t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
                         const mSec = String((it.product as any)?.menuSection || '').toLowerCase().replace(/[^a-z0-9]/g, '')
                         const vText = getItemVarText(it)
-                        return name.includes(rewardTag) || tags.some((t: string) => t.includes(rewardTag)) || mSec.includes(rewardTag) || vText.includes(rewardTag)
+                        return name.includes(rewardTag) || tags.some((t: string) => t.includes(rewardTag)) || mSec.includes(rewardTag) || vText.includes(rewardTag) || itemMatchesVariant(vText, coupon.rewardVariant)
                       }
                       return false
                     })
