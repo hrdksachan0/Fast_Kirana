@@ -186,6 +186,36 @@ class Product {
     }
     return stock > 0 && isAvailable;
   }
+
+  ProductVariant? getVariantByName(String? name) {
+    if (name == null || name.isEmpty || variants == null) return null;
+    final target = name.trim().toLowerCase();
+    for (final v in parsedVariants) {
+      if (v.name.trim().toLowerCase() == target) return v;
+    }
+    return null;
+  }
+
+  int getStockForVariant(String? variantName) {
+    if (variantName != null && variantName.isNotEmpty && parsedVariants.isNotEmpty) {
+      final v = getVariantByName(variantName);
+      if (v != null) return v.stock;
+    }
+    if (parsedVariants.isNotEmpty) {
+      return parsedVariants.fold<int>(0, (sum, v) => sum + v.stock);
+    }
+    return stock;
+  }
+
+  bool isVariantInStock(String? variantName) {
+    if (!isAvailable) return false;
+    if (variantName != null && variantName.isNotEmpty && parsedVariants.isNotEmpty) {
+      final v = getVariantByName(variantName);
+      if (v != null) return v.stock > 0;
+    }
+    return isInStock;
+  }
+
   double get savings => mrp - price;
   int get discountPercentage => discount.toInt();
 
@@ -215,7 +245,14 @@ class Product {
           final vMap = Map<String, dynamic>.from(v);
           final p = double.tryParse(vMap['price']?.toString() ?? '') ?? defaultPrice;
           final m = double.tryParse(vMap['mrp']?.toString() ?? '') ?? (p > 0 ? p : defaultMrp);
-          final s = int.tryParse(vMap['stock']?.toString() ?? '') ?? defaultStock;
+          final isExplicitlyOutOfStock = vMap['isAvailable'] == false ||
+              vMap['is_available'] == false ||
+              vMap['status'] == 'out_of_stock' ||
+              vMap['in_stock'] == false;
+          final rawStock = vMap['stock'];
+          final s = isExplicitlyOutOfStock
+              ? 0
+              : (rawStock != null ? (int.tryParse(rawStock.toString()) ?? 0) : defaultStock);
           return ProductVariant(
             name: vMap['name']?.toString() ?? vMap['unit']?.toString() ?? defaultUnit,
             price: p,

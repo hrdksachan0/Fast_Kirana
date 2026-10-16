@@ -38,7 +38,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     super.initState();
     final variants = widget.product.parsedVariants;
     if (variants.isNotEmpty) {
-      _selectedVariant = variants.reduce((a, b) => a.price < b.price ? a : b);
+      final inStockVariants = variants.where((v) => v.stock > 0).toList();
+      if (inStockVariants.isNotEmpty) {
+        _selectedVariant = inStockVariants.reduce((a, b) => a.price < b.price ? a : b);
+      } else {
+        _selectedVariant = variants.reduce((a, b) => a.price < b.price ? a : b);
+      }
     }
   }
 
@@ -75,8 +80,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       price: finalPrice,
       discount: discount.toDouble(),
       unit: unitName,
-      stock: p.stock,
-      isAvailable: p.isAvailable,
+      stock: variant != null ? variant.stock : p.stock,
+      isAvailable: p.isAvailable && (variant != null ? variant.stock > 0 : true),
       tags: p.tags,
       variants: p.variants,
       addons: p.addons,
@@ -99,7 +104,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   void _addToCart(Product p, ProductVariant? activeVariant, List<AddonItem> selectedAddonItems, bool isStoreOpen) {
-    if (!isStoreOpen || !p.isAvailable || p.stock <= 0) return;
+    final effectiveStock = activeVariant != null ? activeVariant.stock : p.stock;
+    if (!isStoreOpen || !p.isAvailable || effectiveStock <= 0) return;
 
     // Validate required addon groups
     for (final group in p.parsedAddons) {
@@ -481,19 +487,29 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           itemBuilder: (context, index) {
                             final variant = variants[index];
                             final isSelected = _selectedVariant?.name == variant.name;
+                            final isVariantSoldOut = variant.stock <= 0;
 
                             return GestureDetector(
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                setState(() => _selectedVariant = variant);
-                              },
+                              onTap: isVariantSoldOut
+                                  ? () {
+                                      HapticFeedback.heavyImpact();
+                                      setState(() => _selectedVariant = variant);
+                                    }
+                                  : () {
+                                      HapticFeedback.selectionClick();
+                                      setState(() => _selectedVariant = variant);
+                                    },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? AppDesignSystem.statusCancelled : Colors.white,
+                                  color: isVariantSoldOut
+                                      ? const Color(0xFFF9FAFB)
+                                      : (isSelected ? AppDesignSystem.statusCancelled : Colors.white),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: isSelected ? primaryRed : AppDesignSystem.border,
+                                    color: isVariantSoldOut
+                                        ? const Color(0xFFE5E7EB)
+                                        : (isSelected ? primaryRed : AppDesignSystem.border),
                                     width: isSelected ? 1.5 : 1.0,
                                   ),
                                 ),
@@ -501,20 +517,40 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      variant.name,
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 12),
-                                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                        color: isSelected ? primaryRed : AppDesignSystem.gray900,
-                                      ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          variant.name,
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 12),
+                                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                            color: isVariantSoldOut
+                                                ? const Color(0xFF9CA3AF)
+                                                : (isSelected ? primaryRed : AppDesignSystem.gray900),
+                                          ),
+                                        ),
+                                        if (isVariantSoldOut) ...[
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '(Sold Out)',
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 10),
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFFDC2626),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                     Text(
                                       '₹${variant.price.toInt()}',
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 11),
                                         fontWeight: FontWeight.w900,
-                                        color: isSelected ? primaryRed : AppDesignSystem.gray600,
+                                        color: isVariantSoldOut
+                                            ? const Color(0xFF9CA3AF)
+                                            : (isSelected ? primaryRed : AppDesignSystem.gray600),
                                       ),
                                     ),
                                   ],
@@ -947,7 +983,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         );
                         final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
 
-                        final isOutOfStock = p.stock <= 0 || !p.isAvailable;
+                        final isOutOfStock = !p.isAvailable || (activeVariant != null ? activeVariant.stock <= 0 : !p.isInStock);
                         final timingStatus = isFood && (p.availableStartTime != null && p.availableStartTime!.trim().isNotEmpty)
                             ? checkDishTimeAvailability(
                                 p.availableStartTime,
@@ -1111,10 +1147,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                       child: InkWell(
                                         borderRadius: const BorderRadius.horizontal(right: Radius.circular(13)),
                                         onTap: () {
-                                           if (p.stock > 0 && inCartQty >= p.stock) {
+                                          final currentStock = activeVariant != null ? activeVariant.stock : p.stock;
+                                          if (currentStock > 0 && inCartQty >= currentStock) {
                                             StockNoticeHelper.showStockLimit(
                                               context: context,
-                                              stock: p.stock,
+                                              stock: currentStock,
                                               hasFloatingCart: true,
                                             );
                                             return;

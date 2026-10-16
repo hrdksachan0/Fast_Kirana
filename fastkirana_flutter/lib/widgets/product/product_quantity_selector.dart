@@ -225,13 +225,17 @@ class AddToCartButton extends ConsumerWidget {
                   // If only 1 variant item is in the cart, increment it directly
                   if (matchingItems.length == 1) {
                     final singleItem = matchingItems.first;
-                    if (singleItem.product.stock > 0 && inCartQty >= singleItem.product.stock) {
+                    final effectiveItemStock = product.getStockForVariant(singleItem.selectedVariant);
+                    if (effectiveItemStock > 0 && inCartQty >= effectiveItemStock) {
                       HapticFeedback.heavyImpact();
-                      _showStockLimitSnackbar(ref);
+                      _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
                       return;
                     }
                     HapticFeedback.lightImpact();
-                    ref.read(cartProvider.notifier).addProduct(singleItem.product, 1, singleItem.selectedVariant);
+                    final success = ref.read(cartProvider.notifier).addProduct(singleItem.product, 1, singleItem.selectedVariant);
+                    if (!success) {
+                      _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
+                    }
                   } else {
                     VariantSelectorSheet.show(context, product);
                   }
@@ -315,11 +319,11 @@ class AddToCartButton extends ConsumerWidget {
     );
   }
 
-  void _showStockLimitSnackbar(WidgetRef ref) {
+  void _showStockLimitSnackbar(WidgetRef ref, {int? customStock}) {
     final cartItems = ref.read(cartProvider).value?.totalItems ?? 0;
     StockNoticeHelper.showStockLimit(
       context: scaffoldContext,
-      stock: product.stock,
+      stock: customStock ?? product.getStockForVariant(null),
       hasFloatingCart: cartItems > 0,
     );
   }
@@ -336,7 +340,7 @@ class AddToCartButton extends ConsumerWidget {
 
   void _handleAdd(BuildContext context, WidgetRef ref) {
     final cartItems = ref.read(cartProvider).value?.totalItems ?? 0;
-    if (product.stock <= 0 || !product.isAvailable) {
+    if (!product.isInStock) {
       final bottomPadding = MediaQuery.of(scaffoldContext).padding.bottom;
       final bottomMargin = (cartItems > 0) ? (bottomPadding + 80.0) : (bottomPadding + 16.0);
       ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
@@ -358,11 +362,8 @@ class AddToCartButton extends ConsumerWidget {
     }
     final success = ref.read(cartProvider.notifier).addProduct(product, 1);
     if (!success) {
-      StockNoticeHelper.showStockLimit(
-        context: scaffoldContext,
-        stock: product.stock,
-        hasFloatingCart: cartItems > 0,
-      );
+      final effStock = product.getStockForVariant(null);
+      _showStockLimitSnackbar(ref, customStock: effStock);
     }
   }
 }

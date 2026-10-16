@@ -43,8 +43,7 @@ final navratriLinkedProductsProvider = FutureProvider.autoDispose
           Product.fromJson(Map<String, dynamic>.from(response.data as Map));
       if (product.id != id ||
           product.restaurantId?.isNotEmpty == true ||
-          !product.isAvailable ||
-          product.stock <= 0 ||
+          !product.isInStock ||
           !product.price.isFinite ||
           product.price < 0) {
         return null;

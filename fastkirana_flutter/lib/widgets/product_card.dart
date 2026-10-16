@@ -129,8 +129,11 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     );
     final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
 
-    final isOutOfStock = product.stock <= 0 || !product.isAvailable;
-    final isLowStock = !isFood && !isOutOfStock && product.stock > 0 && product.stock <= (product.minStock > 0 ? product.minStock : 10);
+    final isOutOfStock = !product.isInStock;
+    final totalStock = product.parsedVariants.isNotEmpty
+        ? product.parsedVariants.fold<int>(0, (sum, v) => sum + v.stock)
+        : product.stock;
+    final isLowStock = !isFood && !isOutOfStock && totalStock > 0 && totalStock <= (product.minStock > 0 ? product.minStock : 10);
 
     final cart = ref.watch(cartProvider).value;
     final items = cart?.items.where((i) => i.productId == product.id || i.productId.startsWith('${product.id}_')).toList() ?? [];

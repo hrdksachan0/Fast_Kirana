@@ -415,7 +415,7 @@ class NotificationService {
         final savedPhone = prefs.getString('user_phone') ?? '';
         final clean = savedPhone.replaceAll('+91', '').replaceAll(' ', '').trim();
         if (clean.length == 10) {
-          try { await _fcm?.unsubscribeFromTopic('phone_$clean'); } catch (_) {}
+          try { await _fcm?.subscribeToTopic('phone_$clean'); } catch (_) {}
         }
       } catch (e) {
         logger.e("Topic subscription error: $e");
@@ -860,7 +860,7 @@ class NotificationService {
         if (phone.isNotEmpty) {
           final cleanPhone = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
           if (cleanPhone.length == 10) {
-            try { await _fcm?.unsubscribeFromTopic('phone_$cleanPhone'); } catch (_) {}
+            try { await _fcm?.subscribeToTopic('phone_$cleanPhone'); } catch (_) {}
           }
         }
       } catch (e) {

@@ -570,8 +570,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
 
                           // ALWAYS move out-of-stock items to the very end
                           list.sort((a, b) {
-                            final aInStock = a.isAvailable && a.stock > 0;
-                            final bInStock = b.isAvailable && b.stock > 0;
+                            final aInStock = a.isInStock;
+                            final bInStock = b.isInStock;
                             if (aInStock && !bInStock) return -1;
                             if (!aInStock && bInStock) return 1;
                             return 0;

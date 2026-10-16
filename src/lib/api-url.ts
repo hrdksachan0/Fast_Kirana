@@ -69,6 +69,8 @@ export function apiUrl(path?: string): string {
       cleanPath.startsWith('/api/payment') ||
       cleanPath.startsWith('/api/payments') ||
       cleanPath.startsWith('/api/admin') ||
+      cleanPath.startsWith('/api/push') ||
+      cleanPath.startsWith('/api/fcm') ||
       cleanPath.startsWith('/api/revalidate')
     ) {
       return ''

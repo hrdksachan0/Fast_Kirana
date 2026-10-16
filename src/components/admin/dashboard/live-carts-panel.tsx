@@ -25,7 +25,7 @@ export interface LiveCartsPanelProps {
   activeCarts: LiveCart[]
   isLoadingCarts: boolean
   onRefresh: () => void
-  onSendCartNotification: (userId: string, userName: string) => void
+  onSendCartNotification: (userId: string, userName: string, userPhone?: string) => void
   onOpenWhatsAppModal: (userName: string, userPhone: string) => void
 }
 
@@ -133,7 +133,7 @@ export function LiveCartsPanel({
                     <td className="py-3 px-3 text-center">
                       <div className="flex flex-col sm:flex-row gap-1.5 justify-center items-center">
                         <button
-                          onClick={() => onSendCartNotification(cart.userId, cart.userName)}
+                          onClick={() => onSendCartNotification(cart.userId, cart.userName, cart.userPhone)}
                           className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
                           title="Send Push Notification Alert to Customer"
                         >

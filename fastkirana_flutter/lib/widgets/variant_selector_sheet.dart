@@ -8,6 +8,7 @@ import '../data/models/product.dart';
 import '../providers/cart_provider.dart';
 import '../providers/store_settings_provider.dart';
 import '../core/utils/restaurant_utils.dart';
+import '../core/utils/stock_notice_helper.dart';
 import 'cart_conflict_dialog.dart';
 
 class VariantSelectorSheet extends ConsumerStatefulWidget {
@@ -37,6 +38,16 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
   int _selectedVariantIndex = 0;
   int _foodQuantity = 1;
   final Map<String, Set<String>> _selectedAddons = {};
+
+  @override
+  void initState() {
+    super.initState();
+    final variants = widget.product.parsedVariants;
+    if (variants.isNotEmpty) {
+      final firstInStock = variants.indexWhere((v) => v.stock > 0);
+      _selectedVariantIndex = firstInStock != -1 ? firstInStock : 0;
+    }
+  }
 
   bool _isVeg(Product product) {
     final tags = product.tags.map((t) => t.toLowerCase().trim()).toList();
@@ -97,8 +108,8 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
       price: finalPrice,
       discount: discount.toDouble(),
       unit: variant.name,
-      stock: widget.product.stock,
-      isAvailable: widget.product.isAvailable,
+      stock: variant.stock,
+      isAvailable: widget.product.isAvailable && variant.stock > 0,
       tags: widget.product.tags,
       variants: widget.product.variants,
       addons: widget.product.addons,
@@ -121,7 +132,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
   }
 
   void _addFoodItemToCart(ProductVariant selectedVariant, bool isStoreOpen) {
-    if (!isStoreOpen || !widget.product.isAvailable || widget.product.stock <= 0) return;
+    if (!isStoreOpen || !widget.product.isAvailable || selectedVariant.stock <= 0) return;
 
     // Validate required addon groups
     for (final group in widget.product.parsedAddons) {
@@ -230,7 +241,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
     final currentPrice = (selectedVariant.price + addonTotal) * _foodQuantity;
     final currentMrp = ((selectedVariant.mrp > 0 ? selectedVariant.mrp : widget.product.mrp) + addonTotal) * _foodQuantity;
     final hasDiscount = currentMrp > currentPrice;
-    final isOutOfStock = !widget.product.isAvailable || widget.product.stock <= 0;
+    final isOutOfStock = !widget.product.isAvailable || effectiveVariant.stock <= 0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -388,14 +399,17 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                           itemBuilder: (ctx, index) {
                             final v = variants[index];
                             final isSelected = index == _selectedVariantIndex;
+                            final isSoldOut = v.stock <= 0;
 
                             return InkWell(
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                setState(() {
-                                  _selectedVariantIndex = index;
-                                });
-                              },
+                              onTap: isSoldOut
+                                  ? null
+                                  : () {
+                                      HapticFeedback.selectionClick();
+                                      setState(() {
+                                        _selectedVariantIndex = index;
+                                      });
+                                    },
                               borderRadius: BorderRadius.vertical(
                                 top: index == 0 ? const Radius.circular(16) : Radius.zero,
                                 bottom: index == variants.length - 1 ? const Radius.circular(16) : Radius.zero,
@@ -410,13 +424,37 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
 
                                     // Variant Name
                                     Expanded(
-                                      child: Text(
-                                        v.name,
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 14.5),
-                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                          color: const Color(0xFF1F2937),
-                                        ),
+                                      child: Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              v.name,
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 14.5),
+                                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                                color: isSoldOut ? const Color(0xFF9CA3AF) : const Color(0xFF1F2937),
+                                              ),
+                                            ),
+                                          ),
+                                          if (isSoldOut) ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFEE2E2),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                'Sold Out',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                                                  fontWeight: FontWeight.w700,
+                                                  color: const Color(0xFFDC2626),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ),
 
@@ -427,7 +465,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 13.5),
                                           fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF4B5563),
+                                          color: isSoldOut ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -440,11 +478,13 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         border: Border.all(
-                                          color: isSelected ? const Color(0xFF00875A) : const Color(0xFF9CA3AF),
-                                          width: isSelected ? 2 : 1.5,
+                                          color: isSoldOut
+                                              ? const Color(0xFFE5E7EB)
+                                              : (isSelected ? const Color(0xFF00875A) : const Color(0xFF9CA3AF)),
+                                          width: isSelected && !isSoldOut ? 2 : 1.5,
                                         ),
                                       ),
-                                      child: isSelected
+                                      child: isSelected && !isSoldOut
                                           ? Center(
                                               child: Container(
                                                 width: 10,
@@ -975,7 +1015,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
         : 0;
 
     final isSelected = inCartQty > 0;
-    final isSoldOut = !widget.product.isAvailable || widget.product.stock <= 0;
+    final isSoldOut = !widget.product.isAvailable || variant.stock <= 0;
     final variantProduct = _buildVariantProduct(variant);
 
     return Container(
@@ -1163,8 +1203,24 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                   ),
                   InkWell(
                     onTap: () {
+                      if (variant.stock > 0 && inCartQty >= variant.stock) {
+                        HapticFeedback.heavyImpact();
+                        StockNoticeHelper.showStockLimit(
+                          context: context,
+                          stock: variant.stock,
+                          hasFloatingCart: true,
+                        );
+                        return;
+                      }
                       HapticFeedback.lightImpact();
-                      ref.read(cartProvider.notifier).addProduct(variantProduct, 1, variant.name);
+                      final added = ref.read(cartProvider.notifier).addProduct(variantProduct, 1, variant.name);
+                      if (!added) {
+                        StockNoticeHelper.showStockLimit(
+                          context: context,
+                          stock: variant.stock,
+                          hasFloatingCart: true,
+                        );
+                      }
                     },
                     borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
                     child: const SizedBox(

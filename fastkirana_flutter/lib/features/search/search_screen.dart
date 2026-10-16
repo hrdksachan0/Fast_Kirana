@@ -757,6 +757,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         }
         final uniqueRestaurants = uniqueRestMap.values.toSet().toList();
 
+        const genericRestaurantWords = {
+          'restaurant', 'cafe', 'dhaba', 'kitchen', 'food court', 'bhojnalaya', 'sweets', 'bakery', 'hotel', 'outlet', 'restro'
+        };
+
         final isAsQuery = queryClean == 'as' ||
             queryClean.startsWith('as ') ||
             queryClean.contains(' as ') ||
@@ -764,29 +768,38 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             queryClean.contains('a.s') ||
             queryClean.contains('as-restaurant');
 
+        final distinctiveQueryWords = effectiveQueryWords.where((w) => !genericRestaurantWords.contains(w)).toList();
+
         final matchedRestaurants = uniqueRestaurants.where((r) {
           final rName = r.name.toLowerCase();
           final rSlug = r.slug.toLowerCase();
           final rCuisines = r.cuisineTags.map((t) => t.toLowerCase()).join(' ');
 
-          if (isAsQuery && (r.id == 'REST-101' || rSlug.contains('as-restaurant') || rName.contains('a.s'))) {
-            return true;
+          if (isAsQuery) {
+            return r.id == 'REST-101' ||
+                r.id == 'cms2p1lap0000n0id8alldboy' ||
+                rSlug.contains('as-restaurant') ||
+                rSlug.contains('as-cafe') ||
+                rName.contains('a.s');
           }
 
+          if (distinctiveQueryWords.isNotEmpty) {
+            return distinctiveQueryWords.any((w) {
+              if (w == 'as' || w == 'a.s' || w == 'a.s.') {
+                return r.id == 'REST-101' || r.id == 'cms2p1lap0000n0id8alldboy' || rSlug.contains('as');
+              }
+              if (w.length >= 2 && (rName.contains(w) || rSlug.contains(w) || rCuisines.contains(w))) {
+                return true;
+              }
+              return w.length >= 3 && (FuzzyMatcher.bestTokenFuzzyDistance(w, rName, maxDistance: 2) != null ||
+                  FuzzyMatcher.bestTokenFuzzyDistance(w, rSlug, maxDistance: 2) != null);
+            });
+          }
+
+          // Fallback if query was only generic words like "restaurant" or "cafe"
           return rName.contains(queryClean) ||
               rSlug.contains(queryClean) ||
-              rCuisines.contains(queryClean) ||
-              effectiveQueryWords.any((w) {
-                if (w == 'as' || w == 'a.s' || w == 'a.s.') {
-                  return r.id == 'REST-101' || rSlug.contains('as');
-                }
-                if (w.length >= 2 && (rName.contains(w) || rSlug.contains(w) || rCuisines.contains(w))) {
-                  return true;
-                }
-                // Fuzzy tolerance for restaurant names
-                return w.length >= 3 && (FuzzyMatcher.bestTokenFuzzyDistance(w, rName, maxDistance: 2) != null ||
-                    FuzzyMatcher.bestTokenFuzzyDistance(w, rSlug, maxDistance: 2) != null);
-              });
+              rCuisines.contains(queryClean);
         }).toList();
 
         final isRestaurantQuery = isAsQuery ||
@@ -819,9 +832,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
           int score = 0;
 
-          // If searching for a specific restaurant/outlet (e.g. "as ke pizza", "as", "wedson", "hot pizza")
-          if (isAsQuery && (p.restaurantId == 'REST-101' || tags.contains('as') || tags.contains('as-restaurant') || outlet.contains('a.s'))) {
-            score += 180;
+          // If searching for a specific restaurant/outlet (e.g. "as ke pizza", "as", "as restaurant")
+          final isFromAsRestaurant = p.restaurantId == 'REST-101' ||
+              p.restaurantId == 'cms2p1lap0000n0id8alldboy' ||
+              (p.restaurant?.id == 'REST-101' || p.restaurant?.id == 'cms2p1lap0000n0id8alldboy') ||
+              (p.restaurant?.slug ?? '').contains('as') ||
+              tags.contains('as') ||
+              tags.contains('as-restaurant') ||
+              tags.contains('as-cafe') ||
+              outlet.contains('a.s') ||
+              outlet.contains('as restaurant');
+
+          if (isAsQuery && isFromAsRestaurant) {
+            score += 250;
           }
 
           if (isRestaurantQuery && matchedRestaurants.isNotEmpty) {
@@ -830,7 +853,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 (p.restaurant?.name.toLowerCase() ?? '').contains(r.name.toLowerCase()) ||
                 outlet.contains(r.name.toLowerCase()) ||
                 tags.contains(r.slug.toLowerCase()));
-            if (matchesMatchedOutlet) score += 120;
+            if (matchesMatchedOutlet) {
+              score += 120;
+            } else if (isAsQuery && isRestaurantProduct(p)) {
+              // Ignore dishes from other restaurants when explicitly searching for A.S.
+              score = 0;
+            }
           }
 
           if (outlet.isNotEmpty && queryClean.isNotEmpty && outlet.contains(queryClean)) {
@@ -842,12 +870,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             score += 150;
           } else if (pName.startsWith(queryClean)) {
             score += 100;
-          } else if (pName.contains(queryClean)) {
+          } else if (queryClean.length >= 3 && pName.contains(queryClean)) {
             score += 60;
           }
 
           // Variant name match with query
-          if (variantNames.any((vn) => vn == queryClean || vn.contains(queryClean) || (vn.length >= 4 && queryClean.contains(vn)))) {
+          if (variantNames.any((vn) => vn == queryClean || (queryClean.length >= 3 && vn.contains(queryClean)) || (vn.length >= 4 && queryClean.contains(vn)))) {
             score += 45;
           }
 
@@ -860,28 +888,38 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           for (final term in expandedTerms) {
             if (term.isEmpty || stopWords.contains(term)) continue;
 
+            final isShort = term.length <= 2;
+            final nameWords = pName.split(RegExp(r'\s+'));
+
             if (pName == term) {
               score += 120;
-            } else if (pName.contains(term)) {
+            } else if (!isShort && pName.contains(term)) {
+              score += 40;
+            } else if (isShort) {
+              if (nameWords.contains(term)) {
+                score += 50;
+              } else if (nameWords.any((nw) => nw.startsWith(term))) {
+                score += 30;
+              }
+            }
+
+            if (!isShort && nameWords.any((nw) => nw.startsWith(term))) {
+              score += 30;
+            }
+
+            if (variantNames.any((vn) => vn == term || (!isShort && vn.contains(term)) || (vn.length >= 4 && term.contains(vn)))) {
               score += 40;
             }
-            if (variantNames.any((vn) => vn == term || vn.contains(term) || (vn.length >= 4 && term.contains(vn)))) {
-              score += 40;
-            }
-            if (tags.any((t) => t == term || t.contains(term) || (t.length >= 4 && term.contains(t)))) {
+            if (tags.any((t) => t == term || (!isShort && t.contains(term)) || (t.length >= 4 && term.contains(t)))) {
               score += 35;
             }
             if (catName.contains(term) || catSlug.contains(term)) {
-              score += 25;
+              if (!isShort || catName == term || catSlug == term) {
+                score += 25;
+              }
             }
             if (term.length >= 3 && desc.contains(term)) {
               score += 15;
-            }
-
-            // Word-level prefix match (e.g. "am" matches "amul")
-            final nameWords = pName.split(RegExp(r'\s+'));
-            if (nameWords.any((nw) => nw.startsWith(term))) {
-              score += 30;
             }
           }
 
@@ -969,7 +1007,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
           if (score > 0) {
             // Prioritize in-stock and available products
-            if (p.isAvailable && p.stock > 0) score += 20;
+            if (p.isInStock) score += 20;
             if (p.isBestsellerProduct) score += 15;
             if (p.isFlashDealProduct) score += 15;
             if (p.isTrending) score += 10;
@@ -980,8 +1018,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
         // Sort: In-stock items first (ranked by relevance), out-of-stock items at the very end
         scoredProducts.sort((a, b) {
-          final aInStock = a.key.isAvailable && a.key.stock > 0;
-          final bInStock = b.key.isAvailable && b.key.stock > 0;
+          final aInStock = a.key.isInStock;
+          final bInStock = b.key.isInStock;
           if (aInStock && !bInStock) return -1;
           if (!aInStock && bInStock) return 1;
           return b.value.compareTo(a.value);
@@ -1004,7 +1042,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           final currentHub = ref.watch(currentStoreHubProvider);
           final hubCity = currentHub.city.isNotEmpty ? currentHub.city : 'Town';
           final fallbackAlternatives = products
-              .where((p) => p.isAvailable && p.stock > 0)
+              .where((p) => p.isInStock)
               .take(6)
               .toList();
 
@@ -1250,7 +1288,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 storeSettings: storeSettings,
               );
               final isStoreOpen = isFood ? isRestaurantOpen : isGroceryOpen;
-              final isOutOfStock = product.stock <= 0 || !product.isAvailable;
+              final isOutOfStock = !product.isInStock;
               final isClosed = !isStoreOpen || isOutOfStock;
 
               // Veg / Non-veg
@@ -1663,10 +1701,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           if (hasVariants) {
                             VariantSelectorSheet.show(context, product);
                           } else {
-                            if (product.stock > 0 && inCartQty >= product.stock) {
+                            final effStock = product.getStockForVariant(null);
+                            if (effStock > 0 && inCartQty >= effStock) {
                               StockNoticeHelper.showStockLimit(
                                 context: context,
-                                stock: product.stock,
+                                stock: effStock,
                                 hasFloatingCart: inCartQty > 0,
                               );
                               return;

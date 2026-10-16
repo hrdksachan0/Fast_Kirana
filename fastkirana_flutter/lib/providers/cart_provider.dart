@@ -273,11 +273,11 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       return sameBase && sameVariant;
     });
 
-    final maxStock = product.stock > 0 ? product.stock : 999;
+    final maxStock = product.getStockForVariant(targetVariantKey);
     final currentQty = idx >= 0 ? items[idx].quantity : 0;
     final targetQty = currentQty + quantity;
 
-    if (targetQty > maxStock) return false;
+    if (maxStock <= 0 || targetQty > maxStock) return false;
 
     if (idx >= 0) {
       final item = items[idx];
@@ -375,8 +375,9 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     final idx = items.indexWhere((i) => i.productId == productId || i.id == productId || i.product.id == productId);
     if (idx >= 0) {
       final item = items[idx];
-      final effectiveStock = maxStock ?? (item.product.stock > 0 ? item.product.stock : 999);
-      if (quantity > effectiveStock) return false;
+      final itemMaxStock = item.product.getStockForVariant(item.selectedVariant);
+      final effectiveStock = maxStock ?? itemMaxStock;
+      if (effectiveStock <= 0 || quantity > effectiveStock) return false;
       items[idx] = CartItem(
         id: item.id,
         cartId: item.cartId,
@@ -466,9 +467,12 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   Future<void> replaceRestaurantItemsWith(Product product, [int quantity = 1, String? selectedVariant]) async {
+    final maxStock = product.getStockForVariant(selectedVariant);
+    if (maxStock <= 0) return;
     final cart = _cart ?? _emptyCart();
     final items = cart.items.where((i) => !isCafeProduct(i.product)).toList();
-    items.add(_newCartItem(product, quantity, selectedVariant));
+    final effectiveQty = quantity > maxStock ? maxStock : quantity;
+    items.add(_newCartItem(product, effectiveQty, selectedVariant));
     _setState(items, cart);
     await repository.saveLocalCart(items);
     _scheduleDebouncedSync(items);

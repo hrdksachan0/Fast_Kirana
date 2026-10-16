@@ -33,7 +33,7 @@ interface PushNotificationContextType {
 const PushNotificationContext = createContext<PushNotificationContextType | undefined>(undefined)
 
 export function PushNotificationProvider({ children }: { children: React.ReactNode }) {
-  const { status: sessionStatus } = useSession()
+  const { status: sessionStatus, data: session } = useSession()
   const [isSupported, setIsSupported] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [permission, setPermission] = useState<NotificationPermission>('default')
@@ -43,6 +43,24 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
   const [showPrompt, setShowPrompt] = useState(true)
   
   const successCallbackRef = useRef<(() => void) | null>(null)
+
+  const syncSubscriptionToServer = async (subscription: PushSubscription) => {
+    try {
+      const guestId = typeof window !== 'undefined' ? localStorage.getItem('fastkirana-guest-id') : null
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription,
+          userId: session?.user?.id,
+          phone: (session?.user as any)?.phone,
+          guestId,
+        }),
+      })
+    } catch (e) {
+      // Background sync non-fatal
+    }
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -59,6 +77,9 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
       navigator.serviceWorker.ready.then((registration) => {
         registration.pushManager.getSubscription().then((subscription) => {
           setIsSubscribed(!!subscription)
+          if (subscription) {
+            syncSubscriptionToServer(subscription)
+          }
         }).catch(() => {
           // ignore errors
         })
@@ -72,6 +93,19 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
       setShowPrompt(false)
     }
   }, [])
+
+  // Auto-sync existing subscription whenever user logs in or switches account
+  useEffect(() => {
+    if (sessionStatus === 'authenticated' && isSupported && 'Notification' in window && Notification.permission === 'granted') {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.pushManager.getSubscription().then((subscription) => {
+          if (subscription) {
+            syncSubscriptionToServer(subscription)
+          }
+        }).catch(() => {})
+      }).catch(() => {})
+    }
+  }, [sessionStatus, session?.user?.id, isSupported])
 
   const registerSubscription = async (): Promise<boolean> => {
     try {
@@ -92,10 +126,16 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource,
       })
 
-      const res = await fetch(`${apiUrl()}/api/push/subscribe`, {
+      const guestId = typeof window !== 'undefined' ? localStorage.getItem('fastkirana-guest-id') : null
+      const res = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription }),
+        body: JSON.stringify({
+          subscription,
+          userId: session?.user?.id,
+          phone: (session?.user as any)?.phone,
+          guestId,
+        }),
       })
 
       if (!res.ok) {

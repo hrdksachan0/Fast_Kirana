@@ -551,7 +551,7 @@ export function AdminDashboard({
     }
   }
 
-  const sendCartNotification = async (userId: string, userName: string) => {
+  const sendCartNotification = async (userId: string, userName: string, userPhone?: string) => {
     const defaultMsg = `Hey ${userName}! Your items are waiting in your cart. Checkout now for instant delivery! 🛒`
     const message = window.prompt(`Customize push notification for ${userName}:`, defaultMsg)
     if (message === null) return
@@ -565,6 +565,7 @@ export function AdminDashboard({
         },
         body: JSON.stringify({
           userId,
+          phone: userPhone,
           title: 'Cart Waiting 🛒',
           body: message || defaultMsg,
         }),

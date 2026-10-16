@@ -2482,8 +2482,104 @@ async def admin_notify_live_carts(
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Send push notification to users with active carts."""
-    return {"success": True, "notified": 0, "message": "Notification alert sent successfully to customer mobile app & web!"}
+    """Send push notification to users with active carts across FCM mobile & WebPush."""
+    user_id = data.get("userId")
+    title = data.get("title") or "Cart Waiting 🛒"
+    body_text = data.get("body") or "Your items are waiting in your cart. Checkout now for instant delivery! 🛒"
+    raw_phone = data.get("phone")
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="userId is required")
+
+    # Resolve phone and related user accounts
+    clean_phone = ""
+    potential_phones = [raw_phone, str(user_id)]
+    for p in potential_phones:
+        digits = re.sub(r"\D", "", str(p))[-10:]
+        if len(digits) == 10:
+            clean_phone = digits
+            break
+
+    target_user_ids = {str(user_id)}
+
+    # Find user record in DB
+    user_stmt = select(User).where(User.id == str(user_id))
+    user_res = await db.execute(user_stmt)
+    user_obj = user_res.scalars().first()
+
+    if user_obj and user_obj.phone:
+        u_phone = re.sub(r"\D", "", str(user_obj.phone))[-10:]
+        if len(u_phone) == 10:
+            clean_phone = u_phone
+
+    if clean_phone and len(clean_phone) == 10:
+        phone_users_stmt = select(User.id).where(User.phone.like(f"%{clean_phone}%"))
+        phone_res = await db.execute(phone_users_stmt)
+        for uid in phone_res.scalars().all():
+            target_user_ids.add(str(uid))
+
+    all_user_ids = list(target_user_ids)
+
+    # 1. FCM Direct device tokens & topics
+    fcm_tokens_sent = 0
+    fcm_topics_sent = 0
+
+    try:
+        from utils.firebase import send_fcm_notification, send_fcm_topic_notification
+        from models import FcmToken
+
+        tokens_stmt = select(FcmToken.token).where(FcmToken.userId.in_(all_user_ids))
+        tokens_res = await db.execute(tokens_stmt)
+        tokens = list(set(tokens_res.scalars().all()))
+
+        fcm_data = {
+            "type": "CART_ALERT",
+            "url": "/cart",
+            "screen": "cart",
+            "timestamp": str(int(time.time() * 1000)),
+        }
+
+        if tokens:
+            res = await send_fcm_notification(tokens, title, body_text, fcm_data)
+            fcm_tokens_sent = res.get("success", 0)
+
+        if clean_phone and len(clean_phone) == 10:
+            if await send_fcm_topic_notification(f"phone_{clean_phone}", title, body_text, fcm_data):
+                fcm_topics_sent += 1
+
+        for uid in all_user_ids:
+            if await send_fcm_topic_notification(f"user_{uid}", title, body_text, fcm_data):
+                fcm_topics_sent += 1
+    except Exception as e:
+        logger.error(f"FCM live cart notify error: {e}")
+
+    # 2. Bridge WebPush notification
+    webpush_sent = 0
+    try:
+        for uid in all_user_ids:
+            sent = await send_push_notification(
+                user_id=uid,
+                title=title,
+                body=body_text,
+                data={"url": "/cart"}
+            )
+            if sent:
+                webpush_sent += 1
+    except Exception as e:
+        logger.error(f"WebPush bridge error: {e}")
+
+    total_notified = fcm_tokens_sent + fcm_topics_sent + webpush_sent
+
+    return {
+        "success": True,
+        "notified": total_notified,
+        "delivered": {
+            "fcmTokens": fcm_tokens_sent,
+            "fcmTopics": fcm_topics_sent,
+            "webPush": webpush_sent,
+        },
+        "message": "Notification alert sent successfully to customer mobile app & web!"
+    }
 
 
 # ============================================================

@@ -94,15 +94,17 @@ async def send_fcm_notification(
 @router.post("/register", status_code=status.HTTP_200_OK)
 async def register_fcm_token(
     payload: Dict[str, Any] = Body(...),
-    current_user: dict = Depends(require_auth),
+    current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Register or update an FCM device token for the authenticated user.
+    Register or update an FCM device token for authenticated or guest mobile users.
     """
-    user_id = get_user_id(current_user)
+    user_id = get_user_id(current_user) if current_user else None
     token = payload.get("token")
     device_type = payload.get("deviceType", "android")
+    body_user_id = payload.get("userId")
+    phone = payload.get("phone")
 
     if not token:
         raise HTTPException(
@@ -111,6 +113,42 @@ async def register_fcm_token(
         )
 
     try:
+        import re
+        import hashlib
+        from datetime import datetime
+
+        if not user_id and body_user_id:
+            u_check = await db.execute(select(User.id).where(User.id == body_user_id))
+            if u_check.scalars().first():
+                user_id = body_user_id
+
+        if not user_id and phone:
+            clean_phone = re.sub(r"\D", "", str(phone))[-10:]
+            if len(clean_phone) == 10:
+                u_phone_check = await db.execute(select(User.id).where(User.phone.like(f"%{clean_phone}%")))
+                found_id = u_phone_check.scalars().first()
+                if found_id:
+                    user_id = found_id
+
+        if not user_id:
+            token_hash = hashlib.md5(token.encode()).hexdigest()[:12]
+            anon_email = f"anon-fcm-{token_hash}@fastkirana.com"
+            u_anon = await db.execute(select(User).where(User.email == anon_email))
+            anon_user = u_anon.scalars().first()
+            if not anon_user:
+                anon_user = User(
+                    id=f"usr_{uuid.uuid4().hex[:20]}",
+                    email=anon_email,
+                    name="Mobile App User",
+                    role="USER",
+                    phone=str(phone) if phone else None,
+                    createdAt=datetime.utcnow(),
+                    updatedAt=datetime.utcnow()
+                )
+                db.add(anon_user)
+                await db.flush()
+            user_id = anon_user.id
+
         # Check if the token already exists in db
         stmt = select(FcmToken).where(FcmToken.token == token)
         result = await db.execute(stmt)
@@ -121,7 +159,6 @@ async def register_fcm_token(
             existing_token.userId = user_id
             if device_type:
                 existing_token.deviceType = device_type
-            # Clean up old stale tokens for this user so only 1 active token remains
             if user_id:
                 await db.execute(delete(FcmToken).where(FcmToken.userId == user_id, FcmToken.token != token))
             await db.commit()
@@ -132,7 +169,6 @@ async def register_fcm_token(
                 "userId": user_id
             }
         else:
-            # Otherwise, insert a new record
             new_fcm = FcmToken(
                 id=generate_id(),
                 userId=user_id,
@@ -140,7 +176,6 @@ async def register_fcm_token(
                 deviceType=device_type
             )
             db.add(new_fcm)
-            # Clean up old stale tokens for this user
             if user_id:
                 await db.execute(delete(FcmToken).where(FcmToken.userId == user_id, FcmToken.token != token))
             await db.commit()
