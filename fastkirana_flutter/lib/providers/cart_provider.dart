@@ -216,8 +216,30 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     final initialVersion = _cartVersion;
     try {
       final localItems = await r.getLocalCart();
-      // If user performed in-memory mutations while getLocalCart was awaiting, do not overwrite them
+      // If user performed in-memory mutations while getLocalCart was awaiting, merge without losing either
       if (_cartVersion > initialVersion || _latestPendingItems != null) {
+        if (localItems.isNotEmpty) {
+          final currentCart = _cart;
+          final currentItems = currentCart?.items ?? [];
+          final merged = List<CartItem>.from(currentItems);
+          for (final loc in localItems) {
+            final locVar = loc.selectedVariant != null && loc.selectedVariant!.isNotEmpty ? loc.selectedVariant : null;
+            final exists = merged.any((cur) {
+              final curVar = cur.selectedVariant != null && cur.selectedVariant!.isNotEmpty ? cur.selectedVariant : null;
+              final sameBase = cur.productId == loc.productId || cur.product.id == loc.productId || cur.product.id == loc.product.id;
+              return sameBase && curVar == locVar;
+            });
+            if (!exists) {
+              merged.add(loc);
+            }
+          }
+          if (merged.length != currentItems.length) {
+            _cartVersion++;
+            state = AsyncValue.data(_buildCart(merged));
+            await r.saveLocalCart(merged);
+            _scheduleDebouncedSync(merged);
+          }
+        }
         return;
       }
       if (localItems.isNotEmpty) {

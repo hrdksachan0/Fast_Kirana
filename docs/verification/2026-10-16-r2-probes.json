@@ -1,0 +1,843 @@
+{
+  "scope": "current complete quote, intent saver, recovery, FCM registration and SSE functions; fake ORM/cache; external network blocked; no actual SQL or alerts",
+  "source_hash": "b1ad8160fd13889b64bd5f0993d203ec820dbfa77fe993174fb1b168c1280053",
+  "results": [
+    {
+      "case": "invalid_quantity",
+      "quantity": "-1",
+      "http_status": 400
+    },
+    {
+      "case": "invalid_quantity",
+      "quantity": "0",
+      "http_status": 400
+    },
+    {
+      "case": "invalid_quantity",
+      "quantity": "0.5",
+      "http_status": 400
+    },
+    {
+      "case": "invalid_quantity",
+      "quantity": "1.5",
+      "http_status": 400
+    },
+    {
+      "case": "invalid_quantity",
+      "quantity": "nan",
+      "http_status": 400
+    },
+    {
+      "case": "invalid_quantity",
+      "quantity": "inf",
+      "http_status": 400
+    },
+    {
+      "case": "invalid_quantity",
+      "quantity": "1001",
+      "http_status": 400
+    },
+    {
+      "case": "variant-zero-hub",
+      "quote_amount": 100.0,
+      "validated_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "deliveryFee": 0.0,
+      "miscFee": 0.0,
+      "total": 100.0,
+      "stock": 2,
+      "hub_stock": 0,
+      "cart": [],
+      "deleted_cart_ids": [],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        }
+      ]
+    },
+    {
+      "case": "mixed-variants-hub-one",
+      "quote_amount": 200.0,
+      "validated_quote": {
+        "subtotal": 200.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 200.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "ADMIN_PENDING",
+      "subtotal": 200.0,
+      "discount": 0.0,
+      "deliveryFee": 0.0,
+      "miscFee": 0.0,
+      "total": 200.0,
+      "stock": 2,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted_cart_ids": [],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        }
+      ]
+    },
+    {
+      "case": "valid-coupon",
+      "quote_amount": 80.0,
+      "validated_quote": {
+        "subtotal": 100.0,
+        "discount": 20.0,
+        "couponCode": "SAVE20",
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 80.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 20.0,
+      "deliveryFee": 0.0,
+      "miscFee": 0.0,
+      "total": 80.0,
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted_cart_ids": [],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Coupon",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        }
+      ]
+    },
+    {
+      "case": "ineligible-category-coupon",
+      "quote_amount": 100.0,
+      "validated_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "deliveryFee": 0.0,
+      "miscFee": 0.0,
+      "total": 100.0,
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted_cart_ids": [],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Coupon",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        }
+      ]
+    },
+    {
+      "case": "legacy-negative-quantity",
+      "quote_amount": 100.0,
+      "validated_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "deliveryFee": 0.0,
+      "miscFee": 0.0,
+      "total": 100.0,
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted_cart_ids": [],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        }
+      ]
+    },
+    {
+      "case": "delivery-defaults",
+      "quote_amount": 130.0,
+      "validated_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 25.0,
+        "packagingFee": 5.0,
+        "tipAmount": 0.0,
+        "total": 130.0,
+        "deliveryMethod": "DELIVERY",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "deliveryFee": 25.0,
+      "miscFee": 5.0,
+      "total": 130.0,
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted_cart_ids": [],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        }
+      ]
+    },
+    {
+      "case": "pickup-packaging-five",
+      "quote_amount": 100.0,
+      "validated_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "deliveryFee": 0.0,
+      "miscFee": 0.0,
+      "total": 100.0,
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted_cart_ids": [],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        }
+      ]
+    },
+    {
+      "case": "delivery-zero-client-fees",
+      "quote_amount": 130.0,
+      "validated_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 25.0,
+        "packagingFee": 5.0,
+        "tipAmount": 0.0,
+        "total": 130.0,
+        "deliveryMethod": "DELIVERY",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "deliveryFee": 25.0,
+      "miscFee": 5.0,
+      "total": 130.0,
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted_cart_ids": [],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        }
+      ]
+    },
+    {
+      "case": "delivery-negative-client-fee",
+      "http_status": 400,
+      "detail": "Invalid deliveryFee: must be a non-negative finite number",
+      "rejected": true
+    },
+    {
+      "case": "default-cleanup-other-variants",
+      "quote_amount": 100.0,
+      "validated_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "deliveryFee": 0.0,
+      "miscFee": 0.0,
+      "total": 100.0,
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [
+        {
+          "id": "small",
+          "variant": "Small",
+          "quantity": 3
+        },
+        {
+          "id": "large",
+          "variant": "Large",
+          "quantity": 4
+        }
+      ],
+      "deleted_cart_ids": [
+        "default"
+      ],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "CartItem",
+          "for_update": false
+        }
+      ]
+    },
+    {
+      "case": "replacement-default-cleanup",
+      "quote_amount": 100.0,
+      "validated_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "deliveryFee": 0.0,
+      "miscFee": 0.0,
+      "total": 100.0,
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted_cart_ids": [
+        "new-default"
+      ],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "CartItem",
+          "for_update": false
+        }
+      ]
+    },
+    {
+      "case": "accepted-quote-price-changed",
+      "quote_amount": 100.0,
+      "validated_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": []
+      },
+      "status": "CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "deliveryFee": 0.0,
+      "miscFee": 0.0,
+      "total": 100.0,
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted_cart_ids": [],
+      "locks": [
+        {
+          "entity": "Product",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        },
+        {
+          "entity": "Order",
+          "for_update": false
+        },
+        {
+          "entity": "User",
+          "for_update": false
+        },
+        {
+          "entity": "Address",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": false
+        },
+        {
+          "entity": "Cart",
+          "for_update": false
+        }
+      ]
+    },
+    {
+      "case": "unauthenticated-fcm-victim-binding",
+      "response": {
+        "success": true,
+        "message": "FCM token registered successfully",
+        "id": "fcm_0823912b50714e2a9156",
+        "userId": "usr_29c516aaa363423d923f"
+      },
+      "remaining_tokens": [
+        {
+          "userId": "victim-user",
+          "token": "victim-existing-device"
+        },
+        {
+          "userId": "usr_29c516aaa363423d923f",
+          "token": "attacker-device-token"
+        }
+      ],
+      "deleted_token_ids": []
+    },
+    {
+      "case": "unauthenticated-other-order-sse",
+      "status_code": 401,
+      "detail": "Authentication required to stream order updates",
+      "rejected": true
+    },
+    {
+      "case": "redis-reservation-after-db-rejection",
+      "scope": "exact checkout stock source block, fake Redis/ORM; simulated SQL rollback",
+      "http_status": 400,
+      "database_stock_after_rollback": 2,
+      "redis_stock_after_rollback": {
+        "stock:review-hub:review-product:base": 2
+      },
+      "release_function_called_in_orders_source": true
+    },
+    {
+      "case": "tracked-firebase-fallback-private-key",
+      "fallback_credentials_present": false,
+      "remediated": true
+    }
+  ]
+}

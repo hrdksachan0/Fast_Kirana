@@ -236,6 +236,72 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
     'cafe': { bg: 'bg-[#fff8e1] dark:bg-amber-950/20', text: 'text-[#f57f17]', label: 'Cafe', emoji: '☕' },
   }
 
+  const getCategoryPhoto = (cat: any): string | null => {
+    if (cat.imageUrl && (cat.imageUrl.startsWith('data:image/') || cat.imageUrl.startsWith('/') || cat.imageUrl.startsWith('http'))) {
+      return cat.imageUrl
+    }
+    const slug = (cat.slug || '').toLowerCase()
+    if (categoryPhotos[slug]) return categoryPhotos[slug]
+    const combined = `${slug} ${(cat.name || '').toLowerCase()}`
+    if (/dairy|milk|paneer|curd|butter|cheese|chhachh|ghee|dahi/i.test(combined)) return '/dairy_breakfast_category.webp'
+    if (/fruit|veg|sabzi/i.test(combined)) return '/fruits_vegetables_category.webp'
+    if (/cookie|namkeen|snack|munch|chips|biscuit|kurkure/i.test(combined)) return '/snacks_munchies_category.webp'
+    if (/beverage|drink|juice|soda|cola|water|cold/i.test(combined)) return '/beverages_category.webp'
+    if (/personal|care|hygiene|soap|shampoo|oral|hair|cosmetic/i.test(combined)) return '/personal_care_category.webp'
+    if (/clean|wash|house|home|laundry|dish|pest|pooja/i.test(combined)) return '/household_category.webp'
+    if (/atta|rice|dal|oil|spice|masala|kitchen|ration|grain|flour/i.test(combined)) return '/atta_rice_dal_category.webp'
+    if (/ice.?cream|dessert|kulfi|cassatta/i.test(combined)) return '/ice_cream_category.webp'
+    if (/cake|choco|sweet|mithai|pastry|bakery/i.test(combined)) return '/bakery_biscuits_category.webp'
+    if (/cafe|restaurant|burger|pizza/i.test(combined)) return '/cafe_category.webp'
+    return null
+  }
+
+  const getCategoryColor = (cat: any) => {
+    const slug = (cat.slug || '').toLowerCase()
+    if (colorMap[slug]) return colorMap[slug]
+    const combined = `${slug} ${(cat.name || '').toLowerCase()}`
+    if (/dairy|milk|paneer|curd|butter|cheese/i.test(combined)) return colorMap['dairy-products'] || colorMap['dairy-breakfast']
+    if (/fruit|veg/i.test(combined)) return colorMap['fruits-vegetables']
+    if (/cookie|namkeen/i.test(combined)) return colorMap['cookies-namkeen']
+    if (/package|instant|noodle|pasta/i.test(combined)) return colorMap['packaged-items']
+    if (/dry.?fruit|nuts/i.test(combined)) return colorMap['dry-fruits-super-foods']
+    if (/cake|choco|sweet/i.test(combined)) return colorMap['cakes-chocolates']
+    if (/house|clean|home/i.test(combined)) return colorMap['household-essentials']
+    if (/kitchen|ration|atta|rice|dal/i.test(combined)) return colorMap['kitchen-ration']
+    if (/drink|beverage/i.test(combined)) return colorMap['beverages']
+    if (/personal|hygiene|care/i.test(combined)) return colorMap['personal-care']
+    if (/ice.?cream/i.test(combined)) return colorMap['ice-cream']
+    return {
+      bg: 'bg-rose-500/5 dark:bg-rose-950/10 hover:bg-rose-500/10',
+      text: 'text-rose-500 dark:text-rose-450',
+      gradient: 'from-rose-500/10 to-rose-50/5',
+      ring: 'group-hover:ring-rose-500/20 hover:border-rose-500/30',
+    }
+  }
+
+  const getCategoryMobileConfig = (cat: any) => {
+    const slug = (cat.slug || '').toLowerCase()
+    if (mobileColorMap[slug]) return mobileColorMap[slug]
+    const combined = `${slug} ${(cat.name || '').toLowerCase()}`
+    if (/dairy|milk|paneer|curd|butter|cheese/i.test(combined)) return mobileColorMap['dairy-products'] || mobileColorMap['dairy-breakfast']
+    if (/fruit|veg/i.test(combined)) return mobileColorMap['fruits-vegetables']
+    if (/cookie|namkeen/i.test(combined)) return mobileColorMap['cookies-namkeen']
+    if (/package|instant|noodle|pasta/i.test(combined)) return mobileColorMap['packaged-items']
+    if (/dry.?fruit|nuts/i.test(combined)) return mobileColorMap['dry-fruits-super-foods']
+    if (/cake|choco|sweet/i.test(combined)) return mobileColorMap['cakes-chocolates']
+    if (/house|clean|home/i.test(combined)) return mobileColorMap['household-essentials']
+    if (/kitchen|ration|atta|rice|dal/i.test(combined)) return mobileColorMap['kitchen-ration']
+    if (/drink|beverage/i.test(combined)) return mobileColorMap['beverages']
+    if (/personal|hygiene|care/i.test(combined)) return mobileColorMap['personal-care']
+    if (/ice.?cream/i.test(combined)) return mobileColorMap['ice-cream']
+    return {
+      bg: 'bg-rose-500/10 dark:bg-rose-950/20 hover:border-rose-500/30',
+      text: 'text-rose-500 dark:text-rose-450',
+      label: cat.name || slug,
+      emoji: (cat as any).emoji || '📦'
+    }
+  }
+
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const handleScroll = (direction: 'left' | 'right') => {
@@ -285,12 +351,8 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
         className="grid grid-rows-2 grid-flow-col auto-cols-[74px] sm:auto-cols-[80px] gap-x-2.5 gap-y-3 overflow-x-auto pb-2 pt-1 scrollbar-none md:hidden px-1 scroll-smooth"
       >
         {allDisplayCategories.map((category: any) => {
-            const config = mobileColorMap[category.slug] || {
-              bg: 'bg-rose-500/10 dark:bg-rose-950/20 hover:border-rose-500/30',
-              text: 'text-rose-500 dark:text-rose-450',
-              label: category.name,
-              emoji: (category as any).emoji || '📦'
-            }
+            const config = getCategoryMobileConfig(category)
+            const photoSrc = getCategoryPhoto(category)
 
             const rawLabel = (config.label || category.name || '').replace(/^FastKirana\s+/i, '').trim()
             let formattedLabel = rawLabel
@@ -327,20 +389,9 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                     </span>
 
                     {/* Image overlay if real photo URL exists */}
-                    {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
+                    {photoSrc ? (
                       <Image
-                        src={category.imageUrl}
-                        alt={formattedLabel}
-                        fill
-                        sizes="70px"
-                        className="object-contain p-0.5 transition-transform duration-500 group-hover:scale-110 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.06)]"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = 'none'
-                        }}
-                      />
-                    ) : categoryPhotos[category.slug] ? (
-                      <Image
-                        src={categoryPhotos[category.slug]}
+                        src={photoSrc}
                         alt={formattedLabel}
                         fill
                         sizes="70px"
@@ -372,12 +423,8 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
       {/* Desktop: Grid layout */}
       <div className="hidden md:grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-9 gap-4 stagger-children">
         {allDisplayCategories.map((category: any) => {
-            const colors = colorMap[category.slug] || {
-              bg: 'bg-rose-500/5 dark:bg-rose-950/10 hover:bg-rose-500/10',
-              text: 'text-rose-500 dark:text-rose-450',
-              gradient: 'from-rose-500/10 to-rose-50/5',
-              ring: 'group-hover:ring-rose-500/20 hover:border-rose-500/30',
-            }
+            const colors = getCategoryColor(category)
+            const photoSrc = getCategoryPhoto(category)
             const itemCount = category._count?.products ?? 0
             const IconComponent = iconMap[category.slug] || ShoppingBag
 
@@ -398,20 +445,9 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                   <div
                     className={`flex items-center justify-center w-20 h-20 rounded-[22px] ${colors.bg} p-1 border border-white/20 dark:border-white/[0.05] backdrop-blur-md mb-2 shadow-xs transition-all duration-300 group-hover:shadow-md ${colors.ring} overflow-hidden relative`}
                   >
-                    {category.imageUrl && (category.imageUrl.startsWith('data:image/') || category.imageUrl.startsWith('/') || category.imageUrl.startsWith('http')) ? (
+                    {photoSrc ? (
                       <Image
-                        src={category.imageUrl}
-                        alt={category.name}
-                        fill
-                        sizes="(max-width: 768px) 80px, 120px"
-                        className="object-contain p-1 transition-transform duration-300 group-hover:scale-110 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.06)]"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = 'none'
-                        }}
-                      />
-                    ) : categoryPhotos[category.slug] ? (
-                      <Image
-                        src={categoryPhotos[category.slug]}
+                        src={photoSrc}
                         alt={category.name}
                         fill
                         sizes="(max-width: 768px) 80px, 120px"
@@ -434,7 +470,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                     {category.name}
                   </span>
                   <span className="text-[10px] text-text-muted mt-0.5">
-                    {category.isCafeSection ? 'Freshly Made' : `${itemCount} items`}
+                    {category.isCafeSection ? 'Freshly Made' : (itemCount > 0 ? `${itemCount} items` : 'Explore')}
                   </span>
                 </Link>
               </div>

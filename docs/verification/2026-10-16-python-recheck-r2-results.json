@@ -1,0 +1,31 @@
+{
+  "exit_code": 0,
+  "collected": 234,
+  "passed": 234,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "failed_tests": [],
+  "elapsed_seconds": 259.93,
+  "initial_hashes": {
+    "routers/cashfree_router.py": "ec3fa87e76d6172237808196ccdc829393a5b0f02d089afbf13dfc63107a02d7",
+    "routers/orders.py": "e62ac8a300f35bddc5f8a2242f7bae49b6a09b4005189d7451e26394e8e66f0b",
+    "routers/coupons.py": "65e945ef619fe419fea1e8ab6151f4f50a3d2dde005da71a0cd52251035835f9",
+    "utils/idempotency.py": "62271ca7cd1c2158de0fe78bd44ec52cb0c2a9b177b4d66e8150ddffc9083897",
+    "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+    "tests/test_production_blockers_resolved.py": "e9279fd5c8a5a13d25f957182f346f7862fd51df9296fc4757e0f73ff17c60ee",
+    "tests/test_coupon_menu_section.py": "0414ac8bbde11ecb24d924f56153393e3e1b1c8bf5c036e3ecb31d6474c727dd",
+    "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+  },
+  "final_hashes": {
+    "routers/cashfree_router.py": "ec3fa87e76d6172237808196ccdc829393a5b0f02d089afbf13dfc63107a02d7",
+    "routers/orders.py": "e62ac8a300f35bddc5f8a2242f7bae49b6a09b4005189d7451e26394e8e66f0b",
+    "routers/coupons.py": "65e945ef619fe419fea1e8ab6151f4f50a3d2dde005da71a0cd52251035835f9",
+    "utils/idempotency.py": "62271ca7cd1c2158de0fe78bd44ec52cb0c2a9b177b4d66e8150ddffc9083897",
+    "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+    "tests/test_production_blockers_resolved.py": "e9279fd5c8a5a13d25f957182f346f7862fd51df9296fc4757e0f73ff17c60ee",
+    "tests/test_coupon_menu_section.py": "0414ac8bbde11ecb24d924f56153393e3e1b1c8bf5c036e3ecb31d6474c727dd",
+    "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+  },
+  "scope": "offline SQLite; dummy credentials; external sockets blocked; test_migration_full.py excluded"
+}

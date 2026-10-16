@@ -117,19 +117,13 @@ async def register_fcm_token(
         import hashlib
         from datetime import datetime
 
-        if not user_id and body_user_id:
+        # Only allow admin or system caller to bind to a different body_user_id
+        if current_user and current_user.get("role") in ["ADMIN", "SUPERADMIN"] and body_user_id:
             u_check = await db.execute(select(User.id).where(User.id == body_user_id))
             if u_check.scalars().first():
                 user_id = body_user_id
 
-        if not user_id and phone:
-            clean_phone = re.sub(r"\D", "", str(phone))[-10:]
-            if len(clean_phone) == 10:
-                u_phone_check = await db.execute(select(User.id).where(User.phone.like(f"%{clean_phone}%")))
-                found_id = u_phone_check.scalars().first()
-                if found_id:
-                    user_id = found_id
-
+        # Anonymous / unauthenticated callers must NEVER hijack existing user accounts
         if not user_id:
             token_hash = hashlib.md5(token.encode()).hexdigest()[:12]
             anon_email = f"anon-fcm-{token_hash}@fastkirana.com"
@@ -139,9 +133,9 @@ async def register_fcm_token(
                 anon_user = User(
                     id=f"usr_{uuid.uuid4().hex[:20]}",
                     email=anon_email,
-                    name="Mobile App User",
+                    name="Guest Device",
                     role="USER",
-                    phone=str(phone) if phone else None,
+                    phone=None,
                     createdAt=datetime.utcnow(),
                     updatedAt=datetime.utcnow()
                 )
@@ -159,7 +153,7 @@ async def register_fcm_token(
             existing_token.userId = user_id
             if device_type:
                 existing_token.deviceType = device_type
-            if user_id:
+            if current_user and user_id:
                 await db.execute(delete(FcmToken).where(FcmToken.userId == user_id, FcmToken.token != token))
             await db.commit()
             return {
@@ -176,7 +170,7 @@ async def register_fcm_token(
                 deviceType=device_type
             )
             db.add(new_fcm)
-            if user_id:
+            if current_user and user_id:
                 await db.execute(delete(FcmToken).where(FcmToken.userId == user_id, FcmToken.token != token))
             await db.commit()
             return {

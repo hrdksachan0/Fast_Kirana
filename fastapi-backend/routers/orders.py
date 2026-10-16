@@ -1948,6 +1948,7 @@ async def create_order(
                         detail="Payment is currently being processed or already claimed by another request."
                     )
 
+        reserved_redis_items = []
         for spec in order_specs:
             ord_obj = Order(
                 id=generate_id("ord_"),
@@ -2025,7 +2026,7 @@ async def create_order(
                     qty = int(item["quantity"])
 
                     # 1. Fast in-memory pre-deduction via Redis Lua script (Swiggy/Blinkit high-throughput pattern)
-                    from utils.cache import atomic_reserve_inventory
+                    from utils.cache import atomic_reserve_inventory, release_reserved_inventory
                     stock_cache_key = f"stock:{store_id or 'default'}:{prod.id}:{var_name or 'base'}"
                     lua_res = await atomic_reserve_inventory(stock_cache_key, qty, initial_seed_stock=prod.stock)
                     if lua_res == -1:
@@ -2033,76 +2034,85 @@ async def create_order(
                             status_code=400,
                             detail=f"Insufficient inventory for \"{prod.name}\". Requested {qty} units."
                         )
+                    if "reserved_redis_items" in locals() and lua_res >= 0:
+                        reserved_redis_items.append((stock_cache_key, qty))
 
-                    # 2. Row-lock product in DB to ensure persistent multi-worker synchronization
-                    p_lock_stmt = select(Product).where(Product.id == prod.id).with_for_update()
-                    p_lock_res = await db.execute(p_lock_stmt)
-                    locked_prod = p_lock_res.scalars().first()
-                    if not locked_prod:
-                        raise HTTPException(status_code=400, detail=f"Product '{prod.name}' not found")
+                    try:
+                        # 2. Row-lock product in DB to ensure persistent multi-worker synchronization
+                        p_lock_stmt = select(Product).where(Product.id == prod.id).with_for_update()
+                        p_lock_res = await db.execute(p_lock_stmt)
+                        locked_prod = p_lock_res.scalars().first()
+                        if not locked_prod:
+                            raise HTTPException(status_code=400, detail=f"Product '{prod.name}' not found")
 
-                    prev_stock = locked_prod.stock or 0
+                        prev_stock = locked_prod.stock or 0
 
-                    if var_name and locked_prod.variants and isinstance(locked_prod.variants, list):
-                        updated_variants = []
-                        variant_found = False
-                        for v in locked_prod.variants:
-                            v_copy = dict(v)
-                            if v_copy.get("name") == var_name:
-                                variant_found = True
-                                v_stock = int(v_copy.get("stock", 0))
-                                if v_stock < qty:
-                                    raise HTTPException(
-                                        status_code=400,
-                                        detail=f"Insufficient stock for \"{locked_prod.name} ({var_name})\". Available: {v_stock}, requested: {qty}."
-                                    )
-                                v_copy["stock"] = v_stock - qty
-                            updated_variants.append(v_copy)
-                        if not variant_found and prev_stock < qty:
-                            raise HTTPException(
-                                status_code=400,
-                                detail=f"Insufficient stock for \"{locked_prod.name}\". Available: {prev_stock}, requested: {qty}."
-                            )
-                        locked_prod.variants = updated_variants
-                        locked_prod.stock = sum(int(v.get("stock", 0)) for v in updated_variants)
-                    else:
-                        if prev_stock < qty:
-                            raise HTTPException(
-                                status_code=400,
-                                detail=f"Insufficient stock for \"{locked_prod.name}\". Available: {prev_stock}, requested: {qty}."
-                            )
-                        locked_prod.stock = prev_stock - qty
+                        if var_name and locked_prod.variants and isinstance(locked_prod.variants, list):
+                            updated_variants = []
+                            variant_found = False
+                            for v in locked_prod.variants:
+                                v_copy = dict(v)
+                                if v_copy.get("name") == var_name:
+                                    variant_found = True
+                                    v_stock = int(v_copy.get("stock", 0))
+                                    if v_stock < qty:
+                                        raise HTTPException(
+                                            status_code=400,
+                                            detail=f"Insufficient stock for \"{locked_prod.name} ({var_name})\". Available: {v_stock}, requested: {qty}."
+                                        )
+                                    v_copy["stock"] = v_stock - qty
+                                updated_variants.append(v_copy)
+                            if not variant_found and prev_stock < qty:
+                                raise HTTPException(
+                                    status_code=400,
+                                    detail=f"Insufficient stock for \"{locked_prod.name}\". Available: {prev_stock}, requested: {qty}."
+                                )
+                            locked_prod.variants = updated_variants
+                            locked_prod.stock = sum(int(v.get("stock", 0)) for v in updated_variants)
+                        else:
+                            if prev_stock < qty:
+                                raise HTTPException(
+                                    status_code=400,
+                                    detail=f"Insufficient stock for \"{locked_prod.name}\". Available: {prev_stock}, requested: {qty}."
+                                )
+                            locked_prod.stock = prev_stock - qty
 
-                    if store_id:
-                        try:
-                            from models import StoreInventory
-                            inv_stmt = select(StoreInventory).where(
-                                StoreInventory.productId == locked_prod.id,
-                                StoreInventory.storeId == store_id
-                            ).with_for_update()
-                            inv_res = await db.execute(inv_stmt)
-                            existing_inv = inv_res.scalars().first()
-                            if existing_inv:
-                                if existing_inv.stock < qty:
-                                    raise HTTPException(
-                                        status_code=400,
-                                        detail=f"Insufficient hub stock for \"{locked_prod.name}\". Available: {existing_inv.stock}, requested: {qty}."
-                                    )
-                                existing_inv.stock = existing_inv.stock - qty
-                        except HTTPException:
-                            raise
-                        except Exception as inv_err:
-                            logger.warning(f"Could not decrement StoreInventory for product {locked_prod.id} at store {store_id}: {inv_err}")
+                        if store_id:
+                            try:
+                                from models import StoreInventory
+                                inv_stmt = select(StoreInventory).where(
+                                    StoreInventory.productId == locked_prod.id,
+                                    StoreInventory.storeId == store_id
+                                ).with_for_update()
+                                inv_res = await db.execute(inv_stmt)
+                                existing_inv = inv_res.scalars().first()
+                                if existing_inv:
+                                    if existing_inv.stock < qty:
+                                        raise HTTPException(
+                                            status_code=400,
+                                            detail=f"Insufficient hub stock for \"{locked_prod.name}\". Available: {existing_inv.stock}, requested: {qty}."
+                                        )
+                                    existing_inv.stock = existing_inv.stock - qty
+                            except HTTPException:
+                                raise
+                            except Exception as inv_err:
+                                logger.warning(f"Could not decrement StoreInventory for product {locked_prod.id} at store {store_id}: {inv_err}")
 
-                    log = StockLog(
-                        id=generate_id("sl_"),
-                        productId=locked_prod.id,
-                        quantity=-qty,
-                        type="ONLINE_ORDER",
-                        prevStock=prev_stock,
-                        newStock=locked_prod.stock
-                    )
-                    db.add(log)
+                        log = StockLog(
+                            id=generate_id("sl_"),
+                            productId=locked_prod.id,
+                            quantity=-qty,
+                            type="ONLINE_ORDER",
+                            prevStock=prev_stock,
+                            newStock=locked_prod.stock
+                        )
+                        db.add(log)
+                    except Exception:
+                        if lua_res >= 0:
+                            await release_reserved_inventory(stock_cache_key, qty)
+                            if "reserved_redis_items" in locals() and (stock_cache_key, qty) in reserved_redis_items:
+                                reserved_redis_items.remove((stock_cache_key, qty))
+                        raise
 
             created_orders.append(ord_obj)
 
@@ -2451,6 +2461,14 @@ async def create_order(
         return result_payload
 
     except HTTPException as he:
+        if "reserved_redis_items" in locals() and reserved_redis_items:
+            from utils.cache import release_reserved_inventory
+            for r_key, r_qty in reserved_redis_items:
+                try:
+                    await release_reserved_inventory(r_key, r_qty)
+                except Exception:
+                    pass
+            reserved_redis_items.clear()
         if locals().get("lock_acquired"):
             await db.rollback()
             if he.status_code != 409:
@@ -2458,6 +2476,14 @@ async def create_order(
                     await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
         raise
     except Exception as e:
+        if "reserved_redis_items" in locals() and reserved_redis_items:
+            from utils.cache import release_reserved_inventory
+            for r_key, r_qty in reserved_redis_items:
+                try:
+                    await release_reserved_inventory(r_key, r_qty)
+                except Exception:
+                    pass
+            reserved_redis_items.clear()
         await db.rollback()
         logger.error(f"Failed to place order: {str(e)}")
         if locals().get("lock_acquired"):

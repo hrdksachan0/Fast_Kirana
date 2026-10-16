@@ -117,6 +117,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   final Ref ref;
   late final PaymentGatewayHandler _paymentHandler = PaymentGatewayHandler(dio: ref.read(dioProvider));
   BuildContext? _currentContext;
+  static final Set<String> _acknowledgedOrderIds = {};
 
   // Parameters cached for payment callbacks
   double _discountAmount = 0.0;
@@ -726,11 +727,6 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         );
 
         if (cfOrderId != null) {
-          final draftWithId = initialDraft.copyWith(
-            activePaymentSessionId: cfOrderId,
-            cfOrderId: cfOrderId,
-          );
-          await CheckoutDraft.saveAcceptedDraft(draftWithId);
           state = state.copyWith(pendingCashfreeOrderId: cfOrderId);
           return;
         }
@@ -1307,11 +1303,27 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     unawaited(CustomerSoundService.instance.playOrderSuccessSound());
     await Future.delayed(const Duration(milliseconds: 200));
 
-    // Clear only draft items if specified, preserving any unrelated newer cart edits
-    if (orderedItems != null && orderedItems.isNotEmpty) {
-      await ref.read(cartProvider.notifier).removeDraftItems(orderedItems);
+    // Clear only draft items if specified, preserving any unrelated newer cart edits idempotently
+    final orderId = placedOrder.id;
+    if (_acknowledgedOrderIds.contains(orderId)) {
+      LoggerService.info('CheckoutController: Order $orderId already acknowledged, skipping duplicate cart subtraction.');
     } else {
-      await ref.read(cartProvider.notifier).clearCart();
+      _acknowledgedOrderIds.add(orderId);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final ackList = prefs.getStringList('acknowledged_order_ids') ?? [];
+        if (!ackList.contains(orderId)) {
+          ackList.add(orderId);
+          if (ackList.length > 50) ackList.removeAt(0);
+          await prefs.setStringList('acknowledged_order_ids', ackList);
+        }
+      } catch (_) {}
+
+      if (orderedItems != null && orderedItems.isNotEmpty) {
+        await ref.read(cartProvider.notifier).removeDraftItems(orderedItems);
+      } else {
+        await ref.read(cartProvider.notifier).clearCart();
+      }
     }
     ref.invalidate(ordersProvider(userId));
     ref.invalidate(ordersProvider(''));

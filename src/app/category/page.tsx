@@ -41,24 +41,28 @@ async function CategoriesLoader() {
     })
 
     // Map to standard Category schema
-    categories = categoriesRaw.map((c) => ({
-      id: c.id,
-      name: c.name,
-      slug: c.slug,
-      imageUrl: c.imageUrl,
-      parentId: c.parentId,
-      sortOrder: c.sortOrder,
-      _count: c._count,
-      children: c.children?.map((sub) => ({
-        id: sub.id,
-        name: sub.name,
-        slug: sub.slug,
-        imageUrl: sub.imageUrl,
-        parentId: sub.parentId,
-        sortOrder: sub.sortOrder,
-        _count: sub._count,
-      })),
-    }))
+    categories = categoriesRaw.map((c) => {
+      const childrenProducts = c.children?.reduce((sum, sub) => sum + (sub._count?.products ?? 0), 0) ?? 0
+      const totalCount = (c._count?.products ?? 0) + childrenProducts
+      return {
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        imageUrl: c.imageUrl,
+        parentId: c.parentId,
+        sortOrder: c.sortOrder,
+        _count: { products: totalCount },
+        children: c.children?.map((sub) => ({
+          id: sub.id,
+          name: sub.name,
+          slug: sub.slug,
+          imageUrl: sub.imageUrl,
+          parentId: sub.parentId,
+          sortOrder: sub.sortOrder,
+          _count: sub._count,
+        })),
+      }
+    })
   } catch (error) {
     console.error('Failed to load categories in CategoriesLoader:', error)
     categories = []

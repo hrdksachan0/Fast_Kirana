@@ -699,14 +699,62 @@ async def sse_orders_stream(request: Request):
 async def sse_single_order_stream(
     request: Request,
     order_id: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[dict] = Depends(get_current_user),
+    token: Optional[str] = Query(None)
 ):
     """
     Dedicated real-time Server-Sent Events (SSE) stream for single-order tracking.
     Pushes status updates, rider coordinates, and live ETAs directly to Flutter
     without requiring battery-draining continuous polling.
+    Requires authentication and ownership verification.
     """
     clean_oid = order_id.strip()
+
+    # Determine user identity
+    user = current_user if isinstance(current_user, dict) else None
+    if not user:
+        # Check token query parameter or headers
+        auth_token = token
+        if not auth_token and hasattr(request, "query_params"):
+            auth_token = request.query_params.get("token")
+        if not auth_token and hasattr(request, "headers"):
+            auth_hdr = request.headers.get("authorization") or request.headers.get("Authorization")
+            if auth_hdr and auth_hdr.lower().startswith("bearer "):
+                auth_token = auth_hdr[7:].strip()
+        if auth_token:
+            from utils.jwt import extract_user_from_token, is_token_expired
+            candidate = extract_user_from_token(auth_token)
+            if candidate and not is_token_expired(candidate):
+                user = candidate
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required to stream order updates"
+        )
+
+    # Verify order existence and access permissions
+    stmt = select(Order).where(Order.id == clean_oid)
+    res = await db.execute(stmt)
+    ord_obj = res.scalars().first()
+    if not ord_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+
+    user_id = user.get("id") or user.get("sub")
+    user_role = str(user.get("role", "")).upper()
+    is_owner = bool(user_id and ord_obj.userId and user_id == ord_obj.userId)
+    is_staff = user_role in ("ADMIN", "SUPERADMIN", "STORE_MANAGER", "STAFF")
+    is_rider = bool(user_id and getattr(ord_obj, "deliveryPartnerId", None) and user_id == ord_obj.deliveryPartnerId)
+
+    if not (is_owner or is_staff or is_rider):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: You do not have permission to view updates for this order"
+        )
 
     async def single_order_generator():
         yield f"data: {json.dumps({'event': 'CONNECTED', 'orderId': clean_oid, 'timestamp': int(time.time() * 1000)})}\n\n"
@@ -717,20 +765,20 @@ async def sse_single_order_stream(
                 break
 
             try:
-                stmt = select(Order).where(Order.id == clean_oid)
-                res = await db.execute(stmt)
-                ord_obj = res.scalars().first()
-                if ord_obj:
-                    cur_status = str(ord_obj.status)
+                stmt_poll = select(Order).where(Order.id == clean_oid)
+                res_poll = await db.execute(stmt_poll)
+                cur_ord = res_poll.scalars().first()
+                if cur_ord:
+                    cur_status = str(cur_ord.status)
                     if cur_status != last_status:
                         last_status = cur_status
                         payload = {
                             "event": "STATUS_CHANGED",
-                            "orderId": ord_obj.id,
-                            "readableId": ord_obj.readableId,
+                            "orderId": cur_ord.id,
+                            "readableId": cur_ord.readableId,
                             "status": cur_status,
-                            "paymentStatus": ord_obj.paymentStatus,
-                            "deliveryMethod": ord_obj.deliveryMethod,
+                            "paymentStatus": cur_ord.paymentStatus,
+                            "deliveryMethod": cur_ord.deliveryMethod,
                             "timestamp": int(time.time() * 1000)
                         }
                         yield f"data: {json.dumps(payload)}\n\n"

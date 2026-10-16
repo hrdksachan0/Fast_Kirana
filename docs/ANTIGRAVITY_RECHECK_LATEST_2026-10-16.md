@@ -1,170 +1,202 @@
-# FastKirana recheck and Antigravity handoff — 16 October 2026
+# FastKirana independent recheck and Antigravity plan — 16 October 2026
 
-This report supersedes the remaining-findings status in the 15 October report. Reviewed the latest saved, uncommitted Flutter changes and their FastAPI payment boundary. No application fixes, commits, deployments, real payments or production database changes were performed.
+This recheck supersedes the previous findings in this file. **The test suites are green, but six payment/cart findings remain.** Four are P1 because they affect charged amounts, paid-order recovery, or the purchased basket; two are P2 cart correctness defects.
 
-## Independent verification
+Reviewed the latest saved, uncommitted checkout/cart changes and the FastAPI payment boundary. No application fixes, commits, deployments, real payments, or production database changes were made. Review probes used isolated test data and mocked/intercepted native SDK/network calls.
+
+## Fresh verification
 
 | Check | Result |
 |---|---|
-| Full Flutter suite, explicit Skia: `flutter test --no-pub --no-enable-impeller` | **268 passed, 0 failed** |
-| Dart analysis of checkout controller, payment handler, draft, cart provider/repository and success screen | **No issues**, exit 0 |
-| Full FastAPI suite, isolated SQLite, external HTTP blocked | **228 passed, 1 failed**, 255 warnings |
-| Failing backend case | `test_concurrent_workers_idempotency_with_redis_down`, line 1012: successful response observed, but the test database contained zero orders |
-| Focused actual Flutter handler/controller/notifier/repository probes | **8 diagnostic cases completed** |
-| Focused actual FastAPI quote/recovery probes, isolated SQLite | **2 diagnostic cases completed** |
-| Next.js unit tests / TypeScript | Previously passed; not rerun in this Flutter follow-up |
+| FastAPI full suite, isolated SQLite, external HTTP blocked | **235 passed, 0 failed**, 266 warnings |
+| Flutter full suite: `flutter test --no-pub --no-enable-impeller --reporter expanded` | **300 passed, 0 failed** |
+| Next.js unit suite | **147 passed**, 21 suites, 0 failed |
+| TypeScript: `tsc --noEmit --incremental false` | **Exit 0, no errors** |
+| Dart analysis of checkout controller, payment handler, draft, cart provider/repository, success screen | **No issues**, exit 0 |
+| Actual FastAPI quote/recovery diagnostic cases | **5 completed**: closure control and reproduced faulty states |
+| Actual Flutter diagnostic cases | **6 completed**, plus **1 concurrent completion** and **1 second-save** case |
+| Actual cart notifier/repository diagnostic cases | **3 completed** |
 
-Several diagnostic probes deliberately assert the observed faulty state. Their completion confirms the reproduction, not correctness of those paths. Native SDK and HTTP calls were mocked/intercepted. The main Flutter suite passed with explicit Skia; a default-renderer run is not claimed.
+Diagnostic cases deliberately assert the observed bug when reproducing it. A passing diagnostic establishes the reproduction; it does not approve that behavior. The full Flutter run used explicit Skia and did not include the temporary review probes. This is targeted Dart analysis, not a newly run full `flutter analyze`.
 
-## Fixes verified closed or substantially corrected
+The ten files recorded in the initial recheck snapshot retained identical SHA-256 hashes through verification. The Next.js payment creation observations below are source findings; the FastAPI attack/recovery cases were executed against actual handlers.
 
-- **SDK launch is aborted on both thrown and false accepted-draft writes.** Both probes returned null, made no native payment call, and removed the pending Cashfree ID. A successful-write control launched normally and retained the durable draft. The earlier SDK-launch-after-write-failure defect is closed; the cache-state issue below remains.
-- **Online mode and accepted hub now survive recovery.** The actual controller submitted UPI and the accepted hub while its current state/hub differed.
-- **Positive accepted fees survive recovery.** Accepted delivery 12 and packaging 9 were submitted as 12 and 9, with accepted total 121.
-- **Success-screen whole-cart clear has been removed.** Background retry now passes its ordered items to selective completion.
-- **Unit-bearing and explicit variants now subtract correctly in the tested Flutter case.** Ordering one default-unit item and one explicit variant retained the remaining quantities and unrelated B.
-- **The old delayed startup POST race is closed.** The actual queue produced old-A POST completion followed by new-B POST completion; server/UI both ended at B with pending=false.
+## Previous fixes now verified
 
-## Remaining findings and implementation plan
+- Flutter now sends coupon, hub, discount and fee metadata when creating payment. A legitimate ₹100 item with a ₹20 coupon now creates an ₹80 gateway amount and persists quote totals, zero fees and hub.
+- Recovered drafts retain UPI, accepted hub, zero delivery/packaging fees and positive fee snapshots. The earlier zero-as-missing fallback is closed in the tested cases.
+- Both thrown and false first draft writes abort SDK launch and remove pending IDs and cached/durable phantom drafts. A successful first-write control launches and retains the accepted draft.
+- The former `CartItem` import-shadowing and nonexistent `ci.price` recovery errors are closed. The fallback now runs; its basket-selection policy is still unsafe, as finding 3 shows.
+- The success-screen unconditional cart clear is removed, background retry passes ordered items, and unit/variant matching works in the reviewed case.
+- Delayed server GET and the previously identified stale startup POST overwrite are guarded. Early local hydration still loses data, as finding 6 shows.
+- The previously failing backend concurrency test passed in this fresh full run. See the separate concurrency validation gap below.
 
-### 1. [P1] Connect Flutter payment creation to the complete validated quote
+## 1. [P1] Derive fees and validate coupon eligibility on the server
 
-**Where:** [payment_gateway_handler.dart:54](D:/Fastkirana/fastkirana_flutter/lib/features/checkout/controllers/payment_gateway_handler.dart:54), [checkout_controller.dart:683](D:/Fastkirana/fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart:683), [cashfree_router.py:294](D:/Fastkirana/fastapi-backend/routers/cashfree_router.py:294).
+**Where:** [cashfree_router.py:341](D:/Fastkirana/fastapi-backend/routers/cashfree_router.py:341), [coupon evaluator:370](D:/Fastkirana/fastapi-backend/routers/cashfree_router.py:370), [recovery threshold:1392](D:/Fastkirana/fastapi-backend/routers/cashfree_router.py:1392).
 
-The backend now understands coupon information in `orderPayload` / `cartPayload`, but Flutter sends only amount, identity/address, items and delivery method. Its saved coupon/discount/fees/hub snapshot is not included in the create-payment request.
-
-The native handler probe captured no coupon or orderPayload in the request. An actual FastAPI handler probe seeded a real active flat ₹20 coupon and a ₹100 product in isolated SQLite:
+Payment creation treats client delivery/packaging fees as authoritative. Recovery then trusts the saved quote. Actual handler reproduction:
 
 ```text
-accepted amount = 80
-actual Flutter-shaped request -> gateway orderAmount = 100
-same request + coupon metadata -> gateway orderAmount = 80
+Catalog subtotal = 100
+Client deliveryFee = -99, packagingFee = 0
+Gateway amount = 1
+Recovered order = CONFIRMED, subtotal = 100, deliveryFee = -99, total = 1
 ```
 
-The control's durable intent still stored amount/items/scope but omitted the validated coupon and full fee breakdown. This is an incomplete contract across payment creation, persistence and recovery.
+A second probe used a ₹20 category-restricted coupon on a product from a different category. The gateway still charged ₹80. The payment coupon evaluator omits restrictions enforced by normal order placement, including category and other scope/usage rules.
 
 **Implement:**
-1. Submit the accepted checkout data, or a server quote ID, from Flutter before payment-session creation.
-2. Validate coupon eligibility and all quote components on the server. Persist the complete validated quote and bind it to the attempt/payment.
-3. Use that same quote for Cashfree amount, mobile acknowledgement, normal order placement and webhook recovery.
-4. Reject an inconsistent request or request explicit re-acceptance of a changed quote; do not silently charge a higher amount.
-5. Keep the same contract on both backends.
 
-**Acceptance:** Seed a valid ₹20 coupon against a ₹100 product and submit the actual Flutter request. Gateway, durable intent, client display and final business order must all use ₹80. Include valid percentage/free-delivery coupons, invalid coupons, tips, packaging, hub changes and response-loss recovery.
+1. Use one canonical quote policy for payment creation, ordinary placement and recovery. Derive delivery/packaging from validated hub, address, fulfillment and packaging choices.
+2. Reject negative/nonfinite monetary inputs and inconsistent quote data. Nonnegative checks alone do not prevent a client from spoofing zero fees.
+3. Apply the complete coupon eligibility policy, including product/category/restaurant scope and customer usage restrictions.
+4. Persist server-validated quote data before exposing a usable payment session. Bind it to owner, hub and payment attempt.
+5. Bring the Next.js path to the same contract. Its [pre-order amount branch:58](D:/Fastkirana/src/app/api/payment/cashfree/create-order/route.ts:58) still uses client `amount`, and [lines 113–140](D:/Fastkirana/src/app/api/payment/cashfree/create-order/route.ts:113) store a raw draft in Redis. This is a source-confirmed parity gap; this recheck does not claim a demonstrated Next.js fulfillment exploit.
 
-### 2. [P1] Preserve accepted zero fees instead of recalculating them
+**Acceptance:** Reject the ₹100/−₹99 fee attack, forged zero fees, nonfinite values and out-of-scope coupons. Verify valid flat/percentage/free-delivery coupons and packaging choices use identical totals across Flutter, both backends, gateway and recovered order.
 
-**Where:** [checkout_controller.dart:888](D:/Fastkirana/fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart:888).
+## 2. [P1] Preserve accepted line prices after payment
 
-Recovery uses saved delivery/packaging fees only when greater than zero. A valid zero therefore falls through to current settings/tier fees, even though the saved grand total is retained.
+**Where:** [cashfree_router.py:1274](D:/Fastkirana/fastapi-backend/routers/cashfree_router.py:1274), [total reconstruction:1392](D:/Fastkirana/fastapi-backend/routers/cashfree_router.py:1392).
 
-Actual controller probe:
-
-```text
-accepted delivery=0, packaging=0, total=100
-submitted delivery=25, packaging=7, total=100
-payment=UPI, store=accepted hub
-```
-
-The submitted breakdown disagrees with the accepted transaction and its own total.
-
-**Implement:**
-1. Distinguish an absent legacy field from a valid zero using field presence/schema version.
-2. For a complete accepted draft, use the saved fee values including zero.
-3. Preserve the accepted quote's fulfillment origin and validation context too; current cart/settings must not rebuild an already-paid quote.
-4. Handle incomplete legacy drafts through deterministic server reconciliation rather than a silent current-settings fallback.
-
-**Acceptance:** Recover paid drafts with zero delivery, zero packaging, free delivery, pickup and positive fees after settings change. Every quote component and total must remain consistent.
-
-### 3. [P1] Repair the backend cart-fallback recovery branch
-
-**Where:** [cashfree_router.py:1201](D:/Fastkirana/fastapi-backend/routers/cashfree_router.py:1201), [local import at line 1399](D:/Fastkirana/fastapi-backend/routers/cashfree_router.py:1399).
-
-The new selective cleanup includes `from models import CartItem` inside the recovery function. Python consequently treats CartItem as a local variable throughout that function. The earlier cart fallback reads it before that import executes.
-
-An actual recovery probe seeded a buyer, product and cart, removed cached/durable intent, and supplied a paid gateway event:
+Recovery re-reads current product/variant prices despite having an accepted payment intent:
 
 ```text
-result=None
-Auto-Recovery FATAL:
-cannot access local variable 'CartItem' where it is not associated with a value
+Accepted: subtotal = 100, coupon discount = 20, paid = 80
+Catalog changes: product price = 120
+Recovery: subtotal = 120, discount = 20, total = 80
+Status = ADMIN_PENDING; reason = Underpaid: paid 80 < expected 100
 ```
 
-This prevents the fallback from recovering the paid order.
+A valid paid purchase is incorrectly treated as underpaid when the catalog changes.
 
-The same fallback also reads `ci.price` at lines 1212/1217, while the actual [CartItem model](D:/Fastkirana/fastapi-backend/models.py:201) has no price attribute. That is a source-confirmed follow-on error to fix in the same branch.
+**Implement:** Persist canonical server-validated line prices, variants, quantities, discounts, fees, currency and total with the accepted quote. Recover those accepted values. Recheck current stock separately. If a quote expires, require re-acceptance before payment rather than repricing after payment.
 
-**Implement:**
-1. Remove the function-local shadowing and use the intended module-level model.
-2. Align fallback reads with the actual CartItem schema and authoritative product/variant pricing.
-3. Define safe reconciliation when the original accepted snapshot is unavailable. Do not silently equate an unrelated current cart with the paid basket.
-4. Test the no-intent fallback and selective cleanup together, including null/unit/explicit variants and newer quantities.
+**Acceptance:** Change product price, variant price, coupon and fee configuration after payment-session creation. Recovery must preserve the accepted financial snapshot and check inventory independently.
 
-**Acceptance:** A paid event without cached/durable intent but with an existing buyer/cart must reach the defined recovery/manual-reconciliation outcome without a scope/attribute exception. Normal durable-intent recovery must continue to work and preserve unrelated cart additions.
+## 3. [P1] Do not fulfill the current cart when the paid intent is missing
 
-### 4. [P2] Protect mutations made before local cart hydration completes
+**Where:** [cashfree_router.py:1311](D:/Fastkirana/fastapi-backend/routers/cashfree_router.py:1311).
 
-**Where:** [cart_provider.dart:217](D:/Fastkirana/fastkirana_flutter/lib/providers/cart_provider.dart:217), [lines 228–231](D:/Fastkirana/fastkirana_flutter/lib/providers/cart_provider.dart:228).
-
-The queued startup POST is fixed, and server GET hydration has a version guard. An earlier window remains: local storage is read asynchronously, then its old items are published and assigned to the queue without checking whether a user edited the cart while that read was pending.
-
-The actual notifier/repository probe delayed the first local read, added new-B, then completed the old-A read:
+The repaired fallback uses the buyer's current cart as the paid basket. Actual reproduction deliberately removed the accepted intent and replaced the cart:
 
 ```text
-server=[old_A]
-UI=[old_A]
-local storage=[new_B]
-pending=false
+Paid basket: product A, amount = 100
+No cached/durable intent remains
+Current cart: unrelated product B, price = 100
+Recovered order: CONFIRMED, product = B
 ```
 
-The new edit disappears from the visible/server cart and its retry signal is cleared.
+Matching amount and buyer identity do not establish which goods were purchased.
 
-**Implement:**
-1. Capture the owner/hub/generation before the first asynchronous hydration read.
-2. Preserve and replay edits made during loading against the loaded base, or block mutation until hydration completes with a clear UI policy.
-3. Do not overwrite the latest queued revision with the stale read.
-4. Make a clear intent win over an older nonempty cache and preserve dirty/tombstone metadata across restart.
+**Implement:** Recover only from an authoritative attempt-bound accepted snapshot. If that snapshot is unavailable, record the paid event for explicit reconciliation and prevent automatic dispatch or cleanup of the current cart. Preserve newer cart items.
 
-**Acceptance:** Delay local storage, then add, increment, remove and clear before loading finishes. Include pending=true/false and scope changes. Keep the already-passing delayed startup POST regression.
+**Acceptance:** Remove/cache-expire the original intent, add an unrelated equal-price basket and replay the paid event. It must not confirm or dispatch B. Also cover empty cart, higher/lower prices and legacy attempts with a trustworthy archived snapshot.
 
-### 5. [P2] Remove the phantom accepted draft from cache after failed persistence
+## 4. [P1] Preserve a committed draft if a redundant post-launch save fails
 
-**Where:** [checkout_draft.dart:174](D:/Fastkirana/fastkirana_flutter/lib/data/models/checkout_draft.dart:174), [payment_gateway_handler.dart:85](D:/Fastkirana/fastkirana_flutter/lib/features/checkout/controllers/payment_gateway_handler.dart:85), [controller restoration at line 153](D:/Fastkirana/fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart:153).
+**Where:** [checkout_controller.dart:728](D:/Fastkirana/fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart:728), [checkout_draft.dart:180](D:/Fastkirana/fastkirana_flutter/lib/data/models/checkout_draft.dart:180).
 
-SDK abort and pending-ID cleanup now work. However, legacy SharedPreferences updates its cache before the platform write. Both failure probes observed:
+The controller saves the accepted draft in `onBeforeLaunch`, then saves it again after the SDK launch returns. The persistence helper deletes the draft key when a write fails. Actual helper/handler sequence:
 
 ```text
-SDK calls=[]
-pending ID=null
-cached accepted draft=cf_review_failed_attempt
-after preferences reload: durable accepted draft=null
+First accepted-draft write = committed
+Mocked SDK doUPIPaymentWithUI = launched
+Second-only accepted-draft write = false / throws
+Cached draft = null; durable draft after reload = null
+Pending payment ID still exists
 ```
 
-Controller initialization falls back from a missing pending ID to `draft.cfOrderId`. Navigating away and reopening checkout in the same process can therefore restore an uncommitted attempt as pending, despite no payment SDK having launched.
+The first-write abort fix works, but the second write can erase recovery data while a payment is already active.
 
-**Implement:** Roll back/restore or explicitly invalidate the accepted-draft cache on failure. Recovery must admit only committed accepted transactions. Keep a safe server intent reference where needed, but do not present a failed local preparation as a launched payment.
+**Implement:** Remove the redundant post-launch persistence, or make replacement failure preserve the previously committed accepted record. Keep first-time write failure cleanup distinct from replacing a valid record. Completion callbacks must not recreate a finalized draft.
 
-**Acceptance:** Throwing and false writes must abort SDK launch and leave no recoverable phantom attempt both before and after storage reload. Recreate the controller in the same process, then simulate a process restart. The next legitimate purchase must remain usable.
+**Acceptance:** Let the first draft write succeed and the SDK launch, then fail only the second write. Restart/reload storage and verify the exact accepted snapshot remains recoverable. Retain the existing first-write failure controls.
 
-## Backend full-suite failure still requires resolution
+## 5. [P2] Acknowledge cart cleanup once per durable order
 
-The current full suite failed `test_concurrent_workers_idempotency_with_redis_down` at line 1012. This run observed a successful response but then zero durable orders in the test database. Earlier full runs failed the same case with no successful response.
+**Where:** [checkout_controller.dart:1291](D:/Fastkirana/fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart:1291), [quantity subtraction:1312](D:/Fastkirana/fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart:1312).
 
-The fixture uses concurrent requests backed by one SQLite StaticPool connection. Shared rollback/transaction behavior remains a plausible cause; this review does not establish it as the sole cause or claim the same failure occurred against PostgreSQL.
+Selective subtraction is repeatable without a completion marker. Sequential and concurrent actual controller probes both reproduced:
 
-Capture transaction ownership and conflict reasons, isolate the fixture correctly, and verify one durable accepted order with independent PostgreSQL sessions/workers and Redis unavailable. Do not weaken the durability assertion or treat a historical isolated pass as a green full run.
+```text
+Accepted ordered quantity = 1
+Current cart quantity = 3
+Two completion calls receive the same durable business order
+After first completion = 2
+After second completion = 1
+```
 
-## Evidence retained
+The extra subtraction removes a newer, unpurchased quantity even though the server returned one idempotent order.
 
-Files are in `C:/Users/Sooraj/AppData/Local/Temp`:
-- `fastkirana-recheck7-flutter-20261016.log`
-- `fastkirana-recheck7-analyze-20261016.log`
-- `fastkirana-recheck7-backend-20261016.log`
-- `fastkirana-recheck7-probes-final-20261016.log`
-- `fastkirana-recheck7-quote-recovery-final-20261016.log`
-- `fastkirana-recheck7-flutter-probe-20261016.dart`
-- `fastkirana-recheck7-backend-probe-20261016.py`
-- `fastkirana-recheck7-source-snapshot-20261016.json`
+**Implement:** Make completion and cart acknowledgement idempotent per owner/hub/payment attempt/durable order. Coordinate concurrent callbacks and persist an acknowledgement that survives restart. Apply only the original attempt's cart delta once.
 
-Temporary repository probes were removed after execution. Reviewed source hashes remained stable through verification. These local checks do not verify a signed native release, physical-device payment lifecycle, deployed environment or complete production acceptance.
+**Acceptance:** Race SDK callback, status recovery and retry completion for the same durable order; repeat after restart. Cart quantity must finish at 2. A different real order must still perform its own cleanup.
+
+## 6. [P2] Replay edits made during cart hydration against the saved base
+
+**Where:** [cart_provider.dart:214](D:/Fastkirana/fastkirana_flutter/lib/providers/cart_provider.dart:214), [pending key await:236](D:/Fastkirana/fastkirana_flutter/lib/providers/cart_provider.dart:236), [add during loading:264](D:/Fastkirana/fastkirana_flutter/lib/providers/cart_provider.dart:264).
+
+The new local-load guard preserves a newer in-memory edit by returning, but the edit started from an empty cart and the previously saved basket is discarded:
+
+```text
+Saved cart = oldA; first local read is held
+User adds newB before hydration finishes
+Final server/UI/local = [newB], pending = false
+Expected add semantics = [oldA, newB]
+```
+
+A second controlled async probe holds `getPendingSyncKeyForCurrentScope()` after the version guard, then adds B. The old snapshot subsequently replaces the newest queued revision:
+
+```text
+Server = [oldA]
+UI/local = [oldA, newB]
+pending = false, version = ack = 2
+```
+
+The second case uses a delayed-key test seam; it demonstrates an unguarded await boundary without estimating how often production scheduling exposes it.
+
+**Implement:** Either gate mutations until hydration completes or record ordered mutation intents and replay them against the loaded base. Capture scope/generation and validate after asynchronous reads, including pending-key resolution. Only acknowledge the snapshot actually synchronized. Clear/tombstone intent must win over an older cache.
+
+**Acceptance:** Delay each hydration boundary, then add/increment/remove/clear. Test pending true/false and owner/hub changes. Assert equal local/UI/server contents and correct pending revision. Keep the now-passing delayed-server-GET and delayed-startup-POST regressions.
+
+## Concurrency validation still needed
+
+The full backend suite is green this time. The former failure should not be reported as a current failing test or as a proven PostgreSQL defect.
+
+However, [the fixture](D:/Fastkirana/fastapi-backend/tests/conftest.py:24) uses SQLite StaticPool, and the [four-worker test](D:/Fastkirana/fastapi-backend/tests/test_production_blockers_resolved.py:935) uses four threads in one process. A standalone same-pool diagnostic observed another session reading an uncommitted row and its rollback undoing the winner's write despite the winner's later successful commit. This explains why the fixture cannot establish production transaction isolation.
+
+Add an isolated PostgreSQL test with independent connections/processes and Redis unavailable. Assert exactly one durable order, one completed idempotency record, one stock decrement and successful replay after cache loss. Also exercise rollback/commit failure before publication. Do not weaken the durability assertions.
+
+## Antigravity execution order
+
+1. Implement the shared server quote/accepted snapshot contract and full eligibility rules (findings 1–2).
+2. Make missing-intent handling safe and remove destructive post-launch draft persistence (findings 3–4).
+3. Make cart completion idempotent and hydration mutations lossless (findings 5–6).
+4. Add behavior-based regression tests for every reproduction, run the full suites and independent PostgreSQL concurrency checks.
+5. Verify signed native builds and real-device payment lifecycle in a test environment: callback/status overlap, app termination, restart, cancellation, network loss and storage failure. Record exact commands/results and the tested source revision before requesting final release approval.
+
+## Retained evidence
+
+All diagnostic sources and logs are under `C:/Users/Sooraj/AppData/Local/Temp`:
+
+- `fastkirana-recheck8-backend-20261016.log`
+- `fastkirana-recheck8-flutter-20261016.log`
+- `fastkirana-recheck8-node-20261016.log`
+- `fastkirana-recheck8-tsc-20261016.log`
+- `fastkirana-recheck8-analyze-20261016.log`
+- `fastkirana-recheck8-backend-probe-20261016.py`
+- `fastkirana-recheck8-quote-recovery-final-20261016.log`
+- `fastkirana-recheck8-flutter-probe-20261016.dart`
+- `fastkirana-recheck8-flutter-probes-20261016.log`
+- `fastkirana-recheck8-flutter-concurrent-probe-20261016.dart`
+- `fastkirana-recheck8-flutter-concurrent-probe-final-20261016.log`
+- `fastkirana-recheck8-flutter-second-save-probe-20261016.dart`
+- `fastkirana-recheck8-flutter-second-save-probe-20261016.log`
+- `fastkirana-recheck8-cart-probe-20261016.dart`
+- `fastkirana-recheck8-cart-20261016.log`
+- `fastkirana-recheck8-snapshot-20261016.json`
+
+Temporary repository probes were removed after execution. This review does not verify deployed services, a signed native release, production credentials, or real gateway settlement. Knowledge-graph synchronization was not rerun.
 

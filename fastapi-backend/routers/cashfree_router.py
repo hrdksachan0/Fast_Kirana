@@ -20,7 +20,7 @@ from config import settings
 from database import get_db
 from models import (
     Order, User, Address, OrderStatus, PaymentStatus, PaymentMethod,
-    OrderItem, OrderType, Cart, CartItem, Product, Restaurant
+    OrderItem, OrderType, Cart, CartItem, Product, Restaurant, Coupon
 )
 from utils.firebase import send_fcm_topic_notification
 
@@ -333,28 +333,31 @@ async def create_cashfree_order(
         coupon_code = req.couponCode or payload_dict.get("couponCode") or payload_dict.get("coupon")
         delivery_method = req.deliveryMethod or payload_dict.get("deliveryMethod") or "DELIVERY"
         store_id = req.storeId or payload_dict.get("storeId") or "hub-209206"
+        resolved_user_id = effective_user_id or (customer_id if customer_id != "guest_customer" else None)
+
+        # Reject non-finite or negative fees
+        for fee_name, fee_val in [
+            ("deliveryFee", req.deliveryFee if req.deliveryFee is not None else payload_dict.get("deliveryFee")),
+            ("packagingFee", req.packagingFee if req.packagingFee is not None else payload_dict.get("packagingFee")),
+            ("tipAmount", req.tipAmount if req.tipAmount is not None else (payload_dict.get("tipAmount") or payload_dict.get("tip"))),
+        ]:
+            if fee_val is not None and str(fee_val).strip() != "":
+                try:
+                    f_num = float(fee_val)
+                    if not math.isfinite(f_num) or f_num < 0:
+                        raise HTTPException(status_code=400, detail=f"Invalid {fee_name}: must be a non-negative finite number")
+                except (ValueError, TypeError):
+                    raise HTTPException(status_code=400, detail=f"Invalid {fee_name}: must be a valid number")
 
         if delivery_method == "PICKUP":
             delivery_fee = 0.0
             misc_fee = 0.0
         else:
-            if req.deliveryFee is not None:
-                delivery_fee = float(req.deliveryFee)
-            elif payload_dict.get("deliveryFee") is not None:
-                delivery_fee = float(payload_dict.get("deliveryFee"))
-            else:
-                delivery_fee = 25.0 if authoritative_items_subtotal < 149.0 else 0.0
+            # Authoritative server delivery fee
+            delivery_fee = 0.0 if authoritative_items_subtotal >= 149.0 else 25.0
 
-            if req.packagingFee is not None:
-                misc_fee = float(req.packagingFee)
-            elif payload_dict.get("packagingFee") is not None:
-                misc_fee = float(payload_dict.get("packagingFee"))
-            elif payload_dict.get("miscFee") is not None:
-                misc_fee = float(payload_dict.get("miscFee"))
-            else:
-                misc_fee = 5.0
-            if req.packagingOption == "PREMIUM" or payload_dict.get("packagingOption") == "PREMIUM":
-                misc_fee = 15.0
+            # Authoritative packaging fee
+            misc_fee = 15.0 if (req.packagingOption == "PREMIUM" or payload_dict.get("packagingOption") == "PREMIUM") else 5.0
 
         tip_amount = 0.0
         raw_tip = req.tipAmount if req.tipAmount is not None else (payload_dict.get("tipAmount") or payload_dict.get("tip"))
@@ -368,7 +371,6 @@ async def create_cashfree_order(
 
         c_code_clean = None
         if coupon_code:
-            from models import Coupon
             c_code_clean = str(coupon_code).strip().upper()
             c_stmt = select(Coupon).where(Coupon.code == c_code_clean, Coupon.isActive == True)
             c_res = await db.execute(c_stmt)
@@ -377,16 +379,70 @@ async def create_cashfree_order(
                 has_expired = c_obj.expiresAt and c_obj.expiresAt < datetime.utcnow()
                 limit_reached = c_obj.maxUses and c_obj.usedCount >= c_obj.maxUses
                 if not has_expired and not limit_reached:
-                    if authoritative_items_subtotal >= (c_obj.minOrder or 0.0):
-                        if c_obj.discountType in ("PERCENT", "PERCENTAGE"):
-                            disc = (authoritative_items_subtotal * float(c_obj.value)) / 100.0
-                            if c_obj.maxDiscount and c_obj.maxDiscount > 0:
-                                disc = min(disc, float(c_obj.maxDiscount))
-                            validated_discount = round(min(disc, authoritative_items_subtotal), 2)
-                        elif c_obj.discountType == "FLAT":
-                            validated_discount = round(min(float(c_obj.value), authoritative_items_subtotal), 2)
-                        elif c_obj.discountType == "FREE_DELIVERY":
-                            delivery_fee = 0.0
+                    already_used = False
+                    if c_obj.oncePerCustomer and resolved_user_id and not str(resolved_user_id).startswith("guest_"):
+                        used_res = await db.execute(
+                            select(Order.id).where(
+                                Order.userId == resolved_user_id,
+                                Order.couponCode == c_code_clean,
+                                Order.status != OrderStatus.CANCELLED
+                            ).limit(1)
+                        )
+                        if used_res.scalars().first():
+                            already_used = True
+
+                    if not already_used:
+                        eligible_subtotal = 0.0
+                        has_restrictions = bool(c_obj.categoryId or c_obj.restaurantId or c_obj.menuSection or c_obj.bogoDishId)
+
+                        if has_restrictions:
+                            for it in effective_items:
+                                prod_info = it.get("product") or it
+                                it_pid = str(it.get("productId") or prod_info.get("id") or "").strip()
+                                p_obj = db_p_map.get(it_pid)
+                                it_price = float(it.get("price") or prod_info.get("price") or (p_obj.price if p_obj else 0.0))
+                                it_qty = validate_positive_quantity(it.get("quantity")) or 1
+                                it_cat = getattr(p_obj, "categoryId", None) or it.get("categoryId") or prod_info.get("categoryId")
+                                it_rest = getattr(p_obj, "restaurantId", None) or it.get("restaurantId") or prod_info.get("restaurantId")
+                                it_menu = getattr(p_obj, "menuSection", None) or it.get("menuSection") or prod_info.get("menuSection")
+
+                                it_matches = True
+                                if c_obj.categoryId and it_cat != c_obj.categoryId:
+                                    it_matches = False
+                                if it_matches and c_obj.restaurantId and it_rest != c_obj.restaurantId:
+                                    it_matches = False
+                                if it_matches and c_obj.menuSection and str(it_menu or "").strip().lower() != c_obj.menuSection.strip().lower():
+                                    it_matches = False
+                                if it_matches and c_obj.bogoDishId and str(it_pid or "").split("_")[0].strip() != c_obj.bogoDishId.strip():
+                                    it_matches = False
+
+                                if it_matches:
+                                    eligible_subtotal += it_price * it_qty
+                        else:
+                            eligible_subtotal = authoritative_items_subtotal
+
+                        if eligible_subtotal > 0 and eligible_subtotal >= (c_obj.minOrder or 0.0):
+                            if c_obj.discountType in ("PERCENT", "PERCENTAGE"):
+                                disc = (eligible_subtotal * float(c_obj.value)) / 100.0
+                                if c_obj.maxDiscount and c_obj.maxDiscount > 0:
+                                    disc = min(disc, float(c_obj.maxDiscount))
+                                validated_discount = round(min(disc, eligible_subtotal), 2)
+                            elif c_obj.discountType == "FLAT":
+                                validated_discount = round(min(float(c_obj.value), eligible_subtotal), 2)
+                            elif c_obj.discountType == "FREE_DELIVERY":
+                                delivery_fee = 0.0
+
+        # Snapshot current cart item IDs to protect newer replacement cart rows from cleanup
+        active_cart_item_ids = []
+        if resolved_user_id and not str(resolved_user_id).startswith("guest_"):
+            try:
+                cart_res = await db.execute(select(Cart.id).where(Cart.userId == resolved_user_id))
+                active_cart_id = cart_res.scalars().first()
+                if active_cart_id:
+                    ci_res = await db.execute(select(CartItem.id).where(CartItem.cartId == active_cart_id))
+                    active_cart_item_ids = [str(r) for r in ci_res.scalars().all()]
+            except Exception:
+                pass
 
         expected_quote_total = max(1.0, round(authoritative_items_subtotal - validated_discount + (0.0 if delivery_method == "PICKUP" else delivery_fee) + tip_amount + (0.0 if delivery_method == "PICKUP" else misc_fee), 2))
         if total_amount is not None and abs(float(total_amount) - expected_quote_total) <= 0.05:
@@ -409,6 +465,7 @@ async def create_cashfree_order(
             "total": round(total_amount, 2),
             "deliveryMethod": delivery_method,
             "storeId": store_id,
+            "cartItemIds": active_cart_item_ids,
         }
     elif req.amount is not None and float(req.amount) > (total_amount or 0.0):
         total_amount = float(req.amount)
@@ -1271,7 +1328,10 @@ async def auto_recover_unplaced_cashfree_order(
                 if db_prod is not None:
                     # Legitimate grocery products have restaurantId=None and MUST remain None!
                     p_rest_id = db_prod.restaurantId
-                    p_price = float(db_prod.price or 0.0)
+                    if val_quote and it.get("price") is not None and float(it.get("price", 0)) > 0:
+                        p_price = float(it["price"])
+                    else:
+                        p_price = float(db_prod.price or 0.0)
                     total_prod_demanded = aggregated_product_demand.get(p_id, p_qty)
                     total_var_demanded = aggregated_variant_demand.get((p_id, p_var), p_qty)
 
@@ -1284,8 +1344,9 @@ async def auto_recover_unplaced_cashfree_order(
 
                     if p_var and db_prod.variants and isinstance(db_prod.variants, list):
                         v_obj = next((v for v in db_prod.variants if isinstance(v, dict) and v.get("name") == p_var), None)
-                        if v_obj and "price" in v_obj:
-                            p_price = float(v_obj["price"])
+                        if not (val_quote and it.get("price") is not None and float(it.get("price", 0)) > 0):
+                            if v_obj and "price" in v_obj:
+                                p_price = float(v_obj["price"])
                         if not p_rest_id:
                             # 2. Variant-level specific stock check
                             v_stk = int(v_obj.get("stock", 0)) if v_obj else 0
@@ -1308,61 +1369,13 @@ async def auto_recover_unplaced_cashfree_order(
                     "selectedVariant": p_var,
                 })
 
-        # If no cached items, inspect user's cart in database
-        if not items_to_create and user:
-            cart_stmt = select(Cart).where(Cart.userId == user.id)
-            cart_res = await db.execute(cart_stmt)
-            cart = cart_res.scalars().first()
-            if cart:
-                ci_stmt = select(CartItem).options(selectinload(CartItem.product)).where(CartItem.cartId == cart.id)
-                ci_res = await db.execute(ci_stmt)
-                c_items = ci_res.scalars().all()
-                for ci in c_items:
-                    prod = ci.product
-                    p_id = prod.id if prod else ci.productId
-                    p_name = prod.name if prod else "Product"
-                    valid_qty = validate_positive_quantity(ci.quantity)
-                    if valid_qty is None:
-                        has_invalid_quantity = True
-                        p_qty = 1
-                    else:
-                        p_qty = valid_qty
-                    if prod is not None:
-                        db_products[prod.id] = prod
-                        p_rest_id = prod.restaurantId
-                        p_price = float(prod.price or 0.0)
-                        if ci.selectedVariant and prod.variants and isinstance(prod.variants, list):
-                            v_obj = next((v for v in prod.variants if isinstance(v, dict) and v.get("name") == ci.selectedVariant), None)
-                            if v_obj and "price" in v_obj:
-                                p_price = float(v_obj["price"])
-                            if not p_rest_id:
-                                v_stk = int(v_obj.get("stock", 0)) if v_obj else 0
-                                if v_stk < p_qty:
-                                    has_stock_conflict = True
-                        if not p_rest_id and (prod.stock or 0) < p_qty:
-                            has_stock_conflict = True
-                    else:
-                        p_rest_id = None
-                        p_price = 0.0
-                        if p_id:
-                            has_missing_product = True
-                    if p_rest_id:
-                        is_restaurant = True
-                        target_restaurant_id = p_rest_id
-                    items_to_create.append({
-                        "productId": p_id,
-                        "name": p_name,
-                        "price": p_price,
-                        "quantity": p_qty,
-                        "imageUrl": prod.imageUrl if prod else None,
-                        "selectedVariant": ci.selectedVariant,
-                    })
-
-        # If still empty (e.g. cart cleared or instant buy), fallback to reconciled item
+        # If no intent snapshot found, do NOT fulfill current live cart. Flag for manual reconciliation.
+        has_missing_intent = False
         if not items_to_create:
+            has_missing_intent = True
             items_to_create.append({
                 "productId": None,
-                "name": "Online Paid Order (Cashfree Reconciled)",
+                "name": "Online Paid Order (Missing Intent - Reconciled)",
                 "price": order_amount,
                 "quantity": 1,
                 "imageUrl": None,
@@ -1390,7 +1403,11 @@ async def auto_recover_unplaced_cashfree_order(
         new_order_id = f"ord_{uuid.uuid4().hex[:20]}"
 
         calculated_subtotal = sum(it["price"] * it["quantity"] for it in items_to_create)
+        if val_quote and val_quote.get("subtotal") is not None:
+            calculated_subtotal = float(val_quote["subtotal"])
         expected_total = max(0.0, round(calculated_subtotal - recovered_discount + recovered_delivery_fee + recovered_packaging_fee + recovered_tip, 2))
+        if val_quote and val_quote.get("total") is not None:
+            expected_total = float(val_quote["total"])
         order_misc_fee = max(0.0, round(recovered_packaging_fee + recovered_tip, 2))
 
         # Check underpayment against the complete authoritative expected total (or calculated subtotal if no quote)
@@ -1398,8 +1415,10 @@ async def auto_recover_unplaced_cashfree_order(
         if items_to_create and (order_amount < (threshold_total - 0.05)):
             has_underpaid_conflict = True
 
-        if has_underpaid_conflict or has_stock_conflict or has_missing_product or has_invalid_quantity:
+        if has_missing_intent or has_underpaid_conflict or has_stock_conflict or has_missing_product or has_invalid_quantity:
             reconcile_reasons = []
+            if has_missing_intent:
+                reconcile_reasons.append("Payment received but order intent/snapshot was missing - requires manual reconciliation")
             if has_underpaid_conflict:
                 reconcile_reasons.append(f"Underpaid: paid ₹{order_amount:.2f} < expected total ₹{threshold_total:.2f}")
             if has_stock_conflict:
@@ -1526,44 +1545,54 @@ async def auto_recover_unplaced_cashfree_order(
                     pass
 
         # 9. Clear ordered items from user's cart (preserving any newer cart edits)
-        if user and items_to_create:
+        if user and items_to_create and order_status == OrderStatus.CONFIRMED:
             cart_stmt = select(Cart).where(Cart.userId == user.id)
             cart_res = await db.execute(cart_stmt)
             cart = cart_res.scalars().first()
             if cart:
-                for it in items_to_create:
-                    p_id = it.get("productId")
-                    p_qty = int(it.get("quantity") or 1)
-                    p_var = it.get("selectedVariant")
-                    if not p_id:
-                        continue
-                    db_p = db_products.get(p_id)
-                    unit_val = str(db_p.unit or "").strip() if db_p else ""
-                    if p_var:
-                        stmt_ci = select(CartItem).where(
-                            CartItem.cartId == cart.id,
-                            CartItem.productId == p_id,
-                            CartItem.selectedVariant == p_var
-                        )
-                    else:
-                        conditions = [
-                            CartItem.selectedVariant.is_(None),
-                            CartItem.selectedVariant == ""
-                        ]
-                        if unit_val:
-                            conditions.append(CartItem.selectedVariant == unit_val)
-                        stmt_ci = select(CartItem).where(
-                            CartItem.cartId == cart.id,
-                            CartItem.productId == p_id,
-                            or_(*conditions)
-                        )
+                accepted_cart_ids = val_quote.get("cartItemIds") if isinstance(val_quote, dict) else None
+                if accepted_cart_ids and isinstance(accepted_cart_ids, list) and len(accepted_cart_ids) > 0:
+                    stmt_ci = select(CartItem).where(
+                        CartItem.cartId == cart.id,
+                        CartItem.id.in_(accepted_cart_ids)
+                    )
                     ci_res = await db.execute(stmt_ci)
-                    remaining_to_deduct = p_qty
                     for matched_ci in ci_res.scalars().all():
-                        if remaining_to_deduct <= 0:
-                            break
-                        if matched_ci.quantity <= remaining_to_deduct:
-                            remaining_to_deduct -= matched_ci.quantity
+                        await db.delete(matched_ci)
+                else:
+                    for it in items_to_create:
+                        p_id = it.get("productId")
+                        p_qty = int(it.get("quantity") or 1)
+                        p_var = it.get("selectedVariant")
+                        if not p_id:
+                            continue
+                        db_p = db_products.get(p_id)
+                        unit_val = str(db_p.unit or "").strip() if db_p else ""
+                        if p_var:
+                            stmt_ci = select(CartItem).where(
+                                CartItem.cartId == cart.id,
+                                CartItem.productId == p_id,
+                                CartItem.selectedVariant == p_var
+                            )
+                        else:
+                            conditions = [
+                                CartItem.selectedVariant.is_(None),
+                                CartItem.selectedVariant == ""
+                            ]
+                            if unit_val:
+                                conditions.append(CartItem.selectedVariant == unit_val)
+                            stmt_ci = select(CartItem).where(
+                                CartItem.cartId == cart.id,
+                                CartItem.productId == p_id,
+                                or_(*conditions)
+                            )
+                        ci_res = await db.execute(stmt_ci)
+                        remaining_to_deduct = p_qty
+                        for matched_ci in ci_res.scalars().all():
+                            if remaining_to_deduct <= 0:
+                                break
+                            if matched_ci.quantity <= remaining_to_deduct:
+                                remaining_to_deduct -= matched_ci.quantity
                             await db.delete(matched_ci)
                         else:
                             matched_ci.quantity -= remaining_to_deduct

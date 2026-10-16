@@ -180,15 +180,24 @@ class CheckoutDraft {
   static Future<void> saveAcceptedDraft(CheckoutDraft draft) async {
     final prefs = await SharedPreferences.getInstance();
     final key = await _getDraftKey();
+    final existing = prefs.getString(key);
     try {
       final ok = await prefs.setString(key, jsonEncode(draft.toJson()));
       if (!ok) {
-        await prefs.remove(key);
+        if (existing == null) {
+          await prefs.remove(key);
+        } else {
+          await prefs.setString(key, existing);
+        }
         throw StateError('Failed to durably persist accepted checkout draft to local storage');
       }
     } catch (_) {
       try {
-        await prefs.remove(key);
+        if (existing == null) {
+          await prefs.remove(key);
+        } else {
+          await prefs.setString(key, existing);
+        }
       } catch (_) {}
       rethrow;
     }

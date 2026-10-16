@@ -106,19 +106,38 @@ const getCachedBanners = unstable_cache(
 
 const getCachedCategories = unstable_cache(
   async () => {
-    return prisma.category.findMany({
+    const categories = await prisma.category.findMany({
       where: {
         slug: { notIn: ['cafe', 'restaurant', 'fastkirana-cafe', 'fastkirana-restaurant', 'restaurant-food', 'fast-food-kitchen'] },
       },
       orderBy: { sortOrder: 'asc' },
       include: {
+        children: {
+          select: {
+            id: true,
+            _count: {
+              select: { products: true },
+            },
+          },
+        },
         _count: {
           select: { products: true },
         },
       },
     })
+
+    return categories.map((cat) => {
+      const childrenProducts = cat.children?.reduce((sum, child) => sum + (child._count?.products ?? 0), 0) ?? 0
+      const totalCount = (cat._count?.products ?? 0) + childrenProducts
+      return {
+        ...cat,
+        _count: {
+          products: totalCount,
+        },
+      }
+    })
   },
-  ['storefront-categories-v33'],
+  ['storefront-categories-v35'],
   { revalidate: 86400, tags: ['categories'] }
 )
 

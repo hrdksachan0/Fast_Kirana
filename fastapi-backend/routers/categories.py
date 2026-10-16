@@ -51,7 +51,7 @@ async def trigger_revalidation(category_slug: Optional[str] = None):
     clear_categories_cache()
     await invalidate_catalog_cache()
     try:
-        app_url = os.getenv("NEXT_PUBLIC_APP_URL", "http://localhost:3000")
+        app_url = os.getenv("NEXT_PUBLIC_APP_URL") or os.getenv("FRONTEND_URL") or "https://www.fastkirana.in"
         auth_secret = os.getenv("AUTH_SECRET", "")
         async with httpx.AsyncClient() as client:
             await client.post(

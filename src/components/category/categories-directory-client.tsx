@@ -254,6 +254,53 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
     })
   }, [categories, searchQuery])
 
+  const resolveCategoryConfig = (c: Category): CategoryConfig => {
+    if (categoryConfigs[c.slug]) {
+      return categoryConfigs[c.slug]
+    }
+    const combined = `${c.slug} ${c.name}`.toLowerCase()
+    let base = categoryConfigs['fruits-vegetables']
+    let defaultImg = '/fruits_vegetables_category.webp'
+
+    if (/dairy|milk|paneer|curd|butter|cheese/i.test(combined)) {
+      base = categoryConfigs['dairy-breakfast']
+      defaultImg = '/dairy_breakfast_category.webp'
+    } else if (/fruit|veg/i.test(combined)) {
+      base = categoryConfigs['fruits-vegetables']
+      defaultImg = '/fruits_vegetables_category.webp'
+    } else if (/snack|cookie|namkeen|munch/i.test(combined)) {
+      base = categoryConfigs['snacks-munchies']
+      defaultImg = '/snacks_munchies_category.webp'
+    } else if (/drink|beverage|juice|soda/i.test(combined)) {
+      base = categoryConfigs['beverages']
+      defaultImg = '/beverages_category.webp'
+    } else if (/personal|care|hygiene|beauty/i.test(combined)) {
+      base = categoryConfigs['personal-care']
+      defaultImg = '/personal_care_category.webp'
+    } else if (/house|clean|home/i.test(combined)) {
+      base = categoryConfigs['household']
+      defaultImg = '/household_category.webp'
+    } else if (/bakery|bread|biscuit|cake|choco/i.test(combined)) {
+      base = categoryConfigs['bakery-biscuits']
+      defaultImg = '/bakery_biscuits_category.webp'
+    } else if (/atta|rice|dal|kitchen|ration/i.test(combined)) {
+      base = categoryConfigs['atta-rice-dal']
+      defaultImg = '/atta_rice_dal_category.webp'
+    } else if (/ice.?cream/i.test(combined)) {
+      base = categoryConfigs['ice-cream']
+      defaultImg = '/ice_cream_category.webp'
+    } else if (/cafe/i.test(combined)) {
+      base = categoryConfigs['cafe']
+      defaultImg = '/cafe_category.webp'
+    }
+
+    return {
+      ...base,
+      title: c.name,
+      image: (c.imageUrl && (c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http') || c.imageUrl.startsWith('data:'))) ? c.imageUrl : defaultImg,
+    }
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header and Search Bar (matching screenshot layout) */}
@@ -313,25 +360,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-0.5 pb-16">
           {filteredCategories.map((c) => {
-            const config = categoryConfigs[c.slug] || {
-              title: c.name,
-              emoji: '🛒',
-              image: (c.imageUrl && (c.imageUrl.startsWith('/') || c.imageUrl.startsWith('http'))) ? c.imageUrl : '/fruits_vegetables_category.webp',
-              gradient: 'from-zinc-500/10 to-zinc-500/5',
-              borderColor: 'border-zinc-200/60 dark:border-zinc-900/20',
-              labelColor: 'text-zinc-700 dark:text-zinc-355 font-extrabold',
-              cardBg: 'bg-white dark:bg-zinc-950',
-              tagline: 'Essential Products',
-              tagBg: 'bg-zinc-50 dark:bg-zinc-900 text-text-secondary',
-              tagHover: 'hover:border-zinc-300 dark:hover:border-zinc-800 hover:bg-zinc-50/20',
-              badgeText: 'Curated',
-              badgeBg: 'bg-zinc-100 text-zinc-755 dark:bg-zinc-850 dark:text-zinc-350 border border-zinc-200/30',
-              badgeIcon: Sparkles,
-              glowColor: 'hover:shadow-md hover:border-zinc-350',
-              btnBg: 'bg-primary hover:bg-primary/95 text-white',
-              btnArrowColor: 'text-primary',
-              bgEmoji: '🛒',
-            }
+            const config = resolveCategoryConfig(c)
             const itemCount = c._count?.products ?? 0
             const isCafe = c.slug === 'cafe'
             const destinationHref = (isCafe ? '/food/as-cafe' : `/category/${c.slug}`) as any
