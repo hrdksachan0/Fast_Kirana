@@ -61,6 +61,7 @@ export function isProductEligibleForCoupon(product: any, coupon: CouponRuleTarge
       .map((s) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
       .filter(Boolean)
 
+    if (secFilters.length > 0) {
       const pTags = (product.tags || []).map((t: string) => String(t).toLowerCase().replace(/[^a-z0-9]/g, ''))
       const pSec = String(product.menuSection || product.sectionTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '')
       const pSecId = String((product as any).menuSectionId || (product as any).sectionId || '').toLowerCase().replace(/[^a-z0-9]/g, '')

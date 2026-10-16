@@ -250,6 +250,7 @@ export function useAdminReviewsCoupons({
         body: JSON.stringify(payload),
       })
 
+      if (res.ok) {
         const rawCreated = await res.json()
         const created = rawCreated?.coupon || rawCreated
         setCoupons((prev: any[]) => {
