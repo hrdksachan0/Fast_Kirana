@@ -1760,7 +1760,7 @@ async def create_order(
                         from routers.cashfree_router import CASHFREE_BASE_URL, _get_cashfree_headers
                         headers = _get_cashfree_headers()
                         sanitized_check_id = re.sub(r"[^a-zA-Z0-9_-]", "_", incoming_cf_order_id)[:45]
-                        async with httpx.AsyncClient(timeout=4.0) as client:
+                        async with httpx.AsyncClient(timeout=10.0) as client:
                             cf_res = await client.get(f"{CASHFREE_BASE_URL}/orders/{sanitized_check_id}", headers=headers)
                             if cf_res.status_code == 200:
                                 cf_data = cf_res.json()
@@ -1780,8 +1780,8 @@ async def create_order(
                         logger.warning(f"Error checking Cashfree for new order: {cf_e}")
         auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
         is_auto_approve = auto_approve_setting.lower() == "true"
-        # Online Paid orders go straight to CONFIRMED
-        initial_order_status = OrderStatus.CONFIRMED if is_online_paid else (OrderStatus.PENDING if is_auto_approve else OrderStatus.ADMIN_PENDING)
+        # Manual confirmation requirement: Even paid online orders start in ADMIN_PENDING for Admin review & KOT dispatch
+        initial_order_status = OrderStatus.ADMIN_PENDING
 
         # Construct notes — strip any injected fake gateway markers like [CF_ORDER:...] from customer text
         raw_notes = (payload.get("notes") or "").strip()

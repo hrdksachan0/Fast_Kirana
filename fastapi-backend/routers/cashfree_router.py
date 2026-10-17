@@ -988,9 +988,7 @@ async def verify_cashfree_payment(
             pass
 
         if order.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
-            order.status = OrderStatus.CONFIRMED
-            if not order.confirmedAt:
-                order.confirmedAt = datetime.utcnow()
+            order.status = OrderStatus.ADMIN_PENDING
 
         # Handle companion combined orders if present
         comb_orders = []
@@ -1004,9 +1002,7 @@ async def verify_cashfree_payment(
                 if not co.notes or "Cashfree PG Paid" not in co.notes:
                     co.notes = f"{co.notes} | {cf_note}" if co.notes else cf_note
                 if co.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
-                    co.status = OrderStatus.CONFIRMED
-                    if not co.confirmedAt:
-                        co.confirmedAt = datetime.utcnow()
+                    co.status = OrderStatus.ADMIN_PENDING
 
         # Pre-cache payment confirmation in Redis
         try:
@@ -1061,7 +1057,7 @@ async def verify_cashfree_payment(
                             o.restaurantId,
                             o.shopName,
                             float(o.total),
-                            "CONFIRMED",
+                            "ADMIN_PENDING",
                             o.storeId
                         )
                     else:
@@ -1073,7 +1069,7 @@ async def verify_cashfree_payment(
                                 o.restaurantId,
                                 o.shopName,
                                 float(o.total),
-                                "CONFIRMED",
+                                "ADMIN_PENDING",
                                 o.storeId
                             )
                         )
@@ -1516,8 +1512,8 @@ async def auto_recover_unplaced_cashfree_order(
             order_status = OrderStatus.ADMIN_PENDING
             order_notes = f"[RECONCILIATION_REQUIRED] {'; '.join(reconcile_reasons)} | [CF_ORDER:{cf_order_id}] Cashfree PG Paid (Ref: {cf_ref})"
         else:
-            order_status = OrderStatus.CONFIRMED
-            order_notes = f"[CF_ORDER:{cf_order_id}] | Cashfree PG Paid (Ref: {cf_ref}) | Auto-Reconciled from Webhook"
+            order_status = OrderStatus.ADMIN_PENDING
+            order_notes = f"[CF_ORDER:{cf_order_id}] | Cashfree PG Paid (Ref: {cf_ref}) | Auto-Recovered (Awaiting Admin Confirmation)"
 
         # 7. Create Order Row
         order = Order(
@@ -1926,9 +1922,7 @@ async def cashfree_webhook(
                 order.notes = f"{order.notes} | {cf_note}" if order.notes else cf_note
 
             if order.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
-                order.status = OrderStatus.CONFIRMED
-                if not order.confirmedAt:
-                    order.confirmedAt = datetime.utcnow()
+                order.status = OrderStatus.ADMIN_PENDING
 
             comb_orders = []
             if order.combinedId:
@@ -1944,9 +1938,7 @@ async def cashfree_webhook(
                     if not co.notes or "Cashfree PG Paid" not in co.notes:
                         co.notes = f"{co.notes} | {cf_note}" if co.notes else cf_note
                     if co.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
-                        co.status = OrderStatus.CONFIRMED
-                        if not co.confirmedAt:
-                            co.confirmedAt = datetime.utcnow()
+                        co.status = OrderStatus.ADMIN_PENDING
 
             # ── DISTRIBUTED ATOMIC DEDUPLICATION GUARD: Ensure alerts are sent EXACTLY ONCE ──
             order_key = str(order.combinedId or order.id)
@@ -2002,7 +1994,7 @@ async def cashfree_webhook(
                                 o.restaurantId,
                                 o.shopName,
                                 float(o.total or 0),
-                                "CONFIRMED",
+                                "ADMIN_PENDING",
                                 o.storeId
                             )
                         )
@@ -2038,7 +2030,7 @@ async def cashfree_webhook(
                             "event": "PAYMENT_CONFIRMED",
                             "orderId": o.id,
                             "readableId": o.readableId,
-                            "status": "CONFIRMED",
+                            "status": "ADMIN_PENDING",
                             "paymentStatus": "PAID"
                         }))
                 except Exception as ws_err:

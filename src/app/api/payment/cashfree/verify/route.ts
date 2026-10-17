@@ -217,8 +217,7 @@ export async function POST(req: NextRequest) {
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
-            "status" = CASE WHEN status IN ('PENDING', 'ADMIN_PENDING') THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
-            "confirmedAt" = COALESCE("confirmedAt", NOW()),
+            "status" = 'ADMIN_PENDING'::"OrderStatus",
             notes = CASE 
               WHEN notes IS NULL OR notes = '' THEN ${cfNote}
               WHEN notes LIKE '%Cashfree PG%' THEN notes
@@ -232,8 +231,7 @@ export async function POST(req: NextRequest) {
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
-            "status" = CASE WHEN status IN ('PENDING', 'ADMIN_PENDING') THEN 'CONFIRMED'::"OrderStatus" ELSE status END,
-            "confirmedAt" = COALESCE("confirmedAt", NOW()),
+            "status" = 'ADMIN_PENDING'::"OrderStatus",
             notes = CASE 
               WHEN notes IS NULL OR notes = '' THEN ${cfNote}
               WHEN notes LIKE '%Cashfree PG%' THEN notes
@@ -288,9 +286,9 @@ export async function POST(req: NextRequest) {
       const customerPhone = order.userPhone || 'N/A'
 
       if (isRestaurantOrder) {
-        sendPushNotificationToRoles([Role.ADMIN, Role.DELIVERY], {
-          title: '💳 Online Payment Order Confirmed!',
-          body: `Order #${displayId} of ₹${notifyTotal} — PAID via Cashfree ✅`,
+        sendPushNotificationToRoles([Role.ADMIN], {
+          title: '💳 Online Payment Order Received!',
+          body: `Order #${displayId} of ₹${notifyTotal} — PAID via Cashfree (Awaiting Admin Confirmation)`,
           tag: `order-${updatedOrder.id}`,
           data: { orderId: updatedOrder.id }
         }).catch((err: any) => console.error('Push admin error:', err))
@@ -304,9 +302,9 @@ export async function POST(req: NextRequest) {
           }).catch((err: any) => console.error('Push restaurant error:', err))
         }
       } else {
-        sendPushNotificationToRoles([Role.ADMIN, Role.PICKER, Role.DELIVERY], {
-          title: '💳 Online Payment Order Confirmed!',
-          body: `Order #${displayId} of ₹${notifyTotal} — PAID via Cashfree ✅`,
+        sendPushNotificationToRoles([Role.ADMIN], {
+          title: '💳 Online Payment Order Received!',
+          body: `Order #${displayId} of ₹${notifyTotal} — PAID via Cashfree (Awaiting Admin Confirmation)`,
           tag: `order-${updatedOrder.id}`,
           data: { orderId: updatedOrder.id }
         }).catch((err: any) => console.error('Push grocery error:', err))
