@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
 import 'payment_gateway_handler.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../core/theme/design_system.dart';
 import '../../../core/routes/page_transitions.dart';
@@ -509,10 +510,12 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     _currentContext = context;
     if (customDeliveryNotes != null) _customDeliveryNotes = customDeliveryNotes;
 
-    // Confirm API reachability immediately before either COD or payment begins.
-    final reachable = await ref.read(connectivityProvider).checkConnection();
+    // Confirm connectivity immediately before either COD or payment begins.
+    final connectivity = ref.read(connectivityProvider);
+    final reachable = await connectivity.checkConnection();
+    final hasActiveTransport = connectivity.results.any((r) => r != ConnectivityResult.none);
     if (!mounted) return;
-    if (!context.mounted || !reachable) {
+    if (!context.mounted || (!reachable && !hasActiveTransport)) {
       state = state.copyWith(isPlacingOrder: false);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

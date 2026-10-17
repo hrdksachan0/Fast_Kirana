@@ -179,8 +179,8 @@ class PaymentGatewayHandler {
           '/api/payment/cashfree/verify',
           data: {'orderId': cfOrderId, 'cfOrderId': cfOrderId},
           options: Options(
-            sendTimeout: const Duration(seconds: 5),
-            receiveTimeout: const Duration(seconds: 5),
+            sendTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(seconds: 10),
           ),
         );
         hadNetworkOrTimeoutError = false;
@@ -231,7 +231,7 @@ class PaymentGatewayHandler {
     if (hadNetworkOrTimeoutError) {
       return const PaymentVerificationResult(
         status: PaymentVerificationStatus.verificationUnavailable,
-        message: 'Network issue or timeout while verifying payment status.',
+        message: 'Payment verification is taking a moment. Please tap Check Status again.',
       );
     }
 

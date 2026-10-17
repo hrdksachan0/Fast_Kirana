@@ -14,6 +14,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/zepto_connectivity_pill.dart';
 import '../../providers/store_hub_provider.dart';
 import '../../core/utils/app_connectivity.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'controllers/checkout_controller.dart';
 import 'widgets/checkout_trust_badges.dart';
 import 'widgets/checkout_delivery_address_card.dart';
@@ -423,11 +424,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       setState(() => _isCheckingConnection = true);
                       try {
                         final isOnline = await ref.read(connectivityProvider).checkConnection();
-                        if (isOnline && mounted) {
+                        if (!context.mounted) return;
+                        final transports = ref.read(connectivityProvider).results;
+                        final hasActiveTransport = transports.any((r) => r != ConnectivityResult.none);
+                        if (isOnline || hasActiveTransport) {
                           openPaymentSheet();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please check your mobile data or Wi-Fi connection.'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
                         }
                       } catch (_) {
-                        // Keep offline state on error
+                        if (context.mounted) {
+                          final transports = ref.read(connectivityProvider).results;
+                          if (transports.any((r) => r != ConnectivityResult.none)) {
+                            openPaymentSheet();
+                          }
+                        }
                       } finally {
                         if (mounted) setState(() => _isCheckingConnection = false);
                       }

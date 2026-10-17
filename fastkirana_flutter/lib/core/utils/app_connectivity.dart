@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ class AppConnectivityObserver extends ChangeNotifier {
   final Future<bool> Function()? _reachabilityProbe;
   final Duration _offlineDebounce;
   final Duration _pollInterval;
+  final Duration _probeTimeout;
   final Dio _probeClient;
   StreamSubscription<List<ConnectivityResult>>? _subscription;
   Timer? _offlineTimer;
@@ -33,17 +35,22 @@ class AppConnectivityObserver extends ChangeNotifier {
     Future<bool> Function()? reachabilityProbe,
     Duration offlineDebounce = const Duration(milliseconds: 700),
     Duration pollInterval = const Duration(seconds: 20),
+    Duration? probeTimeout,
     bool observeLifecycle = true,
     Dio? probeClient,
   })  : _readConnections = connectionReader ?? Connectivity().checkConnectivity,
         _reachabilityProbe = reachabilityProbe,
         _offlineDebounce = offlineDebounce,
         _pollInterval = pollInterval,
+        _probeTimeout = probeTimeout ??
+            (reachabilityProbe != null
+                ? const Duration(seconds: 4)
+                : const Duration(seconds: 8)),
         _probeClient = probeClient ??
             Dio(BaseOptions(
               baseUrl: AppConfig.apiBaseUrl,
-              connectTimeout: const Duration(seconds: 3),
-              receiveTimeout: const Duration(seconds: 3),
+              connectTimeout: const Duration(seconds: 7),
+              receiveTimeout: const Duration(seconds: 7),
               followRedirects: false,
               headers: {'Cache-Control': 'no-cache, no-store'},
             )) {
@@ -81,7 +88,12 @@ class AppConnectivityObserver extends ChangeNotifier {
     final response = await _probeClient.get('/api/healthz', queryParameters: {
       't': DateTime.now().millisecondsSinceEpoch,
     });
-    final data = response.data;
+    dynamic data = response.data;
+    if (data is String) {
+      try {
+        data = jsonDecode(data);
+      } catch (_) {}
+    }
     // Captive-portal HTML, redirects and proxy error pages cannot report online.
     return response.statusCode == 200 &&
         data is Map &&
@@ -119,7 +131,7 @@ class AppConnectivityObserver extends ChangeNotifier {
       _results = List.of(transports);
       if (transports.any((result) => result != ConnectivityResult.none)) {
         reachable = await (_reachabilityProbe?.call() ?? _probeApi())
-            .timeout(const Duration(seconds: 4));
+            .timeout(_probeTimeout);
       }
     } catch (_) {
       reachable = false;
