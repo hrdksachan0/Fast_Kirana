@@ -197,12 +197,16 @@ class PaymentGatewayHandler {
           lastKnownStatus = data['paymentStatus']?.toString().toUpperCase();
           lastMessage = data['message']?.toString();
 
+          if (lastKnownStatus == 'PENDING' || lastKnownStatus == 'ACTIVE') {
+            // Still in flight with bank/UPI, continue polling attempts
+            continue;
+          }
+
           if (lastKnownStatus == 'FAILED' ||
               lastKnownStatus == 'CANCELLED' ||
               lastKnownStatus == 'USER_DROPPED' ||
               lastKnownStatus == 'EXPIRED' ||
-              lastKnownStatus == 'NOT_PAID' ||
-              lastKnownStatus == 'ACTIVE') {
+              lastKnownStatus == 'NOT_PAID') {
             try {
               final prefs = await SharedPreferences.getInstance();
               await prefs.remove('active_pending_cf_order_id');
@@ -212,11 +216,6 @@ class PaymentGatewayHandler {
               status: PaymentVerificationStatus.failed,
               message: lastMessage ?? 'Payment was cancelled or not completed.',
             );
-          }
-
-          if (lastKnownStatus == 'PENDING') {
-            // Still in flight with bank/UPI, continue polling attempts
-            continue;
           }
         }
       } on DioException catch (dioErr) {
@@ -235,7 +234,7 @@ class PaymentGatewayHandler {
       );
     }
 
-    if (lastKnownStatus == 'PENDING') {
+    if (lastKnownStatus == 'PENDING' || lastKnownStatus == 'ACTIVE') {
       return const PaymentVerificationResult(
         status: PaymentVerificationStatus.pending,
         message: 'Payment is awaiting confirmation from your bank/UPI app.',

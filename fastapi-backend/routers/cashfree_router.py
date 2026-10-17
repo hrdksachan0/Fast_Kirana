@@ -799,7 +799,7 @@ async def verify_cashfree_payment(
     checked_ids = set()
     sanitized_check_id = clean_id
 
-    async with httpx.AsyncClient(timeout=4.0) as client:
+    async with httpx.AsyncClient(timeout=10.0) as client:
         for cid in candidate_ids:
             if not cid:
                 continue
