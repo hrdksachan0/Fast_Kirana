@@ -2235,6 +2235,9 @@ async def create_order(
             cons_rec.orderId = main_order.id
 
         await db.commit()
+        transaction_committed = True
+        if "reserved_redis_items" in locals() and reserved_redis_items:
+            reserved_redis_items.clear()
 
         # Publish to Redis and memory cache only AFTER successful business transaction commit
         if idempotency_key:
@@ -2461,21 +2464,26 @@ async def create_order(
         return result_payload
 
     except HTTPException as he:
-        if "reserved_redis_items" in locals() and reserved_redis_items:
-            from utils.cache import release_reserved_inventory
-            for r_key, r_qty in reserved_redis_items:
-                try:
-                    await release_reserved_inventory(r_key, r_qty)
-                except Exception:
-                    pass
-            reserved_redis_items.clear()
-        if locals().get("lock_acquired"):
-            await db.rollback()
-            if he.status_code != 409:
-                if "idempotency_key" in locals() and idempotency_key:
-                    await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
+        if not locals().get("transaction_committed"):
+            if "reserved_redis_items" in locals() and reserved_redis_items:
+                from utils.cache import release_reserved_inventory
+                for r_key, r_qty in reserved_redis_items:
+                    try:
+                        await release_reserved_inventory(r_key, r_qty)
+                    except Exception:
+                        pass
+                reserved_redis_items.clear()
+            if locals().get("lock_acquired"):
+                await db.rollback()
+                if he.status_code != 409:
+                    if "idempotency_key" in locals() and idempotency_key:
+                        await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
         raise
     except Exception as e:
+        if locals().get("transaction_committed"):
+            logger.error(f"Post-commit notification/broadcast error in order placement: {str(e)}")
+            if "result_payload" in locals() and result_payload:
+                return result_payload
         if "reserved_redis_items" in locals() and reserved_redis_items:
             from utils.cache import release_reserved_inventory
             for r_key, r_qty in reserved_redis_items:

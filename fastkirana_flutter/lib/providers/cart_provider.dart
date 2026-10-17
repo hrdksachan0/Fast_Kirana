@@ -218,22 +218,41 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       final localItems = await r.getLocalCart();
       // If user performed in-memory mutations while getLocalCart was awaiting, merge without losing either
       if (_cartVersion > initialVersion || _latestPendingItems != null) {
+        // If user explicitly cleared the cart, preserve clear intent without resurrecting items
+        if (_latestPendingItems != null && _latestPendingItems!.isEmpty) {
+          return;
+        }
         if (localItems.isNotEmpty) {
           final currentCart = _cart;
           final currentItems = currentCart?.items ?? [];
           final merged = List<CartItem>.from(currentItems);
+          bool hasChanges = false;
           for (final loc in localItems) {
             final locVar = loc.selectedVariant != null && loc.selectedVariant!.isNotEmpty ? loc.selectedVariant : null;
-            final exists = merged.any((cur) {
+            final existingIdx = merged.indexWhere((cur) {
               final curVar = cur.selectedVariant != null && cur.selectedVariant!.isNotEmpty ? cur.selectedVariant : null;
               final sameBase = cur.productId == loc.productId || cur.product.id == loc.productId || cur.product.id == loc.product.id;
               return sameBase && curVar == locVar;
             });
-            if (!exists) {
+            if (existingIdx >= 0) {
+              final existing = merged[existingIdx];
+              final combinedQty = existing.quantity + loc.quantity;
+              merged[existingIdx] = CartItem(
+                id: existing.id,
+                cartId: existing.cartId,
+                productId: existing.productId,
+                product: existing.product,
+                quantity: combinedQty,
+                selectedVariant: existing.selectedVariant,
+                notes: existing.notes ?? loc.notes,
+              );
+              hasChanges = true;
+            } else {
               merged.add(loc);
+              hasChanges = true;
             }
           }
-          if (merged.length != currentItems.length) {
+          if (hasChanges) {
             _cartVersion++;
             state = AsyncValue.data(_buildCart(merged));
             await r.saveLocalCart(merged);

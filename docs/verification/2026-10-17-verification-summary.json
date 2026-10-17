@@ -1,0 +1,72 @@
+{
+  "review_date": "2026-10-17",
+  "timezone": "Asia/Calcutta",
+  "git_head": "e64a096f20b545e3f73b137edc3f9bbbf2ef0d30",
+  "checks": {
+    "python": {
+      "exit_code": 0,
+      "passed": 234,
+      "failed": 0,
+      "command": "fastapi-backend/venv/Scripts/python.exe docs/verification/run_python_recheck_2026_10_17.py",
+      "scope": "SQLite; dotenv disabled; dummy credentials; external network blocked; unmocked migration_full gateway/KOT suite excluded"
+    },
+    "flutter": {
+      "exit_code": 0,
+      "passed": 300,
+      "failed": 0,
+      "command": "flutter test --no-pub --no-enable-impeller --reporter expanded"
+    },
+    "node": {
+      "exit_code": 0,
+      "passed": 147,
+      "suites": 21,
+      "failed": 0,
+      "command": "npm run test:unit"
+    },
+    "typescript": {
+      "exit_code": 0,
+      "errors": 0,
+      "command": "node_modules/.bin/tsc.cmd --noEmit --incremental false"
+    },
+    "dart": {
+      "exit_code": 0,
+      "result": "No issues found",
+      "scope": "six checkout/cart Dart files"
+    },
+    "backend_diagnostics": {
+      "scenarios": 23,
+      "scope": "current functions against fake ORM/cache; exact source blocks for Redis; external network blocked; no live SQL, gateway or alerts"
+    },
+    "flutter_diagnostics": {
+      "completed": 7,
+      "controls": 4,
+      "fault_reproductions": 3,
+      "note": "Some diagnostics assert the observed faulty behavior; passing is not approval"
+    }
+  },
+  "source_changes_since_python_suite": [],
+  "application_worktree_changes": [],
+  "reviewed_source_sha256": {
+    "fastapi-backend/routers/cashfree_router.py": "b1ad8160fd13889b64bd5f0993d203ec820dbfa77fe993174fb1b168c1280053",
+    "fastapi-backend/routers/orders.py": "0f7d7e2956c95e14f596a8ded90a0e9a75576befdf71cb0bedd2437308e840e4",
+    "fastapi-backend/routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+    "fastapi-backend/routers/websockets.py": "1755c417cebdd3c702a5253a4218cf9c20319202d70f75a8ce74fb5409bbce5c",
+    "fastapi-backend/routers/coupons.py": "65e945ef619fe419fea1e8ab6151f4f50a3d2dde005da71a0cd52251035835f9",
+    "fastapi-backend/utils/firebase.py": "e8df7630b7145a74307417bf5bc7af76a1ad3e3cfb8b578111ae0ea9fa74e534",
+    "fastapi-backend/utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+    "fastkirana_flutter/lib/data/models/checkout_draft.dart": "94a02d71dfd42c6ae033c953f941e388f0b82bd2faf6a609f616d77935d0fd92",
+    "fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart": "28077e7278d6a40d610ee3879145454b471d176f136780de7bd80e1f64800356",
+    "fastkirana_flutter/lib/features/checkout/controllers/payment_gateway_handler.dart": "15f87c1a9cc52045f1e406db0d317a8baa5a23a06192af46dc4627a366a35eb2",
+    "fastkirana_flutter/lib/providers/cart_provider.dart": "5de3fd5f400793c41e1ed884bb3e52b9a54ad33111a05eecbf29f2f64066224d",
+    "fastkirana_flutter/lib/data/repositories/cart_repository.dart": "e3b5cf028d2d4e52f8739c9e8c0918b900c503f6c45b42c81a2f18c447ec111d",
+    "fastkirana_flutter/lib/features/checkout/order_success_screen.dart": "715a91f4db3b00db66facf7885ec52055ee119aacfc8e0cd2e50fd6da4af0a32",
+    "src/app/api/payment/cashfree/create-order/route.ts": "a65a7bb35da4a14fef2af718cef45b7125e5937c9896300e34fcf6fa0d103434"
+  },
+  "external_validation_not_performed": [
+    "PostgreSQL independent-process contention",
+    "live Redis/Cashfree",
+    "credential revocation",
+    "signed real-device payment lifecycle",
+    "deployment"
+  ]
+}

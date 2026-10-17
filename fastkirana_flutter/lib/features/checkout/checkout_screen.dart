@@ -251,7 +251,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      'A payment of ₹${(checkoutState.pendingGrandTotal ?? grandTotal).toStringAsFixed(2)} is pending verification for this order. We are holding your cart safely.',
+                                      'Previous payment attempt of ₹${(checkoutState.pendingGrandTotal ?? grandTotal).toStringAsFixed(2)} was not completed.',
                                       style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppDesignSystem.amber900),
                                     ),
                                   ),
@@ -266,12 +266,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         ? null
                                         : () => controller.cancelPendingPaymentSession(context),
                                     style: TextButton.styleFrom(
-                                      foregroundColor: AppDesignSystem.rose600,
+                                      foregroundColor: AppDesignSystem.slate700,
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                       visualDensity: VisualDensity.compact,
                                     ),
                                     child: Text(
-                                      'Cancel & New Order',
+                                      'Dismiss & Pay Now',
                                       style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
                                     ),
                                   ),

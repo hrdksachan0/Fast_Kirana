@@ -231,6 +231,7 @@ async def create_cashfree_order(
 
     authoritative_items_subtotal = 0.0
     has_items_validated = False
+    canonical_accepted_lines = []
     if effective_items and isinstance(effective_items, list) and not (req.orderId and order):
         raw_pids = [
             str(it.get("productId") or (it.get("product") or {}).get("id") or "").strip()
@@ -274,8 +275,33 @@ async def create_cashfree_order(
                             detail=f"Insufficient stock for \"{db_p.name}\". Available: {db_p.stock or 0}, requested: {p_qty}."
                         )
                 authoritative_items_subtotal += item_price * p_qty
+                canonical_accepted_lines.append({
+                    "productId": db_p.id,
+                    "name": db_p.name,
+                    "price": round(item_price, 2),
+                    "quantity": p_qty,
+                    "selectedVariant": sel_var,
+                    "imageUrl": db_p.imageUrl,
+                    "categoryId": db_p.categoryId,
+                    "restaurantId": db_p.restaurantId,
+                    "menuSection": getattr(db_p, "menuSection", None),
+                    "cartItemId": str(it.get("cartItemId") or it.get("id") or "").strip() or None,
+                })
             else:
-                authoritative_items_subtotal += float(it.get("price") or prod_info.get("price") or 0.0) * p_qty
+                raw_price = float(it.get("price") or prod_info.get("price") or 0.0)
+                authoritative_items_subtotal += raw_price * p_qty
+                canonical_accepted_lines.append({
+                    "productId": p_id,
+                    "name": it.get("name") or prod_info.get("name") or "Item",
+                    "price": round(raw_price, 2),
+                    "quantity": p_qty,
+                    "selectedVariant": sel_var,
+                    "imageUrl": it.get("imageUrl") or prod_info.get("imageUrl"),
+                    "categoryId": it.get("categoryId") or prod_info.get("categoryId"),
+                    "restaurantId": it.get("restaurantId") or prod_info.get("restaurantId"),
+                    "menuSection": it.get("menuSection") or prod_info.get("menuSection"),
+                    "cartItemId": str(it.get("cartItemId") or it.get("id") or "").strip() or None,
+                })
         has_items_validated = True
 
     if req.orderId:
@@ -396,15 +422,16 @@ async def create_cashfree_order(
                         has_restrictions = bool(c_obj.categoryId or c_obj.restaurantId or c_obj.menuSection or c_obj.bogoDishId)
 
                         if has_restrictions:
-                            for it in effective_items:
+                            lines_to_check = canonical_accepted_lines if canonical_accepted_lines else effective_items
+                            for it in lines_to_check:
                                 prod_info = it.get("product") or it
                                 it_pid = str(it.get("productId") or prod_info.get("id") or "").strip()
                                 p_obj = db_p_map.get(it_pid)
-                                it_price = float(it.get("price") or prod_info.get("price") or (p_obj.price if p_obj else 0.0))
+                                it_price = float(it.get("price") or (p_obj.price if p_obj else 0.0))
                                 it_qty = validate_positive_quantity(it.get("quantity")) or 1
-                                it_cat = getattr(p_obj, "categoryId", None) or it.get("categoryId") or prod_info.get("categoryId")
-                                it_rest = getattr(p_obj, "restaurantId", None) or it.get("restaurantId") or prod_info.get("restaurantId")
-                                it_menu = getattr(p_obj, "menuSection", None) or it.get("menuSection") or prod_info.get("menuSection")
+                                it_cat = it.get("categoryId") or getattr(p_obj, "categoryId", None)
+                                it_rest = it.get("restaurantId") or getattr(p_obj, "restaurantId", None)
+                                it_menu = it.get("menuSection") or getattr(p_obj, "menuSection", None)
 
                                 it_matches = True
                                 if c_obj.categoryId and it_cat != c_obj.categoryId:
@@ -426,9 +453,9 @@ async def create_cashfree_order(
                                 disc = (eligible_subtotal * float(c_obj.value)) / 100.0
                                 if c_obj.maxDiscount and c_obj.maxDiscount > 0:
                                     disc = min(disc, float(c_obj.maxDiscount))
-                                validated_discount = round(min(disc, eligible_subtotal), 2)
+                                validated_discount = round(min(disc, eligible_subtotal, authoritative_items_subtotal), 2)
                             elif c_obj.discountType == "FLAT":
-                                validated_discount = round(min(float(c_obj.value), eligible_subtotal), 2)
+                                validated_discount = round(min(float(c_obj.value), eligible_subtotal, authoritative_items_subtotal), 2)
                             elif c_obj.discountType == "FREE_DELIVERY":
                                 delivery_fee = 0.0
 
@@ -466,6 +493,7 @@ async def create_cashfree_order(
             "deliveryMethod": delivery_method,
             "storeId": store_id,
             "cartItemIds": active_cart_item_ids,
+            "items": canonical_accepted_lines,
         }
     elif req.amount is not None and float(req.amount) > (total_amount or 0.0):
         total_amount = float(req.amount)
@@ -521,7 +549,7 @@ async def create_cashfree_order(
             customer_phone=clean_phone,
             customer_name=resolved_name,
             customer_email=resolved_email,
-            items=effective_items,
+            items=canonical_accepted_lines if canonical_accepted_lines else effective_items,
             delivery_method=effective_delivery_method,
             store_id=effective_store_id,
             validated_quote=validated_quote_dict
@@ -621,7 +649,7 @@ async def create_cashfree_order(
             customer_phone=clean_phone,
             customer_name=resolved_name,
             customer_email=resolved_email,
-            items=effective_items,
+            items=canonical_accepted_lines if canonical_accepted_lines else effective_items,
             delivery_method=effective_delivery_method,
             store_id=effective_store_id,
             validated_quote=validated_quote_dict
@@ -835,18 +863,46 @@ async def verify_cashfree_payment(
                     logger.error(f"[Cashfree Security] Preflight amount mismatch: Paid ₹{cf_amount:.2f} != Expected ₹{expected_p_amt:.2f}")
                     raise HTTPException(status_code=400, detail="Gateway payment amount does not match checkout session amount.")
 
+            # Auto-recover and insert order into DB immediately so customer order is never missed
+            recovered_order = None
+            try:
+                cf_ref_val = str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}"
+                recovered_order = await auto_recover_unplaced_cashfree_order(
+                    cf_order_id=sanitized_check_id,
+                    clean_id=clean_id,
+                    cf_ref=cf_ref_val,
+                    order_data=cf_order or {},
+                    payment_data=successful_payment or {},
+                    db=db
+                )
+            except Exception as rec_err:
+                logger.error(f"[Cashfree Verify] Auto-recover on verify notice: {rec_err}")
+
             return {
                 "success": True,
-                "orderId": clean_id,
+                "orderId": recovered_order.id if recovered_order else clean_id,
+                "readableId": recovered_order.readableId if recovered_order else None,
                 "paymentStatus": "PAID",
                 "isPaid": True,
                 "cfPaymentId": str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}",
                 "orderAmount": cf_amount,
             }
+        status_to_return = "USER_DROPPED"
+        if cf_order:
+            cf_st = cf_order.get("order_status", "ACTIVE")
+            if cf_st == "EXPIRED":
+                status_to_return = "EXPIRED"
+            elif cf_st in ("CANCELLED", "TERMINATED"):
+                status_to_return = "CANCELLED"
+            elif 'payments' in locals() and any(p.get("payment_status") == "PENDING" for p in (payments or [])):
+                status_to_return = "PENDING"
+            elif cf_st == "ACTIVE":
+                status_to_return = "USER_DROPPED" if ('payments' in locals() and payments) else "NOT_PAID"
+
         return {
             "success": False,
             "orderId": clean_id,
-            "paymentStatus": cf_order.get("order_status", "PENDING") if cf_order else "PENDING",
+            "paymentStatus": status_to_return,
             "isPaid": False,
             "message": "Payment has not been completed on Cashfree gateway.",
         }
@@ -1266,8 +1322,14 @@ async def auto_recover_unplaced_cashfree_order(
         # Check pending cache items first
         cached_items = pending_data.get("items") if pending_data else None
         if cached_items and isinstance(cached_items, list):
-            prod_ids = [str(it.get("productId") or (it.get("product") or {}).get("id") or "").strip() for it in cached_items]
-            prod_ids = [pid for pid in prod_ids if pid]
+            prod_ids = []
+            for it in cached_items:
+                raw_pid = str(it.get("productId") or (it.get("product") or {}).get("id") or "").strip()
+                if raw_pid:
+                    prod_ids.append(raw_pid)
+                    if "_" in raw_pid:
+                        prod_ids.append(raw_pid.split("_")[0])
+            prod_ids = list(set(prod_ids))
             if prod_ids:
                 p_res = await db.execute(select(Product).where(Product.id.in_(prod_ids)).with_for_update())
                 for p in p_res.scalars().all():
@@ -1306,10 +1368,25 @@ async def auto_recover_unplaced_cashfree_order(
                 var_key = (p_id, p_var)
                 aggregated_variant_demand[var_key] = aggregated_variant_demand.get(var_key, 0) + p_qty
 
+            quote_item_map = {}
+            if isinstance(val_quote, dict) and isinstance(val_quote.get("items"), list):
+                for q_it in val_quote["items"]:
+                    q_pid = str(q_it.get("productId") or "").strip()
+                    q_var = str(q_it.get("selectedVariant") or "").strip()
+                    quote_item_map[(q_pid, q_var)] = q_it
+                    if q_pid and q_pid not in quote_item_map:
+                        quote_item_map[q_pid] = q_it
+
             for it in cached_items:
                 prod = it.get("product") or it
                 p_id = str(it.get("productId") or prod.get("id") or "").strip()
+                p_var = it.get("selectedVariant") or prod.get("selectedVariant")
                 db_prod = db_products.get(p_id)
+                if db_prod is None and "_" in p_id:
+                    base_pid = p_id.split("_")[0]
+                    db_prod = db_products.get(base_pid)
+                    if db_prod is not None and not p_var and len(p_id.split("_")) > 1:
+                        p_var = p_id.split("_")[1]
 
                 if db_prod is None and p_id:
                     has_missing_product = True
@@ -1322,16 +1399,28 @@ async def auto_recover_unplaced_cashfree_order(
                 else:
                     p_qty = valid_qty
                 p_img = (db_prod.imageUrl if db_prod else None) or it.get("imageUrl") or prod.get("imageUrl")
-                p_var = it.get("selectedVariant") or prod.get("selectedVariant")
+                p_cart_item_id = str(it.get("cartItemId") or it.get("id") or "").strip() or None
 
                 # Authoritative pricing & routing
+                matched_q_it = quote_item_map.get((p_id, str(p_var or "").strip())) or quote_item_map.get(p_id)
+                if matched_q_it and "price" in matched_q_it:
+                    p_price = float(matched_q_it["price"])
+                    if matched_q_it.get("name"):
+                        p_name = matched_q_it["name"]
+                    if matched_q_it.get("cartItemId"):
+                        p_cart_item_id = matched_q_it["cartItemId"]
+                elif db_prod is not None:
+                    p_price = float(db_prod.price or 0.0)
+                    if p_var and db_prod.variants and isinstance(db_prod.variants, list):
+                        v_obj = next((v for v in db_prod.variants if isinstance(v, dict) and v.get("name") == p_var), None)
+                        if v_obj and "price" in v_obj:
+                            p_price = float(v_obj["price"])
+                else:
+                    p_price = float(it.get("price") or prod.get("price") or 0.0)
+
                 if db_prod is not None:
                     # Legitimate grocery products have restaurantId=None and MUST remain None!
                     p_rest_id = db_prod.restaurantId
-                    if val_quote and it.get("price") is not None and float(it.get("price", 0)) > 0:
-                        p_price = float(it["price"])
-                    else:
-                        p_price = float(db_prod.price or 0.0)
                     total_prod_demanded = aggregated_product_demand.get(p_id, p_qty)
                     total_var_demanded = aggregated_variant_demand.get((p_id, p_var), p_qty)
 
@@ -1344,9 +1433,6 @@ async def auto_recover_unplaced_cashfree_order(
 
                     if p_var and db_prod.variants and isinstance(db_prod.variants, list):
                         v_obj = next((v for v in db_prod.variants if isinstance(v, dict) and v.get("name") == p_var), None)
-                        if not (val_quote and it.get("price") is not None and float(it.get("price", 0)) > 0):
-                            if v_obj and "price" in v_obj:
-                                p_price = float(v_obj["price"])
                         if not p_rest_id:
                             # 2. Variant-level specific stock check
                             v_stk = int(v_obj.get("stock", 0)) if v_obj else 0
@@ -1354,19 +1440,19 @@ async def auto_recover_unplaced_cashfree_order(
                                 has_stock_conflict = True
                 else:
                     p_rest_id = it.get("restaurantId") or prod.get("restaurantId")
-                    p_price = float(it.get("price") or prod.get("price") or 0.0)
 
                 if p_rest_id:
                     is_restaurant = True
                     target_restaurant_id = p_rest_id
 
                 items_to_create.append({
-                    "productId": p_id or None,
+                    "productId": db_prod.id if db_prod else None,
                     "name": p_name,
                     "price": p_price,
                     "quantity": p_qty,
                     "imageUrl": p_img,
                     "selectedVariant": p_var,
+                    "cartItemId": p_cart_item_id,
                 })
 
         # If no intent snapshot found, do NOT fulfill current live cart. Flag for manual reconciliation.
@@ -1550,23 +1636,30 @@ async def auto_recover_unplaced_cashfree_order(
             cart_res = await db.execute(cart_stmt)
             cart = cart_res.scalars().first()
             if cart:
-                accepted_cart_ids = val_quote.get("cartItemIds") if isinstance(val_quote, dict) else None
-                if accepted_cart_ids and isinstance(accepted_cart_ids, list) and len(accepted_cart_ids) > 0:
-                    stmt_ci = select(CartItem).where(
-                        CartItem.cartId == cart.id,
-                        CartItem.id.in_(accepted_cart_ids)
-                    )
-                    ci_res = await db.execute(stmt_ci)
-                    for matched_ci in ci_res.scalars().all():
-                        await db.delete(matched_ci)
-                else:
-                    for it in items_to_create:
-                        p_id = it.get("productId")
-                        p_qty = int(it.get("quantity") or 1)
-                        p_var = it.get("selectedVariant")
-                        if not p_id:
-                            continue
-                        db_p = db_products.get(p_id)
+                for it in items_to_create:
+                    p_id = it.get("productId")
+                    p_qty = int(it.get("quantity") or 1)
+                    p_var = it.get("selectedVariant")
+                    ci_id = it.get("cartItemId")
+                    if not p_id and not ci_id:
+                        continue
+
+                    matched_ci = None
+                    if ci_id:
+                        stmt_ci = select(CartItem).where(
+                            CartItem.cartId == cart.id,
+                            CartItem.id == ci_id
+                        )
+                        ci_res = await db.execute(stmt_ci)
+                        matched_ci = ci_res.scalars().first()
+
+                    if matched_ci:
+                        if matched_ci.quantity <= p_qty:
+                            await db.delete(matched_ci)
+                        else:
+                            matched_ci.quantity -= p_qty
+                    else:
+                        db_p = db_products.get(p_id) if p_id else None
                         unit_val = str(db_p.unit or "").strip() if db_p else ""
                         if p_var:
                             stmt_ci = select(CartItem).where(
@@ -1593,10 +1686,11 @@ async def auto_recover_unplaced_cashfree_order(
                                 break
                             if matched_ci.quantity <= remaining_to_deduct:
                                 remaining_to_deduct -= matched_ci.quantity
-                            await db.delete(matched_ci)
-                        else:
-                            matched_ci.quantity -= remaining_to_deduct
-                            remaining_to_deduct = 0
+                                await db.delete(matched_ci)
+                            else:
+                                matched_ci.quantity -= remaining_to_deduct
+                                remaining_to_deduct = 0
+                                break
 
         # 10. Enqueue Kitchen KOT for printing ONLY if CONFIRMED
         if is_restaurant and target_restaurant_id and order_status == OrderStatus.CONFIRMED:

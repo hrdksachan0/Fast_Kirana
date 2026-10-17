@@ -1,0 +1,667 @@
+{
+  "scope": "current functions against fake ORM/cache; exact source blocks for Redis; external network blocked; no live SQL, gateway or alerts",
+  "results": [
+    {
+      "case": "negative-fee",
+      "quote_http_status": 400,
+      "detail": "Invalid deliveryFee: must be a non-negative finite number"
+    },
+    {
+      "case": "zero-fees",
+      "quote": 130.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 25.0,
+        "packagingFee": 5.0,
+        "tipAmount": 0.0,
+        "total": 130.0,
+        "deliveryMethod": "DELIVERY",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 130.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "valid-coupon",
+      "quote": 80.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 20.0,
+        "couponCode": "SAVE20",
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 80.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 20.0,
+      "total": 80.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "wrong-category-control",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "forged-price-category-coupon",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "inflated-price-eligible-category",
+      "quote": 80.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 20.0,
+        "couponCode": "ELIGIBLE20",
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 80.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": "eligible-cat",
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 20.0,
+      "total": 80.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "variant-zero-hub",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": "Small",
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 0,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "default-and-other-variants",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [
+          "default",
+          "small",
+          "large"
+        ],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [
+        {
+          "id": "small",
+          "variant": "Small",
+          "quantity": 3
+        },
+        {
+          "id": "large",
+          "variant": "Large",
+          "quantity": 4
+        }
+      ],
+      "deleted": [
+        "default"
+      ]
+    },
+    {
+      "case": "unrelated-cart-product",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [
+          "ordered-A-row",
+          "unpaid-B-row"
+        ],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [
+        {
+          "id": "unpaid-B-row",
+          "variant": null,
+          "quantity": 1
+        }
+      ],
+      "deleted": [
+        "ordered-A-row"
+      ]
+    },
+    {
+      "case": "replacement-row",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [
+          "old-default"
+        ],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted": [
+        "new-default"
+      ]
+    },
+    {
+      "case": "newer-same-row-quantity",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [
+          "old-default"
+        ],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [
+        {
+          "id": "old-default",
+          "variant": null,
+          "quantity": 2
+        }
+      ],
+      "deleted": []
+    },
+    {
+      "case": "price-change-no-client-price",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "client-line-price",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.CONFIRMED",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "missing-intent",
+      "status": "OrderStatus.ADMIN_PENDING",
+      "stock": 2,
+      "cart_ids": [
+        "unpaid-current-cart"
+      ]
+    },
+    {
+      "case": "anonymous-fcm-target-user",
+      "bound_user_id": "usr_00cf6021e0914755af4e",
+      "victim_id": "victim-user",
+      "victim_tokens": [
+        "victim-device"
+      ],
+      "deleted": []
+    },
+    {
+      "case": "sse-anonymous",
+      "http_status": 401
+    },
+    {
+      "case": "sse-other-customer",
+      "http_status": 401
+    },
+    {
+      "case": "sse-owner",
+      "http_status": 401
+    },
+    {
+      "case": "sse-assigned-rider",
+      "http_status": 401
+    },
+    {
+      "case": "sse-blocked-demoted-admin-query-token",
+      "http_status": 401
+    },
+    {
+      "case": "redis-rejected-hub",
+      "http_status": 400,
+      "redis_stock": {
+        "stock:review-hub:review-product:base": 2
+      },
+      "reserved_remaining": [],
+      "database_stock_after_simulated_rollback": 2
+    },
+    {
+      "case": "redis-post-commit-handler",
+      "scope": "exact source handler, simulated already committed SQL sale",
+      "http_status": 500,
+      "committed_db_stock": 1,
+      "redis_stock": 2
+    },
+    {
+      "case": "firebase-key",
+      "literal_present": false,
+      "revocation_verified": false
+    }
+  ],
+  "hashes": {
+    "routers/cashfree_router.py": "e13a1d1d5e4ebef8a695b0d532cab53f6f429e1b3606a58180239627781b24b7",
+    "routers/orders.py": "7192e38f03bc2e4518debfb45cf1b7b1f594f5dff7e431562c250e2a5d6a8a88",
+    "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+    "routers/websockets.py": "f834da2025c77b9b7a3bec15ec4ffe616ab7aa4e506eac9a270cf96d962f1a35",
+    "utils/firebase.py": "e8df7630b7145a74307417bf5bc7af76a1ad3e3cfb8b578111ae0ea9fa74e534"
+  }
+}

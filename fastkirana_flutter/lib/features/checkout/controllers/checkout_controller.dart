@@ -156,12 +156,35 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       final draft = await CheckoutDraft.loadAcceptedDraft();
       final effectivePendingId = (pendingId != null && pendingId.isNotEmpty) ? pendingId : draft?.cfOrderId;
       if (effectivePendingId != null && effectivePendingId.isNotEmpty) {
-        final amountStr = await PaymentGatewayHandler.getPendingCfAmount();
-        final amount = amountStr != null ? double.tryParse(amountStr) : null;
-        state = state.copyWith(
-          pendingCashfreeOrderId: effectivePendingId,
-          pendingGrandTotal: amount ?? draft?.grandTotal,
-        );
+        try {
+          final verification = await _paymentHandler.verifyPayment(effectivePendingId, maxAttempts: 1);
+          if (verification.isPaid && verification.paymentId != null) {
+            if (_currentContext != null && _currentContext!.mounted) {
+              await completeOrderPlacement(
+                _currentContext!,
+                draft: draft,
+                cart: ref.read(cartProvider).value ?? Cart.empty(),
+                paymentId: verification.paymentId,
+              );
+            }
+            return;
+          } else if (verification.status == PaymentVerificationStatus.pending) {
+            // ONLY if the gateway explicitly confirms payment is pending with bank
+            final amountStr = await PaymentGatewayHandler.getPendingCfAmount();
+            final amount = amountStr != null ? double.tryParse(amountStr) : null;
+            state = state.copyWith(
+              pendingCashfreeOrderId: effectivePendingId,
+              pendingGrandTotal: amount ?? draft?.grandTotal,
+            );
+            return;
+          }
+        } catch (_) {
+          // If network error/timeout, do not trap customer with an unverified pending banner
+        }
+
+        // In all other cases (unpaid, dropped, failed, expired, error): silently clear!
+        await PaymentGatewayHandler.clearPendingPaymentRecovery();
+        await CheckoutDraft.clearAcceptedDraft();
       }
     });
   }
@@ -236,8 +259,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
       final total = draft?.grandTotal ?? state.pendingGrandTotal ?? cart?.subtotal ?? 0.0;
 
-      // Ambiguous / Pending confirmation: Lock checkout, do NOT wipe orderId, prevent double charge or premature COD
-      if ((verification.isPending || verification.isUnavailable) && context != null && context.mounted) {
+      // Strictly Pending confirmation from bank (in-flight transaction)
+      if (verification.isPending && context != null && context.mounted) {
         state = state.copyWith(isPlacingOrder: true, pendingCashfreeOrderId: cfOrderId);
         await PaymentPendingReconciliationSheet.show(
           context: context,
@@ -339,8 +362,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final cart = state.pendingCart ?? ref.read(cartProvider).value;
     final context = _currentContext;
 
-    // Ambiguous / Pending confirmation: Lock checkout, do NOT wipe orderId, prevent double charge or premature COD
-    if (fastVerify != null && (fastVerify.isPending || fastVerify.isUnavailable) && context != null && context.mounted && cart != null) {
+    // Strictly Pending confirmation from bank (in-flight transaction)
+    if (fastVerify != null && fastVerify.isPending && context != null && context.mounted && cart != null) {
       state = state.copyWith(isPlacingOrder: true, pendingCashfreeOrderId: cfOrderId);
       await PaymentPendingReconciliationSheet.show(
         context: context,
@@ -453,21 +476,27 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   }) async {
     if (state.isPlacingOrder) return;
     if (state.pendingCashfreeOrderId != null && state.pendingCashfreeOrderId!.isNotEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.amber800,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Text(
-              'A payment verification for ₹${(state.pendingGrandTotal ?? 0).toStringAsFixed(2)} is currently pending. Please wait for store verification before placing another order.',
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-            ),
-          ),
-        );
+      final verification = await _paymentHandler.verifyPayment(state.pendingCashfreeOrderId!, maxAttempts: 1);
+      if (verification.isPaid && verification.paymentId != null) {
+        final draft = await CheckoutDraft.loadAcceptedDraft();
+        if (context.mounted) {
+          await completeOrderPlacement(
+            context,
+            draft: draft,
+            cart: state.pendingCart ?? ref.read(cartProvider).value ?? Cart.empty(),
+            paymentId: verification.paymentId,
+          );
+        }
+        return;
       }
-      return;
+      // Not paid! Stale or dropped attempt - clear and proceed smoothly
+      await PaymentGatewayHandler.clearPendingPaymentRecovery();
+      await CheckoutDraft.clearAcceptedDraft();
+      state = state.copyWith(
+        pendingCashfreeOrderId: null,
+        pendingGrandTotal: null,
+        pendingCart: null,
+      );
     }
     TracerService.startTrace('customer_checkout_tap', attributes: {
       'cart_subtotal': cart.subtotal,
@@ -1305,9 +1334,27 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     // Clear only draft items if specified, preserving any unrelated newer cart edits idempotently
     final orderId = placedOrder.id;
-    if (_acknowledgedOrderIds.contains(orderId)) {
+    bool isAlreadyAcked = _acknowledgedOrderIds.contains(orderId);
+    if (!isAlreadyAcked) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final ackList = prefs.getStringList('acknowledged_order_ids') ?? [];
+        if (ackList.contains(orderId)) {
+          isAlreadyAcked = true;
+          _acknowledgedOrderIds.add(orderId);
+        }
+      } catch (_) {}
+    }
+
+    if (isAlreadyAcked) {
       LoggerService.info('CheckoutController: Order $orderId already acknowledged, skipping duplicate cart subtraction.');
     } else {
+      if (orderedItems != null && orderedItems.isNotEmpty) {
+        await ref.read(cartProvider.notifier).removeDraftItems(orderedItems);
+      } else {
+        await ref.read(cartProvider.notifier).clearCart();
+      }
+
       _acknowledgedOrderIds.add(orderId);
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -1318,12 +1365,6 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           await prefs.setStringList('acknowledged_order_ids', ackList);
         }
       } catch (_) {}
-
-      if (orderedItems != null && orderedItems.isNotEmpty) {
-        await ref.read(cartProvider.notifier).removeDraftItems(orderedItems);
-      } else {
-        await ref.read(cartProvider.notifier).clearCart();
-      }
     }
     ref.invalidate(ordersProvider(userId));
     ref.invalidate(ordersProvider(''));
@@ -1484,111 +1525,44 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   }
 
   Future<void> cancelPendingPaymentSession(BuildContext context) async {
+    HapticFeedback.lightImpact();
     final cfOrderId = state.pendingCashfreeOrderId ?? await PaymentGatewayHandler.getPendingCfOrderId();
-    if (cfOrderId == null || cfOrderId.isEmpty) {
-      await PaymentGatewayHandler.clearPendingPaymentRecovery();
-      await CheckoutDraft.clearAcceptedDraft();
-      state = state.copyWith(
-        isPlacingOrder: false,
-        pendingCashfreeOrderId: null,
-        pendingGrandTotal: null,
-        pendingCart: null,
-      );
-      return;
+
+    // 1. Instantly clear SharedPreferences and durable draft
+    await PaymentGatewayHandler.clearPendingPaymentRecovery();
+    await CheckoutDraft.clearAcceptedDraft();
+
+    if (cfOrderId != null && cfOrderId.isNotEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      final cancelledList = prefs.getStringList('cancelled_payment_attempts') ?? [];
+      if (!cancelledList.contains(cfOrderId)) {
+        cancelledList.add(cfOrderId);
+        await prefs.setStringList('cancelled_payment_attempts', cancelledList);
+      }
     }
 
-    state = state.copyWith(isPlacingOrder: true);
-    try {
-      final verification = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 2);
+    // 2. Instantly update state so yellow banner disappears immediately
+    state = state.copyWith(
+      isPlacingOrder: false,
+      pendingCashfreeOrderId: null,
+      pendingGrandTotal: null,
+      pendingCart: null,
+    );
 
-      // 1. If paid, complete the order from draft
-      if (verification.isPaid && verification.paymentId != null) {
-        final draft = await CheckoutDraft.loadAcceptedDraft();
-        if (!context.mounted) return;
-        await completeOrderPlacement(
-          context,
-          draft: draft,
-          cart: state.pendingCart ?? ref.read(cartProvider).value ?? Cart.empty(),
-          paymentId: verification.paymentId,
-        );
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.emerald600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: const Text(
-              'Payment was already confirmed by your bank. Your order has been placed successfully!',
-              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-            ),
+    // 3. Reassure the customer
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppDesignSystem.slate800,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: const Text(
+            'Previous attempt cleared. You can now place your order.',
+            style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
           ),
-        );
-        return;
-      }
-
-      // 2. Terminal failure or explicit cancellation: allow fresh checkout and track cancelled attempt
-      if (verification.isFailed || verification.status == PaymentVerificationStatus.failed) {
-        final prefs = await SharedPreferences.getInstance();
-        final cancelledList = prefs.getStringList('cancelled_payment_attempts') ?? [];
-        if (!cancelledList.contains(cfOrderId)) {
-          cancelledList.add(cfOrderId);
-          await prefs.setStringList('cancelled_payment_attempts', cancelledList);
-        }
-
-        await PaymentGatewayHandler.clearPendingPaymentRecovery();
-        await CheckoutDraft.clearAcceptedDraft();
-        state = state.copyWith(
-          isPlacingOrder: false,
-          pendingCashfreeOrderId: null,
-          pendingGrandTotal: null,
-          pendingCart: null,
-        );
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.slate800,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: const Text(
-                'Pending payment session cleared. You can now place a fresh order.',
-                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ),
-          );
-        }
-        return;
-      }
-
-      // 3. Unresolved / Still Pending: maintain guard to prevent duplicate fulfillment or double debits
-      state = state.copyWith(isPlacingOrder: false);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.amber800,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: const Text(
-              'Payment status is still pending with your bank. To avoid being charged twice, we cannot cancel yet. Tap "Check Status" in a moment.',
-              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      state = state.copyWith(isPlacingOrder: false);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.amber800,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Text(
-              'Could not reach payment gateway to verify status ($e). Guarding order to prevent duplicate charges.',
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-            ),
-          ),
-        );
-      }
+        ),
+      );
     }
   }
 }

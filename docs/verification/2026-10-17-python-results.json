@@ -1,0 +1,31 @@
+{
+  "collected": 234,
+  "passed": 234,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "failed_tests": [],
+  "exit_code": 0,
+  "elapsed_seconds": 307.31,
+  "initial_hashes": {
+    "routers/cashfree_router.py": "b1ad8160fd13889b64bd5f0993d203ec820dbfa77fe993174fb1b168c1280053",
+    "routers/orders.py": "0f7d7e2956c95e14f596a8ded90a0e9a75576befdf71cb0bedd2437308e840e4",
+    "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+    "routers/websockets.py": "1755c417cebdd3c702a5253a4218cf9c20319202d70f75a8ce74fb5409bbce5c",
+    "utils/firebase.py": "e8df7630b7145a74307417bf5bc7af76a1ad3e3cfb8b578111ae0ea9fa74e534",
+    "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+    "tests/test_production_blockers_resolved.py": "e9279fd5c8a5a13d25f957182f346f7862fd51df9296fc4757e0f73ff17c60ee",
+    "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+  },
+  "final_hashes": {
+    "routers/cashfree_router.py": "b1ad8160fd13889b64bd5f0993d203ec820dbfa77fe993174fb1b168c1280053",
+    "routers/orders.py": "0f7d7e2956c95e14f596a8ded90a0e9a75576befdf71cb0bedd2437308e840e4",
+    "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+    "routers/websockets.py": "1755c417cebdd3c702a5253a4218cf9c20319202d70f75a8ce74fb5409bbce5c",
+    "utils/firebase.py": "e8df7630b7145a74307417bf5bc7af76a1ad3e3cfb8b578111ae0ea9fa74e534",
+    "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+    "tests/test_production_blockers_resolved.py": "e9279fd5c8a5a13d25f957182f346f7862fd51df9296fc4757e0f73ff17c60ee",
+    "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+  },
+  "scope": "SQLite; dotenv disabled; dummy credentials; external network blocked; unmocked migration_full gateway/KOT suite excluded"
+}

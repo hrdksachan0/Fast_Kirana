@@ -42,6 +42,8 @@ class CartRepository {
     await prefs.setBool(key, pending);
     if (!pending) {
       await prefs.remove(key);
+      final hubId = prefs.getString('selected_hub_id') ?? 'default';
+      await prefs.remove('has_pending_cart_sync_$hubId');
       await prefs.remove('has_pending_cart_sync');
     }
   }
@@ -76,6 +78,8 @@ class CartRepository {
       if (clearPendingOnSuccess) {
         await prefs.setBool(key, false);
         await prefs.remove(key);
+        final hubId = prefs.getString('selected_hub_id') ?? 'default';
+        await prefs.remove('has_pending_cart_sync_$hubId');
         await prefs.remove('has_pending_cart_sync');
       }
       return true;

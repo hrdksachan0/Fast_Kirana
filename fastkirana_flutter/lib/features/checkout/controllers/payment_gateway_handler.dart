@@ -199,7 +199,10 @@ class PaymentGatewayHandler {
 
           if (lastKnownStatus == 'FAILED' ||
               lastKnownStatus == 'CANCELLED' ||
-              lastKnownStatus == 'USER_DROPPED') {
+              lastKnownStatus == 'USER_DROPPED' ||
+              lastKnownStatus == 'EXPIRED' ||
+              lastKnownStatus == 'NOT_PAID' ||
+              lastKnownStatus == 'ACTIVE') {
             try {
               final prefs = await SharedPreferences.getInstance();
               await prefs.remove('active_pending_cf_order_id');
@@ -207,12 +210,12 @@ class PaymentGatewayHandler {
             } catch (_) {}
             return PaymentVerificationResult(
               status: PaymentVerificationStatus.failed,
-              message: lastMessage ?? 'Payment was cancelled or failed.',
+              message: lastMessage ?? 'Payment was cancelled or not completed.',
             );
           }
 
-          if (lastKnownStatus == 'PENDING' || lastKnownStatus == 'ACTIVE') {
-            // Still in flight, continue polling attempts
+          if (lastKnownStatus == 'PENDING') {
+            // Still in flight with bank/UPI, continue polling attempts
             continue;
           }
         }
@@ -232,7 +235,7 @@ class PaymentGatewayHandler {
       );
     }
 
-    if (lastKnownStatus == 'PENDING' || lastKnownStatus == 'ACTIVE') {
+    if (lastKnownStatus == 'PENDING') {
       return const PaymentVerificationResult(
         status: PaymentVerificationStatus.pending,
         message: 'Payment is awaiting confirmation from your bank/UPI app.',

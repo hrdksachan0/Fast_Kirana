@@ -734,6 +734,35 @@ async def sse_single_order_stream(
             detail="Authentication required to stream order updates"
         )
 
+    # Reject ws_ticket tokens from SSE stream
+    token_scope = str(user.get("scope") or user.get("type") or "").strip().lower()
+    if token_scope == "ws_ticket":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ws_ticket tokens cannot be used to stream SSE order updates"
+        )
+
+    user_id = user.get("id") or user.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required to stream order updates"
+        )
+
+    # Verify user account against database (catches blocked or demoted users)
+    from models import User
+    u_stmt = select(User).where(User.id == user_id)
+    u_res = await db.execute(u_stmt)
+    db_user = u_res.scalars().first()
+    if not db_user or db_user.isBlocked or db_user.deletedAt is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is deactivated, blocked, or not found"
+        )
+
+    # Authoritative role from database
+    user_role = str(db_user.role or "").upper()
+
     # Verify order existence and access permissions
     stmt = select(Order).where(Order.id == clean_oid)
     res = await db.execute(stmt)
@@ -744,13 +773,14 @@ async def sse_single_order_stream(
             detail="Order not found"
         )
 
-    user_id = user.get("id") or user.get("sub")
-    user_role = str(user.get("role", "")).upper()
-    is_owner = bool(user_id and ord_obj.userId and user_id == ord_obj.userId)
-    is_staff = user_role in ("ADMIN", "SUPERADMIN", "STORE_MANAGER", "STAFF")
-    is_rider = bool(user_id and getattr(ord_obj, "deliveryPartnerId", None) and user_id == ord_obj.deliveryPartnerId)
+    is_owner = bool(ord_obj.userId and user_id == ord_obj.userId)
+    is_rider = bool(ord_obj.deliveryUserId and user_id == ord_obj.deliveryUserId)
+    is_super = user_role in ("ADMIN", "SUPERADMIN", "SUPER_ADMIN")
+    is_store_staff = user_role in ("STORE_MANAGER", "STAFF") and (
+        not db_user.assignedStoreId or not ord_obj.storeId or db_user.assignedStoreId == ord_obj.storeId
+    )
 
-    if not (is_owner or is_staff or is_rider):
+    if not (is_owner or is_super or is_store_staff or is_rider):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: You do not have permission to view updates for this order"
