@@ -59,7 +59,7 @@ DEFAULT_SETTINGS = {
     "store_pincode": "209206",
     "store_phone": DEFAULT_SUPPORT_PHONE,
     "store_address": "NH34, Ghatampur, Kanpur Nagar",
-    "shop_name": "FastKirana Dark Store",
+    "shop_name": "FastMinute Dark Store",
     "min_order_value": "20",
     "avg_delivery_time": "8 min",
     "delivered_today": "1,231+",
@@ -78,11 +78,11 @@ DEFAULT_SETTINGS = {
     "delivery_threshold_tier3": "349",
     "delivery_fee": "25",
     "contact_phone": DEFAULT_SUPPORT_PHONE,
-    "contact_email": "help@fastkirana.com",
+    "contact_email": "help@fastminute.in",
     "contact_timings": "6 AM - 12 AM",
     "contact_address": "NH34, Ghatampur, Kanpur Nagar",
     "hero_greeting_closed": "We're resting right now 💤",
-    "hero_subtitle_closed": "FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!",
+    "hero_subtitle_closed": "FastMinute Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!",
     "hero_greeting_morning": "Good morning, let's get breakfast! 🌅",
     "hero_subtitle_morning_mart_closed": "Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨",
     "hero_subtitle_morning_cafe_closed": "Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦",
@@ -722,5 +722,5 @@ async def register_waitlist(payload: Dict[str, Any] = Body(...), db: AsyncSessio
 
     return {
         "success": True,
-        "message": f"Thanks! We will notify {cleaned_phone} on WhatsApp the moment FastKirana goes live in {final_hub}!"
+        "message": f"Thanks! We will notify {cleaned_phone} on WhatsApp the moment FastMinute goes live in {final_hub}!"
     }

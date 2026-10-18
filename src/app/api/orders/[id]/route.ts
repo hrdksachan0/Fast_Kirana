@@ -212,7 +212,7 @@ export async function GET(
             readableId: o.readableId,
             restaurantId: o.restaurantId || null,
             type: isRest ? 'RESTAURANT' : 'GROCERY',
-            shopName: isRest ? (matchedRest?.name || o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
+            shopName: isRest ? (matchedRest?.name || o.shopName || 'Restaurant') : (o.shopName ? o.shopName.replace(/FastKirana/g, 'FastMinute') : 'FastMinute Dark Store'),
             shopPhone: o.shopPhone || (matchedRest as any)?.phone || (matchedRest as any)?.ownerPhone || null,
             restaurant: matchedRest,
             status: o.status,

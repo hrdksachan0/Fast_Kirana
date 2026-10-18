@@ -124,7 +124,7 @@ class OrderAlarmService {
         final orderToken = order.readableId ?? (order.id.length > 6 ? order.id.substring(order.id.length - 6).toUpperCase() : order.id);
         final itemsCount = order.items?.length ?? 0;
         final totalAmount = order.total.toInt();
-        final shopOrKitchen = order.shopName ?? 'FastKirana Store';
+        final shopOrKitchen = (order.shopName ?? 'FastMinute Store').replaceAll('FastKirana', 'FastMinute');
 
         return PopScope(
           canPop: false,

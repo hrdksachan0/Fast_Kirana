@@ -224,7 +224,7 @@ async def test_whatsapp_alert_endpoint(phone: str = "7054470303"):
             "components": [
                 {
                     "type": "body",
-                    "parameters": [{"type": "text", "text": "Test Order #1993 for FastKirana of Rs.320"}],
+                    "parameters": [{"type": "text", "text": "Test Order #1993 for FastMinute of Rs.320"}],
                 }
             ],
         },
@@ -335,11 +335,12 @@ async def dispatch_isolated_order_fcm_notifications(
     try:
         now_ts = str(int(datetime.utcnow().timestamp() * 1000))
         is_admin_pending = (status_val == "ADMIN_PENDING")
+        safe_shop_name = (shop_name or "").replace("FastKirana", "FastMinute")
 
         # ── CASE 1: MANUAL ADMIN APPROVAL REQUIRED ──
         if is_admin_pending:
             admin_title = "🚨 New Order Awaiting Approval!"
-            admin_body = f"Order #{readable_id} ({shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) needs admin approval. Tap to review."
+            admin_body = f"Order #{readable_id} ({safe_shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) needs admin approval. Tap to review."
             admin_data = {
                 "orderId": order_id,
                 "readableId": str(readable_id),
@@ -359,7 +360,7 @@ async def dispatch_isolated_order_fcm_notifications(
         # ── CASE 2: AUTO-APPROVED / CONFIRMED ──
         if restaurant_id:
             # Alert Restaurant/Chef to start cooking (Rider is notified when food is packed/prepared)
-            rest_title = f"👨‍🍳 New Order for {shop_name or 'Kitchen'}!"
+            rest_title = f"👨‍🍳 New Order for {safe_shop_name or 'Kitchen'}!"
             rest_body = f"Order #{readable_id} received (₹{total:.2f})! Open kitchen console to prepare dishes."
             rest_data = {
                 "orderId": order_id,
@@ -428,11 +429,12 @@ async def dispatch_isolated_status_update_notifications(
     try:
         now_ts = str(int(datetime.utcnow().timestamp() * 1000))
         base_order_no = re.sub(r'-[GR\d]+$', '', readable_id or "")
+        safe_shop_name = (shop_name or "").replace("FastKirana", "FastMinute")
 
         # ── RIDER NOTIFICATION: Triggered ONLY when order is PACKED ──
         if status_val == "PACKED" or (restaurant_id and status_val in ["COOKED", "PREPARED", "PACKED"]):
             rider_title = f"🛵 Order #{base_order_no} is Packed & Ready!"
-            rider_body = f"Order #{base_order_no} ({shop_name or 'Store'}) is packed. Tap to pick up & deliver."
+            rider_body = f"Order #{base_order_no} ({safe_shop_name or 'Store'}) is packed. Tap to pick up & deliver."
             rider_data = {
                 "orderId": order_id,
                 "readableId": str(readable_id),
@@ -450,7 +452,7 @@ async def dispatch_isolated_status_update_notifications(
         if restaurant_id:
             # RESTAURANT / KITCHEN ISOLATED STATUS UPDATE
             rest_title = f"👨‍🍳 Order #{base_order_no} Status: {status_val}"
-            rest_body = f"Order #{base_order_no} for {shop_name or 'Kitchen'} updated to {status_val}."
+            rest_body = f"Order #{base_order_no} for {safe_shop_name or 'Kitchen'} updated to {status_val}."
             rest_data = {
                 "orderId": order_id,
                 "readableId": str(readable_id),
@@ -612,7 +614,7 @@ async def create_order(
 
         if not user_obj:
             user_id = user_id if (user_id and not user_id.startswith("default_") and not user_id.startswith("guest_")) else f"usr_{uuid.uuid4().hex[:16]}"
-            user_name = payload.get("userName") or payload.get("buyerName") or payload.get("customerName") or "FastKirana Customer"
+            user_name = payload.get("userName") or payload.get("buyerName") or payload.get("customerName") or "FastMinute Customer"
             user_obj = User(
                 id=user_id,
                 name=user_name,
@@ -1571,7 +1573,7 @@ async def create_order(
     # 5. Determine Restaurant & Shop Context
     restaurant_id = restaurant_data[0]["rId"] if restaurant_data else None
     restaurant_obj = restaurant_groups.get(restaurant_id) if restaurant_id else None
-    final_shop_name = restaurant_obj["name"] if restaurant_obj else "FastKirana Grocery"
+    final_shop_name = restaurant_obj["name"] if restaurant_obj else "FastMinute Grocery"
     final_shop_phone = restaurant_obj.get("ownerPhone", default_support_phone) if restaurant_obj else default_support_phone
 
     has_grocery_items = len(grocery_items) > 0
@@ -1841,7 +1843,7 @@ async def create_order(
                 "type": OrderType.GROCERY,
                 "readableId": f"{readable_id}-G",
                 "restaurantId": None,
-                "shopName": "FastKirana Grocery",
+                "shopName": "FastMinute Grocery",
                 "shopPhone": default_support_phone,
                 "subtotal": round(grocery_subtotal, 2),
                 "discount": round(grocery_disc, 2),
@@ -1884,7 +1886,7 @@ async def create_order(
                 "type": OrderType.GROCERY,
                 "readableId": f"{readable_id}-G",
                 "restaurantId": None,
-                "shopName": "FastKirana Grocery",
+                "shopName": "FastMinute Grocery",
                 "shopPhone": default_support_phone,
                 "subtotal": round(combined_subtotal, 2),
                 "discount": round(combined_discount, 2),
@@ -2688,7 +2690,7 @@ async def list_orders(
                     "paymentStatus": safe_enum_str(o.paymentStatus, "PENDING"),
                     "deliveryMethod": o.deliveryMethod or "DELIVERY",
                     "createdAt": to_iso_utc(o.createdAt),
-                    "shopName": o.shopName or ("FastKirana DarkStore" if not o.restaurantId else "Restaurant"),
+                    "shopName": (o.shopName.replace("FastKirana", "FastMinute") if o.shopName else ("FastMinute Dark Store" if not o.restaurantId else "Restaurant")),
                     "restaurantId": o.restaurantId,
                     "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": safe_float(i.price), "imageUrl": i.imageUrl} for i in o.items],
                     "address": {
@@ -2732,7 +2734,7 @@ async def list_orders(
                     "paymentStatus": safe_enum_str(main_order.paymentStatus, "PENDING"),
                     "deliveryMethod": main_order.deliveryMethod or "DELIVERY",
                     "createdAt": to_iso_utc(main_order.createdAt),
-                    "shopName": main_order.shopName or ("FastKirana DarkStore" if not main_order.restaurantId else "Restaurant"),
+                    "shopName": (main_order.shopName.replace("FastKirana", "FastMinute") if main_order.shopName else ("FastMinute Dark Store" if not main_order.restaurantId else "Restaurant")),
                     "restaurantId": main_order.restaurantId,
                     "items": all_items,
                     "address": {
@@ -2858,7 +2860,7 @@ async def get_order_details(
                     "id": co.id,
                     "readableId": co.readableId,
                     "type": "RESTAURANT" if is_rest else "GROCERY",
-                    "shopName": co.shopName or ("Restaurant" if is_rest else "FastKirana Grocery"),
+                    "shopName": (co.shopName.replace("FastKirana", "FastMinute") if co.shopName else ("Restaurant" if is_rest else "FastMinute Grocery")),
                     "status": safe_enum_str(co.status, "PENDING"),
                     "subtotal": safe_float(co.subtotal),
                     "total": safe_float(co.total),
@@ -4065,7 +4067,7 @@ async def edit_order(
             else:
                 is_restaurant = False
                 resolved_rest_id = None
-                resolved_shop_name = "FastKirana Grocery"
+                resolved_shop_name = "FastMinute Grocery"
                 resolved_shop_phone = None
         else:
             explicit_rest_id = normalize_restaurant_id(item_rest_id) if item_rest_id else None
@@ -4082,7 +4084,7 @@ async def edit_order(
             else:
                 is_restaurant = False
                 resolved_rest_id = None
-                resolved_shop_name = "FastKirana Grocery"
+                resolved_shop_name = "FastMinute Grocery"
                 resolved_shop_phone = None
 
         classified = {
@@ -4190,7 +4192,7 @@ async def edit_order(
         elif has_grocery_items:
             dynamic_order_type = OrderType.GROCERY
             dynamic_restaurant_id = None
-            dynamic_shop_name = "FastKirana Grocery"
+            dynamic_shop_name = "FastMinute Grocery"
             dynamic_shop_phone = None
 
         # Clean up any orphaned companion orders since this is now single-domain
@@ -4289,7 +4291,7 @@ async def edit_order(
             "items": grocery_group,
             "type": OrderType.GROCERY,
             "restaurantId": None,
-            "shopName": "FastKirana Grocery",
+            "shopName": "FastMinute Grocery",
             "shopPhone": None,
             "readableId": f"{base_readable_id}-G",
             "isNew": existing_grocery is None

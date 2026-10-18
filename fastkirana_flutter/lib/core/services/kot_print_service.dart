@@ -419,7 +419,7 @@ class KotPrintService {
           // Header
           pw.Center(
             child: pw.Text(
-              'FASTKIRANA',
+              'FASTMINUTE',
               style: pw.TextStyle(font: monoFont, fontSize: 16, fontWeight: pw.FontWeight.bold),
               textAlign: pw.TextAlign.center,
             ),
@@ -572,7 +572,7 @@ class KotPrintService {
           // Footer
           pw.Center(
             child: pw.Text(
-              '*** FASTKIRANA KITCHEN SYSTEM ***',
+              '*** FASTMINUTE KITCHEN SYSTEM ***',
               style: pw.TextStyle(font: monoFont, fontSize: 8.5, fontWeight: pw.FontWeight.bold),
               textAlign: pw.TextAlign.center,
             ),

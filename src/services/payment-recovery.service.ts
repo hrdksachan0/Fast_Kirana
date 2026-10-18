@@ -60,7 +60,7 @@ export async function runPaymentRecoveryCron(): Promise<PaymentRecoverySummary> 
       const customerName = order.user?.name || 'Customer'
       const displayId = order.readableId || order.id.slice(-6).toUpperCase()
       const totalFormatted = Math.round(order.total)
-      const recoveryUrl = `https://fastkirana.com/order/${order.id}/track?action=cod`
+      const recoveryUrl = `https://fastminute.in/order/${order.id}/track?action=cod`
 
       const messageText = 
         `🛒 *FastMinute Payment Alert*\n\n` +

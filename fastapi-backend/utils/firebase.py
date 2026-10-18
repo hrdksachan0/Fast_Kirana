@@ -135,6 +135,9 @@ async def send_fcm_notification(
     if not clean_tokens:
         return {"success": 0, "failure": 0, "invalid_tokens": []}
     
+    title = str(title or "").replace("FastKirana", "FastMinute")
+    body = str(body or "").replace("FastKirana", "FastMinute")
+
     try:
         data_str = {str(k): str(v) for k, v in (data or {}).items()}
         data_str["click_action"] = "FLUTTER_NOTIFICATION_CLICK"
@@ -241,6 +244,9 @@ async def send_fcm_topic_notification(
     if not clean_topic:
         return False
     
+    title = str(title or "").replace("FastKirana", "FastMinute")
+    body = str(body or "").replace("FastKirana", "FastMinute")
+
     try:
         data_str = {str(k): str(v) for k, v in (data or {}).items()}
         data_str["click_action"] = "FLUTTER_NOTIFICATION_CLICK"

@@ -462,7 +462,7 @@ export async function GET(request: Request) {
         deliveryMethod: o.deliveryMethod,
         shopName: o.restaurantId 
           ? (restaurant?.name || o.shopName || 'Restaurant') 
-          : ((!o.shopName || o.shopName.toLowerCase().includes('restaurant') || o.orderType === 'GROCERY') ? 'FastKirana Dark Store' : o.shopName),
+          : ((!o.shopName || o.shopName.toLowerCase().includes('restaurant') || o.orderType === 'GROCERY') ? 'FastMinute Dark Store' : o.shopName.replace(/FastKirana/g, 'FastMinute')),
         restaurantId: o.restaurantId || null,
         restaurantName: o.restaurantId ? (restaurant?.name || o.shopName || 'Restaurant') : null,
         restaurant,

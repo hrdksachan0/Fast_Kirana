@@ -490,7 +490,7 @@ String getOutletName(Product product) {
     return 'Restaurant';
   }
 
-  return 'FastKirana Store';
+  return 'FastMinute Store';
 }
 
 /// Model representing an exact physical outlet/store location in Ghatampur
@@ -517,7 +517,7 @@ class OutletLocation {
 // ─── Default Physical GPS Coordinates for Grocery Dark Store ─────────────────
 const OutletLocation darkstoreLocation = OutletLocation(
   id: 'darkstore-ghatampur',
-  name: 'FastKirana Dark Store',
+  name: 'FastMinute Dark Store',
   lat: 26.1534185,
   lng: 80.1714024,
   address: 'Ghatampur Market, Kanpur Nagar, UP 209206',

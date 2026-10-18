@@ -32,6 +32,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     const displayId = order.readableId ? String(order.readableId) : order.id.slice(-6).toUpperCase()
 
     const isAdminPending = order.status === OrderStatus.ADMIN_PENDING
+    const safeShopName = (order.shopName || '').replace(/FastKirana/g, 'FastMinute')
 
     // 1. Web Push Notification to Customer
     sendPushNotification(order.userId, {
@@ -60,7 +61,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
         sendPushNotificationToRoles(rolesToNotify, {
           title: '🚨 New Order Awaiting Admin Approval!',
-          body: `Order #${displayId} (${order.shopName || 'Store'}, ₹${order.total}) requires your approval. Tap to review.`,
+          body: `Order #${displayId} (${safeShopName || 'Store'}, ₹${order.total}) requires your approval. Tap to review.`,
           tag: `order-approval-${order.id}`,
           data: { orderId: order.id },
         }).catch((err: any) => console.error('Error sending push to admin:', err))
@@ -73,8 +74,8 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         sendPushNotificationToRoles(rolesToNotify, {
           title: isOnlinePaid ? '💳 Online Payment Food Order!' : '🍽️ New Food Order!',
           body: isOnlinePaid
-            ? `Order #${displayId} for ${order.shopName || 'Restaurant'} (₹${order.total}) — PAID Online ✅`
-            : `Order #${displayId} for ${order.shopName || 'Restaurant'} (₹${order.total}) received.`,
+            ? `Order #${displayId} for ${safeShopName || 'Restaurant'} (₹${order.total}) — PAID Online ✅`
+            : `Order #${displayId} for ${safeShopName || 'Restaurant'} (₹${order.total}) received.`,
           tag: `order-${order.id}`,
           data: { orderId: order.id },
         }).catch((err: any) => console.error('Error sending push to admin/delivery:', err))
@@ -84,7 +85,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       if (order.status !== OrderStatus.CANCELLED) {
         sendPushNotificationToRestaurant(order.restaurantId, {
           title: `👨‍🍳 New Food Order #${displayId}!`,
-          body: `New order #${displayId} received for ${order.shopName || 'Kitchen'}. Tap to prepare dishes.`,
+          body: `New order #${displayId} received for ${safeShopName || 'Kitchen'}. Tap to prepare dishes.`,
           tag: `restaurant-order-${order.id}`,
           data: { orderId: order.id, restaurantId: order.restaurantId },
         }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))

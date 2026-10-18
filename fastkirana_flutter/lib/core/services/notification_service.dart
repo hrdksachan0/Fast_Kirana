@@ -25,8 +25,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   final notification = message.notification;
   final data = message.data;
-  final title = notification?.title ?? data['title'] ?? '⚡ FastMinute Express';
-  final body = notification?.body ?? data['body'] ?? data['message'];
+  final rawTitle = notification?.title ?? data['title'] ?? '⚡ FastMinute Express';
+  final rawBody = notification?.body ?? data['body'] ?? data['message'];
+  final title = rawTitle.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+  final body = rawBody?.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
 
   // Check persisted user role. Only suppress staff/admin alerts if user is CONFIRMED to be a CUSTOMER/USER.
   try {
@@ -430,10 +432,13 @@ class NotificationService {
   final Map<String, int> _recentMessageTimes = {};
 
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
-    final title = message.notification?.title ?? message.data['title'] ?? '⚡ FastMinute Express';
-    final body = message.notification?.body ?? message.data['body'] ?? message.data['message'];
+    final rawTitle = message.notification?.title ?? message.data['title'] ?? '⚡ FastMinute Express';
+    final rawBody = message.notification?.body ?? message.data['body'] ?? message.data['message'];
 
-    if (body == null || body.toString().trim().isEmpty) return;
+    if (rawBody == null || rawBody.toString().trim().isEmpty) return;
+
+    final title = rawTitle.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+    final body = rawBody.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
 
     final data = message.data;
 
@@ -637,10 +642,13 @@ class NotificationService {
             ? 'Real-time chime alerts for Dispatched, Out for Delivery, and Delivered orders.'
             : 'Notifications for order updates and tracking.');
 
+    final cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+    final cleanBody = body.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+
     _localNotifications?.show(
       notifId,
-      title.toString(),
-      body.toString(),
+      cleanTitle,
+      cleanBody,
       NotificationDetails(
         android: AndroidNotificationDetails(
           channelId,
