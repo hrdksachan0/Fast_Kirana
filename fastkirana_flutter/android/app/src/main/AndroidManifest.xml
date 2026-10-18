@@ -81,17 +81,24 @@
                 <data android:scheme="fastkirana" android:host="product" />
             </intent-filter>
 
-            <!-- Universal App Links: https://fastkirana.in/order/*, /orders/*, /product/* -->
+            <!-- Universal App Links: https://fastminute.in & https://fastkirana.in -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="fastkirana.in" android:pathPrefix="/order" />
-                <data android:scheme="https" android:host="fastkirana.in" android:pathPrefix="/orders" />
-                <data android:scheme="https" android:host="fastkirana.in" android:pathPrefix="/product" />
-                <data android:scheme="https" android:host="www.fastkirana.in" android:pathPrefix="/order" />
-                <data android:scheme="https" android:host="www.fastkirana.in" android:pathPrefix="/orders" />
-                <data android:scheme="https" android:host="www.fastkirana.in" android:pathPrefix="/product" />
+                <data android:scheme="https" android:host="fastminute.in" />
+                <data android:scheme="https" android:host="www.fastminute.in" />
+                <data android:scheme="https" android:host="fastkirana.in" />
+                <data android:scheme="https" android:host="www.fastkirana.in" />
+                <data android:pathPrefix="/order" />
+                <data android:pathPrefix="/orders" />
+                <data android:pathPrefix="/product" />
+                <data android:pathPrefix="/products" />
+                <data android:pathPrefix="/category" />
+                <data android:pathPrefix="/categories" />
+                <data android:pathPrefix="/restaurant" />
+                <data android:pathPrefix="/restaurants" />
+                <data android:pathPrefix="/cart" />
             </intent-filter>
         </activity>
 

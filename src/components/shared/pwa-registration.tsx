@@ -86,7 +86,11 @@ export function PWARegistration() {
       return
     }
 
-    if (!deferredPrompt) return
+    if (!deferredPrompt) {
+      // Fallback: If in-app browser or prompt unavailable, direct to Google Play Store!
+      window.location.href = 'https://play.google.com/store/apps/details?id=com.fastkirana.app'
+      return
+    }
 
     deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice

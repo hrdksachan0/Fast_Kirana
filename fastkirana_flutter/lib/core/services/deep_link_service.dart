@@ -63,8 +63,8 @@ class DeepLinkService {
 
       LoggerService.info('Parsing deep link: scheme=$scheme, host=$host, path=$pathSegments');
 
-      // ─── Case 1: Custom Scheme (fastkirana://order/123 or fastkirana://product/milk) ───
-      if (scheme == 'fastkirana') {
+      // ─── Case 1: Custom Scheme (fastminute://order/123 or fastkirana://product/milk) ───
+      if (scheme == 'fastminute' || scheme == 'fastkirana') {
         if (host == 'order' || host == 'orders') {
           final orderId = pathSegments.isNotEmpty ? pathSegments.first : uri.queryParameters['id'];
           if (orderId != null && orderId.isNotEmpty) {
@@ -72,18 +72,20 @@ class DeepLinkService {
             return;
           }
         }
-        if (host == 'product') {
+        if (host == 'product' || host == 'products') {
           final slug = pathSegments.isNotEmpty ? pathSegments.first : uri.queryParameters['slug'];
-          if (slug != null && slug.isNotEmpty) {
-            _navigateToProducts();
-            return;
-          }
+          _navigateToProducts();
+          return;
+        }
+        if (host == 'cart') {
+          AppRouter.navigatorKey.currentState?.pushNamed('/cart');
+          return;
         }
       }
 
-      // ─── Case 2: Universal HTTPS Links (https://fastkirana.in/order/123) ───
+      // ─── Case 2: Universal HTTPS Links (https://fastminute.in/order/123) ───
       if (scheme == 'https' || scheme == 'http') {
-        if (host.contains('fastkirana.in')) {
+        if (host.contains('fastminute.in') || host.contains('fastkirana.in')) {
           if (pathSegments.isNotEmpty) {
             final firstSegment = pathSegments[0].toLowerCase();
 
@@ -98,6 +100,12 @@ class DeepLinkService {
 
             // Product listing / detail: /product/{slug} or /products
             if (firstSegment == 'product' || firstSegment == 'products') {
+              _navigateToProducts();
+              return;
+            }
+
+            // Category browsing: /category/{slug} or /categories
+            if (firstSegment == 'category' || firstSegment == 'categories') {
               _navigateToProducts();
               return;
             }
