@@ -118,13 +118,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description,
       url: canonicalUrl,
       siteName: 'FastMinute',
-      images: [restaurant.imageUrl ? { url: restaurant.imageUrl } : { url: '/brand/fastkirana_app_icon.png' }],
+      images: [restaurant.bannerUrl || restaurant.logoUrl ? { url: (restaurant.bannerUrl || restaurant.logoUrl)! } : { url: '/brand/fastkirana_app_icon.png' }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [restaurant.imageUrl || '/brand/fastkirana_app_icon.png'],
+      images: [restaurant.bannerUrl || restaurant.logoUrl || '/brand/fastkirana_app_icon.png'],
     },
   }
 }
@@ -221,11 +221,11 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
     '@context': 'https://schema.org',
     '@type': 'Restaurant',
     name: restaurant.name,
-    image: restaurant.imageUrl || 'https://www.fastminute.in/brand/fastkirana_app_icon.png',
+    image: restaurant.bannerUrl || restaurant.logoUrl || 'https://www.fastminute.in/brand/fastkirana_app_icon.png',
     url: `https://www.fastminute.in/food/${restaurant.slug || slug}`,
     telephone: '+91-8112849854',
     priceRange: '₹₹',
-    servesCuisine: restaurant.cuisine || 'Fast Food, North Indian, Snacks',
+    servesCuisine: (restaurant as any).cuisineTags?.join(', ') || 'Fast Food, North Indian, Snacks',
     address: {
       '@type': 'PostalAddress',
       addressLocality: 'Ghatampur',
