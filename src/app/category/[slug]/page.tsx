@@ -27,33 +27,38 @@ export const revalidate = 86400 // Cache for 24 hours, purged on-demand when pro
 
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-
   const { slug } = await params
-
   const category = await prisma.category.findFirst({
-
     where: { slug },
-
-    select: { name: true },
-
+    select: { name: true, imageUrl: true },
   }).catch(() => null)
 
-
-
   const name = category?.name || slug.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-
-
+  const title = `${name} - Buy Online | FastMinute Ghatampur`
+  const description = `Buy fresh ${name} online at FastMinute. Instant delivery in Ghatampur, Kanpur Nagar. Best prices, COD & UPI accepted.`
+  const canonicalUrl = `https://www.fastminute.in/category/${slug}`
 
   return {
-
-    title: `${name} - FastMinute | Online Grocery Delivery`,
-
-    description: `Buy ${name} online at FastMinute. Fresh products, fast delivery in Ghatampur, Kanpur.`,
-
-    keywords: [name, 'online grocery', 'fast delivery', 'Ghatampur', 'Kanpur'],
-
+    title,
+    description,
+    keywords: [name, `${name} online`, `${name} delivery Ghatampur`, 'online grocery', 'fast delivery', 'Ghatampur', 'Kanpur Nagar'],
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: 'FastMinute',
+      images: [category?.imageUrl ? { url: category.imageUrl } : { url: '/brand/fastkirana_app_icon.png' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [category?.imageUrl || '/brand/fastkirana_app_icon.png'],
+    },
   }
-
 }
 
 
@@ -624,41 +629,53 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   })))
 
-
+  const categoryJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${activeCategory.name} - FastMinute Ghatampur`,
+    description: `Buy fresh ${activeCategory.name} online at FastMinute. Instant doorstep grocery delivery in Ghatampur, Kanpur Nagar.`,
+    url: `https://www.fastminute.in/category/${slug}`,
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: 'https://www.fastminute.in',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: activeCategory.name,
+          item: `https://www.fastminute.in/category/${slug}`,
+        },
+      ],
+    },
+  }
 
   return (
-
-    <Suspense fallback={<div className="text-center py-20 text-xs font-black text-text-secondary">Loading Category...</div>}>
-
-      <CategoryPageClient
-
-        categories={categories}
-
-        initialProducts={products}
-
-        activeCategory={{
-
-          id: activeCategory.id,
-
-          name: activeCategory.name,
-
-          slug: activeCategory.slug,
-
-          imageUrl: activeCategory.imageUrl,
-
-          parentId: activeCategory.parentId,
-
-          sortOrder: activeCategory.sortOrder,
-
-        }}
-
-        countsMap={countsMap}
-
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(categoryJsonLd) }}
       />
-
-    </Suspense>
-
+      <Suspense fallback={<div className="text-center py-20 text-xs font-black text-text-secondary">Loading Category...</div>}>
+        <CategoryPageClient
+          categories={categories}
+          initialProducts={products}
+          activeCategory={{
+            id: activeCategory.id,
+            name: activeCategory.name,
+            slug: activeCategory.slug,
+            imageUrl: activeCategory.imageUrl,
+            parentId: activeCategory.parentId,
+            sortOrder: activeCategory.sortOrder,
+          }}
+          countsMap={countsMap}
+        />
+      </Suspense>
+    </>
   )
-
 }
 

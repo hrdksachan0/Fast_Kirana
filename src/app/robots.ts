@@ -1,13 +1,13 @@
 import { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastminute.in'
+  const baseUrl = 'https://www.fastminute.in'
 
   return {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
+        allow: ['/', '/category/', '/product/', '/food/'],
         disallow: [
           '/api/',
           '/admin/',
@@ -22,14 +22,16 @@ export default function robots(): MetadataRoute.Robots {
           '/login',
           '/register',
           '/search',
+          '/*?*',
         ],
       },
       {
         userAgent: 'Googlebot',
-        allow: '/',
+        allow: ['/', '/category/', '/product/', '/food/'],
         disallow: [
           '/api/',
           '/admin/',
+          '/superadmin/',
           '/delivery/',
           '/chef/',
           '/picker/',
@@ -39,21 +41,20 @@ export default function robots(): MetadataRoute.Robots {
           '/account/',
           '/login',
           '/register',
+          '/search',
+          '/*?*sort=',
+          '/*?*filter=',
+          '/*?*storeId=',
         ],
       },
       {
-        userAgent: 'GPTBot',
-        disallow: ['/api/', '/admin/', '/product/', '/category/', '/food/', '/search'],
-      },
-      {
-        userAgent: 'PerplexityBot',
-        disallow: ['/api/', '/admin/', '/product/', '/category/', '/food/', '/search'],
-      },
-      {
-        userAgent: 'ClaudeBot',
-        disallow: ['/api/', '/admin/', '/product/', '/category/', '/food/', '/search'],
+        userAgent: ['GPTBot', 'ClaudeBot', 'CCBot', 'Bytespider', 'AhrefsBot', 'SemrushBot'],
+        disallow: ['/'],
       },
     ],
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: [
+      `${baseUrl}/sitemap.xml`,
+      'https://fastminute.in/sitemap.xml',
+    ],
   }
 }

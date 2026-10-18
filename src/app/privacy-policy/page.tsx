@@ -13,14 +13,14 @@ export default function PrivacyPolicyPage() {
           Privacy Policy — FastMinute
         </h1>
         <p className="text-muted-foreground text-sm mb-8">
-          Last Updated: October 7, 2026 | Applicable to: FastMinute Android App (com.fastkirana.app) and fastkirana.in
+          Last Updated: October 18, 2026 | Applicable to: FastMinute Android App (com.fastkirana.app) and fastminute.in
         </p>
 
         <div className="space-y-8 text-foreground/90 leading-relaxed">
           <section>
             <h2 className="text-xl font-bold text-foreground mb-3">1. Introduction</h2>
             <p className="text-muted-foreground">
-              FastMinute ("we", "us", or "our") operates the FastMinute mobile application (Package ID: <strong>com.fastkirana.app</strong>) and the official website (<a href="https://www.fastkirana.in" className="text-primary hover:underline">www.fastkirana.in</a>). This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service.
+              FastMinute ("we", "us", or "our") operates the FastMinute mobile application (Package ID: <strong>com.fastkirana.app</strong>) and the official website (<a href="https://www.fastminute.in" className="text-primary hover:underline">www.fastminute.in</a>). This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service.
             </p>
             <p className="text-muted-foreground mt-2">
               By using FastMinute, you agree to the collection and use of information in accordance with this policy. We do not sell your personal data to any third party.

@@ -39,26 +39,37 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'FastMinute - Online Grocery & Food Delivery in Minutes',
-  description: 'Order groceries, fresh milk, vegetables, dairy, snacks, food & daily essentials online in Ghatampur, Kanpur Nagar. Fast doorstep delivery in minutes with COD & UPI support.',
+  title: {
+    default: 'FastMinute - Online Grocery & Food Delivery in Minutes | Ghatampur',
+    template: '%s | FastMinute Ghatampur',
+  },
+  description: 'Order groceries, fresh milk, vegetables, dairy, snacks, restaurant food & daily essentials online in Ghatampur, Kanpur Nagar (209206). Superfast doorstep delivery with COD & UPI payment support.',
   keywords: [
     'FastMinute',
     'Fast Minute',
     'FastMinute Ghatampur',
+    'fastminute.in',
     'grocery delivery in Ghatampur',
     'online grocery store Kanpur',
     'online kirana shop Ghatampur',
     'buy milk online Ghatampur',
     'fresh vegetables delivery Ghatampur',
+    'food delivery Ghatampur',
+    'restaurant delivery Ghatampur',
     'fast grocery delivery Kanpur',
     'kirana store near me Ghatampur',
     'dark store Ghatampur 209206',
-    'fast delivery Ghatampur'
+    'fast delivery Ghatampur',
+    '10 minute delivery Ghatampur'
   ],
   manifest: '/manifest.json?v=5',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastminute.in'),
   alternates: {
     canonical: 'https://www.fastminute.in',
+    languages: {
+      'en-IN': 'https://www.fastminute.in',
+      'hi-IN': 'https://www.fastminute.in',
+    },
   },
   appLinks: {
     android: {

@@ -2,7 +2,8 @@ import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastminute.in'
+  // Strictly enforce fastminute.in so Google Search Console does not reject sitemap URLs
+  const baseUrl = 'https://www.fastminute.in'
 
   // Static routes
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -13,40 +14,52 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/search`,
+      url: `${baseUrl}/category`,
       lastModified: new Date(),
       changeFrequency: 'daily',
-      priority: 0.8,
+      priority: 0.9,
     },
     {
-      url: `${baseUrl}/privacy-policy`,
+      url: `${baseUrl}/food`,
       lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/refund-policy`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/shipping-policy`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.4,
+      changeFrequency: 'daily',
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/contact`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/faq`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/privacy-policy`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/refund-policy`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/shipping-policy`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.3,
     },
   ]
 
@@ -55,14 +68,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const products = await prisma.product.findMany({
       where: { isAvailable: true },
       select: { id: true, slug: true, updatedAt: true },
-      take: 1000,
+      take: 2000,
     })
 
     const productRoutes: MetadataRoute.Sitemap = products.map((prod) => ({
       url: `${baseUrl}/product/${prod.slug || prod.id}`,
       lastModified: prod.updatedAt || new Date(),
       changeFrequency: 'daily',
-      priority: 0.9,
+      priority: 0.85,
     }))
 
     // Dynamic Category Routes
@@ -78,7 +91,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }))
 
-    return [...staticRoutes, ...categoryRoutes, ...productRoutes]
+    // Dynamic Restaurant & Kitchen Routes
+    const restaurants = await prisma.restaurant.findMany({
+      where: { isActive: true },
+      select: { id: true, slug: true, updatedAt: true },
+      take: 100,
+    })
+
+    const restaurantRoutes: MetadataRoute.Sitemap = restaurants.map((rest) => ({
+      url: `${baseUrl}/food/${rest.slug || rest.id}`,
+      lastModified: rest.updatedAt || new Date(),
+      changeFrequency: 'daily',
+      priority: 0.85,
+    }))
+
+    return [...staticRoutes, ...restaurantRoutes, ...categoryRoutes, ...productRoutes]
   } catch (error) {
     console.error('Error generating sitemap:', error)
     return staticRoutes

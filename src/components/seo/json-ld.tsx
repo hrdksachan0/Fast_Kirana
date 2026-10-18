@@ -1,5 +1,5 @@
 export function JsonLdSchema() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastminute.in'
+  const baseUrl = 'https://www.fastminute.in'
 
   const localBusinessSchema = {
     '@context': 'https://schema.org',
@@ -143,8 +143,46 @@ export function JsonLdSchema() {
     ],
   }
 
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': `${baseUrl}/#organization`,
+    name: 'FastMinute',
+    legalName: 'FastMinute Services',
+    url: baseUrl,
+    logo: `${baseUrl}/brand/fastkirana_app_icon.png`,
+    email: 'help@fastminute.in',
+    telephone: '+91-8112849854',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: 'Main Market Road, Near Power House',
+      addressLocality: 'Ghatampur',
+      addressRegion: 'Uttar Pradesh',
+      postalCode: '209206',
+      addressCountry: 'IN',
+    },
+    contactPoint: [
+      {
+        '@type': 'ContactPoint',
+        telephone: '+91-8112849854',
+        contactType: 'customer service',
+        areaServed: 'IN',
+        availableLanguage: ['en', 'hi'],
+      },
+    ],
+    sameAs: [
+      'https://play.google.com/store/apps/details?id=com.fastkirana.app',
+      'https://www.facebook.com/fastkirana',
+      'https://www.instagram.com/fastkirana',
+    ],
+  }
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}

@@ -44,14 +44,26 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   const title = `${product.name} - Buy Online at ₹${product.price} | FastMinute Ghatampur`
   const description = product.description || `Buy ${product.name} online in Ghatampur, Kanpur Nagar. Fast doorstep grocery delivery.`
+  const canonicalUrl = `https://www.fastminute.in/product/${slug}`
 
   return {
     title,
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title,
       description,
+      url: canonicalUrl,
+      siteName: 'FastMinute',
       images: [product.imageUrl ? { url: product.imageUrl } : { url: '/brand/fastkirana_app_icon.png' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [product.imageUrl || '/brand/fastkirana_app_icon.png'],
     },
   }
 }
@@ -185,19 +197,58 @@ const [productRaw, relatedRaw] = await Promise.all([
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
-    image: [product.imageUrl || 'https://www.fastkirana.in/brand/fastkirana_app_icon.png'],
+    image: [product.imageUrl || 'https://www.fastminute.in/brand/fastkirana_app_icon.png'],
     description: product.description || `Buy ${product.name} online in Ghatampur. Fast delivery from FastMinute.`,
     sku: product.id,
+    brand: {
+      '@type': 'Brand',
+      name: product.category?.name || 'FastMinute',
+    },
     offers: {
       '@type': 'Offer',
       price: product.price,
       priceCurrency: 'INR',
+      priceValidUntil: '2027-12-31',
+      itemCondition: 'https://schema.org/NewCondition',
       availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      url: `https://www.fastminute.in/product/${slug}`,
       seller: {
         '@type': 'Organization',
         name: 'FastMinute',
       },
     },
+    ...(avgRating && reviewCount > 0 ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: avgRating,
+        reviewCount: reviewCount,
+      }
+    } : {}),
+  }
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://www.fastminute.in',
+      },
+      ...(product.category ? [{
+        '@type': 'ListItem',
+        position: 2,
+        name: product.category.name,
+        item: `https://www.fastminute.in/category/${product.category.slug}`,
+      }] : []),
+      {
+        '@type': 'ListItem',
+        position: product.category ? 3 : 2,
+        name: product.name,
+        item: `https://www.fastminute.in/product/${slug}`,
+      },
+    ],
   }
 
   return (
@@ -205,6 +256,10 @@ const [productRaw, relatedRaw] = await Promise.all([
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       
       {/* Breadcrumbs */}

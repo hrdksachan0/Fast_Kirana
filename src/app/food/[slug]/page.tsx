@@ -102,10 +102,30 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return { title: 'Restaurant Not Found - FastMinute' }
   }
 
+  const title = `${restaurant.name} - Order Online | FastMinute Ghatampur`
+  const description = restaurant.description || `Order delicious food, pizza, burgers & meals from ${restaurant.name} online at FastMinute. Fast delivery in Ghatampur, Kanpur Nagar!`
+  const canonicalUrl = `https://www.fastminute.in/food/${restaurant.slug || slug}`
+
   return {
-    title: `${restaurant.name} - Order Online | FastMinute`,
-    description: restaurant.description || `Order delicious food from ${restaurant.name} online at FastMinute. Fast delivery in Ghatampur!`,
-    keywords: [`${restaurant.name}`, 'online food delivery', 'fast delivery', 'Ghatampur', 'Kanpur', 'cafe', 'restaurant'],
+    title,
+    description,
+    keywords: [`${restaurant.name}`, `${restaurant.name} Ghatampur`, 'online food delivery', 'fast food delivery', 'Ghatampur food', 'Kanpur', 'cafe', 'restaurant'],
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: 'FastMinute',
+      images: [restaurant.imageUrl ? { url: restaurant.imageUrl } : { url: '/brand/fastkirana_app_icon.png' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [restaurant.imageUrl || '/brand/fastkirana_app_icon.png'],
+    },
   }
 }
 
@@ -197,11 +217,63 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
   const serializedProducts = JSON.parse(JSON.stringify(decoratedProducts))
   const serializedRecommendedAddons = JSON.parse(JSON.stringify(darkstoreProducts))
 
+  const restaurantJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Restaurant',
+    name: restaurant.name,
+    image: restaurant.imageUrl || 'https://www.fastminute.in/brand/fastkirana_app_icon.png',
+    url: `https://www.fastminute.in/food/${restaurant.slug || slug}`,
+    telephone: '+91-8112849854',
+    priceRange: '₹₹',
+    servesCuisine: restaurant.cuisine || 'Fast Food, North Indian, Snacks',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Ghatampur',
+      addressRegion: 'Uttar Pradesh',
+      postalCode: '209206',
+      addressCountry: 'IN',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 26.1554,
+      longitude: 80.1633,
+    },
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: 'https://www.fastminute.in',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Food & Restaurants',
+          item: 'https://www.fastminute.in/food',
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: restaurant.name,
+          item: `https://www.fastminute.in/food/${restaurant.slug || slug}`,
+        },
+      ],
+    },
+  }
+
   return (
-    <RestaurantStorefront
-      restaurant={serializedRestaurant}
-      products={serializedProducts}
-      recommendedAddons={serializedRecommendedAddons}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(restaurantJsonLd) }}
+      />
+      <RestaurantStorefront
+        restaurant={serializedRestaurant}
+        products={serializedProducts}
+        recommendedAddons={serializedRecommendedAddons}
+      />
+    </>
   )
 }

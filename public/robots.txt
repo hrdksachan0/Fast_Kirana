@@ -1,4 +1,4 @@
-# FastKirana robots.txt - Optimized for Fast Edge CDN Delivery & Scraper Mitigation
+# FastMinute robots.txt - Optimized for Fast Edge CDN Delivery & Search Indexing
 # Search Engine Crawlers
 User-agent: Googlebot
 User-agent: Bingbot
@@ -59,4 +59,5 @@ Disallow: /picker/
 Disallow: /chef/
 Disallow: /*?*
 
-Sitemap: https://www.fastkirana.in/sitemap.xml
+Sitemap: https://www.fastminute.in/sitemap.xml
+Sitemap: https://fastminute.in/sitemap.xml

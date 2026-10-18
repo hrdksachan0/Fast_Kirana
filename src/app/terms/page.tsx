@@ -21,7 +21,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-bold text-foreground mb-3">1. Agreement to Terms</h2>
             <p className="text-muted-foreground">
-              By accessing or using FastMinute website (<a href="https://www.fastkirana.in" className="text-rose-600 hover:underline">www.fastkirana.in</a>) or mobile applications, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
+              By accessing or using FastMinute website (<a href="https://www.fastminute.in" className="text-rose-600 hover:underline">www.fastminute.in</a>) or mobile applications, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
             </p>
           </section>
 
