@@ -1,12 +1,12 @@
 /**
- * FastKirana Progressive Web App Service Worker (v5)
- * Featuring Offline Catalog Browsing & Instant Stale-While-Revalidate Engine
+ * FastMinute Progressive Web App Service Worker (v8)
+ * Featuring Offline Catalog Browsing & Resilient Network Navigation Engine
  */
 
-const CACHE_STATIC = 'fastkirana-static-v7'
-const CACHE_CATALOG = 'fastkirana-catalog-v7'
-const CACHE_IMAGES = 'fastkirana-images-v7'
-const CACHE_PAGES = 'fastkirana-pages-v7'
+const CACHE_STATIC = 'fastminute-static-v8'
+const CACHE_CATALOG = 'fastminute-catalog-v8'
+const CACHE_IMAGES = 'fastminute-images-v8'
+const CACHE_PAGES = 'fastminute-pages-v8'
 
 const ALL_CACHES = [CACHE_STATIC, CACHE_CATALOG, CACHE_IMAGES, CACHE_PAGES]
 
@@ -19,7 +19,7 @@ const PRECACHE_ASSETS = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/brand/fastkirana_app_icon.png',
-  '/brand/fastkirana-logo.png',
+  '/brand/fastkirana_exact_logo.png',
   '/sounds/order_chime.mp3',
   '/api/categories',
   '/api/settings',
@@ -62,7 +62,7 @@ self.addEventListener('activate', (event) => {
 })
 
 // Helper: Network fetch with timeout
-function fetchWithTimeout(request, timeoutMs = 2500) {
+function fetchWithTimeout(request, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error('Network request timed out'))
@@ -203,29 +203,41 @@ self.addEventListener('fetch', (event) => {
     )
     return
   }
+ 
+  // D. Next.js RSC Prefetch Requests (Never return offline HTML for RSC requests!)
+  if (request.headers.get('RSC') === '1') {
+    event.respondWith(
+      fetch(request).catch(() => {
+        return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } })
+      })
+    )
+    return
+  }
 
-  // D. Page Navigation & Next.js RSC Prefetches (Fast Network Race with Cache Fallback)
-  const isPageNavigation = request.mode === 'navigate' || request.headers.get('RSC') === '1'
-  if (isPageNavigation) {
+  // E. HTML Page Navigation (Network-First with generous mobile timeout & graceful cache fallback)
+  if (request.mode === 'navigate') {
     event.respondWith(
       caches.open(CACHE_PAGES).then(async (cache) => {
         try {
-          // Race network with 2.2-second timeout (prevents hanging on slow 2G)
-          const networkRes = await fetchWithTimeout(request, 2200)
+          // Allow up to 10 seconds for mobile 4G/5G networks to load fresh page
+          const networkRes = await fetchWithTimeout(request, 10000)
           if (networkRes && networkRes.ok) {
             cache.put(request, networkRes.clone())
             return networkRes
           }
         } catch {
-          // Network failed or timed out — check cache
+          // Network failed or device is offline — fall back to cache
         }
 
         const cachedPage = await cache.match(request)
         if (cachedPage) return cachedPage
 
-        // If specific sub-page isn't cached, try fallback to cached root or dedicated offline page
+        const cachedRoot = await cache.match('/')
+        if (cachedRoot && url.pathname !== '/offline') return cachedRoot
+
+        // If completely offline and nothing cached, show offline fallback page
         const offlinePage = await caches.match('/offline')
-        return offlinePage || caches.match('/') || new Response('Offline', { status: 503 })
+        return offlinePage || new Response('Offline', { status: 503 })
       })
     )
     return

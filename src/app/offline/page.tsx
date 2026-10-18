@@ -1,13 +1,28 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { WifiOff, RefreshCw, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
 
 export default function OfflinePage() {
+  useEffect(() => {
+    // If user is actually online (e.g. false timeout), bounce back to storefront immediately
+    if (typeof window !== 'undefined' && navigator.onLine) {
+      window.location.href = '/'
+      return
+    }
+
+    const handleOnline = () => {
+      window.location.href = '/'
+    }
+
+    window.addEventListener('online', handleOnline)
+    return () => window.removeEventListener('online', handleOnline)
+  }, [])
+
   const handleReload = () => {
     if (typeof window !== 'undefined') {
-      window.location.reload()
+      window.location.href = '/'
     }
   }
 
