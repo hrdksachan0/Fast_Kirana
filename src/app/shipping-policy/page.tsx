@@ -1,8 +1,8 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Shipping & Delivery Policy - FastKirana',
-  description: 'Instant 10-20 minute delivery timelines, delivery fee tiers, and serviceable zones for FastKirana.',
+  title: 'Shipping & Delivery Policy - FastMinute',
+  description: 'Instant 10-20 minute delivery timelines, delivery fee tiers, and serviceable zones for FastMinute.',
 }
 
 export default function ShippingPolicyPage() {
@@ -20,14 +20,14 @@ export default function ShippingPolicyPage() {
           <section>
             <h2 className="text-xl font-bold text-foreground mb-3">1. Delivery Coverage & Serviceable Area</h2>
             <p className="text-muted-foreground">
-              FastKirana operates an instant hyperlocal dark store and restaurant delivery network serving <strong>Ghatampur, Kanpur Nagar, Uttar Pradesh (PIN: 209206)</strong> and adjacent suburban zones within a strict <strong>5.0 km delivery radius</strong>.
+              FastMinute operates an instant hyperlocal dark store and restaurant delivery network serving <strong>Ghatampur, Kanpur Nagar, Uttar Pradesh (PIN: 209206)</strong> and adjacent suburban zones within a strict <strong>5.0 km delivery radius</strong>.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-foreground mb-3">2. Delivery Timelines (10–20 Minutes)</h2>
             <p className="text-muted-foreground">
-              All orders placed on FastKirana are processed instantly:
+              All orders placed on FastMinute are processed instantly:
             </p>
             <ul className="list-disc pl-5 mt-2 space-y-1.5 text-muted-foreground">
               <li><strong>Grocery & Dark Store Items:</strong> Delivered within <strong>10 to 15 minutes</strong>.</li>

@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
 
 class WebMenuSection {
   final String? id;

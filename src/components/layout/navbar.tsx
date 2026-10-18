@@ -150,7 +150,7 @@ export function Navbar() {
 
         if (prevCafeOpenRef.current !== null && prevCafeOpenRef.current === false && cOpen === true) {
           triggerHaptic('success')
-          toast.success('☕ FastKirana Cafe is now OPEN! Order fresh sandwiches & coffee now.', {
+          toast.success('☕ FastMinute Cafe is now OPEN! Order fresh sandwiches & coffee now.', {
             duration: 6000,
             id: 'cafe-opened-alert',
           })
@@ -456,11 +456,11 @@ export function Navbar() {
               >
                 <User size={16} className="group-hover:scale-105 transition-transform stroke-[2.2]" />
                 <span className="text-xs font-black tracking-tight">
-                  {session ? (session.user.role === 'USER' ? 'Account' : 'Console') : 'Login'}
+                  {session?.user ? (session.user.role === 'USER' ? 'Account' : 'Console') : 'Login'}
                 </span>
               </Link>
 
-              {session && session.user.role !== 'USER' && (
+              {session?.user?.role && session.user.role !== 'USER' && (
                 <Link
                   href="/account"
                   className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-zinc-200/60 dark:border-zinc-800/50 bg-zinc-50/30 dark:bg-zinc-900/20 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/40 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-rose-500 transition-all duration-300 cursor-pointer group shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)]"
@@ -527,7 +527,7 @@ export function Navbar() {
             >
               <User size={18} className="text-zinc-500 dark:text-zinc-400" />
               <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
-                {session && session.user.role !== 'USER' ? 'My Console' : 'My Account'}
+                {session?.user?.role && session.user.role !== 'USER' ? 'My Console' : 'My Account'}
               </span>
             </Link>
             <Link
@@ -538,7 +538,7 @@ export function Navbar() {
               <ShoppingBag size={18} className="text-zinc-500 dark:text-zinc-400" />
               <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">My Orders</span>
             </Link>
-            {session && session.user.role === 'USER' && (
+            {session?.user?.role === 'USER' && (
               <Link
                 href="/account/wishlist"
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-3 md:hover:bg-zinc-100 dark:md:hover:bg-zinc-900 active:bg-zinc-100 dark:active:bg-zinc-900/60 transition-colors"

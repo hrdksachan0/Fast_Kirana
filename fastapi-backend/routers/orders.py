@@ -2114,6 +2114,9 @@ async def create_order(
                                 reserved_redis_items.remove((stock_cache_key, qty))
                         raise
 
+            if any(not item["dbProduct"].restaurantId and spec["type"] == OrderType.GROCERY for item in spec["items"]):
+                ord_obj.notes = f"{ord_obj.notes or ''} [STOCK_DEDUCTED]".strip()
+
             created_orders.append(ord_obj)
 
         if "calc_span" in locals():
@@ -2282,7 +2285,7 @@ async def create_order(
 
             # 1. FCM Push Notification directly to Customer
             customer_title = "🎉 Order Placed Successfully!"
-            customer_body = f"Your order #{order.readableId} of ₹{order.total:.2f} has been placed with FastKirana Express! ⚡"
+            customer_body = f"Your order #{order.readableId} of ₹{order.total:.2f} has been placed with FastMinute Express! ⚡"
             background_tasks.add_task(
                 send_pwa_notification_to_user,
                 order.userId,
@@ -2368,10 +2371,10 @@ async def create_order(
                         if len(clean_v_phone) == 10:
                             item_lines = "\n".join([f"• {i['quantity']}x {i['name']} {('[' + i['weight'] + ']') if i['weight'] else ''}" for i in v_items])
                             v_alert_text = (
-                                f"🔔 *FastKirana New Order Alert #{order.readableId}*\n\n"
+                                f"🔔 *FastMinute New Order Alert #{order.readableId}*\n\n"
                                 f"Customer ordered items from your catalog:\n{item_lines}\n\n"
                                 f"💰 Total Supply Cost: ₹{total_val:.2f}\n"
-                                f"⚡ Please pack and keep ready for FastKirana picker pickup!"
+                                f"⚡ Please pack and keep ready for FastMinute picker pickup!"
                             )
                             background_tasks.add_task(send_whatsapp_alert, clean_v_phone, v_alert_text)
 
@@ -2804,7 +2807,7 @@ async def get_order_details(
         rider_res = await db.execute(rider_stmt)
         rider = rider_res.scalars().first()
         if rider:
-            name = rider.name or "FastKirana Delivery Executive"
+            name = rider.name or "FastMinute Delivery Executive"
             phone = rider.phone or "+919696503759"
             
             # Mask internal Admin details
@@ -2813,7 +2816,7 @@ async def get_order_details(
                 main_rider_res = await db.execute(main_rider_stmt)
                 main_rider = main_rider_res.scalars().first()
                 if main_rider:
-                    name = main_rider.name or "FastKirana Delivery Executive"
+                    name = main_rider.name or "FastMinute Delivery Executive"
                     phone = main_rider.phone or "+919696503759"
             
             delivery_user = {"name": name, "phone": phone}
@@ -3199,61 +3202,64 @@ async def update_order(
 
     # Restore stock on CANCELLED state transition
     if target_status == OrderStatus.CANCELLED and order.status != OrderStatus.CANCELLED:
-        items_stmt = select(OrderItem).where(OrderItem.orderId == order.id)
-        items_res = await db.execute(items_stmt)
-        order_items = items_res.scalars().all()
+        if "[STOCK_DEDUCTED]" in (order.notes or ""):
+            items_stmt = select(OrderItem).where(OrderItem.orderId == order.id)
+            items_res = await db.execute(items_stmt)
+            order_items = items_res.scalars().all()
 
-        for item in order_items:
-            if not item.productId:
-                continue
-            
-            prod_stmt = select(Product).options(selectinload(Product.category)).where(Product.id == item.productId)
-            prod_res = await db.execute(prod_stmt)
-            product = prod_res.scalars().first()
+            for item in order_items:
+                if not item.productId:
+                    continue
+                
+                prod_stmt = select(Product).options(selectinload(Product.category)).where(Product.id == item.productId)
+                prod_res = await db.execute(prod_stmt)
+                product = prod_res.scalars().first()
 
-            if not product:
-                continue
+                if not product:
+                    continue
 
-            # Skip stock restoration for Cafe & Restaurant items
-            p_type = get_product_type(product)
-            if p_type in ["CAFE", "RESTAURANT"]:
-                continue
+                # Skip stock restoration for Cafe & Restaurant items
+                p_type = get_product_type(product)
+                if p_type in ["CAFE", "RESTAURANT"]:
+                    continue
 
-            if item.selectedVariant:
-                if product.variants:
-                    updated_variants = []
-                    for v in product.variants:
-                        if v.get("name") == item.selectedVariant:
-                            v["stock"] = v.get("stock", 0) + item.quantity
-                        updated_variants.append(v)
-                    new_total_stock = sum(v.get("stock", 0) for v in updated_variants)
-                    product.variants = updated_variants
-                    product.stock = new_total_stock
-            else:
-                batches_stmt = select(ProductBatch).where(ProductBatch.productId == item.productId).order_by(ProductBatch.expiryDate.asc())
-                batches_res = await db.execute(batches_stmt)
-                batches = batches_res.scalars().all()
-
-                if batches:
-                    batches[0].quantity += item.quantity
-                    product.stock = sum(b.quantity for b in batches)
+                if item.selectedVariant:
+                    if product.variants:
+                        updated_variants = []
+                        for v in product.variants:
+                            if v.get("name") == item.selectedVariant:
+                                v["stock"] = v.get("stock", 0) + item.quantity
+                            updated_variants.append(v)
+                        new_total_stock = sum(v.get("stock", 0) for v in updated_variants)
+                        product.variants = updated_variants
+                        product.stock = new_total_stock
                 else:
-                    product.stock += item.quantity
+                    batches_stmt = select(ProductBatch).where(ProductBatch.productId == item.productId).order_by(ProductBatch.expiryDate.asc())
+                    batches_res = await db.execute(batches_stmt)
+                    batches = batches_res.scalars().all()
 
-            # If order was associated with a dark store, restore localized stock in StoreInventory
-            if order.storeId:
-                try:
-                    from models import StoreInventory
-                    inv_stmt = select(StoreInventory).where(
-                        StoreInventory.productId == item.productId,
-                        StoreInventory.storeId == order.storeId
-                    )
-                    inv_res = await db.execute(inv_stmt)
-                    existing_inv = inv_res.scalars().first()
-                    if existing_inv:
-                        existing_inv.stock += item.quantity
-                except Exception as inv_restore_err:
-                    logger.warning(f"Could not restore StoreInventory for product {item.productId} at store {order.storeId}: {inv_restore_err}")
+                    if batches:
+                        batches[0].quantity += item.quantity
+                        product.stock = sum(b.quantity for b in batches)
+                    else:
+                        product.stock += item.quantity
+
+                # If order was associated with a dark store, restore localized stock in StoreInventory
+                if order.storeId:
+                    try:
+                        from models import StoreInventory
+                        inv_stmt = select(StoreInventory).where(
+                            StoreInventory.productId == item.productId,
+                            StoreInventory.storeId == order.storeId
+                        )
+                        inv_res = await db.execute(inv_stmt)
+                        existing_inv = inv_res.scalars().first()
+                        if existing_inv:
+                            existing_inv.stock += item.quantity
+                    except Exception as inv_restore_err:
+                        logger.warning(f"Could not restore StoreInventory for product {item.productId} at store {order.storeId}: {inv_restore_err}")
+
+            order.notes = (order.notes or "").replace("[STOCK_DEDUCTED]", "[STOCK_RESTORED]").strip()
 
     # Cloudinary upload on deliver pings
     final_delivery_photo = delivery_photo
@@ -3562,7 +3568,7 @@ async def update_order(
     }
 
     status_title = stage_titles.get(st_val, f"Order #{base_order_no} Update 🔔")
-    status_body = stage_bodies.get(st_val, f"Your FastKirana order #{base_order_no} is now {st_val}.")
+    status_body = stage_bodies.get(st_val, f"Your FastMinute order #{base_order_no} is now {st_val}.")
 
     background_tasks.add_task(
         send_pwa_notification_to_user,

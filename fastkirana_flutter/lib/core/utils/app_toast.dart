@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -334,7 +334,7 @@ class _LuxuryToastWidgetState extends State<_LuxuryToastWidget> {
         pillBg = const Color(0xFFFFF5F6); // FastKirana Soft Rosy White
         icon = Icons.bolt_rounded;
         badgeEmoji = '🚀';
-        badgeLabel = 'FASTKIRANA';
+        badgeLabel = 'FASTMINUTE';
         break;
     }
 

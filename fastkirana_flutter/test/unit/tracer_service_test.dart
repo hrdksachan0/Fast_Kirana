@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/core/services/tracer_service.dart';
+import 'package:fastminute_flutter/core/services/tracer_service.dart';
 
 void main() {
   group('TracerService Distributed Tracing Tests', () {

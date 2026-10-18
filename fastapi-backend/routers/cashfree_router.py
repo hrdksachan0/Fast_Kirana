@@ -233,14 +233,20 @@ async def create_cashfree_order(
     has_items_validated = False
     canonical_accepted_lines = []
     if effective_items and isinstance(effective_items, list) and not (req.orderId and order):
-        raw_pids = [
-            str(it.get("productId") or (it.get("product") or {}).get("id") or "").strip()
-            for it in effective_items
-        ]
-        raw_pids = [pid for pid in raw_pids if pid]
+        candidate_pids = set()
+        for it in effective_items:
+            prod_info = it.get("product") or it
+            pid = str(it.get("productId") or prod_info.get("id") or "").strip()
+            if pid:
+                candidate_pids.add(pid)
+                if "_" in pid:
+                    parts = pid.split("_")
+                    for i in range(1, len(parts)):
+                        candidate_pids.add("_".join(parts[:i]))
+
         db_p_map = {}
-        if raw_pids:
-            p_stmt = select(Product).where(Product.id.in_(raw_pids))
+        if candidate_pids:
+            p_stmt = select(Product).where(Product.id.in_(list(candidate_pids)))
             p_res = await db.execute(p_stmt)
             for p in p_res.scalars().all():
                 db_p_map[p.id] = p
@@ -256,52 +262,117 @@ async def create_cashfree_order(
                 )
             sel_var = it.get("selectedVariant") or prod_info.get("selectedVariant")
             db_p = db_p_map.get(p_id)
-            if db_p:
-                item_price = float(db_p.price or 0.0)
-                if sel_var and db_p.variants and isinstance(db_p.variants, list):
-                    v_match = next((v for v in db_p.variants if isinstance(v, dict) and v.get("name") == sel_var), None)
-                    if v_match and "price" in v_match:
-                        item_price = float(v_match["price"])
-                    if not db_p.restaurantId and v_match:
-                        if int(v_match.get("stock", 0)) < p_qty:
-                            raise HTTPException(
-                                status_code=400,
-                                detail=f"Insufficient stock for \"{db_p.name} ({sel_var})\". Available: {v_match.get('stock', 0)}, requested: {p_qty}."
-                            )
-                else:
-                    if not db_p.restaurantId and (db_p.stock or 0) < p_qty:
+            if not db_p and "_" in p_id:
+                matching_candidates = []
+                parts = p_id.split("_")
+                for i in range(len(parts) - 1, 0, -1):
+                    cand_base = "_".join(parts[:i])
+                    cand_var = "_".join(parts[i:])
+                    cand_prod = db_p_map.get(cand_base)
+                    if not cand_prod:
+                        continue
+
+                    if sel_var and str(sel_var).strip().lower() != cand_var.strip().lower():
+                        continue
+
+                    target_v_str = str(sel_var or cand_var).strip().lower()
+                    has_var = False
+                    if cand_prod.variants and isinstance(cand_prod.variants, list):
+                        has_var = any(
+                            isinstance(v, dict) and str(v.get("name", "")).strip().lower() == target_v_str
+                            for v in cand_prod.variants
+                        )
+
+                    if has_var or (not cand_prod.variants and (cand_var == getattr(cand_prod, "unit", None) or not sel_var)):
+                        matching_candidates.append((cand_prod, cand_var))
+
+                if len(matching_candidates) == 1:
+                    db_p, inferred_var = matching_candidates[0]
+                    if not sel_var:
+                        sel_var = inferred_var
+                elif len(matching_candidates) > 1:
+                    exact_var_candidates = [
+                        (p, v) for p, v in matching_candidates
+                        if p.variants and any(
+                            isinstance(var, dict) and str(var.get("name", "")).strip() == (sel_var or v).strip()
+                            for var in p.variants
+                        )
+                    ]
+                    if len(exact_var_candidates) == 1:
+                        db_p, inferred_var = exact_var_candidates[0]
+                        if not sel_var:
+                            sel_var = inferred_var
+                    else:
                         raise HTTPException(
                             status_code=400,
-                            detail=f"Insufficient stock for \"{db_p.name}\". Available: {db_p.stock or 0}, requested: {p_qty}."
+                            detail=f"Ambiguous encoded product ID '{p_id}' resolves to multiple catalog products."
                         )
-                authoritative_items_subtotal += item_price * p_qty
-                canonical_accepted_lines.append({
-                    "productId": db_p.id,
-                    "name": db_p.name,
-                    "price": round(item_price, 2),
-                    "quantity": p_qty,
-                    "selectedVariant": sel_var,
-                    "imageUrl": db_p.imageUrl,
-                    "categoryId": db_p.categoryId,
-                    "restaurantId": db_p.restaurantId,
-                    "menuSection": getattr(db_p, "menuSection", None),
-                    "cartItemId": str(it.get("cartItemId") or it.get("id") or "").strip() or None,
-                })
+                else:
+                    if sel_var and p_id.endswith(f"_{sel_var}"):
+                        cand_base = p_id[:-len(f"_{sel_var}")]
+                        if cand_base in db_p_map:
+                            db_p = db_p_map[cand_base]
+                    elif len(parts) >= 2:
+                        cand_base = p_id.rsplit("_", 1)[0]
+                        if cand_base in db_p_map:
+                            db_p = db_p_map[cand_base]
+                            if not sel_var:
+                                sel_var = p_id[len(cand_base) + 1:]
+
+            if not db_p:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Product '{p_id}' not found in catalog."
+                )
+
+            item_price = float(db_p.price or 0.0)
+            if db_p.variants and isinstance(db_p.variants, list) and len(db_p.variants) > 0:
+                valid_vars = [v for v in db_p.variants if isinstance(v, dict) and v.get("name")]
+                if not sel_var or not str(sel_var).strip():
+                    if valid_vars:
+                        sel_var = str(valid_vars[0].get("name", "")).strip()
+                    else:
+                        sel_var = None
+
+                v_match = None
+                if sel_var:
+                    v_match = next(
+                        (v for v in db_p.variants if isinstance(v, dict) and str(v.get("name", "")).strip().lower() == str(sel_var).strip().lower()),
+                        None
+                    )
+
+                if v_match and "price" in v_match:
+                    item_price = float(v_match["price"])
+                elif not v_match:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Variant '{sel_var}' not found for product '{db_p.name}' in catalog."
+                    )
+                if not db_p.restaurantId and v_match:
+                    if int(v_match.get("stock", 0)) < p_qty:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Insufficient stock for \"{db_p.name} ({sel_var})\". Available: {v_match.get('stock', 0)}, requested: {p_qty}."
+                        )
             else:
-                raw_price = float(it.get("price") or prod_info.get("price") or 0.0)
-                authoritative_items_subtotal += raw_price * p_qty
-                canonical_accepted_lines.append({
-                    "productId": p_id,
-                    "name": it.get("name") or prod_info.get("name") or "Item",
-                    "price": round(raw_price, 2),
-                    "quantity": p_qty,
-                    "selectedVariant": sel_var,
-                    "imageUrl": it.get("imageUrl") or prod_info.get("imageUrl"),
-                    "categoryId": it.get("categoryId") or prod_info.get("categoryId"),
-                    "restaurantId": it.get("restaurantId") or prod_info.get("restaurantId"),
-                    "menuSection": it.get("menuSection") or prod_info.get("menuSection"),
-                    "cartItemId": str(it.get("cartItemId") or it.get("id") or "").strip() or None,
-                })
+                if not db_p.restaurantId and (db_p.stock or 0) < p_qty:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Insufficient stock for \"{db_p.name}\". Available: {db_p.stock or 0}, requested: {p_qty}."
+                    )
+            authoritative_items_subtotal += item_price * p_qty
+            canonical_accepted_lines.append({
+                "productId": db_p.id,
+                "name": db_p.name,
+                "price": round(item_price, 2),
+                "quantity": p_qty,
+                "selectedVariant": sel_var,
+                "imageUrl": db_p.imageUrl,
+                "categoryId": db_p.categoryId,
+                "restaurantId": db_p.restaurantId,
+                "menuSection": getattr(db_p, "menuSection", None),
+                "cartItemId": str(it.get("cartItemId") or it.get("id") or "").strip() or None,
+            })
         has_items_validated = True
 
     if req.orderId:
@@ -1625,6 +1696,8 @@ async def auto_recover_unplaced_cashfree_order(
                     db.add(log)
                 except Exception:
                     pass
+
+            order.notes = f"{order.notes or ''} [STOCK_DEDUCTED]".strip()
 
         # 9. Clear ordered items from user's cart (preserving any newer cart edits)
         if user and items_to_create and order_status == OrderStatus.CONFIRMED:

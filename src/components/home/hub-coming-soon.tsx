@@ -93,7 +93,7 @@ export function HubComingSoon({ hubName, city }: HubComingSoonProps) {
 
         {/* Subtitle */}
         <p className="text-sm text-text-secondary mt-3 leading-relaxed max-w-lg mx-auto font-medium">
-          FastKirana is setting up operations, local dark stores, and partner kitchens in this area. We are preparing to bring lightning-fast grocery & food deliveries to your doorstep!
+          FastMinute is setting up operations, local dark stores, and partner kitchens in this area. We are preparing to bring lightning-fast grocery & food deliveries to your doorstep!
         </p>
 
         {/* Feature Highlights Grid */}

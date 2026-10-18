@@ -201,7 +201,7 @@ class _NavratriStickyHeaderState
                   Expanded(
                     child: Semantics(
                       button: true,
-                      label: 'Search FastKirana products',
+                      label: 'Search FastMinute products',
                       excludeSemantics: true,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(16),

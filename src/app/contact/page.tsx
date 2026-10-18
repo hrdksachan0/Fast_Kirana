@@ -2,8 +2,8 @@ import { Metadata } from 'next'
 import { MapPin, Phone, Mail, Clock, MessageSquare } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Contact Us - FastKirana',
-  description: 'Get in touch with FastKirana customer support for order queries, store partnerships, and rider assistance in Ghatampur.',
+  title: 'Contact Us - FastMinute',
+  description: 'Get in touch with FastMinute customer support for order queries, store partnerships, and rider assistance in Ghatampur.',
 }
 
 export default function ContactPage() {
@@ -84,7 +84,7 @@ export default function ContactPage() {
               Central Operations Hub
             </div>
             <h3 className="text-lg sm:text-xl font-bold text-foreground">
-              FastKirana Dark Store &amp; Logistics Center
+              FastMinute Dark Store &amp; Logistics Center
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               NH34, Ghatampur Market, Kanpur Nagar, Uttar Pradesh - 209206

@@ -13,19 +13,19 @@ import 'package:google_fonts/google_fonts.dart';
 // ignore: implementation_imports
 import 'package:google_fonts/src/google_fonts_base.dart' as font_test;
 import 'package:dio/dio.dart';
-import 'package:fastkirana_flutter/data/models/cart.dart';
-import 'package:fastkirana_flutter/data/models/store_settings.dart';
-import 'package:fastkirana_flutter/data/repositories/cart_repository.dart';
-import 'package:fastkirana_flutter/data/repositories/wishlist_repository.dart';
-import 'package:fastkirana_flutter/providers/cart_provider.dart';
-import 'package:fastkirana_flutter/providers/store_settings_provider.dart';
-import 'package:fastkirana_flutter/providers/wishlist_provider.dart';
-import 'package:fastkirana_flutter/widgets/product_card.dart';
-import 'package:fastkirana_flutter/features/navratri/campaign_block.dart';
-import 'package:fastkirana_flutter/data/models/product.dart';
-import 'package:fastkirana_flutter/features/navratri/campaign_block_section.dart';
-import 'package:fastkirana_flutter/features/navratri/navratri_data.dart';
-import 'package:fastkirana_flutter/features/navratri/navratri_shopping_section.dart';
+import 'package:fastminute_flutter/data/models/cart.dart';
+import 'package:fastminute_flutter/data/models/store_settings.dart';
+import 'package:fastminute_flutter/data/repositories/cart_repository.dart';
+import 'package:fastminute_flutter/data/repositories/wishlist_repository.dart';
+import 'package:fastminute_flutter/providers/cart_provider.dart';
+import 'package:fastminute_flutter/providers/store_settings_provider.dart';
+import 'package:fastminute_flutter/providers/wishlist_provider.dart';
+import 'package:fastminute_flutter/widgets/product_card.dart';
+import 'package:fastminute_flutter/features/navratri/campaign_block.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/features/navratri/campaign_block_section.dart';
+import 'package:fastminute_flutter/features/navratri/navratri_data.dart';
+import 'package:fastminute_flutter/features/navratri/navratri_shopping_section.dart';
 
 class _CollectionCart extends CartNotifier {
   _CollectionCart() : super(CartRepository(Dio())) {

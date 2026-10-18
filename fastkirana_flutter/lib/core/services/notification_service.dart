@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'package:logger/logger.dart';
 import 'dart:async';
 import 'dart:io';
@@ -25,7 +25,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   final notification = message.notification;
   final data = message.data;
-  final title = notification?.title ?? data['title'] ?? '⚡ FastKirana Express';
+  final title = notification?.title ?? data['title'] ?? '⚡ FastMinute Express';
   final body = notification?.body ?? data['body'] ?? data['message'];
 
   // Check persisted user role. Only suppress staff/admin alerts if user is CONFIRMED to be a CUSTOMER/USER.
@@ -223,7 +223,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           : (isOrderStatusUpdate ? 'fastkirana_order_status' : 'fastkirana_alerts');
       final channelName = isOrderAlert
           ? 'Kitchen & Order Buzz Alerts'
-          : (isOrderStatusUpdate ? 'Live Order Tracking & Delivery' : 'FastKirana Alerts');
+          : (isOrderStatusUpdate ? 'Live Order Tracking & Delivery' : 'FastMinute Alerts');
       final channelDesc = isOrderAlert
           ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
           : (isOrderStatusUpdate
@@ -328,7 +328,7 @@ class NotificationService {
       // 3. Setup local notification channel for Android with MAX priority
       const AndroidNotificationChannel channel = AndroidNotificationChannel(
         'fastkirana_alerts',
-        'FastKirana Alerts',
+        'FastMinute Alerts',
         description: 'Notifications for order updates and tracking.',
         importance: Importance.max,
         playSound: true,
@@ -430,7 +430,7 @@ class NotificationService {
   final Map<String, int> _recentMessageTimes = {};
 
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
-    final title = message.notification?.title ?? message.data['title'] ?? '⚡ FastKirana Express';
+    final title = message.notification?.title ?? message.data['title'] ?? '⚡ FastMinute Express';
     final body = message.notification?.body ?? message.data['body'] ?? message.data['message'];
 
     if (body == null || body.toString().trim().isEmpty) return;
@@ -630,7 +630,7 @@ class NotificationService {
         : (isOrderStatusUpdate ? 'fastkirana_order_status' : 'fastkirana_alerts');
     final channelName = isOrderAlert
         ? 'Kitchen & Order Buzz Alerts'
-        : (isOrderStatusUpdate ? 'Live Order Tracking & Delivery' : 'FastKirana Alerts');
+        : (isOrderStatusUpdate ? 'Live Order Tracking & Delivery' : 'FastMinute Alerts');
     final channelDesc = isOrderAlert
         ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
         : (isOrderStatusUpdate

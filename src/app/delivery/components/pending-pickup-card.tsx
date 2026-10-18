@@ -95,7 +95,7 @@ export default function PendingPickupCard({
               )}
             </div>
             <span className="text-[10px] text-text-muted font-bold block">
-              {order.shopName || (isRestaurant ? 'Partner Kitchen' : 'FastKirana Central Darkstore')}
+              {order.shopName || (isRestaurant ? 'Partner Kitchen' : 'FastMinute Central Darkstore')}
             </span>
           </div>
           <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black tracking-wider shrink-0 border shadow-2xs ${statusStyle.pill}`}>
@@ -194,7 +194,7 @@ export default function PendingPickupCard({
             <div className="truncate">
               <span className="text-[9px] font-black text-text-muted uppercase tracking-wider mr-1.5">Pickup:</span>
               <span className="text-text-primary">
-                {order.shopName || (isRestaurant ? 'Restaurant Kitchen' : 'FastKirana Hub')}
+                {order.shopName || (isRestaurant ? 'Restaurant Kitchen' : 'FastMinute Hub')}
                 {order.companionOrder && <span className="text-purple-600 dark:text-purple-400 ml-1">+ {order.companionOrder.shopName || 'Store'}</span>}
               </span>
             </div>

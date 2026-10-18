@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/design_system.dart';
 import 'package:flutter/services.dart';

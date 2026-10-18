@@ -41,7 +41,7 @@ export function TrackerRiderCard({
               <div className="text-sm font-black text-text-primary mt-0.5 truncate">
                 {order.deliveryUser?.name && order.deliveryUser.name !== 'Admin'
                   ? order.deliveryUser.name
-                  : 'FastKirana Delivery Executive'}
+                  : 'FastMinute Delivery Executive'}
               </div>
               <div className="text-[10px] text-text-muted font-medium flex items-center gap-2 mt-0.5">
                 <span>Verified Delivery Partner</span>
@@ -82,10 +82,10 @@ export function TrackerRiderCard({
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
               </div>
               <div className="text-sm font-black text-text-primary mt-0.5">
-                {order.shopName || 'FastKirana Outlet'}
+                {order.shopName || 'FastMinute Outlet'}
               </div>
               <div className="text-xs text-text-secondary mt-1 font-semibold">
-                Pickup Address: <span className="text-text-primary font-bold">{order.address?.street || 'FastKirana Store counter'}</span>
+                Pickup Address: <span className="text-text-primary font-bold">{order.address?.street || 'FastMinute Store counter'}</span>
               </div>
               <p className="text-[10.5px] text-text-muted mt-1.5">
                 Please show your Order ID <span className="font-extrabold text-primary">#{order.baseReadableId || order.readableId || order.id?.slice(-6).toUpperCase()}</span> at the counter to collect your items.
@@ -122,7 +122,7 @@ export function TrackerRiderCard({
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-black text-xs rounded-xl transition-all"
           >
             <Phone className="h-4 w-4" />
-            FastKirana Support ({supportPhone})
+            FastMinute Support ({supportPhone})
           </a>
         </div>
       )}

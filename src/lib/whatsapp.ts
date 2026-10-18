@@ -73,7 +73,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
         ...body,
         type: 'text',
         text: {
-          body: `Your FastKirana verification code is: ${otp}. Valid for 5 minutes.`,
+          body: `Your FastMinute verification code is: ${otp}. Valid for 5 minutes.`,
         },
       }
     }
@@ -105,7 +105,7 @@ export async function sendWhatsAppOtp(phone: string, otp: string): Promise<boole
         to: cleanPhone,
         type: 'text',
         text: {
-          body: `Your FastKirana verification code is: ${otp}. Valid for 5 minutes.`,
+          body: `Your FastMinute verification code is: ${otp}. Valid for 5 minutes.`,
         },
       }
       res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {

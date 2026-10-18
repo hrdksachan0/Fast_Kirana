@@ -32,7 +32,7 @@ class ProfileScreen extends ConsumerWidget {
   Future<void> _showLogoutDialog(BuildContext context, WidgetRef ref) async {
     final confirmed = await AppConfirmationDialog.showLogout(
       context: context,
-      title: 'Log Out of FastKirana?',
+      title: 'Log Out of FastMinute?',
       subtitle: 'You will need to verify your phone number or email to log back in.',
       accountNote: 'Your cart items, saved addresses, and active orders stay secure in the cloud.',
       confirmLabel: 'Log Out',
@@ -72,7 +72,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'FastKirana 24x7 Customer Care',
+              'FastMinute 24x7 Customer Care',
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 16),
                 fontWeight: FontWeight.w900,
@@ -109,7 +109,7 @@ class ProfileScreen extends ConsumerWidget {
             const Divider(height: 1, color: AppDesignSystem.slate100),
             ListTile(
               onTap: () async {
-                final uri = Uri.parse('https://wa.me/918112849854?text=Hello%20FastKirana%20Support');
+                final uri = Uri.parse('https://wa.me/918112849854?text=Hello%20FastMinute%20Support');
                 if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
               },
               leading: Container(
@@ -127,7 +127,7 @@ class ProfileScreen extends ConsumerWidget {
             const Divider(height: 1, color: AppDesignSystem.slate100),
             ListTile(
               onTap: () async {
-                final uri = Uri.parse('mailto:fastkiranadelivery@gmail.com?subject=FastKirana%20Customer%20Support');
+                final uri = Uri.parse('mailto:fastkiranadelivery@gmail.com?subject=FastMinute%20Customer%20Support');
                 if (await canLaunchUrl(uri)) await launchUrl(uri);
               },
               leading: Container(
@@ -176,7 +176,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Love FastKirana?',
+                  'Love FastMinute?',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 18),
                     fontWeight: FontWeight.w900,
@@ -248,7 +248,7 @@ class ProfileScreen extends ConsumerWidget {
                       } else {
                         // 1-3 stars: route to direct WhatsApp support to solve grievance
                         final waUri = Uri.parse(
-                          'https://wa.me/918112849854?text=${Uri.encodeComponent('Hi FastKirana Support, I gave a $selectedStars-star rating. Here is my feedback: ')}',
+                          'https://wa.me/918112849854?text=${Uri.encodeComponent('Hi FastMinute Support, I gave a $selectedStars-star rating. Here is my feedback: ')}',
                         );
                         if (await canLaunchUrl(waUri)) {
                           await launchUrl(waUri, mode: LaunchMode.externalApplication);
@@ -338,17 +338,17 @@ class ProfileScreen extends ConsumerWidget {
     final isPickerOnly = !isAdmin && (role == 'PICKER');
     final isVendorOnly = !isAdmin && (role == 'VENDOR');
 
-    final name = (user?.name?.isNotEmpty == true && user?.name != 'FastKirana Customer')
+    final name = (user?.name?.isNotEmpty == true && user?.name != 'FastMinute Customer')
         ? user!.name!
         : (isAdmin
-            ? 'FastKirana Admin'
+            ? 'FastMinute Admin'
             : (isRiderOnly
                 ? 'Delivery Partner'
                 : (isChefOrOwnerOnly
                     ? 'Restaurant Chef'
                     : (isPickerOnly
                         ? 'Warehouse Picker'
-                        : (isVendorOnly ? 'Supplier Partner' : 'FastKirana Customer')))));
+                        : (isVendorOnly ? 'Supplier Partner' : 'FastMinute Customer')))));
 
     String phoneDisplay;
     if (user?.phone?.isNotEmpty == true) {
@@ -480,7 +480,7 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
 
                     // Section 2: Help & Support
-                    _buildSectionHeader(context, 'SUPPORT & FASTKIRANA'),
+                    _buildSectionHeader(context, 'SUPPORT & FASTMINUTE'),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -512,8 +512,8 @@ class ProfileScreen extends ConsumerWidget {
                             icon: Icons.star_rounded,
                             iconBg: AppDesignSystem.amber50,
                             iconColor: AppDesignSystem.amber600,
-                            title: 'Rate FastKirana App',
-                            subtitle: 'Love FastKirana? Rate us on Play Store',
+                            title: 'Rate FastMinute App',
+                            subtitle: 'Love FastMinute? Rate us on Play Store',
                             badge: '5.0 ★',
                             onTap: () => _showRateAppDialog(context),
                           ),
@@ -523,12 +523,12 @@ class ProfileScreen extends ConsumerWidget {
                             iconBg: AppDesignSystem.blue50,
                             iconColor: AppDesignSystem.blue600,
                             title: 'Share with Friends & Family',
-                            subtitle: 'Invite friends & family to FastKirana',
+                            subtitle: 'Invite friends & family to FastMinute',
                             onTap: () {
                               HapticFeedback.lightImpact();
                               Share.share(
-                                '⚡ FastKirana Express: Order Groceries, Daily Essentials & Food delivered right to your doorstep!\n\n📲 Download FastKirana App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Or Order Online: https://www.fastkirana.in',
-                                subject: 'FastKirana Express App',
+                                '⚡ FastMinute Express: Order Groceries, Daily Essentials & Food delivered right to your doorstep!\n\n📲 Download FastMinute App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Or Order Online: https://www.fastkirana.in',
+                                subject: 'FastMinute Express App',
                               );
                             },
                           ),
@@ -559,7 +559,7 @@ class ProfileScreen extends ConsumerWidget {
                               Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppDesignSystem.success, shape: BoxShape.circle)),
                               const SizedBox(width: 6),
                               Text(
-                                'FastKirana Express v${AppConfig.appVersion}',
+                                'FastMinute Express v${AppConfig.appVersion}',
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w700,

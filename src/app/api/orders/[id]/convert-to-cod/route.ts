@@ -132,7 +132,7 @@ export async function POST(
     try {
       for (const ro of refreshedOrders) {
         const isRestaurant = !!ro.restaurantId
-        const outletName = ro.shopName || (ro.restaurantId ? 'Restaurant' : 'FastKirana Grocery')
+        const outletName = ro.shopName ? ro.shopName.replace(/FastKirana/g, 'FastMinute') : (ro.restaurantId ? 'Restaurant' : 'FastMinute Grocery')
 
         if (isRestaurant) {
           sendPushNotificationToRestaurant(ro.restaurantId, {
@@ -162,7 +162,7 @@ export async function POST(
     try {
       const customerPhone = order.userPhone?.replace(/\D/g, '')
       if (customerPhone && customerPhone.length >= 10) {
-        const alertMsg = `📦 FastKirana Order #${displayId} confirmed! Total: ₹${totalAmount}. Payment: Cash on Delivery.`
+        const alertMsg = `📦 FastMinute Order #${displayId} confirmed! Total: ₹${totalAmount}. Payment: Cash on Delivery.`
         sendWhatsAppOrderAlert(customerPhone.slice(-10), alertMsg).catch(() => {})
       }
     } catch (waErr) {

@@ -3,10 +3,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/core/network/api_client.dart';
-import 'package:fastkirana_flutter/core/utils/app_connectivity.dart';
-import 'package:fastkirana_flutter/data/models/cart.dart';
-import 'package:fastkirana_flutter/features/checkout/controllers/checkout_controller.dart';
+import 'package:fastminute_flutter/core/network/api_client.dart';
+import 'package:fastminute_flutter/core/utils/app_connectivity.dart';
+import 'package:fastminute_flutter/data/models/cart.dart';
+import 'package:fastminute_flutter/features/checkout/controllers/checkout_controller.dart';
 import 'offline_experience_test.dart' show TestConnection;
 
 class PendingConnection extends TestConnection {

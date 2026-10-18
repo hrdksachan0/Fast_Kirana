@@ -100,7 +100,7 @@ class AddToCartButton extends ConsumerWidget {
                   child: Text(
                     isFood
                         ? '${product.restaurant?.name ?? "This Restaurant"} is currently closed.'
-                        : 'FastKirana Grocery Darkstore is currently closed.',
+                        : 'FastMinute Grocery Darkstore is currently closed.',
                     style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: Colors.white),
                   ),
                 ),

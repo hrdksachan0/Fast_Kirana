@@ -281,7 +281,7 @@ export async function POST(req: NextRequest) {
 
       // Push notification
       const isRestaurantOrder = !!order.restaurantId
-      const outletName = order.shopName || (order.restaurantId ? 'Restaurant' : 'FastKirana Grocery')
+      const outletName = order.shopName ? order.shopName.replace(/FastKirana/g, 'FastMinute') : (order.restaurantId ? 'Restaurant' : 'FastMinute Grocery')
       const customerName = order.userName || 'Customer'
       const customerPhone = order.userPhone || 'N/A'
 

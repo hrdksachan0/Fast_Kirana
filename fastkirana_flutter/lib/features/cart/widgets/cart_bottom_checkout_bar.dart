@@ -175,7 +175,7 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             content: const Text(
-                              'FastKirana Grocery Darkstore is currently closed. Orders cannot be placed right now.',
+                              'FastMinute Grocery Darkstore is currently closed. Orders cannot be placed right now.',
                               style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
                             ),
                           ),

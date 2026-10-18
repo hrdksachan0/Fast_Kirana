@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -134,7 +134,7 @@ class BrandLogo extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'FastKirana',
+              'FastMinute',
               style: GoogleFonts.inter(
                 fontSize: size * 0.58,
                 fontWeight: FontWeight.w900,

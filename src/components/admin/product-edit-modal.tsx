@@ -324,7 +324,7 @@ export function ProductEditModal({
                   }}
                   className="px-2.5 py-1.5 text-xs rounded-xl border border-primary/30 bg-card focus:outline-none focus:border-primary font-bold text-text-primary cursor-pointer shadow-2xs"
                 >
-                  <option value="">🛒 Direct FastKirana (In-house / No Vendor)</option>
+                  <option value="">🛒 Direct FastMinute (In-house / No Vendor)</option>
                   {vendorsList.map((v) => (
                     <option key={v.id} value={v.id}>
                       🏢 {v.code ? `[${v.code}] ` : ''}{v.name}
@@ -561,7 +561,7 @@ export function ProductEditModal({
                       }}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-primary/30 bg-card focus:outline-none focus:border-primary font-bold text-text-primary cursor-pointer shadow-xs"
                     >
-                      <option value="">🛒 Direct / FastKirana In-House (No Vendor)</option>
+                      <option value="">🛒 Direct / FastMinute In-House (No Vendor)</option>
                       {vendorsList.map((v) => (
                         <option key={v.id} value={v.id}>
                           🏢 {v.code ? `[${v.code}] ` : ''}{v.name} {v.companyName ? `(${v.companyName})` : ''}

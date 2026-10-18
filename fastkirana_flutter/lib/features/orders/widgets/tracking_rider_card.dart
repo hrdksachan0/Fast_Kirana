@@ -163,7 +163,7 @@ class TrackingRiderCard extends StatelessWidget {
     // ─── STATE B: Rider Assigned (100% Dynamic) ───
     final isStoreSelfDelivery = rawName.toLowerCase().contains('store partner') ||
         rawName.toLowerCase().contains('store_admin');
-    final displayName = isStoreSelfDelivery ? 'FastKirana Store Partner' : rawName;
+    final displayName = isStoreSelfDelivery ? 'FastMinute Store Partner' : rawName;
 
     return Container(
       decoration: BoxDecoration(
@@ -332,8 +332,8 @@ class TrackingRiderCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         isStoreSelfDelivery
-                            ? 'FastKirana Direct Delivery'
-                            : 'Dedicated FastKirana Rider',
+                            ? 'FastMinute Direct Delivery'
+                            : 'Dedicated FastMinute Rider',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w500,
@@ -352,7 +352,7 @@ class TrackingRiderCard extends StatelessWidget {
                       IconButton(
                         onPressed: () async {
                           HapticFeedback.lightImpact();
-                          final wpUrl = 'https://wa.me/$cleanPhone?text=Hi%20$displayName,%20checking%20on%20my%20FastKirana%20order';
+                          final wpUrl = 'https://wa.me/$cleanPhone?text=Hi%20$displayName,%20checking%20on%20my%20FastMinute%20order';
                           AppUrlLauncher.launchString(wpUrl, context: context);
                         },
                         icon: const Icon(Icons.chat_bubble_rounded, size: 16, color: Color(0xFF16A34A)),

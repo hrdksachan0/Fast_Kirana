@@ -642,7 +642,7 @@ export function AdminRestaurantReport({ storeId }: AdminRestaurantReportProps = 
                   <span className="font-bold text-emerald-600">{formatPrice(settlingRest.totalProductSales)}</span>
                 </div>
                 <div className="flex justify-between items-center text-text-secondary">
-                  <span>FastKirana Commission ({((settlingRest.commissionRate || 0.15) * 100).toFixed(1)}%):</span>
+                  <span>FastMinute Commission ({((settlingRest.commissionRate || 0.15) * 100).toFixed(1)}%):</span>
                   <span className="font-bold text-blue-600">-{formatPrice(settlingRest.adminCommission)}</span>
                 </div>
                 <div className="border-t border-border/50 pt-2 flex justify-between items-center font-black text-sm text-text-primary">

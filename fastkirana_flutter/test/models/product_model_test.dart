@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
 
 void main() {
   group('Product Model Tests', () {

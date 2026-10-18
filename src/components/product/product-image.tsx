@@ -223,7 +223,7 @@ export function ProductImage({
         <span className="text-4xl sm:text-5xl lg:text-6xl filter drop-shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 select-none">{currentSrc}</span>
         {!isBestseller && (
           <span className="text-[9px] font-bold text-text-secondary bg-muted px-2 py-0.5 rounded-full mt-2">
-            FastKirana
+            FastMinute
           </span>
         )}
       </div>
@@ -240,7 +240,7 @@ export function ProductImage({
       </div>
       {!isBestseller && (
         <span className="text-[9px] font-bold text-text-secondary bg-muted px-2 py-0.5 rounded-full">
-          FastKirana
+          FastMinute
         </span>
       )}
     </div>

@@ -354,7 +354,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
             const config = getCategoryMobileConfig(category)
             const photoSrc = getCategoryPhoto(category)
 
-            const rawLabel = (config.label || category.name || '').replace(/^FastKirana\s+/i, '').trim()
+            const rawLabel = (config.label || category.name || '').replace(/^(FastKirana|FastMinute)\s+/i, '').trim()
             let formattedLabel = rawLabel
             if (category.slug === 'household' || category.slug?.includes('household') || category.name?.toLowerCase().includes('household')) {
               formattedLabel = 'Home Care'

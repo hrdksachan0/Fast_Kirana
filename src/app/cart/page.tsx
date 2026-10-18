@@ -694,7 +694,7 @@ export default function CartPage() {
                   📦 Grocery & Daily Essentials
                 </h2>
                 <p className="text-xs text-text-muted mt-1 font-bold">
-                  Delivered from FastKirana Darkstore
+                  Delivered from FastMinute Darkstore
                 </p>
               </div>
 

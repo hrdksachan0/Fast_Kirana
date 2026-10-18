@@ -182,7 +182,7 @@ export function RestaurantSalesConsole({ restaurantId }: RestaurantSalesConsoleP
       let csv = '\uFEFF' // UTF-8 Byte Order Mark for Excel
       
       // Header & Metadata
-      csv += 'FASTKIRANA RESTAURANT SALES REPORT\n'
+      csv += 'FASTMINUTE RESTAURANT SALES REPORT\n'
       csv += `Date Range,"${startDate} to ${endDate}"\n`
       csv += `Generated On,"${new Date().toLocaleString()}"\n\n`
       
@@ -191,7 +191,7 @@ export function RestaurantSalesConsole({ restaurantId }: RestaurantSalesConsoleP
       csv += 'Metric,Value (INR)\n'
       csv += `Total Net Sales,₹${(summary.totalSales || 0).toFixed(2)}\n`
       csv += `Restaurant Margin / Net Share,₹${(summary.restaurantProfit || 0).toFixed(2)}\n`
-      csv += `FastKirana Admin Commission,₹${(summary.adminProfit || 0).toFixed(2)}\n`
+      csv += `FastMinute Admin Commission,₹${(summary.adminProfit || 0).toFixed(2)}\n`
       csv += `Completed Orders Count,${summary.ordersCount || 0}\n`
       csv += `Average Order Value,₹${(summary.avgOrderValue || 0).toFixed(2)}\n`
       csv += `Commission Rate,${summary.commissionRate || 10}%\n`
@@ -420,7 +420,7 @@ export function RestaurantSalesConsole({ restaurantId }: RestaurantSalesConsoleP
                   </strong>
                 </div>
                 <div className="p-2.5 rounded-2xl bg-muted/40 border border-border/40">
-                  <span className="text-[9.5px] font-bold text-text-secondary uppercase block">FastKirana Commission</span>
+                  <span className="text-[9.5px] font-bold text-text-secondary uppercase block">FastMinute Commission</span>
                   <strong className="text-sm font-black text-blue-600 dark:text-blue-400 mt-0.5 block">
                     {formatPrice(summary.delivery?.adminProfit || 0)}
                   </strong>
@@ -451,7 +451,7 @@ export function RestaurantSalesConsole({ restaurantId }: RestaurantSalesConsoleP
                   </strong>
                 </div>
                 <div className="p-2.5 rounded-2xl bg-muted/40 border border-border/40">
-                  <span className="text-[9.5px] font-bold text-text-secondary uppercase block">FastKirana Commission</span>
+                  <span className="text-[9.5px] font-bold text-text-secondary uppercase block">FastMinute Commission</span>
                   <strong className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block">
                     {formatPrice(summary.pickup?.adminProfit || 0)}
                   </strong>

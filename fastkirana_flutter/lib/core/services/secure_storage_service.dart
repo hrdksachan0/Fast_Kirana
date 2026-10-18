@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 import '../../data/models/user_session.dart';
 
 /// Secure storage wrapper for sensitive data (auth tokens, user credentials).

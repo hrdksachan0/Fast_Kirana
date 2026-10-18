@@ -140,7 +140,7 @@ export function FreeMapPicker({
             iconSize: [30, 30],
             iconAnchor: [15, 15],
           })
-          L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup('FastKirana Dark Store Hub')
+          L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup('FastMinute Dark Store Hub')
 
           // Update location on map move
           map.on('move', () => {

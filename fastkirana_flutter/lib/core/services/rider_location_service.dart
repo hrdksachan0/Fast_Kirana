@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -110,7 +110,7 @@ class RiderLocationService {
         distanceFilter: 15, // Battery-efficient: Trigger only after 15 meters of movement
         intervalDuration: const Duration(seconds: 15), // 15s battery-optimized interval to prevent phone heating & battery drain
         foregroundNotificationConfig: const ForegroundNotificationConfig(
-          notificationTitle: 'FastKirana Delivery Partner 🛵',
+          notificationTitle: 'FastMinute Delivery Partner 🛵',
           notificationText: 'Sharing live location with customer (Battery Optimized)',
           notificationChannelName: 'Live Delivery Tracking',
           notificationIcon: AndroidResource(

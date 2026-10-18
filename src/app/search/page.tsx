@@ -16,13 +16,13 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   const query = q?.trim() || ''
   if (query) {
     return {
-      title: `Search results for "${query}" - FastKirana`,
-      description: `Find ${query} and more at FastKirana. Fresh groceries, snacks, dairy and more delivered fast in Ghatampur.`,
+      title: `Search results for "${query}" - FastMinute`,
+      description: `Find ${query} and more at FastMinute. Fresh groceries, snacks, dairy and more delivered fast in Ghatampur.`,
     }
   }
   return {
-    title: 'Search - FastKirana',
-    description: 'Search for products at FastKirana. Groceries, snacks, beverages, dairy and more.',
+    title: 'Search - FastMinute',
+    description: 'Search for products at FastMinute. Groceries, snacks, beverages, dairy and more.',
   }
 }
 

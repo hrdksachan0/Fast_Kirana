@@ -776,7 +776,7 @@ export function CampaignManager({
                       id: uniqueId('slide'),
                       kind: 'title',
                       eyebrow: '',
-                      title: 'Celebrate with FastKirana',
+                      title: 'Celebrate with FastMinute',
                       subtitle: '',
                       image: null,
                     },

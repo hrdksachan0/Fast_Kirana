@@ -161,7 +161,7 @@ class HubComingSoonView extends ConsumerWidget {
 
           // 3. Headline
           Text(
-            'FastKirana is Coming Soon to $cityName!',
+            'FastMinute is Coming Soon to $cityName!',
             textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
               fontSize: Responsive.scaledFontSize(context, 20),

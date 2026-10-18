@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/cart.dart';
 import '../data/models/product.dart';
@@ -22,9 +22,11 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   final CartRepository repository;
 
   int _cartVersion = 0;
+  int _lastClearVersion = 0;
   Timer? _debounceSyncTimer;
 
   int get cartVersion => _cartVersion;
+  int get lastClearVersion => _lastClearVersion;
 
   CartNotifier(this.repository) : super(const AsyncValue.loading()) {
     loadCart();
@@ -79,6 +81,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   /// Immediately increments local cart version and debounces server sync by 300ms.
   /// Serializes whole-cart writes so older requests never overwrite newer snapshots.
   void _scheduleDebouncedSync(List<CartItem> items) async {
+    _debounceSyncTimer?.cancel();
     _cartVersion++;
     _latestPendingItems = items;
     final capturedKey = await repository.getPendingSyncKeyForCurrentScope();
@@ -219,7 +222,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       // If user performed in-memory mutations while getLocalCart was awaiting, merge without losing either
       if (_cartVersion > initialVersion || _latestPendingItems != null) {
         // If user explicitly cleared the cart, preserve clear intent without resurrecting items
-        if (_latestPendingItems != null && _latestPendingItems!.isEmpty) {
+        if (_lastClearVersion > initialVersion || (_latestPendingItems != null && _latestPendingItems!.isEmpty)) {
           return;
         }
         if (localItems.isNotEmpty) {
@@ -236,6 +239,10 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
             });
             if (existingIdx >= 0) {
               final existing = merged[existingIdx];
+              if (existing.id == loc.id) {
+                // Exact same item snapshot already in memory (e.g. written by this instance before getLocalCart resolved)
+                continue;
+              }
               final combinedQty = existing.quantity + loc.quantity;
               merged[existingIdx] = CartItem(
                 id: existing.id,
@@ -275,6 +282,9 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
         // Local has unsynced offline edits! Reconcile through the versioned queue rather than unversioned sync
         try {
           final targetKey = await r.getPendingSyncKeyForCurrentScope();
+          if (_cartVersion > initialVersion || _latestPendingItems != null) {
+            return;
+          }
           _cartVersion++;
           _latestPendingItems = localItems;
           await _flushPendingSync(targetKey);
@@ -444,20 +454,34 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     _scheduleDebouncedSync(items);
   }
 
-  Future<void> clearCart() async {
+  Future<void> clearCart({String? orderId}) async {
+    final backupCart = _cart;
     _debounceSyncTimer?.cancel();
     _cartVersion++;
+    _lastClearVersion = _cartVersion;
     _latestPendingItems = [];
     state = AsyncValue.data(_emptyCart());
-    await repository.saveLocalCart([]);
-    final targetKey = await repository.getPendingSyncKeyForCurrentScope();
-    await repository.setPendingSync(true, targetKey: targetKey);
-    await _flushPendingSync(targetKey);
+    try {
+      final saved = await repository.saveLocalCart([], appliedOrderId: orderId);
+      if (!saved) {
+        throw Exception('Failed to persist cleared cart');
+      }
+      final targetKey = await repository.getPendingSyncKeyForCurrentScope();
+      await repository.setPendingSync(true, targetKey: targetKey);
+      await _flushPendingSync(targetKey);
+    } catch (e) {
+      if (backupCart != null) {
+        _cartVersion++;
+        _latestPendingItems = backupCart.items;
+        state = AsyncValue.data(backupCart);
+      }
+      rethrow;
+    }
   }
 
   /// Removes only items matching the accepted checkout draft from the cart,
   /// preserving any newer items added to the cart while payment was in-flight.
-  Future<void> removeDraftItems(List<Map<String, dynamic>> draftItems) async {
+  Future<void> removeDraftItems(List<Map<String, dynamic>> draftItems, {String? orderId}) async {
     final cart = _cart;
     if (cart == null || cart.items.isEmpty) return;
 
@@ -488,14 +512,25 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       }
     }
 
+    final backupItems = List<CartItem>.from(cart.items);
     _debounceSyncTimer?.cancel();
     _cartVersion++;
     _latestPendingItems = currentItems;
     _setState(currentItems, cart);
-    await repository.saveLocalCart(currentItems);
-    final targetKey = await repository.getPendingSyncKeyForCurrentScope();
-    await repository.setPendingSync(true, targetKey: targetKey);
-    await _flushPendingSync(targetKey);
+    try {
+      final saved = await repository.saveLocalCart(currentItems, appliedOrderId: orderId);
+      if (!saved) {
+        throw Exception('Failed to persist cart with applied delta');
+      }
+      final targetKey = await repository.getPendingSyncKeyForCurrentScope();
+      await repository.setPendingSync(true, targetKey: targetKey);
+      await _flushPendingSync(targetKey);
+    } catch (e) {
+      _cartVersion++;
+      _latestPendingItems = backupItems;
+      _setState(backupItems, cart);
+      rethrow;
+    }
   }
 
   Future<void> clearRestaurantItems() async {
@@ -520,6 +555,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   Future<void> syncPending([CartRepository? repo]) async {
+    _debounceSyncTimer?.cancel();
     final r = repo ?? repository;
     final pending = await r.hasPendingSync();
     if (!pending) return;

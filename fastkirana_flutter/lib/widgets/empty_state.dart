@@ -179,7 +179,7 @@ class EmptyState extends StatelessWidget {
       iconColor: AppDesignSystem.red600,
       emoji: '📡',
       title: 'You are Offline',
-      subtitle: 'Unable to reach FastKirana servers.\nPlease check your Wi-Fi or cellular connection and retry.',
+      subtitle: 'Unable to reach FastMinute servers.\nPlease check your Wi-Fi or cellular connection and retry.',
       ctaLabel: 'Try Again',
       onCta: onRetry,
       bgTint: AppDesignSystem.statusCancelled,

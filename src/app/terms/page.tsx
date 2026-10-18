@@ -2,8 +2,8 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service - FastKirana',
-  description: 'Terms of Service and User Agreement for FastKirana quick-commerce and food delivery services.',
+  title: 'Terms of Service - FastMinute',
+  description: 'Terms of Service and User Agreement for FastMinute quick-commerce and food delivery services.',
 }
 
 export default function TermsPage() {
@@ -21,14 +21,14 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-bold text-foreground mb-3">1. Agreement to Terms</h2>
             <p className="text-muted-foreground">
-              By accessing or using FastKirana website (<a href="https://www.fastkirana.in" className="text-rose-600 hover:underline">www.fastkirana.in</a>) or mobile applications, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
+              By accessing or using FastMinute website (<a href="https://www.fastkirana.in" className="text-rose-600 hover:underline">www.fastkirana.in</a>) or mobile applications, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-foreground mb-3">2. Service Description</h2>
             <p className="text-muted-foreground">
-              FastKirana is a hyperlocal quick-commerce platform providing 10–20 minute delivery of daily groceries, fresh dairy, packaged snacks, beverages, household essentials, and prepared food from local partner restaurants across Ghatampur, Kanpur Nagar, Uttar Pradesh.
+              FastMinute is a hyperlocal quick-commerce platform providing 10–20 minute delivery of daily groceries, fresh dairy, packaged snacks, beverages, household essentials, and prepared food from local partner restaurants across Ghatampur, Kanpur Nagar, Uttar Pradesh.
             </p>
           </section>
 
@@ -42,7 +42,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-bold text-foreground mb-3">4. Pricing, Payments & Billing</h2>
             <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-              <li>All prices listed on FastKirana are in Indian Rupees (INR ₹) inclusive of applicable taxes unless stated otherwise.</li>
+              <li>All prices listed on FastMinute are in Indian Rupees (INR ₹) inclusive of applicable taxes unless stated otherwise.</li>
               <li>We accept payments via UPI (Google Pay, PhonePe, Paytm, BHIM), Credit/Debit Cards, Net Banking, Digital Wallets, and Cash on Delivery (COD).</li>
               <li>Payments made online are processed securely through RBI-compliant, PCI-DSS certified payment gateway partners (such as Cashfree).</li>
               <li>Delivery charges are calculated dynamically based on distance from our dark store/restaurants as per our <Link href="/shipping-policy" className="text-rose-600 hover:underline font-medium">Shipping Policy</Link>.</li>
@@ -76,7 +76,7 @@ export default function TermsPage() {
               For any questions, grievances, or clarifications regarding these Terms of Service:
             </p>
             <div className="mt-3 text-muted-foreground space-y-1">
-              <p><strong>FastKirana Support Desk</strong></p>
+              <p><strong>FastMinute Support Desk</strong></p>
               <p>NH34, Ghatampur Market, Kanpur Nagar, UP - 209206</p>
               <p>Email: <a href="mailto:fastkiranadelivery@gmail.com" className="text-rose-600 hover:underline font-medium">fastkiranadelivery@gmail.com</a></p>
               <p>Phone / WhatsApp: <a href="tel:+917054470303" className="text-rose-600 hover:underline font-medium">+91 70544 70303</a></p>

@@ -1,7 +1,7 @@
 {
-  "name": "FastKirana - Online Grocery & Food Delivery",
-  "short_name": "Fast Kirana",
-  "description": "Instant online grocery and restaurant food delivery, simple, fast, and friendly.",
+  "name": "FastMinute - Online Grocery & Food Delivery in Minutes",
+  "short_name": "FastMinute",
+  "description": "Instant online grocery and food delivery in minutes, simple, fast, and friendly.",
   "start_url": "/",
   "id": "/",
   "display": "standalone",

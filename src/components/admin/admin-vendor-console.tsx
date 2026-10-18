@@ -623,9 +623,9 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
     const storeDisplayName = storeId && storeId !== 'all'
       ? (storeId.replace(/^hub-/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) + ' Hub')
-      : 'FastKirana Dark Store'
+      : 'FastMinute Dark Store'
 
-    let message = `*PURCHASE ORDER - FASTKIRANA*\n`
+    let message = `*PURCHASE ORDER - FASTMINUTE*\n`
     message += `Vendor Code: *${vendorDetails.vendorCode || 'VND-001'}*\n`
     message += `To: ${vendorDetails.name} (${vendorDetails.companyName || 'Supplier'})\n`
     message += `Date: ${todayStr}\n`
@@ -638,7 +638,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     })
 
     message += `\nPlease confirm dispatch time and estimated invoice. Thank you!\n`
-    message += `— FastKirana Procurement Team`
+    message += `— FastMinute Procurement Team`
 
     const cleanPhone = vendorDetails.phone.replace(/\D/g, '')
     const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone
@@ -655,7 +655,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
       // Sheet 1: Sales & Bill Summary
       const summaryRows: any[] = [
-        ['FASTKIRANA - VENDOR BILLING STATEMENT'],
+        ['FASTMINUTE - VENDOR BILLING STATEMENT'],
         ['Generated At:', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })],
         ['Period:', `${startDate} to ${endDate}`],
         [],
@@ -694,7 +694,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
       // Sheet 2: Payouts History
       const payoutRows: any[] = [
-        ['FASTKIRANA - RECORDED VENDOR PAYOUTS'],
+        ['FASTMINUTE - RECORDED VENDOR PAYOUTS'],
         ['Vendor Name:', vendorDetails.name],
         [],
         ['S.No', 'Date & Time', 'Amount (Rs)', 'Payment Method', 'UTR / Ref No', 'Status', 'Notes'],
@@ -717,7 +717,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
 
       // Sheet 3: Date-wise Sales Breakdown
       const dailyRows: any[] = [
-        ['FASTKIRANA - DATE-WISE SALES BREAKDOWN'],
+        ['FASTMINUTE - DATE-WISE SALES BREAKDOWN'],
         ['Vendor Name:', vendorDetails.name],
         ['Period:', `${startDate} to ${endDate}`],
         [],
@@ -754,7 +754,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
       XLSX.utils.book_append_sheet(wb, wsPayouts, 'Recorded_Payouts')
 
       const sanitizedVendorName = vendorDetails.name.replace(/[^a-zA-Z0-9_-]/g, '_')
-      const fileName = `FastKirana_Vendor_${sanitizedVendorName}_${startDate}_to_${endDate}.xlsx`
+      const fileName = `FastMinute_Vendor_${sanitizedVendorName}_${startDate}_to_${endDate}.xlsx`
       XLSX.writeFile(wb, fileName)
       toast.success(`Statement exported to ${fileName}`)
     } catch (e: any) {

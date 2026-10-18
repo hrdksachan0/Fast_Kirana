@@ -352,7 +352,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                         Row(
                           children: [
                             Text(
-                              'FastKirana',
+                              'FastMinute',
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 15),
                                 fontWeight: FontWeight.w900,
@@ -1057,9 +1057,9 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                   ),
                   const SizedBox(height: 8),
 
-                  // 2. FastKirana Grocery Mart
+                  // 2. FastMinute Grocery Mart
                   _buildOutletTile(
-                    title: 'FastKirana Mart (${currentHub.city})',
+                    title: 'FastMinute Mart (${currentHub.city})',
                     subtitle: 'Kirana, dairy, daily essentials delivery · ${currentHub.name}',
                     icon: Icons.shopping_basket_rounded,
                     iconColor: const Color(0xFF0284C7),
@@ -1072,7 +1072,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                         context,
                         targetType: 'HUB',
                         targetId: currentHub.id,
-                        storeName: 'FastKirana Mart (${currentHub.city})',
+                        storeName: 'FastMinute Mart (${currentHub.city})',
                         currentIsOpen: _martOpen,
                         dio: ref.read(dioProvider),
                         onStatusChanged: (isOpen, pauseUntil) {

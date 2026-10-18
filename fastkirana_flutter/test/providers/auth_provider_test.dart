@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:fastkirana_flutter/core/services/secure_storage_service.dart';
-import 'package:fastkirana_flutter/data/models/user.dart';
-import 'package:fastkirana_flutter/providers/auth_provider.dart';
+import 'package:fastminute_flutter/core/services/secure_storage_service.dart';
+import 'package:fastminute_flutter/data/models/user.dart';
+import 'package:fastminute_flutter/providers/auth_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

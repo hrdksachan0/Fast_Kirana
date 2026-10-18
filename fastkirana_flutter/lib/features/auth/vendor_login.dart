@@ -490,7 +490,7 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'FastKirana',
+                              'FastMinute',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: Responsive.scaledFontSize(context, 21),
                                 fontWeight: FontWeight.w900,

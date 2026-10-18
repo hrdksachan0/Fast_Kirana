@@ -879,7 +879,7 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
                       </h3>
                     </div>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      Chilled cold drinks & sweet desserts from FastKirana Darkstore
+                      Chilled cold drinks & sweet desserts from FastMinute Darkstore
                     </p>
                   </div>
                   <span className="text-[11px] font-bold text-orange-500 hidden sm:inline">

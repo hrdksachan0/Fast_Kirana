@@ -367,7 +367,7 @@ export function useCheckoutPayment({
           customerPhone: userPhone,
           customerEmail: userEmail,
           customerName: userName,
-          note: `FastKirana Checkout ₹${paymentAmount}`,
+          note: `FastMinute Checkout ₹${paymentAmount}`,
           orderPayload: {
             ...payload,
             storeId: effectiveStoreId || undefined,

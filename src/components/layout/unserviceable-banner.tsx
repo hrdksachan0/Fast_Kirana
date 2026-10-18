@@ -69,7 +69,7 @@ export function UnserviceableLocationBanner() {
     }
     setIsSubmitting(true)
     try {
-      toast.success("Thank you! We will notify you via WhatsApp / SMS once FastKirana launches in your area.", {
+      toast.success("Thank you! We will notify you via WhatsApp / SMS once FastMinute launches in your area.", {
         duration: 5000,
         icon: '🎉',
       })
@@ -194,7 +194,7 @@ export function UnserviceableLocationBanner() {
               <div className="mt-6 pt-5 border-t border-border/60 text-left">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-text-primary mb-1.5">
                   <Bell className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Want FastKirana in your area?</span>
+                  <span>Want FastMinute in your area?</span>
                 </div>
                 <p className="text-[11px] text-text-secondary mb-3">
                   Drop your phone number. We will send you an alert the day we launch here!

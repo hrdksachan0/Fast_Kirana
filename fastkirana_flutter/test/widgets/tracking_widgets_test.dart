@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/data/models/order.dart';
-import 'package:fastkirana_flutter/features/orders/widgets/tracking_status_stepper.dart';
-import 'package:fastkirana_flutter/features/orders/widgets/tracking_receipt_card.dart';
-import 'package:fastkirana_flutter/features/orders/widgets/tracking_payment_card.dart';
-import 'package:fastkirana_flutter/features/delivery/widgets/connectivity_banner.dart';
+import 'package:fastminute_flutter/data/models/order.dart';
+import 'package:fastminute_flutter/features/orders/widgets/tracking_status_stepper.dart';
+import 'package:fastminute_flutter/features/orders/widgets/tracking_receipt_card.dart';
+import 'package:fastminute_flutter/features/orders/widgets/tracking_payment_card.dart';
+import 'package:fastminute_flutter/features/delivery/widgets/connectivity_banner.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 

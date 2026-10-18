@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';

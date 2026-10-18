@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/core/utils/fuzzy_matcher.dart';
-import 'package:fastkirana_flutter/core/services/location_service.dart';
+import 'package:fastminute_flutter/core/utils/fuzzy_matcher.dart';
+import 'package:fastminute_flutter/core/services/location_service.dart';
 
 void main() {
   group('1. Damerau-Levenshtein Fuzzy Search Algorithm Tests', () {

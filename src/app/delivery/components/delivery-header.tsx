@@ -118,7 +118,7 @@ export default function DeliveryHeader({
           </div>
           <div>
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-100 block leading-none">
-              FastKirana Partner
+              FastMinute Partner
             </span>
             <h1 className="text-base font-black text-white tracking-tight flex items-center gap-1.5 mt-0.5">
               {greeting}, <span className="underline decoration-white/40">{userName || 'Rider'}</span> 👋

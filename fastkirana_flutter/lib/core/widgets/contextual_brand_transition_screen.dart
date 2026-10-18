@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -184,19 +184,19 @@ class _ContextualBrandTransitionScreenState extends State<ContextualBrandTransit
   String get _subBrandTag {
     switch (widget.contextType) {
       case TransitionContextType.grocery:
-        return 'FASTKIRANA GROCERY EXPRESS';
+        return 'FASTMINUTE GROCERY EXPRESS';
       case TransitionContextType.cafe:
         return 'NEARBY RESTAURANTS';
       case TransitionContextType.essentials:
-        return 'FASTKIRANA QUICK COMMERCE';
+        return 'FASTMINUTE QUICK COMMERCE';
       case TransitionContextType.beauty:
-        return 'FASTKIRANA BEAUTY STORE';
+        return 'FASTMINUTE BEAUTY STORE';
       case TransitionContextType.pharmacy:
-        return 'FASTKIRANA PHARMACY EXPRESS';
+        return 'FASTMINUTE PHARMACY EXPRESS';
       case TransitionContextType.checkout:
-        return 'FASTKIRANA PRIORITY FULFILLMENT';
+        return 'FASTMINUTE PRIORITY FULFILLMENT';
       case TransitionContextType.storeFinder:
-        return 'FASTKIRANA REALTIME RADAR';
+        return 'FASTMINUTE REALTIME RADAR';
     }
   }
 

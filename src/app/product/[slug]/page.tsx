@@ -38,11 +38,11 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   if (!product) {
     return {
-      title: 'Product Not Found - FastKirana Ghatampur',
+      title: 'Product Not Found - FastMinute Ghatampur',
     }
   }
 
-  const title = `${product.name} - Buy Online at ₹${product.price} | FastKirana Ghatampur`
+  const title = `${product.name} - Buy Online at ₹${product.price} | FastMinute Ghatampur`
   const description = product.description || `Buy ${product.name} online in Ghatampur, Kanpur Nagar. Fast doorstep grocery delivery.`
 
   return {
@@ -186,7 +186,7 @@ const [productRaw, relatedRaw] = await Promise.all([
     '@type': 'Product',
     name: product.name,
     image: [product.imageUrl || 'https://www.fastkirana.in/brand/fastkirana_app_icon.png'],
-    description: product.description || `Buy ${product.name} online in Ghatampur. Fast delivery from FastKirana.`,
+    description: product.description || `Buy ${product.name} online in Ghatampur. Fast delivery from FastMinute.`,
     sku: product.id,
     offers: {
       '@type': 'Offer',
@@ -195,7 +195,7 @@ const [productRaw, relatedRaw] = await Promise.all([
       availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       seller: {
         '@type': 'Organization',
-        name: 'FastKirana',
+        name: 'FastMinute',
       },
     },
   }
@@ -306,7 +306,7 @@ const [productRaw, relatedRaw] = await Promise.all([
                   Seller Information
                 </AccordionTrigger>
                 <AccordionContent className="text-xs text-text-secondary leading-relaxed">
-                  Sold and fulfilled directly by FastKirana local dark stores. All products are verified for freshness and authentic expiry dates.
+                  Sold and fulfilled directly by FastMinute local dark stores. All products are verified for freshness and authentic expiry dates.
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

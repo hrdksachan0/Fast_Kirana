@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/data/models/order.dart';
+import 'package:fastminute_flutter/data/models/order.dart';
 
 void main() {
   group('Order & OrderItem Serialization Tests', () {

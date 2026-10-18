@@ -27,7 +27,7 @@ class FlavorConfig {
   }) {
     _instance = FlavorConfig._internal(
       flavor: flavor,
-      appTitle: flavor == AppFlavor.rider ? 'FastKirana Rider' : 'FastKirana',
+      appTitle: flavor == AppFlavor.rider ? 'FastMinute Rider' : 'FastMinute',
       baseUrl: baseUrl ?? 'https://fastkirana.vercel.app',
       isRiderEdition: flavor == AppFlavor.rider,
     );
@@ -36,7 +36,7 @@ class FlavorConfig {
   static FlavorConfig get instance {
     _instance ??= FlavorConfig._internal(
       flavor: AppFlavor.customer,
-      appTitle: 'FastKirana',
+      appTitle: 'FastMinute',
       baseUrl: 'https://fastkirana.vercel.app',
       isRiderEdition: false,
     );

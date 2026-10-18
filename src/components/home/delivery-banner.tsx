@@ -18,7 +18,7 @@ export function DeliveryBanner() {
       <div className="flex justify-center mb-5">
         <span className="inline-flex items-center gap-2 px-4.5 py-1.5 rounded-full text-[10px] md:text-xs font-semibold bg-white/95 dark:bg-zinc-900/65 border border-zinc-200/60 dark:border-zinc-800/50 shadow-2xs backdrop-blur-md text-text-primary tracking-wide">
           <Store className="h-3.5 w-3.5 text-primary shrink-0" />
-          <span>From Your Town&apos;s Dark Store — Packed &amp; Delivered by <span className="text-primary font-bold">FastKirana</span></span>
+          <span>From Your Town&apos;s Dark Store — Packed &amp; Delivered by <span className="text-primary font-bold">FastMinute</span></span>
         </span>
       </div>
 

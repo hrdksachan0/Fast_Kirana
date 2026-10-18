@@ -47,6 +47,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'www.fastkirana.in',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.fastminute.in',
+      },
+      {
+        protocol: 'https',
+        hostname: 'fastminute.in',
+      },
     ],
   },
   async redirects() {
@@ -73,10 +81,46 @@ const nextConfig: NextConfig = {
         destination: 'https://www.fastkirana.in/:path*',
         permanent: true,
       },
+      // Policy Aliases & Typo Redirections
+      {
+        source: '/shipping_policy',
+        destination: '/shipping-policy',
+        permanent: true,
+      },
+      {
+        source: '/privacy_policy',
+        destination: '/privacy-policy',
+        permanent: true,
+      },
+      {
+        source: '/refund_policy',
+        destination: '/refund-policy',
+        permanent: true,
+      },
+      {
+        source: '/terms-of-service',
+        destination: '/terms',
+        permanent: true,
+      },
+      {
+        source: '/terms_of_service',
+        destination: '/terms',
+        permanent: true,
+      },
+      {
+        source: '/terms-and-conditions',
+        destination: '/terms',
+        permanent: true,
+      },
+      {
+        source: '/terms_and_conditions',
+        destination: '/terms',
+        permanent: true,
+      },
     ];
   },
   async rewrites() {
-    const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.fastkirana.in';
+    const apiDest = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.fastminute.in';
     const useFastApiProxy = process.env.USE_FASTAPI_PROXY !== 'false';
 
     const fastApiRewrites = [

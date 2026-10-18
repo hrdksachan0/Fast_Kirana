@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
-import 'package:fastkirana_flutter/core/routes/app_router.dart';
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/routes/app_router.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 
 /// Service to handle universal app links and custom scheme deep links
 /// Supports:

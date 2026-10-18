@@ -26,7 +26,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
-        android:label="FastKirana"
+        android:label="FastMinute"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -63,19 +63,21 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- Deep Links: fastkirana://order/{id} -->
+            <!-- Deep Links: fastminute://order/{id} & fastkirana://order/{id} -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fastminute" android:host="order" />
                 <data android:scheme="fastkirana" android:host="order" />
             </intent-filter>
 
-            <!-- Deep Links: fastkirana://product/{slug} -->
+            <!-- Deep Links: fastminute://product/{slug} & fastkirana://product/{slug} -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fastminute" android:host="product" />
                 <data android:scheme="fastkirana" android:host="product" />
             </intent-filter>
 

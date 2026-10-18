@@ -25,7 +25,7 @@ export function Footer() {
 
   const trustedText = isLoaded ? (settings.trusted_text || '✨ Trusted by 5,000+ families in your town') : null
   const contactPhone = settings.contact_phone || '+91 70544 70303'
-  const contactEmail = settings.contact_email || 'help@fastkirana.com'
+  const contactEmail = settings.contact_email || 'help@fastminute.in'
   const contactTimings = settings.contact_timings || '6 AM - 12 AM'
   const contactAddress = settings.contact_address || 'NH34, Ghatampur, Kanpur Nagar'
 
@@ -192,7 +192,7 @@ export function Footer() {
         {/* Footer Bottom Rights */}
         <div className="mt-12 border-t border-white/[0.06] pt-6.5 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 select-none">
-            © {new Date().getFullYear()} FastKirana. All rights reserved.
+            © {new Date().getFullYear()} FastMinute. All rights reserved.
           </p>
           <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-500 order-3 md:order-none select-none">
             We accept: UPI • Cards • COD • Wallets

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/core/services/location_service.dart';
-import 'package:fastkirana_flutter/features/cart/widgets/cart_bill_details_card.dart';
-import 'package:fastkirana_flutter/features/cart/widgets/cart_free_delivery_bar.dart';
-import 'package:fastkirana_flutter/features/checkout/widgets/checkout_savings_banner.dart';
-import 'package:fastkirana_flutter/features/checkout/widgets/checkout_bottom_bar.dart';
-import 'package:fastkirana_flutter/features/checkout/widgets/checkout_trust_badges.dart';
-import 'package:fastkirana_flutter/features/admin/widgets/admin_stats_grid.dart';
+import 'package:fastminute_flutter/core/services/location_service.dart';
+import 'package:fastminute_flutter/features/cart/widgets/cart_bill_details_card.dart';
+import 'package:fastminute_flutter/features/cart/widgets/cart_free_delivery_bar.dart';
+import 'package:fastminute_flutter/features/checkout/widgets/checkout_savings_banner.dart';
+import 'package:fastminute_flutter/features/checkout/widgets/checkout_bottom_bar.dart';
+import 'package:fastminute_flutter/features/checkout/widgets/checkout_trust_badges.dart';
+import 'package:fastminute_flutter/features/admin/widgets/admin_stats_grid.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -56,7 +56,7 @@ export async function POST(request: Request) {
           customer = await prisma.user.create({
             data: {
               phone: `+91${cleanPhone}`,
-              name: customerName || 'FastKirana Customer',
+              name: customerName || 'FastMinute Customer',
               role: Role.USER
             }
           })
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
     const restaurantProduct = dbProducts.find((p) => p.restaurantId !== null)
     const restaurantId = restaurantProduct?.restaurantId || null
     const restaurant = restaurantProduct?.restaurant || null
-    const finalShopName = shopName || restaurant?.name || (restaurantId ? 'Restaurant Kitchen' : 'FastKirana Grocery')
+    const finalShopName = shopName || restaurant?.name || (restaurantId ? 'Restaurant Kitchen' : 'FastMinute Grocery')
 
     // 4. Calculate Subtotal & Totals
     let subtotal = 0

@@ -16,8 +16,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 class AppConfig {
   // ─── API Endpoints ──────────────────────────────────────────────
-  static const String primaryApiUrl = 'https://api.fastkirana.in';
-  static const String secondaryApiUrl = 'https://www.fastkirana.in';
+  static const String primaryApiUrl = 'https://api.fastminute.in';
+  static const String secondaryApiUrl = 'https://api.fastkirana.in';
 
   /// Primary URL, overridable at build time via --dart-define=API_BASE_URL=...
   static const String apiBaseUrl = String.fromEnvironment(
@@ -28,7 +28,7 @@ class AppConfig {
   /// Public storefront URL (web links shared in notifications, etc.)
   static const String webStorefrontUrl = String.fromEnvironment(
     'WEB_STOREFRONT_URL',
-    defaultValue: 'https://www.fastkirana.in',
+    defaultValue: 'https://www.fastminute.in',
   );
 
   // ─── Supabase Realtime ──────────────────────────────────────────
@@ -96,9 +96,9 @@ class AppConfig {
   }
 
   // ─── Build Information ──────────────────────────────────────────
-  static const String appName = 'FastKirana';
-  static String _runtimeAppVersion = '2.0.23';
-  static int _runtimeBuildNumber = 2023;
+  static const String appName = 'FastMinute';
+  static String _runtimeAppVersion = '2.0.33';
+  static int _runtimeBuildNumber = 2033;
 
   /// Dynamic app version (e.g. "2.0.23"), initialized from PackageInfo or defaulted from pubspec
   static String get appVersion => _runtimeAppVersion;

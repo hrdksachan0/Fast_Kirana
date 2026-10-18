@@ -1,11 +1,11 @@
 {
-    "name": "fastkirana_flutter",
-    "short_name": "fastkirana_flutter",
+    "name": "FastMinute",
+    "short_name": "FastMinute",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#047857",
-    "theme_color": "#047857",
-    "description": "A new Flutter project.",
+    "background_color": "#ffffff",
+    "theme_color": "#e20a22",
+    "description": "FastMinute - Fast Delivery in Minutes",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../core/services/logger_service.dart';

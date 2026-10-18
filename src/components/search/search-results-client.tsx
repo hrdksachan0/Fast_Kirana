@@ -47,10 +47,10 @@ export function SearchResultsClient({ products, query }: SearchResultsClientProp
       
       let outletName = rest?.name || (p as any).restaurantName
       if (!outletName) {
-        if (outletId === 'kirana-grocery') outletName = 'FastKirana Store'
+        if (outletId === 'kirana-grocery') outletName = 'FastMinute Store'
         else if (outletId === 'as-restaurant' || outletId === 'as-cafe') outletName = 'A.S Restaurant'
         else if (outletId === 'wedson' || outletId === 'restaurant-kitchen') outletName = 'Wedson Restaurant'
-        else outletName = isRest ? 'Restaurant Outlets' : 'FastKirana Store'
+        else outletName = isRest ? 'Restaurant Outlets' : 'FastMinute Store'
       }
 
       if (!map.has(outletId)) {
@@ -141,7 +141,7 @@ export function SearchResultsClient({ products, query }: SearchResultsClientProp
       const rest = (p as any).restaurant
       const isRest = Boolean(p.restaurantId || rest?.id || p.category?.slug === 'restaurant' || p.category?.slug === 'restaurant-food')
       
-      const outletName = isRest ? (getOutletName(p) || 'Restaurant') : 'FastKirana Store (Grocery)'
+      const outletName = isRest ? (getOutletName(p) || 'Restaurant') : 'FastMinute Store (Grocery)'
       const groupKey = isRest ? (p.restaurantId || rest?.id || outletName) : 'kirana-grocery'
 
       if (!groups[groupKey]) {

@@ -48,13 +48,13 @@ export function LockscreenAlertMockup({ orderId, deliveryMethod }: LockscreenAle
               <div className="h-5 w-5 rounded-md overflow-hidden shadow-sm shrink-0 border border-zinc-700/50">
                 <Image
                   src="/icons/icon-192.png"
-                  alt="FastKirana"
+                  alt="FastMinute"
                   width={20}
                   height={20}
                   className="object-cover"
                 />
               </div>
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">FASTKIRANA</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">FASTMINUTE</span>
               <span className="text-[10px] text-zinc-500 ml-auto">2m ago</span>
             </div>
             {/* Content row */}
@@ -72,7 +72,7 @@ export function LockscreenAlertMockup({ orderId, deliveryMethod }: LockscreenAle
               <div className="h-9 w-9 rounded-lg overflow-hidden border border-zinc-700/50 shadow-md shrink-0">
                 <Image
                   src="/icons/icon-192.png"
-                  alt="FastKirana Logo"
+                  alt="FastMinute Logo"
                   width={36}
                   height={36}
                   className="object-cover"
@@ -88,13 +88,13 @@ export function LockscreenAlertMockup({ orderId, deliveryMethod }: LockscreenAle
               <div className="h-5 w-5 rounded-md overflow-hidden shadow-sm shrink-0 border border-zinc-700/50">
                 <Image
                   src="/icons/icon-192.png"
-                  alt="FastKirana"
+                  alt="FastMinute"
                   width={20}
                   height={20}
                   className="object-cover"
                 />
               </div>
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">FASTKIRANA</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">FASTMINUTE</span>
               <span className="text-[10px] text-zinc-500 ml-auto">8m ago</span>
             </div>
             {/* Content row */}
@@ -112,7 +112,7 @@ export function LockscreenAlertMockup({ orderId, deliveryMethod }: LockscreenAle
               <div className="h-9 w-9 rounded-lg overflow-hidden border border-zinc-700/50 shadow-md shrink-0">
                 <Image
                   src="/icons/icon-192.png"
-                  alt="FastKirana Logo"
+                  alt="FastMinute Logo"
                   width={36}
                   height={36}
                   className="object-cover"
@@ -127,13 +127,13 @@ export function LockscreenAlertMockup({ orderId, deliveryMethod }: LockscreenAle
               <div className="h-5 w-5 rounded-md overflow-hidden shadow-sm shrink-0 border border-zinc-700/50">
                 <Image
                   src="/icons/icon-192.png"
-                  alt="FastKirana"
+                  alt="FastMinute"
                   width={20}
                   height={20}
                   className="object-cover"
                 />
               </div>
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">FASTKIRANA</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">FASTMINUTE</span>
               <span className="text-[10px] text-zinc-500 ml-auto">12m ago</span>
             </div>
             <div className="flex items-start gap-2.5">
@@ -148,7 +148,7 @@ export function LockscreenAlertMockup({ orderId, deliveryMethod }: LockscreenAle
               <div className="h-9 w-9 rounded-lg overflow-hidden border border-zinc-700/50 shadow-md shrink-0">
                 <Image
                   src="/icons/icon-192.png"
-                  alt="FastKirana Logo"
+                  alt="FastMinute Logo"
                   width={36}
                   height={36}
                   className="object-cover"

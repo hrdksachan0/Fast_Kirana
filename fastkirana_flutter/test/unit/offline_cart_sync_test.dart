@@ -1,10 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// ignore: depend_on_referenced_packages
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:dio/dio.dart';
-import 'package:fastkirana_flutter/data/models/product.dart';
-import 'package:fastkirana_flutter/data/models/cart.dart';
-import 'package:fastkirana_flutter/data/repositories/cart_repository.dart';
-import 'package:fastkirana_flutter/providers/cart_provider.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/data/models/cart.dart';
+import 'package:fastminute_flutter/data/repositories/cart_repository.dart';
+import 'package:fastminute_flutter/providers/cart_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -142,5 +144,117 @@ void main() {
     // Verify sync to server was attempted to reconcile
     expect(syncCallCount, greaterThanOrEqualTo(1));
   });
+
+  test('Atomic Cart Delta Persistence: cart envelope commits appliedOrderDeltas atomically with remaining items', () async {
+    final product = makeTestProduct('p104', 'Sugar', 45);
+    final notifier = CartNotifier(cartRepo);
+    notifier.addProduct(product, 3);
+    await Future.delayed(const Duration(milliseconds: 350));
+    expect(notifier.getQuantity('p104'), equals(3));
+
+    // Remove 1 unit with orderId marker
+    const testOrderId = 'ord_atomic_recheck_999';
+    await notifier.removeDraftItems([
+      {'productId': 'p104', 'quantity': 1}
+    ], orderId: testOrderId);
+
+    // Verify in-memory quantity is 2
+    expect(notifier.getQuantity('p104'), equals(2));
+
+    // Verify appliedOrderDeltas contains the orderId from the cart envelope
+    final appliedDeltas = await cartRepo.getAppliedOrderDeltas();
+    expect(appliedDeltas.contains(testOrderId), isTrue);
+
+    // Verify on fresh restart reading saved storage that appliedOrderDeltas is preserved
+    final restartedRepo = CartRepository(mockDio);
+    final restartedDeltas = await restartedRepo.getAppliedOrderDeltas();
+    expect(restartedDeltas.contains(testOrderId), isTrue);
+
+    final restartedItems = await restartedRepo.getLocalCart();
+    expect(restartedItems.length, equals(1));
+    expect(restartedItems.first.quantity, equals(2));
+  });
+
+  for (final throws in [false, true]) {
+    test('Rejected combined save rollback and retry (throws=$throws)', () async {
+      SharedPreferences.setMockInitialValues({});
+      SharedPreferencesStorePlatform.instance = OneShotCombinedFailStore(throws);
+
+      final repo = CartRepository(mockDio);
+      final notifier = CartNotifier(repo);
+      final product = makeTestProduct('p105', 'Atta', 60);
+
+      // Start cart 3
+      notifier.addProduct(product, 3);
+      await Future.delayed(const Duration(milliseconds: 350));
+      expect(notifier.getQuantity('p105'), equals(3));
+      final initialDisk = await repo.getLocalCart();
+      expect(initialDisk.first.quantity, equals(3));
+
+      // Arm failure for the combined checkout write
+      final store = SharedPreferencesStorePlatform.instance as OneShotCombinedFailStore;
+      store.arm();
+
+      // Purchase 1, attempting combined cart write which will fail once
+      final orderId = 'order_reject_test_${throws ? "throw" : "false"}';
+      var threw = false;
+      try {
+        await notifier.removeDraftItems([
+          {'productId': 'p105', 'quantity': 1}
+        ], orderId: orderId);
+      } catch (_) {
+        threw = true;
+      }
+      expect(threw, isTrue);
+
+      // After failure: UI and disk must remain 3
+      expect(notifier.getQuantity('p105'), equals(3));
+      final diskAfterFailure = await repo.getLocalCart();
+      expect(diskAfterFailure.first.quantity, equals(3));
+
+      // Applied-order lookup must NOT report the attempt as committed
+      final deltasAfterFailure = await repo.getAppliedOrderDeltas();
+      expect(deltasAfterFailure.contains(orderId), isFalse);
+
+      // Retry the same order in the same process without explicit preferences reload
+      await notifier.removeDraftItems([
+        {'productId': 'p105', 'quantity': 1}
+      ], orderId: orderId);
+
+      // Require UI/disk 2
+      expect(notifier.getQuantity('p105'), equals(2));
+      final diskAfterRetry = await repo.getLocalCart();
+      expect(diskAfterRetry.first.quantity, equals(2));
+      final deltasAfterRetry = await repo.getAppliedOrderDeltas();
+      expect(deltasAfterRetry.contains(orderId), isTrue);
+
+      // Restart / replay and require 2 again
+      final restartedRepo = CartRepository(mockDio);
+      final restartedDisk = await restartedRepo.getLocalCart();
+      expect(restartedDisk.first.quantity, equals(2));
+      final restartedDeltas = await restartedRepo.getAppliedOrderDeltas();
+      expect(restartedDeltas.contains(orderId), isTrue);
+    });
+  }
 }
+
+class OneShotCombinedFailStore extends InMemorySharedPreferencesStore {
+  final bool throws;
+  bool _armed = false;
+  bool _failed = false;
+  OneShotCombinedFailStore(this.throws) : super.withData({});
+
+  void arm() => _armed = true;
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (_armed && key.contains('local_cart') && !_failed) {
+      _failed = true;
+      if (throws) throw StateError('Injected platform storage write failure');
+      return false;
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
+
 

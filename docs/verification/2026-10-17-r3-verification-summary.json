@@ -1,0 +1,154 @@
+{
+  "review": "2026-10-17 R3",
+  "head": "f04f2a813f8dfb8acd747f06e1c428545d5d64ee",
+  "includes_uncommitted_changes": true,
+  "initial_source_hashes": {
+    "fastapi-backend/routers/admin_extended.py": "C0B1E41899B6FB36C9830B2B20C55BCC6B8223D7D0C6278A23B1F47688D88829",
+    "fastapi-backend/routers/cashfree_router.py": "5A14E03E185A8CB3F05B5F4F4FA1EFAE64980DAC5B98FBE013FFF0DD1D34907F",
+    "fastapi-backend/routers/orders.py": "F3FAEB761C71E0E1E9AD1D20B8C1787BC3BF2BF0E5CF940749C2EE04A5F6BC14",
+    "fastapi-backend/routers/websockets.py": "24C00482D541BF6F8502203F647C7D5E9898F4E538B26F7B3D1F56F068C9F9E6",
+    "fastapi-backend/tests/test_production_blockers_resolved.py": "9EF648243E751B13DD069C410866AC028B7BC76FE3E2C19F2A43084DEB046686",
+    "fastkirana_flutter/lib/providers/cart_provider.dart": "BC108F94E4790EC52E9F32C951598851E12C8C198C18EF79C323D1D2C584E950",
+    "fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart": "39A9F494522B69D7D67EBD48DE8CAA6300CD0338652B0AB8140BF0FFFD05C952"
+  },
+  "final_source_hashes": {
+    "fastapi-backend/routers/admin_extended.py": "C0B1E41899B6FB36C9830B2B20C55BCC6B8223D7D0C6278A23B1F47688D88829",
+    "fastapi-backend/routers/cashfree_router.py": "5A14E03E185A8CB3F05B5F4F4FA1EFAE64980DAC5B98FBE013FFF0DD1D34907F",
+    "fastapi-backend/routers/orders.py": "F3FAEB761C71E0E1E9AD1D20B8C1787BC3BF2BF0E5CF940749C2EE04A5F6BC14",
+    "fastapi-backend/routers/websockets.py": "24C00482D541BF6F8502203F647C7D5E9898F4E538B26F7B3D1F56F068C9F9E6",
+    "fastapi-backend/tests/test_production_blockers_resolved.py": "9EF648243E751B13DD069C410866AC028B7BC76FE3E2C19F2A43084DEB046686",
+    "fastkirana_flutter/lib/providers/cart_provider.dart": "BC108F94E4790EC52E9F32C951598851E12C8C198C18EF79C323D1D2C584E950",
+    "fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart": "39A9F494522B69D7D67EBD48DE8CAA6300CD0338652B0AB8140BF0FFFD05C952"
+  },
+  "changed_sources_during_review": [],
+  "python": {
+    "collected": 234,
+    "passed": 234,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "failed_tests": [],
+    "exit_code": 0,
+    "elapsed_seconds": 112.0,
+    "initial_hashes": {
+      "routers/admin_extended.py": "c0b1e41899b6fb36c9830b2b20c55bcc6b8223d7d0c6278a23b1f47688d88829",
+      "routers/cashfree_router.py": "5a14e03e185a8cb3f05b5f4f4fa1efae64980dac5b98fbe013fff0dd1d34907f",
+      "routers/orders.py": "f3faeb761c71e0e1e9ad1d20b8c1787bc3bf2bf0e5cf940749c2ee04a5f6bc14",
+      "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+      "routers/websockets.py": "24c00482d541bf6f8502203f647c7d5e9898f4e538b26f7b3d1f56f068c9f9e6",
+      "utils/firebase.py": "e8df7630b7145a74307417bf5bc7af76a1ad3e3cfb8b578111ae0ea9fa74e534",
+      "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+      "tests/test_production_blockers_resolved.py": "9ef648243e751b13dd069c410866ac028b7bc76fe3e2c19f2a43084deb046686",
+      "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+    },
+    "final_hashes": {
+      "routers/admin_extended.py": "c0b1e41899b6fb36c9830b2b20c55bcc6b8223d7d0c6278a23b1f47688d88829",
+      "routers/cashfree_router.py": "5a14e03e185a8cb3f05b5f4f4fa1efae64980dac5b98fbe013fff0dd1d34907f",
+      "routers/orders.py": "f3faeb761c71e0e1e9ad1d20b8c1787bc3bf2bf0e5cf940749c2ee04a5f6bc14",
+      "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+      "routers/websockets.py": "24c00482d541bf6f8502203f647c7d5e9898f4e538b26f7b3d1f56f068c9f9e6",
+      "utils/firebase.py": "e8df7630b7145a74307417bf5bc7af76a1ad3e3cfb8b578111ae0ea9fa74e534",
+      "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+      "tests/test_production_blockers_resolved.py": "9ef648243e751b13dd069c410866ac028b7bc76fe3e2c19f2a43084deb046686",
+      "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+    },
+    "scope": "SQLite; dotenv disabled; dummy credentials; external network blocked; unmocked migration_full gateway/KOT suite excluded"
+  },
+  "flutter_full": {
+    "log": "2026-10-17-r3-flutter.log",
+    "exit_code": 0,
+    "failed": 0,
+    "passed": 300
+  },
+  "flutter_targeted": {
+    "exit_code": 0,
+    "temporary_test_removed": true,
+    "failed": 0,
+    "observations": [
+      {
+        "case": "second-save",
+        "throws": false,
+        "durableDraft": "first-accepted"
+      },
+      {
+        "case": "second-save",
+        "throws": true,
+        "durableDraft": "first-accepted"
+      },
+      {
+        "case": "completion-ack",
+        "persistedAck": false,
+        "starting": 3,
+        "ordered": 1,
+        "final": 2,
+        "expectedCorrect": 2,
+        "posts": 2
+      },
+      {
+        "case": "completion-ack",
+        "persistedAck": true,
+        "starting": 3,
+        "ordered": 1,
+        "final": 3,
+        "expectedCorrect": 3,
+        "posts": 1
+      },
+      {
+        "case": "local-hydration",
+        "clear": false,
+        "server": [
+          "newB",
+          "oldA"
+        ],
+        "ui": [
+          "newB",
+          "oldA"
+        ],
+        "local": [
+          "newB",
+          "oldA"
+        ],
+        "pending": false
+      },
+      {
+        "case": "local-hydration",
+        "clear": true,
+        "server": [],
+        "ui": [],
+        "local": [],
+        "pending": false
+      },
+      {
+        "case": "pending-key-await",
+        "server": [
+          "oldA",
+          "newB"
+        ],
+        "ui": [
+          "oldA",
+          "newB"
+        ],
+        "pending": false,
+        "version": 1,
+        "ack": 1
+      }
+    ],
+    "existing_offline_tests": 3,
+    "review_assertions": 7,
+    "passed": 10
+  },
+  "dart_analysis": {
+    "exit_code": 0,
+    "files": 8,
+    "result": "No issues found"
+  },
+  "node_and_typescript": "Not rerun in R3; R2 results 147 unit tests passed and typecheck exit 0",
+  "backend_probe_observations": 21,
+  "backend_probes_exit_code": 0,
+  "findings": [
+    "P1 admin status handler missing PREPARING enum",
+    "P1 latent duplicate-line approval overselling after enum fixed",
+    "P2 ambiguous encoded product ID resolves different SKU"
+  ],
+  "scope": "Offline regression review; fake backend ORM/cache/task dependencies; two explicitly isolated unreachable source-body cases; no production or deployment verification"
+}

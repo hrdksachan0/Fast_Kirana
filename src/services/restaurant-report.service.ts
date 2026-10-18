@@ -99,7 +99,7 @@ export class RestaurantReportService {
           JOIN products p ON oi."productId" = p.id
           WHERE p."restaurantId" = ${restaurantId}
         ))
-        AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
+        AND ("shopName" IS NULL OR ("shopName" NOT IN ('FastKirana Dark Store', 'FastKirana Grocery', 'FastMinute Dark Store', 'FastMinute Grocery')))
         AND "createdAt" >= ${start}
         AND "createdAt" <= ${end}
       ORDER BY "createdAt" ASC
@@ -119,7 +119,7 @@ export class RestaurantReportService {
       LEFT JOIN categories c ON p."categoryId" = c.id
       WHERE o.status::text = 'DELIVERED'
         AND (o."restaurantId" = ${restaurantId} OR p."restaurantId" = ${restaurantId})
-        AND ("shopName" IS NULL OR ("shopName" != 'FastKirana Dark Store' AND "shopName" != 'FastKirana Grocery'))
+        AND ("shopName" IS NULL OR ("shopName" NOT IN ('FastKirana Dark Store', 'FastKirana Grocery', 'FastMinute Dark Store', 'FastMinute Grocery')))
         AND o."createdAt" >= ${start}
         AND o."createdAt" <= ${end}
     `

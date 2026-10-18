@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:fastkirana_flutter/data/models/product.dart';
-import 'package:fastkirana_flutter/features/navratri/navratri_data.dart';
-import 'package:fastkirana_flutter/features/navratri/navratri_shopping_section.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/features/navratri/navratri_data.dart';
+import 'package:fastminute_flutter/features/navratri/navratri_shopping_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

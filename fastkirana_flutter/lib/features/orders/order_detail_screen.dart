@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -29,7 +29,7 @@ class OrderDetailScreen extends StatelessWidget {
   }
 
   Future<void> _openWhatsApp(String phone, String orderId) async {
-    final message = Uri.encodeComponent('Hi FastKirana Support, I need help with my Order #$orderId');
+    final message = Uri.encodeComponent('Hi FastMinute Support, I need help with my Order #$orderId');
     final uri = Uri.parse('https://wa.me/$phone?text=$message');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -412,7 +412,7 @@ class OrderDetailScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     isPickupOrder
-                        ? 'FastKirana Express Darkstore Hub'
+                        ? 'FastMinute Express Darkstore Hub'
                         : (order.customerAddress ?? 'Express Delivery Address'),
                     style: GoogleFonts.inter(
                       fontSize: 12.5,

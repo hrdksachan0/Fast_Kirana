@@ -295,7 +295,7 @@ export function AdminBulkUpdate({ categories, onUpdateCompleted }: AdminBulkUpda
                   className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                 >
                   <option value="ALL">🌐 All Store & Outlets</option>
-                  <option value="GROCERY">🏪 FastKirana Grocery Mart Only</option>
+                  <option value="GROCERY">🏪 FastMinute Grocery Mart Only</option>
                   {restaurants.map((r) => (
                     <option key={r.id} value={r.id}>🍽️ {r.name} (Dishes Only)</option>
                   ))}

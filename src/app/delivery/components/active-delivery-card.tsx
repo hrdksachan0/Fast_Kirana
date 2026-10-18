@@ -210,11 +210,11 @@ export default function ActiveDeliveryCard({
                 Pickup Source
               </span>
               <span className="text-xs font-bold text-text-primary block mt-0.5">
-                {order.shopName || '🏪 FastKirana Darkstore Hub'}
+                {order.shopName || '🏪 FastMinute Darkstore Hub'}
               </span>
               {order.companionOrder && (
                 <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 block mt-1">
-                  + {order.companionOrder.shopName || 'FastKirana Kitchen'}
+                  + {order.companionOrder.shopName || 'FastMinute Kitchen'}
                 </span>
               )}
             </div>

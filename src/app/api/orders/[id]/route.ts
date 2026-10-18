@@ -93,10 +93,10 @@ export async function GET(
             SELECT name, phone FROM users WHERE email = 'delivery@fastkirana.com' OR role::text = 'DELIVERY' LIMIT 1
           `
           if (mainRider.length > 0) {
-            name = mainRider[0].name || 'FastKirana Delivery Executive'
+            name = mainRider[0].name || 'FastMinute Delivery Executive'
             phone = mainRider[0].phone || '+919696503759'
           } else {
-            name = 'FastKirana Delivery Executive'
+            name = 'FastMinute Delivery Executive'
             phone = '+919696503759'
           }
         }
@@ -116,7 +116,7 @@ export async function GET(
       `
       if (mainRider.length > 0) {
         deliveryUser = {
-          name: mainRider[0].name || 'FastKirana Delivery Executive',
+          name: mainRider[0].name || 'FastMinute Delivery Executive',
           phone: mainRider[0].phone || '+919696503759'
         }
       }
@@ -163,10 +163,10 @@ export async function GET(
                   SELECT name, phone FROM users WHERE role::text = 'DELIVERY' LIMIT 1
                 `
                 if (mainRider.length > 0) {
-                  name = mainRider[0].name || 'FastKirana Delivery Executive'
+                  name = mainRider[0].name || 'FastMinute Delivery Executive'
                   phone = mainRider[0].phone || '+919696503759'
                 } else {
-                  name = 'FastKirana Delivery Executive'
+                  name = 'FastMinute Delivery Executive'
                   phone = '+919696503759'
                 }
               }
@@ -1063,7 +1063,7 @@ export async function PATCH(
 
       const displayStatus = status ? (statusLabels[status] || status) : 'Updated'
       const statusTitle = `Order #${baseOrderNo}: ${displayStatus}`
-      const statusBody = `Your FastKirana order #${baseOrderNo} is now ${displayStatus}.`
+      const statusBody = `Your FastMinute order #${baseOrderNo} is now ${displayStatus}.`
 
       const orderTag = `order-${baseOrderNo}`
 

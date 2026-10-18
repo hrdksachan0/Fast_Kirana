@@ -339,7 +339,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
       // 1. Tab 1: Financial Summary Sheet
       const summaryRows = [
-        ['FastKirana Financial Report', ''],
+        ['FastMinute Financial Report', ''],
         ['Report Type', `${scopeLabel} Financials`],
         ['Date Range', `${startDate} to ${endDate}`],
         ['Generated On', new Date().toLocaleString()],
@@ -407,7 +407,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
         return [
           itemId,
           prod.name,
-          prod.vendor || 'Direct / FastKirana',
+          prod.vendor || 'Direct / FastMinute',
           prod.categoryName || '-',
           stockVal,
           prod.price || 0,
@@ -436,7 +436,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
       targetProducts.forEach((prod: TopProduct) => {
         if (!prod.quantity || prod.quantity <= 0) return // Skip unsold items from vendor payable ledger
-        const vName = (prod.vendor && prod.vendor.trim()) || 'Direct / FastKirana'
+        const vName = (prod.vendor && prod.vendor.trim()) || 'Direct / FastMinute'
         if (!vendorSummaryMap[vName]) {
           vendorSummaryMap[vName] = {
             vendor: vName,
@@ -491,7 +491,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       XLSX.utils.book_append_sheet(wb, wsProduct, 'Products')
 
       // Save Workbook
-      XLSX.writeFile(wb, `FastKirana_${scopeLabel}_Report_${startDate}_to_${endDate}.xlsx`)
+      XLSX.writeFile(wb, `FastMinute_${scopeLabel}_Report_${startDate}_to_${endDate}.xlsx`)
       toast.success(`${scopeLabel} Excel report exported successfully!`)
     } catch (e) {
       console.error('Error exporting Excel report:', e)
@@ -672,7 +672,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
         XLSX.utils.book_append_sheet(wb, wsR, sheetName)
       }
 
-      XLSX.writeFile(wb, `FastKirana_${scopeLabel}_${startDate}_to_${endDate}.xlsx`)
+      XLSX.writeFile(wb, `FastMinute_${scopeLabel}_${startDate}_to_${endDate}.xlsx`)
       toast.success(`Order-wise Excel exported! (${targetOrders.length} orders)`, { id: 'order-excel' })
     } catch (e) {
       console.error('Error exporting order-wise Excel:', e)
@@ -688,7 +688,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
     try {
       let csv = '\uFEFF' // UTF-8 Byte Order Mark for Excel
       const scopeLabel = scope === 'grocery' ? 'GROCERY WISE' : scope === 'restaurant' ? 'RESTAURANTS WISE' : 'ALL FINANCIAL'
-      csv += `FASTKIRANA ${scopeLabel} REPORT\n`
+      csv += `FASTMINUTE ${scopeLabel} REPORT\n`
       csv += `Date Range,"${startDate} to ${endDate}"\n`
       csv += `Report Type,"${scopeLabel}"\n`
       csv += `Filtered Category,"${selectedCategory === 'all' ? 'All Categories (Full Store)' : selectedCategory}"\n`
@@ -731,7 +731,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
       // 2. Category-Wise Financial Breakdown
       csv += `--- ${scope === 'restaurant' ? 'OUTLET-WISE RESTAURANTS BREAKDOWN' : 'CATEGORY-WISE FINANCIAL BREAKDOWN'} ---\n`
-      csv += `${scope === 'restaurant' ? 'Restaurant Name' : 'Category Name'},Type,Units Sold,Total Sales (INR),${scope === 'restaurant' ? 'Restaurant Payout Share (INR)' : 'Product Cost (INR)'},${scope === 'restaurant' ? 'FastKirana Commission (INR)' : 'Net Profit (INR)'},Margin (%)\n`
+      csv += `${scope === 'restaurant' ? 'Restaurant Name' : 'Category Name'},Type,Units Sold,Total Sales (INR),${scope === 'restaurant' ? 'Restaurant Payout Share (INR)' : 'Product Cost (INR)'},${scope === 'restaurant' ? 'FastMinute Commission (INR)' : 'Net Profit (INR)'},Margin (%)\n`
       targetCategories.forEach(cat => {
         const catCost = cat.cost ?? (cat.sales - cat.profit)
         const margin = cat.sales > 0 ? ((cat.profit / cat.sales) * 100).toFixed(1) : '0'
@@ -753,7 +753,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.setAttribute('download', `FastKirana_${scopeLabel.replace(/\s+/g, '_')}_${startDate}_to_${endDate}.csv`)
+      link.setAttribute('download', `FastMinute_${scopeLabel.replace(/\s+/g, '_')}_${startDate}_to_${endDate}.csv`)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

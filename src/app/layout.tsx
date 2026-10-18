@@ -39,12 +39,14 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'Fast Kirana - Online Grocery Delivery in Ghatampur, Kanpur',
-  description: 'Order groceries, fresh milk, vegetables, dairy, snacks, food & daily essentials online in Ghatampur, Kanpur Nagar. Fast doorstep delivery with COD & UPI support.',
+  title: 'FastMinute - Online Grocery & Food Delivery in Minutes',
+  description: 'Order groceries, fresh milk, vegetables, dairy, snacks, food & daily essentials online in Ghatampur, Kanpur Nagar. Fast doorstep delivery in minutes with COD & UPI support.',
   keywords: [
+    'FastMinute',
+    'Fast Minute',
+    'FastMinute Ghatampur',
     'grocery delivery in Ghatampur',
     'online grocery store Kanpur',
-    'Fast Kirana Ghatampur',
     'online kirana shop Ghatampur',
     'buy milk online Ghatampur',
     'fresh vegetables delivery Ghatampur',
@@ -54,18 +56,18 @@ export const metadata: Metadata = {
     'fast delivery Ghatampur'
   ],
   manifest: '/manifest.json?v=5',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastminute.in'),
   alternates: {
-    canonical: 'https://www.fastkirana.in',
+    canonical: 'https://www.fastminute.in',
   },
   appLinks: {
     android: {
       package: 'com.fastkirana.app',
-      app_name: 'FastKirana: Deliver in Minutes',
+      app_name: 'FastMinute: Deliver in Minutes',
       url: 'https://play.google.com/store/apps/details?id=com.fastkirana.app',
     },
     web: {
-      url: 'https://www.fastkirana.in/',
+      url: 'https://www.fastminute.in/',
       should_fallback: true,
     },
   },
@@ -81,16 +83,16 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Fast Kirana - Online Grocery Delivery in Ghatampur, Kanpur',
-    description: 'Order groceries online and get them delivered fast in Ghatampur, Kanpur Nagar.',
-    url: 'https://www.fastkirana.in',
-    siteName: 'Fast Kirana',
+    title: 'FastMinute - Online Grocery & Food Delivery in Minutes',
+    description: 'Order groceries and food online and get them delivered in minutes in Ghatampur, Kanpur Nagar.',
+    url: 'https://www.fastminute.in',
+    siteName: 'FastMinute',
     images: [
       {
         url: '/brand/fastkirana_app_icon.png?v=3',
         width: 1024,
         height: 1024,
-        alt: 'Fast Kirana Ghatampur Logo',
+        alt: 'FastMinute Logo',
         type: 'image/png',
       },
     ],
@@ -99,8 +101,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Fast Kirana - Online Grocery Delivery in Ghatampur',
-    description: 'Order groceries online and get them delivered fast in Ghatampur, Kanpur.',
+    title: 'FastMinute - Online Delivery in Minutes',
+    description: 'Order groceries and food online and get them delivered in minutes.',
     images: ['/brand/fastkirana_app_icon.png?v=3'],
   },
 }

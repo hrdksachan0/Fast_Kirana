@@ -478,11 +478,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final isCancelled = order.status == OrderStatus.cancelled;
     final isActive = !isDelivered && !isCancelled;
     final items = order.items ?? [];
-    final rawShopName = order.shopName?.isNotEmpty == true ? order.shopName! : 'FastKirana Mart';
+    final rawShopName = order.shopName?.isNotEmpty == true ? order.shopName! : 'FastMinute Mart';
     final isDarkstoreOrGrocery = rawShopName.toLowerCase().contains('dark') ||
         rawShopName.toLowerCase().contains('grocery') ||
-        rawShopName.toLowerCase().contains('kirana store');
-    final shopName = isDarkstoreOrGrocery ? 'FastKirana Mart' : rawShopName;
+        rawShopName.toLowerCase().contains('kirana') ||
+        rawShopName.toLowerCase().contains('fastminute');
+    final shopName = isDarkstoreOrGrocery ? 'FastMinute Mart' : rawShopName;
 
     Color statusColor = AppDesignSystem.blue600;
     Color statusBg = AppDesignSystem.blue50;

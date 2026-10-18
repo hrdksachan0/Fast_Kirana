@@ -15,7 +15,7 @@ class SponsoredAdCard extends StatelessWidget {
 
   const SponsoredAdCard({
     super.key,
-    this.title = '⚡ FastKirana Central Helpline & WhatsApp',
+    this.title = '⚡ FastMinute Central Helpline & WhatsApp',
     this.subtitle = 'For live order queries, custom additions, or direct assistance.',
     this.promoCode,
     this.discountText = 'EXCLUSIVE PROMO',

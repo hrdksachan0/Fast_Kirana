@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/core/utils/app_connectivity.dart';
+import 'package:fastminute_flutter/core/utils/app_connectivity.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/features/checkout/widgets/checkout_bottom_bar.dart';
+import 'package:fastminute_flutter/features/checkout/widgets/checkout_bottom_bar.dart';
 
 void main() {
   testWidgets('CheckoutBottomBar renders inline offline banner and triggers retry without SnackBar', (tester) async {

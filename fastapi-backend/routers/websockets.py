@@ -533,7 +533,7 @@ async def root_websocket(
 
     await manager.connect(websocket, "general")
     try:
-        await websocket.send_text(json.dumps({"event": "CONNECTED", "message": "Connected to FastKirana WebSocket Server"}))
+        await websocket.send_text(json.dumps({"event": "CONNECTED", "message": "Connected to FastMinute WebSocket Server"}))
         while True:
             data = await websocket.receive_text()
             if data == "ping" or data == '{"type":"ping"}':
@@ -761,7 +761,8 @@ async def sse_single_order_stream(
         )
 
     # Authoritative role from database
-    user_role = str(db_user.role or "").upper()
+    raw_role = getattr(db_user.role, "value", db_user.role)
+    user_role = str(raw_role or "").split(".")[-1].upper()
 
     # Verify order existence and access permissions
     stmt = select(Order).where(Order.id == clean_oid)

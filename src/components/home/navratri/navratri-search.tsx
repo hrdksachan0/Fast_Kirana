@@ -24,7 +24,7 @@ export function NavratriSearch({
       type="button"
       className={styles.search}
       onClick={onSearch}
-      aria-label="Search FastKirana products"
+      aria-label="Search FastMinute products"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}

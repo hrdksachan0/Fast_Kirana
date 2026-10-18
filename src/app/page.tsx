@@ -6,10 +6,10 @@ import { Metadata } from 'next'
 import { StorefrontClient } from '@/components/home/storefront-client'
 
 export const metadata: Metadata = {
-  title: 'Fast Kirana - Online Grocery & Restaurant Delivery in Ghatampur, Kanpur',
-  description: 'Fast Kirana delivers fresh grocery staples, daily dairy items, fruits, vegetables, and delicious meals from partner restaurants in Ghatampur, Kanpur in minutes.',
+  title: 'FastMinute - Online Grocery & Food Delivery in Minutes',
+  description: 'FastMinute delivers fresh grocery staples, daily dairy items, fruits, vegetables, and delicious meals from partner restaurants in Ghatampur, Kanpur in minutes.',
   alternates: {
-    canonical: 'https://www.fastkirana.in',
+    canonical: 'https://www.fastminute.in',
   }
 }
 
@@ -403,7 +403,7 @@ const getCachedRestaurants = unstable_cache(
       }
     })
   },
-  ['storefront-restaurants-v4'],
+  ['storefront-restaurants-v5'],
   { revalidate: 86400, tags: ['restaurants'] }
 )
 
@@ -616,11 +616,11 @@ export default async function Home() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Store",
-            "name": "Fast Kirana",
-            "image": "https://www.fastkirana.in/brand/fastkirana_app_icon.png",
+            "name": "FastMinute",
+            "image": "https://www.fastminute.in/brand/fastkirana_app_icon.png",
             "description": "Fast online grocery, daily dairy items, fresh vegetables, and cafe food delivery service in Ghatampur, Kanpur Nagar.",
             "telephone": "+917054470303",
-            "url": "https://www.fastkirana.in",
+            "url": "https://www.fastminute.in",
             "priceRange": "$$",
             "address": {
               "@type": "PostalAddress",

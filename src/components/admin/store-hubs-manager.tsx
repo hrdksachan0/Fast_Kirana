@@ -702,7 +702,7 @@ export function StoreHubsManager({
               <div className="text-center mb-4">
                 <h3 className="text-base font-black text-text-primary">Create New Store Hub</h3>
                 <p className="text-xs text-text-secondary mt-0.5">
-                  Expand FastKirana to a new city or operational territory with its own Dark Store and location checks.
+                  Expand FastMinute to a new city or operational territory with its own Dark Store and location checks.
                 </p>
               </div>
 
@@ -864,7 +864,7 @@ export function StoreHubsManager({
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. FastKirana Dark Store Counter 1"
+                      placeholder="e.g. FastMinute Dark Store Counter 1"
                       value={newHubPickupAddress}
                       onChange={(e) => setNewHubPickupAddress(e.target.value)}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-border/80 bg-background text-text-primary"
@@ -891,7 +891,7 @@ export function StoreHubsManager({
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. fastkirana@upi"
+                      placeholder="e.g. fastminute@upi"
                       value={newHubUpiVpa}
                       onChange={(e) => setNewHubUpiVpa(e.target.value)}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-border/80 bg-background text-text-primary"

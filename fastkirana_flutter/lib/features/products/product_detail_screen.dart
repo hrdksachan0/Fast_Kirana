@@ -190,8 +190,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     HapticFeedback.lightImpact();
     final priceStr = '₹${activePrice.toStringAsFixed(0)}';
     final productSlug = p.slug.isNotEmpty ? p.slug : p.id;
-    final shareText = '''🛒 Check out ${p.name} ($priceStr) on FastKirana!\n\n⚡ Fast Express Delivery in Ghatampur!\nOrder now: https://www.fastkirana.in/products/$productSlug''';
-    Share.share(shareText, subject: 'Buy ${p.name} on FastKirana');
+    final shareText = '''🛒 Check out ${p.name} ($priceStr) on FastMinute!\n\n⚡ Fast Express Delivery in Ghatampur!\nOrder now: https://www.fastkirana.in/products/$productSlug''';
+    Share.share(shareText, subject: 'Buy ${p.name} on FastMinute');
   }
 
   @override
@@ -754,7 +754,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         children: [
                           _buildQualityRow('⚡ Superfast express delivery from local darkstore'),
                           const Divider(height: 14, color: AppDesignSystem.surfaceMuted),
-                          _buildQualityRow('🛡️ 100% Genuine & Quality assured by FastKirana'),
+                          _buildQualityRow('🛡️ 100% Genuine & Quality assured by FastMinute'),
                           const Divider(height: 14, color: AppDesignSystem.surfaceMuted),
                           _buildQualityRow('🔒 100% Secure Checkout via UPI & Cards'),
                         ],

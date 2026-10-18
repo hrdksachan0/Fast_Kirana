@@ -284,7 +284,7 @@ export function useAdminProducts({
     if (!template) return
 
     let categoryId = ''
-    if (template.categoryName === 'FastKirana Cafe') {
+    if (template.categoryName === 'FastMinute Cafe') {
       const cafeCat = categories.find((c) => c.slug === 'cafe')
       categoryId = cafeCat?.id || ''
       handleNewProductTypeChange('cafe')

@@ -184,7 +184,7 @@ export function MobileOrderCard({
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-xs">🛵</span>
             <span className="font-extrabold text-emerald-800 dark:text-emerald-300 truncate">
-              {o.deliveryUser?.name || o.deliveryBoyName || 'FastKirana Rider'}
+              {o.deliveryUser?.name || o.deliveryBoyName || 'FastMinute Rider'}
             </span>
             {(o.deliveryUser?.phone || o.deliveryBoyPhone) && (
               <span className="text-[10px] text-text-muted font-mono font-semibold">

@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 class DishTimingStatus {
   final bool isAvailableNow;
   final String? formattedTimeSlot;

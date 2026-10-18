@@ -10,8 +10,8 @@ export const revalidate = 0
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'My Account - FastKirana',
-    description: 'Manage your FastKirana account. View orders, addresses, and profile settings.',
+    title: 'My Account - FastMinute',
+    description: 'Manage your FastMinute account. View orders, addresses, and profile settings.',
   }
 }
 

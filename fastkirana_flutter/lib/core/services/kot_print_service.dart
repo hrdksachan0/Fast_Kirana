@@ -190,6 +190,9 @@ class KotPrintService {
         (order['readableId']?.toString().toUpperCase().endsWith('-R') ?? false) ||
         (order['shopName'] != null &&
             order['shopName'].toString().isNotEmpty &&
+            order['shopName'] != 'FastMinute Grocery' &&
+            order['shopName'] != 'FastMinute Dark Store' &&
+            order['shopName'] != 'FastMinute Store' &&
             order['shopName'] != 'FastKirana Grocery' &&
             order['shopName'] != 'FastKirana Dark Store' &&
             order['shopName'] != 'FastKirana Store');
@@ -210,6 +213,9 @@ class KotPrintService {
         final restId = (it['restaurantId'] ?? it['restaurant_id'])?.toString();
         final isRestShop = shop != null &&
             shop.isNotEmpty &&
+            shop != 'FastMinute Grocery' &&
+            shop != 'FastMinute Dark Store' &&
+            shop != 'FastMinute Store' &&
             shop != 'FastKirana Grocery' &&
             shop != 'FastKirana Dark Store' &&
             shop != 'FastKirana Store';

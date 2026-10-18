@@ -1,0 +1,603 @@
+
+┌─────────────────────────────────────────────────────────┐
+│ A new version of Flutter is available!                  │
+│                                                         │
+│ To update to the latest version, run "flutter upgrade". │
+└─────────────────────────────────────────────────────────┘
+00:00 +0: loading D:/Fastkirana/fastkirana_flutter/test/cart_conflict_test.dart
+00:00 +0: D:/Fastkirana/fastkirana_flutter/test/cart_conflict_test.dart: Restaurant Utility & Conflict Tests isCafeProduct correctly identifies food vs grocery
+00:00 +1: D:/Fastkirana/fastkirana_flutter/test/cart_conflict_test.dart: Restaurant Utility & Conflict Tests getOutletName returns correct outlet name
+00:00 +2: D:/Fastkirana/fastkirana_flutter/test/cart_conflict_test.dart: Restaurant Utility & Conflict Tests CartNotifier handles conflict, keeping grocery items safe
+00:06 +3: D:/Fastkirana/fastkirana_flutter/test/core/services/secure_storage_test.dart: SecureStorage readMany returns map of keys present in SharedPreferences
+00:06 +4: D:/Fastkirana/fastkirana_flutter/test/core/services/secure_storage_test.dart: SecureStorage read returns null for missing key
+00:06 +5: D:/Fastkirana/fastkirana_flutter/test/core/services/secure_storage_test.dart: SecureStorage read reads from SharedPreferences when present
+00:06 +6: D:/Fastkirana/fastkirana_flutter/test/core/services/secure_storage_test.dart: SecureStorage delete removes key from SharedPreferences
+00:06 +7: D:/Fastkirana/fastkirana_flutter/test/core/services/secure_storage_test.dart: SecureStorage delete does not throw on missing key
+00:06 +8: D:/Fastkirana/fastkirana_flutter/test/core/services/secure_storage_test.dart: SecureStorage write writes value without throwing
+00:06 +9: D:/Fastkirana/fastkirana_flutter/test/core/services/secure_storage_test.dart: SecureStorage deleteAll does not throw with no keys present
+00:06 +10: D:/Fastkirana/fastkirana_flutter/test/core/services/secure_storage_test.dart: SecureStorage deleteAll does not throw when secure storage has values
+00:09 +11: D:/Fastkirana/fastkirana_flutter/test/data/order_parsing_test.dart: Order.fromJson parses full order with all fields
+00:09 +12: D:/Fastkirana/fastkirana_flutter/test/data/order_parsing_test.dart: Order.fromJson handles empty json with safe defaults
+00:09 +13: D:/Fastkirana/fastkirana_flutter/test/data/order_parsing_test.dart: Order.fromJson handles missing optional fields gracefully
+00:09 +14: D:/Fastkirana/fastkirana_flutter/test/data/order_parsing_test.dart: OrderStatus parsing maps status strings via fromJson
+00:09 +15: D:/Fastkirana/fastkirana_flutter/test/data/order_parsing_test.dart: Order.address getter extracts coordinates from addressRaw
+00:09 +16: D:/Fastkirana/fastkirana_flutter/test/data/order_parsing_test.dart: Order.address getter falls back to delivery coordinates when addressRaw is absent
+00:09 +17: D:/Fastkirana/fastkirana_flutter/test/data/order_parsing_test.dart: Order.copyWith creates copy with overridden fields
+00:09 +18: D:/Fastkirana/fastkirana_flutter/test/data/order_parsing_test.dart: combined / sub-orders parses isCombined from combinedId
+00:30 +19: D:/Fastkirana/fastkirana_flutter/test/e2e/checkout_e2e_integration_test.dart: Full E2E Checkout & Live Delivery Tracking Integration Test Suite Step 1 & 2: Cart Assembly -> Apply Coupon Code -> Bill Verification
+00:31 +20: D:/Fastkirana/fastkirana_flutter/test/e2e/checkout_e2e_integration_test.dart: Full E2E Checkout & Live Delivery Tracking Integration Test Suite Step 1 & 2: Cart Assembly -> Apply Coupon Code -> Bill Verification
+00:31 +21: D:/Fastkirana/fastkirana_flutter/test/e2e/checkout_e2e_integration_test.dart: Full E2E Checkout & Live Delivery Tracking Integration Test Suite Step 1 & 2: Cart Assembly -> Apply Coupon Code -> Bill Verification
+00:33 +22: D:/Fastkirana/fastkirana_flutter/test/e2e/checkout_e2e_integration_test.dart: Full E2E Checkout & Live Delivery Tracking Integration Test Suite Step 3: Online Payment Initiation & Simulated Cashfree Success Flow
+00:33 +23: D:/Fastkirana/fastkirana_flutter/test/e2e/checkout_e2e_integration_test.dart: Full E2E Checkout & Live Delivery Tracking Integration Test Suite Step 4: Live Delivery Tracking Screen Lifecycle (Placed -> On the Way -> Delivered)
+00:34 +24: D:/Fastkirana/fastkirana_flutter/test/e2e/checkout_e2e_integration_test.dart: Full E2E Checkout & Live Delivery Tracking Integration Test Suite Step 4: Live Delivery Tracking Screen Lifecycle (Placed -> On the Way -> Delivered)
+00:34 +25: D:/Fastkirana/fastkirana_flutter/test/e2e/checkout_e2e_integration_test.dart: Full E2E Checkout & Live Delivery Tracking Integration Test Suite Step 4: Live Delivery Tracking Screen Lifecycle (Placed -> On the Way -> Delivered)
+00:34 +26: D:/Fastkirana/fastkirana_flutter/test/models/order_model_test.dart: Order & OrderItem Serialization Tests Order correctly handles ADMIN_PENDING status and approval flow
+00:34 +27: D:/Fastkirana/fastkirana_flutter/test/models/order_model_test.dart: Order & OrderItem Serialization Tests Order correctly handles ADMIN_PENDING status and approval flow
+00:35 +28: D:/Fastkirana/fastkirana_flutter/test/models/product_model_test.dart: Product Model Tests Product correctly parses from and serializes to JSON
+00:35 +29: D:/Fastkirana/fastkirana_flutter/test/models/product_model_test.dart: Product Model Tests Product handles variants and addons correctly
+00:35 +30: D:/Fastkirana/fastkirana_flutter/test/models/product_model_test.dart: Product Model Tests Product parses numeric fields safely with fallbacks
+00:37 +31: D:/Fastkirana/fastkirana_flutter/test/models/restaurant_model_test.dart: Restaurant Model & Schedule Tests Restaurant parses standard JSON correctly
+00:37 +32: D:/Fastkirana/fastkirana_flutter/test/models/restaurant_model_test.dart: Restaurant Model & Schedule Tests Restaurant handles string encoded cuisineTags correctly
+00:37 +33: D:/Fastkirana/fastkirana_flutter/test/models/restaurant_model_test.dart: Restaurant Model & Schedule Tests Restaurant parses latitude/longitude aliases safely
+00:37 +34: D:/Fastkirana/fastkirana_flutter/test/models/restaurant_model_test.dart: Restaurant Model & Schedule Tests Restaurant parses menuSections both as List and JSON string
+00:39 +35: D:/Fastkirana/fastkirana_flutter/test/models/store_settings_test.dart: StoreSettings Model Tests StoreSettings provides correct production defaults
+00:39 +36: D:/Fastkirana/fastkirana_flutter/test/models/store_settings_test.dart: StoreSettings Model Tests StoreSettings parses custom configuration from JSON safely
+00:39 +37: D:/Fastkirana/fastkirana_flutter/test/models/store_settings_test.dart: StoreSettings Model Tests StoreSettings falls back gracefully on null or invalid values
+00:41 +38: D:/Fastkirana/fastkirana_flutter/test/providers/auth_provider_test.dart: AuthNotifier _load() starts with loading state when no stored credentials
+00:42 +39: D:/Fastkirana/fastkirana_flutter/test/providers/auth_provider_test.dart: AuthNotifier _load() loads user from SecureStorage when credentials exist
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   NotificationService._fcm (package:fastkirana_flutter/core/services/notification_service.dart:275:33)[0m
+[38;5;196m│ #2   NotificationService.getFcmToken (package:fastkirana_flutter/core/services/notification_service.dart:709:20)[0m
+[38;5;196m│ #3   NotificationService.registerDeviceToken (package:fastkirana_flutter/core/services/notification_service.dart:755:29)[0m
+[38;5;196m│ #4   AuthNotifier._load (package:fastkirana_flutter/providers/auth_provider.dart:50:31)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:19:59.980 (+0:00:00.005999)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ NotificationService: error[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:42 +40: D:/Fastkirana/fastkirana_flutter/test/providers/auth_provider_test.dart: AuthNotifier _load() loadCache populates in-memory fields after reading from SecureStorage
+00:42 +41: D:/Fastkirana/fastkirana_flutter/test/providers/auth_provider_test.dart: AuthNotifier setUser() writes user data to SecureStorage
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   NotificationService._fcm (package:fastkirana_flutter/core/services/notification_service.dart:275:33)[0m
+[38;5;196m│ #2   NotificationService.getFcmToken (package:fastkirana_flutter/core/services/notification_service.dart:709:20)[0m
+[38;5;196m│ #3   NotificationService.registerDeviceToken (package:fastkirana_flutter/core/services/notification_service.dart:755:29)[0m
+[38;5;196m│ #4   AuthNotifier.setUser (package:fastkirana_flutter/providers/auth_provider.dart:107:29)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m│ #6   main.<anonymous closure>.<anonymous closure>.<anonymous closure> (file:///D:/Fastkirana/fastkirana_flutter/test/providers/auth_provider_test.dart:95:9)[0m
+[38;5;196m│ #7   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:20:00.079 (+0:00:00.105162)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ NotificationService: error[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:42 +42: D:/Fastkirana/fastkirana_flutter/test/providers/auth_provider_test.dart: AuthNotifier setUser() does not fail when SharedPreferences has no legacy token
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   NotificationService._fcm (package:fastkirana_flutter/core/services/notification_service.dart:275:33)[0m
+[38;5;196m│ #2   NotificationService.getFcmToken (package:fastkirana_flutter/core/services/notification_service.dart:709:20)[0m
+[38;5;196m│ #3   NotificationService.registerDeviceToken (package:fastkirana_flutter/core/services/notification_service.dart:755:29)[0m
+[38;5;196m│ #4   AuthNotifier.setUser (package:fastkirana_flutter/providers/auth_provider.dart:107:29)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m│ #6   main.<anonymous closure>.<anonymous closure>.<anonymous closure> (file:///D:/Fastkirana/fastkirana_flutter/test/providers/auth_provider_test.dart:125:9)[0m
+[38;5;196m│ #7   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:20:00.104 (+0:00:00.129921)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ NotificationService: error[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:42 +43: D:/Fastkirana/fastkirana_flutter/test/providers/auth_provider_test.dart: AuthNotifier clear() invalidateCache clears all auth fields
+00:42 +44: D:/Fastkirana/fastkirana_flutter/test/providers/auth_provider_test.dart: AuthNotifier currentUserIdProvider / currentUserProvider returns null when not authenticated
+00:43 +45: D:/Fastkirana/fastkirana_flutter/test/providers/cart_provider_test.dart: isRestaurantProduct / isCafeProduct groceries return false
+00:43 +46: D:/Fastkirana/fastkirana_flutter/test/providers/cart_provider_test.dart: isRestaurantProduct / isCafeProduct restaurant products return true
+00:43 +47: D:/Fastkirana/fastkirana_flutter/test/providers/cart_provider_test.dart: isRestaurantProduct / isCafeProduct cafe tag triggers restaurant detection
+00:43 +48: D:/Fastkirana/fastkirana_flutter/test/providers/cart_provider_test.dart: CartNotifier.addProduct adds product and updates state
+00:43 +49: D:/Fastkirana/fastkirana_flutter/test/providers/cart_provider_test.dart: CartNotifier.addProduct rejects when stock limit reached
+00:43 +50: D:/Fastkirana/fastkirana_flutter/test/providers/cart_provider_test.dart: CartNotifier.checkRestaurantConflict grocery item causes no conflict with restaurant dish
+00:43 +51: D:/Fastkirana/fastkirana_flutter/test/providers/cart_provider_test.dart: CartNotifier.checkRestaurantConflict detects conflict between different restaurants
+00:43 +52: D:/Fastkirana/fastkirana_flutter/test/providers/cart_provider_test.dart: CartNotifier.decrement removes item when quantity reaches 0
+00:43 +53: D:/Fastkirana/fastkirana_flutter/test/providers/cart_provider_test.dart: CartNotifier.clearRestaurantItems keeps groceries, removes restaurant items
+00:46 +54: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Tier 1: 0 to 2 km (Local) subtotal below threshold charges ₹25
+00:46 +55: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Tier 1: 0 to 2 km (Local) subtotal at threshold gets free delivery
+00:46 +56: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Tier 1: 0 to 2 km (Local) subtotal above threshold gets free delivery
+00:46 +57: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Tier 2: 2 to 3 km (Suburban) subtotal below threshold charges ₹35
+00:46 +58: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Tier 2: 2 to 3 km (Suburban) subtotal at threshold gets free delivery
+00:46 +59: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Tier 3: 3 to 5 km (Extended) subtotal below threshold charges ₹50
+00:46 +60: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Tier 3: 3 to 5 km (Extended) subtotal at threshold gets free delivery
+00:46 +61: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Dynamic radius (maxRadius parameter) hub with 8km radius makes 6km serviceable
+00:46 +62: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Dynamic radius (maxRadius parameter) hub with 3km radius makes 4km unserviceable
+00:46 +63: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Dynamic radius (maxRadius parameter) default radius is 5.0 when maxRadius is null
+00:46 +64: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Boundary values exactly 2.0 km is in Tier 1
+00:46 +65: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Boundary values exactly 3.0 km is in Tier 2
+00:46 +66: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Boundary values exactly 5.0 km with default radius is in Tier 3
+00:46 +67: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier Boundary values just over 5.0 km with default radius is unserviceable
+00:46 +68: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier getDistanceKm with dynamic hub uses AppConfig by default
+00:46 +69: D:/Fastkirana/fastkirana_flutter/test/services/location_service_test.dart: LocationService: Distance & Delivery Tier getDistanceKm with dynamic hub zero distance when coordinates match hub
+00:48 +70: D:/Fastkirana/fastkirana_flutter/test/services/location_tier_test.dart: Delivery Tier & Distance-Based Fee Tests Tier 1: 0 to 2 km (Local Ghatampur) - ₹25 fee, free above ₹149
+00:48 +71: D:/Fastkirana/fastkirana_flutter/test/services/location_tier_test.dart: Delivery Tier & Distance-Based Fee Tests Tier 2: 2 to 3 km (Suburban Area) - ₹35 fee, free above ₹249
+00:48 +72: D:/Fastkirana/fastkirana_flutter/test/services/location_tier_test.dart: Delivery Tier & Distance-Based Fee Tests Tier 3: 3 to 5 km (Extended Area) - ₹50 fee, free above ₹349
+00:48 +73: D:/Fastkirana/fastkirana_flutter/test/services/location_tier_test.dart: Delivery Tier & Distance-Based Fee Tests Outside 5 km (Strict Boundary) - Unserviceable
+00:48 +74: D:/Fastkirana/fastkirana_flutter/test/services/location_tier_test.dart: Delivery Tier & Distance-Based Fee Tests Dynamic Store Settings: custom tiers from admin console
+00:48 +75: D:/Fastkirana/fastkirana_flutter/test/services/location_tier_test.dart: Delivery Tier & Distance-Based Fee Tests Dynamic Surge Charge: adds surge fee on top of base delivery fee when not free
+00:50 +76: D:/Fastkirana/fastkirana_flutter/test/unit/algorithmic_upgrades_test.dart: 1. Damerau-Levenshtein Fuzzy Search Algorithm Tests Exact matches should have distance 0 and similarity 100
+00:50 +77: D:/Fastkirana/fastkirana_flutter/test/unit/algorithmic_upgrades_test.dart: 1. Damerau-Levenshtein Fuzzy Search Algorithm Tests Common Indian grocery typos should be detected with distance <= 2
+00:50 +78: D:/Fastkirana/fastkirana_flutter/test/unit/algorithmic_upgrades_test.dart: 1. Damerau-Levenshtein Fuzzy Search Algorithm Tests Early-exit pruning triggers when distance exceeds maxDistance
+00:50 +79: D:/Fastkirana/fastkirana_flutter/test/unit/algorithmic_upgrades_test.dart: 1. Damerau-Levenshtein Fuzzy Search Algorithm Tests bestTokenFuzzyDistance correctly identifies typos in multi-word product names
+00:50 +80: D:/Fastkirana/fastkirana_flutter/test/unit/all_consoles_offline_sync_test.dart: OfflineSyncService Console Queues Picker Console: enqueues action and flushes successfully
+00:50 +81: D:/Fastkirana/fastkirana_flutter/test/unit/all_consoles_offline_sync_test.dart: OfflineSyncService Console Queues Picker Console: enqueues action and flushes successfully
+00:50 +82: D:/Fastkirana/fastkirana_flutter/test/unit/all_consoles_offline_sync_test.dart: OfflineSyncService Console Queues Picker Console: enqueues action and flushes successfully
+00:50 +83: D:/Fastkirana/fastkirana_flutter/test/unit/all_consoles_offline_sync_test.dart: OfflineSyncService Console Queues Picker Console: enqueues action and flushes successfully
+00:50 +84: D:/Fastkirana/fastkirana_flutter/test/unit/all_consoles_offline_sync_test.dart: OfflineSyncService Console Queues Picker Console: enqueues action and flushes successfully
+00:50 +85: D:/Fastkirana/fastkirana_flutter/test/unit/all_consoles_offline_sync_test.dart: OfflineSyncService Console Queues Picker Console: enqueues action and flushes successfully
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.enqueueAction (package:fastkirana_flutter/core/services/offline_sync_service.dart:31:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.335 (+0:00:00.006000)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Enqueued action in offline_picker_queue: MARK_PACKED[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.flushQueue (package:fastkirana_flutter/core/services/offline_sync_service.dart:69:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.376 (+0:00:00.046990)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Flushing actions from offline_picker_queue...[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.flushQueue (package:fastkirana_flutter/core/services/offline_sync_service.dart:104:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.383 (+0:00:00.053986)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Finished flush for offline_picker_queue. Success: 1, Remaining: 0[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:50 +86: D:/Fastkirana/fastkirana_flutter/test/unit/all_consoles_offline_sync_test.dart: OfflineSyncService Console Queues Restaurant Console: enqueues status updates and 86 menu toggles
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.enqueueAction (package:fastkirana_flutter/core/services/offline_sync_service.dart:31:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.451 (+0:00:00.121978)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Enqueued action in offline_restaurant_queue: UPDATE_ORDER_STATUS[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.enqueueAction (package:fastkirana_flutter/core/services/offline_sync_service.dart:31:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.452 (+0:00:00.122983)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Enqueued action in offline_restaurant_queue: TOGGLE_MENU_STOCK[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.flushQueue (package:fastkirana_flutter/core/services/offline_sync_service.dart:69:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.454 (+0:00:00.124977)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Flushing actions from offline_restaurant_queue...[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.flushQueue (package:fastkirana_flutter/core/services/offline_sync_service.dart:104:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.455 (+0:00:00.125983)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Finished flush for offline_restaurant_queue. Success: 2, Remaining: 0[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:50 +87: D:/Fastkirana/fastkirana_flutter/test/unit/all_consoles_offline_sync_test.dart: OfflineSyncService Console Queues Admin Console: enqueues order status changes and rider assignment
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.enqueueAction (package:fastkirana_flutter/core/services/offline_sync_service.dart:31:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.573 (+0:00:00.243916)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Enqueued action in offline_admin_queue: ASSIGN_RIDER[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.flushQueue (package:fastkirana_flutter/core/services/offline_sync_service.dart:69:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.575 (+0:00:00.245917)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Flushing actions from offline_admin_queue...[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.flushQueue (package:fastkirana_flutter/core/services/offline_sync_service.dart:104:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.580 (+0:00:00.250916)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Finished flush for offline_admin_queue. Success: 1, Remaining: 0[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:50 +88: D:/Fastkirana/fastkirana_flutter/test/unit/all_consoles_offline_sync_test.dart: OfflineSyncService Console Queues Retry handling: failed executions remain in queue
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.enqueueAction (package:fastkirana_flutter/core/services/offline_sync_service.dart:31:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.606 (+0:00:00.277428)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Enqueued action in offline_delivery_queue: UPDATE_DELIVERY_STATUS[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.flushQueue (package:fastkirana_flutter/core/services/offline_sync_service.dart:69:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.608 (+0:00:00.279439)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Flushing actions from offline_delivery_queue...[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   OfflineSyncService.flushQueue (package:fastkirana_flutter/core/services/offline_sync_service.dart:104:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:08.610 (+0:00:00.281440)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [OfflineSync] Finished flush for offline_delivery_queue. Success: 0, Remaining: 1[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:51 +89: D:/Fastkirana/fastkirana_flutter/test/unit/api_client_test.dart: ApiClient Network Resilience & Retry Constants kNetworkRetryDelays contains 3-step exponential backoff (3s, 6s, 9s)
+00:51 +90: D:/Fastkirana/fastkirana_flutter/test/unit/api_client_test.dart: ApiClient Network Resilience & Retry Constants Non-retryable routes check prevents financial & order mutation duplicates
+00:51 +91: D:/Fastkirana/fastkirana_flutter/test/unit/api_client_test.dart: ApiClient Network Resilience & Retry Constants Token cache loads properly and cleans up on session revocation
+00:53 +92: D:/Fastkirana/fastkirana_flutter/test/unit/app_connectivity_test.dart: Wi-Fi without reachable API stays offline, manual retry recovers
+00:53 +93: D:/Fastkirana/fastkirana_flutter/test/unit/app_connectivity_test.dart: No device transport does not call the API
+00:53 +94: D:/Fastkirana/fastkirana_flutter/test/unit/app_connectivity_test.dart: Health endpoint validates its response: <html>Sign in to this Wi-Fi network</html>
+00:53 +95: D:/Fastkirana/fastkirana_flutter/test/unit/app_connectivity_test.dart: Health endpoint validates its response: {status: healthy}
+00:53 +96: D:/Fastkirana/fastkirana_flutter/test/unit/app_connectivity_test.dart: Health endpoint validates its response: {status: unhealthy, probe: liveness, service: FastKirana}
+00:53 +97: D:/Fastkirana/fastkirana_flutter/test/unit/app_connectivity_test.dart: Health endpoint validates its response: {status: healthy, probe: liveness, service: FastKirana FastAPI Microservice}
+00:53 +98: D:/Fastkirana/fastkirana_flutter/test/unit/app_connectivity_test.dart: Brief network drop does not flash offline or trigger recovery
+00:53 +99: D:/Fastkirana/fastkirana_flutter/test/unit/app_connectivity_test.dart: A stale successful probe cannot override a newer disconnect
+00:53 +100: D:/Fastkirana/fastkirana_flutter/test/unit/app_connectivity_test.dart: API check timeout resolves offline and does not trap retry
+00:53 +101: D:/Fastkirana/fastkirana_flutter/test/unit/app_connectivity_test.dart: Parallel manual retries share one reachability probe
+00:54 +102: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration read() — migration from SharedPreferences reads auth_token from SharedPreferences when secure storage is unavailable
+00:54 +103: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration read() — migration from SharedPreferences migration removes token from SharedPreferences after first read
+00:54 +104: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration read() — migration from SharedPreferences reads user_data from SharedPreferences
+00:54 +105: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration read() — migration from SharedPreferences returns null for missing key
+00:54 +106: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration read() — migration from SharedPreferences returns null for key that is not a legacy key and not in secure storage
+00:54 +107: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration write() write falls back to SharedPreferences in test environment
+00:54 +108: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration invalidateCache() clears all cached fields
+00:54 +109: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration loadCache() populates in-memory cache from SharedPreferences
+00:54 +110: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration loadCache() does not re-read after cache is loaded
+00:54 +111: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration delete() removes key from SharedPreferences
+00:54 +112: D:/Fastkirana/fastkirana_flutter/test/unit/auth_token_migration_test.dart: SecureStorage Auth Token Migration readMany() returns map of values from SharedPreferences
+00:58 +113: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: (setUpAll)
+01:00 +114: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: (setUpAll)
+01:00 +115: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: (setUpAll)
+01:00 +116: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: (setUpAll)
+01:00 +117: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: (setUpAll)
+01:00 +118: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: (setUpAll)
+01:00 +119: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: (setUpAll)
+01:01 +119: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: shared template index is present in the release asset bundle
+01:01 +120: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: navratri published configuration resolves all assets, destinations and collection filters
+01:02 +121: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: diwali published configuration resolves all assets, destinations and collection filters
+01:03 +122: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: holi published configuration resolves all assets, destinations and collection filters
+01:04 +123: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: ramadan published configuration resolves all assets, destinations and collection filters
+01:04 +124: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: daily-essentials published configuration resolves all assets, destinations and collection filters
+01:04 +125: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: value-picks published configuration resolves all assets, destinations and collection filters
+01:05 +126: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: summer published configuration resolves all assets, destinations and collection filters
+01:05 +127: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: monsoon published configuration resolves all assets, destinations and collection filters
+01:05 +128: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: empty custom-ID tabs mean all configured collections and top-picks obeys its own keywords
+01:05 +129: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: legacy publication defaults to classic and unknown layouts fail instead of fallback silently
+01:05 +130: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: classic composition fits small screens and enlarged text with independent product rotation
+01:08 +131: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: classic composition fits small screens and enlarged text with independent product rotation
+01:08 +132: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: classic composition fits small screens and enlarged text with independent product rotation
+01:08 +133: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: classic composition fits small screens and enlarged text with independent product rotation
+01:08 +134: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: classic composition fits small screens and enlarged text with independent product rotation
+01:08 +135: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: classic composition fits small screens and enlarged text with independent product rotation
+01:09 +136: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: classic composition fits small screens and enlarged text with independent product rotation
+01:09 +137: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: classic composition fits small screens and enlarged text with independent product rotation
+01:09 +138: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: classic composition fits small screens and enlarged text with independent product rotation
+01:09 +139: D:/Fastkirana/fastkirana_flutter/test/unit/curated_brand_offer_card_test.dart: CategoryOfferCard accepts videoUrl and renders CardMediaWidget
+01:10 +140: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: banner composition fits small screens and enlarged text with independent product rotation
+01:10 +141: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: banner composition fits small screens and enlarged text with independent product rotation
+01:10 +142: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: banner composition fits small screens and enlarged text with independent product rotation
+01:10 +143: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: banner composition fits small screens and enlarged text with independent product rotation
+01:10 +144: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: banner composition fits small screens and enlarged text with independent product rotation
+01:10 +145: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: banner composition fits small screens and enlarged text with independent product rotation
+01:10 +146: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: banner composition fits small screens and enlarged text with independent product rotation
+01:10 +147: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: banner composition fits small screens and enlarged text with independent product rotation
+01:10 +148: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: banner composition fits small screens and enlarged text with independent product rotation
+01:10 +149: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: split composition fits small screens and enlarged text with independent product rotation
+01:11 +150: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: grid composition fits small screens and enlarged text with independent product rotation
+01:11 +151: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: deals composition fits small screens and enlarged text with independent product rotation
+01:12 +152: D:/Fastkirana/fastkirana_flutter/test/unit/campaign_templates_test.dart: (tearDownAll)
+01:16 +152: D:/Fastkirana/fastkirana_flutter/test/unit/navratri_linked_products_test.dart: (setUpAll)
+01:17 +152: D:/Fastkirana/fastkirana_flutter/test/unit/navratri_linked_products_test.dart: linked query keys isolate stores and deduplicate stable IDs
+01:17 +153: D:/Fastkirana/fastkirana_flutter/test/unit/navratri_linked_products_test.dart: selected SKU outside the 1000 item home feed resolves by scoped ID
+01:17 +154: D:/Fastkirana/fastkirana_flutter/test/unit/navratri_linked_products_test.dart: store changes and refreshed inventory cannot reuse available old-store stock
+01:17 +155: D:/Fastkirana/fastkirana_flutter/test/unit/navratri_linked_products_test.dart: unavailable, wrong-ID, restaurant and invalid-price detail results are discarded
+01:17 +156: D:/Fastkirana/fastkirana_flutter/test/unit/navratri_linked_products_test.dart: 404 and failed requests never fall back to an available product cached for another hub
+01:17 +157: D:/Fastkirana/fastkirana_flutter/test/unit/navratri_linked_products_test.dart: merging linked results preserves current home product authority
+01:17 +158: D:/Fastkirana/fastkirana_flutter/test/unit/navratri_linked_products_test.dart: (tearDownAll)
+01:18 +158: D:/Fastkirana/fastkirana_flutter/test/unit/notification_service_test.dart: Notification — token persistence and auth gate pending_fcm_token survives app restart until user logs in
+01:18 +159: D:/Fastkirana/fastkirana_flutter/test/unit/notification_service_test.dart: Notification — token persistence and auth gate auth_token availability gates FCM registration
+01:18 +160: D:/Fastkirana/fastkirana_flutter/test/unit/notification_service_test.dart: Notification — token persistence and auth gate phone number normalization for topic subscription
+01:18 +161: D:/Fastkirana/fastkirana_flutter/test/unit/notification_service_test.dart: Notification — token persistence and auth gate pending_fcm_token is cleared after successful registration
+01:20 +162: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+01:20 +162 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down [E]
+  Expected: <2>
+    Actual: <4>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\unit\offline_cart_sync_test.dart 85:5          main.<fn>
+  
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [connection error]: null[0m
+[38;5;196m│ Error: No Internet Connection[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   CartRepository.syncCart (package:fastkirana_flutter/data/repositories/cart_repository.dart:87:21)[0m
+[38;5;196m│ #2   <asynchronous suspension>[0m
+[38;5;196m│ #3   CartNotifier._flushPendingSync (package:fastkirana_flutter/providers/cart_provider.dart:107:23)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m│ #5   CartNotifier._scheduleDebouncedSync.<anonymous closure> (package:fastkirana_flutter/providers/cart_provider.dart:89:7)[0m
+[38;5;196m│ #6   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:20:38.663 (+0:00:00.003994)[0m
+01:21 +162 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+01:21 +162 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ CartRepository: syncCart failed[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+01:21 +162 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [connection error]: null[0m
+[38;5;196m│ Error: No Internet Connection[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   CartRepository.syncCart (package:fastkirana_flutter/data/repositories/cart_repository.dart:87:21)[0m
+[38;5;196m│ #2   <asynchronous suspension>[0m
+[38;5;196m│ #3   CartNotifier._flushPendingSync (package:fastkirana_flutter/providers/cart_provider.dart:107:23)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m│ #5   CartNotifier._scheduleDebouncedSync.<anonymous closure> (package:fastkirana_flutter/providers/cart_provider.dart:89:7)[0m
+[38;5;196m│ #6   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:20:39.184 (+0:00:00.525561)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ CartRepository: syncCart failed[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+01:21 +163 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Restart Resilience: loadCart reconciles pending offline edits without stale server overwrite
+01:21 +164 -1: D:/Fastkirana/fastkirana_flutter/test/unit/restaurant_surge_test.dart: Restaurant Active Orders & Surge Alert Tests Restaurant parses activeOrdersCount correctly from JSON
+01:21 +165 -1: D:/Fastkirana/fastkirana_flutter/test/unit/restaurant_surge_test.dart: Restaurant Active Orders & Surge Alert Tests Restaurant defaults activeOrdersCount to 0 when not provided
+01:21 +166 -1: D:/Fastkirana/fastkirana_flutter/test/unit/restaurant_surge_test.dart: Restaurant Active Orders & Surge Alert Tests Threshold 6 activates surge alert condition
+01:24 +167 -1: D:/Fastkirana/fastkirana_flutter/test/unit/security_and_microinteractions_test.dart: Step 3: Security & Token Auto-Refresh SecureStorage handles tokens in memory and storage
+01:24 +168 -1: D:/Fastkirana/fastkirana_flutter/test/unit/security_and_microinteractions_test.dart: Step 3: Security & Token Auto-Refresh BiometricService provides safe fallback on unsupported environments
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ MissingPluginException(No implementation found for method getAvailableBiometrics on channel plugins.flutter.io/local_auth)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   BiometricService.isBiometricAvailable (package:fastkirana_flutter/core/services/biometric_service.dart:17:33)[0m
+[38;5;196m│ #2   <asynchronous suspension>[0m
+[38;5;196m│ #3   main.<anonymous closure>.<anonymous closure> (file:///D:/Fastkirana/fastkirana_flutter/test/unit/security_and_microinteractions_test.dart:41:25)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m│ #5   Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:15)[0m
+[38;5;196m│ #6   <asynchronous suspension>[0m
+[38;5;196m│ #7   Declarer.test.<anonymous closure> (package:test_api/src/backend/declarer.dart:250:11)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:20:42.267 (+0:00:00.005139)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ BiometricService: error[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ MissingPluginException(No implementation found for method getAvailableBiometrics on channel plugins.flutter.io/local_auth)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   BiometricService.isBiometricAvailable (package:fastkirana_flutter/core/services/biometric_service.dart:17:33)[0m
+[38;5;196m│ #2   <asynchronous suspension>[0m
+[38;5;196m│ #3   BiometricService.authenticate (package:fastkirana_flutter/core/services/biometric_service.dart:37:27)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m│ #5   main.<anonymous closure>.<anonymous closure> (file:///D:/Fastkirana/fastkirana_flutter/test/unit/security_and_microinteractions_test.dart:45:29)[0m
+[38;5;196m│ #6   <asynchronous suspension>[0m
+[38;5;196m│ #7   Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:15)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:20:42.300 (+0:00:00.038134)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ BiometricService: error[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   BiometricService.authenticate (package:fastkirana_flutter/core/services/biometric_service.dart:39:23)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:42.302 (+0:00:00.040131)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 [BiometricService] Biometrics not available on this device[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+01:24 +169 -1: D:/Fastkirana/fastkirana_flutter/test/unit/security_and_microinteractions_test.dart: Step 4: UI/UX Micro-Interactions & Shimmer ProductCardShimmer renders without throwing
+01:26 +170 -1: D:/Fastkirana/fastkirana_flutter/test/unit/security_and_microinteractions_test.dart: Step 4: UI/UX Micro-Interactions & Shimmer CategoryShimmer and OrderRowShimmer render cleanly
+01:28 +171 -1: D:/Fastkirana/fastkirana_flutter/test/unit/store_hub_isolation_test.dart: StoreHub Geofence & Ray-Casting PIP Tests Ray-casting algorithm accurately detects points inside vs outside polygon
+01:28 +172 -1: D:/Fastkirana/fastkirana_flutter/test/unit/store_hub_isolation_test.dart: StoreHub Geofence & Ray-Casting PIP Tests StoreHub falls back to Euclidean radius when polygonGeoJson is null
+01:28 +173 -1: D:/Fastkirana/fastkirana_flutter/test/unit/store_hub_isolation_test.dart: StoreHub Geofence & Ray-Casting PIP Tests StoreHub parses deliveryPolygon from Map list and List list formats
+01:28 +174 -1: D:/Fastkirana/fastkirana_flutter/test/unit/store_hub_isolation_test.dart: Cart Hub Binding & Conflict Tests Cart serializes and deserializes hubId correctly
+01:29 +175 -1: D:/Fastkirana/fastkirana_flutter/test/unit/store_hub_isolation_test.dart: Cart Hub Binding & Conflict Tests Cart copyWith accurately updates or retains hubId
+01:29 +176 -1: D:/Fastkirana/fastkirana_flutter/test/unit/store_hub_isolation_test.dart: Cart Hub Binding & Conflict Tests Grocery items bound to Hub A report conflict when moving to Hub B
+01:30 +177 -1: D:/Fastkirana/fastkirana_flutter/test/unit/tracer_service_test.dart: TracerService Distributed Tracing Tests generateTraceId produces a valid 32-character hex trace ID
+01:31 +178 -1: D:/Fastkirana/fastkirana_flutter/test/unit/tracer_service_test.dart: TracerService Distributed Tracing Tests generateSpanId produces a valid 16-character hex span ID
+01:33 +179 -1: D:/Fastkirana/fastkirana_flutter/test/unit/tracer_service_test.dart: TracerService Distributed Tracing Tests generateSpanId produces a valid 16-character hex span ID
+01:33 +180 -1: D:/Fastkirana/fastkirana_flutter/test/unit/tracer_service_test.dart: TracerService Distributed Tracing Tests generateSpanId produces a valid 16-character hex span ID
+01:33 +181 -1: D:/Fastkirana/fastkirana_flutter/test/unit/variant_stock_test.dart: Variant Stock Precision Tests getStockForVariant returns specific variant stock, not top-level stock
+01:33 +182 -1: D:/Fastkirana/fastkirana_flutter/test/unit/tracer_service_test.dart: TracerService Distributed Tracing Tests startTrace creates an active span and sets active IDs
+01:33 +183 -1: D:/Fastkirana/fastkirana_flutter/test/unit/tracer_service_test.dart: TracerService Distributed Tracing Tests startTrace creates an active span and sets active IDs
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   TracerService.startTrace (package:fastkirana_flutter/core/services/tracer_service.dart:44:19)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:51.126 (+0:00:00.004998)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 📡 [Tracer] [SPAN_START] name=checkout_tap_test trace_id=49d81031ce758b6348c27b3463e4f242 span_id=185c02c163665737 attributes={step: 1}[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   TraceSpan.end (package:fastkirana_flutter/core/services/tracer_service.dart:112:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:51.157 (+0:00:00.036782)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 ✅ [Tracer] [SPAN_END] name=checkout_tap_test trace_id=49d81031ce758b6348c27b3463e4f242 duration=43ms attrs={step: 1, success: true}[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+01:33 +184 -1: D:/Fastkirana/fastkirana_flutter/test/unit/tracer_service_test.dart: TracerService Distributed Tracing Tests traceHeaders returns correct W3C TraceContext format
+01:33 +185 -1: D:/Fastkirana/fastkirana_flutter/test/unit/tracer_service_test.dart: TracerService Distributed Tracing Tests recordSpan logs observed span without throwing
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   TracerService.recordSpan (package:fastkirana_flutter/core/services/tracer_service.dart:58:19)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:20:51.202 (+0:00:00.081311)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 🚀 [Tracer] [SPAN_CAPTURED] name=rider_device_receipt trace_id=1234567890abcdef1234567890abcdef span_id=36816dc2ef0fefa1 parent_span_id=null attributes={status: OUT_FOR_DELIVERY}[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+01:45 +186 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/campaign_block_builder_test.dart: (setUpAll)
+01:48 +186 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/campaign_block_builder_test.dart: legacy configuration keeps template mode
+01:48 +187 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/campaign_block_builder_test.dart: pinned collections match the web selection and append only explicit keyword matches
+01:48 +188 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/campaign_block_builder_test.dart: unknown motion, references and blank compositions fail
+01:48 +189 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/campaign_block_builder_test.dart: motion speeds stay inside existing interval bounds
+01:48 +190 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/campaign_block_builder_test.dart: live blocks require links for displayed slots only
+01:48 +191 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/campaign_block_builder_test.dart: banner renders at 320px with enlarged text without overflow
+01:51 +192 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:51 +193 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:51 +194 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:51 +195 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:52 +196 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:52 +197 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:52 +198 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:52 +199 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:52 +200 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:52 +201 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:53 +202 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:53 +203 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:54 +204 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:54 +205 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:55 +206 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:55 +207 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:55 +208 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:56 +209 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:56 +210 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Cached category opens directly with no forced interstitial
+01:57 +211 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/checkout_bottom_bar_offline_test.dart: CheckoutBottomBar renders inline offline banner and triggers retry without SnackBar
+01:58 +212 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/checkout_bottom_bar_offline_test.dart: CheckoutBottomBar renders inline offline banner and triggers retry without SnackBar
+01:58 +213 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/checkout_bottom_bar_offline_test.dart: CheckoutBottomBar renders inline offline banner and triggers retry without SnackBar
+01:59 +214 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/checkout_bottom_bar_offline_test.dart: CheckoutBottomBar renders inline offline banner and triggers retry without SnackBar
+01:59 +215 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Back during loading never navigates again when data arrives
+01:59 +216 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Back during loading never navigates again when data arrives
+02:00 +217 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Back during loading never navigates again when data arrives
+02:00 +218 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Back during loading never navigates again when data arrives
+02:00 +219 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Back during loading never navigates again when data arrives
+02:00 +220 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Back during loading never navigates again when data arrives
+02:01 +221 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Back during loading never navigates again when data arrives
+02:02 +222 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/checkout_connectivity_guard_test.dart: Checkout waits for API verification, ignores duplicate taps, and stops before payment when unreachable
+02:02 +223 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/checkout_connectivity_guard_test.dart: Checkout waits for API verification, ignores duplicate taps, and stops before payment when unreachable
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   TracerService.startTrace (package:fastkirana_flutter/core/services/tracer_service.dart:44:19)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:21:18.159 (+0:00:00.000000)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 📡 [Tracer] [SPAN_START] name=customer_checkout_tap trace_id=d0f3d9edb95b0662f4c1d0167a7446a4 span_id=fa9fd1600f338dd6 attributes={cart_subtotal: 0.0, items_count: 0, payment_method: cod, delivery_method: DELIVERY}[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+02:03 +224 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Recovery preserves category state, subcategory, cart and scroll while fetching fresh data
+02:05 +225 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: Disk category preview stays isolated to its hub and category
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [connection error]: null[0m
+[38;5;196m│ Error: Simulated offline[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   DioMixin.fetch (package:dio/src/dio_mixin.dart:587:7)[0m
+[38;5;196m│ #1   <asynchronous suspension>[0m
+[38;5;196m│ #2   ProductRepository._fetchLiveProducts (package:fastkirana_flutter/data/repositories/product_repository.dart:521:22)[0m
+[38;5;196m│ #3   <asynchronous suspension>[0m
+[38;5;196m│ #4   ProductRepository.getProducts (package:fastkirana_flutter/data/repositories/product_repository.dart:381:30)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m│ #6   main.<anonymous closure> (file:///D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart:346:22)[0m
+[38;5;196m│ #7   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:21:23.596 (+0:00:00.007995)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ ProductRepository: fetchProducts failed (null, cat=null, catId=SUB-101-02, rid=null, store=cache-test)[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+02:05 +226 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/category_recovery_test.dart: (tearDownAll)
+02:08 +226 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/core_components_widget_test.dart: Core Component Widget Tests CartBillDetailsCard displays line items and totals accurately
+02:10 +227 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/core_components_widget_test.dart: Core Component Widget Tests CartFreeDeliveryBar displays progress when threshold is locked
+02:10 +228 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/core_components_widget_test.dart: Core Component Widget Tests CartFreeDeliveryBar displays unlocked badge when threshold is met
+02:10 +229 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/core_components_widget_test.dart: Core Component Widget Tests CartFreeDeliveryBar alerts when outside delivery zone
+02:10 +230 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/core_components_widget_test.dart: Core Component Widget Tests CheckoutSavingsBanner displays savings amount when positive
+02:10 +231 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/core_components_widget_test.dart: Core Component Widget Tests CheckoutSavingsBanner renders empty when totalSavings is zero
+02:10 +232 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/core_components_widget_test.dart: Core Component Widget Tests CheckoutBottomBar renders bill and responds to proceed click
+02:11 +233 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/core_components_widget_test.dart: Core Component Widget Tests CheckoutBottomBar displays loading indicator and disables tap during order placement
+02:11 +234 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/core_components_widget_test.dart: Core Component Widget Tests CheckoutTrustBadges renders security credentials and badges
+02:11 +235 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/core_components_widget_test.dart: Core Component Widget Tests AdminStatsGrid renders sales, net sales, and order volume cards
+02:13 +236 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: (setUpAll)
+02:13 +236 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: curation filters unavailable roots and keeps admin order and category identity
+02:14 +237 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: invalid persisted curation cannot inject claims or unsafe images
+02:14 +238 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: actual rail is readable and has no overflow: mobile
+02:17 +239 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: actual rail is readable and has no overflow: compact
+02:17 +240 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: actual rail is readable and has no overflow: large-text
+02:17 +241 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: actual rail is readable and has no overflow: tablet
+02:17 +242 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: view all opens category tab with a minimum touch target
+02:18 +243 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: renaming preserves real navigation and assistive activation
+02:18 +244 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: reduced motion removes press animation and empty selection hides
+02:18 +245 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: all empty categories and missing categories hide
+02:18 +246 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: settings load completes before showing a configured hidden section
+02:18 +247 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/featured_categories_test.dart: (tearDownAll)
+02:19 +247 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: (setUpAll)
+02:19 +247 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: published loader scopes request and preserves disabled configuration
+02:19 +248 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: missing, malformed and offline published configuration use bundled fallback
+02:19 +249 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: generic optional labels, palette, autoplay and tab counts are supported
+02:19 +250 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: live campaign cannot use demo prices without catalogue links
+02:19 +251 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: remote SVG and uploaded raster URLs resolve without bundled prefix
+02:19 +252 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: linked promotions use actual catalogue fields and availability
+02:19 +253 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: emoji and invalid live images retain configured campaign artwork
+02:19 +254 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: manifest loads nullable title image and validates destinations
+02:19 +255 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: tabs filter live products and keep restaurant stock out of grocery
+02:19 +256 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: keyword boundaries distinguish diya from dandiya and support plurals
+02:19 +257 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: department row is removed from pinned campaign search
+02:21 +258 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: generic campaign labels palette and disabled autoplay render
+02:23 +259 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_banner_truncation_test.dart: OfflineBanner displays full text without truncation in offline and online recovery states
+02:24 +260 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_banner_truncation_test.dart: OfflineBanner displays full text without truncation in offline and online recovery states
+02:24 +261 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_banner_truncation_test.dart: OfflineBanner displays full text without truncation in offline and online recovery states
+02:25 +262 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_banner_truncation_test.dart: OfflineBanner displays full text without truncation in offline and online recovery states
+02:25 +263 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: independent rotations preserve tall card and grid geometry
+02:25 +264 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_experience_test.dart: (setUpAll)
+02:25 +264 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: crossfade excludes outgoing content from semantics and pointers
+02:26 +265 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_experience_test.dart: Offline layout preview on a standard phone
+02:26 +266 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_experience_test.dart: Offline layout preview on a standard phone
+02:26 +267 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_experience_test.dart: Offline layout preview on a standard phone
+02:27 +268 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_experience_test.dart: Offline layout preview on a standard phone
+02:27 +269 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_experience_test.dart: Offline layout preview on a standard phone
+02:27 +270 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_experience_test.dart: Offline layout preview on a standard phone
+02:28 +271 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_experience_test.dart: Offline layout preview on a standard phone
+02:28 +272 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_experience_test.dart: Offline layout preview on a standard phone
+02:28 +273 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: search fits width 390.0 with 2x text and voice action
+02:28 +274 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/offline_experience_test.dart: Offline screen wraps and scrolls at 320px with text scale 1.0
+02:29 +275 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: layout fits width 320.0 and text scale 1.0
+02:29 +276 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests ProductCard renders without overflow on small mobile (360x640)
+02:29 +277 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests ProductCard renders without overflow on small mobile (360x640)
+02:29 +278 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests ProductCard renders without overflow on small mobile (360x640)
+02:29 +279 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests ProductCard renders without overflow on small mobile (360x640)
+02:29 +280 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests ProductCard renders without overflow on small mobile (360x640)
+02:30 +281 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests ProductCard renders without overflow on small mobile (360x640)
+02:30 +282 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests ProductCard renders without overflow on small mobile (360x640)
+02:30 +283 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests ProductCard renders without overflow on small mobile (360x640)
+02:30 +284 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests ProductCard renders without overflow on small mobile (360x640)
+02:30 +285 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests ProductCard renders without overflow on small mobile (360x640)
+02:31 +286 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: layout fits width 840.0 and text scale 1.0
+02:31 +287 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/navratri_shopping_section_test.dart: layout fits width 840.0 and text scale 1.0
+02:31 +288 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/responsive_layouts_golden_test.dart: Responsive Layouts & Overflow Regression Tests DeliveryModeHeader adapts to 360w without overflow in both Grocery and Cafe modes
+unhandled element <filter/>; Picture key: Svg loader
+02:31 +289 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/tracking_widgets_test.dart: Order Tracking & Delivery Widgets TrackingStatusStepper renders active progress and ETA
+02:31 +290 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/tracking_widgets_test.dart: Order Tracking & Delivery Widgets TrackingStatusStepper renders active progress and ETA
+02:31 +291 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/tracking_widgets_test.dart: Order Tracking & Delivery Widgets TrackingStatusStepper renders active progress and ETA
+02:33 +292 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/tracking_widgets_test.dart: Order Tracking & Delivery Widgets TrackingStatusStepper renders cancelled state banner when order is cancelled
+02:33 +293 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/tracking_widgets_test.dart: Order Tracking & Delivery Widgets TrackingReceiptCard renders bill breakdown correctly
+02:33 +294 -1: D:/Fastkirana/fastkirana_flutter/test/widgets/tracking_widgets_test.dart: Order Tracking & Delivery Widgets TrackingPaymentCard shows Cash on Delivery badge for COD orders
+02:33 +295 -1: D:/Fastkirana/fastkirana_flutter/test/widget_test.dart: FastKirana App Smoke Test
+02:34 +296 -1: D:/Fastkirana/fastkirana_flutter/test/widget_test.dart: FastKirana App Smoke Test
+02:34 +297 -1: D:/Fastkirana/fastkirana_flutter/test/widget_test.dart: FastKirana App Smoke Test
+02:34 +298 -1: D:/Fastkirana/fastkirana_flutter/test/widget_test.dart: FastKirana App Smoke Test
+02:35 +299 -1: Some tests failed.
+
+Failing tests:
+  D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down

@@ -20,7 +20,7 @@ class TrackingReviewCard extends StatelessWidget {
         builder: (_) => AddReviewScreen(
           productName: (order?.items != null && order!.items!.isNotEmpty)
               ? order!.items!.first.name
-              : 'FastKirana Delivery',
+              : 'FastMinute Delivery',
           restaurantId: order?.restaurantId,
         ),
       ),
@@ -177,7 +177,7 @@ class TrackingReviewCard extends StatelessWidget {
             GestureDetector(
               onTap: () => AppUrlLauncher.launchString('tel:${AppConfig.supportPhone}', context: context),
               child: Text(
-                'Call FastKirana Support (${AppConfig.supportPhone})',
+                'Call FastMinute Support (${AppConfig.supportPhone})',
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 12),
                   fontWeight: FontWeight.w800,

@@ -1,0 +1,68 @@
+[
+  {
+    "case": "second-save",
+    "throws": false,
+    "durableDraft": "first-accepted"
+  },
+  {
+    "case": "second-save",
+    "throws": true,
+    "durableDraft": "first-accepted"
+  },
+  {
+    "case": "completion-ack",
+    "persistedAck": false,
+    "starting": 3,
+    "ordered": 1,
+    "final": 1,
+    "expectedCorrect": 2,
+    "posts": 2
+  },
+  {
+    "case": "completion-ack",
+    "persistedAck": true,
+    "starting": 3,
+    "ordered": 1,
+    "final": 3,
+    "expectedCorrect": 3,
+    "posts": 1
+  },
+  {
+    "case": "local-hydration",
+    "clear": false,
+    "server": [
+      "newB",
+      "oldA"
+    ],
+    "ui": [
+      "newB",
+      "oldA"
+    ],
+    "local": [
+      "newB",
+      "oldA"
+    ],
+    "pending": false
+  },
+  {
+    "case": "local-hydration",
+    "clear": true,
+    "server": [],
+    "ui": [],
+    "local": [],
+    "pending": false
+  },
+  {
+    "case": "pending-key-await",
+    "server": [
+      "oldA"
+    ],
+    "ui": [
+      "oldA",
+      "newB"
+    ],
+    "pending": false,
+    "version": 2,
+    "ack": 2
+  }
+]

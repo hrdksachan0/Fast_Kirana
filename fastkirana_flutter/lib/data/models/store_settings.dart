@@ -99,7 +99,7 @@ class StoreSettings with _$StoreSettings {
   String get minAppVersion => raw['min_app_version']?.toString() ?? '1.0.0';
   String get latestAppVersion => raw['latest_app_version']?.toString() ?? '1.0.0';
   String get appUpdateUrl => raw['app_update_url']?.toString() ?? 'https://fastkirana.in/app-release.apk';
-  String get appUpdateMessage => raw['app_update_message']?.toString() ?? 'FastKirana ka naya update available hai! Faster performance, bug fixes aur smooth ordering ke liye abhi update karein.';
+  String get appUpdateMessage => raw['app_update_message']?.toString() ?? 'FastMinute ka naya update available hai! Faster performance, bug fixes aur smooth ordering ke liye abhi update karein.';
   bool get appForceUpdate => (raw['app_force_update']?.toString().toLowerCase() == 'true');
   String get storeUpiVpa => raw['store_upi_vpa']?.toString() ?? '7054470303-2@ibl';
 

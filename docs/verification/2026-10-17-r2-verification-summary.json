@@ -1,0 +1,66 @@
+{
+  "review_date": "2026-10-17",
+  "revision": 2,
+  "git_head": "f04f2a813f8dfb8acd747f06e1c428545d5d64ee",
+  "checks": {
+    "python": {
+      "passed": 234,
+      "failed": 0,
+      "exit_code": 0,
+      "scope": "SQLite; dotenv disabled; dummy credentials; external network blocked; unmocked migration_full gateway/KOT suite excluded"
+    },
+    "flutter_full": {
+      "passed": 299,
+      "failed": 1,
+      "exit_code": 1,
+      "failed_test": "test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down",
+      "expected_quantity": 2,
+      "actual_quantity": 4
+    },
+    "flutter_focused": {
+      "passed": 9,
+      "failed": 1,
+      "exit_code": 1,
+      "observation_cases": 7,
+      "note": "Seven review observations plus the three existing offline-cart tests; diagnostic passing is not release approval"
+    },
+    "node": {
+      "passed": 147,
+      "failed": 0,
+      "suites": 21,
+      "exit_code": 0
+    },
+    "typescript": {
+      "exit_code": 0,
+      "errors": 0
+    },
+    "dart": {
+      "exit_code": 0,
+      "result": "No issues found",
+      "scope": "eight related Dart files"
+    },
+    "backend_probes": {
+      "cases": 16,
+      "scope": "current functions with fake ORM/cache; exact dormant cleanup/exception blocks; one isolated SQLite User round trip; no live SQL, gateway or alerts"
+    }
+  },
+  "source_changes_since_suite": [],
+  "application_worktree_changes": [],
+  "source_sha256": {
+    "fastapi-backend/routers/cashfree_router.py": "8cb805dc9ba9a723d79518cbb575bcce3ec9957ad8c7d39d4c7bcb6c7629e54d",
+    "fastapi-backend/routers/orders.py": "cf4fe36796c7ff0c2e15ce09f2f0fb029055878be6e53831c86d0f89f0ce28f5",
+    "fastapi-backend/routers/admin_extended.py": "8847d70a05b5f03291f57e467e4d8e83c7c4fca2510680cdb7e9b8613d42d826",
+    "fastapi-backend/routers/websockets.py": "f834da2025c77b9b7a3bec15ec4ffe616ab7aa4e506eac9a270cf96d962f1a35",
+    "fastkirana_flutter/lib/providers/cart_provider.dart": "55254ba5b5babfb816e0b9781fc1bef8c21ea6ba0303fb936120dd14587e83c1",
+    "fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart": "58592457692e24a7b1c208ba4689af4150cd75ab8e83b254a497597261ea0983",
+    "fastkirana_flutter/lib/features/checkout/controllers/payment_gateway_handler.dart": "e20943957e0cb68bcbdefd6a95812da672656e709823e69bc711d6bd1bf1ddcf",
+    "fastkirana_flutter/lib/data/repositories/cart_repository.dart": "38ff0485dd35bdf8060b8cb7b1fab5a886dc968838685f073767a4c03971ac9c"
+  },
+  "manual_confirmation_policy": "PAID recovery intentionally remains ADMIN_PENDING; automatic confirmation/KOT not expected",
+  "external_unverified": [
+    "PostgreSQL independent-worker concurrency",
+    "live Redis/gateway",
+    "signed-device lifecycle",
+    "historical Firebase key revocation"
+  ]
+}

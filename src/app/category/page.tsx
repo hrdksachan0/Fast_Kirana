@@ -9,8 +9,8 @@ export const revalidate = 0
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'All Categories - FastKirana | Grocery, Cafe & Restaurant',
-    description: 'Browse all categories at FastKirana. Fresh groceries, dairy, snacks, beverages, ice cream, bakery, and more delivered fast in Ghatampur, Kanpur.',
+    title: 'All Categories - FastMinute | Grocery, Cafe & Restaurant',
+    description: 'Browse all categories at FastMinute. Fresh groceries, dairy, snacks, beverages, ice cream, bakery, and more delivered fast in Ghatampur, Kanpur.',
     keywords: ['grocery categories', 'online grocery', 'fast delivery', 'Ghatampur', 'Kanpur', 'snacks', 'dairy', 'beverages'],
   }
 }

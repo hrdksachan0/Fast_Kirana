@@ -181,6 +181,7 @@ export async function POST(request: NextRequest) {
       user.name.startsWith('User ') ||
       user.name.startsWith('Customer ') ||
       user.name === 'Customer' ||
+      user.name === 'FastMinute Customer' ||
       user.name === 'FastKirana Customer'
 
     const needsProfileSetup = isNewOrUnnamedUser

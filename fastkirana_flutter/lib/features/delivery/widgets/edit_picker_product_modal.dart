@@ -580,7 +580,7 @@ class _EditPickerProductModalState extends ConsumerState<EditPickerProductModal>
                         ),
                       ),
                       Text(
-                        'FastKirana Dark Store Warehouse',
+                        'FastMinute Dark Store Warehouse',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 11),
                           color: slateMuted,

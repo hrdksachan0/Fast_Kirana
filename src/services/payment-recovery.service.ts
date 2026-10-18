@@ -63,7 +63,7 @@ export async function runPaymentRecoveryCron(): Promise<PaymentRecoverySummary> 
       const recoveryUrl = `https://fastkirana.com/order/${order.id}/track?action=cod`
 
       const messageText = 
-        `🛒 *FastKirana Payment Alert*\n\n` +
+        `🛒 *FastMinute Payment Alert*\n\n` +
         `Hi ${customerName}! Aapke order *#${displayId}* (₹${totalFormatted}) ka UPI payment pending hai.\n\n` +
         `Khana / Grocery turant dispatch karwane ke liye niche link par tap karke *Cash on Delivery (COD)* me convert karein ya payment retry karein:\n\n` +
         `👉 ${recoveryUrl}\n\n` +

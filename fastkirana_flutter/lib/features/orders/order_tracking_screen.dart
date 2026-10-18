@@ -1,5 +1,5 @@
 import 'package:collection/collection.dart';
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:dio/dio.dart';
@@ -299,8 +299,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final prefs = await SharedPreferences.getInstance();
     final phone = _order?.customerPhone ?? prefs.getString('user_phone') ?? '';
     final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '').replaceAll(RegExp(r'^91'), '');
-    final email = prefs.getString('user_email') ?? 'customer@fastkirana.in';
-    final customerName = _order?.customerName ?? 'FastKirana Customer';
+    final email = prefs.getString('user_email') ?? 'customer@fastminute.in';
+    final customerName = _order?.customerName ?? 'FastMinute Customer';
 
     // Cashfree PG
     try {
@@ -1721,7 +1721,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                     padding: const EdgeInsets.only(bottom: 14),
                                     child: SponsoredAdCard(
                                       title: activeBanner.title,
-                                      subtitle: activeBanner.subtitle ?? 'Special Partner Offer on FastKirana',
+                                      subtitle: activeBanner.subtitle ?? 'Special Partner Offer on FastMinute',
                                       imageUrl: activeBanner.imageUrl,
                                       discountText: discountTag,
                                       actionText: btnText,

@@ -99,12 +99,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const restaurant = await findRestaurantBySlug(slug)
 
   if (!restaurant) {
-    return { title: 'Restaurant Not Found - FastKirana' }
+    return { title: 'Restaurant Not Found - FastMinute' }
   }
 
   return {
-    title: `${restaurant.name} - Order Online | FastKirana`,
-    description: restaurant.description || `Order delicious food from ${restaurant.name} online at FastKirana. Fast delivery in Ghatampur!`,
+    title: `${restaurant.name} - Order Online | FastMinute`,
+    description: restaurant.description || `Order delicious food from ${restaurant.name} online at FastMinute. Fast delivery in Ghatampur!`,
     keywords: [`${restaurant.name}`, 'online food delivery', 'fast delivery', 'Ghatampur', 'Kanpur', 'cafe', 'restaurant'],
   }
 }

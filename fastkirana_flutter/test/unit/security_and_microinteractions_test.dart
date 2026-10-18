@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:fastkirana_flutter/core/services/secure_storage_service.dart';
-import 'package:fastkirana_flutter/core/services/biometric_service.dart';
-import 'package:fastkirana_flutter/widgets/shimmer_loading.dart';
+import 'package:fastminute_flutter/core/services/secure_storage_service.dart';
+import 'package:fastminute_flutter/core/services/biometric_service.dart';
+import 'package:fastminute_flutter/widgets/shimmer_loading.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

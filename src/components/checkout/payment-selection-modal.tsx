@@ -163,7 +163,7 @@ export function PaymentSelectionModal({
         {/* Footer Trust Badge */}
         <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-text-secondary pt-1">
           <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-          <span>100% Safe Payment • Verified by FastKirana</span>
+          <span>100% Safe Payment • Verified by FastMinute</span>
         </div>
       </div>
     </div>

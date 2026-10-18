@@ -145,7 +145,7 @@ export default function OrderTrackingModal({
           notes: targetOrder.notes || null,
           shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
           printedAt: new Date().toISOString(),
-          kotText: 'FASTKIRANA KOT',
+          kotText: 'FASTMINUTE KOT',
           manual: true,
           source: 'order_modal',
         }),
@@ -188,7 +188,7 @@ export default function OrderTrackingModal({
     const outletName = restSub?.shopName || (o.restaurantId ? (o.restaurantName || o.shopName) : null) || 'Restaurant'
     const orderTime = formatOrderTime(o.createdAt)
     
-    let text = `🍽️ *FASTKIRANA KITCHEN ORDER*\n`
+    let text = `🍽️ *FASTMINUTE KITCHEN ORDER*\n`
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
     text += `🆔 *Order Token:* #${orderId}\n`
     text += `⏰ *Order Time:* ${orderTime}\n`
@@ -519,7 +519,7 @@ export default function OrderTrackingModal({
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   </div>
                   <div className="font-bold text-xs text-text-primary truncate">
-                    {riderName || 'FastKirana Delivery Partner'}
+                    {riderName || 'FastMinute Delivery Partner'}
                   </div>
                   {riderPhone && (
                     <div className="text-[10px] text-text-muted font-mono font-semibold">
@@ -532,7 +532,7 @@ export default function OrderTrackingModal({
               {riderPhone && (
                 <div className="flex items-center gap-1.5 shrink-0">
                   <a
-                    href={`https://wa.me/${riderPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hello ${riderName || 'Rider'}, regarding FastKirana Order #${order.readableId || order.id.slice(0, 8)}:`)}`}
+                    href={`https://wa.me/${riderPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hello ${riderName || 'Rider'}, regarding FastMinute Order #${order.readableId || order.id.slice(0, 8)}:`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="h-8 w-8 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 flex items-center justify-center text-emerald-600 transition-colors cursor-pointer"
@@ -628,7 +628,7 @@ export default function OrderTrackingModal({
                             <span>
                               {isRest 
                                 ? `🍽️ ${(sub.shopName && !sub.shopName.toLowerCase().includes('dark store')) ? sub.shopName : (order.restaurantName || 'Restaurant')}` 
-                                : `🛒 FastKirana Dark Store`}
+                                : `🛒 FastMinute Dark Store`}
                             </span>
                             <span className="font-mono text-text-muted">#{sub.readableId || sub.id?.slice(0, 8)}</span>
                           </div>

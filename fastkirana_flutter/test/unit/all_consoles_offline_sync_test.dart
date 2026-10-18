@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:fastkirana_flutter/core/services/offline_sync_service.dart';
+import 'package:fastminute_flutter/core/services/offline_sync_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

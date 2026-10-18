@@ -1,0 +1,33 @@
+{
+  "collected": 237,
+  "passed": 237,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "failed_tests": [],
+  "exit_code": 0,
+  "elapsed_seconds": 186.33,
+  "initial_hashes": {
+    "routers/admin_extended.py": "f250e5bde77d07a3f7db17728fac09c9a1709576388c7029e9e56d17a383deac",
+    "routers/cashfree_router.py": "e24e493e08d473a1f43a6048aa4e3fd55d2051df6c64f28d806bda9d7032ffdf",
+    "routers/orders.py": "f3faeb761c71e0e1e9ad1d20b8c1787bc3bf2bf0e5cf940749c2ee04a5f6bc14",
+    "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+    "routers/websockets.py": "24c00482d541bf6f8502203f647c7d5e9898f4e538b26f7b3d1f56f068c9f9e6",
+    "utils/firebase.py": "e8df7630b7145a74307417bf5bc7af76a1ad3e3cfb8b578111ae0ea9fa74e534",
+    "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+    "tests/test_production_blockers_resolved.py": "7e170166ab51ac6212d870841044a4c8b3e96b1831fa66db0db79ff6610045df",
+    "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+  },
+  "final_hashes": {
+    "routers/admin_extended.py": "f250e5bde77d07a3f7db17728fac09c9a1709576388c7029e9e56d17a383deac",
+    "routers/cashfree_router.py": "e24e493e08d473a1f43a6048aa4e3fd55d2051df6c64f28d806bda9d7032ffdf",
+    "routers/orders.py": "f3faeb761c71e0e1e9ad1d20b8c1787bc3bf2bf0e5cf940749c2ee04a5f6bc14",
+    "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+    "routers/websockets.py": "24c00482d541bf6f8502203f647c7d5e9898f4e538b26f7b3d1f56f068c9f9e6",
+    "utils/firebase.py": "e8df7630b7145a74307417bf5bc7af76a1ad3e3cfb8b578111ae0ea9fa74e534",
+    "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+    "tests/test_production_blockers_resolved.py": "7e170166ab51ac6212d870841044a4c8b3e96b1831fa66db0db79ff6610045df",
+    "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+  },
+  "scope": "SQLite; dotenv disabled; dummy credentials; external network blocked; unmocked migration_full gateway/KOT suite excluded"
+}

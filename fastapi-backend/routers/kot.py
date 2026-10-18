@@ -113,11 +113,11 @@ def generate_standard_kot_text(
     token = order_id_text.strip().lstrip("#")
     mode = (delivery_method or "DELIVERY").strip().upper()
     mode_icon = "PICKUP" if mode in ("SELF_PICKUP", "PICKUP") else "DELIVERY"
-    brand_or_shop = shop_name.strip() if shop_name else "FastKirana"
+    brand_or_shop = shop_name.strip() if shop_name else "FastMinute"
     cust = (customer_name or "Customer").strip()
 
     lines = [thick]
-    lines.append(center("FASTKIRANA"))
+    lines.append(center("FASTMINUTE"))
     lines.append(center("KITCHEN ORDER TICKET"))
     lines.append(thick)
 
@@ -166,7 +166,7 @@ def generate_standard_kot_text(
     lines.append(thick)
 
     # Footer
-    lines.append(center("*** FASTKIRANA KITCHEN ***"))
+    lines.append(center("*** FASTMINUTE KITCHEN ***"))
     lines.append(center("Jaldi Banao - Garam Serve"))
 
     lines.extend(["\r\n\r\n\r\n"])
@@ -360,7 +360,7 @@ async def broadcast_kot(
         final_readable = f"{final_readable}-R"
 
     kot_text = req.kotText
-    if not kot_text or kot_text.strip() == "FASTKIRANA KOT" or len(kot_text.strip()) < 20:
+    if not kot_text or kot_text.strip() in ("FASTKIRANA KOT", "FASTMINUTE KOT") or len(kot_text.strip()) < 20:
         kot_text = generate_standard_kot_text(
             order_id_text=final_readable,
             customer_name=customer_name or "Customer",

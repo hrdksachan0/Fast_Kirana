@@ -10,7 +10,8 @@ class TrackingPreparingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shopName = order?.shopName ?? 'FastKirana Store';
+    final rawShop = order?.shopName ?? 'FastMinute Store';
+    final shopName = rawShop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
     final isPending = order?.status == OrderStatus.pending || order?.status == OrderStatus.adminPending;
 
     const brandGreen = Color(0xFF00A344);

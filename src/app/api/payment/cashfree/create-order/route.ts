@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     let customerId = 'guest_customer'
     let resolvedPhone = customerPhone || '9999999999'
     let resolvedEmail = customerEmail || 'customer@fastkirana.in'
-    let resolvedName = customerName || 'FastKirana Customer'
+    let resolvedName = customerName || 'FastMinute Customer'
 
     if (orderId) {
       const cleanOrderId = String(orderId).trim()
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       customerEmail: cleanEmail,
       returnUrl: `${appUrl}/checkout/verify?order_id=${resolvedOrderId}&cf_order_id={order_id}`,
       notifyUrl: `${webhookUrl}/api/payment/cashfree/webhook`,
-      note: `FastKirana Order #${readableId || resolvedOrderId}`
+      note: `FastMinute Order #${readableId || resolvedOrderId}`
     })
 
     // 🛡️ PERMANENT FIX: Save draft order payload in Redis cache with 24-hr TTL

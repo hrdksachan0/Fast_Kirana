@@ -100,7 +100,7 @@ export function TrackerMapView({ order, storeLat, storeLng }: TrackerMapViewProp
 
     L.marker([pickupLat, pickupLng], { icon: storeIcon })
       .addTo(map)
-      .bindPopup(`<b>Fulfilling Shop: ${order.shopName || 'FastKirana Store'}</b>`)
+      .bindPopup(`<b>Fulfilling Shop: ${order.shopName || 'FastMinute Store'}</b>`)
 
     L.marker([destLat, destLng], { icon: destIcon })
       .addTo(map)

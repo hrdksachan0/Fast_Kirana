@@ -17,7 +17,7 @@ export interface OrderNotificationContext {
 }
 
 export async function dispatchOrderNotifications(ctx: OrderNotificationContext): Promise<void> {
-  const { createdOrders, isOnlinePaid, customerName, customerPhone, addressText = '', cleanAppUrl = 'fastkirana.in' } = ctx
+  const { createdOrders, isOnlinePaid, customerName, customerPhone, addressText = '', cleanAppUrl = 'fastminute.in' } = ctx
 
   if (!createdOrders || createdOrders.length === 0) return
 

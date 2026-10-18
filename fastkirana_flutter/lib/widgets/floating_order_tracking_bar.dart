@@ -269,7 +269,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                             children: [
                               Expanded(
                                 child: Text(
-                                  '🏪 ${latestOrder.shopName != null && latestOrder.shopName!.isNotEmpty ? (latestOrder.shopName!.toLowerCase().contains('dark') ? 'FastKirana Dark Store' : latestOrder.shopName!) : (latestOrder.restaurantId != null ? 'Restaurant' : 'FastKirana Dark Store')}',
+                                  '🏪 ${latestOrder.shopName != null && latestOrder.shopName!.isNotEmpty ? (latestOrder.shopName!.toLowerCase().contains('dark') ? 'FastMinute Dark Store' : latestOrder.shopName!) : (latestOrder.restaurantId != null ? 'Restaurant' : 'FastMinute Dark Store')}',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 10),
                                     fontWeight: FontWeight.w600,

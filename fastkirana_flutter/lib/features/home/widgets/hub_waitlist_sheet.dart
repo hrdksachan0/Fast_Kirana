@@ -180,7 +180,7 @@ class _HubWaitlistSheetState extends ConsumerState<HubWaitlistSheet> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "We'll message your WhatsApp the instant FastKirana begins delivering in ${widget.hubName}. Exclusive launch discounts will be sent to your number!",
+                  "We'll message your WhatsApp the instant FastMinute begins delivering in ${widget.hubName}. Exclusive launch discounts will be sent to your number!",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 13),

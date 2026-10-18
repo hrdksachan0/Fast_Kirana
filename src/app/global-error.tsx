@@ -32,6 +32,12 @@ export default function GlobalError({
             <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-medium">
               We encountered a temporary interface hiccup. Your cart items and orders are completely safe.
             </p>
+            {error?.message && (
+              <div className="p-2.5 rounded-xl bg-black/60 border border-rose-500/30 text-rose-300 font-mono text-[11px] text-left break-all max-h-28 overflow-y-auto">
+                <p className="font-bold text-rose-400">Error: {error.message}</p>
+                {error.digest && <p className="text-[10px] text-zinc-400 mt-1">Digest: {error.digest}</p>}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-center gap-3 pt-2">

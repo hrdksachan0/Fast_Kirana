@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:fastkirana_flutter/core/config/app_config.dart';
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/config/app_config.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 
 class RoutePolylineService {
   static final Map<String, List<LatLng>> _routeCache = {};

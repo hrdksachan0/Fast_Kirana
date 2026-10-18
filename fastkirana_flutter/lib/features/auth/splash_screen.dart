@@ -105,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'FastKirana',
+                    'FastMinute',
                     style: TextStyle(
                       fontSize: Responsive.scaledFontSize(context, 38),
                       fontWeight: FontWeight.w900,

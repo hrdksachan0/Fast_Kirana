@@ -502,7 +502,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     CartItemsSection(
                       isGrocery: true,
                       title: 'Grocery & Daily Essentials',
-                      subtitle: 'Delivered from FastKirana Darkstore',
+                      subtitle: 'Delivered from FastMinute Darkstore',
                       items: groceryItems,
                     ),
 

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:fastkirana_flutter/data/models/cart.dart';
-import 'package:fastkirana_flutter/data/models/product.dart';
-import 'package:fastkirana_flutter/data/models/order.dart';
-import 'package:fastkirana_flutter/features/checkout/controllers/checkout_controller.dart';
-import 'package:fastkirana_flutter/features/orders/widgets/tracking_status_stepper.dart';
-import 'package:fastkirana_flutter/features/orders/widgets/tracking_payment_card.dart';
-import 'package:fastkirana_flutter/features/cart/widgets/cart_bill_details_card.dart';
+import 'package:fastminute_flutter/data/models/cart.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/data/models/order.dart';
+import 'package:fastminute_flutter/features/checkout/controllers/checkout_controller.dart';
+import 'package:fastminute_flutter/features/orders/widgets/tracking_status_stepper.dart';
+import 'package:fastminute_flutter/features/orders/widgets/tracking_payment_card.dart';
+import 'package:fastminute_flutter/features/cart/widgets/cart_bill_details_card.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

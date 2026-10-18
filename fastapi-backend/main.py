@@ -91,7 +91,7 @@ class TrailingSlashMiddleware:
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="High-Performance Python FastAPI Microservice for FastKirana E-Commerce, AI Demand Forecasting, Real-Time WebSockets, & Rider Wallet Ledger.",
+    description="High-Performance Python FastAPI Microservice for FastMinute E-Commerce, AI Demand Forecasting, Real-Time WebSockets, & Rider Wallet Ledger.",
     version="2.0.0",
     docs_url="/docs" if settings.APP_ENV != "production" else "/docs",
     redoc_url="/redoc",
@@ -124,6 +124,11 @@ except ImportError:
 
 # Configure CORS Middleware for Web & Mobile
 _cors_origins = [
+    "https://fastminute.in",
+    "https://www.fastminute.in",
+    "https://admin.fastminute.in",
+    "https://store.fastminute.in",
+    "https://api.fastminute.in",
     "https://fastkirana.in",
     "https://www.fastkirana.in",
     "https://admin.fastkirana.in",

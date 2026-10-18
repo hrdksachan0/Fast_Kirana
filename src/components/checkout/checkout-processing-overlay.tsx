@@ -153,7 +153,7 @@ export function CheckoutProcessingOverlay({
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                 </span>
                 <Zap className="h-3 w-3 fill-current text-emerald-500" />
-                <span>FastKirana Express Delivery</span>
+                <span>FastMinute Express Delivery</span>
               </motion.div>
 
               {/* Animated Scooter / Rider Radar Stage */}
@@ -210,7 +210,7 @@ export function CheckoutProcessingOverlay({
                 Creating Your Order
               </motion.h2>
               <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1 mb-5">
-                FastKirana Express packing station is locking your items
+                FastMinute Express packing station is locking your items
               </p>
 
               {/* Sleek Gradient Progress Track */}

@@ -150,7 +150,7 @@ const FESTIVAL_TEMPLATES = [
   },
   {
     name: '🎨 Holi Splash',
-    title: 'Holi Ke Rang, FastKirana Ke Sang!',
+    title: 'Holi Ke Rang, FastMinute Ke Sang!',
     description: 'Get natural herbal gulal, sweets, thandai, and pichkaris delivered fast!',
     code: 'HOLI100',
     gradient: 'from-pink-500 via-purple-500 to-yellow-400',
@@ -199,9 +199,9 @@ const FESTIVAL_TEMPLATES = [
 export const INSTAMART_PRO_DESIGNS = [
   {
     id: 'bappa-sweets',
-    name: '🪔 FastKirana Exclusive Sweets',
+    name: '🪔 FastMinute Exclusive Sweets',
     badge: 'FESTIVE SPECIAL',
-    title: 'FastKirana Exclusive',
+    title: 'FastMinute Exclusive',
     description: 'Bappa Approved Sweets! Get modaks, laddoos, pedas & dry fruits.',
     code: 'FESTIVE10',
     imageUrl: '/banners/fastkirana-bappa-retina.png',
@@ -302,7 +302,7 @@ export const MULTI_CARD_PRESETS = [
       'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&q=80',
     ],
     cashbackTitle: 'UP TO 50% OFF',
-    cashbackSubtitle: 'FastKirana Food Pass Exclusive Deals',
+    cashbackSubtitle: 'FastMinute Food Pass Exclusive Deals',
     ctaText: 'EXPLORE CUISINES',
     ctaUrl: '/category/fast-food',
     ctaBgColorHex: '#EA580C',
@@ -343,7 +343,7 @@ export const MULTI_CARD_PRESETS = [
     title: 'FARM FRESH GREENS',
     description: 'Crisp Apples, Ripe Avocados & Hydroponic Veggies',
     eyebrowTag: '🌿 MORNING HARVEST',
-    primaryBrand: 'FASTKIRANA',
+    primaryBrand: 'FASTMINUTE',
     secondaryBrand: 'ORGANIC',
     imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&q=80',
     hasWireframeGrid: true,

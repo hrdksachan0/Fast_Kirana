@@ -44,7 +44,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
   const [minAppVersion, setMinAppVersion] = useState('1.0.0')
   const [latestAppVersion, setLatestAppVersion] = useState('1.0.1')
   const [appUpdateUrl, setAppUpdateUrl] = useState('https://fastkirana.in/app-release.apk')
-  const [appUpdateMessage, setAppUpdateMessage] = useState('FastKirana ka naya update available hai! Faster performance, bug fixes aur smooth ordering ke liye abhi update karein.')
+  const [appUpdateMessage, setAppUpdateMessage] = useState('FastMinute ka naya update available hai! Faster performance, bug fixes aur smooth ordering ke liye abhi update karein.')
   const [appForceUpdate, setAppForceUpdate] = useState(false)
   const [deliveriesCount, setDeliveriesCount] = useState('10,000+')
   const [ratingValue, setRatingValue] = useState('4.8')
@@ -140,7 +140,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
   const [combinedMiscFee, setCombinedMiscFee] = useState('5')
   const [combinedMiscFeeLabel, setCombinedMiscFeeLabel] = useState('Combined Packaging Charge')
   const [contactPhone, setContactPhone] = useState(STORE_PHONE)
-  const [contactEmail, setContactEmail] = useState('help@fastkirana.com')
+  const [contactEmail, setContactEmail] = useState('help@fastminute.in')
   const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
   const [contactAddress, setContactAddress] = useState(STORE_ADDRESS)
   const [groceryPickupAddress, setGroceryPickupAddress] = useState(GROCERY_PICKUP_ADDRESS)
@@ -163,7 +163,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
   const [minOrderValue, setMinOrderValue] = useState('0')
 
   const [heroGreetingClosed, setHeroGreetingClosed] = useState("We're resting right now 💤")
-  const [heroSubtitleClosed, setHeroSubtitleClosed] = useState("FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!")
+  const [heroSubtitleClosed, setHeroSubtitleClosed] = useState("FastMinute Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!")
   
   const [heroGreetingMorning, setHeroGreetingMorning] = useState("Good morning, let's get breakfast! 🌅")
   const [heroSubtitleMorningMartClosed, setHeroSubtitleMorningMartClosed] = useState("Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨")
@@ -362,7 +362,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
     const cleanTaxRate = taxRate.trim() || '5'
     const cleanMinOrderValue = minOrderValue.trim() || '0'
     const cleanMiscFee = miscFee.trim() || '5'
-    const cleanContactEmail = contactEmail.trim() || 'help@fastkirana.com'
+    const cleanContactEmail = contactEmail.trim() || 'help@fastminute.in'
     const cleanContactTimings = contactTimings.trim() || '6 AM - 12 AM'
     const cleanContactAddress = contactAddress.trim() || STORE_ADDRESS
     const cleanGroceryPickupAddress = groceryPickupAddress.trim() || GROCERY_PICKUP_ADDRESS
@@ -371,7 +371,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
     const cleanDeliveryFee = deliveryFee.trim() || '25'
 
     const cleanHeroGreetingClosed = heroGreetingClosed.trim() || "We're resting right now 💤"
-    const cleanHeroSubtitleClosed = heroSubtitleClosed.trim() || "FastKirana Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!"
+    const cleanHeroSubtitleClosed = heroSubtitleClosed.trim() || "FastMinute Cafe & Mart are resting. We will be back to serve you fresh & hot goodies soon!"
     const cleanHeroGreetingMorning = heroGreetingMorning.trim() || "Good morning, let's get breakfast! 🌅"
     const cleanHeroSubtitleMorningMartClosed = heroSubtitleMorningMartClosed.trim() || "Grocery Mart is resting, but our Cafe is firing up fresh hot brews and breakfast specials! ☕✨"
     const cleanHeroSubtitleMorningCafeClosed = heroSubtitleMorningCafeClosed.trim() || "Cafe is taking a break, but Grocery Mart is wide open and delivering fresh milk & fruits! 🥛📦"

@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/product.dart';
 import '../data/repositories/wishlist_repository.dart';

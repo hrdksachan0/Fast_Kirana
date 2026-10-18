@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/data/models/store_settings.dart';
+import 'package:fastminute_flutter/data/models/store_settings.dart';
 
 void main() {
   group('StoreSettings Model Tests', () {

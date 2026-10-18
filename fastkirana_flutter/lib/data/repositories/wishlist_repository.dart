@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'package:dio/dio.dart';
 import '../models/product.dart';
 import '../../core/network/api_client.dart';

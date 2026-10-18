@@ -81,7 +81,7 @@ class RestaurantOutletSwitcherModal {
                       ),
                     ),
                     subtitle: Text(
-                      'FastKirana Food Kitchen · Live Outlet',
+                      'FastMinute Food Kitchen · Live Outlet',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11),
                         color: AppDesignSystem.slate500,

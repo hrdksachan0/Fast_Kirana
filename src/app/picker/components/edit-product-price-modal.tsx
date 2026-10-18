@@ -449,7 +449,7 @@ export function EditProductPriceModal({
             <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
               <div>
                 <span className="text-xs font-black text-slate-800">In Stock for Customers</span>
-                <p className="text-[10px] text-slate-500">Instantly activates item on FastKirana</p>
+                <p className="text-[10px] text-slate-500">Instantly activates item on FastMinute</p>
               </div>
               <button
                 type="button"

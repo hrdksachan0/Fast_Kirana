@@ -79,10 +79,10 @@ const CAFE_TEMPLATE_HEADERS = [
 ]
 
 const CAFE_TEMPLATE_ROWS = [
-  ['', 'Veg Grilled Sandwich', 'FastKirana Cafe', '1 plate', '120', '99', '30', 'sandwich, fastfood, cafe', 'Toasted sandwich with fresh veggies and cheese', '', '60', '5', 'Kitchen Grid A', ''],
-  ['', 'Special Masala Chai', 'FastKirana Cafe', '1 cup', '30', '20', '100', 'tea, beverage, hot', 'Authentic Indian spiced tea', '', '8', '10', 'Chai Station', ''],
-  ['', 'Paneer Burger', 'FastKirana Cafe', '1 pc', '150', '129', '25', 'burger, paneer, popular', 'Crispy paneer patty with gourmet sauces', '', '80', '5', 'Kitchen Grid B', ''],
-  ['', 'Penne Arrabbiata (Red Sauce Pasta)', 'FastKirana Cafe', '1 bowl', '180', '149', '15', 'pasta, Italian, redsauce', 'Spicy tomato sauce pasta with Italian herbs', '', '90', '3', 'Pasta Station', ''],
+  ['', 'Veg Grilled Sandwich', 'FastMinute Cafe', '1 plate', '120', '99', '30', 'sandwich, fastfood, cafe', 'Toasted sandwich with fresh veggies and cheese', '', '60', '5', 'Kitchen Grid A', ''],
+  ['', 'Special Masala Chai', 'FastMinute Cafe', '1 cup', '30', '20', '100', 'tea, beverage, hot', 'Authentic Indian spiced tea', '', '8', '10', 'Chai Station', ''],
+  ['', 'Paneer Burger', 'FastMinute Cafe', '1 pc', '150', '129', '25', 'burger, paneer, popular', 'Crispy paneer patty with gourmet sauces', '', '80', '5', 'Kitchen Grid B', ''],
+  ['', 'Penne Arrabbiata (Red Sauce Pasta)', 'FastMinute Cafe', '1 bowl', '180', '149', '15', 'pasta, Italian, redsauce', 'Spicy tomato sauce pasta with Italian herbs', '', '90', '3', 'Pasta Station', ''],
 ]
 
 
@@ -117,7 +117,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
     const rowsData = importType === 'grocery' ? GROCERY_TEMPLATE_ROWS : CAFE_TEMPLATE_ROWS
 
     const cafeCategory = categories.find((c) => c.slug === 'cafe')
-    const cafeCategoryName = cafeCategory?.name || 'FastKirana Cafe'
+    const cafeCategoryName = cafeCategory?.name || 'FastMinute Cafe'
 
     const rows = rowsData.map((row) => {
       const parsedRow = [...row]
@@ -135,7 +135,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = importType === 'grocery' ? 'fastkirana_grocery_template.csv' : 'fastkirana_cafe_template.csv'
+    a.download = importType === 'grocery' ? 'fastminute_grocery_template.csv' : 'fastminute_cafe_template.csv'
     a.click()
     URL.revokeObjectURL(url)
     toast.success(`${importType === 'grocery' ? 'Grocery' : 'Cafe'} template CSV downloaded!`)
@@ -145,7 +145,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
     const errors: ValidationError[] = []
 
     const cafeCategory = categories.find(c => c.slug === 'cafe')
-    const cafeCategoryName = cafeCategory?.name || 'FastKirana Cafe'
+    const cafeCategoryName = cafeCategory?.name || 'FastMinute Cafe'
     const cafeCategoryNameLower = cafeCategoryName.toLowerCase().trim()
 
     products.forEach((p, i) => {
@@ -254,7 +254,7 @@ export function AdminCsvImport({ categories, onImportComplete, onClose }: AdminC
         const categoryIdx = getIdx(['category', 'category name'])
         const unitIdx = getIdx(['unit', 'unit specification', 'size'])
         const mrpIdx = getIdx(['mrp', 'mrp price', 'max price'])
-        const priceIdx = getIdx(['price', 'selling price', 'fastkirana price'])
+        const priceIdx = getIdx(['price', 'selling price', 'fastminute price', 'fastkirana price'])
         const stockIdx = getIdx(['stock', 'initial stock', 'qty', 'quantity'])
         const tagsIdx = getIdx(['tags', 'tag'])
         const descIdx = getIdx(['description', 'desc', 'details'])

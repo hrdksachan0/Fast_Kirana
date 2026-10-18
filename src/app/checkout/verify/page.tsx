@@ -235,7 +235,7 @@ function CheckoutVerifyContent() {
       {/* Footer trust badge */}
       <div className="absolute bottom-8 flex items-center gap-1.5 text-[10px] text-text-muted font-medium">
         <ShieldCheck className="h-3.5 w-3.5" />
-        <span>Secured by Cashfree Payments & FastKirana</span>
+        <span>Secured by Cashfree Payments & FastMinute</span>
       </div>
     </div>
   )

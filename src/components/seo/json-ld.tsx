@@ -1,17 +1,17 @@
 export function JsonLdSchema() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastminute.in'
 
   const localBusinessSchema = {
     '@context': 'https://schema.org',
     '@type': 'GroceryStore',
     '@id': `${baseUrl}/#store`,
-    name: 'FastKirana - Online Grocery Delivery Ghatampur',
-    alternateName: 'Fast Kirana Ghatampur',
+    name: 'FastMinute - Online Grocery Delivery Ghatampur',
+    alternateName: 'FastMinute Ghatampur',
     url: baseUrl,
     logo: `${baseUrl}/brand/fastkirana_app_icon.png`,
     image: `${baseUrl}/brand/fastkirana_app_icon.png`,
     description:
-      'FastKirana is Ghatampur’s premier online grocery dark store delivery service. Order fresh fruits, vegetables, milk, dairy, snacks, atta, rice, dal, and daily essentials with fast doorstep delivery in Ghatampur, Kanpur Nagar, Uttar Pradesh.',
+      'FastMinute is Ghatampur’s premier online grocery dark store delivery service. Order fresh fruits, vegetables, milk, dairy, snacks, atta, rice, dal, and daily essentials with fast doorstep delivery in Ghatampur, Kanpur Nagar, Uttar Pradesh.',
     telephone: '+91-8112849854',
     priceRange: '₹',
     currenciesAccepted: 'INR',
@@ -70,8 +70,8 @@ export function JsonLdSchema() {
     '@context': 'https://schema.org',
     '@type': 'MobileApplication',
     '@id': `${baseUrl}/#mobileapp`,
-    name: 'FastKirana: Deliver in Minutes',
-    alternateName: ['FastKirana', 'Fast Kirana', 'Fast Kirana App', 'FastKirana App'],
+    name: 'FastMinute: Deliver in Minutes',
+    alternateName: ['FastMinute', 'Fast Minute', 'FastMinute App'],
     operatingSystem: 'Android',
     applicationCategory: 'ShoppingApplication',
     identifier: 'com.fastkirana.app',
@@ -86,11 +86,11 @@ export function JsonLdSchema() {
     },
     author: {
       '@type': 'Organization',
-      name: 'Fastkirana Services',
+      name: 'FastMinute Services',
       url: baseUrl,
     },
     description:
-      'Official FastKirana (Fast Kirana) app for instant grocery, daily milk, fresh fruits & vegetables, snacks, and restaurant food delivery in Ghatampur, Kanpur Nagar.',
+      'Official FastMinute app for instant grocery, daily milk, fresh fruits & vegetables, snacks, and restaurant food delivery in Ghatampur, Kanpur Nagar.',
   }
 
   const websiteSchema = {
@@ -98,7 +98,7 @@ export function JsonLdSchema() {
     '@type': 'WebSite',
     '@id': `${baseUrl}/#website`,
     url: baseUrl,
-    name: 'FastKirana',
+    name: 'FastMinute',
     publisher: {
       '@id': `${baseUrl}/#store`,
     },
@@ -118,10 +118,10 @@ export function JsonLdSchema() {
     mainEntity: [
       {
         '@type': 'Question',
-        name: 'What is FastKirana?',
+        name: 'What is FastMinute?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'FastKirana is Ghatampur’s premier online grocery delivery platform. We deliver fresh milk, vegetables, fruits, packaged foods, snacks, dairy, beverage, and kirana items directly to your doorstep in Ghatampur, Kanpur Nagar.',
+          text: 'FastMinute is Ghatampur’s premier online grocery delivery platform. We deliver fresh milk, vegetables, fruits, packaged foods, snacks, dairy, beverage, and kirana items directly to your doorstep in Ghatampur, Kanpur Nagar.',
         },
       },
       {
@@ -129,15 +129,15 @@ export function JsonLdSchema() {
         name: 'How fast is grocery delivery in Ghatampur?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'FastKirana delivers orders fast across Ghatampur market and surrounding residential areas in Kanpur Nagar.',
+          text: 'FastMinute delivers orders fast across Ghatampur market and surrounding residential areas in Kanpur Nagar.',
         },
       },
       {
         '@type': 'Question',
-        name: 'What payment options are available on FastKirana?',
+        name: 'What payment options are available on FastMinute?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'FastKirana supports Cash on Delivery (COD), UPI payments (Google Pay, PhonePe, Paytm, BHIM), and Cashfree Debit/Credit card options.',
+          text: 'FastMinute supports Cash on Delivery (COD), UPI payments (Google Pay, PhonePe, Paytm, BHIM), and Cashfree Debit/Credit card options.',
         },
       },
     ],

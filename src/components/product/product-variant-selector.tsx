@@ -141,7 +141,7 @@ export function ProductVariantSelector({ product }: ProductVariantSelectorProps)
       <div className="flex items-start gap-3 border border-accent/25 bg-accent/5 p-2.5 min-[375px]:p-3.5 rounded-xl shadow-xs">
         <ShieldCheck className="h-5 w-5 text-accent shrink-0 mt-0.5" />
         <div className="text-xs font-bold text-text-primary">
-          <span className="text-accent">FastKirana DarkStore Fresh Verified</span>
+          <span className="text-accent">FastMinute DarkStore Fresh Verified</span>
           <p className="text-[10px] text-text-secondary mt-1 font-semibold leading-relaxed">
             Sourced directly, stored in a hygiene-controlled environment, and packed under strict guidelines. Freshness guaranteed with zero retail shelf dust.
           </p>

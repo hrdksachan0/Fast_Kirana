@@ -263,7 +263,7 @@ class TrackingStatusStepper extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              sub.shopName ?? (isRest ? 'Restaurant' : 'FastKirana Darkstore'),
+                              sub.shopName ?? (isRest ? 'Restaurant' : 'FastMinute Darkstore'),
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 11.5),
                                 fontWeight: FontWeight.w600,

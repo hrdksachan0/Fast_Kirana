@@ -385,10 +385,10 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     final dateStr = DateFormat('dd MMM yyyy').format(DateTime.now());
 
     final buffer = StringBuffer();
-    buffer.writeln('*PURCHASE ORDER - FASTKIRANA*');
+    buffer.writeln('*PURCHASE ORDER - FASTMINUTE*');
     buffer.writeln('Vendor: *$vendorName* ($vendorCode)');
     buffer.writeln('Date: $dateStr');
-    buffer.writeln('Store: FastKirana Dark Store Hub\n');
+    buffer.writeln('Store: FastMinute Dark Store Hub\n');
     buffer.writeln('*Items Required Immediately:*');
 
     int idx = 1;
@@ -404,7 +404,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     }
 
     buffer.writeln('\nPlease confirm dispatch time and estimated invoice. Thank you!');
-    buffer.writeln('— FastKirana Procurement Team');
+    buffer.writeln('— FastMinute Procurement Team');
 
     final cleanPhone = phone.length == 10 ? '91$phone' : phone;
     final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(buffer.toString())}');
@@ -2720,7 +2720,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     final vendorName = _vendorProfile?['name'] ?? 'Supplier';
 
     final buffer = StringBuffer();
-    buffer.writeln('📦 *VENDOR DISPATCH SLIP - FASTKIRANA*');
+    buffer.writeln('📦 *VENDOR DISPATCH SLIP - FASTMINUTE*');
     buffer.writeln('Order: *#$readableId* (${status.toUpperCase()})');
     buffer.writeln('Supplier: *$vendorName*');
     buffer.writeln('Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}\n');
@@ -2739,7 +2739,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     }
 
     buffer.writeln('\n*Total Supplier Supply Value: ₹${totalVal.toStringAsFixed(0)}*');
-    buffer.writeln('Dark Store FastKirana Hub · Please ensure accurate weight & packing.');
+    buffer.writeln('Dark Store FastMinute Hub · Please ensure accurate weight & packing.');
 
     final url = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(buffer.toString())}');
     if (await canLaunchUrl(url)) {

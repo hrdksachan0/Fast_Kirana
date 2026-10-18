@@ -114,7 +114,7 @@ export function AppDownloadSheet() {
                 <div className="h-14 w-14 rounded-2xl overflow-hidden shadow-md border border-zinc-100 bg-white p-1">
                   <Image
                     src="/brand/fastkirana_icon_new.webp"
-                    alt="FastKirana App"
+                    alt="FastMinute App"
                     width={56}
                     height={56}
                     unoptimized

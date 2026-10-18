@@ -97,7 +97,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
           notes: mergedNotes,
           items,
           isCombined,
-          shopName: isCombined ? 'Multi-Store (FastKirana Darkstore + Restaurant)' : orderRaw.shopName,
+          shopName: isCombined ? 'Multi-Store (FastMinute Darkstore + Restaurant)' : orderRaw.shopName,
           address: address || {
             label: 'Pickup Location',
             houseNo: '',
@@ -185,7 +185,7 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
           Order Placed Successfully!
         </h1>
         <p className="text-xs font-semibold text-text-secondary mt-1.5 max-w-sm">
-          Thank you for shopping with FastKirana. Your order is registered and active!
+          Thank you for shopping with FastMinute. Your order is registered and active!
         </p>
 
         {/* Animated Delivery Timeline */}
@@ -323,8 +323,8 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                 <p className="text-text-primary font-black text-sm">{order.shopName}</p>
                 <p className="text-text-secondary mt-1 leading-relaxed text-[11px]">
                   {order.deliveryMethod === 'PICKUP'
-                    ? 'Your order is packed and ready for pickup at our local FastKirana Ghatampur Hub.'
-                    : 'Your order is packed and dispatched directly from our local FastKirana Dark Store to ensure maximum quality, safety, and fast delivery.'}
+                    ? 'Your order is packed and ready for pickup at our local FastMinute Ghatampur Hub.'
+                    : 'Your order is packed and dispatched directly from our local FastMinute Dark Store to ensure maximum quality, safety, and fast delivery.'}
                 </p>
               </div>
             </div>

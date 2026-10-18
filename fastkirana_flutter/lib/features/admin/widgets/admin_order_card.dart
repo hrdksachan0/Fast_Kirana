@@ -324,9 +324,9 @@ class AdminOrderCard extends ConsumerWidget {
                                   builder: (context) {
                                     final shop = order.shopName;
                                     final isRest = order.isRestaurantOrder;
-                                    final outletName = (shop != null && shop.isNotEmpty && shop != 'null' && shop != 'FastKirana Dark Store') 
+                                    final outletName = (shop != null && shop.isNotEmpty && shop != 'null' && shop != 'FastMinute Dark Store' && shop != 'FastKirana Dark Store') 
                                         ? shop 
-                                        : (isRest ? (RestaurantRegistry.getName(order.restaurantId) ?? 'Restaurant') : 'FastKirana Dark Store');
+                                        : (isRest ? (RestaurantRegistry.getName(order.restaurantId) ?? 'Restaurant') : 'FastMinute Dark Store');
 
                                     return Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -481,7 +481,7 @@ class AdminOrderCard extends ConsumerWidget {
                       final isRest = sub.isRestaurantOrder;
                       final outletIcon = isRest ? '🍽️' : '🛒';
                       final outletTitle = isRest
-                          ? ((sub.shopName != null && sub.shopName!.isNotEmpty && sub.shopName != 'FastKirana Dark Store')
+                          ? ((sub.shopName != null && sub.shopName!.isNotEmpty && sub.shopName != 'FastMinute Dark Store' && sub.shopName != 'FastKirana Dark Store')
                               ? sub.shopName!
                               : (RestaurantRegistry.getName(sub.restaurantId) ?? 'Restaurant'))
                           : 'Dark Store (Grocery)';
@@ -747,7 +747,7 @@ class AdminOrderCard extends ConsumerWidget {
                         ),
                         const SizedBox(height: 1),
                         Text(
-                          order.deliveryBoyName ?? order.deliveryUser?.name ?? 'FastKirana Delivery Partner',
+                          order.deliveryBoyName ?? order.deliveryUser?.name ?? 'FastMinute Delivery Partner',
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 12),
                             fontWeight: FontWeight.w800,
@@ -775,7 +775,7 @@ class AdminOrderCard extends ConsumerWidget {
                       onPressed: () {
                         final phone = (order.deliveryBoyPhone ?? order.deliveryUser?.phone ?? '').replaceAll(RegExp(r'\D'), '');
                         if (phone.isNotEmpty) {
-                          AppUrlLauncher.launchString('https://wa.me/$phone?text=Hello%20FastKirana%20Rider,%20regarding%20Order%20%23${order.displayId}:', context: context);
+                          AppUrlLauncher.launchString('https://wa.me/$phone?text=Hello%20FastMinute%20Rider,%20regarding%20Order%20%23${order.displayId}:', context: context);
                         }
                       },
                       icon: const Icon(Icons.chat_rounded, color: AppDesignSystem.green600, size: 16),

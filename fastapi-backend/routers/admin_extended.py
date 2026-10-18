@@ -773,7 +773,7 @@ async def admin_update_order_status(
         Order.readableId == order_id,
         Order.readableId.ilike(f"{order_id}%"),
         Order.combinedId == order_id
-    )))
+    )).with_for_update())
     order = result.scalars().first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -781,10 +781,322 @@ async def admin_update_order_status(
     old_status = order.status
     new_status = data.get("status")
     if new_status:
-        try:
-            order.status = OrderStatus(str(new_status).upper())
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid status")
+        status_str = str(new_status).strip().upper()
+        if status_str == "PREPARING":
+            target_status = OrderStatus.CONFIRMED
+        else:
+            try:
+                target_status = OrderStatus(status_str)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid status")
+        order.status = target_status
+
+        # If order is moving to an active/confirmed state and stock has NOT been deducted yet:
+        if target_status in [
+            OrderStatus.CONFIRMED,
+            OrderStatus.PACKED,
+            OrderStatus.SHIPPED,
+            OrderStatus.DELIVERED,
+            OrderStatus.PENDING,
+        ] and "[STOCK_DEDUCTED]" not in (order.notes or ""):
+            items_stmt = select(OrderItem).where(OrderItem.orderId == order.id)
+            items_res = await db.execute(items_stmt)
+            order_items = items_res.scalars().all()
+
+            # Aggregate demand across duplicate lines and variants
+            product_variant_demand: Dict[Any, int] = {}
+            product_total_demand: Dict[str, int] = {}
+
+            product_total_demand: Dict[str, int] = {}
+            for item in order_items:
+                if not item.productId:
+                    continue
+                qty = int(item.quantity or 1)
+                if qty <= 0:
+                    continue
+                p_id = str(item.productId)
+                product_total_demand[p_id] = product_total_demand.get(p_id, 0) + qty
+
+            sorted_pids = sorted(product_total_demand.keys())
+            db_products: Dict[str, Product] = {}
+            db_store_inv: Dict[str, Any] = {}
+
+            # Lock products and store inventories
+            for p_id in sorted_pids:
+                p_stmt = select(Product).where(Product.id == p_id).with_for_update()
+                p_res = await db.execute(p_stmt)
+                p_prod = p_res.scalars().first()
+                if not p_prod or p_prod.restaurantId:
+                    continue
+                db_products[p_id] = p_prod
+
+                if order.storeId:
+                    try:
+                        from models import StoreInventory
+                        inv_stmt = select(StoreInventory).where(
+                            StoreInventory.productId == p_id,
+                            StoreInventory.storeId == order.storeId
+                        ).with_for_update()
+                        inv_res = await db.execute(inv_stmt)
+                        store_inv = inv_res.scalars().first()
+                        if store_inv:
+                            db_store_inv[p_id] = store_inv
+                    except Exception as e:
+                        logger.warning(f"StoreInventory lock error in admin status update: {e}")
+
+            product_variant_demand: Dict[Any, int] = {}
+            for item in order_items:
+                if not item.productId:
+                    continue
+                qty = int(item.quantity or 1)
+                if qty <= 0:
+                    continue
+                p_id = str(item.productId)
+                p_prod = db_products.get(p_id)
+                if not p_prod or p_prod.restaurantId:
+                    continue
+
+                norm_var = str(item.selectedVariant).strip().lower() if item.selectedVariant and str(item.selectedVariant).strip() else None
+
+                if p_prod.variants and isinstance(p_prod.variants, list) and len(p_prod.variants) > 0:
+                    valid_vars = [v for v in p_prod.variants if isinstance(v, dict) and v.get("name")]
+                    if not norm_var:
+                        if valid_vars:
+                            def_name = str(valid_vars[0].get("name", "")).strip()
+                            item.selectedVariant = def_name
+                            norm_var = def_name.lower()
+                    else:
+                        v_match = next((v for v in valid_vars if str(v.get("name", "")).strip().lower() == norm_var), None)
+                        if not v_match:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Variant '{item.selectedVariant}' not found for product '{p_prod.name}' in catalog."
+                            )
+                        canonical_name = str(v_match.get("name", "")).strip()
+                        item.selectedVariant = canonical_name
+                        norm_var = canonical_name.lower()
+                else:
+                    norm_var = None
+
+                key = (p_id, norm_var)
+                product_variant_demand[key] = product_variant_demand.get(key, 0) + qty
+
+            # Validation step 1: Store inventory pool check for total demand across all variants
+            for p_id, total_qty in product_total_demand.items():
+                p_prod = db_products.get(p_id)
+                if not p_prod:
+                    continue
+                store_inv = db_store_inv.get(p_id)
+                if store_inv and store_inv.stock < total_qty:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Insufficient store inventory for \"{p_prod.name}\". Available: {store_inv.stock}, required: {total_qty}."
+                    )
+
+            # Validation step 2: Product & Variant stock check
+            for (p_id, norm_var), var_qty in product_variant_demand.items():
+                p_prod = db_products.get(p_id)
+                if not p_prod:
+                    continue
+
+                if norm_var and p_prod.variants and isinstance(p_prod.variants, list):
+                    v_match = next(
+                        (v for v in p_prod.variants if isinstance(v, dict) and str(v.get("name", "")).strip().lower() == norm_var),
+                        None
+                    )
+                    if v_match:
+                        avail = int(v_match.get("stock", 0))
+                        if avail < var_qty:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Insufficient stock for \"{p_prod.name} ({v_match.get('name')})\". Available: {avail}, required: {var_qty}."
+                            )
+                    else:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Variant '{norm_var}' not found for product '{p_prod.name}' in catalog."
+                        )
+                else:
+                    avail = p_prod.stock or 0
+                    total_p_qty = product_total_demand.get(p_id, var_qty)
+                    if avail < total_p_qty:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Insufficient stock for \"{p_prod.name}\". Available: {avail}, required: {total_p_qty}."
+                        )
+
+            # Mutation step: Deduct locked inventory (insufficient stock is rejected above, no concealing clamp)
+            for p_id in sorted_pids:
+                p_prod = db_products.get(p_id)
+                if not p_prod:
+                    continue
+                prev_stock = p_prod.stock or 0
+                total_qty = product_total_demand[p_id]
+
+                if p_prod.variants and isinstance(p_prod.variants, list) and len(p_prod.variants) > 0:
+                    updated_variants = []
+                    for v in p_prod.variants:
+                        if isinstance(v, dict):
+                            v_name = str(v.get("name", "")).strip().lower()
+                            v_qty = product_variant_demand.get((p_id, v_name), 0)
+                            if v_qty > 0:
+                                v_copy = dict(v)
+                                v_copy["stock"] = int(v_copy.get("stock", 0)) - v_qty
+                                updated_variants.append(v_copy)
+                            else:
+                                updated_variants.append(v)
+                        else:
+                            updated_variants.append(v)
+                    p_prod.variants = updated_variants
+                    p_prod.stock = sum(int(v.get("stock", 0)) for v in updated_variants if isinstance(v, dict))
+                else:
+                    p_prod.stock = prev_stock - total_qty
+
+                store_inv = db_store_inv.get(p_id)
+                if store_inv:
+                    store_inv.stock = store_inv.stock - total_qty
+
+                try:
+                    import uuid
+                    db.add(StockLog(
+                        id=f"sl_{uuid.uuid4().hex[:16]}",
+                        productId=p_prod.id,
+                        quantity=-total_qty,
+                        type="ORDER_APPROVAL",
+                        prevStock=prev_stock,
+                        newStock=p_prod.stock
+                    ))
+                except Exception:
+                    pass
+
+            order.notes = f"{order.notes or ''} [STOCK_DEDUCTED]".strip()
+
+        elif target_status == OrderStatus.CANCELLED and old_status != OrderStatus.CANCELLED:
+            if "[STOCK_DEDUCTED]" in (order.notes or ""):
+                items_stmt = select(OrderItem).where(OrderItem.orderId == order.id)
+                items_res = await db.execute(items_stmt)
+                order_items = items_res.scalars().all()
+
+                product_total_demand: Dict[str, int] = {}
+                for item in order_items:
+                    if not item.productId:
+                        continue
+                    qty = int(item.quantity or 1)
+                    if qty <= 0:
+                        continue
+                    p_id = str(item.productId)
+                    product_total_demand[p_id] = product_total_demand.get(p_id, 0) + qty
+
+                sorted_pids = sorted(product_total_demand.keys())
+                db_products: Dict[str, Product] = {}
+                db_store_inv: Dict[str, Any] = {}
+
+                for p_id in sorted_pids:
+                    p_stmt = select(Product).where(Product.id == p_id).with_for_update()
+                    p_res = await db.execute(p_stmt)
+                    p_prod = p_res.scalars().first()
+                    if not p_prod or p_prod.restaurantId:
+                        continue
+                    db_products[p_id] = p_prod
+
+                    if order.storeId:
+                        try:
+                            from models import StoreInventory
+                            inv_stmt = select(StoreInventory).where(
+                                StoreInventory.productId == p_id,
+                                StoreInventory.storeId == order.storeId
+                            ).with_for_update()
+                            inv_res = await db.execute(inv_stmt)
+                            store_inv = inv_res.scalars().first()
+                            if store_inv:
+                                db_store_inv[p_id] = store_inv
+                        except Exception as e:
+                            logger.warning(f"StoreInventory lock error in cancel stock restoration: {e}")
+
+                product_variant_demand: Dict[Any, int] = {}
+                for item in order_items:
+                    if not item.productId:
+                        continue
+                    qty = int(item.quantity or 1)
+                    if qty <= 0:
+                        continue
+                    p_id = str(item.productId)
+                    p_prod = db_products.get(p_id)
+                    if not p_prod or p_prod.restaurantId:
+                        continue
+
+                    norm_var = str(item.selectedVariant).strip().lower() if item.selectedVariant and str(item.selectedVariant).strip() else None
+                    if p_prod.variants and isinstance(p_prod.variants, list) and len(p_prod.variants) > 0:
+                        valid_vars = [v for v in p_prod.variants if isinstance(v, dict) and v.get("name")]
+                        if not norm_var:
+                            if valid_vars:
+                                def_name = str(valid_vars[0].get("name", "")).strip()
+                                norm_var = def_name.lower()
+                        else:
+                            v_match = next((v for v in valid_vars if str(v.get("name", "")).strip().lower() == norm_var), None)
+                            if v_match:
+                                norm_var = str(v_match.get("name", "")).strip().lower()
+                    else:
+                        norm_var = None
+
+                    key = (p_id, norm_var)
+                    product_variant_demand[key] = product_variant_demand.get(key, 0) + qty
+
+                for p_id in sorted_pids:
+                    p_prod = db_products.get(p_id)
+                    if not p_prod or p_prod.restaurantId:
+                        continue
+
+                    prev_stock = p_prod.stock or 0
+                    total_qty = product_total_demand[p_id]
+
+                    if p_prod.variants and isinstance(p_prod.variants, list) and len(p_prod.variants) > 0:
+                        updated_variants = []
+                        for v in p_prod.variants:
+                            if isinstance(v, dict):
+                                v_name = str(v.get("name", "")).strip().lower()
+                                v_qty = product_variant_demand.get((p_id, v_name), 0)
+                                if v_qty > 0:
+                                    v_copy = dict(v)
+                                    v_copy["stock"] = int(v_copy.get("stock", 0)) + v_qty
+                                    updated_variants.append(v_copy)
+                                else:
+                                    updated_variants.append(v)
+                            else:
+                                updated_variants.append(v)
+                        p_prod.variants = updated_variants
+                        p_prod.stock = sum(int(v.get("stock", 0)) for v in updated_variants if isinstance(v, dict))
+                    else:
+                        p_prod.stock = prev_stock + total_qty
+
+                    if order.storeId:
+                        try:
+                            from models import StoreInventory
+                            inv_stmt = select(StoreInventory).where(
+                                StoreInventory.productId == p_prod.id,
+                                StoreInventory.storeId == order.storeId
+                            ).with_for_update()
+                            inv_res = await db.execute(inv_stmt)
+                            store_inv = inv_res.scalars().first()
+                            if store_inv:
+                                store_inv.stock = store_inv.stock + total_qty
+                        except Exception:
+                            pass
+
+                    try:
+                        import uuid
+                        db.add(StockLog(
+                            id=f"sl_{uuid.uuid4().hex[:16]}",
+                            productId=p_prod.id,
+                            quantity=total_qty,
+                            type="ORDER_CANCELLED",
+                            prevStock=prev_stock,
+                            newStock=p_prod.stock
+                        ))
+                    except Exception:
+                        pass
+
+                order.notes = (order.notes or "").replace("[STOCK_DEDUCTED]", "[STOCK_RESTORED]").strip()
 
     if "deliveryUserId" in data:
         order.deliveryUserId = data["deliveryUserId"]
@@ -848,7 +1160,7 @@ async def admin_update_order_status(
             OrderStatus.CONFIRMED: ("Order Confirmed! 🛒", f"Order #{order.readableId or order.id[:8]} has been confirmed by the store."),
             OrderStatus.PACKED: ("Order Packed! 📦", "Your items have been packed and are ready to deliver."),
             OrderStatus.SHIPPED: ("Out for Delivery! 🛵", "Our rider is on the way with your order. Keep your phone nearby!"),
-            OrderStatus.DELIVERED: ("Order Delivered! 🎉", "Thank you for ordering with FastKirana. Enjoy your groceries!"),
+            OrderStatus.DELIVERED: ("Order Delivered! 🎉", "Thank you for ordering with FastMinute. Enjoy your groceries!"),
             OrderStatus.CANCELLED: ("Order Cancelled ❌", f"Order #{order.readableId or order.id[:8]} has been cancelled.")
         }
         
@@ -2685,7 +2997,7 @@ async def admin_create_store(
         upi = payload.get("upiVpa") or payload.get("storeUpiVpa") or ""
 
         resolved_address = (address or f"{city_name}{', ' + clean_pincode if clean_pincode else ''}").strip()
-        resolved_pickup = (pickup or f"FastKirana Dark Store, {city_name}{' - ' + clean_pincode if clean_pincode else ''}").strip()
+        resolved_pickup = (pickup or f"FastMinute Dark Store, {city_name}{' - ' + clean_pincode if clean_pincode else ''}").strip()
         resolved_phone = str(phone).strip()
         resolved_upi = str(upi).strip()
 
@@ -3133,10 +3445,10 @@ async def generate_gemini_cards(
 
     if api_key:
         try:
-            prompt = f"""You are a world-class luxury quick-commerce creative director for FastKirana.
+            prompt = f"""You are a world-class luxury quick-commerce creative director for FastMinute.
 Create an irresistible, mouth-watering, highly aesthetic promotional card configuration for the category: "{category_name}" in "{category_type}" delivery mode.
 Card Format: "{card_format}" (options: dark_showcase, bento_grid, editorial).
-Optional Outlet/Brand: "{outlet_name or ('A.S. Restaurant' if category_type == 'food' else 'FastKirana Direct')}".
+Optional Outlet/Brand: "{outlet_name or ('A.S. Restaurant' if category_type == 'food' else 'FastMinute Direct')}".
 
 Return ONLY a valid JSON object with these EXACT keys:
 {{
@@ -3219,7 +3531,7 @@ Return ONLY a valid JSON object with these EXACT keys:
             "eyebrowTag": "🔥 SIZZLING FAST FOOD" if is_food else "🌿 DAILY HARVEST",
             "discountTitle": fallback_title,
             "subtitle": fallback_sub,
-            "primaryBrand": outlet_name or ("A.S. RESTAURANT" if is_food else "FASTKIRANA"),
+            "primaryBrand": outlet_name or ("A.S. RESTAURANT" if is_food else "FASTMINUTE"),
             "secondaryBrand": "FAST BITES" if is_food else "DIRECT",
             "imageUrl": hero_image,
             "gridImages": bento_images,

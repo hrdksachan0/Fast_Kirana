@@ -10,10 +10,14 @@ const BASE_URL = CASHFREE_ENV === 'PRODUCTION'
   : 'https://sandbox.cashfree.com/pg'
 
 function getAppUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'
-  return (raw.includes('fastkirana.in') && !raw.includes('www.') && !raw.includes('api.'))
-    ? raw.replace('fastkirana.in', 'www.fastkirana.in')
-    : raw
+  const raw = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastminute.in'
+  if (raw.includes('fastminute.in') && !raw.includes('www.') && !raw.includes('api.')) {
+    return raw.replace('fastminute.in', 'www.fastminute.in')
+  }
+  if (raw.includes('fastkirana.in') && !raw.includes('www.') && !raw.includes('api.')) {
+    return raw.replace('fastkirana.in', 'www.fastkirana.in')
+  }
+  return raw
 }
 
 function getApiUrl(): string {
@@ -80,7 +84,7 @@ export async function createCashfreeOrder(params: CreateCashfreeOrderParams): Pr
     customer_phone: phone,
     customer_name: (params.customerName && params.customerName.trim().length > 0)
       ? params.customerName.trim().slice(0, 50)
-      : 'FastKirana Customer',
+      : 'FastMinute Customer',
   }
 
   // Email is completely optional in Cashfree PG; only include if user provided a valid email
@@ -103,7 +107,7 @@ export async function createCashfreeOrder(params: CreateCashfreeOrderParams): Pr
       return_url: params.returnUrl || `${appUrl}/order/${params.orderId}?payment=cf_success`,
       notify_url: params.notifyUrl || `${apiUrl}/api/payment/cashfree/webhook`,
     },
-    order_note: params.note || 'FastKirana Quick Commerce Order',
+    order_note: params.note || 'FastMinute Quick Commerce Order',
   }
 
   const response = await fetch(`${BASE_URL}/orders`, {
@@ -269,7 +273,7 @@ export async function createCashfreePaymentLink(params: {
     link_purpose: params.purpose.slice(0, 100),
     customer_details: {
       customer_phone: phone,
-      customer_name: (params.customerName || 'FastKirana Customer').slice(0, 50),
+      customer_name: (params.customerName || 'FastMinute Customer').slice(0, 50),
       customer_email: params.customerEmail && params.customerEmail.includes('@')
         ? params.customerEmail
         : 'customer@fastkirana.in',

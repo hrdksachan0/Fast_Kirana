@@ -40,7 +40,7 @@ class AboutScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
             Text(
-              'FastKirana',
+              'FastMinute',
               style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 24), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
             ),
             Text(
@@ -65,7 +65,7 @@ class AboutScreen extends StatelessWidget {
                   Text('Our Story', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
                   const SizedBox(height: 12),
                   Text(
-                    'FastKirana brings the local kirana store to your fingertips. We deliver fresh groceries, daily essentials, and cafe delights fast — from farm to your home, we ensure quality and freshness at the best prices.',
+                    'FastMinute brings express groceries and local restaurant favorites to your fingertips. We deliver fresh groceries, daily essentials, and cafe delights in minutes — from local stores to your home, we ensure quality and freshness at the best prices.',
                     style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary, height: 1.6),
                   ),
                 ],

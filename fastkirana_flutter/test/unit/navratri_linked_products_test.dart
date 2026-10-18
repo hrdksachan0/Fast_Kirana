@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:fastkirana_flutter/core/config/app_config.dart';
-import 'package:fastkirana_flutter/core/network/api_client.dart';
-import 'package:fastkirana_flutter/data/models/product.dart';
-import 'package:fastkirana_flutter/data/repositories/product_repository.dart';
-import 'package:fastkirana_flutter/features/navratri/navratri_data.dart';
-import 'package:fastkirana_flutter/features/navratri/navratri_linked_products.dart';
+import 'package:fastminute_flutter/core/config/app_config.dart';
+import 'package:fastminute_flutter/core/network/api_client.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/data/repositories/product_repository.dart';
+import 'package:fastminute_flutter/features/navratri/navratri_data.dart';
+import 'package:fastminute_flutter/features/navratri/navratri_linked_products.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

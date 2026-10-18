@@ -1,0 +1,926 @@
+{
+  "scope": "actual current quote/recovery/SSE/admin functions with fake ORM/cache plus one real isolated SQLite quote/recovery/admin commit; fake ORM refresh timestamp default simulated; tasks/broadcasts suppressed; no production services",
+  "results": [
+    {
+      "case": "eligible-category-coupon",
+      "quote": 80.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 20.0,
+        "couponCode": "ELIGIBLE20",
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 80.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": "eligible-cat",
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 20.0,
+      "total": 80.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "forged-category",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "accepted-price-after-catalog-change",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "client-line-price",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "encoded-variant-client-price",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": "Small",
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "unknown-product",
+      "quote_http_status": 400,
+      "detail": "Product 'nonexistent' not found in catalog."
+    },
+    {
+      "case": "invalid-variant",
+      "quote_http_status": 400,
+      "detail": "Variant 'Unknown' not found for product 'Review item' in catalog."
+    },
+    {
+      "case": "duplicate-lines-last-unit-pending-intent",
+      "quote": 200.0,
+      "accepted_quote": {
+        "subtotal": 200.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 200.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          },
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 200.0,
+      "discount": 0.0,
+      "total": 200.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        },
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 1,
+      "hub_stock": 1,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "encoded-overlapping-product-ids",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "prod_1",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": "Small",
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "prod_1",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "exact-overlapping-product-id-control",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "prod_1",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": "Small",
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "prod_1",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "sse-owner",
+      "http_status": 200
+    },
+    {
+      "case": "sse-rider",
+      "http_status": 200
+    },
+    {
+      "case": "sse-blocked-token",
+      "http_status": 401
+    },
+    {
+      "case": "sse-demoted-token",
+      "http_status": 403
+    },
+    {
+      "case": "sse-admin-enum",
+      "http_status": 200
+    },
+    {
+      "case": "truly-ambiguous-encoded-id",
+      "quote_http_status": 400,
+      "detail": "Ambiguous encoded product ID 'prod_1_Small' resolves to multiple catalog products."
+    },
+    {
+      "case": "underscore-variant-name",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": "Small_Pack",
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "admin-normal-lifecycle",
+      "history": [
+        {
+          "requested": "CONFIRMED",
+          "response": {
+            "order": {
+              "id": "approval-normal-lifecycle",
+              "status": "CONFIRMED"
+            }
+          },
+          "product_stock": 1,
+          "hub_stock": 1,
+          "notes": "Paid recovered order [STOCK_DEDUCTED]",
+          "variants": null
+        },
+        {
+          "requested": "CONFIRMED",
+          "response": {
+            "order": {
+              "id": "approval-normal-lifecycle",
+              "status": "CONFIRMED"
+            }
+          },
+          "product_stock": 1,
+          "hub_stock": 1,
+          "notes": "Paid recovered order [STOCK_DEDUCTED]",
+          "variants": null
+        },
+        {
+          "requested": "PACKED",
+          "response": {
+            "order": {
+              "id": "approval-normal-lifecycle",
+              "status": "PACKED"
+            }
+          },
+          "product_stock": 1,
+          "hub_stock": 1,
+          "notes": "Paid recovered order [STOCK_DEDUCTED]",
+          "variants": null
+        },
+        {
+          "requested": "CANCELLED",
+          "response": {
+            "order": {
+              "id": "approval-normal-lifecycle",
+              "status": "CANCELLED"
+            }
+          },
+          "product_stock": 2,
+          "hub_stock": 2,
+          "notes": "Paid recovered order [STOCK_RESTORED]",
+          "variants": null
+        },
+        {
+          "requested": "CANCELLED",
+          "response": {
+            "order": {
+              "id": "approval-normal-lifecycle",
+              "status": "CANCELLED"
+            }
+          },
+          "product_stock": 2,
+          "hub_stock": 2,
+          "notes": "Paid recovered order [STOCK_RESTORED]",
+          "variants": null
+        }
+      ],
+      "locks": [
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "OrderItem",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "OrderItem",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "Order",
+          "for_update": true
+        }
+      ]
+    },
+    {
+      "case": "admin-preparing-alias",
+      "history": [
+        {
+          "requested": "PREPARING",
+          "response": {
+            "order": {
+              "id": "approval-preparing-alias",
+              "status": "CONFIRMED"
+            }
+          },
+          "product_stock": 1,
+          "hub_stock": 1,
+          "notes": "Paid recovered order [STOCK_DEDUCTED]",
+          "variants": null
+        }
+      ],
+      "locks": [
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "OrderItem",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        }
+      ]
+    },
+    {
+      "case": "admin-duplicate-last-unit",
+      "history": [
+        {
+          "requested": "CONFIRMED",
+          "http_status": 400,
+          "detail": "Insufficient store inventory for \"Review item\". Available: 1, required: 2.",
+          "product_stock": 1,
+          "hub_stock": 1,
+          "commits": 0
+        }
+      ],
+      "locks": [
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "OrderItem",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        }
+      ]
+    },
+    {
+      "case": "admin-duplicate-product-pool",
+      "history": [
+        {
+          "requested": "CONFIRMED",
+          "http_status": 400,
+          "detail": "Insufficient stock for \"Review item\". Available: 1, required: 2.",
+          "product_stock": 1,
+          "hub_stock": 5,
+          "commits": 0
+        }
+      ],
+      "locks": [
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "OrderItem",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        }
+      ]
+    },
+    {
+      "case": "admin-mixed-variant-shared-store",
+      "history": [
+        {
+          "requested": "CONFIRMED",
+          "http_status": 400,
+          "detail": "Insufficient store inventory for \"Review item\". Available: 1, required: 2.",
+          "product_stock": 4,
+          "hub_stock": 1,
+          "commits": 0
+        }
+      ],
+      "locks": [
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "OrderItem",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        }
+      ]
+    },
+    {
+      "case": "admin-normalized-variant-duplicates",
+      "history": [
+        {
+          "requested": "CONFIRMED",
+          "http_status": 400,
+          "detail": "Insufficient stock for \"Review item (Small)\". Available: 1, required: 2.",
+          "product_stock": 2,
+          "hub_stock": 5,
+          "commits": 0
+        }
+      ],
+      "locks": [
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "OrderItem",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        }
+      ]
+    },
+    {
+      "case": "admin-valid-variant-lifecycle",
+      "history": [
+        {
+          "requested": "CONFIRMED",
+          "response": {
+            "order": {
+              "id": "approval-valid-variant-lifecycle",
+              "status": "CONFIRMED"
+            }
+          },
+          "product_stock": 2,
+          "hub_stock": 2,
+          "notes": "Paid recovered order [STOCK_DEDUCTED]",
+          "variants": [
+            {
+              "name": "Small",
+              "price": 100.0,
+              "stock": 1
+            },
+            {
+              "name": "Large",
+              "price": 100.0,
+              "stock": 1
+            }
+          ]
+        },
+        {
+          "requested": "PACKED",
+          "response": {
+            "order": {
+              "id": "approval-valid-variant-lifecycle",
+              "status": "PACKED"
+            }
+          },
+          "product_stock": 2,
+          "hub_stock": 2,
+          "notes": "Paid recovered order [STOCK_DEDUCTED]",
+          "variants": [
+            {
+              "name": "Small",
+              "price": 100.0,
+              "stock": 1
+            },
+            {
+              "name": "Large",
+              "price": 100.0,
+              "stock": 1
+            }
+          ]
+        },
+        {
+          "requested": "CANCELLED",
+          "response": {
+            "order": {
+              "id": "approval-valid-variant-lifecycle",
+              "status": "CANCELLED"
+            }
+          },
+          "product_stock": 4,
+          "hub_stock": 4,
+          "notes": "Paid recovered order [STOCK_RESTORED]",
+          "variants": [
+            {
+              "name": "Small",
+              "price": 100.0,
+              "stock": 2
+            },
+            {
+              "name": "Large",
+              "price": 100.0,
+              "stock": 2
+            }
+          ]
+        }
+      ],
+      "locks": [
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "OrderItem",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "Order",
+          "for_update": true
+        },
+        {
+          "entity": "OrderItem",
+          "for_update": false
+        },
+        {
+          "entity": "Product",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        },
+        {
+          "entity": "StoreInventory",
+          "for_update": true
+        }
+      ]
+    },
+    {
+      "case": "paid-variant-without-selection",
+      "quote": 100.0,
+      "response": {
+        "order": {
+          "id": "ord_8934dcc28cd14ff1b5b2",
+          "status": "CONFIRMED"
+        }
+      },
+      "ordered_items": [
+        {
+          "productId": "review-product",
+          "selectedVariant": "Small",
+          "quantity": 1
+        }
+      ],
+      "initial_product_stock": 2,
+      "product_stock": 1,
+      "hub_stock": 1,
+      "variants": [
+        {
+          "name": "Small",
+          "price": 100.0,
+          "stock": 1
+        }
+      ],
+      "notes": "[CF_ORDER:cf_1792254853776] | Cashfree PG Paid (Ref: review-paid) | Auto-Recovered (Awaiting Admin Confirmation) [STOCK_DEDUCTED]"
+    },
+    {
+      "case": "sqlite-paid-variant-without-selection",
+      "scope": "actual isolated in-memory SQLite quote/recovery/admin commit",
+      "response": {
+        "order": {
+          "id": "ord_9e308e47eaa448f2b4df",
+          "status": "CONFIRMED"
+        }
+      },
+      "quote": 100.0,
+      "initial_product_stock": 2,
+      "product_stock": 1,
+      "hub_stock": 1,
+      "variants": [
+        {
+          "name": "Small",
+          "price": 100.0,
+          "stock": 1
+        }
+      ],
+      "notes": "[CF_ORDER:cf_1792254853934] | Cashfree PG Paid (Ref: sqlite-paid) | Auto-Recovered (Awaiting Admin Confirmation) [STOCK_DEDUCTED]"
+    }
+  ],
+  "hashes": {
+    "routers/cashfree_router.py": "e75a1fd54a73a0615589d613c2e8f956a3edac89183ccb7db651e0f3901b29c3",
+    "routers/orders.py": "f3faeb761c71e0e1e9ad1d20b8c1787bc3bf2bf0e5cf940749c2ee04a5f6bc14",
+    "routers/websockets.py": "24c00482d541bf6f8502203f647c7d5e9898f4e538b26f7b3d1f56f068c9f9e6",
+    "routers/admin_extended.py": "8cb4516a494409b3ae2955e94333ab730ecfb96bed132eaf8b2bcf39419c6ecb"
+  }
+}

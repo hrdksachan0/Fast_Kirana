@@ -110,7 +110,7 @@ class SettingsScreen extends StatelessWidget {
                   _divider(),
                   _navTile(context, Icons.description_rounded, 'Terms & Conditions', 'Usage terms', () {}),
                   _divider(),
-                  _navTile(context, Icons.info_outline_rounded, 'About', 'FastKirana v1.0.0', () {}),
+                  _navTile(context, Icons.info_outline_rounded, 'About', 'FastMinute v1.0.0', () {}),
                 ],
               ),
             ),

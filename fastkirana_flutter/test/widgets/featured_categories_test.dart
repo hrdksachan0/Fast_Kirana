@@ -7,15 +7,15 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/core/routes/page_transitions.dart';
-import 'package:fastkirana_flutter/data/models/category.dart';
-import 'package:fastkirana_flutter/data/models/store_settings.dart';
-import 'package:fastkirana_flutter/features/categories/category_products_screen.dart';
-import 'package:fastkirana_flutter/features/home/featured_categories.dart';
-import 'package:fastkirana_flutter/features/home/main_shell.dart';
-import 'package:fastkirana_flutter/features/home/widgets/trending_categories_section.dart';
-import 'package:fastkirana_flutter/providers/product_provider.dart';
-import 'package:fastkirana_flutter/providers/store_settings_provider.dart';
+import 'package:fastminute_flutter/core/routes/page_transitions.dart';
+import 'package:fastminute_flutter/data/models/category.dart';
+import 'package:fastminute_flutter/data/models/store_settings.dart';
+import 'package:fastminute_flutter/features/categories/category_products_screen.dart';
+import 'package:fastminute_flutter/features/home/featured_categories.dart';
+import 'package:fastminute_flutter/features/home/main_shell.dart';
+import 'package:fastminute_flutter/features/home/widgets/trending_categories_section.dart';
+import 'package:fastminute_flutter/providers/product_provider.dart';
+import 'package:fastminute_flutter/providers/store_settings_provider.dart';
 
 const sources = [
   Category(

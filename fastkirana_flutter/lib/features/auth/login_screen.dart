@@ -257,7 +257,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       style: TextStyle(color: Color(0xFF0F172A)),
                                     ),
                                     TextSpan(
-                                      text: 'Kirana',
+                                      text: 'Minute',
                                       style: TextStyle(color: brandRed),
                                     ),
                                   ],
@@ -788,7 +788,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       Text(
-                        'FastKirana Services & Privacy Policy',
+                        'FastMinute Services & Privacy Policy',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: Responsive.scaledFontSize(context, 12),
                           fontWeight: FontWeight.w500,
@@ -825,7 +825,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     _buildTncSection(
                       context,
                       '1. Service Overview',
-                      'FastKirana provides on-demand grocery, dairy, snacks, beverages, and local restaurant food express delivery across Ghatampur (UP 209206).',
+                      'FastMinute provides on-demand grocery, dairy, snacks, beverages, and local restaurant food express delivery across Ghatampur (UP 209206).',
                     ),
                     _buildTncSection(
                       context,
@@ -835,12 +835,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     _buildTncSection(
                       context,
                       '3. Orders, Pricing & Delivery Zones',
-                      'All prices listed in the FastKirana app are inclusive of applicable taxes. Delivery charges and surge fees (if applicable during extreme weather or late nights) are clearly itemized before checkout.',
+                      'All prices listed in the FastMinute app are inclusive of applicable taxes. Delivery charges and surge fees (if applicable during extreme weather or late nights) are clearly itemized before checkout.',
                     ),
                     _buildTncSection(
                       context,
                       '4. Payment Options',
-                      'FastKirana supports 100% secure Online Payments (UPI - Google Pay, PhonePe, Paytm, BHIM, Net Banking, Credit/Debit Cards) and Cash on Delivery (COD). All online transactions are protected with 256-bit SSL encryption.',
+                      'FastMinute supports 100% secure Online Payments (UPI - Google Pay, PhonePe, Paytm, BHIM, Net Banking, Credit/Debit Cards) and Cash on Delivery (COD). All online transactions are protected with 256-bit SSL encryption.',
                     ),
                     _buildTncSection(
                       context,

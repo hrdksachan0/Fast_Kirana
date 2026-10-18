@@ -111,7 +111,7 @@ export function TrackerStatusHero({
               </span>
             ) : (
               <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                🛒 FastKirana DarkStore
+                🛒 FastMinute DarkStore
               </span>
             )}
           </div>
@@ -142,7 +142,7 @@ export function TrackerStatusHero({
             {combinedStatus === 'CANCELLED'
               ? 'This order has been cancelled.'
               : combinedStatus === 'DELIVERED'
-              ? 'Thank you for ordering with FastKirana!'
+              ? 'Thank you for ordering with FastMinute!'
               : order.deliveryMethod === 'PICKUP'
               ? (
                   (order.status === 'PACKED' || order.status === 'SHIPPED' || ['READY_FOR_PICKUP', 'READY', 'PREPARED'].includes(order.status))
@@ -280,7 +280,7 @@ export function TrackerStatusHero({
                     </div>
                     <div className="min-w-0">
                       <div className="text-text-primary font-black text-xs truncate">
-                        {isRest ? (sub.shopName || 'Restaurant') : 'FastKirana Darkstore'}
+                        {isRest ? (sub.shopName || 'Restaurant') : 'FastMinute Darkstore'}
                       </div>
                       <div className="text-[10px] text-text-muted font-medium mt-0.5">
                         {sub.itemsCount || sub.items?.length || 0} {isRest ? 'Dishes' : 'Grocery items'}

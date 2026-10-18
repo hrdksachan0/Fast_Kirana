@@ -547,7 +547,7 @@ export default async function AdminPage(props: {
       <Suspense fallback={
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-muted-foreground animate-pulse">
           <div className="w-8 h-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
-          <p className="text-xs font-bold tracking-wide">Loading Fast Kirana Admin Console...</p>
+          <p className="text-xs font-bold tracking-wide">Loading FastMinute Admin Console...</p>
         </div>
       }>
         <AdminDashboard

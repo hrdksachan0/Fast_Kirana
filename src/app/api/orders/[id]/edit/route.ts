@@ -215,7 +215,7 @@ export async function POST(
           // No restaurantId -> 100% Dark Store GROCERY item (even if added while editing a restaurant order)
           isRestaurant = false
           resolvedRestId = null
-          resolvedShopName = 'FastKirana Grocery'
+          resolvedShopName = 'FastMinute Grocery'
           resolvedShopPhone = null
         }
       } else {
@@ -236,7 +236,7 @@ export async function POST(
           // Otherwise default custom item to grocery
           isRestaurant = false
           resolvedRestId = null
-          resolvedShopName = 'FastKirana Grocery'
+          resolvedShopName = 'FastMinute Grocery'
           resolvedShopPhone = null
         }
       }
@@ -401,7 +401,7 @@ export async function POST(
       } else if (hasGroceryItems) {
         dynamicOrderType = 'GROCERY'
         dynamicRestaurantId = null
-        dynamicShopName = 'FastKirana Grocery'
+        dynamicShopName = 'FastMinute Grocery'
         dynamicShopPhone = null
       }
 
@@ -547,7 +547,7 @@ export async function POST(
         items: groceryGroup,
         type: 'GROCERY',
         restaurantId: null,
-        shopName: 'FastKirana Grocery',
+        shopName: 'FastMinute Grocery',
         shopPhone: null,
         readableId: `${baseReadableId}-G`,
         isNew: !existingGrocery,

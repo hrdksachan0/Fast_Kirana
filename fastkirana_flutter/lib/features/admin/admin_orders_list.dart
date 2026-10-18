@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -814,7 +814,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
       final subLabels = resolvedSubOrders.map((o) {
         final isRest = o.isRestaurantOrder;
-        final name = (o.shopName != null && o.shopName!.trim().isNotEmpty && o.shopName != 'FastKirana Dark Store' && o.shopName != 'FastKirana Store')
+        final name = (o.shopName != null && o.shopName!.trim().isNotEmpty && o.shopName != 'FastMinute Dark Store' && o.shopName != 'FastMinute Store' && o.shopName != 'FastKirana Dark Store' && o.shopName != 'FastKirana Store')
             ? o.shopName!.trim()
             : (RestaurantRegistry.getName(o.restaurantId) ?? (isRest ? 'Restaurant' : 'Dark Store'));
         return isRest ? '🍽️ $name' : '🛒 $name';
@@ -1231,7 +1231,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       cleanPhone = '91$cleanPhone';
     }
     if (cleanPhone.isEmpty) return;
-    final uri = Uri.parse('https://wa.me/$cleanPhone?text=Hi%20from%20FastKirana%20re:%20Order%20%23$orderId');
+    final uri = Uri.parse('https://wa.me/$cleanPhone?text=Hi%20from%20FastMinute%20re:%20Order%20%23$orderId');
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
@@ -1475,7 +1475,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     final total = order.total.toInt();
     final trackUrl = 'https://fast-kirana-gtm.vercel.app/order/${order.id}/track';
 
-    final message = 'Namaste $custName ji, aapka FastKirana order #$displayId (₹$total) payment ke liye pending hai.\n\nAap is link se online pay kar sakte hain ya status track kar sakte hain:\n$trackUrl\n\nFastKirana Ghatampur se judne ke liye dhanyawad!';
+    final message = 'Namaste $custName ji, aapka FastMinute order #$displayId (₹$total) payment ke liye pending hai.\n\nAap is link se online pay kar sakte hain ya status track kar sakte hain:\n$trackUrl\n\nFastMinute Ghatampur se judne ke liye dhanyawad!';
 
     final uri = Uri.parse('https://wa.me/91$cleanPhone?text=${Uri.encodeComponent(message)}');
     if (await canLaunchUrl(uri)) {
@@ -1519,7 +1519,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
             'selectedVariant': it.selectedVariant,
             'notes': it.notes,
             'restaurantId': it.restaurantId ?? (it.isRestaurantItem ? effectiveRestId : order.restaurantId),
-            'shopName': it.shopName ?? (it.isRestaurantItem ? (order.shopName ?? RestaurantRegistry.getName(effectiveRestId) ?? 'Restaurant') : 'FastKirana Grocery'),
+            'shopName': it.shopName ?? (it.isRestaurantItem ? (order.shopName ?? RestaurantRegistry.getName(effectiveRestId) ?? 'Restaurant') : 'FastMinute Grocery'),
           }).toList(),
           'restaurantId': effectiveRestId,
           'shopName': order.shopName ?? RestaurantRegistry.getName(effectiveRestId),
@@ -1599,7 +1599,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     final typeStr = order.deliveryMethod ?? 'DELIVERY';
 
     return '''======================================
-            FASTKIRANA KOT
+            FASTMINUTE KOT
 ======================================
 TOKEN : #$orderId$custName
 TYPE  : $typeStr
@@ -1609,7 +1609,7 @@ QTY   ITEM
 --------------------------------------
 $formattedItems
 --------------------------------------
-      *** FASTKIRANA KITCHEN ***
+      *** FASTMINUTE KITCHEN ***
 ======================================''';
   }
 

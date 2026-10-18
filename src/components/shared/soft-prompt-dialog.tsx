@@ -48,7 +48,7 @@ export function SoftPromptDialog() {
             <div className="h-7 w-7 rounded-lg overflow-hidden shrink-0 border border-zinc-100 dark:border-zinc-800">
               <Image
                 src="/icons/icon-192.png"
-                alt="FastKirana"
+                alt="FastMinute"
                 width={28}
                 height={28}
                 className="object-cover"
@@ -56,7 +56,7 @@ export function SoftPromptDialog() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-extrabold text-text-primary uppercase tracking-wide">FastKirana</span>
+                <span className="text-[9px] font-extrabold text-text-primary uppercase tracking-wide">FastMinute</span>
                 <span className="text-[7.5px] text-text-muted">now</span>
               </div>
               <p className="text-[10px] font-black text-text-primary mt-0.5">🚴 Rider is on the way!</p>
@@ -69,7 +69,7 @@ export function SoftPromptDialog() {
             <div className="h-7 w-7 rounded-lg overflow-hidden shrink-0 border border-zinc-100 dark:border-zinc-800">
               <Image
                 src="/icons/icon-192.png"
-                alt="FastKirana"
+                alt="FastMinute"
                 width={28}
                 height={28}
                 className="object-cover"
@@ -77,7 +77,7 @@ export function SoftPromptDialog() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-extrabold text-text-primary uppercase tracking-wide">FastKirana</span>
+                <span className="text-[9px] font-extrabold text-text-primary uppercase tracking-wide">FastMinute</span>
                 <span className="text-[7.5px] text-text-muted">5m ago</span>
               </div>
               <p className="text-[10px] font-black text-text-primary mt-0.5">⚡ Flash Deal ending soon!</p>

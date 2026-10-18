@@ -271,7 +271,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     }
 
     if (orderAlertPhones.size > 0) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastminute.in'
       const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
       const customerName = primaryOrder.user?.name || 'Customer'
       const customerPhone = primaryOrder.address?.phone || primaryOrder.user?.phone || userPhone || 'N/A'
@@ -280,7 +280,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       if (createdOrders.length > 1) {
         const baseDisplayId = (primaryOrder.readableId || primaryOrder.id).replace(/-[GR]\d*$/i, '')
         const combinedTotal = createdOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
-        const outlets = Array.from(new Set(createdOrders.map((o) => o.shopName || (o.restaurantId ? 'Restaurant' : 'FastKirana Dark Store')))).join(' + ')
+        const outlets = Array.from(new Set(createdOrders.map((o) => o.shopName || (o.restaurantId ? 'Restaurant' : 'FastMinute Dark Store')))).join(' + ')
         adminText = `#${baseDisplayId} [${outlets}, Rs.${combinedTotal.toFixed(0)}, ${customerName}: ${customerPhone}]`
       } else {
         const order = createdOrders[0]
@@ -315,8 +315,8 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         ? (isCombined ? '💳 Combined Order Confirmed & Paid!' : '💳 Order Confirmed & Paid!')
         : (isCombined ? '📦 Combined Order Placed Successfully!' : '📦 Order Placed Successfully!')
       const notifBody = isCombined
-        ? `Your FastKirana combined order #${baseDisplayId} (₹${combinedTotal.toFixed(0)}) is confirmed and being prepared.`
-        : `Your FastKirana order #${primaryOrder.readableId || primaryOrder.id} (₹${Number(primaryOrder.total).toFixed(0)}) is confirmed and being prepared.`
+        ? `Your FastMinute combined order #${baseDisplayId} (₹${combinedTotal.toFixed(0)}) is confirmed and being prepared.`
+        : `Your FastMinute order #${primaryOrder.readableId || primaryOrder.id} (₹${Number(primaryOrder.total).toFixed(0)}) is confirmed and being prepared.`
 
       const dataPayload: Record<string, string> = {
         title: notifTitle,
@@ -406,7 +406,7 @@ export async function dispatchAdminApprovedNotifications(orderId: string, origin
     for (const order of allTargetOrders) {
       const displayId = order.readableId ? String(order.readableId) : order.id.slice(-6).toUpperCase()
       const isRestaurant = Boolean(order.orderType === 'RESTAURANT' || order.restaurantId)
-      const outletName = order.shopName || (isRestaurant ? 'Restaurant' : 'FastKirana Dark Store')
+      const outletName = order.shopName || (isRestaurant ? 'Restaurant' : 'FastMinute Dark Store')
 
       // 1. Notify Customer (Web Push + FCM)
       sendPushNotification(order.userId, {

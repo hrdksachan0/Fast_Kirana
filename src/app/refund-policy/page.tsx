@@ -2,8 +2,8 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Refund & Cancellation Policy - FastKirana',
-  description: 'Cancellation, Return and Refund Policy for FastKirana quick-commerce and food delivery services.',
+  title: 'Refund & Cancellation Policy - FastMinute',
+  description: 'Cancellation, Return and Refund Policy for FastMinute quick-commerce and food delivery services.',
 }
 
 export default function RefundPolicyPage() {
@@ -78,7 +78,7 @@ export default function RefundPolicyPage() {
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-semibold text-foreground">Cash on Delivery (COD)</td>
-                    <td className="px-4 py-3">Customer UPI ID or FastKirana Wallet</td>
+                    <td className="px-4 py-3">Customer UPI ID or FastMinute Wallet</td>
                     <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">Instant (within 1 hour)</td>
                   </tr>
                 </tbody>

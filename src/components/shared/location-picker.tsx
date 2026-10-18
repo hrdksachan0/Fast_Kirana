@@ -243,7 +243,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
         new google.maps.Marker({
           position: { lat: h.latitude, lng: h.longitude },
           map: map,
-          title: h.name || "FastKirana Dark Store Hub",
+          title: h.name || "FastMinute Dark Store Hub",
           label: {
             text: "🏪",
             fontSize: "20px"
@@ -471,7 +471,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
       return
     }
 
-    const hubLabel = matchedHub?.city || matchedHub?.name || 'FastKirana'
+    const hubLabel = matchedHub?.city || matchedHub?.name || 'FastMinute'
     const finalName = addressName || `${hubLabel} (${currentLat.toFixed(4)}, ${currentLng.toFixed(4)})`
 
     setSelectedLocation(finalName)
@@ -711,7 +711,7 @@ export function LocationPicker({ open, onClose }: LocationPickerProps) {
                     <div>
                       <h5 className="font-bold text-rose-900 dark:text-rose-300">Location Outside Delivery Zone</h5>
                       <p className="mt-0.5 text-rose-800/90 dark:text-rose-300 font-medium leading-relaxed">
-                        This address is {distance.toFixed(1)} km away. FastKirana delivers within {deliveryRadius} km of our operational store hubs.
+                        This address is {distance.toFixed(1)} km away. FastMinute delivers within {deliveryRadius} km of our operational store hubs.
                       </p>
                     </div>
                   </div>

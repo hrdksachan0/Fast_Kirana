@@ -34,7 +34,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'FastKirana — Privacy Policy',
+                    'FastMinute — Privacy Policy',
                     style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 20), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary),
                   ),
                   const SizedBox(height: 8),
@@ -71,7 +71,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             _buildSection(context, '3. Location Data'),
             _buildParagraph(
               context,
-              'FastKirana requires location access to provide delivery services. '
+              'FastMinute requires location access to provide delivery services. '
               'Your location is used only to calculate delivery fees, find nearby products, '
               'and assign delivery partners. We do not store your location data beyond what is necessary for active orders.',
             ),
@@ -183,7 +183,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
   }
 
   Future<void> _launchSupport(BuildContext context) async {
-    final uri = Uri(scheme: 'mailto', path: _supportEmail, query: 'subject=Privacy Policy Query - FastKirana');
+    final uri = Uri(scheme: 'mailto', path: _supportEmail, query: 'subject=Privacy Policy Query - FastMinute');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {

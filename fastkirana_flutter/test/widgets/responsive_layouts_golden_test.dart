@@ -3,18 +3,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
-import 'package:fastkirana_flutter/data/models/product.dart';
-import 'package:fastkirana_flutter/data/models/cart.dart';
-import 'package:fastkirana_flutter/data/models/store_settings.dart';
-import 'package:fastkirana_flutter/core/services/location_service.dart';
-import 'package:fastkirana_flutter/data/repositories/cart_repository.dart';
-import 'package:fastkirana_flutter/data/repositories/wishlist_repository.dart';
-import 'package:fastkirana_flutter/providers/cart_provider.dart';
-import 'package:fastkirana_flutter/providers/wishlist_provider.dart';
-import 'package:fastkirana_flutter/providers/store_settings_provider.dart';
-import 'package:fastkirana_flutter/widgets/product_card.dart';
-import 'package:fastkirana_flutter/widgets/floating_cart_bar.dart';
-import 'package:fastkirana_flutter/features/home/widgets/delivery_mode_header.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/data/models/cart.dart';
+import 'package:fastminute_flutter/data/models/store_settings.dart';
+import 'package:fastminute_flutter/core/services/location_service.dart';
+import 'package:fastminute_flutter/data/repositories/cart_repository.dart';
+import 'package:fastminute_flutter/data/repositories/wishlist_repository.dart';
+import 'package:fastminute_flutter/providers/cart_provider.dart';
+import 'package:fastminute_flutter/providers/wishlist_provider.dart';
+import 'package:fastminute_flutter/providers/store_settings_provider.dart';
+import 'package:fastminute_flutter/widgets/product_card.dart';
+import 'package:fastminute_flutter/widgets/floating_cart_bar.dart';
+import 'package:fastminute_flutter/features/home/widgets/delivery_mode_header.dart';
 
 class FakeCartNotifier extends CartNotifier {
   FakeCartNotifier(Cart cart) : super(CartRepository(Dio())) {

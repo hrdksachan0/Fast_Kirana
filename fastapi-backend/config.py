@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings(BaseSettings):
-    APP_NAME: str = "FastKirana FastAPI Microservice"
+    APP_NAME: str = "FastMinute FastAPI Microservice"
     APP_ENV: str = os.getenv("APP_ENV", "development")
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
 
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     CASHFREE_API_VERSION: str = os.getenv("CASHFREE_API_VERSION", "2023-08-01")
 
     # App & Frontend URL
-    NEXT_PUBLIC_APP_URL: str = os.getenv("NEXT_PUBLIC_APP_URL", "https://www.fastkirana.in")
+    NEXT_PUBLIC_APP_URL: str = os.getenv("NEXT_PUBLIC_APP_URL", "https://www.fastminute.in")
     API_BASE_URL: str = os.getenv("API_BASE_URL", "https://api.fastkirana.in")
 
     # Supabase Configuration

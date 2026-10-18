@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:fastkirana_flutter/core/routes/page_transitions.dart';
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
-import 'package:fastkirana_flutter/features/profile/add_review_screen.dart';
+import 'package:fastminute_flutter/core/routes/page_transitions.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/features/profile/add_review_screen.dart';
 
 /// Reviews and ratings list tab for Cafe / Restaurant Menu screen
 class CafeReviewsTab extends StatelessWidget {

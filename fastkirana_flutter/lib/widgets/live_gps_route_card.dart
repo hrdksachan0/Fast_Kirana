@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -14,7 +14,7 @@ class LiveGpsRouteCard extends StatefulWidget {
   const LiveGpsRouteCard({
     super.key,
     required this.orderId,
-    this.storeName = 'FastKirana Darkstore Hub',
+    this.storeName = 'FastMinute Darkstore Hub',
     this.destinationAddress = 'Ghatampur Market, UP 209206',
     this.totalMinutes = 12,
     this.isDelivered = false,

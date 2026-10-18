@@ -163,12 +163,12 @@ export function PWARegistration() {
       <div className="flex items-center gap-2.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl px-3 py-2 shadow-[0_8px_25px_rgba(0,0,0,0.12)]">
         {/* App Icon */}
         <div className="h-8 w-8 rounded-xl overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-700 shadow-sm">
-          <img src="/icons/icon-192.png" alt="FastKirana" className="object-cover h-full w-full" />
+          <img src="/icons/icon-192.png" alt="FastMinute" className="object-cover h-full w-full" />
         </div>
         
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 leading-tight">Install FastKirana App</p>
+          <p className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 leading-tight">Install FastMinute App</p>
           <p className="text-[9px] font-medium text-zinc-500 dark:text-zinc-400 truncate leading-tight mt-0.5">
             Faster delivery & smoother app experience.
           </p>

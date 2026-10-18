@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -249,8 +249,8 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                         children: [
                           Text(
                             cleanName.isNotEmpty
-                                ? 'Welcome to FastKirana, $cleanName! 🎉'
-                                : 'Welcome to FastKirana! 🎉',
+                                ? 'Welcome to FastMinute, $cleanName! 🎉'
+                                : 'Welcome to FastMinute! 🎉',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w900,
@@ -319,7 +319,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
 
   Future<void> _requestAddressViaWhatsApp() async {
     HapticFeedback.lightImpact();
-    const shareText = 'Hey! Please send me your delivery location for FastKirana order delivery: https://www.fastkirana.in/location';
+    const shareText = 'Hey! Please send me your delivery location for FastMinute order delivery: https://www.fastkirana.in/location';
     final uri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(shareText)}');
     try {
       if (await canLaunchUrl(uri)) {
@@ -397,7 +397,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    'FastKirana Express • Serviceable Zones',
+                    'FastMinute Express • Serviceable Zones',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w600,
@@ -1210,7 +1210,7 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
                       Text('⚡', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                       const SizedBox(width: 6),
                       Text(
-                        'FastKirana',
+                        'FastMinute',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 13.5),
                           fontWeight: FontWeight.w800,

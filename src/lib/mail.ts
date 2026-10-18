@@ -13,7 +13,7 @@ const getCleanEnv = (key: string): string => {
 }
 
 const resendApiKey = getCleanEnv('RESEND_API_KEY')
-const fromEmail = getCleanEnv('EMAIL_FROM') || 'FastKirana <onboarding@resend.dev>'
+const fromEmail = getCleanEnv('EMAIL_FROM') || 'FastMinute <onboarding@resend.dev>'
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null
 
@@ -22,14 +22,14 @@ export async function sendOtpEmail(email: string, otp: string) {
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 0; background-color: #ffffff;">
       <!-- Header -->
       <div style="background: linear-gradient(135deg, #e20a22, #ff4d62); padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0;">
-        <h1 style="color: #ffffff; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">FastKirana</h1>
-        <p style="color: rgba(255,255,255,0.85); font-size: 12px; margin: 6px 0 0; font-weight: 600;">Fast Grocery Delivery</p>
+        <h1 style="color: #ffffff; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">FastMinute</h1>
+        <p style="color: rgba(255,255,255,0.85); font-size: 12px; margin: 6px 0 0; font-weight: 600;">Fast Delivery in Minutes</p>
       </div>
       
       <!-- Body -->
       <div style="padding: 32px 24px; border: 1px solid #f0f0f0; border-top: none;">
         <p style="color: #333; font-size: 15px; margin: 0 0 8px; font-weight: 600;">Hello,</p>
-        <p style="color: #555; font-size: 14px; margin: 0 0 24px; line-height: 1.5;">Use this one-time password to verify your email and sign in to your FastKirana account:</p>
+        <p style="color: #555; font-size: 14px; margin: 0 0 24px; line-height: 1.5;">Use this one-time password to verify your email and sign in to your FastMinute account:</p>
         
         <!-- OTP Box -->
         <div style="background: linear-gradient(135deg, #fafafa, #f5f5f5); border: 2px solid #e20a22; border-radius: 12px; padding: 20px; text-align: center; margin: 0 0 24px;">
@@ -42,7 +42,7 @@ export async function sendOtpEmail(email: string, otp: string) {
       
       <!-- Footer -->
       <div style="padding: 16px 24px; text-align: center; border: 1px solid #f0f0f0; border-top: none; border-radius: 0 0 12px 12px; background: #fafafa;">
-        <p style="color: #aaa; font-size: 11px; margin: 0;">© ${new Date().getFullYear()} FastKirana · Fast Grocery Delivery</p>
+        <p style="color: #aaa; font-size: 11px; margin: 0;">© ${new Date().getFullYear()} FastMinute · Fast Delivery in Minutes</p>
       </div>
     </div>
   `
@@ -55,7 +55,7 @@ export async function sendOtpEmail(email: string, otp: string) {
     const { data, error } = await resend.emails.send({
       from: resendFrom,
       to: email,
-      subject: `${otp} is your FastKirana verification code`,
+      subject: `${otp} is your FastMinute verification code`,
       html: htmlContent,
     })
     

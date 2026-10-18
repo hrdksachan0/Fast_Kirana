@@ -194,7 +194,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'FastKirana Management & Store Operations',
+                    'FastMinute Management & Store Operations',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 12),

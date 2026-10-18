@@ -427,7 +427,7 @@ export function CouponsTab({
                         🛒
                       </div>
                       <div>
-                        <h5 className="text-xs font-black text-text-primary">FastKirana Mart</h5>
+                        <h5 className="text-xs font-black text-text-primary">FastMinute Mart</h5>
                         <p className="text-[10px] text-text-secondary">Grocery Darkstore / All Users</p>
                       </div>
                     </div>

@@ -133,30 +133,172 @@ class CartRepository {
     return 'local_cart_${cleanPhone.isNotEmpty ? cleanPhone : 'guest'}_$hubId';
   }
 
+  static const String _appliedOrderDeltasKey = 'cart_applied_order_deltas';
+
+  Future<void> recordAppliedOrderDelta(String orderId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_appliedOrderDeltasKey) ?? [];
+      if (!list.contains(orderId)) {
+        list.add(orderId);
+        if (list.length > 50) list.removeAt(0);
+        await prefs.setStringList(_appliedOrderDeltasKey, list);
+      }
+      final cacheKey = await _getCartCacheKey();
+      final existingData = prefs.getString(cacheKey);
+      if (existingData != null) {
+        final decoded = jsonDecode(existingData);
+        if (decoded is Map<String, dynamic>) {
+          final deltas = (decoded['appliedOrderDeltas'] as List?)?.map((e) => e.toString()).toList() ?? [];
+          if (!deltas.contains(orderId)) {
+            deltas.add(orderId);
+            if (deltas.length > 50) deltas.removeAt(0);
+            decoded['appliedOrderDeltas'] = deltas;
+            await prefs.setString(cacheKey, jsonEncode(decoded));
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  static final Set<String> _failedAppliedOrderIds = {};
+
+  Future<void> _rollbackAttemptedEnvelope(
+    SharedPreferences prefs,
+    String cacheKey,
+    String? existingData,
+    String? appliedOrderId,
+  ) async {
+    if (appliedOrderId != null && appliedOrderId.isNotEmpty) {
+      _failedAppliedOrderIds.add(appliedOrderId);
+    }
+    try {
+      if (existingData == null) {
+        await prefs.remove(cacheKey);
+      } else {
+        await prefs.setString(cacheKey, existingData);
+      }
+    } catch (_) {}
+    try {
+      await prefs.reload();
+    } catch (_) {}
+  }
+
+  Future<List<String>> getAppliedOrderDeltas() async {
+    final results = <String>{};
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_appliedOrderDeltasKey);
+      if (list != null) results.addAll(list);
+      final cacheKey = await _getCartCacheKey();
+      var data = prefs.getString(cacheKey);
+      if (data == null) {
+        final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
+        final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+        final legacyKey = 'local_cart_${cleanPhone.isNotEmpty ? cleanPhone : 'guest'}';
+        data = prefs.getString(legacyKey);
+      }
+      if (data != null) {
+        final decoded = jsonDecode(data);
+        if (decoded is Map && decoded['appliedOrderDeltas'] is List) {
+          results.addAll((decoded['appliedOrderDeltas'] as List).map((e) => e.toString()));
+        }
+      }
+    } catch (_) {}
+    if (_failedAppliedOrderIds.isNotEmpty) {
+      results.removeAll(_failedAppliedOrderIds);
+    }
+    return results.toList();
+  }
+
   // Local cart persistence (isolated per user phone and darkstore hub with versioned envelope)
-  Future<void> saveLocalCart(List<CartItem> items, {int version = 1, bool isDirty = false}) async {
+  Future<bool> saveLocalCart(
+    List<CartItem> items, {
+    int version = 1,
+    bool isDirty = false,
+    String? appliedOrderId,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final cacheKey = await _getCartCacheKey();
-    if (items.isEmpty) {
-      final envelope = {
-        'version': version,
-        'isDirty': isDirty,
-        'isCleared': true,
-        'updatedAt': DateTime.now().toIso8601String(),
-        'items': <dynamic>[],
-      };
-      await prefs.setString(cacheKey, jsonEncode(envelope));
-      await prefs.remove('local_cart_guest');
-      return;
+
+    List<String> preservedDeltas = [];
+    final existingData = prefs.getString(cacheKey);
+    if (existingData != null) {
+      try {
+        final decoded = jsonDecode(existingData);
+        if (decoded is Map && decoded['appliedOrderDeltas'] is List) {
+          preservedDeltas = (decoded['appliedOrderDeltas'] as List).map((e) => e.toString()).toList();
+        }
+      } catch (_) {}
     }
-    final envelope = {
-      'version': version,
-      'isDirty': isDirty,
-      'isCleared': false,
-      'updatedAt': DateTime.now().toIso8601String(),
-      'items': items.map((item) => item.toJson()).toList(),
-    };
-    await prefs.setString(cacheKey, jsonEncode(envelope));
+    if (preservedDeltas.isEmpty) {
+      final journalDeltas = prefs.getStringList(_appliedOrderDeltasKey);
+      if (journalDeltas != null) {
+        preservedDeltas = List<String>.from(journalDeltas);
+      }
+    }
+    if (_failedAppliedOrderIds.isNotEmpty) {
+      preservedDeltas.removeWhere(_failedAppliedOrderIds.contains);
+    }
+
+    if (appliedOrderId != null && appliedOrderId.isNotEmpty && !preservedDeltas.contains(appliedOrderId)) {
+      preservedDeltas.add(appliedOrderId);
+      if (preservedDeltas.length > 50) preservedDeltas.removeAt(0);
+    }
+
+    final envelope = items.isEmpty
+        ? {
+            'version': version,
+            'isDirty': isDirty,
+            'isCleared': true,
+            'updatedAt': DateTime.now().toIso8601String(),
+            'items': <dynamic>[],
+            if (preservedDeltas.isNotEmpty) 'appliedOrderDeltas': preservedDeltas,
+          }
+        : {
+            'version': version,
+            'isDirty': isDirty,
+            'isCleared': false,
+            'updatedAt': DateTime.now().toIso8601String(),
+            'items': items.map((item) => item.toJson()).toList(),
+            if (preservedDeltas.isNotEmpty) 'appliedOrderDeltas': preservedDeltas,
+          };
+
+    final rawEnvelope = jsonEncode(envelope);
+    bool success = false;
+    try {
+      success = await prefs.setString(cacheKey, rawEnvelope);
+    } catch (_) {
+      await _rollbackAttemptedEnvelope(prefs, cacheKey, existingData, appliedOrderId);
+      rethrow;
+    }
+
+    if (!success) {
+      await _rollbackAttemptedEnvelope(prefs, cacheKey, existingData, appliedOrderId);
+      return false;
+    }
+
+    if (appliedOrderId != null && appliedOrderId.isNotEmpty) {
+      _failedAppliedOrderIds.remove(appliedOrderId);
+    }
+
+    if (items.isEmpty) {
+      try {
+        await prefs.remove('local_cart_guest');
+      } catch (_) {}
+    }
+
+    if (appliedOrderId != null && appliedOrderId.isNotEmpty) {
+      try {
+        final list = prefs.getStringList(_appliedOrderDeltasKey) ?? [];
+        if (!list.contains(appliedOrderId)) {
+          list.add(appliedOrderId);
+          if (list.length > 50) list.removeAt(0);
+          await prefs.setStringList(_appliedOrderDeltasKey, list);
+        }
+      } catch (_) {}
+    }
+    return true;
   }
 
   Future<List<CartItem>> getLocalCart() async {

@@ -1,5 +1,7 @@
 # FastKirana — combined Antigravity handoff and independent recheck
 
+> Latest review: [17 October revision 5, f04f2a81 plus uncommitted fixes](D:/Fastkirana/docs/INDEPENDENT_COMBINED_RECHECK_2026-10-17_R5.md). Use its updated closures, findings and test results. The snapshot below is historical.
+
 **Updated: 17 October 2026 · Reviewed commit: `e64a096f`**
 
 Use this as the current implementation checklist. It combines the supplied 16 October checkout/cart report with the independent Python security/payment report, then updates their findings against the latest code and fresh verification. FastAPI/Python is the primary backend; Flutter and the remaining Next.js payment route are included where they cross the same payment/cart boundary.

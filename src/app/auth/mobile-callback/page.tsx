@@ -34,7 +34,7 @@ export default function MobileCallbackPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 text-white p-6">
       <div className="w-12 h-12 rounded-full border-4 border-t-emerald-500 border-zinc-800 animate-spin mb-4" />
-      <h1 className="text-xl font-bold mb-2">Connecting to FastKirana App...</h1>
+      <h1 className="text-xl font-bold mb-2">Connecting to FastMinute App...</h1>
       <p className="text-zinc-400 text-sm text-center max-w-xs mb-4">
         Please wait while we redirect you back to the mobile app.
       </p>

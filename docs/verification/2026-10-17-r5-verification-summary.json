@@ -1,0 +1,205 @@
+{
+  "review": "2026-10-17 R5",
+  "head": "f04f2a813f8dfb8acd747f06e1c428545d5d64ee",
+  "includes_uncommitted_fixes": true,
+  "initial_source_hashes": {
+    "fastapi-backend/models.py": "6342D6D0C73BBCB0B5110BC8A7B6046D8BFA3EBDA916CC21C8AAF255FE2A1D50",
+    "fastapi-backend/routers/admin_extended.py": "8CB4516A494409B3AE2955E94333AB730ECFB96BED132EAF8B2BCF39419C6ECB",
+    "fastapi-backend/routers/cashfree_router.py": "E75A1FD54A73A0615589D613C2E8F956A3EDAC89183CCB7DB651E0F3901B29C3",
+    "fastapi-backend/routers/orders.py": "F3FAEB761C71E0E1E9AD1D20B8C1787BC3BF2BF0E5CF940749C2EE04A5F6BC14",
+    "fastapi-backend/routers/websockets.py": "24C00482D541BF6F8502203F647C7D5E9898F4E538B26F7B3D1F56F068C9F9E6",
+    "fastapi-backend/tests/test_production_blockers_resolved.py": "0260B6D5EF9773AC4F8BFE070BC6401E9B50E5838960C3D0207456522BD0DD1D",
+    "fastkirana_flutter/lib/data/repositories/cart_repository.dart": "E8413286A211693F2F975A87AD878485E5FC95A0655E323EEE47B30CEC2200E5",
+    "fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart": "77AC88CA0D3A6E08D68BC2A5426A3F411A284CDEFB2251D442664F318A9BF334",
+    "fastkirana_flutter/lib/providers/cart_provider.dart": "BE0F3B89E2EACDDDC6C70F4B5435D69185F682B8C7783B8866E8F5D4545F5F09",
+    "fastkirana_flutter/test/unit/offline_cart_sync_test.dart": "2B86A05CF79E75D1A37F1CC76FCCE54744FCE90D813526532D360E4F7DA1AB18"
+  },
+  "final_source_hashes": {
+    "fastapi-backend/models.py": "6342D6D0C73BBCB0B5110BC8A7B6046D8BFA3EBDA916CC21C8AAF255FE2A1D50",
+    "fastapi-backend/routers/admin_extended.py": "8CB4516A494409B3AE2955E94333AB730ECFB96BED132EAF8B2BCF39419C6ECB",
+    "fastapi-backend/routers/cashfree_router.py": "E75A1FD54A73A0615589D613C2E8F956A3EDAC89183CCB7DB651E0F3901B29C3",
+    "fastapi-backend/routers/orders.py": "F3FAEB761C71E0E1E9AD1D20B8C1787BC3BF2BF0E5CF940749C2EE04A5F6BC14",
+    "fastapi-backend/routers/websockets.py": "24C00482D541BF6F8502203F647C7D5E9898F4E538B26F7B3D1F56F068C9F9E6",
+    "fastapi-backend/tests/test_production_blockers_resolved.py": "0260B6D5EF9773AC4F8BFE070BC6401E9B50E5838960C3D0207456522BD0DD1D",
+    "fastkirana_flutter/lib/data/repositories/cart_repository.dart": "E8413286A211693F2F975A87AD878485E5FC95A0655E323EEE47B30CEC2200E5",
+    "fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart": "77AC88CA0D3A6E08D68BC2A5426A3F411A284CDEFB2251D442664F318A9BF334",
+    "fastkirana_flutter/lib/providers/cart_provider.dart": "BE0F3B89E2EACDDDC6C70F4B5435D69185F682B8C7783B8866E8F5D4545F5F09",
+    "fastkirana_flutter/test/unit/offline_cart_sync_test.dart": "2B86A05CF79E75D1A37F1CC76FCCE54744FCE90D813526532D360E4F7DA1AB18"
+  },
+  "changed_during_review": [],
+  "python": {
+    "collected": 239,
+    "passed": 239,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "failed_tests": [],
+    "exit_code": 0,
+    "elapsed_seconds": 192.03,
+    "initial_hashes": {
+      "routers/admin_extended.py": "8cb4516a494409b3ae2955e94333ab730ecfb96bed132eaf8b2bcf39419c6ecb",
+      "routers/cashfree_router.py": "e75a1fd54a73a0615589d613c2e8f956a3edac89183ccb7db651e0f3901b29c3",
+      "routers/orders.py": "f3faeb761c71e0e1e9ad1d20b8c1787bc3bf2bf0e5cf940749c2ee04a5f6bc14",
+      "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+      "routers/websockets.py": "24c00482d541bf6f8502203f647c7d5e9898f4e538b26f7b3d1f56f068c9f9e6",
+      "utils/firebase.py": "e8df7630b7145a74307417bf5bc7af76a1ad3e3cfb8b578111ae0ea9fa74e534",
+      "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+      "tests/test_production_blockers_resolved.py": "0260b6d5ef9773ac4f8bfe070bc6401e9b50e5838960c3d0207456522bd0dd1d",
+      "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+    },
+    "final_hashes": {
+      "routers/admin_extended.py": "8cb4516a494409b3ae2955e94333ab730ecfb96bed132eaf8b2bcf39419c6ecb",
+      "routers/cashfree_router.py": "e75a1fd54a73a0615589d613c2e8f956a3edac89183ccb7db651e0f3901b29c3",
+      "routers/orders.py": "f3faeb761c71e0e1e9ad1d20b8c1787bc3bf2bf0e5cf940749c2ee04a5f6bc14",
+      "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+      "routers/websockets.py": "24c00482d541bf6f8502203f647c7d5e9898f4e538b26f7b3d1f56f068c9f9e6",
+      "utils/firebase.py": "e8df7630b7145a74307417bf5bc7af76a1ad3e3cfb8b578111ae0ea9fa74e534",
+      "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+      "tests/test_production_blockers_resolved.py": "0260b6d5ef9773ac4f8bfe070bc6401e9b50e5838960c3d0207456522bd0dd1d",
+      "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+    },
+    "scope": "SQLite; dotenv disabled; dummy credentials; external network blocked; unmocked migration_full gateway/KOT suite excluded"
+  },
+  "flutter_full": {
+    "passed": 301,
+    "exit_code": 0,
+    "failed": 0
+  },
+  "flutter_targeted": {
+    "failed": 0,
+    "exit_code": 0,
+    "observations": [
+      {
+        "case": "second-save",
+        "throws": false,
+        "durableDraft": "first-accepted"
+      },
+      {
+        "case": "second-save",
+        "throws": true,
+        "durableDraft": "first-accepted"
+      },
+      {
+        "case": "completion-ack",
+        "persistedAck": false,
+        "journalOnly": false,
+        "starting": 3,
+        "ordered": 1,
+        "final": 2,
+        "expectedCorrect": 2,
+        "posts": 2
+      },
+      {
+        "case": "completion-ack",
+        "persistedAck": true,
+        "journalOnly": false,
+        "starting": 3,
+        "ordered": 1,
+        "final": 3,
+        "expectedCorrect": 3,
+        "posts": 1
+      },
+      {
+        "case": "completion-ack",
+        "persistedAck": false,
+        "journalOnly": true,
+        "starting": 3,
+        "ordered": 1,
+        "final": 3,
+        "expectedCorrect": 3,
+        "posts": 1
+      },
+      {
+        "case": "local-hydration",
+        "clear": false,
+        "server": [
+          "newB",
+          "oldA"
+        ],
+        "ui": [
+          "newB",
+          "oldA"
+        ],
+        "local": [
+          "newB",
+          "oldA"
+        ],
+        "pending": false
+      },
+      {
+        "case": "local-hydration",
+        "clear": true,
+        "server": [],
+        "ui": [],
+        "local": [],
+        "pending": false
+      },
+      {
+        "case": "pending-key-await",
+        "server": [
+          "oldA",
+          "newB"
+        ],
+        "ui": [
+          "oldA",
+          "newB"
+        ],
+        "pending": false,
+        "version": 1,
+        "ack": 1
+      },
+      {
+        "case": "clear-then-add-hydration",
+        "ui": [
+          "newB"
+        ],
+        "local": [
+          "newB"
+        ],
+        "server": [
+          "newB"
+        ]
+      },
+      {
+        "case": "atomic-envelope-secondary-journal-failure",
+        "starting": 1,
+        "remaining": 0,
+        "marker": true,
+        "separateJournal": null
+      },
+      {
+        "case": "atomic-envelope-secondary-journal-failure",
+        "starting": 3,
+        "remaining": 2,
+        "marker": true,
+        "separateJournal": null
+      },
+      {
+        "case": "failed-cart-envelope",
+        "ui": 3,
+        "local": 3,
+        "marker": false
+      }
+    ],
+    "temporary_test_removed": true,
+    "passed": 16,
+    "existing_offline_tests": 4,
+    "review_assertions": 12
+  },
+  "dart_analysis": {
+    "issues": 0,
+    "exit_code": 0,
+    "files": 8
+  },
+  "backend_probes": {
+    "observations": 34,
+    "exit_code": 0,
+    "includes_actual_isolated_sqlite_quote_recovery_approval_and_cancellation": true
+  },
+  "previous_R4_P1": "Executed missing-variant paid flow now resolves Small and deducts product, variant and store stock 2 to 1 exactly once; cancellation restores each pool to 2 exactly once",
+  "fresh_blocking_findings_in_executed_scope": [],
+  "offline_sync_flake": "Not reproduced in current full or focused run; historical R4 intermittent failure retained",
+  "cart_write_controls": "Secondary journal failure preserves atomic envelope item delta and marker; failed envelope write restores UI and persisted cart with no marker",
+  "not_fresh": "Next.js and TypeScript results are previous R2 evidence",
+  "scope": "SQLite/dummy credentials/external network blocked; migration_full gateway/KOT module excluded; real PostgreSQL concurrency and production/device lifecycle not exercised; source and existing tests not edited"
+}

@@ -21,7 +21,7 @@
 const FASTAPI_DIRECT_URL = (
   process.env.NEXT_PUBLIC_FASTAPI_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  'https://api.fastkirana.in'
+  'https://api.fastminute.in'
 ).replace(/\/+$/, '')
 
 /**

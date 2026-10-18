@@ -693,7 +693,7 @@ export function CartDrawer() {
                       📦 Grocery & Daily Essentials
                     </span>
                     <span className="text-[10px] text-zinc-500 font-bold ml-0.5 mt-0.5">
-                      Delivered from FastKirana Darkstore
+                      Delivered from FastMinute Darkstore
                     </span>
                   </div>
                   <AnimatePresence initial={false}>

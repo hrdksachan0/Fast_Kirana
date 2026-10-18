@@ -219,7 +219,7 @@ export function CategoriesDirectoryClient({ categories }: CategoriesDirectoryCli
       bgEmoji: '🍦',
     },
     'cafe': {
-      title: 'FastKirana Café',
+      title: 'FastMinute Café',
       emoji: '☕',
       image: '/cafe_category.webp',
       gradient: 'from-amber-500/10 to-amber-500/5',

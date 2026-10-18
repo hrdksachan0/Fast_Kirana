@@ -190,7 +190,7 @@ class _MainShellState extends ConsumerState<MainShell>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text(
-                'Press back again to exit FastKirana',
+                'Press back again to exit FastMinute',
                 style:
                     TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
               ),

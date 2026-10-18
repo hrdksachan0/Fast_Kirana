@@ -23,7 +23,7 @@ export default function OfflinePage() {
             You&apos;re Offline
           </h1>
           <p className="text-sm text-text-secondary leading-relaxed">
-            It looks like you lost your internet connection. FastKirana will automatically reconnect when your network is restored.
+            It looks like you lost your internet connection. FastMinute will automatically reconnect when your network is restored.
           </p>
         </div>
 

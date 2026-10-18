@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fastkirana_flutter/widgets/curated_brand_offer_card.dart';
-import 'package:fastkirana_flutter/widgets/card_media_widget.dart';
-import 'package:fastkirana_flutter/data/models/brand_offer_card_data.dart';
-import 'package:fastkirana_flutter/providers/banner_provider.dart';
-import 'package:fastkirana_flutter/widgets/dynamic_hero_banner_carousel.dart';
+import 'package:fastminute_flutter/widgets/curated_brand_offer_card.dart';
+import 'package:fastminute_flutter/widgets/card_media_widget.dart';
+import 'package:fastminute_flutter/data/models/brand_offer_card_data.dart';
+import 'package:fastminute_flutter/providers/banner_provider.dart';
+import 'package:fastminute_flutter/widgets/dynamic_hero_banner_carousel.dart';
 
 void main() {
   testWidgets('CategoryOfferCard renders hero variant (Food / Grocery Spotlight)', (WidgetTester tester) async {

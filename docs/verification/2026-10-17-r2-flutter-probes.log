@@ -1,0 +1,370 @@
+00:00 +0: loading D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart
+00:00 +0: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: second draft write preserves committed record throws=false
+{"case":"second-save","throws":false,"durableDraft":"first-accepted"}
+00:00 +1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: second draft write preserves committed record throws=true
+{"case":"second-save","throws":true,"durableDraft":"first-accepted"}
+00:00 +2: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=false
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ MissingPluginException(No implementation found for method read on channel plugins.it_nomads.com/flutter_secure_storage)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   SecureStorage.read (package:fastkirana_flutter/core/services/secure_storage_service.dart:201:21)[0m
+[38;5;196m│ #2   <asynchronous suspension>[0m
+[38;5;196m│ #3   AuthNotifier._load (package:fastkirana_flutter/providers/auth_provider.dart:27:19)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:07.897 (+0:00:00.004999)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ SecureStorageService: read storage failed, checking migration[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ 'package:audioplayers_platform_interface/src/api/audio_context.dart': Failed assertion: line 178 pos 13: 'category == AVAudioSessionCategory.playback ||[0m
+[38;5;196m│                 category == AVAudioSessionCategory.playAndRecord ||[0m
+[38;5;196m│                 category == AVAudioSessionCategory.multiRoute ||[0m
+[38;5;196m│                 !options.contains(AVAudioSessionOptions.mixWithOthers)': You can set the option `mixWithOthers` explicitly only if the audio session category is `playAndRecord`, `playback`, or `multiRoute`.[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   CustomerSoundService._initPlayer (package:fastkirana_flutter/core/services/customer_sound_service.dart:39:21)[0m
+[38;5;196m│ #2   CustomerSoundService.playOrderSuccessSound (package:fastkirana_flutter/core/services/customer_sound_service.dart:53:13)[0m
+[38;5;196m│ #3   CheckoutController._finishOrderPlacement (package:fastkirana_flutter/features/checkout/controllers/checkout_controller.dart:1335:45)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m│ #5   CheckoutController.completeOrderPlacement (package:fastkirana_flutter/features/checkout/controllers/checkout_controller.dart:1309:5)[0m
+[38;5;196m│ #6   <asynchronous suspension>[0m
+[38;5;196m│ #7   Future.wait.<anonymous closure> (dart:async/future.dart:546:21)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:07.970 (+0:00:00.078114)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ CustomerSoundService: failed to init audio context[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ 'package:audioplayers_platform_interface/src/api/audio_context.dart': Failed assertion: line 178 pos 13: 'category == AVAudioSessionCategory.playback ||[0m
+[38;5;196m│                 category == AVAudioSessionCategory.playAndRecord ||[0m
+[38;5;196m│                 category == AVAudioSessionCategory.multiRoute ||[0m
+[38;5;196m│                 !options.contains(AVAudioSessionOptions.mixWithOthers)': You can set the option `mixWithOthers` explicitly only if the audio session category is `playAndRecord`, `playback`, or `multiRoute`.[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   CustomerSoundService._initPlayer (package:fastkirana_flutter/core/services/customer_sound_service.dart:39:21)[0m
+[38;5;196m│ #2   CustomerSoundService.playOrderSuccessSound (package:fastkirana_flutter/core/services/customer_sound_service.dart:53:13)[0m
+[38;5;196m│ #3   CheckoutController._finishOrderPlacement (package:fastkirana_flutter/features/checkout/controllers/checkout_controller.dart:1335:45)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m│ #5   CheckoutController.completeOrderPlacement (package:fastkirana_flutter/features/checkout/controllers/checkout_controller.dart:1309:5)[0m
+[38;5;196m│ #6   <asynchronous suspension>[0m
+[38;5;196m│ #7   Future.wait.<anonymous closure> (dart:async/future.dart:546:21)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:07.974 (+0:00:00.082110)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ CustomerSoundService: failed to init audio context[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ MissingPluginException(No implementation found for method read on channel plugins.it_nomads.com/flutter_secure_storage)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   SecureStorage.read (package:fastkirana_flutter/core/services/secure_storage_service.dart:201:21)[0m
+[38;5;196m│ #2   <asynchronous suspension>[0m
+[38;5;196m│ #3   AuthNotifier._load (package:fastkirana_flutter/providers/auth_provider.dart:28:21)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.052 (+0:00:00.159802)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ SecureStorageService: read storage failed, checking migration[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ MissingPluginException(No implementation found for method getTemporaryDirectory on channel plugins.flutter.io/path_provider)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:364:7)[0m
+[38;5;196m│ #1   <asynchronous suspension>[0m
+[38;5;196m│ #2   getTemporaryDirectory (package:path_provider/path_provider.dart:55:24)[0m
+[38;5;196m│ #3   <asynchronous suspension>[0m
+[38;5;196m│ #4   AudioCache.getTempDir (package:audioplayers/src/audio_cache.dart:87:41)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m│ #6   AudioCache.fetchToMemory (package:audioplayers/src/audio_cache.dart:102:37)[0m
+[38;5;196m│ #7   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.055 (+0:00:00.162802)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ CustomerSoundService: audio playback error[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ MissingPluginException(No implementation found for method getTemporaryDirectory on channel plugins.flutter.io/path_provider)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:364:7)[0m
+[38;5;196m│ #1   <asynchronous suspension>[0m
+[38;5;196m│ #2   getTemporaryDirectory (package:path_provider/path_provider.dart:55:24)[0m
+[38;5;196m│ #3   <asynchronous suspension>[0m
+[38;5;196m│ #4   AudioCache.getTempDir (package:audioplayers/src/audio_cache.dart:87:41)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m│ #6   AudioCache.fetchToMemory (package:audioplayers/src/audio_cache.dart:102:37)[0m
+[38;5;196m│ #7   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.057 (+0:00:00.164801)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ CustomerSoundService: audio playback error[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [unknown]: null[0m
+[38;5;196m│ Error: External HTTP blocked[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   DioMixin.fetch (package:dio/src/dio_mixin.dart:587:7)[0m
+[38;5;196m│ #1   <asynchronous suspension>[0m
+[38;5;196m│ #2   OrderRepository.getOrders (package:fastkirana_flutter/data/repositories/order_repository.dart:57:24)[0m
+[38;5;196m│ #3   <asynchronous suspension>[0m
+[38;5;196m│ #4   FutureHandlerProviderElementMixin.handleFuture.<anonymous closure>.<anonymous closure> (package:riverpod/src/async_notifier/base.dart:355:9)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.236 (+0:00:00.344118)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ OrderRepository: getOrders combine[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [unknown]: null[0m
+[38;5;196m│ Error: External HTTP blocked[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   DioMixin.fetch (package:dio/src/dio_mixin.dart:587:7)[0m
+[38;5;196m│ #1   <asynchronous suspension>[0m
+[38;5;196m│ #2   OrderRepository.getOrders (package:fastkirana_flutter/data/repositories/order_repository.dart:57:24)[0m
+[38;5;196m│ #3   <asynchronous suspension>[0m
+[38;5;196m│ #4   FutureHandlerProviderElementMixin.handleFuture.<anonymous closure>.<anonymous closure> (package:riverpod/src/async_notifier/base.dart:355:9)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.243 (+0:00:00.350635)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ OrderRepository: getOrders combine[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [unknown]: null[0m
+[38;5;196m│ Error: External HTTP blocked[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   DioMixin.fetch (package:dio/src/dio_mixin.dart:587:7)[0m
+[38;5;196m│ #1   <asynchronous suspension>[0m
+[38;5;196m│ #2   OrderRepository.getOrders (package:fastkirana_flutter/data/repositories/order_repository.dart:57:24)[0m
+[38;5;196m│ #3   <asynchronous suspension>[0m
+[38;5;196m│ #4   FutureHandlerProviderElementMixin.handleFuture.<anonymous closure>.<anonymous closure> (package:riverpod/src/async_notifier/base.dart:355:9)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.245 (+0:00:00.352635)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ OrderRepository: getOrders combine[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+{"case":"completion-ack","persistedAck":false,"starting":3,"ordered":1,"final":1,"expectedCorrect":2,"posts":2}
+00:00 +3: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+00:01 +3: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ MissingPluginException(No implementation found for method read on channel plugins.it_nomads.com/flutter_secure_storage)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   SecureStorage.read (package:fastkirana_flutter/core/services/secure_storage_service.dart:201:21)[0m
+[38;5;196m│ #2   <asynchronous suspension>[0m
+[38;5;196m│ #3   AuthNotifier._load (package:fastkirana_flutter/providers/auth_provider.dart:27:19)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.463 (+0:00:00.571232)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ SecureStorageService: read storage failed, checking migration[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ 'package:audioplayers_platform_interface/src/api/audio_context.dart': Failed assertion: line 178 pos 13: 'category == AVAudioSessionCategory.playback ||[0m
+[38;5;196m│                 category == AVAudioSessionCategory.playAndRecord ||[0m
+[38;5;196m│                 category == AVAudioSessionCategory.multiRoute ||[0m
+[38;5;196m│                 !options.contains(AVAudioSessionOptions.mixWithOthers)': You can set the option `mixWithOthers` explicitly only if the audio session category is `playAndRecord`, `playback`, or `multiRoute`.[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   CustomerSoundService._initPlayer (package:fastkirana_flutter/core/services/customer_sound_service.dart:39:21)[0m
+[38;5;196m│ #2   CustomerSoundService.playOrderSuccessSound (package:fastkirana_flutter/core/services/customer_sound_service.dart:53:13)[0m
+[38;5;196m│ #3   CheckoutController._finishOrderPlacement (package:fastkirana_flutter/features/checkout/controllers/checkout_controller.dart:1335:45)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m│ #5   CheckoutController.completeOrderPlacement (package:fastkirana_flutter/features/checkout/controllers/checkout_controller.dart:1309:5)[0m
+[38;5;196m│ #6   <asynchronous suspension>[0m
+[38;5;196m│ #7   main.<anonymous closure> (file:///D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart:86:24)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.470 (+0:00:00.578225)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ CustomerSoundService: failed to init audio context[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ MissingPluginException(No implementation found for method read on channel plugins.it_nomads.com/flutter_secure_storage)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+[38;5;196m│ #1   SecureStorage.read (package:fastkirana_flutter/core/services/secure_storage_service.dart:201:21)[0m
+[38;5;196m│ #2   <asynchronous suspension>[0m
+[38;5;196m│ #3   AuthNotifier._load (package:fastkirana_flutter/providers/auth_provider.dart:28:21)[0m
+[38;5;196m│ #4   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.476 (+0:00:00.584224)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ SecureStorageService: read storage failed, checking migration[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ MissingPluginException(No implementation found for method getTemporaryDirectory on channel plugins.flutter.io/path_provider)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:364:7)[0m
+[38;5;196m│ #1   <asynchronous suspension>[0m
+[38;5;196m│ #2   getTemporaryDirectory (package:path_provider/path_provider.dart:55:24)[0m
+[38;5;196m│ #3   <asynchronous suspension>[0m
+[38;5;196m│ #4   AudioCache.getTempDir (package:audioplayers/src/audio_cache.dart:87:41)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m│ #6   AudioCache.fetchToMemory (package:audioplayers/src/audio_cache.dart:102:37)[0m
+[38;5;196m│ #7   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.478 (+0:00:00.586225)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ CustomerSoundService: audio playback error[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;12m│ #0   LoggerService.info (package:fastkirana_flutter/core/services/logger_service.dart:20:13)[0m
+[38;5;12m│ #1   CheckoutController._finishOrderPlacement (package:fastkirana_flutter/features/checkout/controllers/checkout_controller.dart:1353:21)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 20:24:08.675 (+0:00:00.782598)[0m
+[38;5;12m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;12m│ 💡 CheckoutController: Order persisted-order already acknowledged, skipping duplicate cart subtraction.[0m
+[38;5;12m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+{"case":"completion-ack","persistedAck":true,"starting":3,"ordered":1,"final":3,"expectedCorrect":3,"posts":1}
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [unknown]: null[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ Error: External HTTP blocked[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down [E]
+  Expected: <2>
+    Actual: <4>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\unit\offline_cart_sync_test.dart 85:5          main.<fn>
+  
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #0   DioMixin.fetch (package:dio/src/dio_mixin.dart:587:7)[0m
+[38;5;196m│ #1   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #2   OrderRepository.getOrders (package:fastkirana_flutter/data/repositories/order_repository.dart:57:24)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ DioException [connection error]: null[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #3   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ Error: No Internet Connection[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #4   FutureHandlerProviderElementMixin.handleFuture.<anonymous closure>.<anonymous closure> (package:riverpod/src/async_notifier/base.dart:355:9)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #5   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ #1   CartRepository.syncCart (package:fastkirana_flutter/data/repositories/cart_repository.dart:87:21)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ 20:24:08.686 (+0:00:00.793602)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ #2   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ #3   CartNotifier._flushPendingSync (package:fastkirana_flutter/providers/cart_provider.dart:107:23)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ ⛔ OrderRepository: getOrders combine[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ #4   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ #5   CartNotifier._scheduleDebouncedSync.<anonymous closure> (package:fastkirana_flutter/providers/cart_provider.dart:89:7)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ #6   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ DioException [unknown]: null[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ Error: External HTTP blocked[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ 20:24:08.917 (+0:00:00.004998)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #0   DioMixin.fetch (package:dio/src/dio_mixin.dart:587:7)[0m
+[38;5;196m│ #1   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m│ ⛔ CartRepository: syncCart failed[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #2   OrderRepository.getOrders (package:fastkirana_flutter/data/repositories/order_repository.dart:57:24)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #3   <asynchronous suspension>[0m
+[38;5;196m│ #4   FutureHandlerProviderElementMixin.handleFuture.<anonymous closure>.<anonymous closure> (package:riverpod/src/async_notifier/base.dart:355:9)[0m
+[38;5;196m│ #5   <asynchronous suspension>[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:08.687 (+0:00:00.794602)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ OrderRepository: getOrders combine[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [unknown]: null[0m
+[38;5;196m│ Error: External HTTP blocked[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ #0   DioMixin.fetch (package:dio/src/dio_mixin.dart:587:7)[0m
+[38;5;196m│ #1   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m┌───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;5;196m│ DioException [connection error]: null[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #2   OrderRepository.getOrders (package:fastkirana_flutter/data/repositories/order_repository.dart:57:24)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m│ Error: No Internet Connection[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #3   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #4   FutureHandlerProviderElementMixin.handleFuture.<anonymous closure>.<anonymous closure> (package:riverpod/src/async_notifier/base.dart:355:9)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m│ #0   LoggerService.error (package:fastkirana_flutter/core/services/logger_service.dart:28:13)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ #5   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m│ #1   CartRepository.syncCart (package:fastkirana_flutter/data/repositories/cart_repository.dart:87:21)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m│ #2   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ 20:24:08.688 (+0:00:00.795601)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m│ #3   CartNotifier._flushPendingSync (package:fastkirana_flutter/providers/cart_provider.dart:107:23)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m│ #4   <asynchronous suspension>[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m│ ⛔ OrderRepository: getOrders combine[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m│ #5   CartNotifier._scheduleDebouncedSync.<anonymous closure> (package:fastkirana_flutter/providers/cart_provider.dart:89:7)[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: completion with persisted acknowledgement=true
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:01 +3 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m│ #6   <asynchronous suspension>[0m
+00:01 +4 -1: D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Online Recovery: syncPendingCart flushes local cart to server and clears pending flag
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ 20:24:09.301 (+0:00:00.388187)[0m
+[38;5;196m├┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[0m
+[38;5;196m│ ⛔ CartRepository: syncCart failed[0m
+[38;5;196m└───────────────────────────────────────────────────────────────────────────────────────────────────[0m
+00:01 +5 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: local hydration clear=false
+00:02 +6 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: local hydration clear=false
+{"case":"local-hydration","clear":false,"server":["newB","oldA"],"ui":["newB","oldA"],"local":["newB","oldA"],"pending":false}
+00:02 +7 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: local hydration clear=true
+{"case":"local-hydration","clear":true,"server":[],"ui":[],"local":[],"pending":false}
+00:03 +8 -1: D:/Fastkirana/fastkirana_flutter/test/_independent_recheck_20261017_r2_test.dart: pending-key await still replaces queued revision
+{"case":"pending-key-await","server":["oldA"],"ui":["oldA","newB"],"pending":false,"version":2,"ack":2}
+00:04 +9 -1: Some tests failed.
+
+Failing tests:
+  D:/Fastkirana/fastkirana_flutter/test/unit/offline_cart_sync_test.dart: Offline Mode: saves cart locally and marks pending sync flag when network is down

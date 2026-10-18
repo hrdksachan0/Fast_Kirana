@@ -461,7 +461,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
                     final isRestProduct = isRest || widget.isRestaurant || (effectiveRestId != null && effectiveRestId.trim().isNotEmpty);
                     final outletName = isRestProduct
                         ? (p.restaurant?.name ?? RestaurantRegistry.getName(effectiveRestId) ?? (isRest ? getOutletName(p) : 'Restaurant'))
-                        : 'FastKirana Grocery';
+                        : 'FastMinute Grocery';
                     widget.onProductSelected({
                       'productId': p.id,
                       'name': p.name,
@@ -663,7 +663,7 @@ class _AddItemSearchSheetState extends ConsumerState<AddItemSearchSheet> {
             final isRestOutlet = widget.isRestaurant || isFoodDish || customRestId != null;
             final outletName = isRestOutlet
                 ? (RestaurantRegistry.getName(customRestId) ?? 'Restaurant')
-                : 'FastKirana Grocery';
+                : 'FastMinute Grocery';
 
             widget.onProductSelected({
               'productId': 'custom_${DateTime.now().millisecondsSinceEpoch}',

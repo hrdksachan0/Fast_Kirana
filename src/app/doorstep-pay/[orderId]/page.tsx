@@ -171,7 +171,7 @@ export default function DoorstepPayPage() {
 
         {/* Header */}
         <div className="bg-emerald-600 text-white px-6 py-5 text-center">
-          <div className="text-2xl font-black tracking-tight">FastKirana</div>
+          <div className="text-2xl font-black tracking-tight">FastMinute</div>
           <div className="text-emerald-100 text-xs font-medium mt-1">Doorstep Payment</div>
         </div>
 
@@ -236,7 +236,7 @@ export default function DoorstepPayPage() {
                   Payment Successful! 🎉
                 </h3>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                  ₹{orderInfo ? Number(orderInfo.amount).toFixed(0) : '...'} paid to FastKirana
+                  ₹{orderInfo ? Number(orderInfo.amount).toFixed(0) : '...'} paid to FastMinute
                 </p>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mt-2">
                   Order #{orderInfo?.readableId}
@@ -274,7 +274,7 @@ export default function DoorstepPayPage() {
         {/* Footer */}
         <div className="bg-zinc-50 dark:bg-zinc-800 px-6 py-3 text-center border-t border-zinc-200 dark:border-zinc-700">
           <p className="text-[10px] text-zinc-400">
-            FastKirana • Powered by Cashfree Payments
+            FastMinute • Powered by Cashfree Payments
           </p>
         </div>
       </div>

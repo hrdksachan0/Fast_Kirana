@@ -236,7 +236,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 child: Column(
                   children: [
                     Text(
-                      'FastKirana',
+                      'FastMinute',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: Responsive.scaledFontSize(context, 36),
                         fontWeight: FontWeight.w900,
@@ -300,7 +300,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'FASTKIRANA EXPRESS STORE',
+                      'FASTMINUTE EXPRESS STORE',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: Responsive.scaledFontSize(context, 10),
                         fontWeight: FontWeight.w700,

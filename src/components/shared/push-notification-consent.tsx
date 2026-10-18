@@ -41,7 +41,7 @@ export function PushNotificationConsent() {
         <div className={`fixed ${bottomOffsetClass} left-4 right-4 z-40 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[400px] overflow-hidden bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 p-4 rounded-2xl shadow-elevated flex items-start justify-between gap-3 animate-slide-up`}>
           <div className="flex gap-3">
             <div className="h-10 w-10 rounded-xl overflow-hidden shadow-sm border border-amber-250 dark:border-amber-900/30 shrink-0">
-              <Image src="/icons/icon-192.png" alt="FastKirana" width={40} height={40} className="object-cover" />
+              <Image src="/icons/icon-192.png" alt="FastMinute" width={40} height={40} className="object-cover" />
             </div>
             <div>
               <h4 className="text-xs font-black text-amber-800 dark:text-amber-400 flex items-center gap-1">
@@ -74,7 +74,7 @@ export function PushNotificationConsent() {
       <div className={`fixed ${bottomOffsetClass} left-4 right-4 z-40 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[400px] bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 p-4 rounded-2xl flex items-start justify-between gap-3 animate-fade-in shadow-elevated`}>
         <div className="flex gap-3">
           <div className="h-10 w-10 rounded-xl overflow-hidden shadow-sm border border-rose-250 dark:border-rose-900/30 shrink-0 relative">
-            <Image src="/icons/icon-192.png" alt="FastKirana" width={40} height={40} className="object-cover" />
+            <Image src="/icons/icon-192.png" alt="FastMinute" width={40} height={40} className="object-cover" />
             <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center">
               <ShieldAlert className="h-4 w-4 text-rose-600" />
             </div>
@@ -102,7 +102,7 @@ export function PushNotificationConsent() {
       <div className="flex items-center gap-3 min-w-0">
         {/* App Logo with notification badge */}
         <div className="h-10 w-10 rounded-xl overflow-hidden shadow-sm border border-zinc-800 shrink-0 relative bg-zinc-800/60 flex items-center justify-center">
-          <Image src="/icons/icon-192.png" alt="FastKirana" width={40} height={40} className="object-cover" />
+          <Image src="/icons/icon-192.png" alt="FastMinute" width={40} height={40} className="object-cover" />
           <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-80"></span>
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>

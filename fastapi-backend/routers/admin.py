@@ -445,7 +445,7 @@ async def get_sales_reports(
         items_sql = f"""
             SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
                    COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
-                   COALESCE(p.vendor, 'Direct / FastKirana') as "vendor",
+                   COALESCE(p.vendor, 'Direct / FastMinute') as "vendor",
                    COALESCE(c.name, CASE WHEN p."restaurantId" IS NOT NULL THEN r.name ELSE 'General Grocery' END) as "categoryName",
                    COALESCE(c.slug, CASE WHEN p."restaurantId" IS NOT NULL THEN r.slug ELSE 'general-grocery' END) as "categorySlug",
                    p.tags as "productTags",

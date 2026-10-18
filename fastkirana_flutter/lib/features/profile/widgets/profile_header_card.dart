@@ -107,7 +107,7 @@ class ProfileHeaderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Welcome to FastKirana',
+                      'Welcome to FastMinute',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 17.5),
                         fontWeight: FontWeight.w900,
@@ -186,7 +186,7 @@ class ProfileHeaderCard extends StatelessWidget {
         ? 'STORE ADMIN'
         : (isRider
             ? 'RIDER'
-            : (isRest ? 'RESTAURANT' : 'FASTKIRANA MEMBER'));
+            : (isRest ? 'RESTAURANT' : 'FASTMINUTE MEMBER'));
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

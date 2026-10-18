@@ -125,7 +125,7 @@ export function StorefrontClient({
     // React to store going from closed -> open (navbar updates Zustand)
     if (prevStoreOpenRef.current === false && groceryMartOpen) {
       triggerHaptic('medium')
-      setOnlineAlert('FastKirana Store is now ONLINE! Fresh delivery active.')
+      setOnlineAlert('FastMinute Store is now ONLINE! Fresh delivery active.')
 
       // Smoothly refresh current products & banners
       fetch(`${catalogApiUrl()}/api/products?limit=500&excludeRestaurant=true`)
@@ -520,11 +520,11 @@ function FoodBanner() {
                 ⚡ SPECIAL CAFE
               </span>
               <span className="text-[10px] font-bold text-orange-100 flex items-center gap-1">
-                • FastKirana Kitchen
+                • FastMinute Kitchen
               </span>
             </div>
             <h3 className="text-sm sm:text-[16px] font-black text-white tracking-tight mt-1 leading-snug drop-shadow-xs">
-              Tasty &amp; delicious food delivered by Fastkirana
+              Tasty &amp; delicious food delivered by FastMinute
             </h3>
             <p className="text-[10.5px] text-orange-50/90 font-medium mt-0.5">
               “Good food is good mood” • Freshly prepared &amp; delivered in minutes

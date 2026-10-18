@@ -151,7 +151,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ? checkoutState.customReceiverPhone!
         : (user?.phone ?? selectedAddress?.phone ?? '');
 
-    String outletTitle = 'FastKirana Express Store';
+    String outletTitle = 'FastMinute Express Store';
     for (final item in items) {
       if (item.product.restaurant != null && item.product.restaurant!.name.isNotEmpty) {
         outletTitle = item.product.restaurant!.name;

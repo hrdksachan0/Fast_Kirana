@@ -71,10 +71,10 @@ async function getOrderDetails(id: string) {
             SELECT name, phone FROM users WHERE role::text = 'DELIVERY' LIMIT 1
           `
           if (mainRider.length > 0) {
-            name = mainRider[0].name || 'FastKirana Delivery Executive'
+            name = mainRider[0].name || 'FastMinute Delivery Executive'
             phone = mainRider[0].phone || '+919696503759'
           } else {
-            name = 'FastKirana Delivery Executive'
+            name = 'FastMinute Delivery Executive'
             phone = '+919696503759'
           }
         }
@@ -131,7 +131,7 @@ async function getOrderDetails(id: string) {
             id: o.id,
             readableId: o.readableId,
             type: isRest ? 'RESTAURANT' : 'GROCERY',
-            shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
+            shopName: isRest ? (o.shopName || 'Restaurant') : (o.shopName || 'FastMinute Dark Store'),
             status: o.status,
             subtotal: Number(o.subtotal || 0),
             total: Number(o.total || 0),

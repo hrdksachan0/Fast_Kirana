@@ -170,7 +170,11 @@ class Order {
         sName != 'fastkirana store' &&
         sName != 'fastkirana dark store' &&
         sName != 'fastkirana darkstore' &&
-        sName != 'fastkirana grocery') {
+        sName != 'fastkirana grocery' &&
+        sName != 'fastminute store' &&
+        sName != 'fastminute dark store' &&
+        sName != 'fastminute darkstore' &&
+        sName != 'fastminute grocery') {
       if (sName.contains('restaurant') ||
           sName.contains('cafe') ||
           sName.contains('kitchen') ||
@@ -337,7 +341,9 @@ class Order {
           json['restaurant_name']?.toString() ??
           (json['restaurant'] is Map ? json['restaurant']['name']?.toString() : null);
       if (explicit != null && explicit.trim().isNotEmpty && explicit != 'null') {
-        return explicit.trim();
+        var name = explicit.trim();
+        name = name.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+        return name;
       }
       final restId = json['restaurantId']?.toString() ??
           json['restaurant_id']?.toString() ??
@@ -651,7 +657,11 @@ class OrderItem {
       if (s != 'fastkirana store' &&
           s != 'fastkirana dark store' &&
           s != 'fastkirana darkstore' &&
-          s != 'fastkirana grocery') {
+          s != 'fastkirana grocery' &&
+          s != 'fastminute store' &&
+          s != 'fastminute dark store' &&
+          s != 'fastminute darkstore' &&
+          s != 'fastminute grocery') {
         return true;
       }
     }
@@ -764,7 +774,7 @@ class OrderItem {
       refundAmount: itemRefund,
       isRefunded: json['isRefunded'] == true || hasRefundInNotes || itemRefund > 0,
       restaurantId: rawRestId,
-      shopName: rawShopName,
+      shopName: rawShopName?.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute'),
       unit: rawUnit ?? (resolvedVariant.isNotEmpty ? resolvedVariant : null),
       weight: rawWeight ?? (resolvedVariant.isNotEmpty ? resolvedVariant : null),
       size: rawSize ?? (resolvedVariant.isNotEmpty ? resolvedVariant : null),

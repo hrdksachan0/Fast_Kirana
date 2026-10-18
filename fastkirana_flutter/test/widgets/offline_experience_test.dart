@@ -7,13 +7,13 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/core/utils/app_connectivity.dart';
-import 'package:fastkirana_flutter/data/models/cart.dart';
-import 'package:fastkirana_flutter/data/models/product.dart';
-import 'package:fastkirana_flutter/data/repositories/cart_repository.dart';
-import 'package:fastkirana_flutter/features/offline/offline_zero_signal_screen.dart';
-import 'package:fastkirana_flutter/providers/cart_provider.dart';
-import 'package:fastkirana_flutter/widgets/zepto_connectivity_pill.dart';
+import 'package:fastminute_flutter/core/utils/app_connectivity.dart';
+import 'package:fastminute_flutter/data/models/cart.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/data/repositories/cart_repository.dart';
+import 'package:fastminute_flutter/features/offline/offline_zero_signal_screen.dart';
+import 'package:fastminute_flutter/providers/cart_provider.dart';
+import 'package:fastminute_flutter/widgets/zepto_connectivity_pill.dart';
 
 class TestConnection extends ChangeNotifier implements AppConnectivityObserver {
   bool online = false;

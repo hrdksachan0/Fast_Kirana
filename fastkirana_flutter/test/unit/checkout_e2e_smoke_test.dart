@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/features/checkout/controllers/checkout_controller.dart';
-import 'package:fastkirana_flutter/data/models/cart.dart';
-import 'package:fastkirana_flutter/data/models/product.dart';
-import 'package:fastkirana_flutter/data/models/order.dart';
+import 'package:fastminute_flutter/features/checkout/controllers/checkout_controller.dart';
+import 'package:fastminute_flutter/data/models/cart.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/data/models/order.dart';
 
 void main() {
   group('Automated E2E Checkout Smoke Test (Flutter Mobile)', () {

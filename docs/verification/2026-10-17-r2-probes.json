@@ -1,0 +1,326 @@
+{
+  "scope": "current functions with fake ORM/cache; exact dormant cleanup/exception blocks; one isolated SQLite User round trip; no live SQL, gateway or alerts",
+  "results": [
+    {
+      "case": "old-inflated-price-eligible-category",
+      "quote": 80.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 20.0,
+        "couponCode": "ELIGIBLE20",
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 80.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": "eligible-cat",
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 20.0,
+      "total": 80.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "old-forged-category",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "accepted-price-after-catalog-change",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "old-client-line-price",
+      "quote": 100.0,
+      "accepted_quote": {
+        "subtotal": 100.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 100.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product",
+            "name": "Review item",
+            "price": 100.0,
+            "quantity": 1,
+            "selectedVariant": null,
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 100.0,
+      "discount": 0.0,
+      "total": 100.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 100.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "encoded-variant-client-price",
+      "quote": 1.0,
+      "accepted_quote": {
+        "subtotal": 1.0,
+        "discount": 0.0,
+        "couponCode": null,
+        "deliveryFee": 0.0,
+        "packagingFee": 0.0,
+        "tipAmount": 0.0,
+        "total": 1.0,
+        "deliveryMethod": "PICKUP",
+        "storeId": "review-hub",
+        "cartItemIds": [],
+        "items": [
+          {
+            "productId": "review-product_Small",
+            "name": "Item",
+            "price": 1.0,
+            "quantity": 1,
+            "selectedVariant": "Small",
+            "imageUrl": null,
+            "categoryId": null,
+            "restaurantId": null,
+            "menuSection": null,
+            "cartItemId": null
+          }
+        ]
+      },
+      "recovered": true,
+      "status": "OrderStatus.ADMIN_PENDING",
+      "subtotal": 1.0,
+      "discount": 0.0,
+      "total": 1.0,
+      "items": [
+        {
+          "productId": "review-product",
+          "price": 1.0,
+          "quantity": 1
+        }
+      ],
+      "stock": 2,
+      "hub_stock": 2,
+      "cart": [],
+      "deleted": []
+    },
+    {
+      "case": "sse-owner",
+      "http_status": 200
+    },
+    {
+      "case": "sse-rider",
+      "http_status": 200
+    },
+    {
+      "case": "sse-blocked-token",
+      "http_status": 401
+    },
+    {
+      "case": "sse-demoted-token",
+      "http_status": 403
+    },
+    {
+      "case": "sse-admin-enum",
+      "http_status": 403
+    },
+    {
+      "case": "confirmed-cleanup-other-variants",
+      "scope": "exact cleanup source block; current recovery does not enter this branch",
+      "cart": [
+        {
+          "id": "small",
+          "variant": "Small",
+          "quantity": 3
+        },
+        {
+          "id": "large",
+          "variant": "Large",
+          "quantity": 4
+        }
+      ],
+      "deleted": [
+        "default"
+      ]
+    },
+    {
+      "case": "confirmed-cleanup-newer-quantity",
+      "scope": "exact cleanup source block; current recovery does not enter this branch",
+      "cart": [
+        {
+          "id": "default",
+          "variant": null,
+          "quantity": 2
+        }
+      ],
+      "deleted": []
+    },
+    {
+      "case": "confirmed-cleanup-replacement",
+      "scope": "exact cleanup source block; current recovery does not enter this branch",
+      "cart": [],
+      "deleted": [
+        "new-default"
+      ]
+    },
+    {
+      "case": "post-commit-reservation",
+      "returned": {
+        "id": "committed-order"
+      },
+      "released": []
+    },
+    {
+      "case": "orm-admin-role",
+      "python_type": "Role",
+      "rendered": "Role.ADMIN",
+      "value": "ADMIN"
+    },
+    {
+      "case": "paid-recovery-admin-approval-stock",
+      "before_approval": "OrderStatus.ADMIN_PENDING",
+      "after_approval": {
+        "order": {
+          "id": "ord_21c886ce1a8d4d6c95b3",
+          "status": "CONFIRMED"
+        }
+      },
+      "ordered_quantity": 1,
+      "initial_product_stock": 2,
+      "product_stock": 2,
+      "hub_stock": 2
+    }
+  ],
+  "hashes": {
+    "routers/cashfree_router.py": "8cb805dc9ba9a723d79518cbb575bcce3ec9957ad8c7d39d4c7bcb6c7629e54d",
+    "routers/orders.py": "cf4fe36796c7ff0c2e15ce09f2f0fb029055878be6e53831c86d0f89f0ce28f5",
+    "routers/websockets.py": "f834da2025c77b9b7a3bec15ec4ffe616ab7aa4e506eac9a270cf96d962f1a35"
+  }
+}

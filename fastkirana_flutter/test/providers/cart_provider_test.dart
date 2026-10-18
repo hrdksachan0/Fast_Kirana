@@ -2,10 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
-import 'package:fastkirana_flutter/data/models/product.dart';
-import 'package:fastkirana_flutter/data/repositories/cart_repository.dart';
-import 'package:fastkirana_flutter/providers/cart_provider.dart';
-import 'package:fastkirana_flutter/core/utils/restaurant_utils.dart';
+import 'package:fastminute_flutter/data/models/product.dart';
+import 'package:fastminute_flutter/data/repositories/cart_repository.dart';
+import 'package:fastminute_flutter/providers/cart_provider.dart';
+import 'package:fastminute_flutter/core/utils/restaurant_utils.dart';
 
 const outletWedsonId = 'REST-102';
 const outletAsRestaurantId = 'REST-101';

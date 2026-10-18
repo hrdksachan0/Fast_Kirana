@@ -120,7 +120,8 @@ class TrackingMapView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shopName = order?.shopName ?? 'FastKirana Store';
+    final rawShop = order?.shopName ?? 'FastMinute Store';
+    final shopName = rawShop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
 
     return RepaintBoundary(
       child: Column(
@@ -327,8 +328,8 @@ class TrackingMapView extends StatelessWidget {
                       final rawName = primaryOutlet?.name ?? shopName;
                       String displayStoreName = rawName;
                       final lower = displayStoreName.toLowerCase();
-                      if (lower.contains('dark store') || lower.contains('fastkirana')) {
-                        displayStoreName = 'FastKirana';
+                      if (lower.contains('dark store') || lower.contains('fastkirana') || lower.contains('fastminute')) {
+                        displayStoreName = 'FastMinute';
                       } else if (lower.contains('a.s') || lower.contains('as ')) {
                         displayStoreName = 'A.S. Restaurant';
                       } else if (lower.contains('wedson')) {

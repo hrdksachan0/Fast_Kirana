@@ -303,7 +303,7 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
       </head>
       <body>
         <!-- ═══ HEADER ═══ -->
-        <div style="text-align: center; font-size: 20px; font-weight: 900; letter-spacing: 2px; margin: 4px 0 0;">FASTKIRANA</div>
+        <div style="text-align: center; font-size: 20px; font-weight: 900; letter-spacing: 2px; margin: 4px 0 0;">FASTMINUTE</div>
         <div style="text-align: center; font-size: 11px; font-weight: 700; margin: 2px 0 6px; border-bottom: 2px dashed #000; padding-bottom: 6px;">KITCHEN ORDER TICKET</div>
 
         <!-- ═══ ORDER INFO ═══ -->
@@ -356,7 +356,7 @@ export function generateKOTHtml(order: any, shopType: string = 'RESTAURANT'): st
 
         <!-- ═══ FOOTER ═══ -->
         <div class="footer" style="text-align: center; font-size: 9px; margin-top: 8px; font-weight: 700; color: #555;">
-          *** FASTKIRANA KITCHEN ***<br/>
+          *** FASTMINUTE KITCHEN ***<br/>
           Jaldi Banao • Garam Serve Karo ✓
         </div>
 
@@ -477,7 +477,7 @@ export function generateInvoiceHtml(order: any): string {
         </style>
       </head>
       <body>
-        <div class="title">FASTKIRANA</div>
+        <div class="title">FASTMINUTE</div>
         <div class="subtitle">TAX INVOICE / RECEIPT</div>
         
         <table class="info-table">
@@ -537,7 +537,7 @@ export function generateInvoiceHtml(order: any): string {
         </table>
 
         <div class="footer">
-          Thank you for ordering with FastKirana!<br/>
+          Thank you for ordering with FastMinute!<br/>
           Support: +91 70544 70303
         </div>
         <!-- 🛡️ Thermal roll cutter buffer: feeds paper past the cutter blade before cutting -->

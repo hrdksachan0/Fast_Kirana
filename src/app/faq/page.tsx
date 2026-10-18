@@ -6,8 +6,8 @@ import { buildSettingsMap } from '@/app/api/settings/route'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Frequently Asked Questions (FAQ) & Delivery Policy | FastKirana',
-  description: 'Learn about FastKirana delivery charges, free delivery tiers, minimum order policy, payment options, and delivery coverage across Ghatampur.',
+  title: 'Frequently Asked Questions (FAQ) & Delivery Policy | FastMinute',
+  description: 'Learn about FastMinute delivery charges, free delivery tiers, minimum order policy, payment options, and delivery coverage across Ghatampur.',
 }
 
 export default async function FAQPage() {
@@ -31,8 +31,8 @@ export default async function FAQPage() {
       category: '🚚 Delivery Charges & Distance Tiers',
       items: [
         {
-          q: 'What are the delivery charges and free delivery thresholds on FastKirana?',
-          a: `FastKirana offers distance-based transparent delivery pricing:
+          q: 'What are the delivery charges and free delivery thresholds on FastMinute?',
+          a: `FastMinute offers distance-based transparent delivery pricing:
 • 0 to 2 km (Local Area): ₹${tier1Fee} delivery fee — FREE Delivery on orders above ₹${tier1Threshold}!
 • 2 to 3 km (Suburban Area): ₹${tier2Fee} delivery fee — FREE Delivery on orders above ₹${tier2Threshold}!
 • 3 to 5 km (Extended Area): ₹${tier3Fee} delivery fee — FREE Delivery on orders above ₹${tier3Threshold}!
@@ -54,12 +54,12 @@ export default async function FAQPage() {
       category: '🛍️ Ordering & Combining Stores',
       items: [
         {
-          q: 'Can I combine FastKirana Grocery and Restaurant items in the same order?',
-          a: 'Yes! You can order fresh groceries from FastKirana Darkstore and hot food from any restaurant (like A.S. Restaurant, Wedson Restaurant, or Bal Udyan) together in one seamless combined order.',
+          q: 'Can I combine FastMinute Grocery and Restaurant items in the same order?',
+          a: 'Yes! You can order fresh groceries from FastMinute Darkstore and hot food from any restaurant (like A.S. Restaurant, Wedson Restaurant, or Bal Udyan) together in one seamless combined order.',
         },
         {
           q: 'Can I order from multiple restaurants at the same time?',
-          a: 'To guarantee food quality and quick delivery, food items must come from 1 restaurant kitchen per order. However, FastKirana Grocery items can be combined with any restaurant without any limitation!',
+          a: 'To guarantee food quality and quick delivery, food items must come from 1 restaurant kitchen per order. However, FastMinute Grocery items can be combined with any restaurant without any limitation!',
         },
         {
           q: 'What happens if I add dishes from a different restaurant to my cart?',
@@ -108,7 +108,7 @@ export default async function FAQPage() {
             Frequently Asked Questions
           </h1>
           <p className="text-xs sm:text-sm font-semibold text-text-secondary max-w-xl mx-auto leading-relaxed">
-            Everything you need to know about FastKirana delivery fees, distance tiers, and ordering policies.
+            Everything you need to know about FastMinute delivery fees, distance tiers, and ordering policies.
           </p>
         </div>
 
@@ -117,7 +117,7 @@ export default async function FAQPage() {
           <div className="flex items-center gap-2 text-text-primary">
             <Truck className="h-5 w-5 text-primary" />
             <h2 className="text-sm sm:text-base font-black tracking-tight">
-              FastKirana Distance & Delivery Fee Tiers
+              FastMinute Distance & Delivery Fee Tiers
             </h2>
           </div>
 

@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 
 /// Dynamic light/dark theme colors used across the delivery dashboard.

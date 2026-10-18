@@ -64,7 +64,7 @@ export function Logo({ className = '', showText = true, lightMode = false, simpl
         <div className="flex flex-col text-left leading-none">
           <span className="text-xl font-black tracking-tight select-none">
             <span className="text-[#e20a22]">Fast</span>
-            <span className={cn("dark:text-zinc-200", lightMode ? 'text-white/95' : 'text-[#7c0617]')}>Kirana</span>
+            <span className={cn("dark:text-zinc-200", lightMode ? 'text-white/95' : 'text-[#7c0617]')}>Minute</span>
           </span>
           <div className="flex items-center mt-0.5">
             {/* Clean green delivery bag with speed lines */}

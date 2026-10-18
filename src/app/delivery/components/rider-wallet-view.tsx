@@ -167,7 +167,7 @@ export default function RiderWalletView({
                 <Store className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-black text-text-primary">Deposit at FastKirana Counter</p>
+                <p className="text-xs font-black text-text-primary">Deposit at FastMinute Counter</p>
                 <p className="text-[10px] text-text-secondary">Hand over collected cash to store manager</p>
               </div>
             </div>

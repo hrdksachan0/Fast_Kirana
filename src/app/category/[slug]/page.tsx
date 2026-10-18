@@ -46,9 +46,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return {
 
-    title: `${name} - FastKirana | Online Grocery Delivery`,
+    title: `${name} - FastMinute | Online Grocery Delivery`,
 
-    description: `Buy ${name} online at FastKirana. Fresh products, fast delivery in Ghatampur, Kanpur.`,
+    description: `Buy ${name} online at FastMinute. Fresh products, fast delivery in Ghatampur, Kanpur.`,
 
     keywords: [name, 'online grocery', 'fast delivery', 'Ghatampur', 'Kanpur'],
 

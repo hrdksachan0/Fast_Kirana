@@ -180,7 +180,7 @@ export function AdminOrders({ initialOrders }: AdminOrdersProps) {
                         </span>
                       ) : (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 inline-flex items-center gap-1">
-                          🛒 {o.shopName || 'FastKirana Dark Store'}
+                          🛒 {o.shopName || 'FastMinute Dark Store'}
                         </span>
                       )}
                     </div>

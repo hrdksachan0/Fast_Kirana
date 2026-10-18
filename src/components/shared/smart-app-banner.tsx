@@ -118,7 +118,7 @@ export function SmartAppBanner() {
           <div className="h-8.5 w-8.5 rounded-xl overflow-hidden shrink-0 border border-white/10 shadow-sm bg-black/40 p-0.5">
             <img
               src="/icons/icon-192.png"
-              alt="FastKirana App"
+              alt="FastMinute App"
               className="h-full w-full object-cover rounded-[9px]"
             />
           </div>
@@ -126,7 +126,7 @@ export function SmartAppBanner() {
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 leading-none">
               <span className="text-[11.5px] font-black text-white tracking-tight truncate">
-                ⚡ FastKirana
+                ⚡ FastMinute
               </span>
               <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                 <Sparkles size={8} /> Fast Delivery

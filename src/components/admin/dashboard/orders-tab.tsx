@@ -286,7 +286,7 @@ export function OrdersTab({
     }
     const cleanDisplayId = `#${String(order.readableId || order.id.slice(0, 8)).replace('#', '').trim()}`
     const paymentUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://fastkirana.in'}/order/${order.id}/track`
-    const message = `Namaste ${order.userName || 'Customer'} ji, aapka FastKirana order ${cleanDisplayId} (₹${Number(order.total).toFixed(0)}) payment ke liye pending hai.\n\nAap is link se online pay kar sakte hain ya status track kar sakte hain:\n${paymentUrl}\n\nFastKirana se judne ke liye dhanyawad!`
+    const message = `Namaste ${order.userName || 'Customer'} ji, aapka FastMinute order ${cleanDisplayId} (₹${Number(order.total).toFixed(0)}) payment ke liye pending hai.\n\nAap is link se online pay kar sakte hain ya status track kar sakte hain:\n${paymentUrl}\n\nFastMinute se judne ke liye dhanyawad!`
     const waUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`
     window.open(waUrl, '_blank')
   }
@@ -389,7 +389,7 @@ export function OrdersTab({
                   type: isRestaurant ? 'RESTAURANT' : 'GROCERY',
                   shopName: isRestaurant
                     ? (s.restaurantName || s.shopName || 'Restaurant')
-                    : 'FastKirana Dark Store',
+                    : 'FastMinute Dark Store',
                 }
               }),
               restaurantId: restSub?.restaurantId || null,
@@ -475,7 +475,7 @@ export function OrdersTab({
           notes: targetOrder.notes || null,
           shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
           printedAt: new Date().toISOString(),
-          kotText: 'FASTKIRANA KOT',
+          kotText: 'FASTMINUTE KOT',
           manual: true,
           source: 'orders_tab',
         }),
@@ -514,7 +514,7 @@ export function OrdersTab({
             notes: targetOrder.notes || null,
             shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
             printedAt: new Date().toISOString(),
-            kotText: 'FASTKIRANA KOT',
+            kotText: 'FASTMINUTE KOT',
             manual: true,
             source: 'orders_tab_fallback',
           },
@@ -562,7 +562,7 @@ export function OrdersTab({
               notes: targetOrder.notes || null,
               shopName: targetOrder.shopName || targetOrder.restaurantName || 'Kitchen',
               printedAt: new Date().toISOString(),
-              kotText: 'FASTKIRANA KOT',
+              kotText: 'FASTMINUTE KOT',
               manual: true,
               source: 'orders_tab_fallback',
             }
@@ -607,11 +607,11 @@ export function OrdersTab({
         ? targetSub.items
         : (o.items || []).filter((it: any) => !it.restaurantId)
 
-      let text = `🛒 *FASTKIRANA MART - PACKING SLIP*\n`
+      let text = `🛒 *FASTMINUTE MART - PACKING SLIP*\n`
       text += `━━━━━━━━━━━━━━━━━━━━━\n`
       text += `🆔 *Order Token:* #${orderId}\n`
       text += `⏰ *Order Time:* ${orderTime}\n`
-      text += `🏪 *Hub:* FastKirana Mart (Dark Store)\n`
+      text += `🏪 *Hub:* FastMinute Mart (Dark Store)\n`
       const custAddr = o.address?.formattedAddress || o.address?.address || o.customerAddress || ''
       if (custAddr) {
         text += `📍 *Address:* ${custAddr}\n`
@@ -657,7 +657,7 @@ export function OrdersTab({
     const orderId = targetSub.readableId || o.readableId || o.id?.slice(0, 8) || 'Order'
     const outletName = targetSub.shopName || (o.restaurantId ? (o.restaurantName || o.shopName) : null) || 'Restaurant'
 
-    let text = `🍽️ *FASTKIRANA KITCHEN ORDER*\n`
+    let text = `🍽️ *FASTMINUTE KITCHEN ORDER*\n`
     text += `━━━━━━━━━━━━━━━━━━━━━\n`
     text += `🆔 *Order Token:* #${orderId}\n`
     text += `⏰ *Order Time:* ${orderTime}\n`

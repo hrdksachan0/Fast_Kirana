@@ -8,6 +8,7 @@ import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('origin') || ''
   const isAllowed = 
+    origin.endsWith('fastminute.in') ||
     origin.endsWith('fastkirana.in') ||
     origin.endsWith('fastkirana.com') ||
     origin.startsWith('http://localhost:') ||
@@ -17,7 +18,7 @@ export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': isAllowed ? origin : 'https://www.fastkirana.in',
+      'Access-Control-Allow-Origin': isAllowed ? origin : 'https://www.fastminute.in',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },

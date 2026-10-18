@@ -92,7 +92,7 @@ class _AdminShareSheetContentState extends State<_AdminShareSheetContent> {
             ? ((sub.shopName != null && sub.shopName!.trim().isNotEmpty && !sub.shopName!.toLowerCase().contains('dark store'))
                 ? sub.shopName!.trim()
                 : (RestaurantRegistry.getName(sub.restaurantId) ?? 'Restaurant Kitchen'))
-            : 'FastKirana Mart';
+            : 'FastMinute Mart';
 
         final msg = isRest
             ? AdminNotificationService.formatRestaurantKOTMessage(
@@ -131,6 +131,7 @@ class _AdminShareSheetContentState extends State<_AdminShareSheetContent> {
         final restOutletName = (order.shopName != null &&
                 order.shopName!.trim().isNotEmpty &&
                 !order.shopName!.toLowerCase().contains('dark store') &&
+                !order.shopName!.toLowerCase().contains('fastminute store') &&
                 !order.shopName!.toLowerCase().contains('fastkirana store'))
             ? order.shopName!.trim()
             : (RestaurantRegistry.getName(order.restaurantId) ?? 'Restaurant Kitchen');
@@ -153,7 +154,7 @@ class _AdminShareSheetContentState extends State<_AdminShareSheetContent> {
 
         list.add(_ShareOutletOption(
           id: 'grocery',
-          title: 'FastKirana Mart',
+          title: 'FastMinute Mart',
           subtitle: '${groceryItems.length} grocery items',
           icon: '🛒',
           isRestaurant: false,
@@ -162,7 +163,7 @@ class _AdminShareSheetContentState extends State<_AdminShareSheetContent> {
           message: AdminNotificationService.formatGroceryPackingMessage(
             order,
             specificItems: groceryItems,
-            outletName: 'FastKirana Mart (Dark Store)',
+            outletName: 'FastMinute Mart (Dark Store)',
             orderToken: groceryToken,
           ),
         ));
@@ -197,7 +198,7 @@ class _AdminShareSheetContentState extends State<_AdminShareSheetContent> {
 
         list.add(_ShareOutletOption(
           id: 'grocery',
-          title: 'FastKirana Mart',
+          title: 'FastMinute Mart',
           subtitle: '${items.length} items',
           icon: '🛒',
           isRestaurant: false,
@@ -206,7 +207,7 @@ class _AdminShareSheetContentState extends State<_AdminShareSheetContent> {
           message: AdminNotificationService.formatGroceryPackingMessage(
             order,
             specificItems: items,
-            outletName: 'FastKirana Mart (Dark Store)',
+            outletName: 'FastMinute Mart (Dark Store)',
             orderToken: groceryToken,
           ),
         ));
@@ -240,7 +241,7 @@ class _AdminShareSheetContentState extends State<_AdminShareSheetContent> {
         return;
       }
     } catch (_) {}
-    await Share.share(message, subject: 'FastKirana Order #$token');
+    await Share.share(message, subject: 'FastMinute Order #$token');
   }
 
   Future<void> _shareDirectWhatsApp(String phone, String message) async {
@@ -479,7 +480,7 @@ class _AdminShareSheetContentState extends State<_AdminShareSheetContent> {
               subtitle: 'Telegram, SMS, Email, or other apps',
               onTap: () async {
                 Navigator.pop(context);
-                await Share.share(activeOption.message, subject: 'FastKirana Order #${activeOption.token}');
+                await Share.share(activeOption.message, subject: 'FastMinute Order #${activeOption.token}');
               },
             ),
 

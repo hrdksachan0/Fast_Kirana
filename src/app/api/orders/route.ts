@@ -336,7 +336,7 @@ export async function POST(request: NextRequest) {
     let storeLat: number = DEFAULT_STORE_LAT
     let storeLng: number = DEFAULT_STORE_LNG
     let maxRadiusKm: number = 5.0
-    let storeDisplayName: string = 'FastKirana Store'
+    let storeDisplayName: string = 'FastMinute Store'
 
     // Resolve target dark store for multi-hub routing and geofencing dynamically
     const addrPincode = (address?.pincode || '').trim().replace(/\s+/g, '')
@@ -393,7 +393,7 @@ export async function POST(request: NextRequest) {
       storeLng = targetDarkStore ? targetDarkStore.longitude : (geoSettingMap.get('store_lng') ? parseFloat(geoSettingMap.get('store_lng')!) : DEFAULT_STORE_LNG)
       maxRadiusKm = targetDarkStore?.deliveryRadiusKm ? targetDarkStore.deliveryRadiusKm : (geoSettingMap.get('delivery_radius') ? parseFloat(geoSettingMap.get('delivery_radius')!) : (geoSettingMap.get('max_delivery_radius') ? parseFloat(geoSettingMap.get('max_delivery_radius')!) : 5.0))
       const surgeFee = targetDarkStore?.surgeCharge ? targetDarkStore.surgeCharge : (geoSettingMap.get('surge_charge') ? parseFloat(geoSettingMap.get('surge_charge')!) : 0)
-      storeDisplayName = targetDarkStore?.name || 'FastKirana Store'
+      storeDisplayName = targetDarkStore?.name || 'FastMinute Store'
 
       resolvedLat = targetLat
       resolvedLng = targetLng
@@ -447,7 +447,7 @@ export async function POST(request: NextRequest) {
       return {
         product: {
           id: rawId,
-          name: p.name || i.name || 'FastKirana Item',
+          name: p.name || i.name || 'FastMinute Item',
           price: typeof p.price === 'number' ? p.price : (parseFloat(p.price || i.price || '0') || 0),
           slug: p.slug || i.slug,
           imageUrl: p.imageUrl || i.imageUrl || p.image || i.image,
@@ -1601,7 +1601,7 @@ export async function POST(request: NextRequest) {
               orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
               shopName: orderInfo.type === 'RESTAURANT'
                 ? (orderInfo.restaurant?.name || 'Restaurant')
-                : 'FastKirana Dark Store',
+                : 'FastMinute Dark Store',
               restaurantId: orderInfo.type === 'RESTAURANT' ? orderInfo.restaurantId : null,
               storeId: resolvedStoreId || storeId || null,
               notes: resolvedOrderNotes,
@@ -1657,7 +1657,7 @@ export async function POST(request: NextRequest) {
               couponCode: couponCode ? couponCode.toUpperCase() : null,
               shopName: orderInfo.type === 'RESTAURANT'
                 ? (orderInfo.restaurant?.name || 'Restaurant')
-                : 'FastKirana Dark Store',
+                : 'FastMinute Dark Store',
               shopPhone: orderInfo.type === 'RESTAURANT'
                 ? (orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 81128 49854')
                 : (settingsMap['contact_phone'] || '+91 81128 49854'),
@@ -2066,7 +2066,7 @@ export async function GET(request: NextRequest) {
           readableId: o.readableId,
           type: o.restaurantId ? 'RESTAURANT' : 'GROCERY',
           restaurantId: o.restaurantId,
-          shopName: o.restaurantId ? (o.shopName || (o.restaurant?.name) || 'Restaurant') : (o.shopName || 'FastKirana Dark Store'),
+          shopName: o.restaurantId ? (o.shopName || (o.restaurant?.name) || 'Restaurant') : (o.shopName ? o.shopName.replace(/FastKirana/g, 'FastMinute') : 'FastMinute Dark Store'),
           status: o.status,
           total: o.total,
           itemsCount: o.items?.length || 0,

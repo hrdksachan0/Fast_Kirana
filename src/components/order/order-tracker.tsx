@@ -134,7 +134,7 @@ export function OrderTracker({
           amount={combinedTotal || order.total}
           readableId={String(order.baseReadableId || order.readableId || '').replace(/-[GR\d]+$/i, '') || order.id?.slice(0, 8)}
           customerPhone={(order as any).customerPhone || (order as any).address?.phone || ''}
-          customerName={(order as any).customerName || (order as any).userName || 'FastKirana Customer'}
+          customerName={(order as any).customerName || (order as any).userName || 'FastMinute Customer'}
           onPaymentSuccess={async () => {
             try {
               const refetchRes = await fetch(`${apiUrl()}/api/orders/${order.id}`)

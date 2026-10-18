@@ -8,13 +8,13 @@ class AdminNotificationService {
   /// Format a comprehensive, clean receipt message for Admin & Kitchen/Darkstore
   static String formatOrderWhatsAppMessage(Order order) {
     final orderId = order.readableId ?? (order.id.length > 8 ? order.id.substring(0, 8).toUpperCase() : order.id);
-    final custName = order.customerName?.isNotEmpty == true ? order.customerName! : 'FastKirana Customer';
+    final custName = order.customerName?.isNotEmpty == true ? order.customerName! : 'FastMinute Customer';
     final custPhone = order.customerPhone?.isNotEmpty == true ? order.customerPhone! : 'Not Provided';
     final custAddr = order.customerAddress?.isNotEmpty == true ? order.customerAddress! : 'Ghatampur Market, UP 209206';
     final items = order.items ?? [];
 
     final buffer = StringBuffer();
-    buffer.writeln('🚨 *NEW FASTKIRANA ORDER #$orderId* 🚨\n');
+    buffer.writeln('🚨 *NEW FASTMINUTE ORDER #$orderId* 🚨\n');
     buffer.writeln('👤 *Customer:* $custName');
     buffer.writeln('📞 *Phone:* +91 $custPhone');
     buffer.writeln('📍 *Address:* $custAddr\n');
@@ -62,9 +62,10 @@ class AdminNotificationService {
         ((order.shopName != null &&
                 order.shopName!.trim().isNotEmpty &&
                 !order.shopName!.toLowerCase().contains('dark store') &&
+                !order.shopName!.toLowerCase().contains('fastminute store') &&
                 !order.shopName!.toLowerCase().contains('fastkirana store'))
             ? order.shopName!.trim()
-            : (RestaurantRegistry.getName(order.restaurantId) ?? 'FastKirana Kitchen'));
+            : (RestaurantRegistry.getName(order.restaurantId) ?? 'FastMinute Kitchen'));
 
     final orderDate = order.createdAt.toLocal();
     final hour = orderDate.hour > 12 ? orderDate.hour - 12 : (orderDate.hour == 0 ? 12 : orderDate.hour);
@@ -78,7 +79,7 @@ class AdminNotificationService {
         : '🛵 Doorstep Delivery (Rider Pickup)';
 
     final buffer = StringBuffer();
-    buffer.writeln('🍽️ *FASTKIRANA KITCHEN ORDER*');
+    buffer.writeln('🍽️ *FASTMINUTE KITCHEN ORDER*');
     buffer.writeln('━━━━━━━━━━━━━━━━━━━━━');
     buffer.writeln('🆔 *Order Token:* #$orderId');
     buffer.writeln('⏰ *Order Time:* $timeStr');
@@ -118,7 +119,7 @@ class AdminNotificationService {
     return buffer.toString();
   }
 
-  /// Format clean FastKirana Mart / Darkstore packing slip for grocery items
+  /// Format clean FastMinute Mart / Darkstore packing slip for grocery items
   static String formatGroceryPackingMessage(
     Order order, {
     List<OrderItem>? specificItems,
@@ -137,7 +138,7 @@ class AdminNotificationService {
       items = filtered.isNotEmpty ? filtered : raw;
     }
 
-    final outlet = outletName ?? 'FastKirana Mart (Dark Store)';
+    final outlet = outletName ?? 'FastMinute Mart (Dark Store)';
 
     final orderDate = order.createdAt.toLocal();
     final hour = orderDate.hour > 12 ? orderDate.hour - 12 : (orderDate.hour == 0 ? 12 : orderDate.hour);
@@ -155,7 +156,7 @@ class AdminNotificationService {
     final custAddr = order.customerAddress?.isNotEmpty == true ? order.customerAddress! : '';
 
     final buffer = StringBuffer();
-    buffer.writeln('🛒 *FASTKIRANA MART - PACKING SLIP*');
+    buffer.writeln('🛒 *FASTMINUTE MART - PACKING SLIP*');
     buffer.writeln('━━━━━━━━━━━━━━━━━━━━━');
     buffer.writeln('🆔 *Order ID:* #$orderId');
     buffer.writeln('⏰ *Order Time:* $timeStr');
@@ -214,7 +215,7 @@ class AdminNotificationService {
     final groceryItems = allItems.where((i) => !i.isRestaurantItem).toList();
 
     final buffer = StringBuffer();
-    buffer.writeln('🚨 *FASTKIRANA COMBINED ORDER #$orderId* 🚨\n');
+    buffer.writeln('🚨 *FASTMINUTE COMBINED ORDER #$orderId* 🚨\n');
     buffer.writeln('👤 *Customer:* $custName');
     if (custPhone.isNotEmpty) buffer.writeln('📞 *Phone:* +91 $custPhone');
     buffer.writeln('📍 *Address:* $custAddr\n');
@@ -299,7 +300,7 @@ class AdminNotificationService {
     if (cleanPhone.length < 10) return false;
 
     final buffer = StringBuffer();
-    buffer.writeln('🙏 *Namaste $customerName ji! (FastKirana Express)*\n');
+    buffer.writeln('🙏 *Namaste $customerName ji! (FastMinute Express)*\n');
     buffer.writeln('Aapke Order *#$orderId* me:');
     buffer.writeln('❌ *$unavailableItem* abhi out of stock ho gaya hai.');
     buffer.writeln('');

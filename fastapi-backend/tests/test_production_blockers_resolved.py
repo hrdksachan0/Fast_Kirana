@@ -1587,7 +1587,7 @@ async def test_cashfree_create_order_persists_nested_order_payload_and_store_id(
     """Verify that Cashfree create-order captures orderPayload, deliveryMethod, items,
     and storeId in cf_intent durable persistence."""
     import uuid
-    from models import IdempotencyRecord
+    from models import IdempotencyRecord, Product
     from routers.cashfree_router import create_cashfree_order, CashfreeCreateOrderRequest
 
     custom_store_id = f"store_{uuid.uuid4().hex[:6]}"
@@ -1611,6 +1611,11 @@ async def test_cashfree_create_order_persists_nested_order_payload_and_store_id(
     )
 
     async with TestingSessionLocal() as session:
+        p1 = Product(id="prod_1", name="Organic Milk", slug="organic-milk", mrp=80.0, price=80.0, unit="1L", stock=50)
+        p2 = Product(id="prod_2", name="Brown Bread", slug="brown-bread", mrp=90.0, price=90.0, unit="1 pc", stock=50)
+        session.add_all([p1, p2])
+        await session.commit()
+
         res = await create_cashfree_order(req=req, db=session)
         assert res["success"] is True
 
@@ -2006,4 +2011,509 @@ async def test_websocket_ticket_fails_closed_on_db_ledger_failure_across_all_pro
                 exp = time.time() + 300
                 ticket_accepted = await _consume_ws_ticket(jti, exp)
                 assert ticket_accepted is False, f"Ticket should fail closed when DB ledger fails under {env_dict}"
+
+
+@pytest.mark.asyncio
+async def test_admin_status_transitions_and_stock_lifecycle():
+    """Verify admin status transitions (CONFIRMED, PACKED, CANCELLED) work without
+    OrderStatus.PREPARING AttributeError, and stock is deducted exactly once on approval
+    and restored exactly once on cancellation."""
+    import uuid
+    from models import Order, OrderItem, Product, OrderStatus, DarkStore, StoreInventory, Address
+    from routers import admin_extended
+    from fastapi import BackgroundTasks
+    from starlette.requests import Request
+
+    async with TestingSessionLocal() as db:
+        hub_id = f"hub_{uuid.uuid4().hex[:8]}"
+        hub = DarkStore(id=hub_id, name="Test Hub", city="Kanpur", latitude=26.4499, longitude=80.3319)
+        db.add(hub)
+
+        addr_id = f"addr_{uuid.uuid4().hex[:8]}"
+        addr = Address(
+            id=addr_id,
+            userId="usr_test",
+            label="Home",
+            houseNo="1",
+            street="Mall Rd",
+            area="Civil Lines",
+            city="Kanpur",
+            pincode="208001",
+            phone="9999999999",
+        )
+        db.add(addr)
+
+        p_id = f"p_{uuid.uuid4().hex[:8]}"
+        p = Product(id=p_id, name="Milk 500ml", slug=f"milk-{p_id}", mrp=35.0, price=30.0, unit="500ml", stock=5)
+        db.add(p)
+
+        store_inv = StoreInventory(productId=p_id, storeId=hub_id, stock=5)
+        db.add(store_inv)
+
+        order_id = f"ord_{uuid.uuid4().hex[:8]}"
+        order = Order(
+            id=order_id,
+            readableId=f"FK-{order_id[:6]}",
+            userId="usr_test",
+            addressId=addr_id,
+            storeId=hub_id,
+            subtotal=30.0,
+            total=30.0,
+            status=OrderStatus.ADMIN_PENDING,
+            notes="Paid recovered order"
+        )
+        db.add(order)
+        item = OrderItem(id=f"item_{uuid.uuid4().hex[:8]}", orderId=order_id, productId=p_id, name="Milk 500ml", quantity=1, price=30.0)
+        db.add(item)
+        await db.commit()
+
+        admin_user = {"id": "admin_1", "role": "ADMIN"}
+        bg = BackgroundTasks()
+
+        # 1. ADMIN_PENDING -> CONFIRMED (deducts stock)
+        res_conf = await admin_extended.admin_update_order_status(
+            Request({"type": "http"}), order_id, {"status": "CONFIRMED"}, admin_user, db, bg
+        )
+        assert res_conf["order"]["status"] == "CONFIRMED"
+        await db.refresh(p)
+        await db.refresh(store_inv)
+        await db.refresh(order)
+        assert p.stock == 4
+        assert store_inv.stock == 4
+        assert "[STOCK_DEDUCTED]" in (order.notes or "")
+
+        # 2. CONFIRMED -> PACKED (idempotent, does not deduct again)
+        res_pack = await admin_extended.admin_update_order_status(
+            Request({"type": "http"}), order_id, {"status": "PACKED"}, admin_user, db, bg
+        )
+        assert res_pack["order"]["status"] == "PACKED"
+        await db.refresh(p)
+        await db.refresh(store_inv)
+        assert p.stock == 4
+        assert store_inv.stock == 4
+
+        # 3. PACKED -> CANCELLED (restores stock)
+        res_cancel = await admin_extended.admin_update_order_status(
+            Request({"type": "http"}), order_id, {"status": "CANCELLED"}, admin_user, db, bg
+        )
+        assert res_cancel["order"]["status"] == "CANCELLED"
+        await db.refresh(p)
+        await db.refresh(store_inv)
+        await db.refresh(order)
+        assert p.stock == 5
+        assert store_inv.stock == 5
+        assert "[STOCK_RESTORED]" in (order.notes or "")
+
+
+@pytest.mark.asyncio
+async def test_admin_approval_rejects_overselling_on_duplicate_lines():
+    """Verify that admin status approval aggregates duplicate order lines and rejects
+    orders when total product or store inventory demand exceeds available stock."""
+    import uuid
+    from models import Order, OrderItem, Product, OrderStatus, DarkStore, StoreInventory, Address
+    from routers import admin_extended
+    from fastapi import BackgroundTasks, HTTPException
+    from starlette.requests import Request
+
+    async with TestingSessionLocal() as db:
+        hub_id = f"hub_{uuid.uuid4().hex[:8]}"
+        hub = DarkStore(id=hub_id, name="Test Hub", city="Kanpur", latitude=26.4499, longitude=80.3319)
+        db.add(hub)
+
+        addr_id = f"addr_{uuid.uuid4().hex[:8]}"
+        addr = Address(
+            id=addr_id,
+            userId="usr_test",
+            label="Home",
+            houseNo="1",
+            street="Mall Rd",
+            area="Civil Lines",
+            city="Kanpur",
+            pincode="208001",
+            phone="9999999999",
+        )
+        db.add(addr)
+
+        p_id = f"p_{uuid.uuid4().hex[:8]}"
+        p = Product(id=p_id, name="Scarce Item", slug=f"scarce-{p_id}", mrp=110.0, price=100.0, unit="1 pc", stock=1)
+        db.add(p)
+
+        store_inv = StoreInventory(productId=p_id, storeId=hub_id, stock=1)
+        db.add(store_inv)
+
+        order_id = f"ord_{uuid.uuid4().hex[:8]}"
+        order = Order(
+            id=order_id,
+            readableId=f"FK-{order_id[:6]}",
+            userId="usr_test",
+            addressId=addr_id,
+            storeId=hub_id,
+            subtotal=200.0,
+            total=200.0,
+            status=OrderStatus.ADMIN_PENDING,
+            notes="Paid recovered order"
+        )
+        db.add(order)
+        # Duplicate lines: 2 lines of qty 1 each = demand 2 against stock 1
+        db.add(OrderItem(id=f"item_1_{uuid.uuid4().hex[:8]}", orderId=order_id, productId=p_id, name="Scarce Item", quantity=1, price=100.0))
+        db.add(OrderItem(id=f"item_2_{uuid.uuid4().hex[:8]}", orderId=order_id, productId=p_id, name="Scarce Item", quantity=1, price=100.0))
+        await db.commit()
+
+        admin_user = {"id": "admin_1", "role": "ADMIN"}
+        bg = BackgroundTasks()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await admin_extended.admin_update_order_status(
+                Request({"type": "http"}), order_id, {"status": "CONFIRMED"}, admin_user, db, bg
+            )
+        assert exc_info.value.status_code == 400
+        assert "Insufficient store inventory" in str(exc_info.value.detail) or "Insufficient stock" in str(exc_info.value.detail)
+
+        # Verify stock was not deducted or corrupted
+        await db.refresh(p)
+        await db.refresh(store_inv)
+        assert p.stock == 1
+        assert store_inv.stock == 1
+
+
+@pytest.mark.asyncio
+async def test_cashfree_encoded_overlapping_product_ids_resolution():
+    """Verify that encoded product IDs (e.g. prod_1_Small) resolve to the correct
+    longer canonical product (prod_1) rather than an overlapping shorter product prefix (prod)."""
+    import uuid
+    from models import Product, OrderItem
+    from routers import cashfree_router as cr
+    from sqlalchemy import select
+
+    async with TestingSessionLocal() as db:
+        uid = uuid.uuid4().hex[:6]
+        prod_long_id = f"prod_1_{uid}"
+        prod_short_id = f"prod_{uid}"
+
+        prod_long = Product(
+            id=prod_long_id,
+            name="Premium Rice",
+            slug=f"rice-{prod_long_id}",
+            mrp=120.0,
+            price=100.0,
+            unit="1 kg",
+            stock=10,
+            variants=[{"name": "Small", "price": 100.0, "stock": 10}]
+        )
+        prod_short = Product(
+            id=prod_short_id,
+            name="Cheap Grain",
+            slug=f"grain-{prod_short_id}",
+            mrp=2.0,
+            price=1.0,
+            unit="1 kg",
+            stock=10,
+            variants=[{"name": "Small", "price": 1.0, "stock": 10}]
+        )
+        db.add(prod_long)
+        db.add(prod_short)
+        await db.commit()
+
+        # Submit encoded productId targeting prod_long_id with variant Small: f"{prod_long_id}_Small"
+        encoded_id = f"{prod_long_id}_Small"
+        req = cr.CashfreeCreateOrderRequest(
+            orderId=f"review_{uid}",
+            items=[{"productId": encoded_id, "selectedVariant": "Small", "quantity": 1, "price": 100.0}],
+            amount=100.0,
+            customerPhone="9999999991",
+            userId="usr_test",
+            deliveryMethod="PICKUP"
+        )
+        quote = await cr.create_cashfree_order(req, db)
+        assert quote["orderAmount"] == 100.0
+
+        # Auto recover and inspect canonical order line
+        recovered = await cr.auto_recover_unplaced_cashfree_order(
+            quote["cfOrderId"],
+            quote["orderId"],
+            f"pay_{uid}",
+            {"order_amount": 100.0, "customer_details": {"customer_phone": "9999999991"}},
+            {"payment_amount": 100.0},
+            db
+        )
+        assert recovered is not None
+        item_res = await db.execute(select(OrderItem).where(OrderItem.orderId == recovered.id))
+        items = item_res.scalars().all()
+        assert len(items) == 1
+        assert items[0].productId == prod_long_id
+        assert items[0].price == 100.0
+
+
+@pytest.mark.asyncio
+async def test_variant_lifecycle_missing_selection_resolves_canonical_default_and_deducts_all_pools():
+    """Verify that a paid order without a selected variant resolves to the canonical default variant,
+    deducts all pools (product stock, variant stock, store inventory) exactly once, supports idempotent
+    replays, and restores all pools on cancellation."""
+    import uuid
+    from models import Order, OrderItem, Product, OrderStatus, DarkStore, StoreInventory, Address
+    from routers import cashfree_router as cr, admin_extended
+    from fastapi import BackgroundTasks
+    from starlette.requests import Request
+    from sqlalchemy import select
+
+    async with TestingSessionLocal() as db:
+        uid = uuid.uuid4().hex[:8]
+        hub_id = f"hub_{uid}"
+        hub = DarkStore(id=hub_id, name="Test Hub", city="Kanpur", latitude=26.4499, longitude=80.3319)
+        db.add(hub)
+
+        addr_id = f"addr_{uid}"
+        addr = Address(
+            id=addr_id,
+            userId=f"usr_{uid}",
+            label="Home",
+            houseNo="1",
+            street="Mall Rd",
+            area="Civil Lines",
+            city="Kanpur",
+            pincode="208001",
+            phone="9999999991",
+        )
+        db.add(addr)
+
+        p_id = f"prod_{uid}"
+        product = Product(
+            id=p_id,
+            name="Variant Rice",
+            slug=f"rice-{uid}",
+            mrp=120.0,
+            price=100.0,
+            unit="1 kg",
+            stock=2,
+            variants=[{"name": "Small", "price": 100.0, "stock": 2}]
+        )
+        db.add(product)
+
+        inv = StoreInventory(productId=p_id, storeId=hub_id, stock=2)
+        db.add(inv)
+        await db.commit()
+
+        # 1. Quote request omitting selectedVariant
+        quote = await cr.create_cashfree_order(
+            cr.CashfreeCreateOrderRequest(
+                orderId=f"ord_var_{uid}",
+                items=[{"productId": p_id, "quantity": 1}],
+                amount=100.0,
+                userId=f"usr_{uid}",
+                addressId=addr_id,
+                customerPhone="9999999991",
+                deliveryMethod="PICKUP",
+                storeId=hub_id
+            ),
+            db
+        )
+        assert quote["orderAmount"] == 100.0
+
+        # 2. Auto recovery creates order with canonically resolved variant
+        recovered = await cr.auto_recover_unplaced_cashfree_order(
+            quote["cfOrderId"],
+            quote["orderId"],
+            f"pay_{uid}",
+            {"order_amount": 100.0, "customer_details": {"customer_phone": "9999999991"}},
+            {"payment_amount": 100.0},
+            db
+        )
+        assert recovered is not None
+        item_res = await db.execute(select(OrderItem).where(OrderItem.orderId == recovered.id))
+        order_item = item_res.scalars().first()
+        assert order_item.selectedVariant == "Small"
+
+        admin_user = {"id": "admin_1", "role": "ADMIN"}
+        bg = BackgroundTasks()
+
+        # 3. Admin confirmation deducts product stock, variant stock, and store inventory exactly once
+        res_conf = await admin_extended.admin_update_order_status(
+            Request({"type": "http"}), recovered.id, {"status": "CONFIRMED"}, admin_user, db, bg
+        )
+        assert res_conf["order"]["status"] == "CONFIRMED"
+
+        await db.refresh(product)
+        await db.refresh(inv)
+        await db.refresh(recovered)
+        assert product.stock == 1
+        assert product.variants[0]["stock"] == 1
+        assert inv.stock == 1
+        assert "[STOCK_DEDUCTED]" in (recovered.notes or "")
+
+        # 4. Replay confirmation (idempotent, does not deduct again)
+        res_conf_replay = await admin_extended.admin_update_order_status(
+            Request({"type": "http"}), recovered.id, {"status": "CONFIRMED"}, admin_user, db, bg
+        )
+        assert res_conf_replay["order"]["status"] == "CONFIRMED"
+        await db.refresh(product)
+        await db.refresh(inv)
+        assert product.stock == 1
+        assert product.variants[0]["stock"] == 1
+        assert inv.stock == 1
+
+        # 5. Pack transition (idempotent)
+        res_pack = await admin_extended.admin_update_order_status(
+            Request({"type": "http"}), recovered.id, {"status": "PACKED"}, admin_user, db, bg
+        )
+        assert res_pack["order"]["status"] == "PACKED"
+        await db.refresh(product)
+        await db.refresh(inv)
+        assert product.stock == 1
+        assert product.variants[0]["stock"] == 1
+        assert inv.stock == 1
+
+        # 6. Cancellation restores all 3 pools
+        res_cancel = await admin_extended.admin_update_order_status(
+            Request({"type": "http"}), recovered.id, {"status": "CANCELLED"}, admin_user, db, bg
+        )
+        assert res_cancel["order"]["status"] == "CANCELLED"
+        await db.refresh(product)
+        await db.refresh(inv)
+        await db.refresh(recovered)
+        assert product.stock == 2
+        assert product.variants[0]["stock"] == 2
+        assert inv.stock == 2
+        assert "[STOCK_RESTORED]" in (recovered.notes or "")
+
+        # 7. Replay cancellation (idempotent, does not restore again)
+        res_cancel_replay = await admin_extended.admin_update_order_status(
+            Request({"type": "http"}), recovered.id, {"status": "CANCELLED"}, admin_user, db, bg
+        )
+        assert res_cancel_replay["order"]["status"] == "CANCELLED"
+        await db.refresh(product)
+        await db.refresh(inv)
+        assert product.stock == 2
+        assert product.variants[0]["stock"] == 2
+        assert inv.stock == 2
+
+
+@pytest.mark.asyncio
+async def test_variant_blank_and_invalid_selection_controls():
+    """Verify that a blank variant selection on an existing order resolves to canonical default,
+    while an invalid unknown variant selection is rejected with HTTP 400 during admin approval."""
+    import uuid
+    from models import Order, OrderItem, Product, OrderStatus, DarkStore, StoreInventory, Address
+    from routers import admin_extended
+    from fastapi import BackgroundTasks, HTTPException
+    from starlette.requests import Request
+
+    async with TestingSessionLocal() as db:
+        uid = uuid.uuid4().hex[:8]
+        hub_id = f"hub_{uid}"
+        hub = DarkStore(id=hub_id, name="Test Hub", city="Kanpur", latitude=26.4499, longitude=80.3319)
+        db.add(hub)
+
+        addr_id = f"addr_{uid}"
+        addr = Address(
+            id=addr_id,
+            userId=f"usr_{uid}",
+            label="Home",
+            houseNo="1",
+            street="Mall Rd",
+            area="Civil Lines",
+            city="Kanpur",
+            pincode="208001",
+            phone="9999999991",
+        )
+        db.add(addr)
+
+        p_id = f"prod_{uid}"
+        product = Product(
+            id=p_id,
+            name="Variant Dal",
+            slug=f"dal-{uid}",
+            mrp=150.0,
+            price=120.0,
+            unit="1 kg",
+            stock=2,
+            variants=[{"name": "Medium", "price": 120.0, "stock": 2}]
+        )
+        db.add(product)
+
+        inv = StoreInventory(productId=p_id, storeId=hub_id, stock=2)
+        db.add(inv)
+
+        # 1. Blank string variant selection ("   ")
+        order_blank_id = f"ord_blank_{uid}"
+        order_blank = Order(
+            id=order_blank_id,
+            readableId=f"FK-{uid[:4]}-B",
+            userId=f"usr_{uid}",
+            addressId=addr_id,
+            storeId=hub_id,
+            subtotal=120.0,
+            total=120.0,
+            status=OrderStatus.ADMIN_PENDING,
+            notes="Paid recovered order"
+        )
+        db.add(order_blank)
+        item_blank = OrderItem(
+            id=f"item_b_{uid}",
+            orderId=order_blank_id,
+            productId=p_id,
+            name="Variant Dal",
+            quantity=1,
+            price=120.0,
+            selectedVariant="   "
+        )
+        db.add(item_blank)
+
+        # 2. Invalid unknown variant selection
+        order_inv_id = f"ord_inv_{uid}"
+        order_invalid = Order(
+            id=order_inv_id,
+            readableId=f"FK-{uid[:4]}-I",
+            userId=f"usr_{uid}",
+            addressId=addr_id,
+            storeId=hub_id,
+            subtotal=120.0,
+            total=120.0,
+            status=OrderStatus.ADMIN_PENDING,
+            notes="Paid recovered order"
+        )
+        db.add(order_invalid)
+        item_invalid = OrderItem(
+            id=f"item_i_{uid}",
+            orderId=order_inv_id,
+            productId=p_id,
+            name="Variant Dal",
+            quantity=1,
+            price=120.0,
+            selectedVariant="GhostVariant"
+        )
+        db.add(item_invalid)
+        await db.commit()
+
+        admin_user = {"id": "admin_1", "role": "ADMIN"}
+        bg = BackgroundTasks()
+
+        # Approval on blank variant resolves to canonical Medium and deducts
+        res = await admin_extended.admin_update_order_status(
+            Request({"type": "http"}), order_blank_id, {"status": "CONFIRMED"}, admin_user, db, bg
+        )
+        assert res["order"]["status"] == "CONFIRMED"
+        await db.refresh(product)
+        await db.refresh(inv)
+        await db.refresh(item_blank)
+        assert item_blank.selectedVariant == "Medium"
+        assert product.stock == 1
+        assert product.variants[0]["stock"] == 1
+        assert inv.stock == 1
+
+        # Approval on invalid variant is rejected with HTTP 400
+        with pytest.raises(HTTPException) as exc_info:
+            await admin_extended.admin_update_order_status(
+                Request({"type": "http"}), order_inv_id, {"status": "CONFIRMED"}, admin_user, db, bg
+            )
+        assert exc_info.value.status_code == 400
+        assert "not found for product" in str(exc_info.value.detail)
+
+        # Verify stock was not deducted or corrupted
+        await db.refresh(product)
+        await db.refresh(inv)
+        assert product.stock == 1
+        assert product.variants[0]["stock"] == 1
+        assert inv.stock == 1
+
+
 

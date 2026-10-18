@@ -203,7 +203,7 @@ export function useCheckoutPricing({
     : storeLng
   const originName = isPureRestaurant
     ? (restaurantLocation?.name || 'Restaurant')
-    : (storeSettingsMap['store_name'] || 'FastKirana Dark Store')
+    : (storeSettingsMap['store_name'] || 'FastMinute Dark Store')
   const originMaxRadiusKm = isPureRestaurant
     ? (restaurantLocation?.deliveryRadiusKm ?? 5.0)
     : defaultDarkStoreRadius

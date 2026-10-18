@@ -17,11 +17,11 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
   // Initialize guest ID token for unauthenticated cart sync tracking
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      let gid = localStorage.getItem('fastkirana-guest-id')
+      let gid = localStorage.getItem('fastminute-guest-id') || localStorage.getItem('fastkirana-guest-id')
       if (!gid) {
         gid = 'g_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36)
-        localStorage.setItem('fastkirana-guest-id', gid)
       }
+      localStorage.setItem('fastminute-guest-id', gid)
       setGuestId(gid)
     }
   }, [])

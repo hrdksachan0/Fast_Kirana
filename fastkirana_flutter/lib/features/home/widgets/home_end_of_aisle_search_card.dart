@@ -102,7 +102,7 @@ class HomeEndOfAisleSearchCard extends StatelessWidget {
                   const Icon(Icons.search_rounded, size: 16, color: Colors.white),
                   const SizedBox(width: 6),
                   Text(
-                    'Search FastKirana Store',
+                    'Search FastMinute Store',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 12.5),
                       fontWeight: FontWeight.w800,

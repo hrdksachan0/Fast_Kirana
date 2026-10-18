@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fastkirana_flutter/core/utils/app_connectivity.dart';
-import 'package:fastkirana_flutter/widgets/offline_banner.dart';
+import 'package:fastminute_flutter/core/utils/app_connectivity.dart';
+import 'package:fastminute_flutter/widgets/offline_banner.dart';
 import 'offline_experience_test.dart' show TestConnection;
 
 void main() {

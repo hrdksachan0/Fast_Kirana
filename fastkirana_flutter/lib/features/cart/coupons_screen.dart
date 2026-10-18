@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -74,7 +74,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
               ),
             ),
             Text(
-              'Save extra on your FastKirana order',
+              'Save extra on your FastMinute order',
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w500,

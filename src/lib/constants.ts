@@ -1,5 +1,5 @@
-export const APP_NAME = 'FastKirana'
-export const APP_DESCRIPTION = 'Fast grocery delivery at your doorstep'
+export const APP_NAME = 'FastMinute'
+export const APP_DESCRIPTION = 'Fast grocery and essentials delivery at your doorstep in minutes'
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 export const GROCERY_FREE_DELIVERY_THRESHOLD = 149
@@ -287,7 +287,7 @@ export const PRODUCT_TEMPLATES = [
     id: 'cafe_snack',
     label: '☕ Cafe Snack',
     description: 'Fresh cafe items',
-    categoryName: 'FastKirana Cafe',
+    categoryName: 'FastMinute Cafe',
     unit: '1 plate',
     minStock: 5,
     tags: 'cafe, freshlyprepared'
@@ -470,5 +470,5 @@ export function getOutletName(product: ProductData): string {
     return 'A.S. Restaurant'
   }
 
-  return 'FastKirana Store'
+  return 'FastMinute Store'
 }

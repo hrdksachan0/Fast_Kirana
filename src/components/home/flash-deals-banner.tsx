@@ -74,7 +74,7 @@ export function FlashDealsBanner() {
           <div className="h-11 w-11 rounded-xl overflow-hidden shadow-lg border-2 border-white/25 shrink-0">
             <Image
               src="/icons/icon-192.png"
-              alt="FastKirana"
+              alt="FastMinute"
               width={44}
               height={44}
               className="object-cover"

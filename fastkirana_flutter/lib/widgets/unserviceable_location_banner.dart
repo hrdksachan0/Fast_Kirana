@@ -25,7 +25,7 @@ class UnserviceableLocationBanner extends ConsumerWidget {
       houseNo: isOrderForSomeone ? 'Recipient Address' : '',
       street: currentHub.name,
       area: targetCity.isNotEmpty ? targetCity : currentHub.name,
-      city: targetCity.isNotEmpty ? targetCity : 'FastKirana',
+      city: targetCity.isNotEmpty ? targetCity : 'FastMinute',
       pincode: currentHub.id.contains('224122') ? '224122' : '209206',
       latitude: currentHub.latitude,
       longitude: currentHub.longitude,
@@ -258,7 +258,7 @@ class _UnserviceableSheetContentState extends ConsumerState<_UnserviceableSheetC
 
           // Description
           Text(
-            'FastKirana & Partner Outlets currently do not deliver to this location. Please choose an address within our operational delivery zones to start ordering.',
+            'FastMinute & Partner Outlets currently do not deliver to this location. Please choose an address within our operational delivery zones to start ordering.',
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 12),
               fontWeight: FontWeight.w500,
@@ -370,7 +370,7 @@ class _UnserviceableSheetContentState extends ConsumerState<_UnserviceableSheetC
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Want FastKirana in your area?',
+              'Want FastMinute in your area?',
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w800,

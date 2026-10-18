@@ -241,7 +241,7 @@ class FastKiranaApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(catalogRecoveryProvider);
     return MaterialApp(
-      title: 'FastKirana',
+      title: 'FastMinute',
       navigatorKey: AppRouter.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

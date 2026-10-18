@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/services/logger_service.dart';
+import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1379,7 +1379,7 @@ class _NewUserOnboardingSheetState extends State<_NewUserOnboardingSheet> {
                         const Text('👋', style: TextStyle(fontSize: 12)),
                         const SizedBox(width: 6),
                         Text(
-                          'WELCOME TO FASTKIRANA',
+                          'WELCOME TO FASTMINUTE',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,

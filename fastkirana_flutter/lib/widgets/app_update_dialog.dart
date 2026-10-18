@@ -200,7 +200,7 @@ class AppUpdateDialog extends StatelessWidget {
               child: Text(
                 message.trim().isNotEmpty
                     ? message.trim()
-                    : 'A faster, smoother version of FastKirana is ready for you with important performance improvements.',
+                    : 'A faster, smoother version of FastMinute is ready for you with important performance improvements.',
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 12),
                   fontWeight: FontWeight.w500,
@@ -265,7 +265,7 @@ class AppUpdateDialog extends StatelessWidget {
             ] else ...[
               const SizedBox(height: 10),
               Text(
-                'Please update to continue ordering on FastKirana',
+                'Please update to continue ordering on FastMinute',
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 10.5),
                   fontWeight: FontWeight.w600,

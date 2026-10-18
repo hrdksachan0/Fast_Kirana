@@ -237,7 +237,7 @@ self.addEventListener('push', (event) => {
   if (!event.data) return
   try {
     const payload = event.data.json()
-    const title = payload.title || 'FastKirana Express ⚡'
+    const title = payload.title || 'FastMinute Express ⚡'
     const isOrderUpdate = Boolean(
       payload.data?.orderId ||
       payload.data?.status ||

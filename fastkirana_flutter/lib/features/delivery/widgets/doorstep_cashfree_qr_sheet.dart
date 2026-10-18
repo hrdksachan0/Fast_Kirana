@@ -76,7 +76,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
       if (mounted) {
         final settings = ref.read(storeSettingsProvider).valueOrNull;
         final vpa = settings?.storeUpiVpa.isNotEmpty == true ? settings!.storeUpiVpa : '7054470303-2@ibl';
-        final payee = Uri.encodeComponent('FastKirana');
+        final payee = Uri.encodeComponent('FastMinute');
         final note = Uri.encodeComponent('Order #${widget.orderNum}');
         final upiUri = 'upi://pay?pa=$vpa&pn=$payee&am=${widget.total.toStringAsFixed(2)}&cu=INR&tn=$note';
         final fallbackQr = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${Uri.encodeComponent(upiUri)}';

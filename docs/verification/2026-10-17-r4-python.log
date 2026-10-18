@@ -1,0 +1,184 @@
+........................................................................ [ 30%]
+........................................................................ [ 60%]
+........................................................................ [ 91%]
+.....................                                                    [100%]
+============================== warnings summary ===============================
+tests\test_compression_and_cache.py:2
+  D:\Fastkirana\fastapi-backend\tests\test_compression_and_cache.py:2: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/test_all_endpoints.py: 3 warnings
+tests/test_api.py: 2 warnings
+tests/test_coupon_menu_section.py: 6 warnings
+tests/test_production_blockers_resolved.py: 140 warnings
+  D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\sqlalchemy\sql\schema.py:3623: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+tests/test_all_endpoints.py: 1 warning
+tests/test_api.py: 3 warnings
+tests/test_compression_and_cache.py: 3 warnings
+tests/test_coupon_menu_section.py: 4 warnings
+tests/test_probes.py: 5 warnings
+tests/test_production_blockers_resolved.py: 4 warnings
+  D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\routing.py:144: FastAPIDeprecationWarning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: https://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/response-model/
+    response = await f(request)
+
+tests/test_api.py: 1 warning
+tests/test_coupon_menu_section.py: 2 warnings
+tests/test_production_blockers_resolved.py: 23 warnings
+  D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\_exception_handler.py:59: FastAPIDeprecationWarning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: https://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/response-model/
+    response = await handler(conn, exc)  # type: ignore[arg-type]
+
+tests/test_production_blockers_resolved.py: 12 warnings
+tests/test_websocket_concurrency.py: 3 warnings
+  D:\Fastkirana\fastapi-backend\routers\websockets.py:221: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now_dt = datetime.utcnow()
+
+tests/test_production_blockers_resolved.py: 12 warnings
+tests/test_websocket_concurrency.py: 3 warnings
+  D:\Fastkirana\fastapi-backend\routers\websockets.py:222: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+    exp_dt = datetime.utcfromtimestamp(exp)
+
+tests/test_production_blockers_resolved.py::test_webhook_notes_injection_ignored
+tests/test_production_blockers_resolved.py::test_cashfree_recovery_deduplication_on_repeated_webhooks
+tests/test_production_blockers_resolved.py::test_auto_recovery_restores_pickup_delivery_method_store_and_authoritative_prices
+tests/test_production_blockers_resolved.py::test_auto_recovery_rejects_underpayment_and_enforces_stock_reconciliation
+tests/test_production_blockers_resolved.py::test_auto_recovery_grocery_to_restaurant_spoofing_prevented
+tests/test_production_blockers_resolved.py::test_cashfree_encoded_overlapping_product_ids_resolution
+  D:\Fastkirana\fastapi-backend\routers\cashfree_router.py:1242: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow(),
+
+tests/test_production_blockers_resolved.py::test_webhook_notes_injection_ignored
+tests/test_production_blockers_resolved.py::test_cashfree_recovery_deduplication_on_repeated_webhooks
+tests/test_production_blockers_resolved.py::test_auto_recovery_restores_pickup_delivery_method_store_and_authoritative_prices
+tests/test_production_blockers_resolved.py::test_auto_recovery_rejects_underpayment_and_enforces_stock_reconciliation
+tests/test_production_blockers_resolved.py::test_auto_recovery_grocery_to_restaurant_spoofing_prevented
+tests/test_production_blockers_resolved.py::test_cashfree_encoded_overlapping_product_ids_resolution
+  D:\Fastkirana\fastapi-backend\routers\cashfree_router.py:1243: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    expiresAt=datetime.utcnow() + timedelta(days=7)
+
+tests/test_production_blockers_resolved.py::test_webhook_notes_injection_ignored
+tests/test_production_blockers_resolved.py::test_cashfree_recovery_deduplication_on_repeated_webhooks
+tests/test_production_blockers_resolved.py::test_auto_recovery_restores_pickup_delivery_method_store_and_authoritative_prices
+tests/test_production_blockers_resolved.py::test_auto_recovery_rejects_underpayment_and_enforces_stock_reconciliation
+tests/test_production_blockers_resolved.py::test_auto_recovery_grocery_to_restaurant_spoofing_prevented
+tests/test_production_blockers_resolved.py::test_cashfree_encoded_overlapping_product_ids_resolution
+  D:\Fastkirana\fastapi-backend\routers\cashfree_router.py:1595: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    estimatedDelivery=datetime.utcnow() + timedelta(minutes=25),
+
+tests/test_production_blockers_resolved.py::test_webhook_notes_injection_ignored
+tests/test_production_blockers_resolved.py::test_cashfree_recovery_deduplication_on_repeated_webhooks
+tests/test_production_blockers_resolved.py::test_auto_recovery_restores_pickup_delivery_method_store_and_authoritative_prices
+tests/test_production_blockers_resolved.py::test_auto_recovery_rejects_underpayment_and_enforces_stock_reconciliation
+tests/test_production_blockers_resolved.py::test_auto_recovery_grocery_to_restaurant_spoofing_prevented
+tests/test_production_blockers_resolved.py::test_cashfree_encoded_overlapping_product_ids_resolution
+  D:\Fastkirana\fastapi-backend\routers\cashfree_router.py:1604: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow(),
+
+tests/test_production_blockers_resolved.py::test_webhook_notes_injection_ignored
+tests/test_production_blockers_resolved.py::test_cashfree_recovery_deduplication_on_repeated_webhooks
+tests/test_production_blockers_resolved.py::test_auto_recovery_restores_pickup_delivery_method_store_and_authoritative_prices
+tests/test_production_blockers_resolved.py::test_auto_recovery_rejects_underpayment_and_enforces_stock_reconciliation
+tests/test_production_blockers_resolved.py::test_auto_recovery_grocery_to_restaurant_spoofing_prevented
+tests/test_production_blockers_resolved.py::test_cashfree_encoded_overlapping_product_ids_resolution
+  D:\Fastkirana\fastapi-backend\routers\cashfree_router.py:1605: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    updatedAt=datetime.utcnow(),
+
+tests/test_production_blockers_resolved.py::test_duplicate_variant_lines_aggregated_and_rejected_when_exceeding_stock
+tests/test_production_blockers_resolved.py::test_client_cannot_convert_grocery_into_restaurant_item
+tests/test_production_blockers_resolved.py::test_durable_idempotency_survives_redis_outage
+tests/test_production_blockers_resolved.py::test_concurrent_workers_idempotency_with_redis_down
+tests/test_production_blockers_resolved.py::test_idempotency_expired_db_lock_atomic_takeover_and_503_on_error
+tests/test_production_blockers_resolved.py::test_idempotency_expired_db_lock_atomic_takeover_and_503_on_error
+tests/test_production_blockers_resolved.py::test_idempotency_scoped_release_enables_immediate_retry
+tests/test_production_blockers_resolved.py::test_idempotency_scoped_release_enables_immediate_retry
+tests/test_production_blockers_resolved.py::test_order_creation_and_recovery_share_atomic_consumed_payment_lock
+  D:\Fastkirana\fastapi-backend\utils\idempotency.py:274: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now_dt = datetime.utcnow()
+
+tests/test_production_blockers_resolved.py::test_durable_idempotency_survives_redis_outage
+tests/test_production_blockers_resolved.py::test_concurrent_workers_idempotency_with_redis_down
+tests/test_production_blockers_resolved.py::test_order_creation_and_recovery_share_atomic_consumed_payment_lock
+  D:\Fastkirana\fastapi-backend\routers\orders.py:1628: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    estimated_delivery = datetime.utcnow() + timedelta(minutes=est_mins)
+
+tests/test_production_blockers_resolved.py::test_durable_idempotency_survives_redis_outage
+tests/test_production_blockers_resolved.py::test_concurrent_workers_idempotency_with_redis_down
+tests/test_production_blockers_resolved.py::test_idempotency_record_response_json_type_compatibility
+  D:\Fastkirana\fastapi-backend\utils\idempotency.py:438: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now_dt = datetime.utcnow()
+
+tests/test_production_blockers_resolved.py::test_durable_idempotency_survives_redis_outage
+tests/test_production_blockers_resolved.py::test_concurrent_workers_idempotency_with_redis_down
+  D:\Fastkirana\fastapi-backend\routers\orders.py:336: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now_ts = str(int(datetime.utcnow().timestamp() * 1000))
+
+tests/test_production_blockers_resolved.py::test_verify_otp_blocked_or_deactivated_account_rejected
+  D:\Fastkirana\fastapi-backend\routers\auth.py:910: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    OtpToken.expiresAt > datetime.utcnow()
+
+tests/test_production_blockers_resolved.py::test_idempotency_expired_db_lock_atomic_takeover_and_503_on_error
+  D:\Fastkirana\fastapi-backend\tests\test_production_blockers_resolved.py:1270: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now_dt = datetime.utcnow()
+
+tests/test_production_blockers_resolved.py::test_order_creation_and_recovery_share_atomic_consumed_payment_lock
+  D:\Fastkirana\fastapi-backend\tests\test_production_blockers_resolved.py:1562: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow(),
+
+tests/test_production_blockers_resolved.py::test_order_creation_and_recovery_share_atomic_consumed_payment_lock
+  D:\Fastkirana\fastapi-backend\tests\test_production_blockers_resolved.py:1563: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    expiresAt=datetime.utcnow() + timedelta(days=7)
+
+tests/test_production_blockers_resolved.py::test_order_creation_and_recovery_share_atomic_consumed_payment_lock
+  D:\Fastkirana\fastapi-backend\routers\orders.py:1908: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow(),
+
+tests/test_production_blockers_resolved.py::test_order_creation_and_recovery_share_atomic_consumed_payment_lock
+  D:\Fastkirana\fastapi-backend\routers\orders.py:1909: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    expiresAt=datetime.utcnow() + timedelta(days=7)
+
+tests/test_production_blockers_resolved.py::test_cashfree_create_order_persists_nested_order_payload_and_store_id
+tests/test_production_blockers_resolved.py::test_cashfree_create_order_fails_closed_when_intent_db_write_fails
+tests/test_production_blockers_resolved.py::test_cashfree_encoded_overlapping_product_ids_resolution
+  D:\Fastkirana\fastapi-backend\routers\cashfree_router.py:144: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    intent_expiry = datetime.utcnow() + timedelta(days=2)
+
+tests/test_production_blockers_resolved.py::test_cashfree_create_order_persists_nested_order_payload_and_store_id
+tests/test_production_blockers_resolved.py::test_cashfree_create_order_fails_closed_when_intent_db_write_fails
+tests/test_production_blockers_resolved.py::test_cashfree_encoded_overlapping_product_ids_resolution
+  D:\Fastkirana\fastapi-backend\routers\cashfree_router.py:150: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow(),
+
+tests/test_production_blockers_resolved.py::test_cashfree_create_order_persists_nested_order_payload_and_store_id
+tests/test_production_blockers_resolved.py::test_cashfree_create_order_fails_closed_when_intent_db_write_fails
+tests/test_production_blockers_resolved.py::test_cashfree_encoded_overlapping_product_ids_resolution
+  D:\Fastkirana\fastapi-backend\routers\cashfree_router.py:160: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow(),
+
+tests/test_production_blockers_resolved.py::test_auto_recovery_restores_pickup_delivery_method_store_and_authoritative_prices
+  D:\Fastkirana\fastapi-backend\tests\test_production_blockers_resolved.py:1716: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow(),
+
+tests/test_production_blockers_resolved.py::test_auto_recovery_restores_pickup_delivery_method_store_and_authoritative_prices
+  D:\Fastkirana\fastapi-backend\tests\test_production_blockers_resolved.py:1717: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    expiresAt=datetime.utcnow() + timedelta(days=2)
+
+tests/test_production_blockers_resolved.py::test_auto_recovery_rejects_underpayment_and_enforces_stock_reconciliation
+  D:\Fastkirana\fastapi-backend\tests\test_production_blockers_resolved.py:1833: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow(),
+
+tests/test_production_blockers_resolved.py::test_auto_recovery_rejects_underpayment_and_enforces_stock_reconciliation
+  D:\Fastkirana\fastapi-backend\tests\test_production_blockers_resolved.py:1834: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    expiresAt=datetime.utcnow() + timedelta(days=2)
+
+tests/test_production_blockers_resolved.py::test_auto_recovery_grocery_to_restaurant_spoofing_prevented
+  D:\Fastkirana\fastapi-backend\tests\test_production_blockers_resolved.py:1923: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow(),
+
+tests/test_production_blockers_resolved.py::test_auto_recovery_grocery_to_restaurant_spoofing_prevented
+  D:\Fastkirana\fastapi-backend\tests\test_production_blockers_resolved.py:1924: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    expiresAt=datetime.utcnow() + timedelta(days=2)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+237 passed, 296 warnings in 151.50s (0:02:31)
+RECHECK_SUMMARY {"collected": 237, "passed": 237, "failed": 0, "errors": 0, "skipped": 0, "exit_code": 0, "elapsed_seconds": 186.33}

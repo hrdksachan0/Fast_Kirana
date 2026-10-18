@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,15 +21,15 @@ class WishlistScreen extends ConsumerWidget {
     if (wishlist.isEmpty) return;
 
     final itemNames = wishlist.map((p) => '• ${p.name} - ₹${p.price.toStringAsFixed(0)}').join('\n');
-    final shareText = '''🛒 My FastKirana Wishlist:\n\n$itemNames\n\nOrder fresh groceries & food delivered directly to your doorstep on FastKirana!\n📲 Download App on Play Store: https://play.google.com/store/apps/details?id=com.fastkirana.app\n🌐 Or Order Online: https://www.fastkirana.in''';
+    final shareText = '''🛒 My FastMinute Wishlist:\n\n$itemNames\n\nOrder fresh groceries & food delivered directly to your doorstep on FastMinute!\n📲 Download App on Play Store: https://play.google.com/store/apps/details?id=com.fastkirana.app\n🌐 Or Order Online: https://www.fastkirana.in''';
 
-    Share.share(shareText, subject: 'My FastKirana Wishlist');
+    Share.share(shareText, subject: 'My FastMinute Wishlist');
   }
 
   void _shareApp(BuildContext context) {
     HapticFeedback.lightImpact();
-    const shareText = '''⚡ Order Groceries, Daily Essentials & Restaurant Food in Ghatampur with FastKirana!\n\n📲 Download FastKirana App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Website: https://www.fastkirana.in''';
-    Share.share(shareText, subject: 'Download FastKirana App');
+    const shareText = '''⚡ Order Groceries, Daily Essentials & Restaurant Food in Ghatampur with FastMinute!\n\n📲 Download FastMinute App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Website: https://www.fastkirana.in''';
+    Share.share(shareText, subject: 'Download FastMinute App');
   }
 
   @override

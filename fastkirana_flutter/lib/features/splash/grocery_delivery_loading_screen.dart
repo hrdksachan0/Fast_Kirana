@@ -1,4 +1,4 @@
-import 'package:fastkirana_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -153,7 +153,7 @@ class _GroceryDeliveryLoadingScreenState extends State<GroceryDeliveryLoadingScr
                           ),
                           const SizedBox(width: 7),
                           Text(
-                            'FASTKIRANA GROCERY EXPRESS',
+                            'FASTMINUTE GROCERY EXPRESS',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w800,

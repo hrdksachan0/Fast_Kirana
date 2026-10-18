@@ -120,17 +120,17 @@ export async function POST(req: Request) {
     // If Gemini API Key is present, invoke Google Gemini 2.5 Flash
     if (apiKey) {
       try {
-        const prompt = `You are a world-class luxury quick-commerce creative director for FastKirana (high-speed delivery app).
+        const prompt = `You are a world-class luxury quick-commerce creative director for FastMinute (high-speed delivery app).
 Create an irresistible, mouth-watering, highly aesthetic promotional card configuration for the category: "${categoryName}" in "${categoryType}" delivery mode.
 Card Format: "${cardFormat}" (options: dark_showcase, bento_grid, editorial).
-Optional Outlet/Brand: "${outletName || (categoryType === 'food' ? 'A.S. Restaurant / Wedson' : 'FastKirana Direct')}".
+Optional Outlet/Brand: "${outletName || (categoryType === 'food' ? 'A.S. Restaurant / Wedson' : 'FastMinute Direct')}".
 
 Return ONLY a valid JSON object with these EXACT keys:
 {
   "eyebrowTag": "Short uppercase punchy badge (e.g. '🔥 SIZZLING FAST DROP', '🌿 100% FARM FRESH', '👑 CHEF\\'S SIGNATURE')",
   "discountTitle": "Bold catchy headline in all-caps (e.g. 'DOUBLE CHEESE BURGER', 'FLAT 50% OFF DUM BIRYANI', 'CRISP ORGANIC GREENS')",
   "subtitle": "Irresistible culinary or freshness description under 8 words (e.g. 'Melted Cheddar • Crispy Patty • Hot Garlic Dip')",
-  "primaryBrand": "Short uppercase brand/cuisine name (e.g. '${outletName || (categoryType === 'food' ? 'FAST BITES' : 'FASTKIRANA')}')",
+  "primaryBrand": "Short uppercase brand/cuisine name (e.g. '${outletName || (categoryType === 'food' ? 'FAST BITES' : 'FASTMINUTE')}')",
   "secondaryBrand": "Optional accent tag (e.g. 'SPECIAL DROP', 'EXPRESS 10M')",
   "ctaText": "Active conversion button text (e.g. 'ORDER NOW', 'EXPLORE MENU', 'GRAB DEALS')",
   "ctaBgColorHex": "Vibrant hex color (e.g. '#EF4444' or '#10B981' or '#F59E0B' or '#FFFFFF')",
@@ -210,7 +210,7 @@ Return ONLY a valid JSON object with these EXACT keys:
         eyebrowTag: isFood ? '🔥 SIZZLING FAST FOOD' : '🌿 DAILY HARVEST',
         discountTitle: fallbackTitle,
         subtitle: fallbackSubtitle,
-        primaryBrand: outletName || (isFood ? 'A.S. RESTAURANT' : 'FASTKIRANA'),
+        primaryBrand: outletName || (isFood ? 'A.S. RESTAURANT' : 'FASTMINUTE'),
         secondaryBrand: isFood ? 'FAST BITES' : 'DIRECT',
         imageUrl: heroImage,
         gridImages: bentoImages,

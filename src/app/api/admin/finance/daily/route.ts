@@ -198,7 +198,7 @@ export async function GET(req: NextRequest) {
         total: tot,
         customerName: o.user?.name || 'Customer',
         customerPhone: o.user?.phone || '',
-        shopName: o.shopName || (o.restaurantId ? 'Restaurant' : 'FastKirana Grocery'),
+        shopName: o.shopName ? o.shopName.replace(/FastKirana/g, 'FastMinute') : (o.restaurantId ? 'Restaurant' : 'FastMinute Grocery'),
         paymentMethod: pMethod,
         paymentStatus: pStatus,
         orderStatus: oStatus,

@@ -98,7 +98,7 @@ export default function UpiQrModal({
   const handleShareWhatsApp = () => {
     const doorstepPayUrl = (qrData as any)?.doorstepPayUrl || `${window.location.origin}/doorstep-pay/${order.id}`
     const text = encodeURIComponent(
-      `Namaste! Aapka FastKirana Order #${displayId} ka bill ₹${order.total} hai.\n\nOnline pay karne ke liye yahan click karein:\n${doorstepPayUrl}\n\nGPay, PhonePe, Paytm, UPI, Card — sab supported hai.`
+      `Namaste! Aapka FastMinute Order #${displayId} ka bill ₹${order.total} hai.\n\nOnline pay karne ke liye yahan click karein:\n${doorstepPayUrl}\n\nGPay, PhonePe, Paytm, UPI, Card — sab supported hai.`
     )
     const targetPhone = customerPhone ? `91${customerPhone}` : ''
     const waUrl = targetPhone ? `https://wa.me/${targetPhone}?text=${text}` : `https://wa.me/?text=${text}`
@@ -138,7 +138,7 @@ export default function UpiQrModal({
             ) : (
               <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/20">
                 <Zap className="h-3.5 w-3.5 fill-emerald-500 text-emerald-500" />
-                FASTKIRANA CASHFREE QR ⚡
+                FASTMINUTE CASHFREE QR ⚡
               </span>
             )}
             
@@ -181,11 +181,11 @@ export default function UpiQrModal({
                   <>
                     <img
                       src={qrSrc}
-                      alt="FastKirana Cashfree QR"
+                      alt="FastMinute Cashfree QR"
                       className="w-full h-full object-contain"
                     />
                     <div className="absolute bottom-1 bg-emerald-600 text-white text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-                      <span>OFFICIAL FASTKIRANA CASHFREE ⚡</span>
+                      <span>OFFICIAL FASTMINUTE CASHFREE ⚡</span>
                     </div>
                   </>
                 )}

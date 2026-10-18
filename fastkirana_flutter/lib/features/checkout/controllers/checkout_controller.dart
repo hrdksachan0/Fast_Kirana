@@ -119,6 +119,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   late final PaymentGatewayHandler _paymentHandler = PaymentGatewayHandler(dio: ref.read(dioProvider));
   BuildContext? _currentContext;
   static final Set<String> _acknowledgedOrderIds = {};
+  static final Map<String, Future<void>> _activeOrderCompletions = {};
 
   // Parameters cached for payment callbacks
   double _discountAmount = 0.0;
@@ -541,7 +542,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: const Text(
-              'FastKirana Grocery Darkstore is currently closed. Orders cannot be placed right now.',
+              'FastMinute Grocery Darkstore is currently closed. Orders cannot be placed right now.',
               style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
             ),
           ),
@@ -949,7 +950,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         : (subtotal + deliveryFee + packagingFee + effectiveTip - effectiveDiscount).clamp(0.0, 999999.0);
 
     final selectedAddr = effectiveDeliveryMethod == 'PICKUP'
-        ? '🏬 Self Pickup: FastKirana Darkstore Counter'
+        ? '🏬 Self Pickup: FastMinute Darkstore Counter'
         : (selectedAddress != null ? selectedAddress.fullAddress : 'Ghatampur Express Zone');
 
     final user = ref.read(authProvider).value;
@@ -960,7 +961,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         : (prefs.getString('user_phone') ?? prefs.getString('auth_phone') ?? '');
     final buyerName = user?.name?.isNotEmpty == true
         ? user!.name!
-        : (prefs.getString('user_name') ?? 'FastKirana Customer');
+        : (prefs.getString('user_name') ?? 'FastMinute Customer');
 
     final isOrderForSomeone = (draft?.customReceiverName?.isNotEmpty == true || draft?.customReceiverPhone?.isNotEmpty == true) ||
         (state.customReceiverName?.isNotEmpty == true || state.customReceiverPhone?.isNotEmpty == true);
@@ -973,7 +974,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
                 ? user!.name!
                 : (selectedAddress != null && !selectedAddress.label.toLowerCase().contains('current')
                     ? selectedAddress.label
-                    : 'FastKirana Customer')));
+                    : 'FastMinute Customer')));
 
     final receiverPhone = draft?.customReceiverPhone?.isNotEmpty == true
         ? draft!.customReceiverPhone!
@@ -1018,7 +1019,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       }
     }
 
-    String shopName = 'FastKirana Dark Store';
+    String shopName = 'FastMinute Dark Store';
     String? restaurantId;
     if (hasDraftItems) {
       for (final item in draft.items) {
@@ -1179,7 +1180,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         'longitude': selectedAddress?.longitude,
         'lat': selectedAddress?.latitude,
         'lng': selectedAddress?.longitude,
-        'shopName': (hasGrocery && hasRestaurant) ? 'FastKirana Dark Store' : shopName,
+        'shopName': (hasGrocery && hasRestaurant) ? 'FastMinute Dark Store' : shopName,
         'restaurantId': restaurantId,
         'packagingOption': effectivePackaging,
         'packagingFee': packagingFee,
@@ -1337,37 +1338,62 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     // Clear only draft items if specified, preserving any unrelated newer cart edits idempotently
     final orderId = placedOrder.id;
-    bool isAlreadyAcked = _acknowledgedOrderIds.contains(orderId);
-    if (!isAlreadyAcked) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final ackList = prefs.getStringList('acknowledged_order_ids') ?? [];
-        if (ackList.contains(orderId)) {
-          isAlreadyAcked = true;
-          _acknowledgedOrderIds.add(orderId);
-        }
-      } catch (_) {}
+
+    Future<void>? inFlight = _activeOrderCompletions[orderId];
+    if (inFlight != null) {
+      await inFlight;
+      return;
     }
 
-    if (isAlreadyAcked) {
-      LoggerService.info('CheckoutController: Order $orderId already acknowledged, skipping duplicate cart subtraction.');
-    } else {
-      if (orderedItems != null && orderedItems.isNotEmpty) {
-        await ref.read(cartProvider.notifier).removeDraftItems(orderedItems);
-      } else {
-        await ref.read(cartProvider.notifier).clearCart();
+    final completer = Completer<void>();
+    _activeOrderCompletions[orderId] = completer.future;
+
+    try {
+      bool isAlreadyAcked = _acknowledgedOrderIds.contains(orderId);
+      if (!isAlreadyAcked) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final ackList = prefs.getStringList('acknowledged_order_ids') ?? [];
+          if (ackList.contains(orderId)) {
+            isAlreadyAcked = true;
+            _acknowledgedOrderIds.add(orderId);
+          }
+        } catch (_) {}
+      }
+      if (!isAlreadyAcked) {
+        try {
+          final cartRepo = ref.read(cartRepoProvider);
+          final appliedDeltas = await cartRepo.getAppliedOrderDeltas();
+          if (appliedDeltas.contains(orderId)) {
+            isAlreadyAcked = true;
+            _acknowledgedOrderIds.add(orderId);
+          }
+        } catch (_) {}
       }
 
-      _acknowledgedOrderIds.add(orderId);
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final ackList = prefs.getStringList('acknowledged_order_ids') ?? [];
-        if (!ackList.contains(orderId)) {
-          ackList.add(orderId);
-          if (ackList.length > 50) ackList.removeAt(0);
-          await prefs.setStringList('acknowledged_order_ids', ackList);
+      if (isAlreadyAcked) {
+        LoggerService.info('CheckoutController: Order $orderId already acknowledged, skipping duplicate cart subtraction.');
+      } else {
+        if (orderedItems != null && orderedItems.isNotEmpty) {
+          await ref.read(cartProvider.notifier).removeDraftItems(orderedItems, orderId: orderId);
+        } else {
+          await ref.read(cartProvider.notifier).clearCart(orderId: orderId);
         }
-      } catch (_) {}
+
+        _acknowledgedOrderIds.add(orderId);
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final ackList = prefs.getStringList('acknowledged_order_ids') ?? [];
+          if (!ackList.contains(orderId)) {
+            ackList.add(orderId);
+            if (ackList.length > 50) ackList.removeAt(0);
+            await prefs.setStringList('acknowledged_order_ids', ackList);
+          }
+        } catch (_) {}
+      }
+    } finally {
+      completer.complete();
+      _activeOrderCompletions.remove(orderId);
     }
     ref.invalidate(ordersProvider(userId));
     ref.invalidate(ordersProvider(''));

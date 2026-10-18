@@ -1,8 +1,8 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Checkout - FastKirana',
-  description: 'Complete your FastKirana grocery and food order.',
+  title: 'Checkout - FastMinute',
+  description: 'Complete your FastMinute grocery and food order.',
   robots: {
     index: false,
     follow: false,

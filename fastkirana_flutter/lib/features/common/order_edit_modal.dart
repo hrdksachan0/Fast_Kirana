@@ -83,6 +83,8 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
         final isExplicitDarkStore = currentShop != null &&
             (currentShop.toLowerCase().contains('dark store') ||
              currentShop.toLowerCase().contains('darkstore') ||
+             currentShop == 'FastMinute Grocery' ||
+             currentShop == 'FastMinute Store' ||
              currentShop == 'FastKirana Grocery' ||
              currentShop == 'FastKirana Store');
 
@@ -92,9 +94,11 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
           }
           if (currentShop == null ||
               currentShop.isEmpty ||
+              currentShop == 'FastMinute Grocery' ||
+              currentShop == 'FastMinute Store' ||
               currentShop == 'FastKirana Grocery' ||
               currentShop == 'FastKirana Store') {
-            map['shopName'] = (parentShopName != null && parentShopName.isNotEmpty && parentShopName != 'FastKirana Grocery')
+            map['shopName'] = (parentShopName != null && parentShopName.isNotEmpty && parentShopName != 'FastMinute Grocery' && parentShopName != 'FastKirana Grocery')
                 ? parentShopName
                 : (RestaurantRegistry.getName(map['restaurantId']?.toString()) ?? (parentShopName ?? '🍽️ Kitchen'));
           }
@@ -305,7 +309,7 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
           final isCombined = widget.order['isCombined'] == true;
           final isDedicatedRestaurant = widget.isRestaurant && !isCombined;
           final resolvedRestId = it['restaurantId'] ?? (isDedicatedRestaurant ? (widget.restaurantId ?? widget.order['restaurantId']) : null);
-          final resolvedShopName = it['shopName'] ?? (isDedicatedRestaurant ? (widget.order['shopName'] ?? 'Restaurant') : (resolvedRestId != null ? (widget.order['shopName'] ?? 'Restaurant') : 'FastKirana Grocery'));
+          final resolvedShopName = it['shopName'] ?? (isDedicatedRestaurant ? (widget.order['shopName'] ?? 'Restaurant') : (resolvedRestId != null ? (widget.order['shopName'] ?? 'Restaurant') : 'FastMinute Grocery'));
 
           return {
             'productId': cleanPid,
@@ -596,6 +600,9 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                           isDish ||
                           (itemShopName != null &&
                               itemShopName.isNotEmpty &&
+                              itemShopName != 'FastMinute Grocery' &&
+                              itemShopName != 'FastMinute Store' &&
+                              itemShopName != 'FastMinute Dark Store' &&
                               itemShopName != 'FastKirana Grocery' &&
                               itemShopName != 'FastKirana Store' &&
                               itemShopName != 'FastKirana Dark Store');
@@ -603,12 +610,15 @@ class _OrderEditModalState extends ConsumerState<OrderEditModal> {
                       final parentShop = widget.order['shopName']?.toString() ?? widget.order['shop_name']?.toString();
                       final resolvedShopName = (itemShopName != null &&
                               itemShopName.isNotEmpty &&
+                              itemShopName != 'FastMinute Grocery' &&
+                              itemShopName != 'FastMinute Store' &&
+                              itemShopName != 'FastMinute Dark Store' &&
                               itemShopName != 'FastKirana Grocery' &&
                               itemShopName != 'FastKirana Store' &&
                               itemShopName != 'FastKirana Dark Store')
                           ? itemShopName
                           : (RestaurantRegistry.getName(itemRestId) ??
-                              (parentShop != null && parentShop.isNotEmpty && parentShop != 'FastKirana Grocery'
+                              (parentShop != null && parentShop.isNotEmpty && parentShop != 'FastMinute Grocery' && parentShop != 'FastKirana Grocery'
                                   ? parentShop
                                   : 'Kitchen'));
 
