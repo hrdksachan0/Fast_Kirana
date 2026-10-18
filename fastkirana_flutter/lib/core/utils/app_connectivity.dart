@@ -100,7 +100,8 @@ class AppConnectivityObserver extends ChangeNotifier {
         data['status'] == 'healthy' &&
         data['probe'] == 'liveness' &&
         data['service'] is String &&
-        (data['service'] as String).contains('FastKirana');
+        ((data['service'] as String).contains('FastKirana') ||
+         (data['service'] as String).contains('FastMinute'));
   }
 
   void _publish(bool online, int epoch, {required bool debounce}) {

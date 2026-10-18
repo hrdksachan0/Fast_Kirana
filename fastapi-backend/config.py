@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings(BaseSettings):
-    APP_NAME: str = "FastMinute FastAPI Microservice"
+    APP_NAME: str = "FastMinute / FastKirana FastAPI Microservice"
     APP_ENV: str = os.getenv("APP_ENV", "development")
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
 
