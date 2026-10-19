@@ -2144,12 +2144,7 @@ async def create_order(
             if c_obj:
                 c_obj.usedCount += 1
 
-        # Clear cart
-        cart_stmt = select(Cart).where(Cart.userId == user_id)
-        cart_res = await db.execute(cart_stmt)
-        cart = cart_res.scalars().first()
-        if cart:
-            await db.execute(text("DELETE FROM cart_items WHERE \"cartId\" = :cart_id"), {"cart_id": cart.id})
+        # Cart clearing will be performed post-commit to avoid PostgreSQL deadlocks with concurrent cart syncs
 
         main_order = next((o for o in created_orders if not o.restaurantId), created_orders[0])
 
@@ -2251,6 +2246,19 @@ async def create_order(
         transaction_committed = True
         if "reserved_redis_items" in locals() and reserved_redis_items:
             reserved_redis_items.clear()
+
+        # Clear cart items safely after the order transaction has committed.
+        # This guarantees all product row locks are already released by PostgreSQL,
+        # completely preventing deadlocks with concurrent background cart syncs.
+        try:
+            cart_stmt = select(Cart).where(Cart.userId == user_id)
+            cart_res = await db.execute(cart_stmt)
+            cart_obj = cart_res.scalars().first()
+            if cart_obj:
+                await db.execute(text("DELETE FROM cart_items WHERE \"cartId\" = :cart_id"), {"cart_id": cart_obj.id})
+                await db.commit()
+        except Exception as cart_err:
+            logger.warning(f"Non-critical post-commit cart clear warning for user {user_id}: {cart_err}")
 
         # Publish to Redis and memory cache in background after successful business transaction commit
         if idempotency_key:
@@ -2498,11 +2506,16 @@ async def create_order(
                     pass
             reserved_redis_items.clear()
         await db.rollback()
-        logger.error(f"Failed to place order: {str(e)}")
+        logger.error(f"Failed to place order: {str(e)}", exc_info=True)
         if locals().get("lock_acquired"):
             if "idempotency_key" in locals() and idempotency_key:
                 await release_idempotency_lock_async(idempotency_key, db=db, user_id=user_id)
-        raise HTTPException(status_code=500, detail=f"Failed to place order: {str(e)}")
+        err_str = str(e)
+        if any(kw in err_str.lower() for kw in ["deadlock", "asyncpg", "sqlalchemy", "foreignkey", "violates foreign key", "could not serialize"]):
+            detail_msg = "Order placement could not be completed due to high server traffic. Please try again."
+        else:
+            detail_msg = f"Failed to place order: {err_str}"
+        raise HTTPException(status_code=500, detail=detail_msg)
 
 
 @router.get("")
