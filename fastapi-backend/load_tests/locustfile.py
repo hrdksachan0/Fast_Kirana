@@ -1,114 +1,174 @@
 """
-FastKirana Locust Load & Stress Testing Suite.
-Simulates high-concurrency peak festive sale surges (browsing, cart operations, checkout).
+FastKirana & FastMinute Locust Load & Capacity Testing Suite.
+Simulates concurrent shoppers (browsing, cart sync, address quotes, checkout).
 Tests connection pool exhaustion limits and durability under load.
 """
 
+import os
 import uuid
 import random
+from urllib.parse import urlparse
+from typing import Dict, Any, List
 from locust import HttpUser, task, between, events
-from typing import Dict, Any
+
+# Allowed origins for load/stress tests (staging and local environments ONLY)
+ALLOWED_LOAD_TEST_ORIGINS = {
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "staging.fastkirana.in",
+    "staging.fastminute.in",
+    "staging-api.fastkirana.in",
+    "fastkirana-staging.up.railway.app",
+    "fastminute-staging.up.railway.app",
+}
+
+BLOCKED_PRODUCTION_PATTERNS = [
+    "fastkirana.in",
+    "fastminute.in",
+    "fastminute.app",
+    "fastkirana.com",
+    "railway.app", # unless explicitly staging prefix
+]
+
 
 class FastKiranaCustomerUser(HttpUser):
-    # Wait between 0.5 to 2.5 seconds between simulated customer actions
-    wait_time = between(0.5, 2.5)
+    # Realistic shopper pacing between 3.0 to 8.0 seconds
+    wait_time = between(3.0, 8.0)
 
     def on_start(self):
-        """Initialize simulated user credentials and headers."""
-        # SAFETY GUARD: Prevent accidental load tests against production domain to avoid Railway abuse triggers
-        target_host = str(self.host or "").lower()
-        if "fastkirana.in" in target_host and not os.environ.get("FORCE_PROD_LOAD_TEST"):
+        """Initialize verified staging user session and enforce origin guard."""
+        target_host = str(self.host or "").strip().lower()
+        parsed = urlparse(target_host if "://" in target_host else f"http://{target_host}")
+        hostname = (parsed.hostname or "").lower()
+
+        # STRICT SAFETY BLOCK: Guarantee load runner never targets production
+        is_allowed = hostname in ALLOWED_LOAD_TEST_ORIGINS or hostname.endswith(".local") or hostname.startswith("staging-")
+        is_blocked = any(prod in hostname for prod in ["fastkirana.in", "fastminute.in", "fastminute.app"]) and "staging" not in hostname
+
+        if not is_allowed or is_blocked:
             raise RuntimeError(
-                f"[CRITICAL SAFETY BLOCK] Locust is configured to target live production ({self.host}). "
-                "Direct high-concurrency load testing against production is disabled to protect against provider bans. "
-                "Target localhost:8000 or a dedicated staging environment instead."
+                f"[CRITICAL SAFETY BLOCK] Locust target ({hostname}) is not in the staging allowlist: {ALLOWED_LOAD_TEST_ORIGINS}. "
+                "High-concurrency load testing against production or unverified hosts is strictly prohibited."
             )
 
-        self.user_id = f"stress_user_{uuid.uuid4().hex[:12]}"
-        self.auth_token = None
+        self.guest_id = f"guest_stress_{uuid.uuid4().hex[:16]}"
+        self.phone = f"9876{random.randint(100000, 999999)}"
+        self.user_id = f"usr_{self.guest_id}"
         self.headers = {
             "Content-Type": "application/json",
-            "x-user-id": self.user_id,
+            "x-guest-id": self.guest_id,
+            "x-user-phone": self.phone,
             "x-user-role": "USER",
         }
-        self.cart_items = []
+        self.known_product_ids: List[str] = []
 
-    @task(5)
+    @task(11)  # ~55% of user actions
     def browse_products(self):
-        """High frequency: Browse products catalog with category filters."""
-        params = {"limit": 20, "page": random.randint(1, 5)}
+        """High frequency: Browse products catalog with pagination."""
+        params = {"limit": 20, "page": random.randint(1, 3)}
         with self.client.get("/api/products", params=params, headers=self.headers, catch_response=True) as response:
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    products = data.get("products") or data.get("items") or (data if isinstance(data, list) else [])
+                    for p in products[:5]:
+                        if isinstance(p, dict) and p.get("id"):
+                            self.known_product_ids.append(p["id"])
+                    response.success()
+                except Exception as e:
+                    response.failure(f"Catalog response parsing error: {e}")
+            else:
+                response.failure(f"Browse products failed with HTTP {response.status_code}: {response.text[:100]}")
+
+    @task(4)  # ~20% of user actions
+    def cart_operations(self):
+        """Inspect and mutate cart using correct /api/cart endpoints."""
+        # 1. Inspect cart
+        with self.client.get("/api/cart", headers=self.headers, catch_response=True) as response:
             if response.status_code == 200:
                 response.success()
             else:
-                response.failure(f"Browse products failed with {response.status_code}")
+                response.failure(f"Cart view failed with HTTP {response.status_code}: {response.text[:100]}")
+                return
 
-    @task(3)
-    def view_cart(self):
-        """Inspect current cart items."""
-        with self.client.get("/api/cart", headers=self.headers, catch_response=True) as response:
-            if response.status_code in [200, 404]:
-                response.success()
-            else:
-                response.failure(f"Cart view failed with {response.status_code}")
-
-    @task(4)
-    def update_cart_item(self):
-        """Simulate concurrent cart mutation."""
-        product_id = f"prod_sample_{random.randint(1, 100)}"
-        qty = random.randint(1, 5)
-        payload = {
-            "productId": product_id,
-            "quantity": qty
+        # 2. Add/sync item if product IDs are known
+        product_id = random.choice(self.known_product_ids) if self.known_product_ids else "prod_1"
+        sync_payload = {
+            "guestId": self.guest_id,
+            "items": [
+                {
+                    "productId": product_id,
+                    "quantity": random.randint(1, 3),
+                    "selectedVariant": None,
+                    "notes": ""
+                }
+            ]
         }
-        with self.client.post("/api/cart/items", json=payload, headers=self.headers, catch_response=True) as response:
+        with self.client.post("/api/cart", json=sync_payload, headers=self.headers, catch_response=True) as response:
             if response.status_code in [200, 201]:
                 response.success()
-            elif response.status_code in [400, 404]:
-                # Handled business rejection (e.g., sample product doesn't exist)
-                response.success()
             else:
-                response.failure(f"Cart update failed with {response.status_code}")
+                response.failure(f"Cart sync failed with HTTP {response.status_code}: {response.text[:100]}")
 
-    @task(2)
-    def calculate_delivery_surge(self):
-        """Simulate geofence and surge fee calculations during rush hour."""
+    @task(2)  # ~10% of user actions
+    def calculate_delivery_quote(self):
+        """Simulate geofence, fee and surge calculation."""
         payload = {
-            "lat": 26.1534 + (random.random() - 0.5) * 0.05,
-            "lng": 80.1714 + (random.random() - 0.5) * 0.05,
-            "subtotal": random.choice([99.0, 149.0, 299.0, 499.0])
+            "lat": 26.1534 + (random.random() - 0.5) * 0.02,
+            "lng": 80.1714 + (random.random() - 0.5) * 0.02,
+            "subtotal": random.choice([149.0, 249.0, 399.0, 599.0])
         }
         with self.client.post("/api/delivery/calculate", json=payload, headers=self.headers, catch_response=True) as response:
-            if response.status_code in [200, 400]:
+            if response.status_code == 200:
                 response.success()
             else:
-                response.failure(f"Delivery calculation failed with {response.status_code}")
+                response.failure(f"Delivery calculation failed with HTTP {response.status_code}: {response.text[:100]}")
 
-    @task(1)
+    @task(1)  # ~5% of user actions
     def checkout_attempt(self):
-        """Simulate concurrent flash sale checkout with idempotency key."""
-        idempotency_key = f"idemp_surge_{uuid.uuid4().hex}"
+        """Simulate checkout write with idempotency key."""
+        idempotency_key = f"idemp_load_{uuid.uuid4().hex}"
         checkout_headers = {
             **self.headers,
             "X-Idempotency-Key": idempotency_key
         }
+        product_id = random.choice(self.known_product_ids) if self.known_product_ids else "prod_1"
         checkout_payload = {
             "items": [
                 {
-                    "productId": f"prod_flash_{random.randint(1, 20)}",
-                    "quantity": random.randint(1, 2),
+                    "productId": product_id,
+                    "quantity": 1,
                     "price": 100.0,
-                    "name": "Festive Special Item"
+                    "name": "Standard Catalog Item"
                 }
             ],
-            "addressId": f"addr_stress_{random.randint(1, 50)}",
+            "customerPhone": self.phone,
             "paymentMethod": "COD",
-            "deliveryMethod": "DELIVERY"
+            "deliveryMethod": "DELIVERY",
+            "address": {
+                "street": "123 Staging Boulevard",
+                "city": "Kanpur",
+                "pincode": "208001",
+                "lat": 26.1534,
+                "lng": 80.1714
+            }
         }
         with self.client.post("/api/orders", json=checkout_payload, headers=checkout_headers, catch_response=True) as response:
-            # Under load, expect 201 Created, 200 Replayed, or 400 validation error (e.g. stock/address)
-            # 500 or 503 indicates pool exhaustion or unhandled database deadlock
-            if response.status_code in [200, 201, 400, 404, 409]:
+            # Only genuine business successes (200 OK / 201 Created) count as success
+            if response.status_code in [200, 201]:
                 response.success()
             else:
-                response.failure(f"Checkout crashed or timed out with {response.status_code}: {response.text[:100]}")
+                response.failure(f"Checkout failed with HTTP {response.status_code}: {response.text[:120]}")
+
+    @task(2)  # ~10% of user actions
+    def order_tracking_read(self):
+        """Simulate customer polling order tracking status."""
+        with self.client.get("/api/orders/user", headers=self.headers, catch_response=True) as response:
+            if response.status_code == 200:
+                response.success()
+            elif response.status_code == 404:
+                # No orders placed yet for this user session is a valid empty read
+                response.success()
+            else:
+                response.failure(f"Order tracking read failed with HTTP {response.status_code}: {response.text[:100]}")

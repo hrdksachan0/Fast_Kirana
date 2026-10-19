@@ -175,7 +175,7 @@ class PaymentGatewayHandler {
     Options? options,
   }) async {
     final binding = WidgetsBinding.instance;
-    if (binding.runtimeType.toString().contains('TestWidgetsFlutterBinding')) {
+    if (binding.runtimeType.toString() == 'AutomatedTestWidgetsFlutterBinding') {
       dynamic dynamicBinding = binding;
       final res = await dynamicBinding.runAsync(() async {
         try {

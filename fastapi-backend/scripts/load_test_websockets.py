@@ -94,10 +94,19 @@ async def simulate_rider(
     duration: float,
     interval: float,
     metrics: LoadTestMetrics,
-    stop_event: asyncio.Event
+    stop_event: asyncio.Event,
+    token: str = None,
+    ticket: str = None,
 ):
     rider_id = f"rider_{rider_index:04d}"
-    ws_url = f"{base_ws_url.rstrip('/')}/ws/rider/{rider_id}"
+    query_params = []
+    if ticket:
+        query_params.append(f"ticket={ticket}")
+    elif token:
+        query_params.append(f"token={token}")
+    
+    query_str = f"?{'&'.join(query_params)}" if query_params else ""
+    ws_url = f"{base_ws_url.rstrip('/')}/ws/rider/{rider_id}{query_str}"
     
     # Slight coordinate jitter for realistic geospatial scatter
     current_lat = BASE_LAT + (random.uniform(-0.05, 0.05))
@@ -179,7 +188,9 @@ async def run_load_test(args):
                 duration=args.duration,
                 interval=args.interval,
                 metrics=metrics,
-                stop_event=stop_event
+                stop_event=stop_event,
+                token=getattr(args, 'token', None),
+                ticket=getattr(args, 'ticket', None),
             )
         )
         tasks.append(t)
@@ -247,6 +258,8 @@ def main():
     parser.add_argument("--duration", type=float, default=15.0, help="Benchmark run duration in seconds (default: 15)")
     parser.add_argument("--ramp", type=int, default=100, help="Connections per second ramp-up rate (default: 100)")
     parser.add_argument("--interval", type=float, default=1.0, help="Seconds between GPS telemetry pings per rider (default: 1.0)")
+    parser.add_argument("--token", type=str, default=None, help="Bearer JWT token for rider authentication")
+    parser.add_argument("--ticket", type=str, default=None, help="Single-use channel ticket for authorized connection")
     args = parser.parse_args()
 
     asyncio.run(run_load_test(args))

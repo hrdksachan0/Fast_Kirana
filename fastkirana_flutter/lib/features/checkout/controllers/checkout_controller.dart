@@ -1274,15 +1274,16 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       // 🛡️ EMERGENCY RECOVERY: If paid online, save locally and proceed
       if (isOnlinePaid) {
         debugPrint('Emergency Payment Recovery: Order $orderId was paid ($paymentId) but backend sync failed. Retaining recovery reference.');
-        final isTestEnv = WidgetsBinding.instance.runtimeType.toString().contains('Test');
-        if (!isTestEnv) {
+        try {
           await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);
+        } catch (saveErr, st) {
+          LoggerService.error('CheckoutController: savePlacedOrderLocally emergency', saveErr, st);
         }
         state = state.copyWith(
           isPlacingOrder: false,
           pendingCashfreeOrderId: state.pendingCashfreeOrderId ?? orderId,
         );
-        if (apiPayload != null && !isTestEnv) {
+        if (apiPayload != null) {
           unawaited(_retryOrderSync(
             apiPayload,
             localOrder: placedOrder,
@@ -1291,8 +1292,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             userId: userId,
           ));
         }
-        if (context != null && context.mounted && !isTestEnv) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        if (context != null && context.mounted) {
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
             const SnackBar(
               backgroundColor: AppDesignSystem.amber800,
               content: Text('Payment received! Finalizing order details with store...'),
@@ -1601,7 +1602,6 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     state = state.copyWith(isPlacingOrder: true);
 
     String? cfOrderId;
-    final isTestEnv = WidgetsBinding.instance.runtimeType.toString().contains('Test');
     try {
       cfOrderId = state.pendingCashfreeOrderId ?? await PaymentGatewayHandler.getPendingCfOrderId();
       if (cfOrderId == null || cfOrderId.isEmpty) {
@@ -1627,7 +1627,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             pendingCashfreeOrderId: cfOrderId,
           );
         }
-        if (context.mounted && !isTestEnv) {
+        if (context.mounted) {
           final draft = await CheckoutDraft.loadAcceptedDraft();
           if (!context.mounted) return;
           final currentCart = state.pendingCart ?? Cart.empty();
@@ -1649,19 +1649,22 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             pendingCashfreeOrderId: cfOrderId,
           );
         }
-        if (context.mounted && !isTestEnv) {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.amber800,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                verification.message ?? 'Payment status is still pending with your bank. Recovery retained.',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+        if (context.mounted) {
+          final messenger = ScaffoldMessenger.maybeOf(context);
+          if (messenger != null) {
+            messenger.hideCurrentSnackBar();
+            messenger.showSnackBar(
+              SnackBar(
+                backgroundColor: AppDesignSystem.amber800,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                content: Text(
+                  verification.message ?? 'Payment status is still pending with your bank. Recovery retained.',
+                  style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+                ),
               ),
-            ),
-          );
+            );
+          }
         }
         return;
       }
@@ -1686,19 +1689,22 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         );
       }
 
-      if (context.mounted && !isTestEnv) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.slate800,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: const Text(
-              'Previous attempt cleared. You can now place your order.',
-              style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+      if (context.mounted) {
+        final messenger = ScaffoldMessenger.maybeOf(context);
+        if (messenger != null) {
+          messenger.hideCurrentSnackBar();
+          messenger.showSnackBar(
+            SnackBar(
+              backgroundColor: AppDesignSystem.slate800,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: const Text(
+                'Previous attempt cleared. You can now place your order.',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     } catch (e) {
       // Recover busy state on errors, retain recovery
@@ -1708,19 +1714,22 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           pendingCashfreeOrderId: cfOrderId,
         );
       }
-      if (context.mounted && !isTestEnv) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.amber800,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Text(
-              'Could not reach payment gateway: $e. Recovery retained.',
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+      if (context.mounted) {
+        final messenger = ScaffoldMessenger.maybeOf(context);
+        if (messenger != null) {
+          messenger.hideCurrentSnackBar();
+          messenger.showSnackBar(
+            SnackBar(
+              backgroundColor: AppDesignSystem.amber800,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Text(
+                'Could not reach payment gateway: $e. Recovery retained.',
+                style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     } finally {
       _isHandlingPaymentDismissal = false;

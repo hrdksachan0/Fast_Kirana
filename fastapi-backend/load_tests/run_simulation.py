@@ -20,8 +20,10 @@ from sqlalchemy import text
 async def simulate_worker_query(worker_id: int) -> float:
     start = time.perf_counter()
     async with AsyncSessionLocal() as session:
-        # Simulate rapid transactional check
-        await session.execute(text("SELECT 1"))
+        # Simulate realistic multi-table transactional read/lock under load
+        # Probe products, inventory, and active carts
+        await session.execute(text("SELECT id, name, price, stock, isAvailable FROM products LIMIT 5"))
+        await session.execute(text("SELECT id, userId, updatedAt FROM carts ORDER BY updatedAt DESC LIMIT 3"))
     return (time.perf_counter() - start) * 1000.0
 
 

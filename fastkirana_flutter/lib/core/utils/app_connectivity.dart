@@ -54,19 +54,22 @@ class AppConnectivityObserver extends ChangeNotifier {
               headers: {'Cache-Control': 'no-cache, no-store'},
             )),
         _readConnections = connectionReader ??
-            (WidgetsBinding.instance.runtimeType.toString().contains('Test')
+            (WidgetsBinding.instance.runtimeType.toString() == 'AutomatedTestWidgetsFlutterBinding'
                 ? (() async => [ConnectivityResult.wifi])
                 : Connectivity().checkConnectivity) {
-    final isTestEnv = WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    // Only headless unit tests without real platform channels skip background polling;
+    // real physical devices under IntegrationTestWidgetsFlutterBinding run the full stack.
+    final isHeadlessUnitTest =
+        WidgetsBinding.instance.runtimeType.toString() == 'AutomatedTestWidgetsFlutterBinding';
     final stream = connectionChanges ??
-        (!isTestEnv ? Connectivity().onConnectivityChanged : null);
+        (!isHeadlessUnitTest ? Connectivity().onConnectivityChanged : null);
     if (stream != null) {
       _subscription = stream.listen(
         (results) => unawaited(_check(results: results, debounce: true)),
         onError: (Object _) => unawaited(_check(debounce: true)),
       );
     }
-    if (observeLifecycle && !isTestEnv) {
+    if (observeLifecycle && !isHeadlessUnitTest) {
       _lifecycle = _ConnectionLifecycleObserver((state) {
         if (state == AppLifecycleState.resumed) {
           _startPolling();
@@ -78,7 +81,7 @@ class AppConnectivityObserver extends ChangeNotifier {
       });
       WidgetsBinding.instance.addObserver(_lifecycle!);
     }
-    if (!isTestEnv) {
+    if (!isHeadlessUnitTest) {
       _startPolling();
       unawaited(checkConnection());
     } else if (reachabilityProbe != null) {
