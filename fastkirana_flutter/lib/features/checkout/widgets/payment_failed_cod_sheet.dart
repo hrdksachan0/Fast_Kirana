@@ -248,8 +248,8 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> with Sing
                                   ),
                                 ),
                                 const SizedBox(width: 5),
-                                Text(
-                                  'PAYMENT INTERRUPTED',
+                                 Text(
+                                  'PAYMENT NOT COMPLETED',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 9,
                                     fontWeight: FontWeight.w800,
@@ -264,16 +264,16 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> with Sing
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
+                              color: const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFBBF7D0)),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
                             ),
                             child: Text(
-                              '₹0 DEBITED',
+                              'SAFE & REFUNDABLE',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFF15803D),
+                                color: const Color(0xFF1D4ED8),
                                 letterSpacing: 0.4,
                               ),
                             ),
@@ -282,7 +282,7 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> with Sing
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Online Payment Cancelled',
+                        'Payment Not Completed',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
@@ -292,7 +292,7 @@ class _PaymentFailedCodSheetState extends State<PaymentFailedCodSheet> with Sing
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'No amount was deducted. Would you like to switch to COD or retry?',
+                        'If any amount was debited by your bank, it will be automatically refunded in 24-48 hrs. Would you like to switch to COD or retry?',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,

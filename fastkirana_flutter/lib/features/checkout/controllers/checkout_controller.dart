@@ -253,7 +253,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     state = state.copyWith(isPlacingOrder: true);
 
-    final verification = await _paymentHandler.verifyPayment(cfOrderId);
+    final verification = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 5);
     final verifiedPaid = verification.isPaid;
     final resolvedPaymentId = verification.paymentId;
 
@@ -263,15 +263,15 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
       final total = draft?.grandTotal ?? state.pendingGrandTotal ?? cart?.subtotal ?? 0.0;
 
-      // Strictly Pending confirmation from bank (in-flight transaction)
-      if (verification.isPending && context != null && context.mounted) {
-        state = state.copyWith(isPlacingOrder: true, pendingCashfreeOrderId: cfOrderId);
+      // Pending or in-flight confirmation from bank/UPI: retain recovery, DO NOT show cancelled sheet!
+      if ((verification.isPending || verification.isUnavailable) && context != null && context.mounted) {
+        state = state.copyWith(isPlacingOrder: false, pendingCashfreeOrderId: cfOrderId);
         await PaymentPendingReconciliationSheet.show(
           context: context,
           grandTotal: total,
           cfOrderId: cfOrderId,
           onCheckStatus: () async {
-            final recheck = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 2);
+            final recheck = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 3);
             if (!context.mounted) return;
             if (recheck.isPaid && recheck.paymentId != null) {
               Navigator.pop(context);
@@ -306,8 +306,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
       state = state.copyWith(isPlacingOrder: false);
 
-      // Strictly Failed / Cancelled
-      if (context != null && context.mounted && total > 0) {
+      // ONLY show failure sheet if strictly confirmed as terminal failure
+      if (verification.isFailed && context != null && context.mounted && total > 0) {
         await PaymentFailedCodSheet.show(
           context: context,
           grandTotal: total,
@@ -323,7 +323,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 content: Text(
-                  'Payment was cancelled. Order has not been placed.',
+                  'Payment attempt was not completed.',
                   style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
                 ),
               ),
@@ -352,7 +352,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     PaymentVerificationResult? fastVerify;
     try {
-      fastVerify = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 1);
+      // Allow up to 5 polling attempts so UPI/NPCI settlement has time to complete
+      fastVerify = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 5);
       if (fastVerify.isPaid) {
         debugPrint('✅ Payment verified as PAID on server despite error callback! Routing to success...');
         await _onCashfreeSuccess(cfOrderId);
@@ -366,15 +367,18 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final cart = state.pendingCart ?? ref.read(cartProvider).value;
     final context = _currentContext;
 
-    // Strictly Pending confirmation from bank (in-flight transaction)
-    if (fastVerify != null && fastVerify.isPending && context != null && context.mounted && cart != null) {
-      state = state.copyWith(isPlacingOrder: true, pendingCashfreeOrderId: cfOrderId);
+    // In-flight or pending confirmation from bank/UPI: retain recovery, DO NOT show cancelled sheet!
+    if ((fastVerify == null || fastVerify.isPending || fastVerify.isUnavailable) &&
+        context != null &&
+        context.mounted &&
+        cart != null) {
+      state = state.copyWith(isPlacingOrder: false, pendingCashfreeOrderId: cfOrderId);
       await PaymentPendingReconciliationSheet.show(
         context: context,
         grandTotal: total,
         cfOrderId: cfOrderId,
         onCheckStatus: () async {
-          final recheck = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 2);
+          final recheck = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 3);
           if (!context.mounted) return;
           if (recheck.isPaid && recheck.paymentId != null) {
             Navigator.pop(context);
@@ -409,7 +413,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     state = state.copyWith(isPlacingOrder: false);
 
-    if (context != null && context.mounted && total > 0 && cart != null) {
+    // ONLY show failure sheet if strictly confirmed as terminal failure
+    if (fastVerify != null && fastVerify.isFailed && context != null && context.mounted && total > 0 && cart != null) {
       await PaymentFailedCodSheet.show(
         context: context,
         grandTotal: total,
@@ -425,7 +430,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               content: Text(
-                'Order was cancelled. No amount was debited.',
+                'Payment attempt was not completed.',
                 style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
               ),
             ),

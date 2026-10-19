@@ -193,14 +193,15 @@ class PaymentGatewayHandler {
   }
 
   /// Verifies payment on backend with up to [maxAttempts] retries
-  Future<PaymentVerificationResult> verifyPayment(String cfOrderId, {int maxAttempts = 3}) async {
+  Future<PaymentVerificationResult> verifyPayment(String cfOrderId, {int maxAttempts = 5}) async {
     bool hadNetworkOrTimeoutError = false;
     String? lastKnownStatus;
     String? lastMessage;
 
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
       if (attempt > 0) {
-        await Future.delayed(const Duration(milliseconds: 600));
+        // Progressive backoff: 800ms, 1200ms, 1600ms, 2000ms
+        await Future.delayed(Duration(milliseconds: 600 + (attempt * 400)));
       }
       try {
         final verifyRes = await _safePost(
@@ -221,16 +222,21 @@ class PaymentGatewayHandler {
           lastKnownStatus = data['paymentStatus']?.toString().toUpperCase();
           lastMessage = data['message']?.toString();
 
-          if (lastKnownStatus == 'PENDING' || lastKnownStatus == 'ACTIVE') {
-            // Still in flight with bank/UPI, continue polling attempts
-            continue;
+          // While still in flight or unsettled (PENDING, ACTIVE, USER_DROPPED, NOT_PAID),
+          // keep polling if attempts remain so webhook / NPCI settlement has time to arrive
+          if (attempt < maxAttempts - 1) {
+            if (lastKnownStatus == 'PENDING' ||
+                lastKnownStatus == 'ACTIVE' ||
+                lastKnownStatus == 'USER_DROPPED' ||
+                lastKnownStatus == 'NOT_PAID') {
+              continue;
+            }
           }
 
+          // Only truly terminal confirmed rejections by the gateway/bank should exit early
           if (lastKnownStatus == 'FAILED' ||
               lastKnownStatus == 'CANCELLED' ||
-              lastKnownStatus == 'USER_DROPPED' ||
-              lastKnownStatus == 'EXPIRED' ||
-              lastKnownStatus == 'NOT_PAID') {
+              lastKnownStatus == 'EXPIRED') {
             return PaymentVerificationResult(
               status: PaymentVerificationStatus.failed,
               message: lastMessage ?? 'Payment was cancelled or not completed.',

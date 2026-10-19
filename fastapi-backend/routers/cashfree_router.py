@@ -753,9 +753,13 @@ async def verify_cashfree_payment(
     raw_id = (req.orderId or req.cfOrderId or "").strip()
     clean_id = re.sub(r"_r\d+$", "", raw_id)
 
-    # 1. FAST PATH: Check indexed primary keys first in ~2ms!
+    # 1. FAST PATH: Check indexed primary keys and Cashfree order IDs in ~2ms!
     stmt = select(Order).where(
-        (Order.id == clean_id) | (Order.readableId == clean_id) | (Order.id == raw_id)
+        (Order.id == clean_id) |
+        (Order.readableId == clean_id) |
+        (Order.id == raw_id) |
+        (Order.cfOrderId == clean_id) |
+        (Order.cfOrderId == raw_id)
     )
     res = await db.execute(stmt)
     order = res.scalars().first()
@@ -777,9 +781,10 @@ async def verify_cashfree_payment(
         return {
             "success": True,
             "orderId": order.id,
+            "readableId": order.readableId,
             "paymentStatus": "PAID",
             "isPaid": True,
-            "cfPaymentId": f"CF_{order.id}",
+            "cfPaymentId": f"CF_{order.cfOrderId or order.id}",
             "orderAmount": float(order.total or 0),
         }
 
@@ -958,24 +963,29 @@ async def verify_cashfree_payment(
                 "cfPaymentId": str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}",
                 "orderAmount": cf_amount,
             }
-        status_to_return = "USER_DROPPED"
+        status_to_return = "PENDING"
         if cf_order:
             cf_st = cf_order.get("order_status", "ACTIVE")
             if cf_st == "EXPIRED":
                 status_to_return = "EXPIRED"
             elif cf_st in ("CANCELLED", "TERMINATED"):
                 status_to_return = "CANCELLED"
+            elif 'payments' in locals() and any(p.get("payment_status") == "SUCCESS" for p in (payments or [])):
+                status_to_return = "PAID"
             elif 'payments' in locals() and any(p.get("payment_status") == "PENDING" for p in (payments or [])):
                 status_to_return = "PENDING"
             elif cf_st == "ACTIVE":
-                status_to_return = "USER_DROPPED" if ('payments' in locals() and payments) else "NOT_PAID"
+                # Active session is awaiting bank/UPI settlement callback
+                status_to_return = "PENDING"
+            elif 'payments' in locals() and any(p.get("payment_status") == "FAILED" for p in (payments or [])):
+                status_to_return = "FAILED"
 
         return {
             "success": False,
             "orderId": clean_id,
             "paymentStatus": status_to_return,
-            "isPaid": False,
-            "message": "Payment has not been completed on Cashfree gateway.",
+            "isPaid": status_to_return == "PAID",
+            "message": "Payment confirmation pending with your bank.",
         }
 
     # Verify gateway order identity strictly binds to this order
