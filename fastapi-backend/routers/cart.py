@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body, Header, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import desc, delete
+from sqlalchemy import desc, delete, or_
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import os
@@ -10,7 +10,7 @@ import hashlib
 
 from database import get_db
 from models import Cart, CartItem, Product, User
-from routers.auth import get_current_user, require_auth
+from routers.auth import get_current_user, require_auth, normalize_phone
 
 router = APIRouter(prefix="/cart", tags=["Cart"])
 
@@ -103,6 +103,8 @@ async def get_cart(
     if not user_id and is_internal_service:
         user_id = x_user_id or (request.headers.get("x-user-id") if request else None)
 
+    # Secure user resolution: derive ownership strictly from verified authentication or internal service secret
+    # Device-scoped guest sessions use x-guest-id; unverified phone headers are never proof of account ownership
     guest_id = x_guest_id or (request.headers.get("x-guest-id") if request else None)
     if not user_id and guest_id:
         guest_user = await get_or_create_guest_user(guest_id, db)
@@ -238,10 +240,19 @@ async def sync_cart(
     if not isinstance(items_data, list):
         raise HTTPException(status_code=400, detail="items must be a list")
 
+    # Unauthenticated callers bind strictly to device-scoped guest accounts
+    # Passing unverified phone or user numbers never grants ownership of an existing registered user
     if not user_id and guest_id:
         guest_user = await get_or_create_guest_user(str(guest_id), db)
-        if guest_user and store_id:
-            guest_user.assignedStoreId = store_id
+        if guest_user:
+            incoming_name = payload.get("userName") or (request.headers.get("x-user-name") if request else None)
+            incoming_phone = payload.get("userPhone") or x_user_phone or (request.headers.get("x-user-phone") if request else None)
+            if incoming_name and (not guest_user.name or guest_user.name.startswith("Guest Shopper")):
+                guest_user.name = incoming_name
+            if incoming_phone and not guest_user.phone:
+                guest_user.phone = normalize_phone(incoming_phone)
+            if store_id:
+                guest_user.assignedStoreId = store_id
             await db.commit()
         user_id = guest_user.id if guest_user else None
 
@@ -262,49 +273,79 @@ async def sync_cart(
     if not cart:
         raise HTTPException(status_code=500, detail="Failed to find or create cart")
 
-    # Atomic delete and flush to ensure no unique constraint violation on insert
-    await db.execute(delete(CartItem).where(CartItem.cartId == cart.id))
-    await db.flush()
-
-    # Filter valid products and deduplicate incoming payload by (productId, selectedVariant)
+    # Validate replacement items BEFORE deleting existing cart items to prevent silent cart loss
+    deduped_items: Dict[tuple, Dict[str, Any]] = {}
     valid_count = 0
     if items_data:
-        product_ids = [str(i.get("productId") or "") for i in items_data if i.get("productId")]
-        if product_ids:
-            p_stmt = select(Product.id).where(Product.id.in_(product_ids))
+        candidate_ids = set()
+        for i in items_data:
+            pid = str(i.get("productId") or "").strip()
+            if not pid:
+                raise HTTPException(status_code=400, detail="Invalid item in cart payload: productId cannot be blank")
+            candidate_ids.add(pid)
+            if "_" in pid:
+                parts = pid.split("_")
+                for idx in range(1, len(parts)):
+                    candidate_ids.add("_".join(parts[:idx]))
+
+        valid_pids = set()
+        if candidate_ids:
+            p_stmt = select(Product.id).where(Product.id.in_(list(candidate_ids)))
             p_res = await db.execute(p_stmt)
             valid_pids = set(p_res.scalars().all())
 
-            deduped_items: Dict[tuple, Dict[str, Any]] = {}
-            for item_data in items_data:
-                product_id = item_data.get("productId")
-                if not product_id or product_id not in valid_pids:
-                    continue
+        for item_data in items_data:
+            raw_product_id = str(item_data.get("productId") or "").strip()
+            resolved_pid = None
+            variant = item_data.get("selectedVariant") or None
 
-                variant = item_data.get("selectedVariant") or None
-                key = (product_id, variant)
-                qty = max(1, int(item_data.get("quantity", 1)))
-                if key in deduped_items:
-                    deduped_items[key]["quantity"] += qty
-                else:
-                    deduped_items[key] = {
-                        "productId": product_id,
-                        "quantity": qty,
-                        "selectedVariant": variant,
-                        "notes": item_data.get("notes"),
-                    }
+            # 1. Exact catalog ID match takes absolute precedence (e.g. prod_1)
+            if raw_product_id in valid_pids:
+                resolved_pid = raw_product_id
+            elif "_" in raw_product_id:
+                # 2. Only decompose compound ID if exact match is NOT present in catalog
+                parts = raw_product_id.split("_")
+                for idx in range(len(parts) - 1, 0, -1):
+                    prefix = "_".join(parts[:idx])
+                    if prefix in valid_pids:
+                        resolved_pid = prefix
+                        if not variant:
+                            variant = "_".join(parts[idx:])
+                        break
 
-            for item in deduped_items.values():
-                new_item = CartItem(
-                    id=generate_id("ci_"),
-                    cartId=cart.id,
-                    productId=item["productId"],
-                    quantity=item["quantity"],
-                    selectedVariant=item["selectedVariant"],
-                    notes=item["notes"],
+            if not resolved_pid:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Product with ID '{raw_product_id}' could not be resolved in catalog"
                 )
-                db.add(new_item)
-                valid_count += 1
+
+            key = (resolved_pid, variant)
+            qty = max(1, int(item_data.get("quantity", 1)))
+            if key in deduped_items:
+                deduped_items[key]["quantity"] += qty
+            else:
+                deduped_items[key] = {
+                    "productId": resolved_pid,
+                    "quantity": qty,
+                    "selectedVariant": variant,
+                    "notes": item_data.get("notes"),
+                }
+
+    # Atomic delete and insert to ensure no unique constraint violation on insert
+    await db.execute(delete(CartItem).where(CartItem.cartId == cart.id))
+    await db.flush()
+
+    for item in deduped_items.values():
+        new_item = CartItem(
+            id=generate_id("ci_"),
+            cartId=cart.id,
+            productId=item["productId"],
+            quantity=item["quantity"],
+            selectedVariant=item["selectedVariant"],
+            notes=item["notes"],
+        )
+        db.add(new_item)
+        valid_count += 1
 
     cart.updatedAt = datetime.utcnow()
     await db.commit()

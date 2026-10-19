@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // ignore: depend_on_referenced_packages
@@ -15,25 +16,32 @@ void main() {
   late CartRepository cartRepo;
   bool shouldNetworkFail = false;
   int syncCallCount = 0;
+  void Function(DioException error)? onNetworkRejected;
+  void Function(RequestOptions options)? onNetworkRequest;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     shouldNetworkFail = false;
     syncCallCount = 0;
+    onNetworkRejected = null;
+    onNetworkRequest = null;
 
     mockDio = Dio(BaseOptions(baseUrl: 'http://localhost'));
     mockDio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
         if (shouldNetworkFail) {
-          return handler.reject(DioException(
+          final err = DioException(
             requestOptions: options,
             type: DioExceptionType.connectionError,
             error: 'No Internet Connection',
-          ));
+          );
+          onNetworkRejected?.call(err);
+          return handler.reject(err);
         }
 
         if (options.path == '/api/cart' && options.method == 'POST') {
           syncCallCount++;
+          onNetworkRequest?.call(options);
           return handler.resolve(Response(
             data: {'success': true},
             requestOptions: options,
@@ -46,6 +54,7 @@ void main() {
     ));
 
     cartRepo = CartRepository(mockDio);
+    addTearDown(() => mockDio.close(force: true));
   });
 
   Product makeTestProduct(String id, String name, double price) {
@@ -73,7 +82,15 @@ void main() {
 
   test('Offline Mode: saves cart locally and marks pending sync flag when network is down', () async {
     final notifier = CartNotifier(cartRepo);
+    addTearDown(() => notifier.dispose());
     final product = makeTestProduct('p101', 'Basmati Rice', 120);
+
+    final offlineAttemptCompleter = Completer<void>();
+    onNetworkRejected = (_) {
+      if (!offlineAttemptCompleter.isCompleted) {
+        offlineAttemptCompleter.complete();
+      }
+    };
 
     // Simulate network cut
     shouldNetworkFail = true;
@@ -81,10 +98,13 @@ void main() {
     // Add item while offline
     final added = notifier.addProduct(product, 2);
     expect(added, isTrue);
-    await Future.delayed(const Duration(milliseconds: 350));
 
     // Verify UI state has the item immediately (optimistic UI)
     expect(notifier.getQuantity('p101'), equals(2));
+
+    // Await deterministic offline attempt rejection
+    await offlineAttemptCompleter.future;
+    await pumpEventQueue();
 
     // Verify item was persisted to local storage
     final localItems = await cartRepo.getLocalCart();
@@ -99,23 +119,43 @@ void main() {
 
   test('Online Recovery: syncPendingCart flushes local cart to server and clears pending flag', () async {
     final notifier = CartNotifier(cartRepo);
+    addTearDown(() => notifier.dispose());
     final product = makeTestProduct('p102', 'Tata Salt', 25);
 
-    // 1. User performs action while offline
+    // 1. User performs action while offline: wait for explicit offline attempt completion
+    final offlineAttemptCompleter = Completer<void>();
+    onNetworkRejected = (_) {
+      if (!offlineAttemptCompleter.isCompleted) {
+        offlineAttemptCompleter.complete();
+      }
+    };
+
     shouldNetworkFail = true;
     notifier.addProduct(product, 3);
-    await Future.delayed(const Duration(milliseconds: 350));
+
+    // Deterministically await the offline attempt failure signal rather than an elapsed duration
+    await offlineAttemptCompleter.future;
+    await pumpEventQueue();
+
     expect(await cartRepo.hasPendingSync(), isTrue);
     expect(syncCallCount, equals(0));
 
     // 2. Network is restored (reconnection)
     shouldNetworkFail = false;
 
-    // 3. Auto-sync trigger executes
+    // 3. Auto-sync trigger executes: await explicit completion of server POST
+    final onlineSyncCompleter = Completer<void>();
+    onNetworkRequest = (_) {
+      if (!onlineSyncCompleter.isCompleted) {
+        onlineSyncCompleter.complete();
+      }
+    };
+
     await notifier.syncPendingCart();
+    await onlineSyncCompleter.future;
     await pumpEventQueue();
 
-    // 4. Verify server was called and pending flag is cleared
+    // 4. Verify server was called exactly once and pending flag is cleared
     expect(syncCallCount, equals(1));
     expect(await cartRepo.hasPendingSync(), isFalse);
   });
@@ -137,6 +177,7 @@ void main() {
     // Restart application: instantiate fresh notifier
     shouldNetworkFail = false;
     final restartedNotifier = CartNotifier(cartRepo);
+    addTearDown(() => restartedNotifier.dispose());
     await Future.delayed(const Duration(milliseconds: 200));
 
     // Verify local quantity 5 was preserved and not overwritten
@@ -148,6 +189,7 @@ void main() {
   test('Atomic Cart Delta Persistence: cart envelope commits appliedOrderDeltas atomically with remaining items', () async {
     final product = makeTestProduct('p104', 'Sugar', 45);
     final notifier = CartNotifier(cartRepo);
+    addTearDown(() => notifier.dispose());
     notifier.addProduct(product, 3);
     await Future.delayed(const Duration(milliseconds: 350));
     expect(notifier.getQuantity('p104'), equals(3));
@@ -182,6 +224,7 @@ void main() {
 
       final repo = CartRepository(mockDio);
       final notifier = CartNotifier(repo);
+      addTearDown(() => notifier.dispose());
       final product = makeTestProduct('p105', 'Atta', 60);
 
       // Start cart 3
@@ -236,6 +279,41 @@ void main() {
       expect(restartedDeltas.contains(orderId), isTrue);
     });
   }
+
+  test('Canonical ID preservation: item_123 retains its exact canonical catalog ID when syncing', () async {
+    Map<String, dynamic>? lastSyncedPayload;
+    final testDio = Dio(BaseOptions(baseUrl: 'http://localhost'));
+    testDio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        if (options.path == '/api/cart' && options.method == 'POST') {
+          lastSyncedPayload = options.data as Map<String, dynamic>;
+          return handler.resolve(Response(
+            data: {'success': true},
+            requestOptions: options,
+            statusCode: 200,
+          ));
+        }
+        return handler.next(options);
+      },
+    ));
+
+    final repo = CartRepository(testDio);
+    final product = makeTestProduct('item_123', 'Catalog Item With Prefix', 99);
+    final cartItem = CartItem(
+      id: 'cart_item_row_1',
+      cartId: 'cart_active',
+      productId: 'item_123',
+      product: product,
+      quantity: 1,
+    );
+
+    await repo.syncCart([cartItem]);
+
+    expect(lastSyncedPayload, isNotNull);
+    final items = lastSyncedPayload!['items'] as List;
+    expect(items.length, equals(1));
+    expect(items.first['productId'], equals('item_123'));
+  });
 }
 
 class OneShotCombinedFailStore extends InMemorySharedPreferencesStore {

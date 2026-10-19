@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import func, and_, or_, desc, text, update, delete, case
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, time, timedelta, timezone
 import uuid
 import re
 import json
@@ -15,7 +15,7 @@ from database import get_db
 from models import (
     User, Order, RiderWallet, CashDepositTransaction, Role, 
     OrderStatus, PaymentMethod, PaymentStatus, StoreSetting, 
-    Product, Category, OrderItem, Restaurant, DarkStore, Address
+    Product, Category, OrderItem, Restaurant, DarkStore, Address, Store
 )
 from schemas import CashDepositRequest, FinancialSummaryOut
 from routers.auth import require_admin
@@ -61,7 +61,11 @@ async def get_admin_rider_cash_summary(
     """
     Real-time financial reconciliation & rider cash balances
     """
-    today_start = datetime.combine(date.today(), time.min)
+    # Indian Standard Time (UTC +5:30) for today's midnight
+    ist = timezone(timedelta(hours=5, minutes=30))
+    now_ist = datetime.now(ist)
+    today_start_ist = datetime.combine(now_ist.date(), time.min, tzinfo=ist)
+    today_start = today_start_ist.astimezone(timezone.utc).replace(tzinfo=None)
 
     # 1. Fetch riders using standard SQLAlchemy enum filter scoped by store
     rider_stmt = select(User).options(selectinload(User.riderWallet)).where(
@@ -73,6 +77,10 @@ async def get_admin_rider_cash_summary(
 
     rider_res = await db.execute(rider_stmt)
     riders = rider_res.scalars().all()
+
+    # Pre-fetch store names for mapping
+    stores_res = await db.execute(select(Store.id, Store.name))
+    store_map = {row[0]: row[1] for row in stores_res.all()}
 
     # Ensure wallet exists for every rider
     rider_list = []
@@ -95,7 +103,17 @@ async def get_admin_rider_cash_summary(
 
         pending_rider_cash += float(wallet.cashInHand)
 
-        # Fetch today's COD stats for rider (M15 FIX: deliveredAt filtering)
+        # Active orders currently assigned and in progress
+        active_stmt = select(func.count(Order.id)).where(
+            and_(
+                Order.deliveryUserId == r.id,
+                Order.status.in_([OrderStatus.PACKED, OrderStatus.SHIPPED])
+            )
+        )
+        active_res = await db.execute(active_stmt)
+        active_count = active_res.scalar() or 0
+
+        # Fetch today's COD stats for rider (deliveredAt filtering in IST)
         cod_stmt = select(func.count(Order.id), func.coalesce(func.sum(Order.total), 0.0)).where(
             and_(
                 Order.deliveryUserId == r.id,
@@ -107,7 +125,7 @@ async def get_admin_rider_cash_summary(
         cod_res = await db.execute(cod_stmt)
         today_cod_count, today_cod_total = cod_res.first() or (0, 0.0)
 
-        # M16 FIX: Fetch today's Online/UPI stats for rider
+        # Fetch today's Online/UPI stats for rider
         online_rider_stmt = select(func.count(Order.id), func.coalesce(func.sum(Order.total), 0.0)).where(
             and_(
                 Order.deliveryUserId == r.id,
@@ -129,6 +147,9 @@ async def get_admin_rider_cash_summary(
         dep_res = await db.execute(dep_stmt)
         today_dep_total = dep_res.scalar() or 0.0
 
+        today_total_orders = (today_cod_count or 0) + (today_online_count or 0)
+        today_total_money = float(today_cod_total or 0.0) + float(today_online_total or 0.0)
+
         rider_list.append({
             "id": r.id,
             "name": r.name or "Rider",
@@ -139,49 +160,78 @@ async def get_admin_rider_cash_summary(
             "cashLimit": float(wallet.cashLimit),
             "totalCollected": float(wallet.totalCollected),
             "totalDeposited": float(wallet.totalDeposited),
-            "todayCodOrdersCount": today_cod_count,
-            "todayCodTotal": float(today_cod_total),
-            "todayOnlineOrdersCount": today_online_count,
-            "todayOnlineTotal": float(today_online_total),
-            "todayDepositedTotal": float(today_dep_total)
+            "activeOrdersCount": active_count,
+            "todayTotalOrdersCount": today_total_orders,
+            "todayTotalDeliveredMoney": today_total_money,
+            "todayCodOrdersCount": today_cod_count or 0,
+            "todayCodTotal": float(today_cod_total or 0.0),
+            "todayOnlineOrdersCount": today_online_count or 0,
+            "todayOnlineTotal": float(today_online_total or 0.0),
+            "todayDepositedTotal": float(today_dep_total or 0.0),
+            "assignedStoreId": r.assignedStoreId,
+            "storeName": store_map.get(r.assignedStoreId) if r.assignedStoreId else None
         })
 
-    # 2. Overall Financial Summary Today
+    # 2. Overall Financial Summary Today (Scoped by store if provided)
+    order_filter = [
+        Order.status == OrderStatus.DELIVERED,
+        func.coalesce(Order.deliveredAt, Order.createdAt) >= today_start
+    ]
+    if effective_store and effective_store.lower() != 'all':
+        order_filter.append(Order.storeId == effective_store)
+
     online_stmt = select(func.coalesce(func.sum(Order.total), 0.0)).where(
         and_(
+            *order_filter,
             Order.paymentMethod != PaymentMethod.COD,
-            Order.paymentStatus == PaymentStatus.PAID,
-            Order.createdAt >= today_start
+            Order.paymentStatus == PaymentStatus.PAID
         )
     )
     online_revenue = (await db.execute(online_stmt)).scalar() or 0.0
 
     delivered_cod_stmt = select(func.coalesce(func.sum(Order.total), 0.0)).where(
         and_(
-            Order.paymentMethod == PaymentMethod.COD,
-            Order.status == OrderStatus.DELIVERED,
-            func.coalesce(Order.deliveredAt, Order.createdAt) >= today_start
+            *order_filter,
+            Order.paymentMethod == PaymentMethod.COD
         )
     )
     delivered_cod_today = (await db.execute(delivered_cod_stmt)).scalar() or 0.0
 
     counter_cash_stmt = select(func.coalesce(func.sum(Order.total), 0.0)).where(
         and_(
+            *order_filter,
             Order.paymentMethod == PaymentMethod.COD,
-            Order.status == OrderStatus.DELIVERED,
-            Order.deliveryUserId.is_(None),
-            func.coalesce(Order.deliveredAt, Order.createdAt) >= today_start
+            Order.deliveryUserId.is_(None)
         )
     )
     counter_cash_today = (await db.execute(counter_cash_stmt)).scalar() or 0.0
 
-    total_dep_stmt = select(func.coalesce(func.sum(CashDepositTransaction.amount), 0.0)).where(
-        CashDepositTransaction.createdAt >= today_start
-    )
+    dep_filter = [CashDepositTransaction.createdAt >= today_start]
+    if effective_store and effective_store.lower() != 'all':
+        total_dep_stmt = select(func.coalesce(func.sum(CashDepositTransaction.amount), 0.0)).join(
+            User, CashDepositTransaction.riderId == User.id
+        ).where(
+            and_(*dep_filter, User.assignedStoreId == effective_store)
+        )
+    else:
+        total_dep_stmt = select(func.coalesce(func.sum(CashDepositTransaction.amount), 0.0)).where(
+            and_(*dep_filter)
+        )
     total_dep_today = (await db.execute(total_dep_stmt)).scalar() or 0.0
 
+    total_orders_today = sum(r["todayTotalOrdersCount"] for r in rider_list)
+    total_money_today = sum(r["todayTotalDeliveredMoney"] for r in rider_list)
+
     # 3. Recent Deposit Logs
-    recent_dep_stmt = select(CashDepositTransaction).order_by(desc(CashDepositTransaction.createdAt)).limit(20)
+    if effective_store and effective_store.lower() != 'all':
+        recent_dep_stmt = select(CashDepositTransaction).join(
+            User, CashDepositTransaction.riderId == User.id
+        ).where(
+            User.assignedStoreId == effective_store
+        ).order_by(desc(CashDepositTransaction.createdAt)).limit(20)
+    else:
+        recent_dep_stmt = select(CashDepositTransaction).order_by(desc(CashDepositTransaction.createdAt)).limit(20)
+
     recent_dep_res = await db.execute(recent_dep_stmt)
     recent_deps = recent_dep_res.scalars().all()
 
@@ -193,7 +243,9 @@ async def get_admin_rider_cash_summary(
             "counterCashToday": float(counter_cash_today),
             "totalCashDepositedToday": float(total_dep_today),
             "pendingRiderCash": float(pending_rider_cash),
-            "activeRidersCount": len(riders)
+            "activeRidersCount": len(rider_list),
+            "totalOrdersDeliveredToday": total_orders_today,
+            "totalDeliveredMoneyToday": float(total_money_today)
         },
         "recentDeposits": [
             {
@@ -291,7 +343,7 @@ async def delete_rider_cash_log(
 
 
 
-@router.patch("/settings")
+@router.api_route("/settings", methods=["PATCH", "POST"])
 async def save_admin_settings(
     payload: Dict[str, Any] = Body(...),
     current_admin: Any = Depends(require_admin),

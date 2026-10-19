@@ -1,0 +1,777 @@
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 49, in main
+    response=await client.get('/api/cart')
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 193, in enterprise_security_and_tracing_middleware
+    span = TracerService.start_span(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 100, in start_span
+    return TraceSpan(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 209, in __init__
+    logger.info(
+Message: '\U0001f4e1 [Tracer] [SPAN_START] name=fastapi_http_request trace_id=d8646fac5a40ef6a987cd3032f1a1b9a span_id=a9d2dddec7ff2690 parent=None'
+Arguments: ()
+D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\routing.py:144: FastAPIDeprecationWarning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: https://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/response-model/
+  response = await f(request)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 49, in main
+    response=await client.get('/api/cart')
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 233, in enterprise_security_and_tracing_middleware
+    span.end(extra_attributes={"status_code": response.status_code, "duration_ms": process_time * 1000})
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 233, in end
+    logger.info(
+Message: "\u2705 [Tracer] [SPAN_END] name=fastapi_http_request trace_id=d8646fac5a40ef6a987cd3032f1a1b9a span_id=a9d2dddec7ff2690 duration=2805.01ms attrs={'path': '/api/cart', 'method': 'GET', 'status_code': 200, 'duration_ms': 855.1020000013523}"
+Arguments: ()
+{"case": "anonymous-no-phone-control", "http_status": 200, "count": 0}
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 51, in main
+    response=await client.get('/api/cart',headers={'x-user-phone':'9999999991'})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 193, in enterprise_security_and_tracing_middleware
+    span = TracerService.start_span(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 100, in start_span
+    return TraceSpan(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 209, in __init__
+    logger.info(
+Message: '\U0001f4e1 [Tracer] [SPAN_START] name=fastapi_http_request trace_id=9e50513b1564ca7eae423bce92f01bc0 span_id=56d3eacf33c27435 parent=None'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 51, in main
+    response=await client.get('/api/cart',headers={'x-user-phone':'9999999991'})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 233, in enterprise_security_and_tracing_middleware
+    span.end(extra_attributes={"status_code": response.status_code, "duration_ms": process_time * 1000})
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 233, in end
+    logger.info(
+Message: "\u2705 [Tracer] [SPAN_END] name=fastapi_http_request trace_id=9e50513b1564ca7eae423bce92f01bc0 span_id=56d3eacf33c27435 duration=528.23ms attrs={'path': '/api/cart', 'method': 'GET', 'status_code': 200, 'duration_ms': 523.3846000046469}"
+Arguments: ()
+{"case": "anonymous-victim-phone-read", "http_status": 200, "cartId": "review-cart", "items": [{"productId": "prod_1", "quantity": 3}]}
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 53, in main
+    response=await client.post('/api/cart',json={'userPhone':'9999999991','storeId':'review-other-store','items':[]})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1859, in post
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 193, in enterprise_security_and_tracing_middleware
+    span = TracerService.start_span(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 100, in start_span
+    return TraceSpan(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 209, in __init__
+    logger.info(
+Message: '\U0001f4e1 [Tracer] [SPAN_START] name=fastapi_http_request trace_id=2e575f6e84ab491267fcf66593d88bd0 span_id=b58828b9edcfce74 parent=None'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 53, in main
+    response=await client.post('/api/cart',json={'userPhone':'9999999991','storeId':'review-other-store','items':[]})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1859, in post
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 233, in enterprise_security_and_tracing_middleware
+    span.end(extra_attributes={"status_code": response.status_code, "duration_ms": process_time * 1000})
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 233, in end
+    logger.info(
+Message: "\u2705 [Tracer] [SPAN_END] name=fastapi_http_request trace_id=2e575f6e84ab491267fcf66593d88bd0 span_id=b58828b9edcfce74 duration=331.91ms attrs={'path': '/api/cart', 'method': 'POST', 'status_code': 200, 'duration_ms': 327.6709000347182}"
+Arguments: ()
+{"case": "anonymous-victim-phone-write", "http_status": 200, "remaining_items": 0, "assignedStoreId": "review-other-store"}
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 59, in main
+    response=await client.post('/api/cart',headers={'x-guest-id':'review-new-guest'},json={'items':[{'productId':'prod_1_Small','selectedVariant':'Small','quantity':1}]})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1859, in post
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 193, in enterprise_security_and_tracing_middleware
+    span = TracerService.start_span(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 100, in start_span
+    return TraceSpan(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 209, in __init__
+    logger.info(
+Message: '\U0001f4e1 [Tracer] [SPAN_START] name=fastapi_http_request trace_id=607f87c9704076b5559723920a429f0a span_id=3c573f962ae79f38 parent=None'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 59, in main
+    response=await client.post('/api/cart',headers={'x-guest-id':'review-new-guest'},json={'items':[{'productId':'prod_1_Small','selectedVariant':'Small','quantity':1}]})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1859, in post
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 233, in enterprise_security_and_tracing_middleware
+    span.end(extra_attributes={"status_code": response.status_code, "duration_ms": process_time * 1000})
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 233, in end
+    logger.info(
+Message: "\u2705 [Tracer] [SPAN_END] name=fastapi_http_request trace_id=607f87c9704076b5559723920a429f0a span_id=3c573f962ae79f38 duration=59.65ms attrs={'path': '/api/cart', 'method': 'POST', 'status_code': 200, 'duration_ms': 55.64269999740645}"
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 60, in main
+    loaded=await client.get('/api/cart',headers={'x-guest-id':'review-new-guest'})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 193, in enterprise_security_and_tracing_middleware
+    span = TracerService.start_span(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 100, in start_span
+    return TraceSpan(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 209, in __init__
+    logger.info(
+Message: '\U0001f4e1 [Tracer] [SPAN_START] name=fastapi_http_request trace_id=9222b4b24ff7e9559be1932bbe3cc857 span_id=1301641cf314ef3b parent=None'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 60, in main
+    loaded=await client.get('/api/cart',headers={'x-guest-id':'review-new-guest'})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 233, in enterprise_security_and_tracing_middleware
+    span.end(extra_attributes={"status_code": response.status_code, "duration_ms": process_time * 1000})
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 233, in end
+    logger.info(
+Message: "\u2705 [Tracer] [SPAN_END] name=fastapi_http_request trace_id=9222b4b24ff7e9559be1932bbe3cc857 span_id=1301641cf314ef3b duration=17.23ms attrs={'path': '/api/cart', 'method': 'GET', 'status_code': 200, 'duration_ms': 11.518699990119785}"
+Arguments: ()
+{"case": "encoded-cart-overlapping-product", "http_status": 200, "items": [{"productId": "prod", "variant": "Small", "quantity": 1}]}
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 62, in main
+    response=await client.post('/api/cart',headers={'x-guest-id':'review-new-guest'},json={'items':[{'productId':'prod_1','selectedVariant':'Small','quantity':1}]})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1859, in post
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 193, in enterprise_security_and_tracing_middleware
+    span = TracerService.start_span(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 100, in start_span
+    return TraceSpan(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 209, in __init__
+    logger.info(
+Message: '\U0001f4e1 [Tracer] [SPAN_START] name=fastapi_http_request trace_id=d99b4cc53e2f067504774e7ab9a9f097 span_id=b127d36d13d3cc00 parent=None'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 62, in main
+    response=await client.post('/api/cart',headers={'x-guest-id':'review-new-guest'},json={'items':[{'productId':'prod_1','selectedVariant':'Small','quantity':1}]})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1859, in post
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 233, in enterprise_security_and_tracing_middleware
+    span.end(extra_attributes={"status_code": response.status_code, "duration_ms": process_time * 1000})
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 233, in end
+    logger.info(
+Message: "\u2705 [Tracer] [SPAN_END] name=fastapi_http_request trace_id=d99b4cc53e2f067504774e7ab9a9f097 span_id=b127d36d13d3cc00 duration=23.26ms attrs={'path': '/api/cart', 'method': 'POST', 'status_code': 200, 'duration_ms': 18.84299999801442}"
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 63, in main
+    loaded=await client.get('/api/cart',headers={'x-guest-id':'review-new-guest'})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 193, in enterprise_security_and_tracing_middleware
+    span = TracerService.start_span(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 100, in start_span
+    return TraceSpan(
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 209, in __init__
+    logger.info(
+Message: '\U0001f4e1 [Tracer] [SPAN_START] name=fastapi_http_request trace_id=632bcd1f3cbc4b48dd0b7630b2b62f0d span_id=497ea9b58e50edc7 parent=None'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 56: character maps to <undefined>
+Call stack:
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 68, in <module>
+    asyncio.run(main())
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\base_events.py", line 2057, in _run_once
+    handle._run()
+  File "C:\Users\Sooraj\AppData\Local\Programs\Python\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\Fastkirana\docs\verification\cart_security_recheck_2026_10_19.py", line 63, in main
+    loaded=await client.get('/api/cart',headers={'x-guest-id':'review-new-guest'})
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1768, in get
+    return await self.request(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\httpx\_transports\asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Fastkirana\fastapi-backend\venv\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\Fastkirana\fastapi-backend\main.py", line 233, in enterprise_security_and_tracing_middleware
+    span.end(extra_attributes={"status_code": response.status_code, "duration_ms": process_time * 1000})
+  File "D:\Fastkirana\fastapi-backend\services\tracer_service.py", line 233, in end
+    logger.info(
+Message: "\u2705 [Tracer] [SPAN_END] name=fastapi_http_request trace_id=632bcd1f3cbc4b48dd0b7630b2b62f0d span_id=497ea9b58e50edc7 duration=15.71ms attrs={'path': '/api/cart', 'method': 'GET', 'status_code': 200, 'duration_ms': 12.137499987147748}"
+Arguments: ()
+{"case": "exact-cart-product-control", "http_status": 200, "items": [{"productId": "prod_1", "variant": "Small", "quantity": 1}]}

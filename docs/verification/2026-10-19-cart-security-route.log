@@ -1,0 +1,5 @@
+{"case": "anonymous-no-phone-control", "http_status": 200, "count": 0}
+{"case": "anonymous-victim-phone-read", "http_status": 200, "cartId": "review-cart", "items": [{"productId": "prod_1", "quantity": 3}]}
+{"case": "anonymous-victim-phone-write", "http_status": 200, "remaining_items": 0, "assignedStoreId": "review-other-store"}
+{"case": "encoded-cart-overlapping-product", "http_status": 200, "items": [{"productId": "prod", "variant": "Small", "quantity": 1}]}
+{"case": "exact-cart-product-control", "http_status": 200, "items": [{"productId": "prod_1", "variant": "Small", "quantity": 1}]}

@@ -1,0 +1,56 @@
+{
+  "review": "2026-10-19 revision 6",
+  "head": "66b1f4a93bb4619eee472943674ecd9c964e8343",
+  "includes_uncommitted_changes": true,
+  "offline_test_sha256": "131DBA2B542D4FD7088AFEB32F91BC4EB0218EE4C8BAF8211FAF127778461CFC",
+  "source_stability": {
+    "core_changed": [],
+    "flutter_changed": [],
+    "core_files": 15,
+    "flutter_files": 379
+  },
+  "offline_runs": [
+    {
+      "attempt": 1,
+      "passed": 7,
+      "exit_code": 0,
+      "completed": true,
+      "log": "2026-10-19-r6-offline-1.log"
+    },
+    {
+      "attempt": 2,
+      "passed": 7,
+      "exit_code": 0,
+      "completed": true,
+      "log": "2026-10-19-r6-offline-2.log"
+    },
+    {
+      "attempt": 3,
+      "passed": 7,
+      "exit_code": 0,
+      "completed": true,
+      "log": "2026-10-19-r6-offline-3.log"
+    }
+  ],
+  "delayed_probe": {
+    "exit_code": 0,
+    "injected_offline_delay_ms": 650,
+    "selected_cases": 2,
+    "passed": 2,
+    "completed": true
+  },
+  "dart_analysis": {
+    "log": "2026-10-19-r6-dart-analysis.log",
+    "files": 7,
+    "issues": 0,
+    "exit_code": 0
+  },
+  "r5_fixed_wait_note": "Closed for the reported offline/recovery cases: explicit rejection signal replaces 450ms wait; both cases pass with 650ms injected offline request delay",
+  "historical_r4": {
+    "flutter_passed": 306,
+    "rerun_this_revision": false,
+    "python_passed": 240
+  },
+  "application_source_edited_by_review": false,
+  "temporary_probe_removed": true
+}

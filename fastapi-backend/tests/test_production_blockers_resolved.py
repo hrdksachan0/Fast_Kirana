@@ -2516,4 +2516,125 @@ async def test_variant_blank_and_invalid_selection_controls():
         assert inv.stock == 1
 
 
+@pytest.mark.asyncio
+async def test_cart_sync_mixed_invalid_rejection_and_preservation():
+    """Verify that cart sync strictly validates all items before modifying DB.
+    1. A valid sync (prod_1 x 3) succeeds.
+    2. A mixed sync with valid (prod_1 x 1) + nonexistent item returns 400 and preserves prod_1 x 3 untouched.
+    3. A mixed sync with blank productId returns 400 and preserves prod_1 x 3 untouched.
+    4. An all-invalid sync returns 400 and preserves prod_1 x 3 untouched.
+    5. An explicit empty list sync returns 200 and clears the cart."""
+    import uuid
+    from models import Product, Cart, CartItem
+
+    async with TestingSessionLocal() as db:
+        user_id = f"usr_cart_test_{uuid.uuid4().hex[:8]}"
+        test_user = User(
+            id=user_id,
+            email=f"{user_id}@test.com",
+            role="USER",
+            phone="9876543210",
+            isBlocked=False,
+        )
+        p1_id = f"prod_cart_{uuid.uuid4().hex[:6]}"
+        p1 = Product(
+            id=p1_id,
+            name="Test Milk",
+            slug=f"milk-{p1_id}",
+            mrp=40.0,
+            price=35.0,
+            unit="1L",
+            stock=100,
+        )
+        db.add(test_user)
+        db.add(p1)
+        await db.commit()
+
+    token = create_access_token({"id": user_id, "role": "USER"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Initial valid cart sync with p1 (quantity 3)
+    resp = client.post(
+        "/api/cart",
+        headers=headers,
+        json={"items": [{"productId": p1_id, "quantity": 3}]},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["itemCount"] == 1
+
+    # Verify cart has p1 x 3
+    get_resp = client.get("/api/cart", headers=headers)
+    assert get_resp.status_code == 200
+    cart_data = get_resp.json()
+    assert len(cart_data["items"]) == 1
+    assert cart_data["items"][0]["productId"] == p1_id
+    assert cart_data["items"][0]["quantity"] == 3
+
+    # 2. Mixed sync: valid p1 (quantity 1) + nonexistent product
+    mixed_resp = client.post(
+        "/api/cart",
+        headers=headers,
+        json={
+            "items": [
+                {"productId": p1_id, "quantity": 1},
+                {"productId": "nonexistent_prod_999", "quantity": 1},
+            ]
+        },
+    )
+    assert mixed_resp.status_code == 400
+    assert "could not be resolved" in mixed_resp.json()["detail"]
+
+    # Verify original cart is completely preserved (NOT partially overwritten)
+    get_resp = client.get("/api/cart", headers=headers)
+    assert get_resp.status_code == 200
+    cart_data = get_resp.json()
+    assert len(cart_data["items"]) == 1
+    assert cart_data["items"][0]["productId"] == p1_id
+    assert cart_data["items"][0]["quantity"] == 3, "Cart must preserve original quantity 3 and NOT partially commit!"
+
+    # 3. Blank productId sync
+    blank_resp = client.post(
+        "/api/cart",
+        headers=headers,
+        json={
+            "items": [
+                {"productId": p1_id, "quantity": 1},
+                {"productId": "", "quantity": 1},
+            ]
+        },
+    )
+    assert blank_resp.status_code == 400
+    assert "productId cannot be blank" in blank_resp.json()["detail"]
+
+    # Verify original cart still preserved
+    get_resp = client.get("/api/cart", headers=headers)
+    assert get_resp.json()["items"][0]["quantity"] == 3
+
+    # 4. All invalid sync
+    invalid_resp = client.post(
+        "/api/cart",
+        headers=headers,
+        json={"items": [{"productId": "unknown_item_xyz", "quantity": 2}]},
+    )
+    assert invalid_resp.status_code == 400
+
+    # Verify original cart still preserved
+    get_resp = client.get("/api/cart", headers=headers)
+    assert get_resp.json()["items"][0]["quantity"] == 3
+
+    # 5. Explicit empty list sync (client clearing cart)
+    clear_resp = client.post(
+        "/api/cart",
+        headers=headers,
+        json={"items": []},
+    )
+    assert clear_resp.status_code == 200
+    assert clear_resp.json()["itemCount"] == 0
+
+    # Verify cart is now empty
+    get_resp = client.get("/api/cart", headers=headers)
+    assert len(get_resp.json()["items"]) == 0
+
+
+
 

@@ -1,0 +1,51 @@
+{
+  "review": "2026-10-19 revision 5",
+  "head": "66b1f4a93bb4619eee472943674ecd9c964e8343",
+  "changed_flutter_files_since_r4": [
+    "test/unit/offline_cart_sync_test.dart"
+  ],
+  "offline_test_sha256": "260CCDDE95556AE119F196F2F812F3037615E31036CA147C1E1FF029D22254CA",
+  "offline_test_last_write": "2026-10-19T19:02:09.4442403+05:30",
+  "offline_runs": [
+    {
+      "attempt": 1,
+      "exit_code": 0,
+      "completed": true,
+      "passed": 7,
+      "log": "2026-10-19-r5-offline-1.log"
+    },
+    {
+      "attempt": 2,
+      "exit_code": 0,
+      "completed": true,
+      "passed": 7,
+      "log": "2026-10-19-r5-offline-2.log"
+    },
+    {
+      "attempt": 3,
+      "exit_code": 0,
+      "completed": true,
+      "passed": 7,
+      "log": "2026-10-19-r5-offline-3.log"
+    }
+  ],
+  "dart_analysis": {
+    "files": 7,
+    "exit_code": 0,
+    "issues": 0,
+    "log": "2026-10-19-r5-dart-analysis.log"
+  },
+  "graph": {
+    "parsed": true,
+    "nodes": 12930,
+    "links": 23149,
+    "source_freshness_certified": false
+  },
+  "historical_r4": {
+    "rerun_this_revision": false,
+    "python_passed": 240,
+    "flutter_passed": 306
+  },
+  "remaining_note": "450ms plus pumpEventQueue does not establish completion of an asynchronous offline attempt; exact cause of the previous extra POST remains unproven",
+  "source_edited_by_review": false
+}

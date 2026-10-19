@@ -55,10 +55,24 @@ final dioProvider = Provider<Dio>((ref) {
           options.headers['Authorization'] = 'Bearer $token';
         }
 
+        final prefs = await SharedPreferences.getInstance();
+
         // ─── Hub Isolation: Automatically inject active darkstore hub ID ──
-        if (AppConfig.darkstoreId.isNotEmpty) {
-          options.headers.putIfAbsent('x-store-id', () => AppConfig.darkstoreId);
+        final dynamicStoreId = prefs.getString('selected_hub_id') ?? prefs.getString('selected_store_id');
+        final effectiveStoreId = (dynamicStoreId != null && dynamicStoreId.isNotEmpty)
+            ? dynamicStoreId
+            : AppConfig.darkstoreId;
+        if (effectiveStoreId.isNotEmpty) {
+          options.headers.putIfAbsent('x-store-id', () => effectiveStoreId);
         }
+
+        // Guest Shopper device-level ID for cart sync & live cart tracking
+        var guestId = prefs.getString('fastkirana_guest_id');
+        if (guestId == null || guestId.isEmpty) {
+          guestId = 'g_app_${DateTime.now().millisecondsSinceEpoch}_${(1000 + DateTime.now().microsecond % 9000)}';
+          await prefs.setString('fastkirana_guest_id', guestId);
+        }
+        options.headers.putIfAbsent('x-guest-id', () => guestId);
 
         final isAuthRoute = options.path.contains('/api/auth');
         final isPublicGetRoute = kIsWeb &&
@@ -70,7 +84,6 @@ final dioProvider = Provider<Dio>((ref) {
         if (!isAuthRoute && !isPublicGetRoute) {
           var session = SecureStorage.cachedUserSession;
           if (session == null) {
-            final prefs = await SharedPreferences.getInstance();
             final uid = prefs.getString('user_id');
             if (uid != null && uid.isNotEmpty) {
               session = UserSession(
@@ -88,14 +101,14 @@ final dioProvider = Provider<Dio>((ref) {
               options.headers.putIfAbsent(headerKey, () => headerValue);
             });
           } else {
-            // Guest Shopper device-level ID for cart sync & live cart tracking
-            final prefs = await SharedPreferences.getInstance();
-            var guestId = prefs.getString('fastkirana_guest_id');
-            if (guestId == null || guestId.isEmpty) {
-              guestId = 'g_app_${DateTime.now().millisecondsSinceEpoch}_${(1000 + DateTime.now().microsecond % 9000)}';
-              await prefs.setString('fastkirana_guest_id', guestId);
+            final savedPhone = prefs.getString('user_phone');
+            if (savedPhone != null && savedPhone.isNotEmpty) {
+              options.headers.putIfAbsent('x-user-phone', () => savedPhone);
             }
-            options.headers.putIfAbsent('x-guest-id', () => guestId);
+            final savedName = prefs.getString('user_name');
+            if (savedName != null && savedName.isNotEmpty) {
+              options.headers.putIfAbsent('x-user-name', () => savedName);
+            }
           }
         }
 

@@ -1,6 +1,6 @@
 # FastKirana — combined Antigravity handoff and independent recheck
 
-> Latest review: [17 October revision 5, f04f2a81 plus uncommitted fixes](D:/Fastkirana/docs/INDEPENDENT_COMBINED_RECHECK_2026-10-17_R5.md). Use its updated closures, findings and test results. The snapshot below is historical.
+> Latest review: [19 October revision 6, offline-cart timing follow-up closed](D:/Fastkirana/docs/INDEPENDENT_COMBINED_RECHECK_2026-10-19_R6.md). Three targeted runs and the independent delayed-request probe pass. Use [revision 4](D:/Fastkirana/docs/INDEPENDENT_COMBINED_RECHECK_2026-10-19_R4.md) for broader closures and full-suite results. The snapshot below is historical.
 
 **Updated: 17 October 2026 · Reviewed commit: `e64a096f`**
 

@@ -1,0 +1,17 @@
+{
+  "reason": "Checkout controller changed externally during verification; replace mixed-source run with a fresh snapshot run",
+  "completed": false,
+  "owned_root": 10984,
+  "owned_command": "\"C:\\Program Files\\PowerShell\\7\\pwsh.exe\" -NoProfile -Command \"try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}\nif (Test-Path test/_independent_recheck_20261019_r4_test.dart) { throw 'Focused probe not removed' }; & C:/src/flutter/bin/flutter.bat test --no-pub --no-enable-impeller --concurrency=1 --reporter expanded *> ../docs/verification/2026-10-19-r4-flutter.log; $reviewExit=$LASTEXITCODE; Get-Content ../docs/verification/2026-10-19-r4-flutter.log -Tail 16; exit $reviewExit\"",
+  "stopped_process_ids": [
+    10984,
+    6524,
+    17308,
+    12716,
+    14780,
+    20528,
+    4560
+  ],
+  "last_progress": "03:02 +147: loading D:/Fastkirana/fastkirana_flutter/test/unit/fcm_token_test.dart",
+  "recorded_at": "2026-10-19T18:43:17.1240913+05:30"
+}

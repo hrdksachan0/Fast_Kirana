@@ -1853,7 +1853,7 @@ async def admin_get_settings(
     return {"settings": {s.key: s.value for s in settings}}
 
 
-@router.patch("/settings")
+@router.api_route("/settings", methods=["PATCH", "POST"])
 async def admin_update_settings(
     data: Dict[str, Any] = Body(...),
     current_admin: dict = Depends(require_admin),

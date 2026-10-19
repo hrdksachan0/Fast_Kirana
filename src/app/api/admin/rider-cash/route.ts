@@ -14,8 +14,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
+    const now = new Date()
+    const istOffsetMs = 5.5 * 60 * 60 * 1000
+    const istNow = new Date(now.getTime() + istOffsetMs)
+    istNow.setUTCHours(0, 0, 0, 0)
+    const todayStart = new Date(istNow.getTime() - istOffsetMs)
 
     const { searchParams } = new URL(request.url)
     const storeId = getEffectiveStoreId(session, searchParams.get('storeId'))
@@ -182,6 +185,9 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    const totalOrdersDeliveredToday = ridersWithWallets.reduce((sum, r) => sum + r.todayTotalOrdersCount, 0)
+    const totalDeliveredMoneyToday = ridersWithWallets.reduce((sum, r) => sum + r.todayTotalDeliveredMoney, 0)
+
     return NextResponse.json({
       riders: ridersWithWallets,
       summary: {
@@ -190,7 +196,9 @@ export async function GET(request: NextRequest) {
         counterCashToday,
         totalCashDepositedToday,
         pendingRiderCash,
-        activeRidersCount: ridersWithWallets.length
+        activeRidersCount: ridersWithWallets.length,
+        totalOrdersDeliveredToday,
+        totalDeliveredMoneyToday
       },
       recentDeposits: recentDeposits.map((d: any) => ({
         id: d.id,

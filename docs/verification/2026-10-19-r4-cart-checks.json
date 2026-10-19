@@ -1,0 +1,10 @@
+{
+  "phone_read_denied": true,
+  "victim_store_unchanged": true,
+  "mixed_invalid_rejected": true,
+  "mixed_cart_preserved": true,
+  "unknown_rejected": true,
+  "encoded_product_preserved": true,
+  "exact_item_prefix_preserved": true,
+  "explicit_clear_works": true
+}

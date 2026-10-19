@@ -47,60 +47,113 @@ class _AdminStatsGridState extends State<AdminStatsGrid> {
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.green50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(Icons.analytics_outlined, size: 14, color: AppDesignSystem.emerald600),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'DAILY OVERVIEW',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 10.5),
-                      fontWeight: FontWeight.w900,
-                      color: AppDesignSystem.slate500,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  if (_isCollapsed) ...[
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '₹${widget.displayTodaySales.toInt()} • ${widget.displayTodayOrdersCount} orders • ${widget.displayActiveOrderCount} live',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
-                          fontWeight: FontWeight.w700,
-                          color: AppDesignSystem.slate700,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ] else
-                    const Spacer(),
                   Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppDesignSystem.green50,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(Icons.analytics_outlined, size: 14, color: AppDesignSystem.emerald600),
+                      ),
+                      const SizedBox(width: 8),
                       Text(
-                        _isCollapsed ? 'Show Stats' : 'Hide Stats',
+                        'DAILY OVERVIEW',
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 10.5),
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w900,
                           color: AppDesignSystem.slate500,
+                          letterSpacing: 0.8,
                         ),
                       ),
-                      const SizedBox(width: 2),
-                      Icon(
-                        _isCollapsed ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
-                        size: 18,
-                        color: AppDesignSystem.slate500,
+                      const Spacer(),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _isCollapsed ? 'Show Stats' : 'Hide Stats',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w700,
+                              color: AppDesignSystem.slate500,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            _isCollapsed ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
+                            size: 18,
+                            color: AppDesignSystem.slate500,
+                          ),
+                        ],
                       ),
                     ],
                   ),
+                  if (_isCollapsed) ...[
+                    const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 2),
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          Text(
+                            '₹${widget.displayTodaySales.toInt()}',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 13),
+                              fontWeight: FontWeight.w900,
+                              color: AppDesignSystem.slate900,
+                            ),
+                          ),
+                          Container(
+                            width: 3.5,
+                            height: 3.5,
+                            decoration: const BoxDecoration(
+                              color: AppDesignSystem.slate400,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Text(
+                            '${widget.displayTodayOrdersCount} orders',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
+                              fontWeight: FontWeight.w700,
+                              color: AppDesignSystem.slate700,
+                            ),
+                          ),
+                          Container(
+                            width: 3.5,
+                            height: 3.5,
+                            decoration: const BoxDecoration(
+                              color: AppDesignSystem.slate400,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: AppDesignSystem.green50,
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(color: AppDesignSystem.emerald600.withValues(alpha: 0.2)),
+                            ),
+                            child: Text(
+                              '${widget.displayActiveOrderCount} live',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                fontWeight: FontWeight.w800,
+                                color: AppDesignSystem.emerald700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

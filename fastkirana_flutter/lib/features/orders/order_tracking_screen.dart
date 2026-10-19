@@ -1341,10 +1341,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final isPaid = _order?.paymentStatus == 'PAID';
     final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
     final cleanDisplayId = '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}';
-    final canCancel = (_order?.status == OrderStatus.pending || _order?.status == OrderStatus.adminPending) &&
+    final canCancel = (_order?.status == OrderStatus.adminPending) &&
         !isCancelled &&
         !isDelivered &&
-        (_order?.subOrders?.every((s) => s.status == OrderStatus.pending || s.status == OrderStatus.adminPending) ?? true);
+        (_order?.subOrders?.every((s) => s.status == OrderStatus.adminPending) ?? true);
 
     final initialTarget = _riderPosition ?? _storePosition ?? LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
 

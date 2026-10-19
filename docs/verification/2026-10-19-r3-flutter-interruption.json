@@ -1,0 +1,17 @@
+{
+  "reason": "Full serial suite stalled on Brief network drop connectivity test teardown",
+  "last_reported_pass_count": 99,
+  "stall_seconds_before_stop": 114.1,
+  "completed": false,
+  "stopped_owned_process_ids": [
+    15488,
+    2652,
+    13260,
+    16292,
+    7188,
+    11780,
+    9592,
+    14080,
+    10864
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "focused_exit_code": 0,
+  "offline_reruns": [
+    {
+      "attempt": 1,
+      "exit_code": 0
+    },
+    {
+      "attempt": 2,
+      "exit_code": 0
+    }
+  ]
+}

@@ -62,21 +62,21 @@ class _CheckoutPlacingOrderOverlayState extends State<CheckoutPlacingOrderOverla
       CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
     );
 
-    // Progress bar fill animation
+    // Progress bar fill animation - snappier progression (1.2s instead of 2.4s)
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2400),
+      duration: const Duration(milliseconds: 1200),
     )..forward();
 
-    _progressAnimation = Tween<double>(begin: 0.15, end: 0.92).animate(
-      CurvedAnimation(parent: _progressController, curve: Curves.easeInOutCubic),
+    _progressAnimation = Tween<double>(begin: 0.15, end: 0.95).animate(
+      CurvedAnimation(parent: _progressController, curve: Curves.easeOutCubic),
     );
 
-    // Step switching timer
-    Future.delayed(const Duration(milliseconds: 800), () {
+    // Step switching timer - snappy Zepto style milestones
+    Future.delayed(const Duration(milliseconds: 350), () {
       if (mounted) setState(() => _currentStep = 1);
     });
-    Future.delayed(const Duration(milliseconds: 1700), () {
+    Future.delayed(const Duration(milliseconds: 750), () {
       if (mounted) setState(() => _currentStep = 2);
     });
   }

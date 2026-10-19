@@ -755,11 +755,18 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
     }
 
     try {
-      await ref.read(dioProvider).post('/api/admin/settings', data: {
+      await ref.read(dioProvider).patch('/api/admin/settings', data: {
         'storeId': currentHub.id,
         'grocery_mart_open': val.toString(),
       });
-    } catch (_) {}
+    } catch (_) {
+      try {
+        await ref.read(dioProvider).post('/api/admin/settings', data: {
+          'storeId': currentHub.id,
+          'grocery_mart_open': val.toString(),
+        });
+      } catch (_) {}
+    }
 
     ref.invalidate(storeSettingsProvider);
   }
@@ -795,12 +802,21 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
         'isOpen': val,
       });
       if (val) {
-        await ref.read(dioProvider).post('/api/admin/settings', data: {
+        await ref.read(dioProvider).patch('/api/admin/settings', data: {
           'restaurantOpen': true,
           'cafeOpen': true,
         });
       }
-    } catch (_) {}
+    } catch (_) {
+      try {
+        if (val) {
+          await ref.read(dioProvider).post('/api/admin/settings', data: {
+            'restaurantOpen': true,
+            'cafeOpen': true,
+          });
+        }
+      } catch (_) {}
+    }
 
     ref.invalidate(restaurantsProvider);
     ref.invalidate(storeSettingsProvider);
@@ -851,12 +867,20 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
     }
 
     try {
-      await ref.read(dioProvider).post('/api/admin/settings', data: {
+      await ref.read(dioProvider).patch('/api/admin/settings', data: {
         'storeId': currentHub.id,
         'global_store_open': val.toString(),
         'grocery_mart_open': val.toString(),
       });
-    } catch (_) {}
+    } catch (_) {
+      try {
+        await ref.read(dioProvider).post('/api/admin/settings', data: {
+          'storeId': currentHub.id,
+          'global_store_open': val.toString(),
+          'grocery_mart_open': val.toString(),
+        });
+      } catch (_) {}
+    }
 
     ref.invalidate(storeSettingsProvider);
     ref.invalidate(restaurantsProvider);
@@ -893,43 +917,55 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
 
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+            padding: const EdgeInsets.fromLTRB(16, 8, 12, 12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(12),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.storefront_rounded, color: Color(0xFF2563EB), size: 22),
                       ),
-                      child: const Icon(Icons.storefront_rounded, color: Color(0xFF2563EB), size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Store & Outlet Operations',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 16),
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF0F172A),
-                          ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Store & Outlet Operations',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 15),
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF0F172A),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Control live ordering for Mart & Restaurants',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                color: const Color(0xFF64748B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        Text(
-                          'Control live ordering for Mart & Restaurants',
-                          style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: const Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
                   onPressed: () => Navigator.pop(context),
+                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
@@ -983,62 +1019,68 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    '🚨 Master Hub Switch',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 14),
-                                      fontWeight: FontWeight.w900,
-                                      color: isStoreManager ? const Color(0xFF64748B) : const Color(0xFF0F172A),
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              runSpacing: 2,
+                              children: [
+                                Text(
+                                  '🚨 Master Hub Switch',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 13.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: isStoreManager ? const Color(0xFF64748B) : const Color(0xFF0F172A),
+                                  ),
+                                ),
+                                if (isStoreManager)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE2E8F0),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Super Admin 🔒',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF475569),
+                                      ),
                                     ),
                                   ),
-                                  if (isStoreManager) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFE2E8F0),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        'Super Admin 🔒',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF475569),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              isStoreManager
+                                  ? 'Platform-wide emergency switch is restricted to Super Admin HQ'
+                                  : (_masterOpen
+                                      ? 'All customer ordering is active'
+                                      : 'Emergency: Entire store & all outlets paused'),
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: FontWeight.w600,
+                                color: isStoreManager
+                                    ? const Color(0xFF64748B)
+                                    : (_masterOpen ? const Color(0xFF15803D) : const Color(0xFFB91C1C)),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                isStoreManager
-                                    ? 'Platform-wide emergency switch is restricted to Super Admin HQ'
-                                    : (_masterOpen
-                                        ? 'All customer ordering is active'
-                                        : 'Emergency: Entire store & all outlets paused'),
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11),
-                                  fontWeight: FontWeight.w600,
-                                  color: isStoreManager
-                                      ? const Color(0xFF64748B)
-                                      : (_masterOpen ? const Color(0xFF15803D) : const Color(0xFFB91C1C)),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        Switch(
+                      ),
+                      const SizedBox(width: 8),
+                      Transform.scale(
+                        scale: 0.88,
+                        child: Switch(
                           value: isStoreManager ? false : _masterOpen,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           activeThumbColor: const Color(0xFF16A34A),
                           activeTrackColor: const Color(0xFFDCFCE7),
                           inactiveThumbColor: const Color(0xFF94A3B8),
                           inactiveTrackColor: const Color(0xFFE2E8F0),
                           onChanged: isStoreManager ? null : _updateMaster,
                         ),
+                      ),
                       ],
                     ),
                   ),
@@ -1180,7 +1222,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
     VoidCallback? onPause,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -1199,85 +1241,106 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
             ),
             child: Icon(icon, color: iconColor, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // Line 1: Outlet title (Full unconstrained width)
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 13),
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF0F172A),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                // Line 2: Status pill + Subtitle
                 Row(
                   children: [
-                    Flexible(
-                      child: Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13.5),
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                       decoration: BoxDecoration(
                         color: isOpen ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
-                        borderRadius: BorderRadius.circular(5),
+                        borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         isOpen ? 'OPEN' : 'CLOSED',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9),
+                          fontSize: Responsive.scaledFontSize(context, 8.5),
                           fontWeight: FontWeight.w900,
                           color: isOpen ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                         ),
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        subtitle,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          color: const Color(0xFF64748B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 11),
-                    color: const Color(0xFF64748B),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          if (onPause != null && isOpen) ...[
-            GestureDetector(
-              onTap: onPause,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFFDE68A)),
+          const SizedBox(width: 8),
+          // Actions: Pause button + Switch
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (onPause != null && isOpen) ...[
+                GestureDetector(
+                  onTap: onPause,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.pause_circle_outlined, size: 13, color: Color(0xFFD97706)),
+                        const SizedBox(width: 3),
+                        Text(
+                          'Pause',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFD97706),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.pause_circle_outlined, size: 14, color: Color(0xFFD97706)),
-                    const SizedBox(width: 4),
-                    Text('Pause', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFFD97706))),
-                  ],
+                const SizedBox(width: 4),
+              ],
+              Transform.scale(
+                scale: 0.85,
+                child: Switch(
+                  value: isOpen,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  activeThumbColor: const Color(0xFF16A34A),
+                  activeTrackColor: const Color(0xFFDCFCE7),
+                  inactiveThumbColor: const Color(0xFF94A3B8),
+                  inactiveTrackColor: const Color(0xFFE2E8F0),
+                  onChanged: onChanged,
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Switch(
-            value: isOpen,
-            activeThumbColor: const Color(0xFF16A34A),
-            activeTrackColor: const Color(0xFFDCFCE7),
-            inactiveThumbColor: const Color(0xFF94A3B8),
-            inactiveTrackColor: const Color(0xFFE2E8F0),
-            onChanged: onChanged,
+            ],
           ),
         ],
       ),

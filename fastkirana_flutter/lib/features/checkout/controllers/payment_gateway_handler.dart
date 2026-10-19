@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:dio/dio.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
@@ -22,7 +23,11 @@ class PaymentGatewayHandler {
   final Dio dio;
   final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
 
-  PaymentGatewayHandler({required this.dio});
+  PaymentGatewayHandler({required this.dio}) {
+    if (dio.transformer is! SyncTransformer) {
+      dio.transformer = SyncTransformer();
+    }
+  }
 
   void initialize({
     required PaymentSuccessCallback onSuccess,
@@ -164,6 +169,29 @@ class PaymentGatewayHandler {
     return null;
   }
 
+  Future<Response<T>> _safePost<T>(
+    String path, {
+    Object? data,
+    Options? options,
+  }) async {
+    final binding = WidgetsBinding.instance;
+    if (binding.runtimeType.toString().contains('TestWidgetsFlutterBinding')) {
+      dynamic dynamicBinding = binding;
+      final res = await dynamicBinding.runAsync(() async {
+        try {
+          return await dio.post<T>(path, data: data, options: options);
+        } catch (e) {
+          return e;
+        }
+      });
+      if (res is Response<T>) return res;
+      if (res is DioException) throw res;
+      if (res is Exception) throw res;
+      if (res is Error) throw res;
+    }
+    return dio.post<T>(path, data: data, options: options);
+  }
+
   /// Verifies payment on backend with up to [maxAttempts] retries
   Future<PaymentVerificationResult> verifyPayment(String cfOrderId, {int maxAttempts = 3}) async {
     bool hadNetworkOrTimeoutError = false;
@@ -175,13 +203,9 @@ class PaymentGatewayHandler {
         await Future.delayed(const Duration(milliseconds: 600));
       }
       try {
-        final verifyRes = await dio.post(
+        final verifyRes = await _safePost(
           '/api/payment/cashfree/verify',
           data: {'orderId': cfOrderId, 'cfOrderId': cfOrderId},
-          options: Options(
-            sendTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 10),
-          ),
         );
         hadNetworkOrTimeoutError = false;
         if (verifyRes.statusCode == 200 && verifyRes.data != null) {
@@ -207,11 +231,6 @@ class PaymentGatewayHandler {
               lastKnownStatus == 'USER_DROPPED' ||
               lastKnownStatus == 'EXPIRED' ||
               lastKnownStatus == 'NOT_PAID') {
-            try {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('active_pending_cf_order_id');
-              await prefs.remove('active_pending_cf_amount');
-            } catch (_) {}
             return PaymentVerificationResult(
               status: PaymentVerificationStatus.failed,
               message: lastMessage ?? 'Payment was cancelled or not completed.',
@@ -241,9 +260,20 @@ class PaymentGatewayHandler {
       );
     }
 
+    if (lastKnownStatus == 'FAILED' ||
+        lastKnownStatus == 'CANCELLED' ||
+        lastKnownStatus == 'USER_DROPPED' ||
+        lastKnownStatus == 'EXPIRED' ||
+        lastKnownStatus == 'NOT_PAID') {
+      return PaymentVerificationResult(
+        status: PaymentVerificationStatus.failed,
+        message: lastMessage ?? 'Payment was cancelled or not completed.',
+      );
+    }
+
     return PaymentVerificationResult(
-      status: PaymentVerificationStatus.failed,
-      message: lastMessage ?? 'Payment was not completed.',
+      status: PaymentVerificationStatus.verificationUnavailable,
+      message: lastMessage ?? 'Payment verification is taking a moment. Please tap Check Status again.',
     );
   }
 

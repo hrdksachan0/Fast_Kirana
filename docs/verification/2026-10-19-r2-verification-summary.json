@@ -1,0 +1,345 @@
+{
+  "review": "2026-10-19 revision 2",
+  "head": "66b1f4a93bb4619eee472943674ecd9c964e8343",
+  "includes_uncommitted_fixes": true,
+  "initial_hashes": {
+    "fastapi-backend/models.py": "6342D6D0C73BBCB0B5110BC8A7B6046D8BFA3EBDA916CC21C8AAF255FE2A1D50",
+    "fastapi-backend/routers/auth.py": "453320FF0E65F757742EDFFAD5B3168300C3B5751BFE13D2FD8F7270515CB786",
+    "fastapi-backend/routers/cart.py": "BB473ED29CE8F06F29B16DB20F20ACF4A3FC8B06F990B2CC05982C3405B55A4B",
+    "fastapi-backend/routers/cashfree_router.py": "E75A1FD54A73A0615589D613C2E8F956A3EDAC89183CCB7DB651E0F3901B29C3",
+    "fastapi-backend/routers/admin_extended.py": "D02607525FA1826B8A3D4A06342246050C88972CFB7478ADDB4E3AB5B2CF3BBA",
+    "fastapi-backend/routers/orders.py": "6E7D5EEF05367A5857B9433EC2BEC8736CF09F749C6D2E833A18AEB7637E90AB",
+    "fastapi-backend/tests/test_production_blockers_resolved.py": "0260B6D5EF9773AC4F8BFE070BC6401E9B50E5838960C3D0207456522BD0DD1D",
+    "fastkirana_flutter/lib/data/repositories/cart_repository.dart": "35298634740E042AE4D7B66FF59DCA6E88AFD7ACA168E04441D2D078637EBD57",
+    "fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart": "1A93B23D654F0705E60244FDCD08C0A230D53C6A03C978002AFDC101FFF23F88",
+    "fastkirana_flutter/lib/providers/cart_provider.dart": "BBA7E9CDC3421CC9EA97C4F70ECA512305689CF4A28AB3F9BA8C6F4830583027",
+    "fastkirana_flutter/test/unit/offline_cart_sync_test.dart": "D533A18A7757F799B867C069A15B7799FE4CE835E883A10EFDA120DAEF241B21",
+    "fastkirana_flutter/test/widgets/checkout_connectivity_guard_test.dart": "D7717E207352C67AED6A6307FC1D6BFEC1FCEF80591C40CD5B9074D24CBF2B2D"
+  },
+  "final_hashes": {
+    "fastapi-backend/models.py": "6342D6D0C73BBCB0B5110BC8A7B6046D8BFA3EBDA916CC21C8AAF255FE2A1D50",
+    "fastapi-backend/routers/auth.py": "453320FF0E65F757742EDFFAD5B3168300C3B5751BFE13D2FD8F7270515CB786",
+    "fastapi-backend/routers/cart.py": "BB473ED29CE8F06F29B16DB20F20ACF4A3FC8B06F990B2CC05982C3405B55A4B",
+    "fastapi-backend/routers/cashfree_router.py": "E75A1FD54A73A0615589D613C2E8F956A3EDAC89183CCB7DB651E0F3901B29C3",
+    "fastapi-backend/routers/admin_extended.py": "D02607525FA1826B8A3D4A06342246050C88972CFB7478ADDB4E3AB5B2CF3BBA",
+    "fastapi-backend/routers/orders.py": "6E7D5EEF05367A5857B9433EC2BEC8736CF09F749C6D2E833A18AEB7637E90AB",
+    "fastapi-backend/tests/test_production_blockers_resolved.py": "0260B6D5EF9773AC4F8BFE070BC6401E9B50E5838960C3D0207456522BD0DD1D",
+    "fastkirana_flutter/lib/data/repositories/cart_repository.dart": "35298634740E042AE4D7B66FF59DCA6E88AFD7ACA168E04441D2D078637EBD57",
+    "fastkirana_flutter/lib/features/checkout/controllers/checkout_controller.dart": "1A93B23D654F0705E60244FDCD08C0A230D53C6A03C978002AFDC101FFF23F88",
+    "fastkirana_flutter/lib/providers/cart_provider.dart": "BBA7E9CDC3421CC9EA97C4F70ECA512305689CF4A28AB3F9BA8C6F4830583027",
+    "fastkirana_flutter/test/unit/offline_cart_sync_test.dart": "D533A18A7757F799B867C069A15B7799FE4CE835E883A10EFDA120DAEF241B21",
+    "fastkirana_flutter/test/widgets/checkout_connectivity_guard_test.dart": "D7717E207352C67AED6A6307FC1D6BFEC1FCEF80591C40CD5B9074D24CBF2B2D"
+  },
+  "changed_during_review": [],
+  "monitored_files": 12,
+  "python": {
+    "collected": 239,
+    "passed": 239,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "failed_tests": [],
+    "exit_code": 0,
+    "elapsed_seconds": 202.48,
+    "initial_hashes": {
+      "routers/admin.py": "29f874dc6fde2968e47c318da59e895497ea2a0dfe78b0e14a4c13900c9a726b",
+      "routers/cart.py": "bb473ed29ce8f06f29b16db20f20acf4a3fc8b06f990b2cc05982c3405b55a4b",
+      "routers/admin_extended.py": "d02607525fa1826b8a3d4a06342246050c88972cfb7478addb4e3ab5b2cf3bba",
+      "routers/cashfree_router.py": "e75a1fd54a73a0615589d613c2e8f956a3edac89183ccb7db651e0f3901b29c3",
+      "routers/orders.py": "6e7d5eef05367a5857b9433ec2bec8736cf09f749c6d2e833a18aeb7637e90ab",
+      "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+      "routers/websockets.py": "b399760e03886ef7e17782f9d8b3fdb8ed488e5e647fcee9b157e93afce1b9cc",
+      "utils/firebase.py": "de78975dd41f4e43edef59b7405aa73ae43a4f6c8f53ee215c206fbbccd8fc54",
+      "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+      "tests/test_production_blockers_resolved.py": "0260b6d5ef9773ac4f8bfe070bc6401e9b50e5838960c3d0207456522bd0dd1d",
+      "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+    },
+    "final_hashes": {
+      "routers/admin.py": "29f874dc6fde2968e47c318da59e895497ea2a0dfe78b0e14a4c13900c9a726b",
+      "routers/cart.py": "bb473ed29ce8f06f29b16db20f20acf4a3fc8b06f990b2cc05982c3405b55a4b",
+      "routers/admin_extended.py": "d02607525fa1826b8a3d4a06342246050c88972cfb7478addb4e3ab5b2cf3bba",
+      "routers/cashfree_router.py": "e75a1fd54a73a0615589d613c2e8f956a3edac89183ccb7db651e0f3901b29c3",
+      "routers/orders.py": "6e7d5eef05367a5857b9433ec2bec8736cf09f749c6d2e833a18aeb7637e90ab",
+      "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+      "routers/websockets.py": "b399760e03886ef7e17782f9d8b3fdb8ed488e5e647fcee9b157e93afce1b9cc",
+      "utils/firebase.py": "de78975dd41f4e43edef59b7405aa73ae43a4f6c8f53ee215c206fbbccd8fc54",
+      "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+      "tests/test_production_blockers_resolved.py": "0260b6d5ef9773ac4f8bfe070bc6401e9b50e5838960c3d0207456522bd0dd1d",
+      "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+    },
+    "scope": "SQLite; dotenv disabled; dummy credentials; external network blocked; unmocked migration_full gateway/KOT suite excluded"
+  },
+  "flutter_full": {
+    "exit_code": 0,
+    "passed": 304,
+    "failed": 0,
+    "concurrency": 1
+  },
+  "dart_analysis": {
+    "exit_code": 0,
+    "files": 3,
+    "issues": 0
+  },
+  "flutter_targeted": {
+    "temporary_test_removed": true,
+    "review_assertions": 16,
+    "failed_test": "canonical product ID item_123 survives mobile cart sync",
+    "failed": 1,
+    "passed": 21,
+    "observations": [
+      {
+        "case": "second-save",
+        "throws": false,
+        "durableDraft": "first-accepted"
+      },
+      {
+        "case": "second-save",
+        "throws": true,
+        "durableDraft": "first-accepted"
+      },
+      {
+        "case": "completion-ack",
+        "persistedAck": false,
+        "journalOnly": false,
+        "starting": 3,
+        "ordered": 1,
+        "final": 2,
+        "expectedCorrect": 2,
+        "posts": 2
+      },
+      {
+        "case": "completion-ack",
+        "persistedAck": true,
+        "journalOnly": false,
+        "starting": 3,
+        "ordered": 1,
+        "final": 3,
+        "expectedCorrect": 3,
+        "posts": 1
+      },
+      {
+        "case": "completion-ack",
+        "persistedAck": false,
+        "journalOnly": true,
+        "starting": 3,
+        "ordered": 1,
+        "final": 3,
+        "expectedCorrect": 3,
+        "posts": 1
+      },
+      {
+        "case": "local-hydration",
+        "clear": false,
+        "server": [
+          "newB",
+          "oldA"
+        ],
+        "ui": [
+          "newB",
+          "oldA"
+        ],
+        "local": [
+          "newB",
+          "oldA"
+        ],
+        "pending": false
+      },
+      {
+        "case": "local-hydration",
+        "clear": true,
+        "server": [],
+        "ui": [],
+        "local": [],
+        "pending": false
+      },
+      {
+        "case": "pending-key-await",
+        "server": [
+          "oldA",
+          "newB"
+        ],
+        "ui": [
+          "oldA",
+          "newB"
+        ],
+        "pending": false,
+        "version": 1,
+        "ack": 1
+      },
+      {
+        "case": "clear-then-add-hydration",
+        "ui": [
+          "newB"
+        ],
+        "local": [
+          "newB"
+        ],
+        "server": [
+          "newB"
+        ]
+      },
+      {
+        "case": "atomic-envelope-secondary-journal-failure",
+        "starting": 1,
+        "remaining": 0,
+        "marker": true,
+        "separateJournal": null
+      },
+      {
+        "case": "atomic-envelope-secondary-journal-failure",
+        "starting": 3,
+        "remaining": 2,
+        "marker": true,
+        "separateJournal": null
+      },
+      {
+        "case": "failed-cart-envelope",
+        "ui": 3,
+        "local": 3,
+        "marker": false
+      },
+      {
+        "case": "mobile-canonical-product-id",
+        "input": "prod_1",
+        "postedProductId": "prod_1",
+        "postedVariant": null,
+        "syncSuccess": true
+      },
+      {
+        "case": "mobile-canonical-product-id",
+        "input": "sku_cow_milk",
+        "postedProductId": "sku_cow_milk",
+        "postedVariant": null,
+        "syncSuccess": true
+      },
+      {
+        "case": "mobile-canonical-product-id",
+        "input": "item_123",
+        "postedProductId": "123",
+        "postedVariant": null,
+        "syncSuccess": true
+      },
+      {
+        "case": "checkout-provider-disposal",
+        "providerDisposed": true,
+        "remaining": 2,
+        "expected": 2,
+        "appliedMarker": true,
+        "acceptedDraftCleared": true
+      }
+    ],
+    "existing_offline_tests": 6,
+    "exit_code": 1,
+    "concurrency": 1
+  },
+  "cart_asgi_sqlite": {
+    "observations": [
+      {
+        "case": "anonymous-no-phone-control",
+        "http_status": 200,
+        "count": 0
+      },
+      {
+        "case": "anonymous-victim-phone-read",
+        "http_status": 200,
+        "cartId": null,
+        "items": []
+      },
+      {
+        "case": "anonymous-victim-phone-write",
+        "http_status": 200,
+        "remaining_items": 1,
+        "assignedStoreId": null
+      },
+      {
+        "case": "encoded-cart-overlapping-product",
+        "http_status": 200,
+        "items": [
+          {
+            "productId": "prod_1",
+            "variant": "Small",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "case": "exact-cart-product-control",
+        "http_status": 200,
+        "items": [
+          {
+            "productId": "prod_1",
+            "variant": "Small",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "case": "authenticated-owner-read",
+        "http_status": 200,
+        "cartId": "review-cart",
+        "count": 1
+      },
+      {
+        "case": "all-invalid-replacement",
+        "http_status": 400,
+        "remaining": [
+          {
+            "productId": "prod_1",
+            "quantity": 3
+          }
+        ],
+        "expected_status": 400
+      },
+      {
+        "case": "mixed-invalid-replacement",
+        "http_status": 200,
+        "response": {
+          "success": true,
+          "message": "Cart synced to database successfully",
+          "itemCount": 1
+        },
+        "remaining": [
+          {
+            "productId": "prod_1",
+            "quantity": 1
+          }
+        ],
+        "expected_status": 400,
+        "expected_original_quantity": 3
+      },
+      {
+        "case": "server-exact-item-prefix-control",
+        "http_status": 200,
+        "items": [
+          {
+            "productId": "item_123",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "case": "explicit-owner-clear-control",
+        "http_status": 200,
+        "count": 0
+      }
+    ],
+    "exit_code": 0
+  },
+  "closures": [
+    "Original unauthenticated phone-based registered cart ownership bypass",
+    "Exact and encoded prod_1; mobile prod_1 and sku_cow_milk",
+    "All-invalid cart replacement rejected before delete",
+    "Updated offline and duplicate-tap widget tests"
+  ],
+  "remaining_findings": [
+    "P2 mixed valid/invalid replacement silently commits valid subset",
+    "P2 mobile strips item_ from valid canonical item_123"
+  ],
+  "production_ready_certified": false,
+  "not_fresh": [
+    "Node and TypeScript",
+    "Wider Dart analysis",
+    "Knowledge graph source coverage/rebuild"
+  ],
+  "scope": "Actual isolated SQLite and full-app ASGI; mocked Flutter HTTP/native/storage; dummy credentials/external sockets blocked; Python migration_full excluded; no source/test edits; no live PostgreSQL concurrency, device benchmarks or production actions"
+}

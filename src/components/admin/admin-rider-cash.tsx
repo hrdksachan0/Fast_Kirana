@@ -200,11 +200,27 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
 
   const [filterTab, setFilterTab] = useState<'all' | 'needs-settle' | 'free' | 'busy'>('all')
 
-  const totalDeliveredOrdersToday = riders.reduce((sum, r) => sum + (r.todayTotalOrdersCount || 0), 0)
-  const totalDeliveredMoneyToday = riders.reduce((sum, r) => sum + (r.todayTotalDeliveredMoney || 0), 0)
+  const getRiderTotalOrders = (r: RiderCashInfo) => {
+    const sum = (r.todayCodOrdersCount || 0) + (r.todayOnlineOrdersCount || 0)
+    return Math.max(r.todayTotalOrdersCount || 0, sum)
+  }
+
+  const getRiderTotalMoney = (r: RiderCashInfo) => {
+    const sum = (r.todayCodTotal || 0) + (r.todayOnlineTotal || 0)
+    return Math.max(r.todayTotalDeliveredMoney || 0, sum)
+  }
+
+  const isRiderNeedsSettle = (r: RiderCashInfo) => {
+    if (!r.cashInHand || r.cashInHand <= 0) return false
+    const limit = r.cashLimit > 0 ? r.cashLimit : 2000
+    return r.cashInHand >= limit * 0.75
+  }
+
+  const totalDeliveredOrdersToday = summary?.totalOrdersDeliveredToday ?? riders.reduce((sum, r) => sum + getRiderTotalOrders(r), 0)
+  const totalDeliveredMoneyToday = summary?.totalDeliveredMoneyToday ?? riders.reduce((sum, r) => sum + getRiderTotalMoney(r), 0)
   const busyRidersCount = riders.filter((r) => (r.activeOrdersCount || 0) > 0).length
   const freeRidersCount = riders.filter((r) => (r.activeOrdersCount || 0) === 0).length
-  const needsSettleCount = riders.filter((r) => r.cashInHand >= r.cashLimit * 0.75 || r.cashInHand >= r.cashLimit).length
+  const needsSettleCount = riders.filter(isRiderNeedsSettle).length
 
   const handleWhatsAppRider = (rider: RiderCashInfo) => {
     const cleanPhone = (rider.phone || '').replace(/\D/g, '').slice(-10)
@@ -223,7 +239,7 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
     if (!matchesSearch) return false
 
     if (filterTab === 'needs-settle') {
-      return r.cashInHand >= r.cashLimit * 0.75 || r.cashInHand >= r.cashLimit
+      return isRiderNeedsSettle(r)
     }
     if (filterTab === 'free') {
       return (r.activeOrdersCount || 0) === 0
@@ -436,10 +452,13 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredRiders.map((r) => {
-                  const percentUsed = Math.min(100, Math.round((r.cashInHand / r.cashLimit) * 100))
-                  const isLocked = r.cashInHand >= r.cashLimit
-                  const isWarning = r.cashInHand >= r.cashLimit * 0.75
+                  const riderLimit = r.cashLimit > 0 ? r.cashLimit : 2000
+                  const percentUsed = r.cashInHand > 0 ? Math.min(100, Math.round((r.cashInHand / riderLimit) * 100)) : 0
+                  const isLocked = r.cashInHand > 0 && r.cashInHand >= riderLimit
+                  const isWarning = r.cashInHand > 0 && r.cashInHand >= riderLimit * 0.75
                   const activeCount = r.activeOrdersCount || 0
+                  const riderTotalOrders = getRiderTotalOrders(r)
+                  const riderTotalMoney = getRiderTotalMoney(r)
 
                   return (
                     <tr key={r.id} className="hover:bg-muted/20 transition-colors">
@@ -492,10 +511,10 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
                             {activeCount === 0 ? '🟢 Free (0 active)' : `🟡 Busy (${activeCount} active)`}
                           </span>
                           <p className="text-[11px] font-bold text-text-primary">
-                            {r.todayTotalOrdersCount || 0} Total Deliveries
+                            {riderTotalOrders} Total Deliveries
                           </p>
                           <p className="text-[10px] text-text-muted">
-                            {r.todayCodOrdersCount} Cash • {r.todayOnlineOrdersCount || 0} Online
+                            {r.todayCodOrdersCount || 0} Cash • {r.todayOnlineOrdersCount || 0} Online
                           </p>
                         </div>
                       </td>
@@ -504,13 +523,13 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
                       <td className="py-3.5 px-4">
                         <div>
                           <p className="font-black text-sm text-text-primary">
-                            {formatPrice(r.todayTotalDeliveredMoney || 0)}
+                            {formatPrice(riderTotalMoney)}
                           </p>
                           <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">
                             📱 {formatPrice(r.todayOnlineTotal || 0)} Direct Bank
                           </p>
                           <p className="text-[9.5px] text-amber-700 dark:text-amber-400 font-semibold">
-                            💵 {formatPrice(r.todayCodTotal)} COD Collected
+                            💵 {formatPrice(r.todayCodTotal || 0)} COD Collected
                           </p>
                         </div>
                       </td>
@@ -531,7 +550,7 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
                             )}
                           </div>
                           <div className="flex justify-between text-[10px] font-bold text-text-muted">
-                            <span>{percentUsed}% of {formatPrice(r.cashLimit)} limit</span>
+                            <span>{percentUsed}% of {formatPrice(riderLimit)} limit</span>
                           </div>
                           <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                             <div

@@ -1,0 +1,14 @@
+Analyzing app_connectivity.dart, cart_repository.dart, checkout_controller.dart, payment_gateway_handler.dart, offline_cart_sync_test.dart, checkout_connectivity_guard_test.dart, debug_cancel_test.dart...
+
+   info - test\debug_cancel_test.dart:17:43 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - test\debug_cancel_test.dart:59:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - test\debug_cancel_test.dart:61:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - test\debug_cancel_test.dart:63:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - test\debug_cancel_test.dart:66:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - test\debug_cancel_test.dart:68:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - test\debug_cancel_test.dart:72:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - test\debug_cancel_test.dart:74:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - test\debug_cancel_test.dart:78:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - test\debug_cancel_test.dart:91:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+
+10 issues found.

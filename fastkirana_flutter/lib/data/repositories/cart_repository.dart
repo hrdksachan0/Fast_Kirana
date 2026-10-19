@@ -65,14 +65,32 @@ class CartRepository {
       if (items.isEmpty) {
         await dio.delete('/api/cart');
       } else {
+        final phone = prefs.getString('user_phone') ?? '';
+        final name = prefs.getString('user_name') ?? '';
+        final userId = prefs.getString('user_id') ?? '';
+        final storeId = prefs.getString('selected_hub_id') ?? prefs.getString('selected_store_id') ?? '';
+
+        final cleanItems = items.map((item) {
+          final canonicalId = (item.productId.isNotEmpty ? item.productId : item.product.id).trim();
+          final variant = (item.selectedVariant != null && item.selectedVariant!.isNotEmpty)
+              ? item.selectedVariant
+              : null;
+
+          return {
+            'productId': canonicalId,
+            'quantity': item.quantity,
+            'selectedVariant': variant,
+            'notes': item.notes,
+          };
+        }).toList();
+
         await dio.post('/api/cart', data: {
           'guestId': guestId,
-          'items': items.map((item) => {
-            'productId': item.productId,
-            'quantity': item.quantity,
-            'selectedVariant': item.selectedVariant,
-            'notes': item.notes,
-          }).toList(),
+          if (userId.isNotEmpty) 'userId': userId,
+          if (phone.isNotEmpty) 'userPhone': phone,
+          if (name.isNotEmpty) 'userName': name,
+          if (storeId.isNotEmpty) 'storeId': storeId,
+          'items': cleanItems,
         });
       }
       if (clearPendingOnSuccess) {

@@ -659,10 +659,11 @@ async def create_order(
         )
     lock_acquired = True
 
-    # Check if account is blocked
-    user_stmt = select(User).where(User.id == user_id)
-    user_res = await db.execute(user_stmt)
-    user_obj = user_res.scalars().first()
+    # Check if account is blocked (reuse resolved user_obj without redundant DB roundtrip)
+    if not user_obj and user_id:
+        user_stmt = select(User).where(User.id == user_id)
+        user_res = await db.execute(user_stmt)
+        user_obj = user_res.scalars().first()
 
     if user_obj and getattr(user_obj, "isBlocked", False):
         reason = getattr(user_obj, "blockReason", None)
@@ -815,7 +816,7 @@ async def create_order(
             pickup_address.pincode = pincode
             pickup_address.phone = default_support_phone
         
-        await db.commit()
+        await db.flush()
         final_address_id = pickup_address.id
 
     address_stmt = select(Address).where(Address.id == final_address_id)
@@ -876,21 +877,34 @@ async def create_order(
         clean_p = "".join(filter(str.isdigit, str(raw_phone)))[-10:]
         if len(clean_p) == 10:
             address.phone = f"+91{clean_p}"
-            await db.commit()
+            await db.flush()
 
-    # Geocode if lat/lng is missing
+    # Fast Geocode resolution: prevent external geocoding network latency from stalling checkout
     target_lat = address.lat
     target_lng = address.lng
     if (target_lat is None or target_lng is None) and address:
+        target_lat = 26.1534185
+        target_lng = 80.1714024
+        address.lat = target_lat
+        address.lng = target_lng
         address_query = f"{address.houseNo or ''} {address.street or ''} {address.area or ''}, {address.city or ''}, {address.pincode or ''}".strip()
         if address_query:
-            coords = await geocode_address(address_query)
-            if coords:
-                target_lat = coords["lat"]
-                target_lng = coords["lng"]
-                address.lat = target_lat
-                address.lng = target_lng
-                await db.commit()
+            async def _bg_geocode(addr_id: str, query_str: str):
+                try:
+                    c = await geocode_address(query_str)
+                    if c:
+                        async with AsyncSessionLocal() as s:
+                            st = select(Address).where(Address.id == addr_id)
+                            r = await s.execute(st)
+                            a = r.scalars().first()
+                            if a:
+                                a.lat = c["lat"]
+                                a.lng = c["lng"]
+                                await s.commit()
+                except Exception as g_err:
+                    logger.warning(f"Background geocode update notice for address {addr_id}: {g_err}")
+
+            background_tasks.add_task(_bg_geocode, address.id, address_query)
 
     # ── DYNAMIC MULTI-HUB RESOLUTION (100% Database-Driven, No Hardcoding) ──
     # Fetch all active dark stores from PostgreSQL
@@ -1020,7 +1034,7 @@ async def create_order(
         store_inv_stmt = select(StoreInventory).where(
             StoreInventory.storeId == effective_store_id,
             StoreInventory.productId.in_(list(db_product_ids))
-        )
+        ).with_for_update()
         store_inv_res = await db.execute(store_inv_stmt)
         store_inv_map = {inv.productId: inv for inv in store_inv_res.scalars().all()}
 
@@ -2081,13 +2095,7 @@ async def create_order(
 
                         if store_id:
                             try:
-                                from models import StoreInventory
-                                inv_stmt = select(StoreInventory).where(
-                                    StoreInventory.productId == locked_prod.id,
-                                    StoreInventory.storeId == store_id
-                                ).with_for_update()
-                                inv_res = await db.execute(inv_stmt)
-                                existing_inv = inv_res.scalars().first()
+                                existing_inv = store_inv_map.get(locked_prod.id)
                                 if existing_inv:
                                     if existing_inv.stock < qty:
                                         raise HTTPException(
@@ -2244,9 +2252,10 @@ async def create_order(
         if "reserved_redis_items" in locals() and reserved_redis_items:
             reserved_redis_items.clear()
 
-        # Publish to Redis and memory cache only AFTER successful business transaction commit
+        # Publish to Redis and memory cache in background after successful business transaction commit
         if idempotency_key:
-            await publish_idempotency_cache_async(
+            background_tasks.add_task(
+                publish_idempotency_cache_async,
                 idempotency_key,
                 result_payload,
                 user_id=user_id,
@@ -2254,37 +2263,128 @@ async def create_order(
                 order_id=main_order.id
             )
 
-        # Dispatch real-time WebSocket alerts
-        for order in created_orders:
-            # Broadcast to general websocket
-            await manager.broadcast_to_channel("general", {
-                "event": "NEW_ORDER",
-                "type": "new-order",
-                "orderId": order.id,
-                "readableId": order.readableId,
-                "shopName": order.shopName,
-                "status": order.status.value,
-                "total": float(order.total),
-                "createdAt": order.createdAt.isoformat(),
-                "restaurantId": order.restaurantId,
-                "traceId": trace_id,
-            })
-            await manager.broadcast_to_channel("general", {
-                "event": "CART_UPDATE",
-                "type": "cart-updated",
-                "userId": user_id,
-                "traceId": trace_id,
-            })
-            await manager.broadcast_to_channel(f"order_{order.id}", {
-                "event": "NEW_ORDER",
-                "type": "new-order",
-                "orderId": order.id,
-                "readableId": order.readableId,
-                "status": order.status.value,
-                "total": float(order.total),
-                "traceId": trace_id,
-            })
+        # Dispatch real-time WebSocket alerts and vendor dispatch via background task to return HTTP 201 immediately
+        async def _dispatch_post_order_broadcasts(orders_list, items_list, products_list, uid, tid):
+            for ord_item in orders_list:
+                try:
+                    await manager.broadcast_to_channel("general", {
+                        "event": "NEW_ORDER",
+                        "type": "new-order",
+                        "orderId": ord_item.id,
+                        "readableId": ord_item.readableId,
+                        "shopName": ord_item.shopName,
+                        "status": ord_item.status.value,
+                        "total": float(ord_item.total),
+                        "createdAt": ord_item.createdAt.isoformat(),
+                        "restaurantId": ord_item.restaurantId,
+                        "traceId": tid,
+                    })
+                    await manager.broadcast_to_channel("general", {
+                        "event": "CART_UPDATE",
+                        "type": "cart-updated",
+                        "userId": uid,
+                        "traceId": tid,
+                    })
+                    await manager.broadcast_to_channel(f"order_{ord_item.id}", {
+                        "event": "NEW_ORDER",
+                        "type": "new-order",
+                        "orderId": ord_item.id,
+                        "readableId": ord_item.readableId,
+                        "status": ord_item.status.value,
+                        "total": float(ord_item.total),
+                        "traceId": tid,
+                    })
+                except Exception as ws_err:
+                    logger.warning(f"Error in background order WebSocket broadcast: {ws_err}")
 
+                # Dedicated Vendor Dispatch
+                try:
+                    async with AsyncSessionLocal() as v_db:
+                        v_all_res = await v_db.execute(select(Vendor).where(Vendor.isActive.is_(True)))
+                        active_vendors = v_all_res.scalars().all()
+                        vendor_by_id = {v.id: v for v in active_vendors}
+                        vendor_by_name = {v.name.lower().strip(): v for v in active_vendors if v.name}
+
+                        vendor_groups = {}
+                        for it in items_list:
+                            db_p = it.get("dbProduct")
+                            if not db_p:
+                                raw_id = str((it.get("product") or {}).get("id") or it.get("productId") or "")
+                                p_id = raw_id.split("_")[0] if "_" in raw_id else raw_id
+                                db_p = next((p for p in products_list if p.id == p_id), None)
+                            if not db_p:
+                                continue
+
+                            matched_v = None
+                            if db_p.vendorId and db_p.vendorId in vendor_by_id:
+                                matched_v = vendor_by_id[db_p.vendorId]
+                            elif db_p.vendor and db_p.vendor.lower().strip() in vendor_by_name:
+                                matched_v = vendor_by_name[db_p.vendor.lower().strip()]
+
+                            if matched_v:
+                                if matched_v.id not in vendor_groups:
+                                    vendor_groups[matched_v.id] = {
+                                        "vendor": matched_v,
+                                        "items": []
+                                    }
+                                qty = int(it.get("quantity", 1))
+                                unit_cost = float(db_p.costPrice or db_p.price or 0.0)
+                                weight_variant = str(it.get("selectedVariant") or getattr(db_p, "unit", "") or "")
+                                vendor_groups[matched_v.id]["items"].append({
+                                    "name": db_p.name,
+                                    "quantity": qty,
+                                    "cost": unit_cost,
+                                    "weight": weight_variant,
+                                })
+
+                        for v_id, v_data in vendor_groups.items():
+                            v_obj = v_data["vendor"]
+                            v_items = v_data["items"]
+                            total_val = sum(i["quantity"] * i["cost"] for i in v_items)
+
+                            await manager.broadcast_to_channel(f"vendor_{v_id}", {
+                                "event": "NEW_VENDOR_ORDER",
+                                "type": "new-vendor-order",
+                                "orderId": ord_item.id,
+                                "readableId": ord_item.readableId,
+                                "items": v_items,
+                                "totalVendorCost": total_val,
+                                "createdAt": ord_item.createdAt.isoformat(),
+                            })
+
+                            clean_v_phone = ""
+                            if v_obj.phone:
+                                clean_v_phone = re.sub(r'\D', '', str(v_obj.phone))[-10:]
+                                if len(clean_v_phone) == 10:
+                                    item_lines = "\n".join([f"• {i['quantity']}x {i['name']} {('[' + i['weight'] + ']') if i['weight'] else ''}" for i in v_items])
+                                    v_alert_text = (
+                                        f"🔔 *FastMinute New Order Alert #{ord_item.readableId}*\n\n"
+                                        f"Customer ordered items from your catalog:\n{item_lines}\n\n"
+                                        f"💰 Total Supply Cost: ₹{total_val:.2f}\n"
+                                        f"⚡ Please pack and keep ready for FastMinute picker pickup!"
+                                    )
+                                    await send_whatsapp_alert(clean_v_phone, v_alert_text)
+
+                            vendor_topic = f"vendor_{v_id}"
+                            fcm_title = f"📦 New Order #{ord_item.readableId} for Your Store!"
+                            fcm_body = f"{len(v_items)} item(s) to pack (₹{total_val:.0f}). Tap to view and mark ready!"
+                            fcm_data = {
+                                "type": "VENDOR_NEW_ORDER",
+                                "orderId": ord_item.id,
+                                "readableId": str(ord_item.readableId),
+                                "vendorId": v_id,
+                                "screen": "vendor-console",
+                                "click_action": "FLUTTER_NOTIFICATION_CLICK",
+                            }
+                            send_fcm_topic_notification(vendor_topic, fcm_title, fcm_body, fcm_data)
+                            if clean_v_phone and len(clean_v_phone) == 10:
+                                send_fcm_topic_notification(f"phone_{clean_v_phone}", fcm_title, fcm_body, fcm_data)
+                except Exception as vendor_notify_err:
+                    logger.warning(f"Could not dispatch vendor notifications for order #{ord_item.readableId}: {vendor_notify_err}")
+
+        background_tasks.add_task(_dispatch_post_order_broadcasts, created_orders, items, db_products, user_id, trace_id)
+
+        for order in created_orders:
             # 1. FCM Push Notification directly to Customer
             customer_title = "🎉 Order Placed Successfully!"
             customer_body = f"Your order #{order.readableId} of ₹{order.total:.2f} has been placed with FastMinute Express! ⚡"
@@ -2309,106 +2409,6 @@ async def create_order(
                 order.status.value,
                 order.storeId
             )
-
-
-            # 3. Dedicated Vendor Dispatch: Notify suppliers of their attached products!
-            try:
-                v_all_res = await db.execute(select(Vendor).where(Vendor.isActive.is_(True)))
-                active_vendors = v_all_res.scalars().all()
-                vendor_by_id = {v.id: v for v in active_vendors}
-                vendor_by_name = {v.name.lower().strip(): v for v in active_vendors if v.name}
-
-                vendor_groups = {} # vendor_id -> { "vendor": Vendor, "items": [] }
-                for it in items:
-                    db_p = it.get("dbProduct")
-                    if not db_p:
-                        raw_id = str((it.get("product") or {}).get("id") or it.get("productId") or "")
-                        p_id = raw_id.split("_")[0] if "_" in raw_id else raw_id
-                        db_p = next((p for p in db_products if p.id == p_id), None)
-                    if not db_p:
-                        continue
-
-                    matched_v = None
-                    if db_p.vendorId and db_p.vendorId in vendor_by_id:
-                        matched_v = vendor_by_id[db_p.vendorId]
-                    elif db_p.vendor and db_p.vendor.lower().strip() in vendor_by_name:
-                        matched_v = vendor_by_name[db_p.vendor.lower().strip()]
-
-                    if matched_v:
-                        if matched_v.id not in vendor_groups:
-                            vendor_groups[matched_v.id] = {
-                                "vendor": matched_v,
-                                "items": []
-                            }
-                        qty = int(it.get("quantity", 1))
-                        unit_cost = float(db_p.costPrice or db_p.price or 0.0)
-                        weight_variant = str(it.get("selectedVariant") or getattr(db_p, "unit", "") or "")
-                        vendor_groups[matched_v.id]["items"].append({
-                            "name": db_p.name,
-                            "quantity": qty,
-                            "cost": unit_cost,
-                            "weight": weight_variant,
-                        })
-
-                for v_id, v_data in vendor_groups.items():
-                    v_obj = v_data["vendor"]
-                    v_items = v_data["items"]
-                    total_val = sum(i["quantity"] * i["cost"] for i in v_items)
-
-                    # Real-time WebSocket to vendor console
-                    await manager.broadcast_to_channel(f"vendor_{v_id}", {
-                        "event": "NEW_VENDOR_ORDER",
-                        "type": "new-vendor-order",
-                        "orderId": order.id,
-                        "readableId": order.readableId,
-                        "items": v_items,
-                        "totalVendorCost": total_val,
-                        "createdAt": order.createdAt.isoformat(),
-                    })
-
-                    # Instant WhatsApp order alert to vendor phone
-                    clean_v_phone = ""
-                    if v_obj.phone:
-                        clean_v_phone = re.sub(r'\D', '', str(v_obj.phone))[-10:]
-                        if len(clean_v_phone) == 10:
-                            item_lines = "\n".join([f"• {i['quantity']}x {i['name']} {('[' + i['weight'] + ']') if i['weight'] else ''}" for i in v_items])
-                            v_alert_text = (
-                                f"🔔 *FastMinute New Order Alert #{order.readableId}*\n\n"
-                                f"Customer ordered items from your catalog:\n{item_lines}\n\n"
-                                f"💰 Total Supply Cost: ₹{total_val:.2f}\n"
-                                f"⚡ Please pack and keep ready for FastMinute picker pickup!"
-                            )
-                            background_tasks.add_task(send_whatsapp_alert, clean_v_phone, v_alert_text)
-
-                    # Specific High-Priority Push Notification to Vendor's App!
-                    vendor_topic = f"vendor_{v_id}"
-                    fcm_title = f"📦 New Order #{order.readableId} for Your Store!"
-                    fcm_body = f"{len(v_items)} item(s) to pack (₹{total_val:.0f}). Tap to view and mark ready!"
-                    fcm_data = {
-                        "type": "VENDOR_NEW_ORDER",
-                        "orderId": order.id,
-                        "readableId": str(order.readableId),
-                        "vendorId": v_id,
-                        "screen": "vendor-console",
-                        "click_action": "FLUTTER_NOTIFICATION_CLICK",
-                    }
-                    background_tasks.add_task(
-                        send_fcm_topic_notification,
-                        vendor_topic,
-                        fcm_title,
-                        fcm_body,
-                        fcm_data,
-                    )
-                    if clean_v_phone and len(clean_v_phone) == 10:
-                        background_tasks.add_task(
-                            send_fcm_topic_notification,
-                            f"phone_{clean_v_phone}",
-                            fcm_title,
-                            fcm_body,
-                            fcm_data,
-                        )
-            except Exception as vendor_notify_err:
-                logger.warning(f"Could not dispatch vendor notifications for order #{order.readableId}: {vendor_notify_err}")
 
         # Return full order object matching Flutter Order.fromJson expectations
         main_order = next((o for o in created_orders if not o.restaurantId), created_orders[0])
@@ -3118,8 +3118,8 @@ async def update_order(
     # Strict Role Assignment for Status Transitions
     if target_status == OrderStatus.CANCELLED:
         if is_owner and not is_admin:
-            # C8 FIX: Customers can only cancel PENDING or ADMIN_PENDING orders
-            if order.status not in [OrderStatus.PENDING, OrderStatus.ADMIN_PENDING]:
+            # Customers can only cancel ADMIN_PENDING orders before confirmation
+            if order.status != OrderStatus.ADMIN_PENDING:
                 raise HTTPException(
                     status_code=400,
                     detail="Order cannot be cancelled after it has been confirmed. Please contact support."

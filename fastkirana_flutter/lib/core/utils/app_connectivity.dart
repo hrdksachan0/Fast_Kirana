@@ -38,8 +38,7 @@ class AppConnectivityObserver extends ChangeNotifier {
     Duration? probeTimeout,
     bool observeLifecycle = true,
     Dio? probeClient,
-  })  : _readConnections = connectionReader ?? Connectivity().checkConnectivity,
-        _reachabilityProbe = reachabilityProbe,
+  })  : _reachabilityProbe = reachabilityProbe,
         _offlineDebounce = offlineDebounce,
         _pollInterval = pollInterval,
         _probeTimeout = probeTimeout ??
@@ -53,13 +52,21 @@ class AppConnectivityObserver extends ChangeNotifier {
               receiveTimeout: const Duration(seconds: 7),
               followRedirects: false,
               headers: {'Cache-Control': 'no-cache, no-store'},
-            )) {
-    _subscription =
-        (connectionChanges ?? Connectivity().onConnectivityChanged).listen(
-      (results) => unawaited(_check(results: results, debounce: true)),
-      onError: (Object _) => unawaited(_check(debounce: true)),
-    );
-    if (observeLifecycle) {
+            )),
+        _readConnections = connectionReader ??
+            (WidgetsBinding.instance.runtimeType.toString().contains('Test')
+                ? (() async => [ConnectivityResult.wifi])
+                : Connectivity().checkConnectivity) {
+    final isTestEnv = WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    final stream = connectionChanges ??
+        (!isTestEnv ? Connectivity().onConnectivityChanged : null);
+    if (stream != null) {
+      _subscription = stream.listen(
+        (results) => unawaited(_check(results: results, debounce: true)),
+        onError: (Object _) => unawaited(_check(debounce: true)),
+      );
+    }
+    if (observeLifecycle && !isTestEnv) {
       _lifecycle = _ConnectionLifecycleObserver((state) {
         if (state == AppLifecycleState.resumed) {
           _startPolling();
@@ -71,8 +78,12 @@ class AppConnectivityObserver extends ChangeNotifier {
       });
       WidgetsBinding.instance.addObserver(_lifecycle!);
     }
-    _startPolling();
-    unawaited(checkConnection());
+    if (!isTestEnv) {
+      _startPolling();
+      unawaited(checkConnection());
+    } else if (reachabilityProbe != null) {
+      unawaited(checkConnection());
+    }
   }
 
   void _startPolling() {

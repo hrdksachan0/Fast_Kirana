@@ -1182,14 +1182,14 @@ class AdminOrderCard extends ConsumerWidget {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      // ✅ APPROVE → moves to PENDING (restaurant can now see it)
+                      // ✅ APPROVE → moves to CONFIRMED
                       Expanded(
                         flex: 3,
                         child: ElevatedButton.icon(
-                          onPressed: onUpdateStatus != null ? () => onUpdateStatus!(order, OrderStatus.pending) : null,
+                          onPressed: onUpdateStatus != null ? () => onUpdateStatus!(order, OrderStatus.confirmed) : null,
                           icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
                           label: Text(
-                            'APPROVE ORDER',
+                            'APPROVE & CONFIRM',
                             style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w900, color: Colors.white),
                           ),
                           style: ElevatedButton.styleFrom(

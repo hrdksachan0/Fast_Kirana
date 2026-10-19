@@ -264,14 +264,27 @@ export async function POST(request: NextRequest) {
     })
 
     if (itemsData.length > 0) {
-      const productIds: string[] = itemsData.map((i: any) => String(i.productId || '')).filter(Boolean)
+      const normalizedItems = itemsData.map((item: any) => {
+        const rawId = String(item.productId || '').trim()
+        const baseId = rawId.includes('_') ? rawId.split('_')[0] : rawId
+        const derivedVariant = (!item.selectedVariant || item.selectedVariant === '') && rawId.includes('_')
+          ? rawId.split('_').slice(1).join('_')
+          : item.selectedVariant || null
+        return {
+          ...item,
+          productId: baseId,
+          selectedVariant: derivedVariant,
+        }
+      })
+
+      const productIds: string[] = normalizedItems.map((i: any) => String(i.productId || '')).filter(Boolean)
       const validProducts = await prisma.product.findMany({
         where: { id: { in: productIds } },
         select: { id: true },
       })
       const validProductIdSet = new Set(validProducts.map((p) => p.id))
 
-      for (const item of itemsData) {
+      for (const item of normalizedItems) {
         if (!item.productId || !validProductIdSet.has(item.productId)) continue
 
         await prisma.cartItem.create({

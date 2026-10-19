@@ -1,0 +1,96 @@
+{
+  "scope": "Actual full-app ASGI and isolated SQLite; negative probes anonymous, positive controls use seeded-owner JWT; broadcasts suppressed; external network blocked",
+  "results": [
+    {
+      "case": "anonymous-no-phone-control",
+      "http_status": 200,
+      "count": 0
+    },
+    {
+      "case": "anonymous-victim-phone-read",
+      "http_status": 200,
+      "cartId": null,
+      "items": []
+    },
+    {
+      "case": "anonymous-victim-phone-write",
+      "http_status": 200,
+      "remaining_items": 1,
+      "assignedStoreId": null
+    },
+    {
+      "case": "encoded-cart-overlapping-product",
+      "http_status": 200,
+      "items": [
+        {
+          "productId": "prod_1",
+          "variant": "Small",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "case": "exact-cart-product-control",
+      "http_status": 200,
+      "items": [
+        {
+          "productId": "prod_1",
+          "variant": "Small",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "case": "authenticated-owner-read",
+      "http_status": 200,
+      "cartId": "review-cart",
+      "count": 1
+    },
+    {
+      "case": "all-invalid-replacement",
+      "http_status": 400,
+      "remaining": [
+        {
+          "productId": "prod_1",
+          "quantity": 3
+        }
+      ],
+      "expected_status": 400
+    },
+    {
+      "case": "mixed-invalid-replacement",
+      "http_status": 400,
+      "response": {
+        "success": false,
+        "error": "Product with ID 'nonexistent' could not be resolved in catalog",
+        "detail": "Product with ID 'nonexistent' could not be resolved in catalog",
+        "message": "Product with ID 'nonexistent' could not be resolved in catalog",
+        "statusCode": 400,
+        "requestId": "req-65afefd098"
+      },
+      "remaining": [
+        {
+          "productId": "prod_1",
+          "quantity": 3
+        }
+      ],
+      "expected_status": 400,
+      "expected_original_quantity": 3
+    },
+    {
+      "case": "server-exact-item-prefix-control",
+      "http_status": 200,
+      "items": [
+        {
+          "productId": "item_123",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "case": "explicit-owner-clear-control",
+      "http_status": 200,
+      "count": 0
+    }
+  ]
+}

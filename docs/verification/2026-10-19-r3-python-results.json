@@ -1,0 +1,37 @@
+{
+  "collected": 240,
+  "passed": 240,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "failed_tests": [],
+  "exit_code": 0,
+  "elapsed_seconds": 182.81,
+  "initial_hashes": {
+    "routers/admin.py": "29f874dc6fde2968e47c318da59e895497ea2a0dfe78b0e14a4c13900c9a726b",
+    "routers/cart.py": "99d700f1a137e24b209bf7a05e783418bb7c3824104feb9578332d7c4f8203a6",
+    "routers/admin_extended.py": "d02607525fa1826b8a3d4a06342246050c88972cfb7478addb4e3ab5b2cf3bba",
+    "routers/cashfree_router.py": "e75a1fd54a73a0615589d613c2e8f956a3edac89183ccb7db651e0f3901b29c3",
+    "routers/orders.py": "6e7d5eef05367a5857b9433ec2bec8736cf09f749c6d2e833a18aeb7637e90ab",
+    "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+    "routers/websockets.py": "b399760e03886ef7e17782f9d8b3fdb8ed488e5e647fcee9b157e93afce1b9cc",
+    "utils/firebase.py": "de78975dd41f4e43edef59b7405aa73ae43a4f6c8f53ee215c206fbbccd8fc54",
+    "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+    "tests/test_production_blockers_resolved.py": "04fbd7086fc60a6fb198bab66e4f55f7c6b35af35fe71b9858aaf0fa1870544e",
+    "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+  },
+  "final_hashes": {
+    "routers/admin.py": "29f874dc6fde2968e47c318da59e895497ea2a0dfe78b0e14a4c13900c9a726b",
+    "routers/cart.py": "99d700f1a137e24b209bf7a05e783418bb7c3824104feb9578332d7c4f8203a6",
+    "routers/admin_extended.py": "d02607525fa1826b8a3d4a06342246050c88972cfb7478addb4e3ab5b2cf3bba",
+    "routers/cashfree_router.py": "e75a1fd54a73a0615589d613c2e8f956a3edac89183ccb7db651e0f3901b29c3",
+    "routers/orders.py": "6e7d5eef05367a5857b9433ec2bec8736cf09f749c6d2e833a18aeb7637e90ab",
+    "routers/fcm.py": "75b346e035d4d9cc94ff1afa19932436ee620423dae55396a60c45bc177952f5",
+    "routers/websockets.py": "b399760e03886ef7e17782f9d8b3fdb8ed488e5e647fcee9b157e93afce1b9cc",
+    "utils/firebase.py": "de78975dd41f4e43edef59b7405aa73ae43a4f6c8f53ee215c206fbbccd8fc54",
+    "utils/cache.py": "49a88baa4f6ee13bc4ad40073a074b380894a8dd04cdce8fa734b68efe3b1df8",
+    "tests/test_production_blockers_resolved.py": "04fbd7086fc60a6fb198bab66e4f55f7c6b35af35fe71b9858aaf0fa1870544e",
+    "tests/conftest.py": "363579e20a5d0d2728b76452f890591a24d76bfcd269a9f16064233c0c402eab"
+  },
+  "scope": "SQLite; dotenv disabled; dummy credentials; external network blocked; unmocked migration_full gateway/KOT suite excluded"
+}
