@@ -79,18 +79,26 @@ export async function POST(req: NextRequest) {
           })
         }
         if (cfOrder) {
+          const rawSt = String(cfOrder.order_status || 'PENDING').toUpperCase()
+          const mappedStatus = rawSt === 'ACTIVE' ? 'PENDING' : rawSt
           return NextResponse.json({
             success: false,
             orderId: cleanId,
-            paymentStatus: cfOrder.order_status || 'PENDING',
+            paymentStatus: mappedStatus,
             isPaid: false,
-            message: 'Payment has not been completed on Cashfree gateway.',
+            message: 'Payment confirmation pending with your bank.',
           }, { status: 200 })
         }
       } catch (cfErr) {
         console.warn('Preflight Cashfree order check note:', cfErr)
       }
-      return NextResponse.json({ error: 'Order not found or payment not completed', isPaid: false, success: false }, { status: 404 })
+      return NextResponse.json({
+        success: false,
+        orderId: cleanId,
+        paymentStatus: 'PENDING',
+        isPaid: false,
+        message: 'Order verification in progress.',
+      }, { status: 200 })
     }
 
     const order = orders[0]
@@ -170,9 +178,12 @@ export async function POST(req: NextRequest) {
     if (!isPaid) {
       return NextResponse.json({
         success: false,
+        orderId: order.id,
+        readableId: order.readableId,
         paymentStatus: 'PENDING',
-        message: 'Payment has not been completed or is still processing.'
-      }, { status: 400 })
+        isPaid: false,
+        message: 'Payment confirmation is pending with your bank.'
+      }, { status: 200 })
     }
 
     // Symmetric amount verification

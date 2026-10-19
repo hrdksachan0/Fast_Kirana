@@ -99,6 +99,7 @@ export function useCheckoutPayment({
     totalAmount: number
     cfOrderId?: string
     pendingPayload?: any
+    isPending?: boolean
   } | null>(null)
   const [overlayState, setOverlayState] = useState<'creating-order' | 'preparing-payment' | 'awaiting-payment' | 'verifying-payment' | 'success' | null>(null)
   const [orderReadableId, setOrderReadableId] = useState<string | undefined>(undefined)
@@ -433,6 +434,7 @@ export function useCheckoutPayment({
       // POST-PAYMENT: Verify & create order in DB only after PAID
       // ═══════════════════════════════════════════════════════════════════════
       let pollCount = 0
+      let lastKnownStatus = 'PENDING'
       const checkVerificationAndCreateOrder = async () => {
         if (paymentSuccess || isVerifyingOrCreating) return true
         isVerifyingOrCreating = true
@@ -443,6 +445,9 @@ export function useCheckoutPayment({
             body: JSON.stringify({ orderId: cfData.orderId, cfOrderId: cfData.orderId }),
           })
           const verifyData = await verifyRes.json()
+          if (verifyData?.paymentStatus) {
+            lastKnownStatus = String(verifyData.paymentStatus).toUpperCase()
+          }
           if (verifyRes.ok && (verifyData.paymentStatus === 'PAID' || verifyData.isPaid === true)) {
             paymentSuccess = true
             clearInterval(pollTimer)
@@ -551,13 +556,16 @@ export function useCheckoutPayment({
           redirectTarget: '_modal',
         })
 
-        // When user returns or modal dismisses, aggressively verify payment
+        // When user returns or modal dismisses, aggressively verify payment with backoff
         setOverlayState('verifying-payment')
         let isVerified = false
-        for (let attempt = 0; attempt < 10; attempt++) {
+        for (let attempt = 0; attempt < 12; attempt++) {
           isVerified = await checkVerificationAndCreateOrder()
           if (isVerified || paymentSuccess) break
-          await new Promise((resolve) => setTimeout(resolve, 1500))
+          if (lastKnownStatus === 'FAILED' || lastKnownStatus === 'CANCELLED' || lastKnownStatus === 'EXPIRED') {
+            break
+          }
+          await new Promise((resolve) => setTimeout(resolve, 800 + (attempt * 200)))
         }
 
         if (!isVerified && !paymentSuccess) {
@@ -569,22 +577,27 @@ export function useCheckoutPayment({
             console.log('Cashfree modal closed with note:', result.error)
           }
           triggerHaptic('warning')
-          // No DB order was created — show retry options without orderId
+          const isPending = lastKnownStatus !== 'FAILED' && lastKnownStatus !== 'CANCELLED' && lastKnownStatus !== 'EXPIRED'
+          // Show recovery options with proper pending state
           setFailedPaymentOrder({
             id: '', // No DB order exists
             totalAmount: paymentAmount,
             cfOrderId: cfData.orderId,
             pendingPayload,
+            isPending,
           })
         }
       } catch (checkoutErr) {
         console.warn('Cashfree checkout modal error:', checkoutErr)
         setOverlayState('verifying-payment')
         let isVerified = false
-        for (let attempt = 0; attempt < 8; attempt++) {
+        for (let attempt = 0; attempt < 10; attempt++) {
           isVerified = await checkVerificationAndCreateOrder()
           if (isVerified || paymentSuccess) break
-          await new Promise((resolve) => setTimeout(resolve, 1500))
+          if (lastKnownStatus === 'FAILED' || lastKnownStatus === 'CANCELLED' || lastKnownStatus === 'EXPIRED') {
+            break
+          }
+          await new Promise((resolve) => setTimeout(resolve, 800 + (attempt * 200)))
         }
 
         if (!isVerified && !paymentSuccess) {
@@ -592,11 +605,13 @@ export function useCheckoutPayment({
           document.removeEventListener('visibilitychange', handleVisibilityChange)
           setIsPlacingOrder(false)
           setOverlayState(null)
+          const isPending = lastKnownStatus !== 'FAILED' && lastKnownStatus !== 'CANCELLED' && lastKnownStatus !== 'EXPIRED'
           setFailedPaymentOrder({
             id: '',
             totalAmount: paymentAmount,
             cfOrderId: cfData.orderId,
             pendingPayload,
+            isPending,
           })
         }
       }
@@ -733,6 +748,55 @@ export function useCheckoutPayment({
     }
   }
 
+  const handleRecheckStatus = async () => {
+    if (!failedPaymentOrder?.cfOrderId) return
+    setIsPlacingOrder(true)
+    setOverlayState('verifying-payment')
+    try {
+      const verifyRes = await fetch(`${apiUrl()}/api/payment/cashfree/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: failedPaymentOrder.cfOrderId,
+          cfOrderId: failedPaymentOrder.cfOrderId,
+        }),
+      })
+      const verifyData = await verifyRes.json()
+      if (verifyRes.ok && (verifyData.paymentStatus === 'PAID' || verifyData.isPaid === true)) {
+        toast.success('🎉 Payment verified as PAID! Placing order...')
+        const resolvedPaymentId =
+          verifyData.cfPaymentId || verifyData.paymentId || `CF_${failedPaymentOrder.cfOrderId}`
+        const pendingPl = failedPaymentOrder.pendingPayload || {}
+        const orderRes = await fetch(`${apiUrl()}/api/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...pendingPl,
+            paymentStatus: 'PAID',
+            paymentMethod: 'UPI',
+            paymentId: resolvedPaymentId,
+            cfOrderId: failedPaymentOrder.cfOrderId,
+          }),
+        })
+        const orderData = await orderRes.json()
+        if (orderRes.ok && orderData?.id) {
+          clearCart()
+          triggerHaptic('success')
+          setFailedPaymentOrder(null)
+          window.location.replace(`/order/${orderData.id}/success`)
+          return
+        }
+      } else {
+        toast.info(verifyData?.message || 'Payment confirmation is still pending with your bank.')
+      }
+    } catch (_) {
+      toast.error('Network check failed. Please try again.')
+    } finally {
+      setIsPlacingOrder(false)
+      setOverlayState(null)
+    }
+  }
+
   return {
     paymentMethod,
     setPaymentMethod,
@@ -749,5 +813,6 @@ export function useCheckoutPayment({
     handlePlaceOrder,
     handleCashfreeCheckout,
     handlePlaceOrderClick,
+    handleRecheckStatus,
   }
 }

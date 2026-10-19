@@ -16,6 +16,8 @@ export interface PaymentFailedCodModalProps {
   onSuccessCod: (orderId: string) => void
   onRetryPayment?: () => void
   onConfirmCodFresh?: () => void
+  onCheckStatus?: () => void
+  isPendingVerification?: boolean
 }
 
 const TOTAL_COUNTDOWN_SECONDS = 60
@@ -29,6 +31,8 @@ export function PaymentFailedCodModal({
   onSuccessCod,
   onRetryPayment,
   onConfirmCodFresh,
+  onCheckStatus,
+  isPendingVerification = false,
 }: PaymentFailedCodModalProps) {
   const [secondsRemaining, setSecondsRemaining] = useState(TOTAL_COUNTDOWN_SECONDS)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -59,13 +63,14 @@ export function PaymentFailedCodModal({
     }
   }, [isOpen])
 
-  // SAFEGUARD: When countdown expires without user action, AUTO-CANCEL the order.
-  // NEVER auto-convert to COD without explicit customer consent!
+  // Countdown timer for automatic modal dismiss
+  // NEVER auto-cancel an order where payment might be in-flight!
   useEffect(() => {
     if (isOpen && secondsRemaining === 0 && !isProcessing && !isCancelled) {
-      handleStopAndCancel(true)
+      if (timerRef.current) clearInterval(timerRef.current)
+      onClose()
     }
-  }, [secondsRemaining, isOpen, isProcessing, isCancelled])
+  }, [secondsRemaining, isOpen, isProcessing, isCancelled, onClose])
 
   const handleStopAndCancel = async (isAutoTimeout = false) => {
     if (isProcessing) return
@@ -78,8 +83,8 @@ export function PaymentFailedCodModal({
       triggerHaptic('light')
       toast.info(
         isAutoTimeout
-          ? '⏳ Payment complete nahi hua. Koi charge nahi kata.'
-          : '🛑 Payment cancel kar diya gaya. Koi charge nahi kata.'
+          ? '⏳ Verification window paused. Cart items kept safe.'
+          : 'Payment window closed. If any amount was debited, it will be refunded in 24-48 hrs.'
       )
       setIsProcessing(false)
       onClose()
@@ -101,8 +106,8 @@ export function PaymentFailedCodModal({
       if (res.ok) {
         toast.info(
           isAutoTimeout
-            ? '⏳ Payment na hone par order cancel kar diya gaya hai. Koi charge nahi kata.'
-            : '🛑 Order cancel kar diya gaya hai. Koi charge nahi kata.'
+            ? '⏳ Verification window paused. Cart items kept safe.'
+            : 'Order cancelled. If any amount was debited, it will be refunded in 24-48 hrs.'
         )
       } else {
         toast.info('Order cancelled.')
@@ -191,15 +196,31 @@ export function PaymentFailedCodModal({
           <div className="p-5 sm:p-6">
             {/* Header Icon & Title */}
             <div className="flex items-start gap-3.5 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-center shrink-0 shadow-sm">
-                <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <div
+                className={`w-12 h-12 rounded-2xl ${
+                  isPendingVerification
+                    ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800'
+                    : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800'
+                } border flex items-center justify-center shrink-0 shadow-sm`}
+              >
+                {isPendingVerification ? (
+                  <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
+                ) : (
+                  <AlertTriangle className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+                )}
               </div>
               <div className="pr-6">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 text-xs font-bold mb-1 border border-rose-200 dark:border-rose-800">
-                  <span>Payment Incomplete</span>
+                <div
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full ${
+                    isPendingVerification
+                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                      : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                  } text-xs font-bold mb-1 border`}
+                >
+                  <span>{isPendingVerification ? 'CONFIRMATION IN PROGRESS' : 'SAFE & REFUNDABLE'}</span>
                 </div>
                 <h3 className="text-lg font-black text-slate-900 dark:text-zinc-100 tracking-tight leading-tight">
-                  Online Payment Cancel Ho Gaya
+                  {isPendingVerification ? 'Payment Confirmation Pending' : 'Payment Not Completed'}
                 </h3>
                 {orderReadableId && (
                   <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium mt-0.5">
@@ -213,9 +234,11 @@ export function PaymentFailedCodModal({
             <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/60 rounded-2xl p-3.5 mb-4 text-slate-700 dark:text-zinc-300 text-xs leading-relaxed">
               <p className="font-semibold text-slate-900 dark:text-zinc-100 mb-1 flex items-center gap-1.5">
                 <Banknote className="w-4 h-4 text-emerald-600 inline" />
-                Aap kya karna chahenge?
+                {isPendingVerification ? 'Aapka paisa surakshit hai' : 'Aap kya karna chahenge?'}
               </p>
-              Aapka online payment pura nahi hua. Aap is order ko <strong>Cash on Delivery (Ghar par payment)</strong> par mangwa sakte hain ya dobara online pay kar sakte hain.
+              {isPendingVerification
+                ? 'Aapka payment bank se process ho raha hai. Agar aapke account se paise kat gaye hain, toh thoda intezar karein ya neeche Status Recheck karein.'
+                : 'Aapka online payment pura nahi hua. Agar koi amount debit hua hai toh woh 24-48 hrs me refund ho jayega. Aap COD chunein ya dobara online pay karein.'}
             </div>
 
             {/* Countdown Slider & Timer Visual */}
@@ -223,7 +246,7 @@ export function PaymentFailedCodModal({
               <div className="flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-300 mb-2">
                 <span className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin" style={{ animationDuration: '4s' }} />
-                  Auto-cancel countdown:
+                  Verification window timer:
                 </span>
                 <span className="font-mono text-sm font-black text-amber-700 dark:text-amber-400 bg-white dark:bg-zinc-800 px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-800 shadow-2xs">
                   {formattedTime}
@@ -242,13 +265,26 @@ export function PaymentFailedCodModal({
 
               <p className="text-[11px] text-amber-800/80 dark:text-amber-400/80 font-medium text-center mt-2">
                 {secondsRemaining > 0
-                  ? `⏰ 1 minute me decision na lene par order automatically cancel ho jayega`
-                  : '⏳ Cancelling unpaid order...'}
+                  ? `⏰ 1 minute tak confirmation ka wait kiya ja raha hai`
+                  : '⏳ Verification window paused. Cart items kept safe.'}
               </p>
             </div>
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-2.5">
+              {/* If pending, show primary Check Status button */}
+              {isPendingVerification && onCheckStatus && (
+                <button
+                  type="button"
+                  onClick={onCheckStatus}
+                  disabled={isProcessing}
+                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 active:scale-[0.99] text-white font-black text-sm transition-all duration-150 flex items-center justify-center gap-2 shadow-md shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className="w-4 h-4 text-white" />
+                  <span>🔄 Check Payment Status</span>
+                </button>
+              )}
+
               {/* Primary Explicit COD Confirm Button */}
               <button
                 type="button"
@@ -273,7 +309,7 @@ export function PaymentFailedCodModal({
                 </button>
               )}
 
-              {/* Cancel Order Button */}
+              {/* Cancel / Close Button */}
               <button
                 type="button"
                 onClick={() => handleStopAndCancel(false)}
@@ -281,7 +317,7 @@ export function PaymentFailedCodModal({
                 className="w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-400 font-bold text-xs transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 <XCircle className="w-3.5 h-3.5 text-slate-500" />
-                <span>🛑 Nahi Chahiye / Cancel Order</span>
+                <span>{isPendingVerification ? 'Band Karein (Cart Safe Hai)' : '🛑 Cancel Order'}</span>
               </button>
             </div>
           </div>

@@ -403,6 +403,8 @@ export default function CheckoutPage() {
         orderId={payment.failedPaymentOrder?.id || ''}
         orderReadableId={payment.failedPaymentOrder?.readableId}
         totalAmount={payment.failedPaymentOrder?.totalAmount || pricing.grandTotal}
+        isPendingVerification={Boolean(payment.failedPaymentOrder?.isPending)}
+        onCheckStatus={payment.handleRecheckStatus}
         onClose={() => payment.setFailedPaymentOrder(null)}
         onSuccessCod={(orderId) => {
           payment.setFailedPaymentOrder(null)
