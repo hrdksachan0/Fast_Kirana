@@ -562,7 +562,7 @@ export function useCheckoutPayment({
         for (let attempt = 0; attempt < 12; attempt++) {
           isVerified = await checkVerificationAndCreateOrder()
           if (isVerified || paymentSuccess) break
-          if (lastKnownStatus === 'FAILED' || lastKnownStatus === 'CANCELLED' || lastKnownStatus === 'EXPIRED') {
+          if (lastKnownStatus === 'FAILED' || lastKnownStatus === 'CANCELLED' || lastKnownStatus === 'USER_DROPPED' || lastKnownStatus === 'EXPIRED') {
             break
           }
           await new Promise((resolve) => setTimeout(resolve, 800 + (attempt * 200)))
@@ -577,7 +577,7 @@ export function useCheckoutPayment({
             console.log('Cashfree modal closed with note:', result.error)
           }
           triggerHaptic('warning')
-          const isPending = lastKnownStatus !== 'FAILED' && lastKnownStatus !== 'CANCELLED' && lastKnownStatus !== 'EXPIRED'
+          const isPending = lastKnownStatus !== 'FAILED' && lastKnownStatus !== 'CANCELLED' && lastKnownStatus !== 'USER_DROPPED' && lastKnownStatus !== 'EXPIRED'
           // Show recovery options with proper pending state
           setFailedPaymentOrder({
             id: '', // No DB order exists
@@ -594,7 +594,7 @@ export function useCheckoutPayment({
         for (let attempt = 0; attempt < 10; attempt++) {
           isVerified = await checkVerificationAndCreateOrder()
           if (isVerified || paymentSuccess) break
-          if (lastKnownStatus === 'FAILED' || lastKnownStatus === 'CANCELLED' || lastKnownStatus === 'EXPIRED') {
+          if (lastKnownStatus === 'FAILED' || lastKnownStatus === 'CANCELLED' || lastKnownStatus === 'USER_DROPPED' || lastKnownStatus === 'EXPIRED') {
             break
           }
           await new Promise((resolve) => setTimeout(resolve, 800 + (attempt * 200)))
@@ -605,7 +605,7 @@ export function useCheckoutPayment({
           document.removeEventListener('visibilitychange', handleVisibilityChange)
           setIsPlacingOrder(false)
           setOverlayState(null)
-          const isPending = lastKnownStatus !== 'FAILED' && lastKnownStatus !== 'CANCELLED' && lastKnownStatus !== 'EXPIRED'
+          const isPending = lastKnownStatus !== 'FAILED' && lastKnownStatus !== 'CANCELLED' && lastKnownStatus !== 'USER_DROPPED' && lastKnownStatus !== 'EXPIRED'
           setFailedPaymentOrder({
             id: '',
             totalAmount: paymentAmount,
