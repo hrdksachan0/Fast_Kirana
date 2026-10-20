@@ -193,15 +193,16 @@ class PaymentGatewayHandler {
   }
 
   /// Verifies payment on backend with up to [maxAttempts] retries
-  Future<PaymentVerificationResult> verifyPayment(String cfOrderId, {int maxAttempts = 5}) async {
+  Future<PaymentVerificationResult> verifyPayment(String cfOrderId, {int maxAttempts = 12}) async {
     bool hadNetworkOrTimeoutError = false;
     String? lastKnownStatus;
     String? lastMessage;
 
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
       if (attempt > 0) {
-        // Progressive backoff: 800ms, 1200ms, 1600ms, 2000ms
-        await Future.delayed(Duration(milliseconds: 600 + (attempt * 400)));
+        // Progressive backoff: quick checks first, then steady intervals (total window ~14s)
+        final delayMs = attempt <= 3 ? 800 : (attempt <= 7 ? 1200 : 1500);
+        await Future.delayed(Duration(milliseconds: delayMs));
       }
       try {
         final verifyRes = await _safePost(

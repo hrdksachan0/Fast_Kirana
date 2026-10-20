@@ -160,8 +160,16 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       final effectivePendingId = (pendingId != null && pendingId.isNotEmpty) ? pendingId : draft?.cfOrderId;
       if (effectivePendingId != null && effectivePendingId.isNotEmpty) {
         try {
-          final verification = await _paymentHandler.verifyPayment(effectivePendingId, maxAttempts: 1);
+          final verification = await _paymentHandler.verifyPayment(effectivePendingId, maxAttempts: 3);
           if (verification.isPaid && verification.paymentId != null) {
+            await PaymentGatewayHandler.clearPendingPaymentRecovery();
+            await CheckoutDraft.clearAcceptedDraft();
+            state = state.copyWith(
+              isPlacingOrder: false,
+              pendingCashfreeOrderId: null,
+              pendingGrandTotal: null,
+              pendingCart: null,
+            );
             if (_currentContext != null && _currentContext!.mounted) {
               await completeOrderPlacement(
                 _currentContext!,
@@ -177,11 +185,45 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             // ONLY confirmed terminal failed / cancelled / expired unpaid attempts can be cleared!
             await PaymentGatewayHandler.clearPendingPaymentRecovery();
             await CheckoutDraft.clearAcceptedDraft();
+            state = state.copyWith(
+              pendingCashfreeOrderId: null,
+              pendingGrandTotal: null,
+              pendingCart: null,
+            );
             return;
           }
         } catch (_) {
           // Network error/timeout/exception: retain recovery
         }
+
+        // Webhook check: If order was already inserted into PostgreSQL, auto-recover and navigate to success!
+        try {
+          final dio = ref.read(dioProvider);
+          final cleanCf = effectivePendingId.trim();
+          final checkRes = await dio.get('/api/orders', queryParameters: {'cfOrderId': cleanCf});
+          if (checkRes.statusCode == 200 && checkRes.data is List && (checkRes.data as List).isNotEmpty) {
+            final existingOrderData = (checkRes.data as List).first;
+            final existingOrder = Order.fromJson(existingOrderData);
+            await PaymentGatewayHandler.clearPendingPaymentRecovery();
+            await CheckoutDraft.clearAcceptedDraft();
+            state = state.copyWith(
+              isPlacingOrder: false,
+              pendingCashfreeOrderId: null,
+              pendingGrandTotal: null,
+              pendingCart: null,
+            );
+            if (_currentContext != null && _currentContext!.mounted) {
+              await _finishOrderPlacement(
+                placedOrder: existingOrder,
+                grandTotal: existingOrder.total,
+                selectedAddr: existingOrder.customerAddress ?? '',
+                userId: existingOrder.userId,
+                context: _currentContext,
+              );
+            }
+            return;
+          }
+        } catch (_) {}
 
         // PENDING, ACTIVE, timeout, unavailable, or unknown results:
         // PRESERVE recovery and display banner!
@@ -255,13 +297,106 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     state = state.copyWith(isPlacingOrder: true);
 
-    final verification = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 5);
+    // 1. High-trust fullscreen confirmation dialog
+    bool dialogShown = false;
+    final navContext = _currentContext;
+    if (navContext != null && navContext.mounted) {
+      dialogShown = true;
+      showDialog(
+        context: navContext,
+        barrierDismissible: false,
+        routeSettings: const RouteSettings(name: 'payment_confirming_dialog'),
+        builder: (dialogCtx) => PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00A344)),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Confirming Payment...',
+                    style: GoogleFonts.inter(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0F172A),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Securing your order with the kitchen.\nPlease do not press back.',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF64748B),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 2. Poll backend with generous window (12 attempts ~15s) for gateway & webhook settlement
+    final verification = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 12);
     final verifiedPaid = verification.isPaid;
     final resolvedPaymentId = verification.paymentId;
+
+    // Dismiss loading dialog if open
+    if (dialogShown && navContext != null && navContext.mounted) {
+      try {
+        Navigator.of(navContext, rootNavigator: true).pop();
+      } catch (_) {}
+    }
 
     final context = _currentContext;
     if (!verifiedPaid || resolvedPaymentId == null) {
       debugPrint('❌ Cashfree payment verification status: ${verification.status} (cfOrderId: $cfOrderId)');
+
+      // 3. Webhook / Auto-recovery safety check before opening any warning sheets:
+      // If server webhook already created the order in DB, discover it and navigate directly to success!
+      try {
+        final dio = ref.read(dioProvider);
+        final cleanCf = cfOrderId.trim();
+        final checkRes = await dio.get('/api/orders', queryParameters: {'cfOrderId': cleanCf});
+        if (checkRes.statusCode == 200 && checkRes.data is List && (checkRes.data as List).isNotEmpty) {
+          final existingOrderData = (checkRes.data as List).first;
+          final existingOrder = Order.fromJson(existingOrderData);
+          await PaymentGatewayHandler.clearPendingPaymentRecovery();
+          await CheckoutDraft.clearAcceptedDraft();
+          state = state.copyWith(
+            isPlacingOrder: false,
+            pendingCashfreeOrderId: null,
+            pendingGrandTotal: null,
+            pendingCart: null,
+          );
+          await _finishOrderPlacement(
+            placedOrder: existingOrder,
+            grandTotal: existingOrder.total,
+            selectedAddr: existingOrder.customerAddress ?? '',
+            userId: existingOrder.userId,
+            context: _currentContext,
+          );
+          return;
+        }
+      } catch (checkErr) {
+        debugPrint('Post-verify DB order check note: $checkErr');
+      }
 
       final total = draft?.grandTotal ?? state.pendingGrandTotal ?? cart?.subtotal ?? 0.0;
 
@@ -273,11 +408,19 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           grandTotal: total,
           cfOrderId: cfOrderId,
           onCheckStatus: () async {
-            final recheck = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 3);
+            final recheck = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 6);
             if (!context.mounted) return;
             if (recheck.isPaid && recheck.paymentId != null) {
               Navigator.pop(context);
               final freshDraft = await CheckoutDraft.loadAcceptedDraft();
+              await PaymentGatewayHandler.clearPendingPaymentRecovery();
+              await CheckoutDraft.clearAcceptedDraft();
+              state = state.copyWith(
+                isPlacingOrder: false,
+                pendingCashfreeOrderId: null,
+                pendingGrandTotal: null,
+                pendingCart: null,
+              );
               if (!context.mounted) return;
               await completeOrderPlacement(
                 context,
@@ -342,6 +485,16 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return;
     }
 
+    // 4. Payment verified! Clear recovery flags immediately so warning banner NEVER displays
+    await PaymentGatewayHandler.clearPendingPaymentRecovery();
+    await CheckoutDraft.clearAcceptedDraft();
+    state = state.copyWith(
+      isPlacingOrder: false,
+      pendingCashfreeOrderId: null,
+      pendingGrandTotal: null,
+      pendingCart: null,
+    );
+
     // Always complete order placement to backend API even if UI context was detached/unmounted during UPI app switch
     await completeOrderPlacement(
       _currentContext,
@@ -359,7 +512,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     PaymentVerificationResult? fastVerify;
     try {
       // Quick verification: check if server already marked order PAID (e.g., slow SDK callback)
-      fastVerify = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 2);
+      fastVerify = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 6);
       if (fastVerify.isPaid) {
         debugPrint('✅ Payment verified as PAID on server despite error callback! Routing to success...');
         await _onCashfreeSuccess(cfOrderId);
@@ -1388,11 +1541,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           if (isAlreadyAcked) {
             LoggerService.info('CheckoutController: Order $orderId already acknowledged, skipping duplicate cart subtraction.');
           } else {
-            if (orderedItems != null && orderedItems.isNotEmpty) {
-              await ref.read(cartProvider.notifier).removeDraftItems(orderedItems, orderId: orderId);
-            } else {
-              await ref.read(cartProvider.notifier).clearCart(orderId: orderId);
-            }
+            // Unconditionally clear the placed cart to ensure zero leftover items
+            await ref.read(cartProvider.notifier).clearCart(orderId: orderId);
 
             _acknowledgedOrderIds.add(orderId);
             try {
