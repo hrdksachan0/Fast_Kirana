@@ -12,6 +12,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../core/theme/design_system.dart';
 import '../../../core/routes/page_transitions.dart';
+import '../../../core/routes/app_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/logger_service.dart';
@@ -375,24 +376,40 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         final cleanCf = cfOrderId.trim();
         final checkRes = await dio.get('/api/orders', queryParameters: {'cfOrderId': cleanCf});
         if (checkRes.statusCode == 200 && checkRes.data is List && (checkRes.data as List).isNotEmpty) {
-          final existingOrderData = (checkRes.data as List).first;
-          final existingOrder = Order.fromJson(existingOrderData);
-          await PaymentGatewayHandler.clearPendingPaymentRecovery();
-          await CheckoutDraft.clearAcceptedDraft();
-          state = state.copyWith(
-            isPlacingOrder: false,
-            pendingCashfreeOrderId: null,
-            pendingGrandTotal: null,
-            pendingCart: null,
+          final matchingOrderData = (checkRes.data as List).firstWhere(
+            (o) {
+              if (o is! Map) return false;
+              final oNotes = o['notes']?.toString() ?? '';
+              final oCf = o['cfOrderId']?.toString() ?? '';
+              final oReadable = o['readableId']?.toString() ?? '';
+              final oId = o['id']?.toString() ?? '';
+              return oNotes.contains(cleanCf) || oCf == cleanCf || oReadable == cleanCf || oId == cleanCf;
+            },
+            orElse: () => null,
           );
-          await _finishOrderPlacement(
-            placedOrder: existingOrder,
-            grandTotal: existingOrder.total,
-            selectedAddr: existingOrder.customerAddress ?? '',
-            userId: existingOrder.userId,
-            context: _currentContext,
-          );
-          return;
+          if (matchingOrderData != null) {
+            final existingOrder = Order.fromJson(matchingOrderData);
+            await PaymentGatewayHandler.clearPendingPaymentRecovery();
+            await CheckoutDraft.clearAcceptedDraft();
+            state = state.copyWith(
+              isPlacingOrder: false,
+              pendingCashfreeOrderId: null,
+              pendingGrandTotal: null,
+              pendingCart: null,
+            );
+            final activeCtx = (context != null && context.mounted)
+                ? context
+                : AppRouter.navigatorKey.currentContext;
+            await _finishOrderPlacement(
+              placedOrder: existingOrder,
+              grandTotal: existingOrder.total,
+              selectedAddr: existingOrder.customerAddress ?? '',
+              userId: existingOrder.userId,
+              orderedItems: (existingOrder.items ?? []).map((i) => i.toJson()).toList(),
+              context: activeCtx,
+            );
+            return;
+          }
         }
       } catch (checkErr) {
         debugPrint('Post-verify DB order check note: $checkErr');
@@ -495,9 +512,13 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       pendingCart: null,
     );
 
+    final activeContext = (_currentContext != null && _currentContext!.mounted)
+        ? _currentContext
+        : AppRouter.navigatorKey.currentContext;
+
     // Always complete order placement to backend API even if UI context was detached/unmounted during UPI app switch
     await completeOrderPlacement(
-      _currentContext,
+      activeContext,
       draft: draft,
       cart: cart ?? Cart.empty(),
       paymentId: resolvedPaymentId,
@@ -1452,14 +1473,17 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       }
     }
 
-    if (context != null && !context.mounted) return;
+    final activeContext = (context != null && context.mounted)
+        ? context
+        : AppRouter.navigatorKey.currentContext;
+
     await _finishOrderPlacement(
       placedOrder: placedOrder,
       grandTotal: grandTotal,
       selectedAddr: selectedAddr,
       userId: userId,
       orderedItems: itemsPayload,
-      context: context,
+      context: activeContext,
     );
   }
 
@@ -1482,24 +1506,37 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       pendingCart: null,
     );
 
-    // Fast-track navigation to OrderSuccessScreen without waiting for background disk/cart IO
-    if (context != null && context.mounted) {
-      final successPage = OrderSuccessScreen(
-        orderId: placedOrder.displayId,
-        totalAmount: grandTotal,
-        deliveryAddress: selectedAddr,
-        paymentMethod: placedOrder.paymentMethod == PaymentMethod.upi ? 'CASHFREE (PAID)' : 'CASH ON DELIVERY',
-        order: placedOrder,
-      );
+    // Guaranteed instant cart clearance on placement to ensure zero leftover items
+    final orderId = placedOrder.id;
+    unawaited(ref.read(cartProvider.notifier).clearCart(orderId: orderId));
 
-      Navigator.pushReplacement(
-        context,
+    // Fast-track navigation to OrderSuccessScreen using active or root navigator key
+    final rootContext = (context != null && context.mounted) ? context : AppRouter.navigatorKey.currentContext;
+    final nav = AppRouter.navigatorKey.currentState;
+    final successPage = OrderSuccessScreen(
+      orderId: placedOrder.displayId,
+      totalAmount: grandTotal,
+      deliveryAddress: selectedAddr,
+      paymentMethod: placedOrder.paymentMethod == PaymentMethod.upi ? 'CASHFREE (PAID)' : 'CASH ON DELIVERY',
+      order: placedOrder,
+    );
+
+    if (rootContext != null && rootContext.mounted) {
+      try {
+        Navigator.pushReplacement(
+          rootContext,
+          FadeSlideRoute(page: successPage),
+        );
+      } catch (_) {
+        nav?.pushReplacement(FadeSlideRoute(page: successPage));
+      }
+    } else if (nav != null && nav.mounted) {
+      nav.pushReplacement(
         FadeSlideRoute(page: successPage),
       );
     }
 
     // Background asynchronous durable tasks (local cache, cart cleanup, draft clearance)
-    final orderId = placedOrder.id;
     unawaited(() async {
       try {
         await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);

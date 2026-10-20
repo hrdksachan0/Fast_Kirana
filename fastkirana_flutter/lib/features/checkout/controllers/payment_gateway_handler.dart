@@ -227,11 +227,8 @@ class PaymentGatewayHandler {
           lastKnownStatus = data['paymentStatus']?.toString().toUpperCase();
           lastMessage = data['message']?.toString();
 
-          // Only truly terminal confirmed rejections by the gateway/bank should exit early
-          if (lastKnownStatus == 'FAILED' ||
-              lastKnownStatus == 'CANCELLED' ||
-              lastKnownStatus == 'USER_DROPPED' ||
-              lastKnownStatus == 'EXPIRED') {
+          // Only truly terminal confirmed rejections by the gateway/bank should exit early after multiple checks
+          if (attempt >= 3 && (lastKnownStatus == 'CANCELLED' || lastKnownStatus == 'EXPIRED')) {
             return PaymentVerificationResult(
               status: PaymentVerificationStatus.failed,
               message: lastMessage ?? 'Payment was cancelled or not completed.',
