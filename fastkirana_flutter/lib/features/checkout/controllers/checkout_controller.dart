@@ -352,8 +352,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     PaymentVerificationResult? fastVerify;
     try {
-      // Allow up to 5 polling attempts so UPI/NPCI settlement has time to complete
-      fastVerify = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 5);
+      // Quick verification: check if server already marked order PAID (e.g., slow SDK callback)
+      fastVerify = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 2);
       if (fastVerify.isPaid) {
         debugPrint('✅ Payment verified as PAID on server despite error callback! Routing to success...');
         await _onCashfreeSuccess(cfOrderId);
@@ -367,74 +367,48 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final cart = state.pendingCart ?? ref.read(cartProvider).value;
     final context = _currentContext;
 
-    // In-flight or pending confirmation from bank/UPI: retain recovery, DO NOT show cancelled sheet!
-    if ((fastVerify == null || fastVerify.isPending || fastVerify.isUnavailable) &&
-        context != null &&
-        context.mounted &&
-        cart != null) {
-      state = state.copyWith(isPlacingOrder: false, pendingCashfreeOrderId: cfOrderId);
-      await PaymentPendingReconciliationSheet.show(
-        context: context,
-        grandTotal: total,
-        cfOrderId: cfOrderId,
-        onCheckStatus: () async {
-          final recheck = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 3);
-          if (!context.mounted) return;
-          if (recheck.isPaid && recheck.paymentId != null) {
-            Navigator.pop(context);
-            final freshDraft = await CheckoutDraft.loadAcceptedDraft();
-            if (!context.mounted) return;
-            await completeOrderPlacement(
-              context,
-              draft: freshDraft,
-              cart: cart,
-              paymentId: recheck.paymentId,
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: AppDesignSystem.amber600,
-                content: Text(
-                  recheck.message ?? 'Payment confirmation is still pending with your bank.',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        onWait: () {
-          // Keep pending Cashfree order ID intact and unblock checkout UI to show recovery banner
-          state = state.copyWith(isPlacingOrder: false, pendingCashfreeOrderId: cfOrderId);
-        },
-      );
-      return;
-    }
-
     state = state.copyWith(isPlacingOrder: false);
 
-    // ONLY show failure sheet if strictly confirmed as terminal failure
-    if (fastVerify != null && fastVerify.isFailed && context != null && context.mounted && total > 0 && cart != null) {
+    // Prompt customer immediately with options: Retry Payment, Convert to COD, or Cancel Order
+    if (context != null && context.mounted && total > 0 && cart != null) {
       await PaymentFailedCodSheet.show(
         context: context,
         grandTotal: total,
-        onRetryPayment: () {
-          state = state.copyWith(pendingCashfreeOrderId: null);
-          handlePlaceOrder(context, cart: cart);
-        },
-        onCancelOrder: () {
-          state = state.copyWith(isPlacingOrder: false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.rose600,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                'Payment attempt was not completed.',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-              ),
-            ),
+        onRetryPayment: () async {
+          await PaymentGatewayHandler.clearPendingPaymentRecovery();
+          await CheckoutDraft.clearAcceptedDraft();
+          state = state.copyWith(
+            isPlacingOrder: false,
+            pendingCashfreeOrderId: null,
+            pendingGrandTotal: null,
+            pendingCart: null,
           );
+          if (context.mounted) {
+            handlePlaceOrder(context, cart: cart);
+          }
+        },
+        onCancelOrder: () async {
+          await PaymentGatewayHandler.clearPendingPaymentRecovery();
+          await CheckoutDraft.clearAcceptedDraft();
+          state = state.copyWith(
+            isPlacingOrder: false,
+            pendingCashfreeOrderId: null,
+            pendingGrandTotal: null,
+            pendingCart: null,
+          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: AppDesignSystem.rose600,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                content: Text(
+                  'Payment attempt was not completed. Your items are saved in your cart.',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+              ),
+            );
+          }
         },
         onConfirmCod: () async {
           state = state.copyWith(selectedPayment: 'cod', isPlacingOrder: true);
@@ -497,32 +471,15 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           );
         }
         return;
-      } else if (verification.isFailed) {
-        // Confirmed terminal failed: clear recovery and allow fresh placement
-        await PaymentGatewayHandler.clearPendingPaymentRecovery();
-        await CheckoutDraft.clearAcceptedDraft();
-        state = state.copyWith(
-          pendingCashfreeOrderId: null,
-          pendingGrandTotal: null,
-          pendingCart: null,
-        );
-      } else {
-        // PENDING, ACTIVE, timeout and unknown: PRESERVE recovery and BLOCK replacement payment!
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.amber800,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                verification.message ?? 'An existing payment is still pending confirmation with your bank. Please verify its status before initiating a new payment.',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-              ),
-            ),
-          );
-        }
-        return;
       }
+      // If payment was not completed/paid, clear previous attempt and allow fresh placement
+      await PaymentGatewayHandler.clearPendingPaymentRecovery();
+      await CheckoutDraft.clearAcceptedDraft();
+      state = state.copyWith(
+        pendingCashfreeOrderId: null,
+        pendingGrandTotal: null,
+        pendingCart: null,
+      );
     }
     TracerService.startTrace('customer_checkout_tap', attributes: {
       'cart_subtotal': cart.subtotal,
@@ -1646,35 +1603,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         return;
       }
 
-      if (verification.isPending || verification.isUnavailable) {
-        // Retain recovery for pending/unavailable/unknown results; do NOT clear
-        if (mounted) {
-          state = state.copyWith(
-            isPlacingOrder: false,
-            pendingCashfreeOrderId: cfOrderId,
-          );
-        }
-        if (context.mounted) {
-          final messenger = ScaffoldMessenger.maybeOf(context);
-          if (messenger != null) {
-            messenger.hideCurrentSnackBar();
-            messenger.showSnackBar(
-              SnackBar(
-                backgroundColor: AppDesignSystem.amber800,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                content: Text(
-                  verification.message ?? 'Payment status is still pending with your bank. Recovery retained.',
-                  style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-              ),
-            );
-          }
-        }
-        return;
-      }
-
-      // ONLY confirmed terminal unpaid results (FAILED / CANCELLED / EXPIRED / USER_DROPPED)
+      // 2. User explicitly tapped "Dismiss & Pay Now"
+      // Clear previous unconfirmed/cancelled attempt and allow immediate fresh payment
       await PaymentGatewayHandler.clearPendingPaymentRecovery();
       await CheckoutDraft.clearAcceptedDraft();
 
@@ -1685,6 +1615,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         await prefs.setStringList('cancelled_payment_attempts', cancelledList);
       }
 
+      final activeCart = state.pendingCart ?? ref.read(cartProvider).value ?? Cart.empty();
+
       if (mounted) {
         state = state.copyWith(
           isPlacingOrder: false,
@@ -1694,7 +1626,26 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         );
       }
 
-      if (context.mounted) {
+      // Immediately launch a fresh payment attempt if cart has items!
+      if (context.mounted && activeCart.items.isNotEmpty) {
+        final messenger = ScaffoldMessenger.maybeOf(context);
+        if (messenger != null) {
+          messenger.hideCurrentSnackBar();
+          messenger.showSnackBar(
+            SnackBar(
+              backgroundColor: AppDesignSystem.emerald600,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: const Text(
+                'Starting a fresh payment attempt...',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+              duration: const Duration(milliseconds: 1500),
+            ),
+          );
+        }
+        await handlePlaceOrder(context, cart: activeCart);
+      } else if (context.mounted) {
         final messenger = ScaffoldMessenger.maybeOf(context);
         if (messenger != null) {
           messenger.hideCurrentSnackBar();
@@ -1712,11 +1663,14 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         }
       }
     } catch (e) {
-      // Recover busy state on errors, retain recovery
+      await PaymentGatewayHandler.clearPendingPaymentRecovery();
+      await CheckoutDraft.clearAcceptedDraft();
       if (mounted) {
         state = state.copyWith(
           isPlacingOrder: false,
-          pendingCashfreeOrderId: cfOrderId,
+          pendingCashfreeOrderId: null,
+          pendingGrandTotal: null,
+          pendingCart: null,
         );
       }
       if (context.mounted) {
@@ -1725,12 +1679,12 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           messenger.hideCurrentSnackBar();
           messenger.showSnackBar(
             SnackBar(
-              backgroundColor: AppDesignSystem.amber800,
+              backgroundColor: AppDesignSystem.slate800,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                'Could not reach payment gateway: $e. Recovery retained.',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+              content: const Text(
+                'Previous attempt cleared. You can now place your order.',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
               ),
             ),
           );

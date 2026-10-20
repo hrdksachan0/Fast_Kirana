@@ -222,25 +222,25 @@ class PaymentGatewayHandler {
           lastKnownStatus = data['paymentStatus']?.toString().toUpperCase();
           lastMessage = data['message']?.toString();
 
-          // While still in flight or unsettled (PENDING, ACTIVE, USER_DROPPED, NOT_PAID),
-          // keep polling if attempts remain so webhook / NPCI settlement has time to arrive
-          if (attempt < maxAttempts - 1) {
-            if (lastKnownStatus == 'PENDING' ||
-                lastKnownStatus == 'ACTIVE' ||
-                lastKnownStatus == 'USER_DROPPED' ||
-                lastKnownStatus == 'NOT_PAID') {
-              continue;
-            }
-          }
-
           // Only truly terminal confirmed rejections by the gateway/bank should exit early
           if (lastKnownStatus == 'FAILED' ||
               lastKnownStatus == 'CANCELLED' ||
+              lastKnownStatus == 'USER_DROPPED' ||
               lastKnownStatus == 'EXPIRED') {
             return PaymentVerificationResult(
               status: PaymentVerificationStatus.failed,
               message: lastMessage ?? 'Payment was cancelled or not completed.',
             );
+          }
+
+          // While still in flight or unsettled (PENDING, ACTIVE, NOT_PAID),
+          // keep polling if attempts remain so webhook / NPCI settlement has time to arrive
+          if (attempt < maxAttempts - 1) {
+            if (lastKnownStatus == 'PENDING' ||
+                lastKnownStatus == 'ACTIVE' ||
+                lastKnownStatus == 'NOT_PAID') {
+              continue;
+            }
           }
         }
       } on DioException catch (dioErr) {

@@ -972,20 +972,19 @@ async def verify_cashfree_payment(
                 status_to_return = "CANCELLED"
             elif 'payments' in locals() and any(p.get("payment_status") == "SUCCESS" for p in (payments or [])):
                 status_to_return = "PAID"
+            elif 'payments' in locals() and any(p.get("payment_status") in ("FAILED", "CANCELLED", "USER_DROPPED") for p in (payments or [])):
+                status_to_return = "FAILED"
             elif 'payments' in locals() and any(p.get("payment_status") == "PENDING" for p in (payments or [])):
                 status_to_return = "PENDING"
             elif cf_st == "ACTIVE":
-                # Active session is awaiting bank/UPI settlement callback
-                status_to_return = "PENDING"
-            elif 'payments' in locals() and any(p.get("payment_status") == "FAILED" for p in (payments or [])):
-                status_to_return = "FAILED"
+                status_to_return = "ACTIVE"
 
         return {
             "success": False,
             "orderId": clean_id,
             "paymentStatus": status_to_return,
             "isPaid": status_to_return == "PAID",
-            "message": "Payment confirmation pending with your bank.",
+            "message": "Payment was cancelled or could not be completed." if status_to_return == "FAILED" else "Payment confirmation pending with your bank.",
         }
 
     # Verify gateway order identity strictly binds to this order

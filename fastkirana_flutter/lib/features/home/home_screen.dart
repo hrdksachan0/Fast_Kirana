@@ -20,7 +20,7 @@ import 'widgets/home_top_categories_grid.dart';
 import 'widgets/home_product_sections.dart';
 import 'widgets/home_infinite_feed.dart';
 import 'widgets/home_top_header.dart';
-import 'widgets/home_category_toggle.dart';
+import 'widgets/home_sticky_search_toggle.dart';
 import '../../providers/address_provider.dart';
 import '../orders/orders_screen.dart';
 import '../../widgets/unserviceable_location_banner.dart';
@@ -332,8 +332,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
                 slivers: [
                   const SliverToBoxAdapter(
-                    child: HomeTopHeader(showSearch: true),
+                    child: HomeTopHeader(showSearch: false),
                   ),
+
+                  // Sticky Search Bar & Grocery/Food Toggle (pinned across Grocery and Food screens)
+                  if (!hubStatus.isOutsideZone && !hubStatus.isComingSoon)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: HomeStickyHeaderDelegate(
+                        isGrocerySelected: _isGrocerySelected,
+                        onModeChanged: (val) {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _isGrocerySelected = val;
+                          });
+                        },
+                      ),
+                    ),
 
                   // 1. Outside All Serviceable Delivery Zones
                   if (hubStatus.isOutsideZone) ...[
@@ -358,17 +373,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   else ...[
                     const SliverToBoxAdapter(
                         child: UnserviceableLocationBanner()),
-                    SliverToBoxAdapter(
-                      child: HomeCategoryToggle(
-                        isGrocerySelected: _isGrocerySelected,
-                        onModeChanged: (val) {
-                          HapticFeedback.selectionClick();
-                          setState(() {
-                            _isGrocerySelected = val;
-                          });
-                        },
-                      ),
-                    ),
                     SliverToBoxAdapter(
                       child: DynamicHeroBannerCarousel(
                         key: ValueKey(

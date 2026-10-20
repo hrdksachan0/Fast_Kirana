@@ -75,7 +75,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
         context.isCompact ? 10 : 16,
         8,
         context.isCompact ? 10 : 16,
-        12,
+        widget.showSearch ? 12 : 6,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

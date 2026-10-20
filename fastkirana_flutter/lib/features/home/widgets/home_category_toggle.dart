@@ -6,11 +6,15 @@ import 'package:google_fonts/google_fonts.dart';
 class HomeCategoryToggle extends StatefulWidget {
   final bool isGrocerySelected;
   final ValueChanged<bool> onModeChanged;
+  final double height;
+  final EdgeInsetsGeometry padding;
 
   const HomeCategoryToggle({
     super.key,
     required this.isGrocerySelected,
     required this.onModeChanged,
+    this.height = 56.0,
+    this.padding = const EdgeInsets.fromLTRB(16, 6, 16, 12),
   });
 
   @override
@@ -69,7 +73,7 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
     <ellipse cx="31" cy="28" rx="1.5" ry="2.5" transform="rotate(15 31 28)" fill="#FEF3C7"/>
     <ellipse cx="41" cy="29" rx="1.5" ry="2.5" transform="rotate(-15 41 29)" fill="#FEF3C7"/>
     <!-- Lettuce (Vibrant Green Wavy) -->
-    <path d="M10 37c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4-1.5 6 0 4-1.5 6 0 4-1.5 6 0 4-1.5 6 0v4H10v-4z" fill="#10B981"/>
+    <path d="M10 37c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0 4-1.5 6 0 4-1.5 6 0 4-1.5 6 0v4H10v-4z" fill="#10B981"/>
     <!-- Tomato Slices (Vibrant Red) -->
     <rect x="13" y="40" width="22" height="4.5" rx="2.2" fill="#EF4444"/>
     <rect x="37" y="40" width="22" height="4.5" rx="2.2" fill="#EF4444"/>
@@ -145,7 +149,7 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
     final isGrocery = widget.isGrocerySelected;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+      padding: widget.padding,
       child: AnimatedBuilder(
         animation: _toggleNudgeController,
         builder: (context, child) {
@@ -155,15 +159,16 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
           return LayoutBuilder(
             builder: (context, constraints) {
               final outerWidth = constraints.maxWidth;
-              const outerHeight = 60.0;
-              const innerPadding = 4.0;
+              final outerHeight = widget.height;
+              final isCompactHeight = outerHeight <= 52.0;
+              final innerPadding = isCompactHeight ? 3.0 : 4.0;
               final pillWidth = (outerWidth - (innerPadding * 2)) / 2;
 
               return Container(
                 height: outerHeight,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(32),
+                  borderRadius: BorderRadius.circular(isCompactHeight ? 28 : 32),
                   border: Border.all(
                     color: const Color(0xFFE2E8F0),
                     width: 1.2,
@@ -196,7 +201,7 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(26),
+                          borderRadius: BorderRadius.circular(isCompactHeight ? 22 : 26),
                           boxShadow: [
                             BoxShadow(
                               color: (isGrocery ? const Color(0xFFE20A22) : const Color(0xFFEA580C))
@@ -271,13 +276,13 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                             ),
                                             child: SvgPicture.string(
                                               _grocerySvg,
-                                              width: 32,
-                                              height: 32,
+                                              width: isCompactHeight ? 26 : 32,
+                                              height: isCompactHeight ? 26 : 32,
                                             ),
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 9),
+                                      SizedBox(width: isCompactHeight ? 7 : 9),
                                       // 2-Line Typography
                                       Column(
                                         mainAxisAlignment: MainAxisAlignment.center,
@@ -286,7 +291,7 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                           AnimatedDefaultTextStyle(
                                             duration: const Duration(milliseconds: 220),
                                             style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 16.5,
+                                              fontSize: isCompactHeight ? 14.5 : 16.5,
                                               fontWeight: FontWeight.w900,
                                               color: isGrocery
                                                   ? Colors.white
@@ -295,16 +300,16 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                             ),
                                             child: const Text('Grocery'),
                                           ),
-                                          const SizedBox(height: 2),
+                                          SizedBox(height: isCompactHeight ? 1 : 2),
                                           AnimatedDefaultTextStyle(
                                             duration: const Duration(milliseconds: 220),
                                             style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 8.5,
+                                              fontSize: isCompactHeight ? 7.5 : 8.5,
                                               fontWeight: FontWeight.w800,
                                               color: isGrocery
                                                   ? Colors.white.withValues(alpha: 0.9)
                                                   : const Color(0xFF94A3B8),
-                                              letterSpacing: 1.4,
+                                              letterSpacing: 1.3,
                                             ),
                                             child: const Text('FAST DELIVERY'),
                                           ),
@@ -355,13 +360,13 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                             ),
                                             child: SvgPicture.string(
                                               _burgerSvg,
-                                              width: 32,
-                                              height: 32,
+                                              width: isCompactHeight ? 26 : 32,
+                                              height: isCompactHeight ? 26 : 32,
                                             ),
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 9),
+                                      SizedBox(width: isCompactHeight ? 7 : 9),
                                       // 2-Line Typography
                                       Column(
                                         mainAxisAlignment: MainAxisAlignment.center,
@@ -370,7 +375,7 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                           AnimatedDefaultTextStyle(
                                             duration: const Duration(milliseconds: 220),
                                             style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 16.5,
+                                              fontSize: isCompactHeight ? 14.5 : 16.5,
                                               fontWeight: FontWeight.w900,
                                               color: !isGrocery
                                                   ? Colors.white
@@ -379,16 +384,16 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                             ),
                                             child: const Text('Food'),
                                           ),
-                                          const SizedBox(height: 2),
+                                          SizedBox(height: isCompactHeight ? 1 : 2),
                                           AnimatedDefaultTextStyle(
                                             duration: const Duration(milliseconds: 220),
                                             style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 8.5,
+                                              fontSize: isCompactHeight ? 7.5 : 8.5,
                                               fontWeight: FontWeight.w800,
                                               color: !isGrocery
                                                   ? Colors.white.withValues(alpha: 0.9)
                                                   : const Color(0xFF94A3B8),
-                                              letterSpacing: 1.4,
+                                              letterSpacing: 1.3,
                                             ),
                                             child: const Text('RESTAURANTS'),
                                           ),
