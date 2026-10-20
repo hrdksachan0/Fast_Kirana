@@ -15,7 +15,7 @@ from database import get_db
 from models import (
     User, Order, RiderWallet, CashDepositTransaction, Role, 
     OrderStatus, PaymentMethod, PaymentStatus, StoreSetting, 
-    Product, Category, OrderItem, Restaurant, DarkStore, Address, Store
+    Product, Category, OrderItem, Restaurant, DarkStore, Address
 )
 from schemas import CashDepositRequest, FinancialSummaryOut
 from routers.auth import require_admin
@@ -53,6 +53,7 @@ async def admin_toggle_serviceability_alias(
 
 
 @router.get("/rider-cash")
+@router.get("/rider-cash/")
 async def get_admin_rider_cash_summary(
     storeId: Optional[str] = Query(None),
     current_admin: Any = Depends(require_admin),
@@ -79,13 +80,14 @@ async def get_admin_rider_cash_summary(
     riders = rider_res.scalars().all()
 
     # Pre-fetch store names for mapping
-    stores_res = await db.execute(select(Store.id, Store.name))
+    stores_res = await db.execute(select(DarkStore.id, DarkStore.name))
     store_map = {row[0]: row[1] for row in stores_res.all()}
 
-    # Ensure wallet exists for every rider
+    # Ensure wallet exists for every rider safely without expiring session instances
     rider_list = []
     pending_rider_cash = 0.0
 
+    new_wallets_added = False
     for r in riders:
         wallet = r.riderWallet
         if not wallet:
@@ -98,10 +100,19 @@ async def get_admin_rider_cash_summary(
                 totalDeposited=0.0
             )
             db.add(wallet)
-            await db.commit()
-            await db.refresh(wallet)
+            r.riderWallet = wallet
+            new_wallets_added = True
 
-        pending_rider_cash += float(wallet.cashInHand)
+    if new_wallets_added:
+        try:
+            await db.flush()
+        except Exception as e:
+            logger.warning(f"Failed to flush auto-created rider wallets: {e}")
+
+    for r in riders:
+        wallet = r.riderWallet
+        wallet_cash = float(wallet.cashInHand) if (wallet and wallet.cashInHand is not None) else 0.0
+        pending_rider_cash += wallet_cash
 
         # Active orders currently assigned and in progress
         active_stmt = select(func.count(Order.id)).where(
@@ -156,10 +167,10 @@ async def get_admin_rider_cash_summary(
             "email": r.email,
             "phone": r.phone or "",
             "image": r.image,
-            "cashInHand": float(wallet.cashInHand),
-            "cashLimit": float(wallet.cashLimit),
-            "totalCollected": float(wallet.totalCollected),
-            "totalDeposited": float(wallet.totalDeposited),
+            "cashInHand": wallet_cash,
+            "cashLimit": float(wallet.cashLimit) if (wallet and wallet.cashLimit is not None) else 2000.0,
+            "totalCollected": float(wallet.totalCollected) if (wallet and wallet.totalCollected is not None) else 0.0,
+            "totalDeposited": float(wallet.totalDeposited) if (wallet and wallet.totalDeposited is not None) else 0.0,
             "activeOrdersCount": active_count,
             "todayTotalOrdersCount": today_total_orders,
             "todayTotalDeliveredMoney": today_total_money,
@@ -260,6 +271,7 @@ async def get_admin_rider_cash_summary(
 
 
 @router.post("/rider-cash")
+@router.post("/rider-cash/")
 async def settle_rider_cash(
     payload: CashDepositRequest,
     current_admin: Any = Depends(require_admin),
@@ -314,6 +326,7 @@ async def settle_rider_cash(
 
 
 @router.delete("/rider-cash")
+@router.delete("/rider-cash/")
 async def delete_rider_cash_log(
     id: Optional[str] = Query(None),
     clearAll: Optional[bool] = Query(False),
