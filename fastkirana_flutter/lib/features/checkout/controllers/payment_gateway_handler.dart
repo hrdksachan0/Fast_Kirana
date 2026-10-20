@@ -213,10 +213,14 @@ class PaymentGatewayHandler {
           final data = verifyRes.data;
           if (data['isPaid'] == true || data['paymentStatus'] == 'PAID') {
             final paymentId = data['cfPaymentId']?.toString() ?? 'CF_$cfOrderId';
+            final serverOrderId = data['orderId']?.toString();
+            final readableId = data['readableId']?.toString();
             // Do NOT clear active_pending_cf_order_id here; keep recovery intact until backend order placement ACK
             return PaymentVerificationResult(
               status: PaymentVerificationStatus.paid,
               paymentId: paymentId,
+              serverOrderId: serverOrderId,
+              readableId: readableId,
             );
           }
           lastKnownStatus = data['paymentStatus']?.toString().toUpperCase();
@@ -323,11 +327,15 @@ enum PaymentVerificationStatus {
 class PaymentVerificationResult {
   final PaymentVerificationStatus status;
   final String? paymentId;
+  final String? serverOrderId;
+  final String? readableId;
   final String? message;
 
   const PaymentVerificationResult({
     required this.status,
     this.paymentId,
+    this.serverOrderId,
+    this.readableId,
     this.message,
   });
 

@@ -1035,6 +1035,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           filtered = [...serverProducts, ...remaining];
         }
 
+        // Zepto/Blinkit architecture: prioritize in-stock products first, out-of-stock sinks to end
+        filtered.sort((a, b) {
+          final aIn = a.isInStock ? 0 : 1;
+          final bIn = b.isInStock ? 0 : 1;
+          return aIn.compareTo(bIn);
+        });
+
         if (filtered.isEmpty && matchedRestaurants.isEmpty) {
           if (serverSearchAsync.isLoading) {
             return _buildShimmerGrid();

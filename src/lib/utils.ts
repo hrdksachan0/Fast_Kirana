@@ -174,7 +174,8 @@ export function sortProductsByStock<T extends { stock?: number | null; variants?
 }
 
 /** Variant-aware stock check — matches the mobile app's isProductOutOfStock logic */
-export function isProductInStock(p: { stock?: number | null; variants?: any }): boolean {
+export function isProductInStock(p: { stock?: number | null; variants?: any; isAvailable?: boolean }): boolean {
+  if (p.isAvailable === false || (p as any).is_available === false) return false
   const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0
   if (!hasVariants) return (p.stock ?? 0) > 0
   const totalStock = (p.variants as any[]).reduce((sum: number, v: any) => sum + (v.stock || 0), 0)

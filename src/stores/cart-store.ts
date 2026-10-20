@@ -89,10 +89,20 @@ export const useCartStore = create<CartState>()(
           if (effectiveHubId && currentHubId && currentHubId !== effectiveHubId && items.length > 0) {
             items = []
           }
+          // Zepto/Blinkit cart guardrail: Strictly prevent out-of-stock items from entering the cart
+          const isRest = Boolean(product.restaurantId || (product as any).restaurant)
+          const isOutOfStock = (!isRest && typeof product.stock === 'number' && product.stock <= 0) || product.isAvailable === false
+          if (isOutOfStock) {
+            return { hubId: currentHubId || null, items }
+          }
+
           const targetHubId = effectiveHubId || currentHubId || null
           const existing = items.find((item) => item?.product?.id === product.id)
           if (existing) {
-            const maxAllowed = product.stock > 0 ? product.stock : 9999
+            const maxAllowed = isRest ? 99 : (product.stock > 0 ? product.stock : 1)
+            if (existing.quantity >= maxAllowed) {
+              return { hubId: targetHubId, items }
+            }
             return {
               hubId: targetHubId,
               items: items.map((item) =>
@@ -129,7 +139,8 @@ export const useCartStore = create<CartState>()(
             return {
               items: items.map((item) => {
                 if (item.product.id === productId) {
-                  const maxAllowed = item.product.stock > 0 ? item.product.stock : 9999
+                  const isRest = Boolean(item.product.restaurantId || (item.product as any).restaurant)
+                  const maxAllowed = isRest ? 99 : (item.product.stock > 0 ? item.product.stock : 1)
                   return { ...item, quantity: Math.min(quantity, maxAllowed) }
                 }
                 return item
@@ -140,7 +151,8 @@ export const useCartStore = create<CartState>()(
           return {
             items: items.map((item) => {
               if (item.product.id.startsWith(`${productId}_`)) {
-                const maxAllowed = item.product.stock > 0 ? item.product.stock : 9999
+                const isRest = Boolean(item.product.restaurantId || (item.product as any).restaurant)
+                const maxAllowed = isRest ? 99 : (item.product.stock > 0 ? item.product.stock : 1)
                 return { ...item, quantity: Math.min(quantity, maxAllowed) }
               }
               return item

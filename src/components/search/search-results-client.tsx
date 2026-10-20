@@ -121,6 +121,13 @@ export function SearchResultsClient({ products, query }: SearchResultsClientProp
         break
     }
 
+    // Zepto/Blinkit architecture: In-stock products always first, out-of-stock items sink to the bottom
+    result.sort((a, b) => {
+      const aInStock = (typeof a.stock === 'number' ? a.stock > 0 : true) && a.isAvailable !== false ? 1 : 0
+      const bInStock = (typeof b.stock === 'number' ? b.stock > 0 : true) && b.isAvailable !== false ? 1 : 0
+      return bInStock - aInStock
+    })
+
     return result
   }, [products, selectedOutlet, selectedCategory, sortBy, priceRange, inStockOnly])
 

@@ -351,14 +351,19 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   Future<void> increment(Product product) async {
-    HapticFeedback.selectionClick();
     final cart = _cart;
-    if (cart == null) return;
+    if (cart == null || !product.isAvailable) return;
     final items = List<CartItem>.from(cart.items);
     final idx = items.indexWhere((i) => i.productId == product.id || i.product.id == product.id);
 
     if (idx >= 0) {
       final item = items[idx];
+      final maxStock = product.getStockForVariant(item.selectedVariant);
+      if (maxStock > 0 && item.quantity >= maxStock) {
+        HapticFeedback.heavyImpact();
+        return;
+      }
+      HapticFeedback.selectionClick();
       items[idx] = CartItem(
         id: item.id,
         cartId: item.cartId,
@@ -371,6 +376,8 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       await repository.saveLocalCart(items);
       _scheduleDebouncedSync(items);
     } else {
+      if (product.stock <= 0) return;
+      HapticFeedback.selectionClick();
       items.add(_newCartItem(product, 1, null));
       _setState(items, cart);
       await repository.saveLocalCart(items);

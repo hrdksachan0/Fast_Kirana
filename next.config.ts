@@ -83,6 +83,11 @@ const nextConfig: NextConfig = {
       },
       // Policy Aliases & Typo Redirections
       {
+        source: '/orders',
+        destination: '/account',
+        permanent: false,
+      },
+      {
         source: '/shipping_policy',
         destination: '/shipping-policy',
         permanent: true,

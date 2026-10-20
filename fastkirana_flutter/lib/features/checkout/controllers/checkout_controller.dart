@@ -168,6 +168,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
                 draft: draft,
                 cart: ref.read(cartProvider).value ?? Cart.empty(),
                 paymentId: verification.paymentId,
+                serverOrderId: verification.serverOrderId,
+                serverReadableId: verification.readableId,
               );
             }
             return;
@@ -282,6 +284,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
                 draft: freshDraft ?? draft,
                 cart: cart ?? Cart.empty(),
                 paymentId: recheck.paymentId,
+                serverOrderId: recheck.serverOrderId,
+                serverReadableId: recheck.readableId,
               );
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -344,6 +348,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       draft: draft,
       cart: cart ?? Cart.empty(),
       paymentId: resolvedPaymentId,
+      serverOrderId: verification.serverOrderId,
+      serverReadableId: verification.readableId,
     );
   }
 
@@ -803,6 +809,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     Cart? cart,
     CheckoutDraft? draft,
     String? paymentId,
+    String? serverOrderId,
+    String? serverReadableId,
   }) async {
     final effectiveCart = cart ?? ref.read(cartProvider).value ?? Cart.empty();
     final hasDraftItems = draft != null && draft.items.isNotEmpty;
@@ -1037,7 +1045,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     }
 
     final isOnlinePaid = paymentId != null && paymentId.isNotEmpty;
-    final orderId = 'FK-${(100000 + DateTime.now().millisecondsSinceEpoch % 900000)}';
+    final orderId = serverReadableId ?? 'FK-${(100000 + DateTime.now().millisecondsSinceEpoch % 900000)}';
 
     final List<OrderItem> orderItemsList = hasDraftItems
         ? draft.items.map<OrderItem>((i) {
@@ -1070,8 +1078,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           }).toList();
 
     final newOrder = Order(
-      id: orderId,
-      readableId: orderId,
+      id: serverOrderId ?? orderId,
+      readableId: serverReadableId ?? orderId,
       userId: userId,
       addressId: selectedAddress?.id ?? 'addr_default',
       restaurantId: restaurantId,
@@ -1233,17 +1241,21 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       debugPrint('Backend sync notice: $e');
       final isOnlinePaid = paymentId != null && paymentId.isNotEmpty;
 
-      // 🛡️ EMERGENCY RECOVERY: If paid online, save locally and proceed
+      // 🛡️ CONFIRMED PAYMENT: If paid online, save locally and proceed directly to Order Success!
       if (isOnlinePaid) {
-        debugPrint('Emergency Payment Recovery: Order $orderId was paid ($paymentId) but backend sync failed. Retaining recovery reference.');
+        debugPrint('🛡️ Payment Confirmed ($paymentId): Order placed, clearing recovery and proceeding to Order Success.');
         try {
           await OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder);
         } catch (saveErr, st) {
           LoggerService.error('CheckoutController: savePlacedOrderLocally emergency', saveErr, st);
         }
+        await PaymentGatewayHandler.clearPendingPaymentRecovery();
+        await CheckoutDraft.clearAcceptedDraft();
         state = state.copyWith(
           isPlacingOrder: false,
-          pendingCashfreeOrderId: state.pendingCashfreeOrderId ?? orderId,
+          pendingCashfreeOrderId: null,
+          pendingGrandTotal: null,
+          pendingCart: null,
         );
         if (apiPayload != null) {
           unawaited(_retryOrderSync(
@@ -1254,15 +1266,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             userId: userId,
           ));
         }
-        if (context != null && context.mounted) {
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            const SnackBar(
-              backgroundColor: AppDesignSystem.amber800,
-              content: Text('Payment received! Finalizing order details with store...'),
-            ),
-          );
-        }
-        return;
+        // Do NOT return! Proceed directly to _finishOrderPlacement so customer always sees OrderSuccessScreen!
       } else {
         state = state.copyWith(isPlacingOrder: false);
         if (context != null && context.mounted) {
@@ -1498,6 +1502,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           draft: draft,
           cart: currentCart ?? Cart.empty(),
           paymentId: verification.paymentId,
+          serverOrderId: verification.serverOrderId,
+          serverReadableId: verification.readableId,
         );
       } else if (verification.isFailed) {
         await PaymentGatewayHandler.clearPendingPaymentRecovery();
@@ -1598,6 +1604,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             draft: draft,
             cart: currentCart,
             paymentId: verification.paymentId,
+            serverOrderId: verification.serverOrderId,
+            serverReadableId: verification.readableId,
           );
         }
         return;

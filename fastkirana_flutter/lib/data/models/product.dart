@@ -105,6 +105,33 @@ class Product {
     final discountVal = double.tryParse(json['discount']?.toString() ?? '0') ??
         (mrpVal > priceVal && mrpVal > 0 ? ((mrpVal - priceVal) / mrpVal * 100) : 0.0);
 
+    final isRest = (json['restaurantId'] != null && json['restaurantId'].toString().trim().isNotEmpty) ||
+        (json['restaurant'] is Map);
+
+    final bool availableFlag = json['isAvailable'] != false &&
+        json['is_available'] != false &&
+        json['inStock'] != false &&
+        json['in_stock'] != false &&
+        json['status'] != 'out_of_stock' &&
+        json['isSoldOut'] != true &&
+        json['is_sold_out'] != true;
+
+    int resolvedStock = 0;
+    if (json['inventories'] is List && (json['inventories'] as List).isNotEmpty) {
+      final inv = (json['inventories'] as List).first;
+      if (inv is Map && inv['stock'] != null) {
+        resolvedStock = int.tryParse(inv['stock'].toString()) ?? 0;
+      }
+    } else if (json['stock'] != null) {
+      resolvedStock = int.tryParse(json['stock'].toString()) ?? 0;
+    } else if (json['inventory'] != null && json['inventory'] is Map && (json['inventory'] as Map)['stock'] != null) {
+      resolvedStock = int.tryParse((json['inventory'] as Map)['stock'].toString()) ?? 0;
+    } else if (isRest) {
+      resolvedStock = 999;
+    } else {
+      resolvedStock = 0;
+    }
+
     return Product(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Product',
@@ -119,10 +146,10 @@ class Product {
       unit: (json['unit'] != null && json['unit'].toString().trim().isNotEmpty)
           ? json['unit'].toString()
           : '1 unit',
-      stock: int.tryParse(json['stock']?.toString() ?? '999') ?? 999,
-      isAvailable: json['isAvailable'] != false,
+      stock: resolvedStock,
+      isAvailable: availableFlag,
       tags: tagsList,
-      variants: _parseVariantsFromJson(json['variants'], double.tryParse(json['price']?.toString() ?? '0') ?? 0, double.tryParse(json['mrp']?.toString() ?? '0') ?? 0, int.tryParse(json['stock']?.toString() ?? '0') ?? 0, json['unit']?.toString() ?? ''),
+      variants: _parseVariantsFromJson(json['variants'], double.tryParse(json['price']?.toString() ?? '0') ?? 0, double.tryParse(json['mrp']?.toString() ?? '0') ?? 0, resolvedStock, json['unit']?.toString() ?? ''),
       addons: _parseAddonsFromJson(json['addons']),
       minStock: int.tryParse(json['minStock']?.toString() ?? '0') ?? 0,
       expiryDate: parsedExpiry,
@@ -181,10 +208,11 @@ class Product {
       };
 
   bool get isInStock {
+    if (!isAvailable) return false;
     if (parsedVariants.isNotEmpty) {
-      return parsedVariants.any((v) => v.stock > 0) && isAvailable;
+      return parsedVariants.any((v) => v.stock > 0);
     }
-    return stock > 0 && isAvailable;
+    return stock > 0;
   }
 
   ProductVariant? getVariantByName(String? name) {
@@ -355,7 +383,7 @@ class ProductVariant {
     required this.name,
     required this.price,
     required this.mrp,
-    this.stock = 999,
+    this.stock = 0,
   });
 
   Map<String, dynamic> toJson() => {

@@ -627,6 +627,52 @@ async def create_order(
         else:
             user_id = user_obj.id
 
+    # ── EARLY IDEMPOTENCY CHECK FOR ONLINE/CASHFREE ORDERS ──
+    # If this Cashfree payment was already processed (auto-recovered on verify or webhook),
+    # immediately return the existing order without re-evaluating stock, store hours, or coupons.
+    early_cf_order = str(payload.get("cfOrderId") or "").strip()
+    early_pm_id = str(payload.get("paymentId") or payload.get("cfPaymentId") or "").strip()
+    early_cf_id = early_cf_order or (early_pm_id.replace("CF_", "") if early_pm_id.startswith("CF_") else (early_pm_id if early_pm_id.startswith("cf_") else ""))
+    if early_cf_id:
+        early_clean_cf = re.sub(r"[^a-zA-Z0-9_-]", "_", early_cf_id)[:45]
+        early_base_cf = re.sub(r"_r\d+$", "", early_clean_cf.strip())
+        try:
+            exist_res = await db.execute(
+                select(Order).where(
+                    or_(
+                        Order.id == early_clean_cf,
+                        Order.id == early_base_cf,
+                        Order.readableId == early_clean_cf,
+                        Order.readableId == early_base_cf,
+                        Order.cfOrderId == early_clean_cf,
+                        Order.cfOrderId == early_base_cf,
+                    )
+                ).options(selectinload(Order.items), selectinload(Order.address), selectinload(Order.user)).order_by(Order.createdAt.asc())
+            )
+            existing_matched = exist_res.scalars().all()
+            if existing_matched:
+                first_match = existing_matched[0]
+                first_phone = re.sub(r"\D", "", str(first_match.user.phone if first_match.user else ""))[-10:]
+                caller_phone = re.sub(r"\D", "", str(user_obj.phone if user_obj else payload.get("phone") or ""))[-10:]
+                is_owner = (first_match.userId == user_id) or (first_phone and caller_phone and first_phone == caller_phone)
+                if not is_owner:
+                    logger.error(f"[Payment Security] Order #{first_match.readableId} belongs to user '{first_match.userId}', but caller is '{user_id}'. Replay rejected.")
+                    raise HTTPException(status_code=403, detail="Payment reference belongs to another user's order.")
+                all_matches = list(existing_matched)
+                if first_match.combinedId:
+                    comb_res = await db.execute(
+                        select(Order).where(Order.combinedId == first_match.combinedId)
+                        .options(selectinload(Order.items), selectinload(Order.address), selectinload(Order.user))
+                        .order_by(Order.createdAt.asc())
+                    )
+                    all_matches = comb_res.scalars().all()
+                main_match = next((o for o in all_matches if not o.restaurantId), all_matches[0])
+                logger.info(f"🛡️ [EARLY IDEMPOTENCY] FastAPI returning existing order #{main_match.readableId} for CF ID {early_clean_cf}")
+                return _build_replayed_order_payload(main_match, all_matches)
+        except HTTPException:
+            raise
+        except Exception as early_idemp_err:
+            logger.warning(f"Early idempotency check notice: {early_idemp_err}")
     # H2 FIX: Idempotency lock check with canonical request fingerprint
     raw_req_items = payload.get("items", [])
     raw_req_addr = payload.get("addressId")

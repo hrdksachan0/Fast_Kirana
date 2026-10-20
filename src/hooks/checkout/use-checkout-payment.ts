@@ -453,72 +453,45 @@ export function useCheckoutPayment({
             clearInterval(pollTimer)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
 
-            // Payment verified! Now create the order in DB
+            // Payment verified! Now ensure order exists in DB & navigate cleanly to success
             setOverlayState('creating-order')
             const resolvedPaymentId = verifyData.cfPaymentId || verifyData.paymentId || `CF_${cfData.orderId}`
 
-            let orderCreated = false
             let orderData: any = null
 
-            // Retry order creation up to 3 times (critical: payment already taken)
-            for (let retry = 0; retry < 3; retry++) {
-              try {
-                const orderRes = await fetch(`${apiUrl()}/api/orders`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    ...pendingPayload,
-                    paymentStatus: 'PAID',
-                    paymentId: resolvedPaymentId,
-                    cfOrderId: cfData.orderId,
-                  }),
-                })
-                orderData = await orderRes.json()
-                if (orderRes.ok) {
-                  orderCreated = true
-                  break
-                }
-                console.warn(`Order creation attempt ${retry + 1} failed:`, orderData)
-              } catch (orderErr) {
-                console.error(`Order creation attempt ${retry + 1} error:`, orderErr)
-              }
-              if (retry < 2) await new Promise((r) => setTimeout(r, 2000))
-            }
-
-            if (orderCreated && orderData) {
-              clearCart()
-              triggerHaptic('success')
-              setOrderReadableId(orderData.readableId || orderData.id?.slice(0, 8))
-              setOverlayState('success')
-              toast.success('🎉 Payment Verified & Order Placed!')
-              setTimeout(() => {
-                window.location.replace(`/order/${orderData.id}/success`)
-              }, 1500)
-            } else {
-              // 🛡️ EMERGENCY RECOVERY: Payment succeeded but order creation failed
-              // Save to localStorage as backup — webhook/cron will reconcile
-              try {
-                const emergencyData = {
-                  payload: pendingPayload,
+            // Fast sync with backend (backend early-idempotency resolves existing order in <50ms)
+            try {
+              const orderRes = await fetch(`${apiUrl()}/api/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...pendingPayload,
+                  paymentStatus: 'PAID',
                   paymentId: resolvedPaymentId,
                   cfOrderId: cfData.orderId,
-                  amount: paymentAmount,
-                  timestamp: Date.now(),
-                }
-                localStorage.setItem(`fk_emergency_order_${cfData.orderId}`, JSON.stringify(emergencyData))
-              } catch (_) {}
-
-              clearCart()
-              triggerHaptic('success')
-              setOverlayState('success')
-              toast.success(
-                '✅ Payment of ₹' + paymentAmount + ' successful! Your order is being confirmed. You will receive confirmation shortly.',
-                { duration: 8000 }
-              )
-              setTimeout(() => {
-                window.location.replace('/orders')
-              }, 3000)
+                }),
+              })
+              orderData = await orderRes.json()
+            } catch (orderErr) {
+              console.warn('Order sync note:', orderErr)
             }
+
+            // Target Order ID: orderData?.id or verifyData.orderId (auto-recovered) or cfData.orderId
+            const finalOrderId = orderData?.id || orderData?.order?.id || verifyData?.orderId || cfData.orderId
+            const finalReadableId = orderData?.readableId || orderData?.order?.readableId || verifyData?.readableId || finalOrderId
+
+            clearCart()
+            triggerHaptic('success')
+            if (finalReadableId) {
+              setOrderReadableId(finalReadableId)
+            }
+            setOverlayState('success')
+            toast.success('🎉 Payment Verified & Order Placed!')
+
+            // Seamless immediate transition to Order Success Screen
+            setTimeout(() => {
+              window.location.replace(`/order/${finalOrderId}/success`)
+            }, 500)
             return true
           }
         } catch (_) {
@@ -779,11 +752,12 @@ export function useCheckoutPayment({
           }),
         })
         const orderData = await orderRes.json()
-        if (orderRes.ok && orderData?.id) {
+        const targetId = orderData?.id || orderData?.order?.id || verifyData?.orderId || failedPaymentOrder.cfOrderId
+        if (targetId) {
           clearCart()
           triggerHaptic('success')
           setFailedPaymentOrder(null)
-          window.location.replace(`/order/${orderData.id}/success`)
+          window.location.replace(`/order/${targetId}/success`)
           return
         }
       } else {

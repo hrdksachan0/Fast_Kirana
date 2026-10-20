@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Product } from '@/types'
 import { ProductStockBanner } from './product-stock-banner'
 import { ProductDetailActions } from './product-detail-actions'
@@ -29,7 +29,7 @@ export function ProductVariantSelector({ product }: ProductVariantSelectorProps)
         name: String(v.name || v.title || v.unit || `Option ${i + 1}`),
         price: Number(v.price) || Number(product.price) || 0,
         mrp: Number(v.mrp) || Number(v.price) || Number(product.mrp) || 0,
-        stock: v.stock !== undefined ? Number(v.stock) : Number(product.stock ?? 10),
+        stock: v.stock !== undefined ? Number(v.stock) : Number(product.stock ?? 0),
       }))
       .sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
   }, [product.variants, product.price, product.mrp, product.stock])
@@ -37,10 +37,21 @@ export function ProductVariantSelector({ product }: ProductVariantSelectorProps)
   const hasVariants = normalizedVariants.length > 0
   const variantsList = normalizedVariants
 
-  // Track selected variant name (default to cheapest variant)
-  const [selectedVariantName, setSelectedVariantName] = useState<string>(
-    variantsList.length > 0 ? variantsList[0].name : ''
-  )
+  // Zepto/Blinkit behavior: Auto-select the first in-stock variant
+  const initialVariant = useMemo(() => {
+    if (variantsList.length === 0) return ''
+    const inStock = variantsList.find((v) => (v.stock ?? 0) > 0)
+    return inStock ? inStock.name : variantsList[0].name
+  }, [variantsList])
+
+  const [selectedVariantName, setSelectedVariantName] = useState<string>(initialVariant)
+
+  // Keep selected variant in sync when variant list changes
+  useEffect(() => {
+    if (initialVariant && !selectedVariantName) {
+      setSelectedVariantName(initialVariant)
+    }
+  }, [initialVariant, selectedVariantName])
 
   const activeVariant = useMemo(() => {
     if (!hasVariants || variantsList.length === 0) return null
@@ -50,7 +61,8 @@ export function ProductVariantSelector({ product }: ProductVariantSelectorProps)
   // Resolve ID, Price, MRP, and Stock
   const resolvedVariantName = activeVariant ? activeVariant.name : null
   const resolvedId = resolvedVariantName ? `${product.id}_${resolvedVariantName}` : product.id
-  const initialStock = activeVariant ? activeVariant.stock : product.stock
+  const initialStock = activeVariant ? (activeVariant.stock ?? 0) : (product.stock ?? 0)
+  const isVariantInStock = initialStock > 0 && product.isAvailable !== false
   const resolvedPrice = activeVariant ? activeVariant.price : product.price
   const resolvedMrp = activeVariant ? activeVariant.mrp : product.mrp
   const resolvedDiscount = resolvedMrp > resolvedPrice
@@ -67,8 +79,9 @@ export function ProductVariantSelector({ product }: ProductVariantSelectorProps)
       mrp: resolvedMrp,
       discount: resolvedDiscount,
       stock: initialStock,
+      isAvailable: isVariantInStock,
     }
-  }, [product, resolvedId, resolvedVariantName, resolvedPrice, resolvedMrp, resolvedDiscount, initialStock])
+  }, [product, resolvedId, resolvedVariantName, resolvedPrice, resolvedMrp, resolvedDiscount, initialStock, isVariantInStock])
 
   return (
     <div className="space-y-4">
@@ -81,17 +94,25 @@ export function ProductVariantSelector({ product }: ProductVariantSelectorProps)
           <div className="flex flex-wrap gap-2">
             {variantsList.map((v) => {
               const isSelected = v.name === selectedVariantName
+              const isSoldOut = (v.stock ?? 0) <= 0
               return (
                 <button
                   key={v.name}
                   onClick={() => setSelectedVariantName(v.name)}
-                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all duration-200 cursor-pointer ${
+                  className={`px-3.5 py-1.5 text-xs font-bold rounded-xl border transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
                     isSelected
-                      ? 'bg-primary border-primary text-white shadow-sm'
+                      ? (isSoldOut ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-primary border-primary text-white shadow-sm')
+                      : isSoldOut
+                      ? 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-400 opacity-60'
                       : 'bg-muted/30 border-border/60 text-text-primary hover:border-primary/50'
                   }`}
                 >
-                  {v.name}
+                  <span className={isSoldOut && !isSelected ? 'line-through' : ''}>{v.name}</span>
+                  {isSoldOut && (
+                    <span className="text-[9px] uppercase tracking-wider font-black text-rose-500 bg-rose-50 dark:bg-rose-950/40 px-1 py-0.5 rounded">
+                      Sold Out
+                    </span>
+                  )}
                 </button>
               )
             })}
