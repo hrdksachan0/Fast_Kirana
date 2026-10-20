@@ -4033,12 +4033,51 @@ async def edit_order(
 
     # 1B. Fetch existing companion orders early for stock restoration and discount synchronization
     existing_companions = []
+    base_rid = re.sub(r"-(G|R\d*)$", "", order.readableId or "", flags=re.IGNORECASE).strip()
+    c_conds = []
     if order.combinedId:
+        c_conds.append(Order.combinedId == order.combinedId)
+    if base_rid and len(base_rid) >= 2:
+        c_conds.append(and_(Order.userId == order.userId, Order.readableId.like(f"{base_rid}-%")))
+    if c_conds:
         c_stmt = select(Order).options(selectinload(Order.items)).where(
-            and_(Order.combinedId == order.combinedId, Order.id != order.id)
+            and_(or_(*c_conds), Order.id != order.id)
         )
         c_res = await db.execute(c_stmt)
-        existing_companions = c_res.scalars().all()
+        existing_companions = list(c_res.scalars().all())
+
+    # Helper: Ensure readableId is globally unique in orders table to prevent UniqueViolationError
+    async def resolve_unique_readable_id(candidate_id: Optional[str], target_order_id: Optional[str], order_type: OrderType) -> str:
+        clean = (candidate_id or "").strip()
+        if not clean or clean in ["-G", "-R", "-R1", "-R2", "-R3"]:
+            try:
+                seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')::int as nextval"))
+                clean = str(seq_res.scalar())
+            except Exception:
+                clean = f"FK-{int(time.time() * 1000) % 1000000:06d}"
+            suffix = "-G" if order_type == OrderType.GROCERY else "-R"
+            clean = f"{clean}{suffix}"
+
+        curr = clean
+        for _ in range(10):
+            stmt = select(Order.id).where(Order.readableId == curr)
+            if target_order_id:
+                stmt = stmt.where(Order.id != target_order_id)
+            res = await db.execute(stmt)
+            if not res.scalar_one_or_none():
+                return curr
+
+            # Collision! Fetch fresh DB sequence to generate a guaranteed unique readableId
+            try:
+                seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')::int as nextval"))
+                next_seq = seq_res.scalar()
+                suffix_match = re.search(r"-(G|R\d*)$", curr, flags=re.IGNORECASE)
+                suffix_str = suffix_match.group(0).upper() if suffix_match else ("-G" if order_type == OrderType.GROCERY else "-R")
+                curr = f"{next_seq}{suffix_str}"
+            except Exception:
+                curr = f"{clean}_{uuid.uuid4().hex[:4]}"
+
+        return curr
 
     # 2. Adjust out of stock products if provided
     if out_of_stock_product_ids and isinstance(out_of_stock_product_ids, list):
@@ -4302,8 +4341,9 @@ async def edit_order(
         order.shopName = dynamic_shop_name
         order.shopPhone = dynamic_shop_phone
 
-        base_clean = re.sub(r"-(G|R\d*)$", "", order.readableId or "", flags=re.IGNORECASE)
-        order.readableId = f"{base_clean}-R" if dynamic_order_type == OrderType.RESTAURANT else base_clean
+        base_clean = re.sub(r"-(G|R\d*)$", "", order.readableId or "", flags=re.IGNORECASE).strip()
+        candidate_rid = f"{base_clean}-R" if dynamic_order_type == OrderType.RESTAURANT else base_clean
+        order.readableId = await resolve_unique_readable_id(candidate_rid, order.id, dynamic_order_type)
 
         if str(dynamic_order_type) == "GROCERY":
             order.assignedChefId = None
@@ -4338,7 +4378,13 @@ async def edit_order(
     # =====================================================================
     # MIXED-DOMAIN PATH (Order Splitting & Multi-Domain Swap)
     # =====================================================================
-    base_readable_id = re.sub(r"-(G|R\d*)$", "", order.readableId or "", flags=re.IGNORECASE)
+    base_readable_id = re.sub(r"-(G|R\d*)$", "", order.readableId or "", flags=re.IGNORECASE).strip()
+    if not base_readable_id:
+        try:
+            seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')::int as nextval"))
+            base_readable_id = str(seq_res.scalar())
+        except Exception:
+            base_readable_id = f"FK-{int(time.time() * 1000) % 1000000:06d}"
     combined_id = order.combinedId or f"combined_{uuid.uuid4().hex[:9]}_{int(datetime.utcnow().timestamp())}"
     current_is_grocery = (str(order.orderType.value if hasattr(order.orderType, "value") else order.orderType) == "GROCERY") or not order.restaurantId
 
@@ -4389,6 +4435,7 @@ async def edit_order(
 
     for spec in sub_orders:
         target_id = spec["orderId"]
+        spec["readableId"] = await resolve_unique_readable_id(spec.get("readableId"), target_id, spec["type"])
         if spec["isNew"]:
             new_ord = Order(
                 id=str(uuid.uuid4()),
