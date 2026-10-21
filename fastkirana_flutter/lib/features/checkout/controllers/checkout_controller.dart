@@ -214,7 +214,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
               pendingCart: null,
             );
             if (_currentContext != null && _currentContext!.mounted) {
-              await _finishOrderPlacement(
+              // ignore: use_build_context_synchronously
+            await _finishOrderPlacement(
                 placedOrder: existingOrder,
                 grandTotal: existingOrder.total,
                 selectedAddr: existingOrder.customerAddress ?? '',
@@ -296,7 +297,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return;
     }
 
-    state = state.copyWith(isPlacingOrder: true);
+    // Ensure placing overlay is dismissed so only the sleek high-trust payment dialog shows
+    state = state.copyWith(isPlacingOrder: false);
 
     // 1. High-trust fullscreen confirmation dialog
     bool dialogShown = false;
@@ -400,6 +402,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             final activeCtx = (context != null && context.mounted)
                 ? context
                 : AppRouter.navigatorKey.currentContext;
+            // ignore: use_build_context_synchronously
             await _finishOrderPlacement(
               placedOrder: existingOrder,
               grandTotal: existingOrder.total,
@@ -517,6 +520,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         : AppRouter.navigatorKey.currentContext;
 
     // Always complete order placement to backend API even if UI context was detached/unmounted during UPI app switch
+    // ignore: use_build_context_synchronously
     await completeOrderPlacement(
       activeContext,
       draft: draft,
@@ -920,7 +924,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         );
 
         if (cfOrderId != null) {
-          state = state.copyWith(pendingCashfreeOrderId: cfOrderId);
+          state = state.copyWith(
+            pendingCashfreeOrderId: cfOrderId,
+            isPlacingOrder: false,
+          );
           return;
         }
 
@@ -1310,6 +1317,34 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           }).toList();
 
     var placedOrder = newOrder;
+
+    // ⚡ FAST-TRACK: If server already created and auto-recovered the order during payment verification,
+    // skip the redundant POST /api/orders roundtrip and navigate instantly to OrderSuccessScreen!
+    if (serverOrderId != null && serverOrderId.isNotEmpty) {
+      placedOrder = placedOrder.copyWith(
+        id: serverOrderId,
+        readableId: serverReadableId ?? serverOrderId,
+      );
+      debugPrint('⚡ Fast-track order completion: order #${placedOrder.readableId} ($serverOrderId) already confirmed on server.');
+
+      // Save local order copy asynchronously
+      unawaited(OrderRepository(ref.read(dioProvider)).savePlacedOrderLocally(placedOrder));
+
+      final activeContext = (context != null && context.mounted)
+          ? context
+          : AppRouter.navigatorKey.currentContext;
+
+      await _finishOrderPlacement(
+        placedOrder: placedOrder,
+        grandTotal: grandTotal,
+        selectedAddr: selectedAddr,
+        userId: userId,
+        orderedItems: itemsPayload,
+        context: activeContext,
+      );
+      return;
+    }
+
     Map<String, dynamic>? apiPayload;
     try {
       apiPayload = {
@@ -1477,6 +1512,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         ? context
         : AppRouter.navigatorKey.currentContext;
 
+    // ignore: use_build_context_synchronously
     await _finishOrderPlacement(
       placedOrder: placedOrder,
       grandTotal: grandTotal,

@@ -200,8 +200,8 @@ class PaymentGatewayHandler {
 
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
       if (attempt > 0) {
-        // Progressive backoff: quick checks first, then steady intervals (total window ~14s)
-        final delayMs = attempt <= 3 ? 800 : (attempt <= 7 ? 1200 : 1500);
+        // Fast progressive backoff: 300ms for first 2 retries, then 600ms, then 1000ms
+        final delayMs = attempt <= 2 ? 300 : (attempt <= 6 ? 600 : 1000);
         await Future.delayed(Duration(milliseconds: delayMs));
       }
       try {
