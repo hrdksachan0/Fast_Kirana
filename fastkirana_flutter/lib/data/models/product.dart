@@ -149,7 +149,14 @@ class Product {
       stock: resolvedStock,
       isAvailable: availableFlag,
       tags: tagsList,
-      variants: _parseVariantsFromJson(json['variants'], double.tryParse(json['price']?.toString() ?? '0') ?? 0, double.tryParse(json['mrp']?.toString() ?? '0') ?? 0, resolvedStock, json['unit']?.toString() ?? ''),
+      variants: _parseVariantsFromJson(
+        json['variants'],
+        double.tryParse(json['price']?.toString() ?? '0') ?? 0,
+        double.tryParse(json['mrp']?.toString() ?? '0') ?? 0,
+        resolvedStock,
+        json['unit']?.toString() ?? '',
+        double.tryParse(json['costPrice']?.toString() ?? '0') ?? 0.0,
+      ),
       addons: _parseAddonsFromJson(json['addons']),
       minStock: int.tryParse(json['minStock']?.toString() ?? '0') ?? 0,
       expiryDate: parsedExpiry,
@@ -255,8 +262,9 @@ class Product {
     double defaultPrice,
     double defaultMrp,
     int defaultStock,
-    String defaultUnit,
-  ) {
+    String defaultUnit, [
+    double defaultCostPrice = 0.0,
+  ]) {
     if (raw == null) return null;
     dynamic listData = raw;
     if (raw is String) {
@@ -273,6 +281,8 @@ class Product {
           final vMap = Map<String, dynamic>.from(v);
           final p = double.tryParse(vMap['price']?.toString() ?? '') ?? defaultPrice;
           final m = double.tryParse(vMap['mrp']?.toString() ?? '') ?? (p > 0 ? p : defaultMrp);
+          final cpRaw = vMap['costPrice'] ?? vMap['cost_price'] ?? vMap['cp'] ?? vMap['cost'];
+          final cp = double.tryParse(cpRaw?.toString() ?? '') ?? defaultCostPrice;
           final isExplicitlyOutOfStock = vMap['isAvailable'] == false ||
               vMap['is_available'] == false ||
               vMap['status'] == 'out_of_stock' ||
@@ -286,11 +296,12 @@ class Product {
             price: p,
             mrp: m,
             stock: s,
+            costPrice: cp,
           );
         } else if (v is String) {
-          return ProductVariant(name: v, price: defaultPrice, mrp: defaultMrp, stock: defaultStock);
+          return ProductVariant(name: v, price: defaultPrice, mrp: defaultMrp, stock: defaultStock, costPrice: defaultCostPrice);
         }
-        return ProductVariant(name: v.toString(), price: defaultPrice, mrp: defaultMrp, stock: defaultStock);
+        return ProductVariant(name: v.toString(), price: defaultPrice, mrp: defaultMrp, stock: defaultStock, costPrice: defaultCostPrice);
       }).toList();
       list.sort((a, b) => a.price.compareTo(b.price));
       return list;
@@ -378,19 +389,32 @@ class ProductVariant {
   final double price;
   final double mrp;
   final int stock;
+  final double costPrice;
 
   ProductVariant({
     required this.name,
     required this.price,
     required this.mrp,
     this.stock = 0,
+    this.costPrice = 0.0,
   });
+
+  factory ProductVariant.fromJson(Map<String, dynamic> json) => ProductVariant(
+        name: json['name']?.toString() ?? '',
+        price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+        mrp: double.tryParse(json['mrp']?.toString() ?? '0') ?? 0.0,
+        stock: int.tryParse(json['stock']?.toString() ?? '0') ?? 0,
+        costPrice: double.tryParse(
+          (json['costPrice'] ?? json['cost_price'] ?? json['cp'] ?? json['cost'])?.toString() ?? '0',
+        ) ?? 0.0,
+      );
 
   Map<String, dynamic> toJson() => {
         'name': name,
         'price': price,
         'mrp': mrp,
         'stock': stock,
+        'costPrice': costPrice,
       };
 }
 

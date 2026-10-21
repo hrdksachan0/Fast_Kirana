@@ -623,7 +623,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     final String prodId = prod['id']?.toString() ?? '';
     final String prodName = prod['name']?.toString() ?? 'Product';
     final String unit = prod['unit']?.toString() ?? '';
-    final double initialCost = (prod['costPrice'] as num?)?.toDouble() ?? (prod['cost'] as num?)?.toDouble() ?? 0.0;
+    final double initialCost = OrderItemHelper.resolveCostPrice(prod);
     final double initialPrice = (prod['price'] as num?)?.toDouble() ?? 0.0;
     final double initialMrp = (prod['mrp'] as num?)?.toDouble() ?? initialPrice;
     final int initialStock = (prod['stock'] as num?)?.toInt() ?? 0;
@@ -2308,7 +2308,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
         final prod = filtered[index];
         final name = prod['name'] ?? 'Product';
         final barcode = prod['barcode'] ?? '';
-        final cost = (prod['costPrice'] as num?)?.toDouble() ?? 0.0;
+        final cost = OrderItemHelper.resolveCostPrice(prod);
         final price = (prod['price'] as num?)?.toDouble() ?? 0.0;
         final mrp = (prod['mrp'] as num?)?.toDouble() ?? price;
         final stock = (prod['stock'] as num?)?.toInt() ?? 0;
@@ -2478,7 +2478,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     for (final item in _lowStockItems) {
       final id = item['id']?.toString() ?? '';
       final qty = _poQuantities[id] ?? 10;
-      final cost = (item['costPrice'] as num?)?.toDouble() ?? 0.0;
+      final cost = OrderItemHelper.resolveCostPrice(item);
       totalEstCost += qty * cost;
     }
 
@@ -2534,7 +2534,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
               final id = item['id']?.toString() ?? '';
               final name = item['name'] ?? 'Product';
               final stock = item['stock'] ?? 0;
-              final cost = (item['costPrice'] as num?)?.toDouble() ?? 0.0;
+              final cost = OrderItemHelper.resolveCostPrice(item);
               final currentQty = _poQuantities[id] ?? 10;
               final weightVariant = OrderItemHelper.resolveWeightOrVariant(item, name);
 
@@ -2732,7 +2732,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       final qty = (it['quantity'] as num?)?.toInt() ?? 1;
       final weight = OrderItemHelper.resolveWeightOrVariant(it, name);
       final weightLabel = weight.isNotEmpty ? ' [$weight]' : '';
-      final cost = (it['cost'] as num?)?.toDouble() ?? 0.0;
+      final cost = OrderItemHelper.resolveCostPrice(it);
       final itemTotal = (it['totalCost'] as num?)?.toDouble() ?? (cost * qty);
       buffer.writeln('$idx. *$name$weightLabel* x *$qty* (@ ₹${cost.toStringAsFixed(0)} = ₹${itemTotal.toStringAsFixed(0)})');
       idx++;
@@ -3023,9 +3023,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                                     children: items.map((it) {
                                       final name = (it['name'] ?? 'Product').toString();
                                       final qty = (it['quantity'] as num?)?.toInt() ?? 1;
-                                      final cost = (it['cost'] as num?)?.toDouble()
-                                          ?? (it['costPrice'] as num?)?.toDouble()
-                                          ?? 0.0;
+                                      final cost = OrderItemHelper.resolveCostPrice(it);
                                       final itemTotal = (it['totalCost'] as num?)?.toDouble() ?? (cost * qty);
                                       final imgUrl = _resolveImgUrl(it['imageUrl']);
                                       final weightVariant = OrderItemHelper.resolveWeightOrVariant(it, name);

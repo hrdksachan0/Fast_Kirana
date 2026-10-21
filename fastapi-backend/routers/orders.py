@@ -2049,14 +2049,31 @@ async def create_order(
                 is_var = "_" in raw_id
                 var_name = item.get("selectedVariant") or (raw_id.split("_")[1] if is_var else None)
 
-                cost_price = prod.costPrice or 0.0
+                cost_price = float(prod.costPrice or 0.0)
                 item_price = prod.price
-                if var_name and prod.variants and isinstance(prod.variants, list):
-                    variant = next((v for v in prod.variants if v.get("name") == var_name), None)
+                if prod.variants and isinstance(prod.variants, list):
+                    target_var = str(var_name).strip().lower() if var_name else ""
+                    variant = None
+                    if target_var:
+                        variant = next((
+                            v for v in prod.variants
+                            if isinstance(v, dict) and (
+                                str(v.get("name") or v.get("unit") or "").strip().lower() == target_var or
+                                str(v.get("name") or v.get("unit") or "").strip().lower().replace(" ", "") == target_var.replace(" ", "")
+                            )
+                        ), None)
                     if variant:
                         item_price = float(variant.get("price", item_price))
-                        if variant.get("costPrice") is not None:
-                            cost_price = float(variant.get("costPrice"))
+                        cp_val = variant.get("costPrice") or variant.get("cp") or variant.get("cost")
+                        if cp_val is not None and float(cp_val) > 0:
+                            cost_price = float(cp_val)
+                    elif (not cost_price or cost_price <= 0) and len(prod.variants) > 0:
+                        for v in prod.variants:
+                            if isinstance(v, dict):
+                                cp_val = v.get("costPrice") or v.get("cp") or v.get("cost")
+                                if cp_val is not None and float(cp_val) > 0:
+                                    cost_price = float(cp_val)
+                                    break
 
                 # Food Addons Calculation & Storage (verified from DB)
                 selected_addons_raw = item.get("selectedAddons") or []
@@ -4237,7 +4254,11 @@ async def edit_order(
                 selectedVariant=ci["item"].get("selectedVariant"),
                 imageUrl=ci["item"].get("imageUrl") or (ci["product"].imageUrl if ci["product"] else None),
                 notes=ci["item"].get("notes"),
-                costPrice=float(ci["product"].costPrice or 0.0) if ci["product"] else 0.0
+                costPrice=(lambda p, v_name: (
+                    next((float(v.get("costPrice") or v.get("cp") or 0.0) for v in p.variants if isinstance(v, dict) and str(v.get("name") or "").strip().lower() == str(v_name or "").strip().lower() and (v.get("costPrice") or v.get("cp"))), None)
+                    or next((float(v.get("costPrice") or v.get("cp") or 0.0) for v in p.variants if isinstance(v, dict) and (v.get("costPrice") or v.get("cp"))), None)
+                    or float(p.costPrice or 0.0)
+                ) if p and p.variants and isinstance(p.variants, list) else float(p.costPrice or 0.0) if p else 0.0)(ci["product"], ci["item"].get("selectedVariant"))
             )
             db.add(order_item)
 

@@ -1413,12 +1413,27 @@ export async function POST(request: NextRequest) {
           
           let itemPrice = item.dbProduct.price
           let itemCostPrice = item.dbProduct.costPrice || 0
-          if (variantName && item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
-            const variant = (item.dbProduct.variants as any[]).find((v) => v.name === variantName)
+          if (item.dbProduct.variants && Array.isArray(item.dbProduct.variants)) {
+            const vTarget = variantName ? variantName.trim().toLowerCase() : ''
+            const variant = vTarget
+              ? (item.dbProduct.variants as any[]).find((v) => {
+                  const vn = (v.name || v.unit || '').toString().trim().toLowerCase()
+                  return vn === vTarget || vn.replace(/\s+/g, '') === vTarget.replace(/\s+/g, '')
+                })
+              : null
             if (variant) {
               itemPrice = variant.price
-              if (variant.costPrice !== undefined) {
-                itemCostPrice = parseFloat(variant.costPrice) || 0
+              const cpVal = variant.costPrice ?? variant.cp ?? variant.cost
+              if (cpVal !== undefined && cpVal !== null) {
+                itemCostPrice = parseFloat(cpVal) || 0
+              }
+            } else if ((!itemCostPrice || itemCostPrice <= 0) && item.dbProduct.variants.length > 0) {
+              for (const v of item.dbProduct.variants as any[]) {
+                const cpVal = v.costPrice ?? v.cp ?? v.cost
+                if (cpVal !== undefined && cpVal !== null && parseFloat(cpVal) > 0) {
+                  itemCostPrice = parseFloat(cpVal) || 0
+                  break
+                }
               }
             }
           }

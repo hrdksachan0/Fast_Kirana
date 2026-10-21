@@ -37,6 +37,46 @@ def check_vendor_or_admin_access(current_user: dict, vendor_id: str) -> dict:
     )
 
 
+
+def resolve_variant_cost_price(product, selected_variant=None, fallback_name=None, current_cost=None) -> float:
+    """
+    Authoritative helper to resolve cost price for vendor products and order items,
+    guaranteeing that products with variants return their true purchase/cost price instead of 0.
+    """
+    if current_cost is not None and float(current_cost) > 0:
+        return float(current_cost)
+
+    if not product:
+        return 0.0
+
+    variants = getattr(product, "variants", None)
+    if variants and isinstance(variants, list) and len(variants) > 0:
+        target_name = (str(selected_variant).strip().lower() if selected_variant else None)
+        if not target_name and fallback_name and "(" in str(fallback_name):
+            try:
+                target_name = str(fallback_name).split("(")[1].split(")")[0].strip().lower()
+            except Exception:
+                target_name = None
+
+        if target_name:
+            for v in variants:
+                if isinstance(v, dict):
+                    v_name = str(v.get("name") or v.get("unit") or "").strip().lower()
+                    if v_name == target_name or v_name.replace(" ", "") == target_name.replace(" ", ""):
+                        cp = v.get("costPrice") or v.get("cp") or v.get("cost")
+                        if cp is not None and float(cp) > 0:
+                            return float(cp)
+
+        for v in variants:
+            if isinstance(v, dict):
+                cp = v.get("costPrice") or v.get("cp") or v.get("cost")
+                if cp is not None and float(cp) > 0:
+                    return float(cp)
+
+    prod_cp = getattr(product, "costPrice", None)
+    return float(prod_cp) if prod_cp and float(prod_cp) > 0 else 0.0
+
+
 class VendorLoginRequest(BaseModel):
     phone: Optional[str] = None
     vendorCode: Optional[str] = None
@@ -251,7 +291,8 @@ async def get_vendor_details(
             "categoryName": p.category.name if p.category else "General",
             "barcode": p.barcode or "",
             "unitsSold": 0,
-            "unitCostPrice": float(p.costPrice or 0.0),
+            "unitCostPrice": resolve_variant_cost_price(p),
+            "variants": p.variants,
             "sellingPrice": float(p.price),
             "totalPayable": 0.0,
             "currentStock": p.stock,
@@ -284,7 +325,7 @@ async def get_vendor_details(
                 continue
 
             base_prod = product_map.get(oi.productId)
-            effective_cost = float(oi.costPrice) if oi.costPrice and oi.costPrice > 0 else float(base_prod.costPrice if base_prod else 0.0)
+            effective_cost = resolve_variant_cost_price(base_prod, selected_variant=getattr(oi, "selectedVariant", None), fallback_name=oi.name, current_cost=oi.costPrice)
             qty = int(oi.quantity or 0)
             item_payable = qty * effective_cost
 
@@ -375,7 +416,8 @@ async def get_vendor_details(
                 "barcode": p.barcode or "",
                 "stock": curr_stock,
                 "minStock": min_stock,
-                "costPrice": float(p.costPrice or 0.0),
+                "costPrice": resolve_variant_cost_price(p),
+                "variants": p.variants,
                 "isLow": True,
                 "imageUrl": p.imageUrl or "",
             })
@@ -419,7 +461,8 @@ async def get_vendor_details(
                 "barcode": p.barcode or "",
                 "price": float(p.price),
                 "mrp": float(p.mrp),
-                "costPrice": float(p.costPrice or 0.0),
+                "costPrice": resolve_variant_cost_price(p),
+                "variants": p.variants,
                 "stock": store_stock_map.get(p.id, p.stock),
                 "category": p.category.name if p.category else "General",
                 "imageUrl": p.imageUrl or "",
@@ -615,7 +658,7 @@ async def get_vendor_live_orders(
             if it.productId in prod_map:
                 prod = prod_map[it.productId]
                 qty = it.quantity or 1
-                cost = float(it.costPrice if it.costPrice and it.costPrice > 0 else (prod.costPrice or 0.0))
+                cost = resolve_variant_cost_price(prod, selected_variant=getattr(it, "selectedVariant", None), fallback_name=it.name, current_cost=it.costPrice)
                 price = float(it.price or prod.price or 0.0)
                 item_total = qty * cost
                 total_vendor_val += item_total
@@ -629,6 +672,8 @@ async def get_vendor_live_orders(
                     "sellingPrice": price,
                     "unit": prod.unit or "",
                     "imageUrl": prod.imageUrl or "",
+                    "selectedVariant": getattr(it, "selectedVariant", None),
+                    "variants": prod.variants,
                 })
 
         if matching_items:

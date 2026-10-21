@@ -1,9 +1,85 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/design_system.dart';
 import 'restaurant_utils.dart';
 
 class OrderItemHelper {
+  /// Resolves the unit cost price from an order item or product dictionary,
+  /// accounting for selected variants, variant arrays, and product cost price.
+  static double resolveCostPrice(dynamic item, [dynamic product]) {
+    if (item == null && product == null) return 0.0;
+
+    double directCost = 0.0;
+    if (item is Map) {
+      directCost = (item['cost'] as num?)?.toDouble()
+          ?? (item['costPrice'] as num?)?.toDouble()
+          ?? (item['cost_price'] as num?)?.toDouble()
+          ?? (item['unitCostPrice'] as num?)?.toDouble()
+          ?? 0.0;
+    }
+
+    if (directCost > 0.0) return directCost;
+
+    // Check if variant info is present
+    dynamic rawVariants;
+    String selectedVariant = '';
+
+    if (item is Map) {
+      rawVariants = item['variants'];
+      selectedVariant = (item['selectedVariant'] ?? item['selected_variant'] ?? '').toString();
+      if (rawVariants == null && item['product'] is Map) {
+        rawVariants = item['product']['variants'];
+        selectedVariant = selectedVariant.isEmpty
+            ? (item['product']['selectedVariant'] ?? item['product']['selected_variant'] ?? '').toString()
+            : selectedVariant;
+      }
+    }
+
+    if (rawVariants == null && product is Map) {
+      rawVariants = product['variants'];
+    }
+
+    if (rawVariants != null) {
+      List listVars = [];
+      if (rawVariants is List) {
+        listVars = rawVariants;
+      } else if (rawVariants is String && rawVariants.isNotEmpty) {
+        try {
+          listVars = jsonDecode(rawVariants);
+        } catch (_) {}
+      }
+
+      final selNorm = selectedVariant.trim().toLowerCase().replaceAll(' ', '');
+      double firstValidCost = 0.0;
+
+      for (final v in listVars) {
+        if (v is Map) {
+          final vCost = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble() ?? 0.0;
+          if (vCost > 0) {
+            if (firstValidCost == 0.0) firstValidCost = vCost;
+            final vName = (v['name'] ?? v['unit'] ?? '').toString().trim().toLowerCase().replaceAll(' ', '');
+            if (selNorm.isNotEmpty && (vName == selNorm || vName.contains(selNorm) || selNorm.contains(vName))) {
+              return vCost;
+            }
+          }
+        }
+      }
+
+      if (firstValidCost > 0) return firstValidCost;
+    }
+
+    // Fallback to base product costPrice if available
+    if (product is Map) {
+      final pCost = (product['costPrice'] as num?)?.toDouble()
+          ?? (product['cost_price'] as num?)?.toDouble()
+          ?? 0.0;
+      if (pCost > 0) return pCost;
+    }
+
+    return directCost;
+  }
+
   /// Extracts the weight, pack size, unit, or variant from an order item map or object.
   /// Checks explicit variant fields, product unit fields, portion/size, and falls back to regex matching from the title.
   static String resolveWeightOrVariant(dynamic item, [String? fallbackName]) {

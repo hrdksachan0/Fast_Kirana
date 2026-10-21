@@ -115,7 +115,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
       addons: widget.product.addons,
       minStock: widget.product.minStock,
       expiryDate: widget.product.expiryDate,
-      costPrice: widget.product.costPrice,
+      costPrice: variant.costPrice > 0 ? variant.costPrice : widget.product.costPrice,
       location: widget.product.location,
       isFlashDeal: widget.product.isFlashDeal,
       isTopPick: widget.product.isTopPick,
@@ -224,6 +224,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                 price: widget.product.price,
                 mrp: widget.product.mrp,
                 stock: widget.product.stock,
+                costPrice: widget.product.costPrice,
               ));
     final selectedVariant = effectiveVariant;
 

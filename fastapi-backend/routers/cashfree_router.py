@@ -1521,10 +1521,35 @@ async def auto_recover_unplaced_cashfree_order(
                     is_restaurant = True
                     target_restaurant_id = p_rest_id
 
+                p_cost = 0.0
+                if db_prod:
+                    p_cost = float(db_prod.costPrice or 0.0)
+                    if p_var and db_prod.variants and isinstance(db_prod.variants, list):
+                        v_target = str(p_var).strip().lower()
+                        v_obj = next((
+                            v for v in db_prod.variants
+                            if isinstance(v, dict) and (
+                                str(v.get("name") or v.get("unit") or "").strip().lower() == v_target or
+                                str(v.get("name") or v.get("unit") or "").strip().lower().replace(" ", "") == v_target.replace(" ", "")
+                            )
+                        ), None)
+                        if v_obj:
+                            cp_v = v_obj.get("costPrice") or v_obj.get("cp") or v_obj.get("cost")
+                            if cp_v is not None and float(cp_v) > 0:
+                                p_cost = float(cp_v)
+                    elif (not p_cost or p_cost <= 0) and db_prod.variants and isinstance(db_prod.variants, list):
+                        for v in db_prod.variants:
+                            if isinstance(v, dict):
+                                cp_v = v.get("costPrice") or v.get("cp") or v.get("cost")
+                                if cp_v is not None and float(cp_v) > 0:
+                                    p_cost = float(cp_v)
+                                    break
+
                 items_to_create.append({
                     "productId": db_prod.id if db_prod else None,
                     "name": p_name,
                     "price": p_price,
+                    "costPrice": p_cost,
                     "quantity": p_qty,
                     "imageUrl": p_img,
                     "selectedVariant": p_var,
@@ -1644,7 +1669,7 @@ async def auto_recover_unplaced_cashfree_order(
                 quantity=it["quantity"],
                 imageUrl=it.get("imageUrl"),
                 selectedVariant=it.get("selectedVariant"),
-                costPrice=0.0,
+                costPrice=float(it.get("costPrice") or 0.0),
                 variants=None,
                 notes=None,
                 refundAmount=0.0,
