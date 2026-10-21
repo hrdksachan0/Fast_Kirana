@@ -752,6 +752,7 @@ async def verify_cashfree_payment(
 
     raw_id = (req.orderId or req.cfOrderId or "").strip()
     clean_id = re.sub(r"_r\d+$", "", raw_id)
+    prefix_id = clean_id.split("-")[0]
 
     # 1. FAST PATH: Check indexed primary keys and Cashfree order IDs in ~2ms!
     stmt = select(Order).where(
@@ -759,7 +760,11 @@ async def verify_cashfree_payment(
         (Order.readableId == clean_id) |
         (Order.id == raw_id) |
         (Order.cfOrderId == clean_id) |
-        (Order.cfOrderId == raw_id)
+        (Order.cfOrderId == raw_id) |
+        (Order.readableId == f"{clean_id}-G") |
+        (Order.readableId == f"{clean_id}-R") |
+        (Order.readableId == f"{prefix_id}-G") |
+        (Order.readableId == f"{prefix_id}-R")
     )
     res = await db.execute(stmt)
     order = res.scalars().first()
@@ -1214,6 +1219,7 @@ async def auto_recover_unplaced_cashfree_order(
         # 0. Check if order already recovered or created with this cfOrderId / clean_id
         # Authoritative lookup strictly uses explicit order fields — NEVER free-text notes
         base_cf_id = re.sub(r"_r\d+$", "", clean_cf_id)
+        prefix_id = base_cf_id.split("-")[0]
         existing_stmt = select(Order).options(
             selectinload(Order.items),
             selectinload(Order.user),
@@ -1228,6 +1234,10 @@ async def auto_recover_unplaced_cashfree_order(
                 Order.id == base_cf_id,
                 Order.readableId == clean_id,
                 Order.readableId == base_cf_id,
+                Order.readableId == f"{base_cf_id}-G",
+                Order.readableId == f"{base_cf_id}-R",
+                Order.readableId == f"{prefix_id}-G",
+                Order.readableId == f"{prefix_id}-R",
             )
         )
         existing_res = await db.execute(existing_stmt)
@@ -1249,7 +1259,12 @@ async def auto_recover_unplaced_cashfree_order(
             logger.info(f"[Cashfree Recovery] Order already recovered or exists for {cf_order_id}: #{existing_order.readableId or existing_order.id}")
             if not getattr(existing_order, "cfOrderId", None):
                 existing_order.cfOrderId = base_cf_id
-                await db.commit()
+            if existing_order.combinedId:
+                comb_res = await db.execute(select(Order).where(Order.combinedId == existing_order.combinedId))
+                for co in comb_res.scalars().all():
+                    if not getattr(co, "cfOrderId", None):
+                        co.cfOrderId = base_cf_id
+            await db.commit()
             return existing_order
 
         # 0.5 Atomic payment fulfillment lock to prevent concurrent duplicate recovery across workers
@@ -1969,6 +1984,7 @@ async def cashfree_webhook(
     if event_type == "PAYMENT_SUCCESS_WEBHOOK" or payment_status == "SUCCESS":
         cf_ref = payment_data.get("cf_payment_id") or cf_order_id
 
+        prefix_id = clean_id.split("-")[0]
         stmt = select(Order).options(
             selectinload(Order.address),
             selectinload(Order.user)
@@ -1977,7 +1993,11 @@ async def cashfree_webhook(
             (Order.readableId == clean_id) | 
             (Order.id == cf_order_id) |
             (Order.cfOrderId == cf_order_id) |
-            (Order.cfOrderId == clean_id)
+            (Order.cfOrderId == clean_id) |
+            (Order.readableId == f"{clean_id}-G") |
+            (Order.readableId == f"{clean_id}-R") |
+            (Order.readableId == f"{prefix_id}-G") |
+            (Order.readableId == f"{prefix_id}-R")
         )
         res = await db.execute(stmt)
         order = res.scalars().first()

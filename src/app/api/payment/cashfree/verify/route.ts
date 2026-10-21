@@ -33,6 +33,8 @@ export async function POST(req: NextRequest) {
       FROM orders o
       LEFT JOIN users u ON o."userId" = u.id
       WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId} OR o."cfOrderId" = ${cleanId} OR o."cfOrderId" = ${rawId}
+         OR o."readableId" = ${cleanId + '-G'} OR o."readableId" = ${cleanId + '-R'}
+         OR o."readableId" = ${cleanId.split('-')[0] + '-G'} OR o."readableId" = ${cleanId.split('-')[0] + '-R'}
       LIMIT 1
     `
 

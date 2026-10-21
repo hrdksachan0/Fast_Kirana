@@ -63,6 +63,8 @@ export async function POST(req: NextRequest) {
           FROM orders o
           LEFT JOIN users u ON o."userId" = u.id
           WHERE o.id = ${cleanId} OR o."readableId" = ${cleanId} OR o.id = ${rawId} OR o."cfOrderId" = ${cleanId} OR o."cfOrderId" = ${rawId}
+             OR o."readableId" = ${cleanId + '-G'} OR o."readableId" = ${cleanId + '-R'}
+             OR o."readableId" = ${cleanId.split('-')[0] + '-G'} OR o."readableId" = ${cleanId.split('-')[0] + '-R'}
           LIMIT 1
         `
 
@@ -385,7 +387,7 @@ export async function POST(req: NextRequest) {
           UPDATE orders
           SET "paymentStatus" = 'FAILED'::"PaymentStatus",
               "updatedAt" = NOW()
-          WHERE (id = ${cleanId} OR "readableId" = ${cleanId} OR id = ${rawId})
+          WHERE (id = ${cleanId} OR "readableId" = ${cleanId} OR id = ${rawId} OR "readableId" = ${cleanId + '-G'} OR "readableId" = ${cleanId + '-R'} OR "readableId" = ${cleanId.split('-')[0] + '-G'} OR "readableId" = ${cleanId.split('-')[0] + '-R'})
             AND "paymentStatus" != 'PAID'::"PaymentStatus"
             AND "paymentMethod" != 'COD'::"PaymentMethod"
         `.catch((err: any) => console.error('Error updating failed payment status:', err))
