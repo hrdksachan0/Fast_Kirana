@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
           assignedStoreId: true,
           assignedRestaurantId: true,
           passwordHash: true,
+          deletedAt: true,
         }
       })
 
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    if (user && (user.isBlocked || (user as any).deletedAt !== null)) {
+    if (user && (user.isBlocked || Boolean((user as any).deletedAt))) {
       return NextResponse.json({
         error: `Your account has been deactivated or blocked. ${user.blockReason ? `Reason: ${user.blockReason}` : 'Please contact customer support.'}`
       }, { status: 403 })
