@@ -76,7 +76,7 @@ export default function DeliveryDashboard() {
     if (status === 'authenticated') {
       fetchWallet()
     }
-  }, [status, fetchWallet, orders])
+  }, [status, fetchWallet])
 
   useEffect(() => {
     if (status === 'unauthenticated') {

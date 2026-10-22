@@ -1,7 +1,7 @@
 'use client';
 import { apiUrl } from '@/lib/api-url';
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { OrderTracker } from '@/components/order/order-tracker'
 import { Loader2 } from 'lucide-react'
@@ -14,6 +14,9 @@ interface TrackingPageClientProps {
 
 export function TrackingPageClient({ orderId, initialOrder }: TrackingPageClientProps) {
   const [order, setOrder] = useState<any>(initialOrder || null)
+  const orderRef = useRef<any>(initialOrder || null)
+  orderRef.current = order
+
   const [companionOrder, setCompanionOrder] = useState<any>(null)
   const [loading, setLoading] = useState(!initialOrder)
   const [error, setError] = useState<string | null>(null)
@@ -21,7 +24,7 @@ export function TrackingPageClient({ orderId, initialOrder }: TrackingPageClient
 
   const fetchOrder = useCallback(async (isBackground = false) => {
     try {
-      if (!isBackground && !order) setLoading(true)
+      if (!isBackground && !orderRef.current) setLoading(true)
 
       const [res, settingsRes] = await Promise.all([
         fetch(`${apiUrl()}/api/orders/${orderId}?t=${Date.now()}`),
@@ -36,11 +39,11 @@ export function TrackingPageClient({ orderId, initialOrder }: TrackingPageClient
       }
 
       if (!res.ok) {
-        if (res.status === 401 && !order) {
+        if (res.status === 401 && !orderRef.current) {
           window.location.href = '/login'
           return
         }
-        if (!order) {
+        if (!orderRef.current) {
           throw new Error(`Failed to fetch order (${res.status})`)
         }
         return
@@ -106,13 +109,13 @@ export function TrackingPageClient({ orderId, initialOrder }: TrackingPageClient
       setError(null)
     } catch (err: any) {
       console.error('Error fetching order for tracking:', err)
-      if (!order) {
+      if (!orderRef.current) {
         setError(err.message || 'Failed to load order')
       }
     } finally {
       setLoading(false)
     }
-  }, [orderId, order])
+  }, [orderId])
 
   useEffect(() => {
     fetchOrder(false)

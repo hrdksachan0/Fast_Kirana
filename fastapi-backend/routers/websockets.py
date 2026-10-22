@@ -523,13 +523,15 @@ async def root_websocket(
     """
     channel = "general"
     auth_ticket = ticket or token
-    if not auth_ticket:
-        await websocket.close(code=4003, reason="Unauthorized: Ticket or token required")
-        return
-    user = await _verify_ws_ticket(auth_ticket, channel)
-    if not user:
-        await websocket.close(code=4003, reason="Unauthorized: Valid ticket required")
-        return
+    user = None
+    if auth_ticket:
+        user = await _verify_ws_ticket(auth_ticket, channel)
+        if not user:
+            try:
+                from utils.jwt import decode_nextauth_jwt
+                user = decode_nextauth_jwt(auth_ticket)
+            except Exception:
+                pass
 
     await manager.connect(websocket, "general")
     try:

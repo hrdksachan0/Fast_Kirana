@@ -283,7 +283,8 @@ export function useAdminRealtime({
       try {
         const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.fastkirana.in'
         const cleanUrl = rawFastApiUrl.replace(/\/+$/, '')
-        const wsUrl = cleanUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws'
+        const token = getAuthToken()
+        const wsUrl = cleanUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws' + (token ? `?token=${encodeURIComponent(token)}` : '')
         railwayWs = new WebSocket(wsUrl)
 
         railwayWs.onopen = () => {
