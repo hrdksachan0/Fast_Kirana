@@ -52,6 +52,7 @@ class CartRepository {
     List<CartItem> items, {
     String? targetSyncKey,
     bool clearPendingOnSuccess = true,
+    bool isExplicitClear = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final key = targetSyncKey ?? await _getPendingSyncKey();
@@ -63,7 +64,10 @@ class CartRepository {
       }
 
       if (items.isEmpty) {
-        await dio.delete('/api/cart');
+        // Only delete cart on server if explicitly requested (e.g. order placed or user cleared cart)
+        if (isExplicitClear) {
+          await dio.delete('/api/cart');
+        }
       } else {
         final phone = prefs.getString('user_phone') ?? '';
         final name = prefs.getString('user_name') ?? '';
@@ -120,7 +124,7 @@ class CartRepository {
   Future<void> clearCart() async {
     try {
       await saveLocalCart([]);
-      final success = await syncCart([]);
+      final success = await syncCart([], isExplicitClear: true);
       if (!success) {
         await setPendingSync(true);
       }
@@ -323,12 +327,25 @@ class CartRepository {
     final prefs = await SharedPreferences.getInstance();
     final cacheKey = await _getCartCacheKey();
     var data = prefs.getString(cacheKey);
+    bool shouldMigrateToCurrentKey = false;
+
     if (data == null) {
-      // Backward compatibility: check un-suffixed key if newly scoped key not found
+      // 1. Check legacy unscoped key
       final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
       final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
       final legacyKey = 'local_cart_${cleanPhone.isNotEmpty ? cleanPhone : 'guest'}';
       data = prefs.getString(legacyKey);
+      if (data != null) shouldMigrateToCurrentKey = true;
+
+      // 2. Hub-shift or login recovery: check guest scoped keys across known hubs
+      if (data == null) {
+        final hubId = prefs.getString('selected_hub_id') ?? 'default';
+        data = prefs.getString('local_cart_guest_$hubId') ??
+               prefs.getString('local_cart_guest_hub-209206') ??
+               prefs.getString('local_cart_guest_default') ??
+               prefs.getString('local_cart_guest');
+        if (data != null) shouldMigrateToCurrentKey = true;
+      }
       if (data == null) return [];
     }
     try {
@@ -343,8 +360,8 @@ class CartRepository {
           .map((json) => CartItem.fromJson(json as Map<String, dynamic>))
           .where((i) => i.product.name != 'FastKirana Item' && i.product.name.trim().isNotEmpty)
           .toList();
-      // If mock items were filtered out, save clean cart
-      if (items.length != rawList.length) {
+      // If mock items were filtered out or we retrieved items from guest/fallback key, save clean cart to current key
+      if (items.length != rawList.length || shouldMigrateToCurrentKey) {
         await saveLocalCart(items);
       }
       return items;

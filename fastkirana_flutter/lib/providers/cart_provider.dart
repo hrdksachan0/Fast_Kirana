@@ -107,10 +107,12 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
     _isSyncing = true;
     final targetKey = capturedKey ?? await repository.getPendingSyncKeyForCurrentScope();
     try {
+      final isClearIntent = itemsToSync.isEmpty && _lastClearVersion == versionToSync;
       final success = await repository.syncCart(
         itemsToSync,
         targetSyncKey: targetKey,
         clearPendingOnSuccess: false,
+        isExplicitClear: isClearIntent,
       );
       if (success) {
         _lastAcknowledgedVersion = versionToSync;
@@ -260,6 +262,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
             }
           }
           if (hasChanges) {
+  
             _cartVersion++;
             state = AsyncValue.data(_buildCart(merged));
             await r.saveLocalCart(merged);
@@ -285,9 +288,19 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
           if (_cartVersion > initialVersion || _latestPendingItems != null) {
             return;
           }
-          _cartVersion++;
-          _latestPendingItems = localItems;
-          await _flushPendingSync(targetKey);
+
+          if (localItems.isNotEmpty) {
+  
+            _cartVersion++;
+            _latestPendingItems = localItems;
+            await _flushPendingSync(targetKey);
+  
+            return;
+          } else {
+            // Local items are empty - reset pending sync flag to avoid wiping out server cart
+            await r.setPendingSync(false, targetKey: targetKey);
+          }
+
         } catch (e, st) {
           LoggerService.error('CartProvider: background reconciliation of pending offline cart failed', e, st);
         }
@@ -297,7 +310,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       try {
         final serverCart = await r.getCart();
         // Guard against startup race: only hydrate from server if local has no items and no mutations occurred
-        if (_cartVersion == 0 && localItems.isEmpty && serverCart.items.isNotEmpty && _latestPendingItems == null) {
+        if (localItems.isEmpty && serverCart.items.isNotEmpty && (_latestPendingItems == null || _latestPendingItems!.isEmpty)) {
           state = AsyncValue.data(serverCart);
           await r.saveLocalCart(serverCart.items);
         }

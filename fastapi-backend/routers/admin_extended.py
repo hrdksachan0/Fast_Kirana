@@ -2692,12 +2692,13 @@ async def admin_get_live_carts(
                 continue
             user_store = getattr(u, "assignedStoreId", None)
             if user_store:
-                if user_store == storeId:
+                if user_store == storeId or user_store == "default":
                     filtered_carts.append(c)
             else:
                 pin = storeId.replace("hub-", "")
-                has_pin = u.addresses and any(a.pincode == pin for a in u.addresses if a.pincode)
-                if has_pin or not u.addresses:
+                has_pin = u.addresses and any(a.pincode and a.pincode.replace(" ", "") == pin for a in u.addresses)
+                is_guest = not u.phone or (u.email and u.email.startswith("guest-")) or (u.name and "Guest" in u.name)
+                if has_pin or not u.addresses or is_guest or storeId == "hub-209206":
                     filtered_carts.append(c)
         carts_db = filtered_carts
 

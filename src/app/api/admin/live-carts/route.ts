@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       }
 
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 1500)
+      const timeoutId = setTimeout(() => controller.abort(), 6000)
 
       const fastRes = await fetch(`${fastApiUrl}/api/admin/live-carts${query}`, {
         headers,
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
         some: {} // has at least one item
       },
       updatedAt: {
-        gte: new Date(Date.now() - 12 * 60 * 60 * 1000) // past 12 hours
+        gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // past 24 hours
       }
     }
 
@@ -80,6 +80,8 @@ export async function GET(request: Request) {
       whereClause.OR = [
         { user: { assignedStoreId: storeId } },
         { user: { assignedStoreId: null } },
+        { user: { assignedStoreId: 'default' } },
+        { user: { phone: null } },
       ]
     }
 
