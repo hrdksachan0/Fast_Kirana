@@ -403,9 +403,15 @@ async def get_products(
     now = time.time()
 
     if is_cacheable:
+        if cache_key in search_cache and (now - search_cache_time.get(cache_key, 0)) < 300:
+            response.headers["Cache-Control"] = "public, s-maxage=300, stale-while-revalidate=86400"
+            response.headers["X-FastKirana-Cache"] = "HIT-MEMORY"
+            return search_cache[cache_key]
         cached_result = await get_cached(cache_key)
         if cached_result is not None:
-            response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=120"
+            search_cache[cache_key] = cached_result
+            search_cache_time[cache_key] = now
+            response.headers["Cache-Control"] = "public, s-maxage=300, stale-while-revalidate=86400"
             response.headers["X-FastKirana-Cache"] = "HIT"
             return cached_result
 
@@ -872,7 +878,7 @@ async def get_products(
                 search_cache_time.pop(k, None)
         search_cache[cache_key] = response_data
         search_cache_time[cache_key] = now
-        await set_cached(cache_key, response_data, 60)
+        await set_cached(cache_key, response_data, 300)
 
     # Provide ETag header for client validation but always deliver full JSON payload to prevent empty cold-start state
     if is_cacheable and serialized_products:

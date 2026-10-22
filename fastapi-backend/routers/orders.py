@@ -681,9 +681,9 @@ async def create_order(
                 main_match = next((o for o in all_matches if not o.restaurantId), all_matches[0])
                 logger.info(f"🛡️ [EARLY IDEMPOTENCY] FastAPI returning existing order #{main_match.readableId} for CF ID {early_clean_cf}")
                 try:
-                    from routers.websockets import manager
+                    from routers.websockets import manager as early_ws_manager
                     for o in all_matches:
-                        asyncio.create_task(manager.broadcast_to_channel("general", {
+                        asyncio.create_task(early_ws_manager.broadcast_to_channel("general", {
                             "event": "NEW_ORDER",
                             "type": "new-order",
                             "orderId": o.id,
@@ -2368,9 +2368,10 @@ async def create_order(
 
         # Dispatch real-time WebSocket alerts and vendor dispatch via background task to return HTTP 201 immediately
         async def _dispatch_post_order_broadcasts(orders_list, items_list, products_list, uid, tid):
+            from routers.websockets import manager as ws_manager
             for ord_item in orders_list:
                 try:
-                    await manager.broadcast_to_channel("general", {
+                    await ws_manager.broadcast_to_channel("general", {
                         "event": "NEW_ORDER",
                         "type": "new-order",
                         "orderId": ord_item.id,
@@ -2382,13 +2383,13 @@ async def create_order(
                         "restaurantId": ord_item.restaurantId,
                         "traceId": tid,
                     })
-                    await manager.broadcast_to_channel("general", {
+                    await ws_manager.broadcast_to_channel("general", {
                         "event": "CART_UPDATE",
                         "type": "cart-updated",
                         "userId": uid,
                         "traceId": tid,
                     })
-                    await manager.broadcast_to_channel(f"order_{ord_item.id}", {
+                    await ws_manager.broadcast_to_channel(f"order_{ord_item.id}", {
                         "event": "NEW_ORDER",
                         "type": "new-order",
                         "orderId": ord_item.id,
@@ -2445,7 +2446,7 @@ async def create_order(
                             v_items = v_data["items"]
                             total_val = sum(i["quantity"] * i["cost"] for i in v_items)
 
-                            await manager.broadcast_to_channel(f"vendor_{v_id}", {
+                            await ws_manager.broadcast_to_channel(f"vendor_{v_id}", {
                                 "event": "NEW_VENDOR_ORDER",
                                 "type": "new-vendor-order",
                                 "orderId": ord_item.id,

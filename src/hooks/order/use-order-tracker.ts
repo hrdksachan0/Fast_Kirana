@@ -471,11 +471,25 @@ export function useOrderTracker({
 
     // Railway WebSocket connection for redundant live order & rider updates
     let ws: WebSocket | null = null
+    let pingInterval: NodeJS.Timeout | null = null
     try {
-      const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://fastkiran-backend-production.up.railway.app'
+      const rawFastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.fastkirana.in'
       const cleanUrl = rawFastApiUrl.replace(/\/+$/, '')
-      const wsUrl = cleanUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + `/ws/orders/${order.id}`
+      const token = typeof window !== 'undefined'
+        ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token'))
+        : null
+      const wsUrl = cleanUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + `/ws/orders/${order.id}` + (token ? `?token=${encodeURIComponent(token)}` : '')
       ws = new WebSocket(wsUrl)
+      ws.onopen = () => {
+        if (pingInterval) clearInterval(pingInterval)
+        pingInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            try {
+              ws.send('ping')
+            } catch (_) {}
+          }
+        }, 20000)
+      }
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data)
@@ -500,6 +514,7 @@ export function useOrderTracker({
 
     return () => {
       supabase.removeChannel(channel)
+      if (pingInterval) clearInterval(pingInterval)
       if (ws) ws.close()
     }
   }, [order.id, compOrder?.id])

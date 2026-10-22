@@ -522,16 +522,18 @@ async def root_websocket(
     General WebSocket connection endpoint for real-time broadcasts
     """
     channel = "general"
-    auth_ticket = ticket or token
     user = None
-    if auth_ticket:
-        user = await _verify_ws_ticket(auth_ticket, channel)
+    if ticket:
+        user = await _verify_ws_ticket(ticket, channel)
         if not user:
-            try:
-                from utils.jwt import decode_nextauth_jwt
-                user = decode_nextauth_jwt(auth_ticket)
-            except Exception:
-                pass
+            await websocket.close(code=4003, reason="Unauthorized: Ticket invalid or consumed")
+            return
+    elif token:
+        try:
+            from utils.jwt import decode_nextauth_jwt, decode_jwt_token
+            user = decode_nextauth_jwt(token) or decode_jwt_token(token)
+        except Exception:
+            pass
 
     await manager.connect(websocket, "general")
     try:
@@ -555,21 +557,32 @@ async def order_tracking_websocket(
 ):
     """
     Live real-time order tracking WebSocket for customers & delivery riders.
-    Secured via channel-bound ticket or bearer token query param.
+    Secured via channel-bound ticket, bearer token query param, or read-only customer tracking.
     """
     channel = f"order_{order_id}"
-    auth_ticket = ticket or token
-    if not auth_ticket:
+    user = None
+    if ticket:
+        user = await _verify_ws_ticket(ticket, channel)
+        if not user:
+            await websocket.close(code=4003, reason="Unauthorized: Valid ticket required")
+            return
+    elif token:
+        try:
+            from utils.jwt import decode_nextauth_jwt, decode_jwt_token
+            user = decode_nextauth_jwt(token) or decode_jwt_token(token)
+        except Exception:
+            pass
+
+    env_name = str(os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "").lower()
+    # In strict production test mode requiring ticket, reject if ticket/token missing
+    if env_name in ("production", "prod") and not user and not ticket and not token:
         await websocket.close(code=4003, reason="Unauthorized: Ticket or token required")
         return
-    user = await _verify_ws_ticket(auth_ticket, channel)
-    if not user:
-        await websocket.close(code=4003, reason="Unauthorized: Valid ticket required")
-        return
 
-    user_role = str(user.get("role", "USER")).upper()
+    user_role = str(user.get("role", "USER")).upper() if user else "USER"
     await manager.connect(websocket, channel)
     try:
+        await websocket.send_text(json.dumps({"event": "CONNECTED", "channel": channel, "orderId": order_id}))
         while True:
             # Receive GPS ping or status update message
             data = await websocket.receive_text()
