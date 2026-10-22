@@ -1143,7 +1143,8 @@ async def verify_cashfree_payment(
                             o.shopName,
                             float(o.total),
                             "ADMIN_PENDING",
-                            o.storeId
+                            o.storeId,
+                            "PAID"
                         )
                     else:
                         import asyncio
@@ -1155,7 +1156,8 @@ async def verify_cashfree_payment(
                                 o.shopName,
                                 float(o.total),
                                 "ADMIN_PENDING",
-                                o.storeId
+                                o.storeId,
+                                "PAID"
                             )
                         )
                 from routers.orders import send_whatsapp_alert
@@ -1176,6 +1178,48 @@ async def verify_cashfree_payment(
                         asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text, dedupe_ref))
             except Exception as fcm_err:
                 logger.warning(f"Cashfree payment notification error: {fcm_err}")
+
+            # WebSocket Broadcast to Admin Dashboards on general channel
+            try:
+                from routers.websockets import manager
+                target_orders = comb_orders if comb_orders else [order]
+                for o in target_orders:
+                    clean_oid = str(o.readableId or o.id).strip().lstrip("#")
+                    ws_payload = {
+                        "event": "NEW_ORDER",
+                        "type": "new-order",
+                        "orderId": o.id,
+                        "readableId": o.readableId,
+                        "shopName": o.shopName,
+                        "status": "ADMIN_PENDING",
+                        "paymentStatus": "PAID",
+                        "paymentMethod": "UPI",
+                        "total": float(o.total or 0),
+                        "createdAt": datetime.utcnow().isoformat(),
+                        "restaurantId": o.restaurantId,
+                        "storeId": o.storeId,
+                        "isPaid": True,
+                    }
+                    if background_tasks:
+                        background_tasks.add_task(manager.broadcast_to_channel, "general", ws_payload)
+                        background_tasks.add_task(manager.broadcast_to_channel, f"order_{clean_oid}", {
+                            "event": "PAYMENT_CONFIRMED",
+                            "orderId": o.id,
+                            "readableId": o.readableId,
+                            "status": "ADMIN_PENDING",
+                            "paymentStatus": "PAID"
+                        })
+                    else:
+                        asyncio.create_task(manager.broadcast_to_channel("general", ws_payload))
+                        asyncio.create_task(manager.broadcast_to_channel(f"order_{clean_oid}", {
+                            "event": "PAYMENT_CONFIRMED",
+                            "orderId": o.id,
+                            "readableId": o.readableId,
+                            "status": "ADMIN_PENDING",
+                            "paymentStatus": "PAID"
+                        }))
+            except Exception as ws_err:
+                logger.warning(f"Cashfree WebSocket broadcast error: {ws_err}")
 
         return {
             "success": True,
@@ -1891,6 +1935,43 @@ async def auto_recover_unplaced_cashfree_order(
         except Exception as wa_e:
             logger.warning(f"[Auto-Recovery] WhatsApp alert failed: {wa_e}")
 
+        # FCM Order Buzzer notification (to admin, store, and picker)
+        try:
+            from routers.orders import dispatch_isolated_order_fcm_notifications
+            asyncio.create_task(dispatch_isolated_order_fcm_notifications(
+                order_id=new_order_id,
+                readable_id=readable_id,
+                restaurant_id=target_restaurant_id,
+                shop_name=shop_name,
+                total=float(order_amount),
+                status_val=order_status.value if hasattr(order_status, "value") else str(order_status),
+                store_id=target_store_id,
+                payment_status="PAID"
+            ))
+        except Exception as fcm_err:
+            logger.warning(f"[Auto-Recovery] FCM order buzzer notification failed: {fcm_err}")
+
+        # WebSocket broadcast to general channel for Admin Web / Flutter dashboards
+        try:
+            from routers.websockets import manager
+            asyncio.create_task(manager.broadcast_to_channel("general", {
+                "event": "NEW_ORDER",
+                "type": "new-order",
+                "orderId": new_order_id,
+                "readableId": readable_id,
+                "shopName": shop_name,
+                "status": order_status.value if hasattr(order_status, "value") else str(order_status),
+                "paymentStatus": "PAID",
+                "paymentMethod": "UPI",
+                "total": float(order_amount),
+                "createdAt": datetime.utcnow().isoformat(),
+                "restaurantId": target_restaurant_id,
+                "storeId": target_store_id,
+                "isPaid": True,
+            }))
+        except Exception as ws_err:
+            logger.warning(f"[Auto-Recovery] WebSocket broadcast failed: {ws_err}")
+
         # FCM to Restaurant
         if target_restaurant_id and order_status == OrderStatus.CONFIRMED:
             try:
@@ -2122,7 +2203,8 @@ async def cashfree_webhook(
                                 o.shopName,
                                 float(o.total or 0),
                                 "ADMIN_PENDING",
-                                o.storeId
+                                o.storeId,
+                                "PAID"
                             )
                         )
                 except Exception as fcm_err:
@@ -2159,6 +2241,21 @@ async def cashfree_webhook(
                             "readableId": o.readableId,
                             "status": "ADMIN_PENDING",
                             "paymentStatus": "PAID"
+                        }))
+                        asyncio.create_task(manager.broadcast_to_channel("general", {
+                            "event": "NEW_ORDER",
+                            "type": "new-order",
+                            "orderId": o.id,
+                            "readableId": o.readableId,
+                            "shopName": o.shopName,
+                            "status": "ADMIN_PENDING",
+                            "paymentStatus": "PAID",
+                            "paymentMethod": "UPI",
+                            "total": float(o.total or 0),
+                            "createdAt": datetime.utcnow().isoformat(),
+                            "restaurantId": o.restaurantId,
+                            "storeId": o.storeId,
+                            "isPaid": True,
                         }))
                 except Exception as ws_err:
                     logger.warning(f"[Cashfree Webhook] WebSocket broadcast notice: {ws_err}")

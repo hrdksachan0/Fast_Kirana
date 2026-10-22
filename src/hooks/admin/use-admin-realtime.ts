@@ -225,11 +225,18 @@ export function useAdminRealtime({
           }
 
           if (payload.eventType === 'INSERT') {
-            toast.success(`🛎️ New Order Received: #${(orderData.readableId || orderData.id).slice(0, 8)}`)
+            const isPaid = orderData?.paymentStatus === 'PAID'
+            toast.success(isPaid ? `💳 Online Paid Order: #${(orderData.readableId || orderData.id).slice(0, 8)}` : `🛎️ New Order Received: #${(orderData.readableId || orderData.id).slice(0, 8)}`)
             playNewOrderChime()
             onNewOrder?.(orderData)
             debouncedRefresh()
           } else if (payload.eventType === 'UPDATE') {
+            const oldOrder = payload.old as any
+            const isNowPaid = orderData?.paymentStatus === 'PAID' && oldOrder?.paymentStatus !== 'PAID'
+            if (isNowPaid) {
+              toast.success(`💳 Online Paid Order: #${(orderData.readableId || orderData.id).slice(0, 8)}`)
+              playNewOrderChime()
+            }
             onOrderUpdated?.(orderData)
             debouncedRefresh()
           }
@@ -251,7 +258,8 @@ export function useAdminRealtime({
         if (selectedHubId && selectedHubId !== 'all' && orderStoreId && orderStoreId !== selectedHubId) {
           return
         }
-        toast.success(`🛎️ New Order Received: #${(orderData?.readableId || orderData?.id || '').slice(0, 8)}`)
+        const isPaid = orderData?.paymentStatus === 'PAID'
+        toast.success(isPaid ? `💳 Online Paid Order: #${(orderData?.readableId || orderData?.id || '').slice(0, 8)}` : `🛎️ New Order Received: #${(orderData?.readableId || orderData?.id || '').slice(0, 8)}`)
         playNewOrderChime()
         debouncedRefresh()
       })
@@ -260,6 +268,7 @@ export function useAdminRealtime({
       })
       .on('broadcast', { event: 'order-payment-updated' }, (payload) => {
         toast.success(`💳 Order #${payload.payload?.orderId?.slice(0, 8)} marked PAID!`)
+        playNewOrderChime()
         debouncedRefresh()
       })
       .subscribe()
@@ -301,7 +310,22 @@ export function useAdminRealtime({
                 return
               }
               const displayId = payload.readableId || payload.orderId || payload.order?.readableId || ''
-              toast.success(`🛎️ New Order Received! ${displayId ? '#' + displayId.slice(0, 8) : ''}`)
+              const isPaid = payload.paymentStatus === 'PAID' || payload.isPaid
+              toast.success(isPaid ? `💳 Online Paid Order! ${displayId ? '#' + displayId.slice(0, 8) : ''}` : `🛎️ New Order Received! ${displayId ? '#' + displayId.slice(0, 8) : ''}`)
+              playNewOrderChime()
+              debouncedRefresh()
+            } else if (
+              ev === 'PAYMENT_CONFIRMED' ||
+              ev === 'PAYMENT_SUCCESS' ||
+              ev === 'order-payment-updated' ||
+              (payload.paymentStatus === 'PAID' && (ev === 'UPDATE' || ev === 'STATUS_UPDATE'))
+            ) {
+              const orderStoreId = payload.storeId || payload.order?.storeId
+              if (selectedHubId && selectedHubId !== 'all' && orderStoreId && orderStoreId !== selectedHubId) {
+                return
+              }
+              const displayId = payload.readableId || payload.orderId || payload.order?.readableId || ''
+              toast.success(`💳 Online Payment Confirmed! ${displayId ? '#' + displayId.slice(0, 8) : ''}`)
               playNewOrderChime()
               debouncedRefresh()
             } else if (

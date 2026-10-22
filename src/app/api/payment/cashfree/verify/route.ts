@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCashfreeOrder, getCashfreeOrderPayments } from '@/lib/cashfree'
 import { sseEmitter } from '@/lib/sse-emitter'
 import { sendPushNotificationToRoles, sendPushNotificationToRestaurant } from '@/lib/push-notification'
+import { sendTopicWithRetry, buildOrderFcmPayload } from '@/lib/fcm-utils'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { Role } from '@prisma/client'
 import { apiWriteLimiter } from '@/lib/rate-limit'
@@ -292,11 +293,69 @@ export async function POST(req: NextRequest) {
         createdAt: updatedOrder.createdAt,
       })
 
+      // Real-time broadcast to FastAPI WebSocket server for instant Admin Live Action Queue updates
+      try {
+        const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.FASTAPI_URL || 'https://api.fastkirana.in'
+        const cleanFastApiUrl = fastApiUrl.replace(/\/+$/, '')
+        fetch(`${cleanFastApiUrl}/api/ws/broadcast`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel: 'general',
+            message: {
+              event: 'NEW_ORDER',
+              type: 'new-order',
+              orderId: updatedOrder.id,
+              readableId: displayId,
+              shopName: order.shopName,
+              status: updatedOrder.status,
+              paymentStatus: 'PAID',
+              paymentMethod: 'UPI',
+              total: notifyTotal,
+              storeId: order.storeId,
+              restaurantId: order.restaurantId,
+              isPaid: true,
+            },
+          }),
+        }).catch(() => {})
+      } catch (_) {}
+
       // Push notification
       const isRestaurantOrder = !!order.restaurantId
       const outletName = order.shopName ? order.shopName.replace(/FastKirana/g, 'FastMinute') : (order.restaurantId ? 'Restaurant' : 'FastMinute Grocery')
       const customerName = order.userName || 'Customer'
       const customerPhone = order.userPhone || 'N/A'
+
+      // Mobile FCM push to Admin with high priority buzzer alarm
+      try {
+        const { fcmMessaging } = await import('@/lib/firebase-admin')
+        if (fcmMessaging) {
+          const staffPayload = buildOrderFcmPayload(
+            `💳 Online Paid Order #${displayId}!`,
+            `Order #${displayId} (${outletName}, ₹${notifyTotal}) is PAID online. Tap to review & process.`,
+            {
+              title: `💳 Online Paid Order #${displayId}!`,
+              body: `Order #${displayId} (${outletName}, ₹${notifyTotal}) is PAID online. Tap to review & process.`,
+              orderId: updatedOrder.id,
+              readableId: displayId,
+              status: updatedOrder.status,
+              paymentStatus: 'PAID',
+              isPaid: 'true',
+              screen: 'admin-orders',
+              type: 'NEW_ORDER',
+              role: 'ADMIN',
+              timestamp: Date.now().toString(),
+            }
+          )
+          const adminTopic = order.storeId ? `admin_orders_${order.storeId}` : 'admin_orders'
+          sendTopicWithRetry(fcmMessaging, { topic: adminTopic, ...staffPayload }).catch(() => {})
+          if (adminTopic !== 'admin_orders') {
+            sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
+          }
+        }
+      } catch (fcmErr) {
+        console.error('FCM admin notification error on verify:', fcmErr)
+      }
 
       if (isRestaurantOrder) {
         sendPushNotificationToRoles([Role.ADMIN], {

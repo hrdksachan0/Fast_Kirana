@@ -322,7 +322,8 @@ async def dispatch_isolated_order_fcm_notifications(
     shop_name: Optional[str],
     total: float,
     status_val: str,
-    store_id: Optional[str] = None
+    store_id: Optional[str] = None,
+    payment_status: Optional[str] = None
 ):
     """
     Dispatches order notifications with absolute isolation & strict order lifecycle:
@@ -336,17 +337,24 @@ async def dispatch_isolated_order_fcm_notifications(
         now_ts = str(int(datetime.utcnow().timestamp() * 1000))
         is_admin_pending = (status_val == "ADMIN_PENDING")
         safe_shop_name = (shop_name or "").replace("FastKirana", "FastMinute")
+        is_paid = (str(payment_status or "").upper() == "PAID")
 
         # ── CASE 1: MANUAL ADMIN APPROVAL REQUIRED ──
         if is_admin_pending:
-            admin_title = "🚨 New Order Awaiting Approval!"
-            admin_body = f"Order #{readable_id} ({safe_shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) needs admin approval. Tap to review."
+            if is_paid:
+                admin_title = f"💳 Online Paid Order #{readable_id}!"
+                admin_body = f"Order #{readable_id} ({safe_shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) is PAID online. Tap to review & process."
+            else:
+                admin_title = "🚨 New Order Awaiting Approval!"
+                admin_body = f"Order #{readable_id} ({safe_shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) needs admin approval. Tap to review."
             admin_data = {
                 "orderId": order_id,
                 "readableId": str(readable_id),
                 "storeId": str(store_id or ""),
                 "restaurantId": str(restaurant_id or ""),
                 "status": status_val,
+                "paymentStatus": "PAID" if is_paid else "PENDING",
+                "isPaid": "true" if is_paid else "false",
                 "screen": "admin-orders",
                 "type": "NEW_ORDER",
                 "role": "ADMIN",
@@ -367,6 +375,7 @@ async def dispatch_isolated_order_fcm_notifications(
                 "readableId": str(readable_id),
                 "restaurantId": str(restaurant_id),
                 "status": status_val,
+                "paymentStatus": "PAID" if is_paid else "PENDING",
                 "screen": "restaurant-console",
                 "type": "NEW_ORDER",
                 "timestamp": now_ts,
@@ -383,6 +392,7 @@ async def dispatch_isolated_order_fcm_notifications(
                 "readableId": str(readable_id),
                 "storeId": str(store_id or ""),
                 "status": status_val,
+                "paymentStatus": "PAID" if is_paid else "PENDING",
                 "screen": "picker",
                 "type": "NEW_ORDER",
                 "role": "PICKER",
@@ -392,14 +402,16 @@ async def dispatch_isolated_order_fcm_notifications(
             await send_fcm_topic_notification(picker_topic, grocery_title, grocery_body, grocery_data)
 
         # ── 3. BROADCAST TO HUB MANAGER & MASTER ADMIN ──
-        admin_title = f"🛎️ New Order Received #{readable_id}"
-        admin_body = f"New order #{readable_id} of ₹{total:.2f} has been placed. Tap to review."
+        admin_title = f"💳 Online Paid Order #{readable_id}!" if is_paid else f"🛎️ New Order Received #{readable_id}"
+        admin_body = f"Order #{readable_id} of ₹{total:.2f} is PAID online. Tap to review." if is_paid else f"New order #{readable_id} of ₹{total:.2f} has been placed. Tap to review."
         admin_data = {
             "orderId": order_id,
             "readableId": str(readable_id),
             "storeId": str(store_id or ""),
             "restaurantId": str(restaurant_id or ""),
             "status": status_val,
+            "paymentStatus": "PAID" if is_paid else "PENDING",
+            "isPaid": "true" if is_paid else "false",
             "screen": "admin-orders",
             "type": "NEW_ORDER",
             "role": "ADMIN",
@@ -668,6 +680,26 @@ async def create_order(
                     all_matches = comb_res.scalars().all()
                 main_match = next((o for o in all_matches if not o.restaurantId), all_matches[0])
                 logger.info(f"🛡️ [EARLY IDEMPOTENCY] FastAPI returning existing order #{main_match.readableId} for CF ID {early_clean_cf}")
+                try:
+                    from routers.websockets import manager
+                    for o in all_matches:
+                        asyncio.create_task(manager.broadcast_to_channel("general", {
+                            "event": "NEW_ORDER",
+                            "type": "new-order",
+                            "orderId": o.id,
+                            "readableId": o.readableId,
+                            "shopName": o.shopName,
+                            "status": o.status.value if hasattr(o.status, "value") else str(o.status),
+                            "paymentStatus": "PAID" if str(getattr(o.paymentStatus, "value", o.paymentStatus)).upper() == "PAID" else "PENDING",
+                            "paymentMethod": "UPI",
+                            "total": float(o.total or 0),
+                            "createdAt": o.createdAt.isoformat() if hasattr(o, "createdAt") and o.createdAt else datetime.utcnow().isoformat(),
+                            "restaurantId": o.restaurantId,
+                            "storeId": o.storeId,
+                            "isPaid": True,
+                        }))
+                except Exception as idemp_ws_err:
+                    logger.warning(f"[Early Idempotency] WebSocket broadcast notice: {idemp_ws_err}")
                 return _build_replayed_order_payload(main_match, all_matches)
         except HTTPException:
             raise
@@ -2478,7 +2510,8 @@ async def create_order(
                 order.shopName,
                 float(order.total),
                 order.status.value,
-                order.storeId
+                order.storeId,
+                "PAID" if is_online_paid else "PENDING"
             )
 
         # Return full order object matching Flutter Order.fromJson expectations

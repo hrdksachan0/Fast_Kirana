@@ -381,6 +381,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           debugPrint('[Admin WebSocket] Live order update event: ${record['id']}');
           _silentFetchAdminOrders();
           final status = (record['status'] ?? '').toString().toUpperCase();
+          final paymentStatus = (record['paymentStatus'] ?? '').toString().toUpperCase();
           if (status == 'CANCELLED') {
             final recordId = record['id']?.toString();
             final readableId = record['readableId']?.toString();
@@ -389,7 +390,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
                  OrderAlarmService.instance.activeOrderId == readableId)) {
               _stopPendingAlarm();
             }
-          } else if (status == 'PENDING' || status == 'ADMIN_PENDING') {
+          } else if (status == 'PENDING' || status == 'ADMIN_PENDING' || paymentStatus == 'PAID') {
             _playChime();
           }
         }
