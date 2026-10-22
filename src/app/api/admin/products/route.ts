@@ -166,7 +166,17 @@ export async function GET(request: Request) {
         isAvailable: p.isAvailable,
         tags: p.tags,
         variants: p.variants,
-        costPrice: p.costPrice ?? 0,
+        costPrice: (() => {
+          const base = p.costPrice ?? 0
+          if (base > 0) return base
+          if (Array.isArray(p.variants) && (p.variants as any[]).length > 0) {
+            const match = (p.variants as any[]).find((v) => Number(v?.price) === Number(p.price) && (Number(v?.costPrice) > 0 || Number(v?.cp) > 0))
+            if (match) return Number(match.costPrice || match.cp)
+            const first = (p.variants as any[]).find((v) => Number(v?.costPrice) > 0 || Number(v?.cp) > 0)
+            if (first) return Number(first.costPrice || first.cp)
+          }
+          return 0
+        })(),
         minStock: p.minStock ?? 10,
         location: p.location,
         barcode: p.barcode || '',

@@ -409,12 +409,14 @@ export function useAdminProducts({
     }, 50)
   }
 
-  const handleExportCsv = async (type: 'all' | 'grocery' | 'cafe') => {
+  const handleExportCsv = async (type: 'all' | 'grocery' | 'cafe' | 'filtered') => {
     setIsExporting(true)
     try {
       // For full catalog export ('all'), omit storeId so all products across all categories and outlets are exported
       const storeQuery = type !== 'all' && selectedHubId && selectedHubId !== 'all' ? `&storeId=${encodeURIComponent(selectedHubId)}` : ''
-      const url = `${apiUrl()}/api/admin/products?limit=10000${type !== 'all' ? `&type=${type}` : ''}${storeQuery}`
+      const categoryQuery = type === 'filtered' && selectedCategoryFilter ? `&categoryId=${encodeURIComponent(selectedCategoryFilter)}` : ''
+      const typeParam = type !== 'all' && type !== 'filtered' ? `&type=${type}` : ''
+      const url = `${apiUrl()}/api/admin/products?limit=10000${typeParam}${categoryQuery}${storeQuery}`
       const res = await fetch(url, { headers: authHeaders })
       const data = await res.json()
 
@@ -478,7 +480,21 @@ export function useAdminProducts({
           Array.isArray(p.tags) ? p.tags.join(', ') : p.tags || '',
           p.description || '',
           p.imageUrl || '',
-          p.costPrice?.toString() || '0',
+          (() => {
+            let effectiveCost = Number(p.costPrice) || 0
+            if (effectiveCost <= 0 && Array.isArray(p.variants) && p.variants.length > 0) {
+              const matchVar = p.variants.find((v: any) => Number(v?.price) === Number(p.price) && (Number(v?.costPrice) > 0 || Number(v?.cp) > 0))
+              if (matchVar) {
+                effectiveCost = Number(matchVar.costPrice || matchVar.cp) || 0
+              } else {
+                const firstWithCost = p.variants.find((v: any) => Number(v?.costPrice) > 0 || Number(v?.cp) > 0)
+                if (firstWithCost) {
+                  effectiveCost = Number(firstWithCost.costPrice || firstWithCost.cp) || 0
+                }
+              }
+            }
+            return effectiveCost.toString()
+          })(),
           p.minStock?.toString() || '10',
           p.location || '',
           p.barcode || '',
@@ -507,7 +523,7 @@ export function useAdminProducts({
         ]
 
         const escapedRow = row.map((cell) => {
-          const cleanCell = cell.replace(/"/g, '""')
+          const cleanCell = cell.replace(/"/g, '""').replace(/\r?\n/g, ' ')
           if (cleanCell.includes(',') || cleanCell.includes('\n') || cleanCell.includes('"')) {
             return `"${cleanCell}"`
           }
@@ -525,7 +541,9 @@ export function useAdminProducts({
       const link = document.createElement('a')
       link.href = urlBlob
 
-      const filename = `fastkirana_products_${type}_${
+      const selectedCatObj = categories?.find((c: any) => c.id === selectedCategoryFilter)
+      const exportLabel = type === 'filtered' ? (selectedCatObj?.slug || 'category') : type
+      const filename = `fastkirana_products_${exportLabel}_${
         new Date().toISOString().split('T')[0]
       }.csv`
       link.setAttribute('download', filename)

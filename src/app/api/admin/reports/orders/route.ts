@@ -104,14 +104,22 @@ export async function GET(request: NextRequest) {
         costPrice: number
         restaurantId: string | null
         restaurantName: string | null
+        restaurantCommissionRate: number | null
         categoryName: string | null
+        variants: any
+        selectedVariant: string | null
+        isGroceryProduct: boolean
       }>
     >`
       SELECT oi."orderId", oi.name, oi.price, oi.quantity, 
              COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice",
              COALESCE(p."restaurantId", o."restaurantId") as "restaurantId",
              r.name as "restaurantName",
-             c.name as "categoryName"
+             r."commissionRate" as "restaurantCommissionRate",
+             c.name as "categoryName",
+             COALESCE(oi.variants, p.variants) as "variants",
+             oi."selectedVariant",
+             CASE WHEN p.id IS NOT NULL AND p."restaurantId" IS NULL THEN true ELSE false END as "isGroceryProduct"
       FROM order_items oi
       JOIN orders o ON oi."orderId" = o.id
       LEFT JOIN products p ON oi."productId" = p.id
@@ -122,6 +130,74 @@ export async function GET(request: NextRequest) {
         AND o."createdAt" <= ${end}
         ${storeWhere}
     ` : []
+
+    const normalizeText = (s: string | null | undefined): string => {
+      return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    }
+
+    const resolveItemCost = (item: typeof orderItems[0]): { totalCost: number; unitCost: number } => {
+      const qty = Number(item.quantity) || 1
+      let unitCost = 0
+
+      // If restaurant item: cost is based on restaurant commission payout
+      if (!item.isGroceryProduct && item.restaurantId) {
+        const commRate = item.restaurantCommissionRate ? (Number(item.restaurantCommissionRate) > 1 ? Number(item.restaurantCommissionRate) / 100 : Number(item.restaurantCommissionRate)) : 0.10
+        const itemRevenue = (Number(item.price) || 0) * qty
+        const total = Math.round(itemRevenue * (1 - commRate) * 100) / 100
+        return { totalCost: total, unitCost: qty > 0 ? Math.round((total / qty) * 100) / 100 : total }
+      }
+
+      // 1. Explicit costPrice on item
+      if (item.costPrice && Number(item.costPrice) > 0) {
+        unitCost = Number(item.costPrice)
+        return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
+      }
+
+      // 2. Variants match
+      let variantsList: any[] = []
+      if (item.variants) {
+        try {
+          variantsList = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants
+        } catch {}
+      }
+
+      let targetVariant = item.selectedVariant
+      if (!targetVariant && item.name && item.name.includes('(')) {
+        const match = item.name.match(/\(([^)]+)\)/)
+        if (match) targetVariant = match[1]
+      }
+
+      if (Array.isArray(variantsList) && variantsList.length > 0) {
+        if (targetVariant) {
+          const normTarget = normalizeText(targetVariant)
+          const matched = variantsList.find((v: any) => {
+            if (!v) return false
+            const vName = normalizeText(v.name)
+            const vUnit = normalizeText(v.unit)
+            return vName === normTarget || vUnit === normTarget || normTarget.includes(vName) || vName.includes(normTarget)
+          })
+          if (matched && Number(matched.costPrice) > 0) {
+            unitCost = Number(matched.costPrice)
+            return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
+          }
+        }
+
+        const priceMatched = variantsList.find((v: any) => v && Number(v.price) === Number(item.price))
+        if (priceMatched && Number(priceMatched.costPrice) > 0) {
+          unitCost = Number(priceMatched.costPrice)
+          return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
+        }
+      }
+
+      if (item.costPrice && Number(item.costPrice) > 0) {
+        unitCost = Number(item.costPrice)
+        return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
+      }
+
+      // 3. Fallback 25% margin estimate (75% cost)
+      unitCost = Math.round((Number(item.price) || 0) * 0.75 * 100) / 100
+      return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
+    }
 
     // Group items by order
     const itemsByOrder: Record<string, typeof orderItems> = {}
@@ -135,9 +211,28 @@ export async function GET(request: NextRequest) {
     // Build order-wise rows
     const orderRows = orders.map(o => {
       const items = itemsByOrder[o.id] || []
-      const itemNames = items.map(i => `${i.name} x${i.quantity}`).join(', ')
-      const totalCost = items.reduce((sum, i) => sum + (i.costPrice * i.quantity), 0)
-      const profit = o.total - totalCost
+      const itemNames = items.map(i => `${i.name}${i.selectedVariant ? ` (${i.selectedVariant})` : ''} x${i.quantity}`).join(', ')
+      let totalCost = 0
+      const detailedItems = items.map(i => {
+        const { totalCost: iCost, unitCost: iUnitCost } = resolveItemCost(i)
+        totalCost += iCost
+        const qty = Number(i.quantity) || 1
+        const price = Number(i.price) || 0
+        const iSales = Math.round(price * qty * 100) / 100
+        const iProfit = Math.round((iSales - iCost) * 100) / 100
+        return {
+          name: i.name,
+          selectedVariant: i.selectedVariant || null,
+          categoryName: i.categoryName || 'General',
+          quantity: qty,
+          price,
+          unitCost: iUnitCost,
+          totalSales: iSales,
+          totalCost: iCost,
+          profit: iProfit
+        }
+      })
+      const profit = Math.max(0, o.total - totalCost)
       const restaurantItems = items.filter(i => i.restaurantId)
       const groceryItems = items.filter(i => !i.restaurantId)
       const restaurantNames = [...new Set(restaurantItems.map(i => i.restaurantName).filter(Boolean))]
@@ -185,6 +280,7 @@ export async function GET(request: NextRequest) {
         couponCode: o.couponCode || '-',
         notes: o.notes || '-',
         combinedId: o.combinedId || '-',
+        detailedItems,
         // For restaurant-wise grouping
         _restaurantItems: restaurantItems,
         _groceryItems: groceryItems,

@@ -95,6 +95,8 @@ export async function GET(
             costPrice: true,
             refundAmount: true,
             isRefunded: true,
+            selectedVariant: true,
+            variants: true,
           },
         },
       },
@@ -126,6 +128,18 @@ export async function GET(
         ? (prod.inventories?.[0]?.stock ?? prod.stock)
         : prod.stock
 
+      // Resolve base cost price from variants if base is 0
+      let initCost = prod.costPrice || 0
+      if (!initCost && prod.variants) {
+        try {
+          const vList = typeof prod.variants === 'string' ? JSON.parse(prod.variants as string) : prod.variants
+          if (Array.isArray(vList) && vList.length > 0) {
+            const first = vList.find((v: any) => v && Number(v.costPrice) > 0)
+            if (first) initCost = Number(first.costPrice)
+          }
+        } catch {}
+      }
+
       itemSalesSummary[prod.id] = {
         productId: prod.id,
         name: prod.name,
@@ -133,21 +147,65 @@ export async function GET(
         categoryName: prod.category?.name || 'Uncategorized',
         barcode: prod.barcode || null,
         unitsSold: 0,
-        unitCostPrice: prod.costPrice || 0,
+        unitCostPrice: initCost,
         sellingPrice: prod.price,
         totalPayable: 0,
         currentStock,
       }
     }
 
-    // Accumulate delivered sales
+    // Accumulate delivered sales with robust variant cost resolution
     for (const order of deliveredOrders) {
       for (const item of order.items) {
         if (item.isRefunded || !item.productId) continue
 
-        const effectiveCostPrice = item.costPrice && item.costPrice > 0
-          ? item.costPrice
-          : (productMap.get(item.productId)?.costPrice || 0)
+        const baseProd = productMap.get(item.productId)
+        let effectiveCostPrice = item.costPrice && item.costPrice > 0 ? Number(item.costPrice) : 0
+
+        if (!effectiveCostPrice) {
+          const rawVariants = item.variants || baseProd?.variants
+          let variantsList: any[] = []
+          if (rawVariants) {
+            try {
+              variantsList = typeof rawVariants === 'string' ? JSON.parse(rawVariants as string) : rawVariants
+            } catch {}
+          }
+
+          let target = item.selectedVariant
+          if (!target && item.name && item.name.includes('(')) {
+            const match = item.name.match(/\(([^)]+)\)/)
+            if (match) target = match[1]
+          }
+
+          if (Array.isArray(variantsList) && variantsList.length > 0) {
+            if (target) {
+              const normTarget = target.toLowerCase().replace(/[^a-z0-9]/g, '')
+              const matched = variantsList.find((v: any) => {
+                if (!v) return false
+                const vName = (v.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                const vUnit = (v.unit || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                return vName === normTarget || vUnit === normTarget || normTarget.includes(vName) || vName.includes(normTarget)
+              })
+              if (matched && Number(matched.costPrice) > 0) {
+                effectiveCostPrice = Number(matched.costPrice)
+              }
+            }
+            if (!effectiveCostPrice) {
+              const priceMatched = variantsList.find((v: any) => v && Number(v.price) === Number(item.price))
+              if (priceMatched && Number(priceMatched.costPrice) > 0) {
+                effectiveCostPrice = Number(priceMatched.costPrice)
+              }
+            }
+          }
+
+          if (!effectiveCostPrice && baseProd?.costPrice && Number(baseProd.costPrice) > 0) {
+            effectiveCostPrice = Number(baseProd.costPrice)
+          }
+
+          if (!effectiveCostPrice && item.price > 0) {
+            effectiveCostPrice = Math.round(Number(item.price) * 0.75 * 100) / 100
+          }
+        }
 
         const qty = item.quantity || 0
         const itemPayable = qty * effectiveCostPrice
@@ -158,9 +216,10 @@ export async function GET(
         if (itemSalesSummary[item.productId]) {
           itemSalesSummary[item.productId].unitsSold += qty
           itemSalesSummary[item.productId].totalPayable += itemPayable
-          // Keep most accurate cost price
-          if (effectiveCostPrice > 0) {
-            itemSalesSummary[item.productId].unitCostPrice = effectiveCostPrice
+          if (itemSalesSummary[item.productId].unitsSold > 0) {
+            itemSalesSummary[item.productId].unitCostPrice = Math.round(
+              (itemSalesSummary[item.productId].totalPayable / itemSalesSummary[item.productId].unitsSold) * 100
+            ) / 100
           }
         }
       }

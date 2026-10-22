@@ -741,9 +741,24 @@ export function AdminDashboard({
       const pDesc = p.description ? String(p.description).toLowerCase() : ''
       const matchesSearch = !q || pName.includes(q) || pDesc.includes(q)
 
-      const matchesCategory =
-        !productHook.selectedCategoryFilter ||
-        p.categoryId === productHook.selectedCategoryFilter
+      const matchesCategory = (() => {
+        const filterId = productHook.selectedCategoryFilter
+        if (!filterId) return true
+        if (p.categoryId === filterId) return true
+
+        // Category hierarchy matching: if a parent category is selected, also match all its subcategories
+        const cats = categoryHook.categories || []
+        const childIds = new Set()
+        cats.forEach((c) => {
+          if (c.parentId === filterId) {
+            childIds.add(c.id)
+            cats.forEach((sub) => {
+              if (sub.parentId === c.id) childIds.add(sub.id)
+            })
+          }
+        })
+        return childIds.has(p.categoryId)
+      })()
 
       const isCafeItem = Array.isArray(p.tags) && p.tags.some((t: any) => String(t || '').toLowerCase() === 'cafe')
       const isRestaurantItem =
@@ -776,6 +791,7 @@ export function AdminDashboard({
     productHook.searchQuery,
     productHook.selectedCategoryFilter,
     productHook.selectedTypeFilter,
+    categoryHook.categories,
   ])
 
   // Current active orders count

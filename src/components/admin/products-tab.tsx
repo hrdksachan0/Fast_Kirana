@@ -131,7 +131,7 @@ interface ProductsTabProps {
   startEditingProduct: (p: any) => void
   handleDuplicateProduct: (p: any) => void
   handleCloudinaryUpload: (file: File, onUploadSuccess: (url: string) => void) => void
-  handleExportCsv: (type: 'all' | 'grocery' | 'cafe') => void
+  handleExportCsv: (type: 'all' | 'grocery' | 'cafe' | 'filtered') => void
   handleReplenishCsv: () => void
   renderPagination: (
     currentPage: number,
@@ -441,6 +441,16 @@ export function ProductsTab({
                 <span className="text-xs font-black">🍽️ Restaurant Dishes Only</span>
                 <span className="text-[10px] opacity-80 mt-0.5">Kitchen menu, meals & cafe items</span>
               </button>
+              {selectedCategoryFilter && (
+                <button
+                  disabled={isExporting}
+                  onClick={() => handleExportCsv('filtered')}
+                  className="flex-1 flex flex-col items-center justify-center p-3 border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/15 text-purple-600 dark:text-purple-400 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <span className="text-xs font-black">🥬 Selected Category Only</span>
+                  <span className="text-[10px] opacity-80 mt-0.5">{categories.find(c => c.id === selectedCategoryFilter)?.name || 'Filtered items'}</span>
+                </button>
+              )}
             </div>
           </motion.div>
         )}

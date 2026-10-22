@@ -84,6 +84,8 @@ export async function GET(request: NextRequest) {
         vendor: string | null
         categoryName: string
         categorySlug: string
+        parentCategoryName?: string | null
+        parentCategorySlug?: string | null
         productTags: string[] | null
         variants: any
         selectedVariant: string | null
@@ -104,6 +106,8 @@ export async function GET(request: NextRequest) {
              COALESCE(p.vendor, 'Direct / FastKirana') as "vendor",
              COALESCE(c.name, CASE WHEN p."restaurantId" IS NOT NULL THEN r.name ELSE 'General Grocery' END) as "categoryName",
              COALESCE(c.slug, CASE WHEN p."restaurantId" IS NOT NULL THEN r.slug ELSE 'general-grocery' END) as "categorySlug",
+             parent_c.name as "parentCategoryName",
+             parent_c.slug as "parentCategorySlug",
              p.tags as "productTags",
              COALESCE(oi.variants, p.variants) as "variants", 
              oi."selectedVariant",
@@ -120,6 +124,7 @@ export async function GET(request: NextRequest) {
       JOIN orders o ON oi."orderId" = o.id
       LEFT JOIN products p ON oi."productId" = p.id
       LEFT JOIN categories c ON p."categoryId" = c.id
+      LEFT JOIN categories parent_c ON c."parentId" = parent_c.id
       LEFT JOIN restaurants r ON p."restaurantId" = r.id
       WHERE o.status::text = 'DELIVERED'
         AND o."createdAt" >= ${start}
@@ -143,15 +148,15 @@ export async function GET(request: NextRequest) {
     const allRestaurants = await prisma.restaurant.findMany({
       select: { id: true, name: true, slug: true, commissionRate: true }
     })
-    const restaurantById = new Map(allRestaurants.map(r => [r.id, r]))
-    const restaurantByName = new Map(allRestaurants.map(r => [r.name.toLowerCase().trim(), r]))
-    const restaurantBySlug = new Map(allRestaurants.map(r => [r.slug.toLowerCase().trim(), r]))
+    const restaurantById = new Map<string, { id: string; name: string; slug: string; commissionRate: any }>(allRestaurants.map(r => [r.id, r]))
+    const restaurantByName = new Map<string, { id: string; name: string; slug: string; commissionRate: any }>(allRestaurants.map(r => [r.name.toLowerCase().trim(), r]))
+    const restaurantBySlug = new Map<string, { id: string; name: string; slug: string; commissionRate: any }>(allRestaurants.map(r => [r.slug.toLowerCase().trim(), r]))
 
     // Fetch dynamic settings
     const settingsList = await prisma.storeSetting.findMany({
       where: { key: { in: ['restaurant_commission', 'restaurant_default_margin', 'cafe_default_margin'] } }
     })
-    const settingsMap = new Map(settingsList.map(s => [s.key, s.value]))
+    const settingsMap = new Map<string, string>(settingsList.map(s => [s.key, String(s.value ?? '')]))
     const dynamicCommissionRate = parseFloat(settingsMap.get('restaurant_commission') || '10') / 100
 
     const resolveRestaurantForItem = (item: typeof orderItems[0]) => {
@@ -174,11 +179,76 @@ export async function GET(request: NextRequest) {
       return null
     }
 
+    const normalizeText = (s: string | null | undefined): string => {
+      return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    }
+
+    const resolveItemCostPrice = (item: typeof orderItems[0]): { costPerUnit: number; isEstimated: boolean } => {
+      // 1. Explicit costPrice on order item if > 0
+      if (item.costPrice && Number(item.costPrice) > 0) {
+        return { costPerUnit: Number(item.costPrice), isEstimated: false }
+      }
+
+      // 2. Parse variants
+      const rawVariants = item.variants
+      let variantsList: any[] = []
+      if (rawVariants) {
+        try {
+          variantsList = typeof rawVariants === 'string' ? JSON.parse(rawVariants) : rawVariants
+        } catch {}
+      }
+
+      let targetVariant = item.selectedVariant
+      if (!targetVariant && item.name && item.name.includes('(')) {
+        const match = item.name.match(/\(([^)]+)\)/)
+        if (match) targetVariant = match[1]
+      }
+
+      if (Array.isArray(variantsList) && variantsList.length > 0) {
+        if (targetVariant) {
+          const normTarget = normalizeText(targetVariant)
+          const matched = variantsList.find((v: any) => {
+            if (!v) return false
+            const vName = normalizeText(v.name)
+            const vUnit = normalizeText(v.unit)
+            return vName === normTarget || vUnit === normTarget || normTarget.includes(vName) || vName.includes(normTarget)
+          })
+          if (matched && Number(matched.costPrice) > 0) {
+            return { costPerUnit: Number(matched.costPrice), isEstimated: false }
+          }
+        }
+
+        // Try price match fallback against variants
+        const priceMatched = variantsList.find((v: any) => v && Number(v.price) === Number(item.price))
+        if (priceMatched && Number(priceMatched.costPrice) > 0) {
+          return { costPerUnit: Number(priceMatched.costPrice), isEstimated: false }
+        }
+
+        // Check if any variant has costPrice
+        const anyWithCost = variantsList.find((v: any) => v && Number(v.costPrice) > 0 && Number(v.price) > 0)
+        if (anyWithCost && Number(item.price) > 0) {
+          const marginRatio = Number(anyWithCost.costPrice) / Number(anyWithCost.price)
+          if (marginRatio > 0 && marginRatio < 1) {
+            return { costPerUnit: Math.round(Number(item.price) * marginRatio * 100) / 100, isEstimated: false }
+          }
+        }
+      }
+
+      // 3. Fallback to base product costPrice if > 0
+      if (item.costPrice && Number(item.costPrice) > 0) {
+        return { costPerUnit: Number(item.costPrice), isEstimated: false }
+      }
+
+      // 4. Default 25% margin estimate (75% cost)
+      const estimatedCost = Math.round(Number(item.price || 0) * 0.75 * 100) / 100
+      return { costPerUnit: estimatedCost, isEstimated: true }
+    }
+
     const getItemMetrics = (item: typeof orderItems[0]) => {
       const grossRevenue = (item.price || 0) * (item.quantity || 1)
       const itemRevenue = Math.max(0, grossRevenue - (item.refundAmount || 0))
       if (item.isRefunded && itemRevenue === 0) {
-        return { cost: 0, revenue: 0, profit: 0, matchedRest: null }
+        return { cost: 0, revenue: 0, profit: 0, matchedRest: null, unitCost: 0 }
       }
       const isGrocery = Boolean(item.isGroceryProduct)
       const matchedRest = !isGrocery ? resolveRestaurantForItem(item) : null
@@ -197,30 +267,12 @@ export async function GET(request: NextRequest) {
 
         const itemProfit = itemRevenue * commRate
         const itemCost = itemRevenue * (1 - commRate)
-        return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest }
+        const unitCost = (item.quantity || 1) > 0 ? (itemCost / (item.quantity || 1)) : itemCost
+        return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest, unitCost }
       }
 
-      let costPrice = item.costPrice || 0
-
-      // If there is a selected variant, try to find its cost price in the variants array
-      if (item.selectedVariant && item.variants) {
-        try {
-          const variantsList = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants
-          if (Array.isArray(variantsList)) {
-            const matchedVariant = variantsList.find((v: any) => v && v.name === item.selectedVariant)
-            if (matchedVariant && matchedVariant.costPrice !== undefined) {
-              costPrice = parseFloat(matchedVariant.costPrice) || 0
-            }
-          }
-        } catch (e) {
-          console.error('Error parsing variants for item cost calculation:', e)
-        }
-      }
-
-      const hasCostPrice = costPrice > 0
-      let costPerUnit = costPrice
-      if (!hasCostPrice) {
-        costPerUnit = (item.price || 0) * 0.75
+      const { costPerUnit, isEstimated } = resolveItemCostPrice(item)
+      if (isEstimated) {
         const prodKey = item.productId || `manual_${(item.name || 'item').toLowerCase().replace(/[^a-z0-9]/g, '_')}`
         missingCostProductsMap[prodKey] = {
           id: prodKey,
@@ -228,10 +280,11 @@ export async function GET(request: NextRequest) {
           price: item.price || 0
         }
       }
+
       const itemCost = costPerUnit * (item.quantity || 1)
       const itemProfit = itemRevenue - itemCost
       
-      return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest: null }
+      return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest: null, unitCost: costPerUnit }
     }
 
     // Calculate aggregated metrics
@@ -270,16 +323,27 @@ export async function GET(request: NextRequest) {
       string,
       { 
         productId: string; 
+        baseProductId?: string;
         name: string; 
         mrp: number; 
         price: number; 
         costPrice: number; 
+        totalCost: number;
         quantity: number; 
         sales: number; 
         profit: number; 
         categoryName: string; 
+        parentCategoryName?: string;
         vendor: string;
-        type: 'restaurant' | 'grocery' 
+        type: 'restaurant' | 'grocery';
+        stock?: number;
+        readableId?: string | number;
+        variantName?: string;
+        minPrice?: number;
+        maxPrice?: number;
+        minCost?: number;
+        maxCost?: number;
+        hasPriceVaried?: boolean;
       }
     > = {}
 
@@ -332,7 +396,7 @@ export async function GET(request: NextRequest) {
       let orderCost = 0
 
       for (const item of items) {
-        const { cost, revenue: itemRev, profit: itemProf, matchedRest } = getItemMetrics(item)
+        const { cost, revenue: itemRev, profit: itemProf, matchedRest, unitCost } = getItemMetrics(item)
         orderCost += cost
 
         if (isRetail) continue // Skip adding retail items to category and product breakdown
@@ -344,17 +408,17 @@ export async function GET(request: NextRequest) {
         let targetType: 'restaurant' | 'grocery' = 'grocery'
 
         if (isGrocery) {
-          targetCategoryName = item.categoryName || 'Grocery Essentials'
+          targetCategoryName = (item.categoryName || 'Grocery Essentials').trim()
           targetType = 'grocery'
         } else if (matchedRest) {
-          targetCategoryName = matchedRest.name || 'Restaurant'
+          targetCategoryName = (matchedRest.name || 'Restaurant').trim()
           targetType = 'restaurant'
         } else if (item.prodRestaurantId) {
           const rObj = restaurantById.get(item.prodRestaurantId)
-          targetCategoryName = rObj?.name || item.restaurantName || 'Restaurant Food'
+          targetCategoryName = (rObj?.name || item.restaurantName || 'Restaurant Food').trim()
           targetType = 'restaurant'
         } else {
-          targetCategoryName = item.categoryName || 'General Store'
+          targetCategoryName = (item.categoryName || 'General Store').trim()
           targetType = 'grocery'
         }
 
@@ -374,25 +438,65 @@ export async function GET(request: NextRequest) {
         categoryData[targetCategoryName].profit += itemProf
         categoryData[targetCategoryName].quantity += (item.quantity || 1)
 
-        // Product breakdown
-        const prodKey = item.productId || `manual_${(item.name || 'item').toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+        // Product breakdown with distinct variant tracking
+        const variantSuffix = item.selectedVariant && item.selectedVariant.trim() ? item.selectedVariant.trim() : null
+        const cleanName = (item.name || 'Unnamed Product').trim()
+        const displayName = variantSuffix && !cleanName.toLowerCase().includes(variantSuffix.toLowerCase())
+          ? `${cleanName} (${variantSuffix})`
+          : cleanName
+        
+        const normVar = variantSuffix ? normalizeText(variantSuffix) : ''
+        const prodKey = item.productId
+          ? `${item.productId}${normVar ? `_${normVar}` : ''}`
+          : `manual_${normalizeText(displayName)}`
+
+        const itemSellingPrice = item.price || 0
+        const itemUnitCost = unitCost || 0
+
         if (!productData[prodKey]) {
           productData[prodKey] = {
             productId: prodKey,
-            name: item.name || 'Unnamed Product',
+            baseProductId: item.productId,
+            name: displayName,
             mrp: item.mrp || item.price || 0,
-            price: item.price || 0,
-            costPrice: item.costPrice || 0,
+            price: itemSellingPrice,
+            costPrice: itemUnitCost,
+            totalCost: 0,
             quantity: 0,
             sales: 0,
             profit: 0,
             categoryName: targetCategoryName,
-            vendor: item.vendor || 'Direct / FastKirana',
-            type: targetType
+            parentCategoryName: (item.parentCategoryName || '').trim(),
+            vendor: (item.vendor || 'Direct / FastKirana').trim(),
+            type: targetType,
+            variantName: variantSuffix || undefined,
+            minPrice: itemSellingPrice,
+            maxPrice: itemSellingPrice,
+            minCost: itemUnitCost,
+            maxCost: itemUnitCost,
+            hasPriceVaried: false,
+          }
+        } else {
+          if (itemSellingPrice > 0) {
+            if ((productData[prodKey].minPrice ?? 0) === 0 || itemSellingPrice < (productData[prodKey].minPrice ?? itemSellingPrice)) {
+              productData[prodKey].minPrice = itemSellingPrice
+            }
+            if (itemSellingPrice > (productData[prodKey].maxPrice ?? itemSellingPrice)) {
+              productData[prodKey].maxPrice = itemSellingPrice
+            }
+          }
+          if (itemUnitCost > 0) {
+            if ((productData[prodKey].minCost ?? 0) === 0 || itemUnitCost < (productData[prodKey].minCost ?? itemUnitCost)) {
+              productData[prodKey].minCost = itemUnitCost
+            }
+            if (itemUnitCost > (productData[prodKey].maxCost ?? itemUnitCost)) {
+              productData[prodKey].maxCost = itemUnitCost
+            }
           }
         }
         productData[prodKey].quantity += (item.quantity || 1)
         productData[prodKey].sales += itemRev
+        productData[prodKey].totalCost += cost
         productData[prodKey].profit += itemProf
       }
 
@@ -429,6 +533,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Compute accurate weighted unit cost and unit selling price for sold products
+    for (const prodKey in productData) {
+      const p = productData[prodKey]
+      if (p.quantity > 0) {
+        p.costPrice = Math.round((p.totalCost / p.quantity) * 100) / 100
+        p.price = Math.round((p.sales / p.quantity) * 100) / 100
+        if (p.minPrice !== undefined && p.maxPrice !== undefined && p.minPrice !== p.maxPrice) {
+          p.hasPriceVaried = true
+        }
+        if (p.minCost !== undefined && p.maxCost !== undefined && p.minCost !== p.maxCost) {
+          p.hasPriceVaried = true
+        }
+      }
+    }
+
     // Merge full grocery catalog to ensure 100% complete grocery coverage (including unsold items with qty=0)
     try {
       const allGroceryProducts = await prisma.product.findMany({
@@ -445,31 +564,64 @@ export async function GET(request: NextRequest) {
           costPrice: true,
           stock: true,
           vendor: true,
+          variants: true,
           category: {
             select: {
               name: true,
+              parent: {
+                select: {
+                  name: true
+                }
+              }
             }
           }
         }
       })
 
       for (const gp of allGroceryProducts) {
-        if (productData[gp.id]) {
-          (productData[gp.id] as any).stock = gp.stock
-          if (gp.readableId) (productData[gp.id] as any).readableId = gp.readableId
+        // Resolve a fallback cost for products whose base costPrice is 0 but have variants with cost
+        let resolvedCatalogCost = gp.costPrice || 0
+        if (!resolvedCatalogCost && gp.variants) {
+          try {
+            const vList = typeof gp.variants === 'string' ? JSON.parse(gp.variants as string) : gp.variants
+            if (Array.isArray(vList) && vList.length > 0) {
+              const firstWithCost = vList.find((v: any) => v && Number(v.costPrice) > 0)
+              if (firstWithCost) resolvedCatalogCost = Number(firstWithCost.costPrice)
+            }
+          } catch {}
+        }
+        if (!resolvedCatalogCost && gp.price > 0) {
+          resolvedCatalogCost = Math.round(gp.price * 0.75 * 100) / 100
+        }
+
+        // Check if any variant or base entry of this product was sold
+        const matchingKeys = Object.keys(productData).filter(k => 
+          k === gp.id || productData[k].baseProductId === gp.id
+        )
+
+        if (matchingKeys.length > 0) {
+          for (const mk of matchingKeys) {
+            (productData[mk] as any).stock = gp.stock
+            if (gp.readableId) (productData[mk] as any).readableId = gp.readableId
+          }
         } else {
-          // Present in catalog but not sold in this period: include with 0 qty sold
+          // Unsold product: add to catalog listing
+          const catName = (gp.category?.name || 'Grocery Essentials').trim()
+          const parentCatName = (gp.category?.parent?.name || '').trim()
           productData[gp.id] = {
             productId: gp.id,
-            name: gp.name,
+            baseProductId: gp.id,
+            name: gp.name.trim(),
             mrp: gp.mrp || gp.price || 0,
             price: gp.price || 0,
-            costPrice: gp.costPrice || 0,
+            costPrice: resolvedCatalogCost,
+            totalCost: 0,
             quantity: 0,
             sales: 0,
             profit: 0,
-            categoryName: gp.category?.name || 'Grocery Essentials',
-            vendor: gp.vendor || 'Direct / FastKirana',
+            categoryName: catName,
+            parentCategoryName: parentCatName,
+            vendor: (gp.vendor || 'Direct / FastKirana').trim(),
             type: 'grocery',
             stock: gp.stock ?? 0,
             readableId: gp.readableId,

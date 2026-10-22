@@ -45,18 +45,27 @@ interface CategorySale {
 
 interface TopProduct {
   productId: string
+  baseProductId?: string
   name: string
   mrp?: number
   price?: number
   costPrice?: number
+  totalCost?: number
   quantity: number
   sales: number
   profit: number
   categoryName?: string
+  parentCategoryName?: string
   vendor?: string
   type?: 'restaurant' | 'grocery'
   stock?: number
   readableId?: string | number
+  variantName?: string
+  minPrice?: number
+  maxPrice?: number
+  minCost?: number
+  maxCost?: number
+  hasPriceVaried?: boolean
 }
 
 interface ChannelMetrics {
@@ -234,13 +243,19 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
   const filteredProducts = useMemo(() => {
     let list = rawTopProducts
     if (selectedCategory !== 'all') {
-      list = list.filter(p => p.categoryName?.toLowerCase() === selectedCategory.toLowerCase())
+      const target = selectedCategory.toLowerCase().trim()
+      list = list.filter(p => {
+        const cat = (p.categoryName || '').toLowerCase().trim()
+        const parent = (p.parentCategoryName || '').toLowerCase().trim()
+        return cat === target || parent === target || cat.includes(target) || target.includes(cat)
+      })
     }
     if (productSearch.trim()) {
       const q = productSearch.toLowerCase().trim()
       list = list.filter(p => 
         p.name.toLowerCase().includes(q) || 
-        (p.categoryName && p.categoryName.toLowerCase().includes(q))
+        (p.categoryName && p.categoryName.toLowerCase().includes(q)) ||
+        (p.parentCategoryName && p.parentCategoryName.toLowerCase().includes(q))
       )
     }
     return list
@@ -391,8 +406,10 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
         'Vendor / Supplier',
         'Category / Outlet',
         'Current Stock',
-        'Selling Price (INR)',
-        'Cost / Purchase Rate (INR)',
+        'Selling Rate Avg (INR)',
+        'Selling Range (If Varied)',
+        'Cost Rate Avg (INR)',
+        'Cost Range (If Varied)',
         'Qty Sold',
         'Total Sales (INR)',
         'Total Vendor Payable (INR)',
@@ -401,9 +418,15 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       ]
       const prodRows = targetProducts.map((prod: TopProduct) => {
         const margin = prod.sales > 0 ? ((prod.profit / prod.sales) * 100) : 0
-        const vendorPayable = Math.round((prod.costPrice || 0) * prod.quantity * 100) / 100
+        const vendorPayable = Math.round((prod.totalCost !== undefined ? prod.totalCost : ((prod.costPrice || 0) * prod.quantity)) * 100) / 100
         const itemId = prod.readableId ? `#${prod.readableId}` : prod.productId
         const stockVal = prod.stock !== undefined ? prod.stock : '-'
+        const sellingRange = prod.hasPriceVaried && prod.minPrice !== undefined && prod.maxPrice !== undefined && prod.minPrice !== prod.maxPrice
+          ? `₹${prod.minPrice} - ₹${prod.maxPrice}`
+          : '-'
+        const costRange = prod.hasPriceVaried && prod.minCost !== undefined && prod.maxCost !== undefined && prod.minCost !== prod.maxCost
+          ? `₹${prod.minCost} - ₹${prod.maxCost}`
+          : '-'
         return [
           itemId,
           prod.name,
@@ -411,7 +434,9 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
           prod.categoryName || '-',
           stockVal,
           prod.price || 0,
+          sellingRange,
           prod.costPrice || 0,
+          costRange,
           prod.quantity,
           prod.sales,
           vendorPayable,
@@ -446,7 +471,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
             totalPayable: 0,
           }
         }
-        const itemPayable = (prod.costPrice || 0) * (prod.quantity || 0)
+        const itemPayable = prod.totalCost !== undefined ? prod.totalCost : ((prod.costPrice || 0) * (prod.quantity || 0))
         vendorSummaryMap[vName].productsCount += 1
         vendorSummaryMap[vName].unitsSold += (prod.quantity || 0)
         vendorSummaryMap[vName].totalSales += (prod.sales || 0)
@@ -596,7 +621,57 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, wsAll, scope === 'restaurant' ? 'Restaurant Orders' : 'All Orders')
 
-      // ── Sheet 2: Payment Summary
+      // ── Sheet 2: Itemized Sales & Historical Rate Log (Exact prices & costs on each day)
+      const itemLogHeader = [
+        'Order #', 'Order Date & Time', 'Product / Item Name', 'Variant', 'Category / Outlet',
+        'Quantity Sold', 'Selling Rate at Order Time (₹)', 'Purchase / Cost Rate (₹)',
+        'Item Total Sales (₹)', 'Item Total Cost (₹)', 'Net Profit (₹)', 'Margin %'
+      ]
+
+      const itemLogRows: any[] = []
+      for (const o of targetOrders) {
+        const dItems = (o as any).detailedItems || []
+        for (const it of dItems) {
+          const margin = it.totalSales > 0 ? `${Math.round((it.profit / it.totalSales) * 100)}%` : '0%'
+          itemLogRows.push([
+            `#${o.readableId}`,
+            formatDateTime(o.orderDate),
+            it.name,
+            it.selectedVariant || '-',
+            it.categoryName || '-',
+            it.quantity,
+            it.price,
+            it.unitCost,
+            it.totalSales,
+            it.totalCost,
+            it.profit,
+            margin
+          ])
+        }
+      }
+
+      const totalItemUnits = itemLogRows.reduce((s, r) => s + (Number(r[5]) || 0), 0)
+      const totalItemSales = Math.round(itemLogRows.reduce((s, r) => s + (Number(r[8]) || 0), 0) * 100) / 100
+      const totalItemCost = Math.round(itemLogRows.reduce((s, r) => s + (Number(r[9]) || 0), 0) * 100) / 100
+      const totalItemProf = Math.round(itemLogRows.reduce((s, r) => s + (Number(r[10]) || 0), 0) * 100) / 100
+
+      const itemLogTotalRow = [
+        'TOTAL', `${itemLogRows.length} Items Sold`, '', '', '',
+        totalItemUnits, '', '',
+        totalItemSales, totalItemCost, totalItemProf,
+        totalItemSales > 0 ? `${Math.round((totalItemProf / totalItemSales) * 100)}%` : '0%'
+      ]
+
+      const wsItemLog = XLSX.utils.aoa_to_sheet([itemLogHeader, ...itemLogRows, [], itemLogTotalRow])
+      wsItemLog['!cols'] = [
+        { wch: 12 }, { wch: 20 }, { wch: 30 }, { wch: 14 }, { wch: 20 },
+        { wch: 14 }, { wch: 24 }, { wch: 22 },
+        { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 12 }
+      ]
+
+      XLSX.utils.book_append_sheet(wb, wsItemLog, 'Itemized Rate Log')
+
+      // ── Sheet 3: Payment Summary
       const codOrders = targetOrders.filter((o: any) => o.paymentMethod === 'COD')
       const onlineOrders = targetOrders.filter((o: any) => o.paymentMethod !== 'COD')
       const paidOrders = targetOrders.filter((o: any) => o.paymentStatus === 'PAID')
@@ -1301,6 +1376,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                     <th className="pb-2.5 text-right">Cost Price</th>
                     <th className="pb-2.5 text-center">Qty Sold</th>
                     <th className="pb-2.5 text-right">Total Revenue</th>
+                    <th className="pb-2.5 text-right">Total Cost</th>
                     <th className="pb-2.5 text-right">Net Profit</th>
                     <th className="pb-2.5 text-center pr-2">Margin</th>
                   </tr>
@@ -1309,6 +1385,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                   {filteredProducts.map((prod) => {
                     const margin = prod.sales > 0 ? Math.round((prod.profit / prod.sales) * 100) : 0
                     const meta = getCategoryMeta(prod.categoryName || '')
+                    const effectiveCost = prod.totalCost !== undefined ? prod.totalCost : ((prod.costPrice || 0) * prod.quantity)
 
                     return (
                       <tr key={prod.productId} className="hover:bg-muted/15 transition-colors">
@@ -1325,12 +1402,26 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                           </span>
                         </td>
 
-                        <td className="py-2.5 text-right font-black text-text-primary">
-                          {formatPrice(prod.price || 0)}
+                        <td className="py-2.5 text-right">
+                          <span className="font-black text-text-primary block">
+                            {formatPrice(prod.price || 0)}
+                          </span>
+                          {prod.hasPriceVaried && prod.minPrice !== undefined && prod.maxPrice !== undefined && prod.minPrice !== prod.maxPrice && (
+                            <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold block" title="Selling rate changed during this period">
+                              ₹{prod.minPrice} - ₹{prod.maxPrice}
+                            </span>
+                          )}
                         </td>
 
-                        <td className="py-2.5 text-right font-semibold text-blue-600 dark:text-blue-400">
-                          {formatPrice(prod.costPrice || 0)}
+                        <td className="py-2.5 text-right">
+                          <span className="font-semibold text-blue-600 dark:text-blue-400 block">
+                            {formatPrice(prod.costPrice || 0)}
+                          </span>
+                          {prod.hasPriceVaried && prod.minCost !== undefined && prod.maxCost !== undefined && prod.minCost !== prod.maxCost && (
+                            <span className="text-[9px] text-blue-500/80 dark:text-blue-400/80 font-bold block" title="Purchase cost changed during this period">
+                              ₹{prod.minCost} - ₹{prod.maxCost}
+                            </span>
+                          )}
                         </td>
 
                         <td className="py-2.5 text-center font-black text-text-secondary">
@@ -1339,6 +1430,10 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
                         <td className="py-2.5 text-right font-black text-text-primary">
                           {formatPrice(prod.sales)}
+                        </td>
+
+                        <td className="py-2.5 text-right font-bold text-blue-600 dark:text-blue-400">
+                          {formatPrice(effectiveCost)}
                         </td>
 
                         <td className="py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400">
@@ -1360,7 +1455,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
                   {filteredProducts.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-10 text-center text-text-muted text-xs font-bold">
+                      <td colSpan={9} className="py-10 text-center text-text-muted text-xs font-bold">
                         {productSearch ? `No products found matching "${productSearch}".` : 'No products sold in this category.'}
                       </td>
                     </tr>

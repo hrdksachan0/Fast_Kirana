@@ -168,8 +168,14 @@ export class RestaurantReportService {
         try {
           const variantsList = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants
           if (Array.isArray(variantsList)) {
-            const matchedVariant = variantsList.find((v: any) => v.name === item.selectedVariant)
-            if (matchedVariant && matchedVariant.costPrice !== undefined) {
+            const normSel = item.selectedVariant.toLowerCase().replace(/[^a-z0-9]/g, '')
+            const matchedVariant = variantsList.find((v: any) => {
+              if (!v) return false
+              const vName = (v.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+              const vUnit = (v.unit || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+              return vName === normSel || vUnit === normSel || normSel.includes(vName) || vName.includes(normSel)
+            })
+            if (matchedVariant && matchedVariant.costPrice !== undefined && Number(matchedVariant.costPrice) > 0) {
               costPrice = parseFloat(matchedVariant.costPrice) || 0
             }
           }
