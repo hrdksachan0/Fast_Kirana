@@ -18,6 +18,8 @@ import 'data/repositories/product_repository.dart';
 import 'providers/product_provider.dart';
 import 'firebase_options.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'core/services/logger_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,32 +81,46 @@ void main() async {
   }
 
   ErrorWidget.builder = (FlutterErrorDetails details) {
+    LoggerService.error("ErrorWidget display error: ${details.exceptionAsString()}", details.exception, details.stack);
+    unawaited(() async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('last_display_error', '${details.exceptionAsString()}\n${details.stack}');
+      } catch (_) {}
+    }());
+
     return Material(
       child: Container(
         color: AppDesignSystem.statusCancelled,
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.error_outline_rounded, size: 56, color: AppDesignSystem.danger),
+                  const Icon(Icons.error_outline_rounded, size: 54, color: AppDesignSystem.danger),
                   const SizedBox(height: 16),
                   const Text(
                     'Oops! Something went wrong',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppDesignSystem.textPrimary),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    kReleaseMode
-                        ? 'We encountered an unexpected display issue. Please try refreshing or restarting the app.'
-                        : details.exceptionAsString(),
-                    textAlign: TextAlign.center,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: AppDesignSystem.textSecondary, height: 1.4),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppDesignSystem.danger.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(
+                      details.exceptionAsString(),
+                      textAlign: TextAlign.start,
+                      maxLines: 5,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: AppDesignSystem.textSecondary, height: 1.4, fontFamily: 'monospace'),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -112,14 +128,27 @@ void main() async {
                     children: [
                       ElevatedButton.icon(
                         onPressed: () {
-                          AppRouter.navigatorKey.currentState?.pop();
+                          AppRouter.navigatorKey.currentState?.pushNamedAndRemoveUntil('/home', (r) => false);
                         },
-                        icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                        label: const Text('Go Back'),
+                        icon: const Icon(Icons.home_rounded, size: 16),
+                        label: const Text('Return to Home'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppDesignSystem.danger,
+                          backgroundColor: AppDesignSystem.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: details.exceptionAsString()));
+                        },
+                        icon: const Icon(Icons.copy_rounded, size: 14),
+                        label: const Text('Copy Details'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppDesignSystem.textPrimary,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),

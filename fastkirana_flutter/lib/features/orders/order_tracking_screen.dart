@@ -514,8 +514,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     HapticFeedback.lightImpact();
     final isPaid = _order?.paymentStatus == 'PAID';
     final totalAmount = _order?.total ?? 0.0;
-    final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
-    final cleanDisplayId = '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}';
+    final displayNum = (_order?.displayId ?? _order?.readableId ?? widget.orderId).trim();
+    final cleanDisplayId = displayNum.isNotEmpty
+        ? '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}'
+        : '#ORDER';
 
     final shouldCancel = await AppConfirmationDialog.showDestructive(
       context: context,
@@ -1035,7 +1037,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   Future<void> _initCustomMarkers() async {
     try {
-      final markers = await MapMarkerGenerator.initCustomMarkers(context);
+      final markers = await MapMarkerGenerator.initCustomMarkers();
       _storeMarkerIcon = markers['store'];
       _restaurantMarkerIcon = markers['restaurant'];
       _riderMarkerIcon = markers['rider'];
@@ -1339,8 +1341,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final isCancelled = _order?.status == OrderStatus.cancelled || statusStep == -1;
     final isDelivered = _order?.status == OrderStatus.delivered || statusStep >= 4;
     final isPaid = _order?.paymentStatus == 'PAID';
-    final displayNum = _order?.displayId ?? (_order?.readableId ?? widget.orderId);
-    final cleanDisplayId = '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}';
+    final displayNum = (_order?.displayId ?? _order?.readableId ?? widget.orderId).trim();
+    final cleanDisplayId = displayNum.isNotEmpty
+        ? '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}'
+        : '#ORDER';
     final canCancel = (_order?.status == OrderStatus.adminPending) &&
         !isCancelled &&
         !isDelivered &&

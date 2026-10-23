@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:confetti/confetti.dart';
 import '../../core/routes/page_transitions.dart';
+import '../../core/routes/app_router.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
@@ -33,7 +34,8 @@ class OrderSuccessScreen extends ConsumerStatefulWidget {
   ConsumerState<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
 }
 
-class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with SingleTickerProviderStateMixin {
+class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const Color primaryRed = AppDesignSystem.primary;
   static const Color successGreen = AppDesignSystem.success;
   static const Color slateDark = AppDesignSystem.slate900;
@@ -68,6 +70,12 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
         timer.cancel();
         return;
       }
+      // Never tick or auto-navigate while app is in background/paused
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (lifecycle != null && lifecycle != AppLifecycleState.resumed) {
+        return;
+      }
+
       if (_autoNavigateSeconds > 1) {
         setState(() {
           _autoNavigateSeconds--;
@@ -82,23 +90,53 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
   void _navigateToTracking() {
     _autoNavigateTimer?.cancel();
     if (!mounted) return;
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle != null && lifecycle != AppLifecycleState.resumed) {
+      // Defer navigation until app comes back to foreground
+      return;
+    }
     HapticFeedback.mediumImpact();
     final effectiveOrder = _liveOrder ?? widget.order;
     final trackingId = effectiveOrder?.id ?? effectiveOrder?.readableId ?? widget.orderId ?? '';
-    Navigator.pushReplacement(
-      context,
-      FadeSlideRoute(
-        page: OrderTrackingScreen(
-          orderId: trackingId,
-          initialOrder: effectiveOrder,
+    try {
+      Navigator.pushReplacement(
+        context,
+        FadeSlideRoute(
+          page: OrderTrackingScreen(
+            orderId: trackingId,
+            initialOrder: effectiveOrder,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (_) {
+      AppRouter.navigatorKey.currentState?.pushReplacement(
+        FadeSlideRoute(
+          page: OrderTrackingScreen(
+            orderId: trackingId,
+            initialOrder: effectiveOrder,
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // Pause countdown timer when app is minimized to prevent background route collision
+      _autoNavigateTimer?.cancel();
+    } else if (state == AppLifecycleState.resumed) {
+      // Resume timer only if user has not opted to stay on page and seconds remain
+      if (mounted && !_userStayedOnPage && _autoNavigateSeconds > 0) {
+        _startAutoNavigateTimer();
+      }
+    }
   }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _confettiController = ConfettiController(duration: const Duration(seconds: 2));
     _confettiController.play();
 
@@ -182,6 +220,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _autoNavigateTimer?.cancel();
     _syncTimer?.cancel();
     _confettiController.dispose();
@@ -461,7 +500,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
-                              value: (4 - _autoNavigateSeconds) / 4,
+                              value: ((4 - _autoNavigateSeconds) / 4).clamp(0.0, 1.0),
                               strokeWidth: 2.5,
                               color: AppDesignSystem.primary,
                               backgroundColor: Colors.white24,
@@ -702,10 +741,14 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> with Si
                               'Order ID',
                               displayId,
                               customValue: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    displayId.length > 20 ? '${displayId.substring(0, 20)}...' : displayId,
-                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: slateDark),
+                                  Flexible(
+                                    child: Text(
+                                      displayId.length > 20 ? '${displayId.substring(0, 20)}...' : displayId,
+                                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: slateDark),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   const SizedBox(width: 6),
                                   GestureDetector(

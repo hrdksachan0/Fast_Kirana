@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../../core/theme/responsive.dart';
 
 class MapMarkerGenerator {
   static final Map<String, BitmapDescriptor> _cache = {};
@@ -13,10 +12,13 @@ class MapMarkerGenerator {
     final picture = pictureRecorder.endRecording();
     final img = await picture.toImage(size.width.toInt(), size.height.toInt());
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
+    if (byteData == null) {
+      return BitmapDescriptor.defaultMarker;
+    }
+    return BitmapDescriptor.bytes(byteData.buffer.asUint8List());
   }
 
-  static Future<BitmapDescriptor> createRiderMarkerBitmap(BuildContext context) async {
+  static Future<BitmapDescriptor> createRiderMarkerBitmap([BuildContext? context]) async {
     const cacheKey = 'rider_marker';
     if (_cache.containsKey(cacheKey)) return _cache[cacheKey]!;
 
@@ -51,9 +53,9 @@ class MapMarkerGenerator {
       canvas.drawPath(arrowPath, arrowPaint);
 
       final emojiPainter = TextPainter(
-        text: TextSpan(
+        text: const TextSpan(
           text: '🛵',
-          style: TextStyle(fontSize: Responsive.scaledFontSize(context, 26)),
+          style: TextStyle(fontSize: 26),
         ),
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
@@ -66,7 +68,7 @@ class MapMarkerGenerator {
   }
 
   static Future<BitmapDescriptor> createCustomMarkerBitmap({
-    required BuildContext context,
+    BuildContext? context,
     required String label,
     required String emoji,
     required Color color,
@@ -105,7 +107,7 @@ class MapMarkerGenerator {
       final emojiPainter = TextPainter(
         text: TextSpan(
           text: emoji,
-          style: TextStyle(fontSize: Responsive.scaledFontSize(context, 26)),
+          style: const TextStyle(fontSize: 26),
         ),
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
@@ -124,8 +126,8 @@ class MapMarkerGenerator {
       final labelPainter = TextPainter(
         text: TextSpan(
           text: label,
-          style: TextStyle(
-            fontSize: Responsive.scaledFontSize(context, 9.5),
+          style: const TextStyle(
+            fontSize: 9.5,
             fontWeight: FontWeight.w900,
             color: Colors.white,
             letterSpacing: 0.6,
@@ -141,23 +143,20 @@ class MapMarkerGenerator {
     return marker;
   }
 
-  static Future<Map<String, BitmapDescriptor>> initCustomMarkers(BuildContext context) async {
+  static Future<Map<String, BitmapDescriptor>> initCustomMarkers([BuildContext? context]) async {
     final results = await Future.wait([
       createCustomMarkerBitmap(
-        context: context,
         label: 'STORE',
         emoji: '🏪',
         color: const Color(0xFF16A34A),
       ),
       createCustomMarkerBitmap(
-        context: context,
         label: 'FOOD',
         emoji: '🍽️',
         color: const Color(0xFF7C3AED),
       ),
-      createRiderMarkerBitmap(context),
+      createRiderMarkerBitmap(),
       createCustomMarkerBitmap(
-        context: context,
         label: 'HOME',
         emoji: '🏠',
         color: const Color(0xFFDC2626),
