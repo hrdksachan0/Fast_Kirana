@@ -249,11 +249,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
         // PENDING, ACTIVE, timeout, unavailable, or unknown results:
         // PRESERVE recovery and display banner!
-        final amountStr = await PaymentGatewayHandler.getPendingCfAmount();
-        final amount = amountStr != null ? double.tryParse(amountStr) : null;
         state = state.copyWith(
           pendingCashfreeOrderId: effectivePendingId,
-          pendingGrandTotal: amount ?? draft?.grandTotal,
+          pendingGrandTotal: pendingAmount,
         );
       }
     });
