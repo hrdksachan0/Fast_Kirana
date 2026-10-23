@@ -55,13 +55,13 @@ function Build-ReleaseAab {
 
     # Production API URL + Razorpay live key
     $buildArgs += @(
-        "--dart-define=API_BASE_URL=https://api.fastkirana.in",
-        "--dart-define=WEB_STOREFRONT_URL=https://fastkirana.in",
+        "--dart-define=API_BASE_URL=https://api.fastminute.in",
+        "--dart-define=WEB_STOREFRONT_URL=https://www.fastminute.in",
         "--dart-define=RAZORPAY_KEY_ID=rzp_live_TRvyzlqHiRGWbr",
         "--dart-define=BUILD_FLAVOR=prod"
     )
 
-    Write-Host "  API: https://api.fastkirana.in" -ForegroundColor Green
+    Write-Host "  API: https://api.fastminute.in" -ForegroundColor Green
     Write-Host "  Flavor: prod" -ForegroundColor Green
 
     Invoke-FlutterBuild $buildArgs
@@ -87,8 +87,8 @@ function Build-ReleaseApk {
     }
 
     $buildArgs += @(
-        "--dart-define=API_BASE_URL=https://api.fastkirana.in",
-        "--dart-define=WEB_STOREFRONT_URL=https://fastkirana.in",
+        "--dart-define=API_BASE_URL=https://api.fastminute.in",
+        "--dart-define=WEB_STOREFRONT_URL=https://www.fastminute.in",
         "--dart-define=RAZORPAY_KEY_ID=rzp_live_TRvyzlqHiRGWbr",
         "--dart-define=BUILD_FLAVOR=prod"
     )
