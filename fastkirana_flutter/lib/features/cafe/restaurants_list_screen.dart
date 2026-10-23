@@ -141,12 +141,17 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                     final cat = _cuisineCategories[index];
                     final isSelected = selectedCuisine == cat['id'];
 
-                    return GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        ref.read(selectedCuisineProvider.notifier).state = cat['id']!;
-                      },
-                      child: AnimatedContainer(
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          FocusScope.of(context).unfocus();
+                          final newCuisine = isSelected && cat['id'] != 'all' ? 'all' : cat['id']!;
+                          ref.read(selectedCuisineProvider.notifier).state = newCuisine;
+                        },
+                        borderRadius: BorderRadius.circular(AppDesignSystem.radiusFull),
+                        child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
@@ -172,10 +177,11 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                           ],
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
+            ),
 
               // 3. Quick Filter Toggles Row (Pure Veg, Offers, 4.5+ Rating)
               Container(
@@ -300,25 +306,32 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
   }
 
   Widget _buildFilterPill({required String label, required bool isActive, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isActive ? AppDesignSystem.orange50 : Colors.white,
-          borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
-          border: Border.all(
-            color: isActive ? AppDesignSystem.orange600 : AppDesignSystem.border,
-            width: isActive ? 1.5 : 1.0,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: isActive ? AppDesignSystem.orange50 : Colors.white,
+            borderRadius: BorderRadius.circular(AppDesignSystem.radiusSm),
+            border: Border.all(
+              color: isActive ? AppDesignSystem.orange600 : AppDesignSystem.border,
+              width: isActive ? 1.5 : 1.0,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: Responsive.scaledFontSize(context, 11),
-            fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
-            color: isActive ? AppDesignSystem.orange600 : AppDesignSystem.gray600,
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: Responsive.scaledFontSize(context, 11),
+              fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+              color: isActive ? AppDesignSystem.orange600 : AppDesignSystem.gray600,
+            ),
           ),
         ),
       ),

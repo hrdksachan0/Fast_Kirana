@@ -174,15 +174,22 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     setState(() => _activeCategoryTag = resolvedTag);
     _centerCategoryInHorizontalBar(resolvedTag);
 
-    final key = _sectionKeys[resolvedTag] ?? _sectionKeys[tag];
-    if (key?.currentContext != null) {
-      Scrollable.ensureVisible(
-        key!.currentContext!,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOutCubic,
-        alignment: 0.0,
-      );
+    void executeScroll() {
+      final key = _sectionKeys[resolvedTag] ?? _sectionKeys[tag];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOutCubic,
+          alignment: 0.0,
+        );
+      }
     }
+
+    executeScroll();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) executeScroll();
+    });
 
     Future.delayed(const Duration(milliseconds: 450), () {
       if (mounted) _isManualTabClick = false;
@@ -1033,6 +1040,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
           },
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
+            cacheExtent: 3500.0,
             slivers: [
               // 1. Items Count Bar
               SliverToBoxAdapter(
@@ -1320,6 +1328,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       color: Colors.transparent,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() => _collapsedSections[section.tag] = !isCollapsed);
@@ -1576,6 +1585,7 @@ class _CategoryChipsDelegate extends SliverPersistentHeaderDelegate {
                 final formattedTitle = _formatCategoryTitle(cat.title);
 
                 return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () => onCategoryTap(cat.tag),
                   child: SizedBox(
                     width: 76,
