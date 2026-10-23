@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/cart.dart';
 import '../data/models/product.dart';
 import '../data/repositories/cart_repository.dart';
+import '../data/models/checkout_draft.dart';
+import '../features/checkout/controllers/payment_gateway_handler.dart';
 import '../core/network/api_client.dart';
 import '../core/config/app_config.dart';
 import '../core/utils/restaurant_utils.dart';
@@ -50,7 +52,15 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
 
   Cart _emptyCart({String? hubId}) => _buildCart([], hubId: hubId);
 
-  void _setState(List<CartItem> items, Cart? oldCart, {String? hubId}) {
+  void _invalidatePendingPaymentSession() {
+    unawaited(PaymentGatewayHandler.clearPendingPaymentRecovery());
+    unawaited(CheckoutDraft.clearAcceptedDraft());
+  }
+
+  void _setState(List<CartItem> items, Cart? oldCart, {String? hubId, bool invalidatePaymentSession = true}) {
+    if (invalidatePaymentSession) {
+      _invalidatePendingPaymentSession();
+    }
     state = AsyncValue.data(
       _buildCart(
         items,
@@ -475,6 +485,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   Future<void> clearCart({String? orderId}) async {
+    _invalidatePendingPaymentSession();
     final backupCart = _cart;
     _debounceSyncTimer?.cancel();
     _cartVersion++;

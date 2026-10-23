@@ -234,7 +234,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 0. Pending Payment Recovery Banner
-                      if (checkoutState.pendingCashfreeOrderId != null && checkoutState.pendingCashfreeOrderId!.isNotEmpty) ...[
+                      if (checkoutState.pendingCashfreeOrderId != null &&
+                          checkoutState.pendingCashfreeOrderId!.isNotEmpty &&
+                          (checkoutState.pendingGrandTotal == null ||
+                              (checkoutState.pendingGrandTotal! - grandTotal).abs() < 1.0)) ...[
                         Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),

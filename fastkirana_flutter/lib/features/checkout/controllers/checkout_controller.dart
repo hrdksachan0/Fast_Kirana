@@ -160,6 +160,26 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       final draft = await CheckoutDraft.loadAcceptedDraft();
       final effectivePendingId = (pendingId != null && pendingId.isNotEmpty) ? pendingId : draft?.cfOrderId;
       if (effectivePendingId != null && effectivePendingId.isNotEmpty) {
+        final currentCart = ref.read(cartProvider).value ?? Cart.empty();
+        final amountStr = await PaymentGatewayHandler.getPendingCfAmount();
+        final pendingAmount = amountStr != null ? double.tryParse(amountStr) : draft?.grandTotal;
+
+        // Swiggy/Blinkit rule: If cart changed (different items or amount), discard stale pending payment session immediately!
+        final bool isCartConsistent = currentCart.items.isNotEmpty &&
+            draft != null &&
+            draft.items.length == currentCart.items.length &&
+            (pendingAmount != null && (pendingAmount - (currentCart.subtotal + draft.deliveryFee + draft.packagingFee)).abs() < 1.0);
+
+        if (!isCartConsistent) {
+          await PaymentGatewayHandler.clearPendingPaymentRecovery();
+          await CheckoutDraft.clearAcceptedDraft();
+          state = state.copyWith(
+            pendingCashfreeOrderId: null,
+            pendingGrandTotal: null,
+            pendingCart: null,
+          );
+          return;
+        }
         try {
           final verification = await _paymentHandler.verifyPayment(effectivePendingId, maxAttempts: 3);
           if (verification.isPaid && verification.paymentId != null) {
@@ -547,11 +567,56 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       debugPrint('Cashfree error verify check note: $vErr');
     }
 
+    final rawMsg = errorResponse.getMessage() ?? '';
+    final rawCode = errorResponse.getCode() ?? '';
+    final rawStatus = errorResponse.getStatus() ?? '';
+    final msg = rawMsg.toUpperCase();
+    final code = rawCode.toUpperCase();
+    final status = rawStatus.toUpperCase();
+
+    final isUserBackout = msg.contains('USER_DROPPED') ||
+        msg.contains('CANCEL') ||
+        msg.contains('BACK') ||
+        code.contains('USER_DROPPED') ||
+        code.contains('CANCEL') ||
+        code.contains('BACK') ||
+        status.contains('USER_DROPPED') ||
+        status.contains('CANCEL');
+
     final total = state.pendingGrandTotal ?? 0.0;
     final cart = state.pendingCart ?? ref.read(cartProvider).value;
     final context = _currentContext;
 
-    state = state.copyWith(isPlacingOrder: false);
+    // Swiggy/Blinkit rule: Always cleanly reset in-flight state and clear pending payment session
+    await PaymentGatewayHandler.clearPendingPaymentRecovery();
+    await CheckoutDraft.clearAcceptedDraft();
+    state = state.copyWith(
+      isPlacingOrder: false,
+      pendingCashfreeOrderId: null,
+      pendingGrandTotal: null,
+      pendingCart: null,
+    );
+
+    // If user deliberately pressed back or dropped out, return gracefully without scary modals
+    if (isUserBackout) {
+      debugPrint('ℹ️ User dropped or cancelled Cashfree payment ($cfOrderId). Returning cleanly to checkout.');
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppDesignSystem.slate800,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Text(
+              'Payment was cancelled. Your cart items are saved.',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
 
     // Prompt customer immediately with options: Retry Payment, Convert to COD, or Cancel Order
     if (context != null && context.mounted && total > 0 && cart != null) {
@@ -898,7 +963,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           customerPhone: cleanPhone.isNotEmpty ? cleanPhone : rawPhone,
           customerEmail: hasValidEmail ? userEmail : null,
           customerName: customerName,
-          existingOrderId: state.pendingCashfreeOrderId,
+          existingOrderId: null, // Swiggy/Blinkit rule: Cart checkout ALWAYS launches fresh Cashfree session
           userId: user?.id,
           addressId: selectedAddress?.id,
           items: itemsPayload,
@@ -936,26 +1001,52 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             await PaymentFailedCodSheet.show(
               context: context,
               grandTotal: grandTotal,
-              onRetryPayment: () {
-                state = state.copyWith(pendingCashfreeOrderId: null);
-                handlePlaceOrder(context, cart: cart);
-              },
-              onCancelOrder: () {
-                state = state.copyWith(isPlacingOrder: false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: AppDesignSystem.rose600,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    content: Text(
-                      'Order was cancelled. No amount was debited.',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                    ),
-                  ),
+              onRetryPayment: () async {
+                await PaymentGatewayHandler.clearPendingPaymentRecovery();
+                await CheckoutDraft.clearAcceptedDraft();
+                state = state.copyWith(
+                  isPlacingOrder: false,
+                  pendingCashfreeOrderId: null,
+                  pendingGrandTotal: null,
+                  pendingCart: null,
                 );
+                if (context.mounted) {
+                  handlePlaceOrder(context, cart: cart);
+                }
+              },
+              onCancelOrder: () async {
+                await PaymentGatewayHandler.clearPendingPaymentRecovery();
+                await CheckoutDraft.clearAcceptedDraft();
+                state = state.copyWith(
+                  isPlacingOrder: false,
+                  pendingCashfreeOrderId: null,
+                  pendingGrandTotal: null,
+                  pendingCart: null,
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: AppDesignSystem.rose600,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      content: Text(
+                        'Order was cancelled. No amount was debited.',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                    ),
+                  );
+                }
               },
               onConfirmCod: () async {
-                state = state.copyWith(selectedPayment: 'cod', isPlacingOrder: true);
+                await PaymentGatewayHandler.clearPendingPaymentRecovery();
+                await CheckoutDraft.clearAcceptedDraft();
+                state = state.copyWith(
+                  selectedPayment: 'cod',
+                  isPlacingOrder: true,
+                  pendingCashfreeOrderId: null,
+                  pendingGrandTotal: null,
+                  pendingCart: null,
+                );
                 await completeOrderPlacement(context, cart: cart);
               },
             );
@@ -994,7 +1085,18 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     String? serverReadableId,
   }) async {
     final effectiveCart = cart ?? ref.read(cartProvider).value ?? Cart.empty();
-    final hasDraftItems = draft != null && draft.items.isNotEmpty;
+
+    // Swiggy/Blinkit rule: Only use draft items if the draft explicitly matches this confirmed payment
+    // and cart items/amount; otherwise, the active cart items represent what the customer actually chose!
+    final bool isDraftValid = draft != null &&
+        draft.items.isNotEmpty &&
+        (effectiveCart.items.isEmpty ||
+            ((draft.cfOrderId != null &&
+                    paymentId != null &&
+                    (paymentId.contains(draft.cfOrderId!) || draft.cfOrderId!.contains(paymentId))) &&
+                (draft.items.length == effectiveCart.items.length)));
+
+    final hasDraftItems = isDraftValid;
     final subtotal = hasDraftItems
         ? draft.items.fold<double>(0.0, (sum, i) => sum + ((i['price'] as num?)?.toDouble() ?? 0.0) * ((i['quantity'] as num?)?.toInt() ?? 1))
         : effectiveCart.subtotal;
