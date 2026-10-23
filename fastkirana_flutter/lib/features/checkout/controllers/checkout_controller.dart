@@ -34,7 +34,6 @@ import '../../../providers/store_settings_provider.dart';
 import '../../orders/orders_screen.dart';
 import '../order_success_screen.dart';
 import '../widgets/payment_failed_cod_sheet.dart';
-import '../widgets/payment_pending_reconciliation_sheet.dart';
 import '../widgets/checkout_delivery_instructions.dart';
 
 // ─── State ──────────────────────────────────────────────────────────────────
@@ -320,15 +319,22 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     // 1. High-trust fullscreen confirmation dialog
     bool dialogShown = false;
-    final navContext = _currentContext;
+    final navContext = _currentContext ?? AppRouter.navigatorKey.currentContext;
+
+    void dismissConfirmingDialog() {
+      try {
+        AppRouter.navigatorKey.currentState?.popUntil((route) => route.settings.name != 'payment_confirming_dialog');
+      } catch (_) {}
+    }
+
     if (navContext != null && navContext.mounted) {
       dialogShown = true;
       showDialog(
         context: navContext,
-        barrierDismissible: false,
+        barrierDismissible: true,
         routeSettings: const RouteSettings(name: 'payment_confirming_dialog'),
         builder: (dialogCtx) => PopScope(
-          canPop: false,
+          canPop: true,
           child: Dialog(
             backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -373,24 +379,27 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       );
     }
 
-    // 2. Poll backend with generous window (12 attempts ~15s) for gateway & webhook settlement
-    final verification = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 12);
-    final verifiedPaid = verification.isPaid;
-    final resolvedPaymentId = verification.paymentId;
-
-    // Dismiss loading dialog if open
-    if (dialogShown && navContext != null && navContext.mounted) {
-      try {
-        Navigator.of(navContext, rootNavigator: true).pop();
-      } catch (_) {}
+    PaymentVerificationResult? verification;
+    try {
+      // 2. Fast poll backend (at most 4 attempts ~1.5s)
+      verification = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 4);
+    } catch (vErr) {
+      debugPrint('Cashfree verification error: $vErr');
+    } finally {
+      // GUARANTEED: Dialog is ALWAYS dismissed!
+      if (dialogShown) {
+        dismissConfirmingDialog();
+      }
     }
 
-    final context = _currentContext;
-    if (!verifiedPaid || resolvedPaymentId == null) {
-      debugPrint('❌ Cashfree payment verification status: ${verification.status} (cfOrderId: $cfOrderId)');
+    final verifiedPaid = verification?.isPaid == true;
+    final resolvedPaymentId = verification?.paymentId;
 
-      // 3. Webhook / Auto-recovery safety check before opening any warning sheets:
-      // If server webhook already created the order in DB, discover it and navigate directly to success!
+    final context = _currentContext ?? AppRouter.navigatorKey.currentContext;
+    if (!verifiedPaid || resolvedPaymentId == null) {
+      debugPrint('❌ Cashfree payment verification status: ${verification?.status} (cfOrderId: $cfOrderId)');
+
+      // 3. Webhook fallback check: If server webhook already created the order in DB, discover it and navigate directly to success!
       try {
         final dio = ref.read(dioProvider);
         final cleanCf = cfOrderId.trim();
@@ -436,88 +445,30 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         debugPrint('Post-verify DB order check note: $checkErr');
       }
 
-      final total = draft?.grandTotal ?? state.pendingGrandTotal ?? cart?.subtotal ?? 0.0;
+      // Swiggy/Blinkit rule: If not paid, user cancelled, backed out, or failed payment.
+      // Immediately clear all pending session, recovery, and draft so NO amber recovery banner displays!
+      await PaymentGatewayHandler.clearPendingPaymentRecovery();
+      await CheckoutDraft.clearAcceptedDraft();
+      state = state.copyWith(
+        isPlacingOrder: false,
+        pendingCashfreeOrderId: null,
+        pendingGrandTotal: null,
+        pendingCart: null,
+      );
 
-      // Pending or in-flight confirmation from bank/UPI: retain recovery, DO NOT show cancelled sheet!
-      if ((verification.isPending || verification.isUnavailable) && context != null && context.mounted) {
-        state = state.copyWith(isPlacingOrder: false, pendingCashfreeOrderId: cfOrderId);
-        await PaymentPendingReconciliationSheet.show(
-          context: context,
-          grandTotal: total,
-          cfOrderId: cfOrderId,
-          onCheckStatus: () async {
-            final recheck = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 6);
-            if (!context.mounted) return;
-            if (recheck.isPaid && recheck.paymentId != null) {
-              Navigator.pop(context);
-              final freshDraft = await CheckoutDraft.loadAcceptedDraft();
-              await PaymentGatewayHandler.clearPendingPaymentRecovery();
-              await CheckoutDraft.clearAcceptedDraft();
-              state = state.copyWith(
-                isPlacingOrder: false,
-                pendingCashfreeOrderId: null,
-                pendingGrandTotal: null,
-                pendingCart: null,
-              );
-              if (!context.mounted) return;
-              await completeOrderPlacement(
-                context,
-                draft: freshDraft ?? draft,
-                cart: cart ?? Cart.empty(),
-                paymentId: recheck.paymentId,
-                serverOrderId: recheck.serverOrderId,
-                serverReadableId: recheck.readableId,
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: AppDesignSystem.amber600,
-                  content: Text(
-                    recheck.message ?? 'Payment confirmation is still pending with your bank.',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          },
-          onWait: () {
-            // Keep pending Cashfree order ID intact and unblock checkout UI to show recovery banner
-            state = state.copyWith(isPlacingOrder: false, pendingCashfreeOrderId: cfOrderId);
-          },
-        );
-        return;
-      }
-
-      state = state.copyWith(isPlacingOrder: false);
-
-      // ONLY show failure sheet if strictly confirmed as terminal failure
-      if (verification.isFailed && context != null && context.mounted && total > 0) {
-        await PaymentFailedCodSheet.show(
-          context: context,
-          grandTotal: total,
-          onRetryPayment: () {
-            state = state.copyWith(pendingCashfreeOrderId: null);
-            handlePlaceOrder(context, cart: cart ?? Cart.empty());
-          },
-          onCancelOrder: () {
-            state = state.copyWith(isPlacingOrder: false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: AppDesignSystem.rose600,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                content: Text(
-                  'Payment attempt was not completed.',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-              ),
-            );
-          },
-          onConfirmCod: () async {
-            state = state.copyWith(selectedPayment: 'cod', isPlacingOrder: true);
-            await completeOrderPlacement(context, draft: draft, cart: cart ?? Cart.empty());
-          },
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppDesignSystem.slate800,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Text(
+              'Payment was cancelled or not completed. Your items are saved in your cart.',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
       return;
@@ -544,8 +495,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       draft: draft,
       cart: cart ?? Cart.empty(),
       paymentId: resolvedPaymentId,
-      serverOrderId: verification.serverOrderId,
-      serverReadableId: verification.readableId,
+      serverOrderId: verification?.serverOrderId,
+      serverReadableId: verification?.readableId,
     );
   }
 

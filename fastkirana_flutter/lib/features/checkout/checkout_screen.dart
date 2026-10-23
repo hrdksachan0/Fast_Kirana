@@ -416,6 +416,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           controller.setPaymentMethod(method);
                         },
                         onConfirm: () {
+                          Navigator.of(context).pop();
                           controller.updateNotes(_deliveryNotesController.text);
                           controller.handlePlaceOrder(context, cart: activeCart);
                         },

@@ -968,7 +968,7 @@ async def verify_cashfree_payment(
                 "cfPaymentId": str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}",
                 "orderAmount": cf_amount,
             }
-        status_to_return = "PENDING"
+        status_to_return = "USER_DROPPED"
         if cf_order:
             cf_st = cf_order.get("order_status", "ACTIVE")
             if cf_st == "EXPIRED":
@@ -977,19 +977,23 @@ async def verify_cashfree_payment(
                 status_to_return = "CANCELLED"
             elif 'payments' in locals() and any(p.get("payment_status") == "SUCCESS" for p in (payments or [])):
                 status_to_return = "PAID"
-            elif 'payments' in locals() and any(p.get("payment_status") in ("FAILED", "CANCELLED", "USER_DROPPED") for p in (payments or [])):
-                status_to_return = "FAILED"
             elif 'payments' in locals() and any(p.get("payment_status") == "PENDING" for p in (payments or [])):
                 status_to_return = "PENDING"
+            elif 'payments' in locals() and any(p.get("payment_status") in ("FAILED", "CANCELLED", "USER_DROPPED") for p in (payments or [])):
+                status_to_return = "FAILED"
+            elif not ('payments' in locals() and payments):
+                # Customer closed or cancelled gateway without completing or submitting payment
+                status_to_return = "USER_DROPPED"
             elif cf_st == "ACTIVE":
                 status_to_return = "ACTIVE"
 
+        is_terminally_not_paid = status_to_return in ("FAILED", "USER_DROPPED", "CANCELLED", "EXPIRED")
         return {
             "success": False,
             "orderId": clean_id,
             "paymentStatus": status_to_return,
             "isPaid": status_to_return == "PAID",
-            "message": "Payment was cancelled or could not be completed." if status_to_return == "FAILED" else "Payment confirmation pending with your bank.",
+            "message": "Payment was cancelled or could not be completed." if is_terminally_not_paid else "Payment confirmation pending with your bank.",
         }
 
     # Verify gateway order identity strictly binds to this order
