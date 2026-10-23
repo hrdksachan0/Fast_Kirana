@@ -141,7 +141,10 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
   }
 
   // Verify ownership or direct secret link access
-  const isDirectSecretLink = id === order.id && typeof order.id === 'string' && order.id.length >= 20
+  const isDirectSecretLink = Boolean(
+    (id === order.id && typeof order.id === 'string' && order.id.length >= 10) ||
+    (order.readableId && String(id).toLowerCase() === String(order.readableId).toLowerCase())
+  )
   if (!isDirectSecretLink && !session?.user?.id) {
     redirect('/login')
   }

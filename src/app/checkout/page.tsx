@@ -201,7 +201,7 @@ export default function CheckoutPage() {
   // Early Return Barriers
   const validItems = items.filter((item) => item && item.product)
 
-  if (items.length === 0 || validItems.length === 0) {
+  if (!payment.isPlacingOrder && !payment.overlayState && (items.length === 0 || validItems.length === 0)) {
     return <EmptyCartScreen />
   }
 

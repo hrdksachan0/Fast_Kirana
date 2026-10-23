@@ -2261,6 +2261,7 @@ async def create_order(
 
         result_payload = {
             "id": main_order.id,
+            "orderId": main_order.id,
             "readableId": main_order.readableId,
             "traceId": trace_id,
             "userId": main_order.userId,
@@ -4424,6 +4425,9 @@ async def edit_order(
 
         return {
             "success": True,
+            "id": order.id,
+            "orderId": order.id,
+            "readableId": order.readableId,
             "total": total_val,
             "orderType": str(dynamic_order_type.value if hasattr(dynamic_order_type, "value") else dynamic_order_type),
             "restaurantId": dynamic_restaurant_id,
@@ -4654,6 +4658,10 @@ async def edit_order(
 
     return {
         "success": True,
+        "id": order.id,
+        "orderId": order.id,
+        "readableId": order.readableId,
+        "combinedId": final_combined_id,
         "total": primary_total,
         "orderType": primary_order_type,
         "restaurantId": primary_restaurant_id,

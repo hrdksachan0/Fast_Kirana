@@ -212,10 +212,12 @@ export function useCheckoutPayment({
       const data = await res.json()
 
       if (res.ok) {
+        const targetOrderId = data.id || data.orderId || data.order?.id || data.orders?.[0]?.id || data.readableId
+        const displayReadableId = data.readableId || data.order?.readableId || data.orders?.[0]?.readableId || (typeof targetOrderId === 'string' ? targetOrderId.slice(0, 8) : undefined)
+
         triggerHaptic('success')
-        setOrderReadableId(data.readableId || data.id?.slice(0, 8))
+        setOrderReadableId(displayReadableId)
         setOverlayState('success')
-        clearCart()
 
         // Play success chime
         try {
@@ -236,10 +238,11 @@ export function useCheckoutPayment({
           }
         } catch (_) {}
 
-        // Hard redirect after showing success celebration for 1.5s
+        // Clear cart and redirect smoothly
         setTimeout(() => {
-          window.location.replace(`/order/${data.id}/success`)
-        }, 1500)
+          clearCart()
+          window.location.replace(`/order/${targetOrderId}/success`)
+        }, 1200)
       } else {
         setOverlayState(null)
         toast.error(getApiErrorMessage(data, 'Failed to place order'))
@@ -337,13 +340,16 @@ export function useCheckoutPayment({
         })
         const orderData = await orderRes.json()
         if (orderRes.ok) {
-          clearCart()
+          const targetOrderId = orderData.id || orderData.orderId || orderData.order?.id || orderData.orders?.[0]?.id || orderData.readableId
+          const displayReadableId = orderData.readableId || orderData.order?.readableId || (typeof targetOrderId === 'string' ? targetOrderId.slice(0, 8) : undefined)
+
           triggerHaptic('success')
-          setOrderReadableId(orderData.readableId || orderData.id?.slice(0, 8))
+          setOrderReadableId(displayReadableId)
           setOverlayState('success')
           toast.success('🎉 Order placed successfully! (100% Free Promo)')
           setTimeout(() => {
-            window.location.replace(`/order/${orderData.id}/success`)
+            clearCart()
+            window.location.replace(`/order/${targetOrderId}/success`)
           }, 1200)
         } else {
           setOverlayState(null)
@@ -477,10 +483,9 @@ export function useCheckoutPayment({
             }
 
             // Target Order ID: orderData?.id or verifyData.orderId (auto-recovered) or cfData.orderId
-            const finalOrderId = orderData?.id || orderData?.order?.id || verifyData?.orderId || cfData.orderId
-            const finalReadableId = orderData?.readableId || orderData?.order?.readableId || verifyData?.readableId || finalOrderId
+            const finalOrderId = orderData?.id || orderData?.orderId || orderData?.order?.id || orderData?.orders?.[0]?.id || verifyData?.orderId || cfData.orderId
+            const finalReadableId = orderData?.readableId || orderData?.order?.readableId || orderData?.orders?.[0]?.readableId || verifyData?.readableId || finalOrderId
 
-            clearCart()
             triggerHaptic('success')
             if (finalReadableId) {
               setOrderReadableId(finalReadableId)
@@ -490,8 +495,9 @@ export function useCheckoutPayment({
 
             // Seamless immediate transition to Order Success Screen
             setTimeout(() => {
+              clearCart()
               window.location.replace(`/order/${finalOrderId}/success`)
-            }, 500)
+            }, 600)
             return true
           }
         } catch (_) {
