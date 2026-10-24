@@ -1617,6 +1617,7 @@ async def auto_recover_unplaced_cashfree_order(
                     "imageUrl": p_img,
                     "selectedVariant": p_var,
                     "cartItemId": p_cart_item_id,
+                    "restaurantId": p_rest_id,
                 })
 
         # If no intent snapshot found, do NOT fulfill current live cart. Flag for manual reconciliation.
@@ -1630,27 +1631,41 @@ async def auto_recover_unplaced_cashfree_order(
                 "quantity": 1,
                 "imageUrl": None,
                 "selectedVariant": None,
+                "restaurantId": target_restaurant_id if is_restaurant else None,
             })
 
-        # If restaurant item, find restaurant name
-        if is_restaurant and target_restaurant_id:
-            r_stmt = select(Restaurant).where(Restaurant.id == target_restaurant_id)
+        # Partition items into Grocery and Restaurant groups
+        grocery_items = [it for it in items_to_create if not it.get("restaurantId")]
+        rest_items_by_id = {}
+        for it in items_to_create:
+            r_id = it.get("restaurantId")
+            if r_id:
+                if r_id not in rest_items_by_id:
+                    rest_items_by_id[r_id] = []
+                rest_items_by_id[r_id].append(it)
+
+        is_split = (len(grocery_items) > 0 and len(rest_items_by_id) > 0) or len(rest_items_by_id) > 1
+
+        all_rest_ids = list(rest_items_by_id.keys())
+        if target_restaurant_id and target_restaurant_id not in all_rest_ids:
+            all_rest_ids.append(target_restaurant_id)
+
+        restaurant_names = {}
+        if all_rest_ids:
+            r_stmt = select(Restaurant).where(Restaurant.id.in_(all_rest_ids))
             r_res = await db.execute(r_stmt)
-            r_obj = r_res.scalars().first()
-            if r_obj:
-                target_shop_name = r_obj.name
-        elif not is_restaurant and target_restaurant_id:
-            target_shop_name = "Restaurant"
+            for r_obj in r_res.scalars().all():
+                restaurant_names[r_obj.id] = r_obj.name
+
+        if is_restaurant and target_restaurant_id:
+            target_shop_name = restaurant_names.get(target_restaurant_id, "A.S. Restaurant" if target_restaurant_id == "REST-101" else "Restaurant")
 
         # 6. Allocate Next Order Readable ID Sequence
-        order_suffix = "-R" if is_restaurant else "-G"
         try:
             seq_res = await db.execute(text("SELECT nextval('order_readable_id_seq')"))
             next_seq = seq_res.scalar()
-            readable_id = f"{next_seq}{order_suffix}"
         except Exception:
-            readable_id = f"FK-{int(time.time() * 1000) % 1000000:06d}{order_suffix}"
-        new_order_id = f"ord_{uuid.uuid4().hex[:20]}"
+            next_seq = int(time.time() * 1000) % 1000000
 
         calculated_subtotal = sum(it["price"] * it["quantity"] for it in items_to_create)
         if val_quote and val_quote.get("subtotal") is not None:
@@ -1683,71 +1698,210 @@ async def auto_recover_unplaced_cashfree_order(
             order_status = OrderStatus.ADMIN_PENDING
             order_notes = f"[CF_ORDER:{cf_order_id}] | Cashfree PG Paid (Ref: {cf_ref}) | Auto-Recovered (Awaiting Admin Confirmation)"
 
-        # 7. Create Order Row
-        order = Order(
-            id=new_order_id,
-            readableId=readable_id,
-            userId=user_id,
-            addressId=address.id,
-            combinedId=None,
-            cfOrderId=clean_cf_id,
-            restaurantId=target_restaurant_id if is_restaurant else None,
-            orderType=OrderType.RESTAURANT if is_restaurant else OrderType.GROCERY,
-            status=order_status,
-            subtotal=calculated_subtotal if calculated_subtotal > 0 else order_amount,
-            discount=recovered_discount,
-            deliveryFee=recovered_delivery_fee,
-            taxes=0.0,
-            miscFee=order_misc_fee,
-            total=order_amount,
-            paymentMethod=PaymentMethod.UPI,
-            paymentStatus=PaymentStatus.PAID,
-            estimatedDelivery=datetime.utcnow() + timedelta(minutes=25),
-            deliveryLat=address.lat,
-            deliveryLng=address.lng,
-            deliveryMethod=recovered_delivery_method,
-            isB2B=False,
-            shopName=target_shop_name,
-            shopPhone="+918112849854",
-            storeId=recovered_store_id,
-            couponCode=recovered_coupon,
-            createdAt=datetime.utcnow(),
-            updatedAt=datetime.utcnow(),
-            confirmedAt=datetime.utcnow() if order_status == OrderStatus.CONFIRMED else None,
-            notes=order_notes,
-            refundAmount=0.0
-        )
-        db.add(order)
-        await db.flush()
+        # 7. Create Orders (Split into Grocery + Restaurant if mixed cart)
+        combined_id = f"combined_{uuid.uuid4().hex[:9]}_{int(time.time())}" if is_split else None
+        created_orders = []
 
-        # 8. Create Order Items
-        for it in items_to_create:
-            oi_id = f"oi_{uuid.uuid4().hex[:20]}"
-            oi = OrderItem(
-                id=oi_id,
-                orderId=new_order_id,
-                productId=it["productId"],
-                name=it["name"],
-                price=it["price"],
-                quantity=it["quantity"],
-                imageUrl=it.get("imageUrl"),
-                selectedVariant=it.get("selectedVariant"),
-                costPrice=float(it.get("costPrice") or 0.0),
-                variants=None,
-                notes=None,
-                refundAmount=0.0,
-                isRefunded=False
+        if is_split:
+            raw_subtotal = sum(it["price"] * it["quantity"] for it in items_to_create)
+            total_subtotal = raw_subtotal if raw_subtotal > 0 else order_amount
+            rest_idx = 0
+
+            # 7a. Split Grocery Order
+            if grocery_items:
+                g_id = f"ord_{uuid.uuid4().hex[:20]}"
+                g_readable = f"{next_seq}-G"
+                g_subtotal = sum(it["price"] * it["quantity"] for it in grocery_items)
+                g_ratio = (g_subtotal / total_subtotal) if total_subtotal > 0 else 0.0
+                g_discount = round(g_ratio * recovered_discount, 2)
+                g_misc = order_misc_fee
+                g_delivery = recovered_delivery_fee
+                g_total = max(0.0, round(g_subtotal - g_discount + g_delivery + g_misc, 2))
+
+                order_g = Order(
+                    id=g_id,
+                    readableId=g_readable,
+                    userId=user_id,
+                    addressId=address.id,
+                    combinedId=combined_id,
+                    cfOrderId=clean_cf_id,
+                    restaurantId=None,
+                    orderType=OrderType.GROCERY,
+                    status=order_status,
+                    subtotal=g_subtotal,
+                    discount=g_discount,
+                    deliveryFee=g_delivery,
+                    taxes=0.0,
+                    miscFee=g_misc,
+                    total=g_total,
+                    paymentMethod=PaymentMethod.UPI,
+                    paymentStatus=PaymentStatus.PAID,
+                    estimatedDelivery=datetime.utcnow() + timedelta(minutes=25),
+                    deliveryLat=address.lat,
+                    deliveryLng=address.lng,
+                    deliveryMethod=recovered_delivery_method,
+                    isB2B=False,
+                    shopName="FastKirana Grocery",
+                    shopPhone="+918112849854",
+                    storeId=recovered_store_id,
+                    couponCode=recovered_coupon,
+                    createdAt=datetime.utcnow(),
+                    updatedAt=datetime.utcnow(),
+                    confirmedAt=datetime.utcnow() if order_status == OrderStatus.CONFIRMED else None,
+                    notes=order_notes,
+                    refundAmount=0.0
+                )
+                db.add(order_g)
+                await db.flush()
+                created_orders.append({
+                    "order": order_g,
+                    "items": grocery_items,
+                    "is_restaurant": False,
+                    "restaurant_id": None,
+                    "shop_name": "FastKirana Grocery"
+                })
+
+            # 7b. Split Restaurant Order(s)
+            for r_id, r_items in rest_items_by_id.items():
+                rest_idx += 1
+                r_suffix = f"-R{rest_idx}" if rest_idx > 1 else "-R"
+                r_id_str = f"ord_{uuid.uuid4().hex[:20]}"
+                r_readable = f"{next_seq}{r_suffix}"
+                r_subtotal = sum(it["price"] * it["quantity"] for it in r_items)
+                r_ratio = (r_subtotal / total_subtotal) if total_subtotal > 0 else 0.0
+                r_discount = round(r_ratio * recovered_discount, 2)
+                r_misc = order_misc_fee if (not grocery_items and rest_idx == 1) else 0.0
+                r_delivery = recovered_delivery_fee if (not grocery_items and rest_idx == 1) else 0.0
+                r_total = max(0.0, round(r_subtotal - r_discount + r_delivery + r_misc, 2))
+                r_shop = restaurant_names.get(r_id, "A.S. Restaurant" if r_id == "REST-101" else "Restaurant")
+
+                order_r = Order(
+                    id=r_id_str,
+                    readableId=r_readable,
+                    userId=user_id,
+                    addressId=address.id,
+                    combinedId=combined_id,
+                    cfOrderId=clean_cf_id,
+                    restaurantId=r_id,
+                    orderType=OrderType.RESTAURANT,
+                    status=order_status,
+                    subtotal=r_subtotal,
+                    discount=r_discount,
+                    deliveryFee=r_delivery,
+                    taxes=0.0,
+                    miscFee=r_misc,
+                    total=r_total,
+                    paymentMethod=PaymentMethod.UPI,
+                    paymentStatus=PaymentStatus.PAID,
+                    estimatedDelivery=datetime.utcnow() + timedelta(minutes=25),
+                    deliveryLat=address.lat,
+                    deliveryLng=address.lng,
+                    deliveryMethod=recovered_delivery_method,
+                    isB2B=False,
+                    shopName=r_shop,
+                    shopPhone="+918112849854",
+                    storeId=recovered_store_id,
+                    couponCode=recovered_coupon,
+                    createdAt=datetime.utcnow(),
+                    updatedAt=datetime.utcnow(),
+                    confirmedAt=datetime.utcnow() if order_status == OrderStatus.CONFIRMED else None,
+                    notes=order_notes,
+                    refundAmount=0.0
+                )
+                db.add(order_r)
+                await db.flush()
+                created_orders.append({
+                    "order": order_r,
+                    "items": r_items,
+                    "is_restaurant": True,
+                    "restaurant_id": r_id,
+                    "shop_name": r_shop
+                })
+
+            # Reconcile any rounding cents across orders so sum == order_amount
+            sum_totals = sum(co["order"].total for co in created_orders)
+            rounding_diff = round(order_amount - sum_totals, 2)
+            if abs(rounding_diff) > 0 and abs(rounding_diff) <= 1.0 and created_orders:
+                created_orders[0]["order"].total = max(0.0, round(created_orders[0]["order"].total + rounding_diff, 2))
+
+        else:
+            # Single non-split order
+            order_suffix = "-R" if is_restaurant else "-G"
+            readable_id = f"{next_seq}{order_suffix}"
+            new_order_id = f"ord_{uuid.uuid4().hex[:20]}"
+            order = Order(
+                id=new_order_id,
+                readableId=readable_id,
+                userId=user_id,
+                addressId=address.id,
+                combinedId=None,
+                cfOrderId=clean_cf_id,
+                restaurantId=target_restaurant_id if is_restaurant else None,
+                orderType=OrderType.RESTAURANT if is_restaurant else OrderType.GROCERY,
+                status=order_status,
+                subtotal=calculated_subtotal if calculated_subtotal > 0 else order_amount,
+                discount=recovered_discount,
+                deliveryFee=recovered_delivery_fee,
+                taxes=0.0,
+                miscFee=order_misc_fee,
+                total=order_amount,
+                paymentMethod=PaymentMethod.UPI,
+                paymentStatus=PaymentStatus.PAID,
+                estimatedDelivery=datetime.utcnow() + timedelta(minutes=25),
+                deliveryLat=address.lat,
+                deliveryLng=address.lng,
+                deliveryMethod=recovered_delivery_method,
+                isB2B=False,
+                shopName=target_shop_name,
+                shopPhone="+918112849854",
+                storeId=recovered_store_id,
+                couponCode=recovered_coupon,
+                createdAt=datetime.utcnow(),
+                updatedAt=datetime.utcnow(),
+                confirmedAt=datetime.utcnow() if order_status == OrderStatus.CONFIRMED else None,
+                notes=order_notes,
+                refundAmount=0.0
             )
-            db.add(oi)
+            db.add(order)
+            await db.flush()
+            created_orders.append({
+                "order": order,
+                "items": items_to_create,
+                "is_restaurant": is_restaurant,
+                "restaurant_id": target_restaurant_id,
+                "shop_name": target_shop_name
+            })
 
-        # 8.5 Enforce stock deduction ONLY if order is CONFIRMED (adequately paid and stock available)
+        # 8. Create Order Items for each order
+        for co in created_orders:
+            ord_obj = co["order"]
+            for it in co["items"]:
+                oi_id = f"oi_{uuid.uuid4().hex[:20]}"
+                oi = OrderItem(
+                    id=oi_id,
+                    orderId=ord_obj.id,
+                    productId=it["productId"],
+                    name=it["name"],
+                    price=it["price"],
+                    quantity=it["quantity"],
+                    imageUrl=it.get("imageUrl"),
+                    selectedVariant=it.get("selectedVariant"),
+                    costPrice=float(it.get("costPrice") or 0.0),
+                    variants=None,
+                    notes=None,
+                    refundAmount=0.0,
+                    isRefunded=False
+                )
+                db.add(oi)
+
+        # 8.5 Enforce stock deduction ONLY for grocery products if order is CONFIRMED
         if order_status == OrderStatus.CONFIRMED:
             for it in items_to_create:
                 p_id = it.get("productId")
                 if not p_id or not db_products.get(p_id):
                     continue
                 db_p = db_products[p_id]
-                if db_p.restaurantId:
+                if db_p.restaurantId or it.get("restaurantId"):
                     continue
                 qty = it["quantity"]
                 sel_var = it.get("selectedVariant")
@@ -1794,7 +1948,8 @@ async def auto_recover_unplaced_cashfree_order(
                 except Exception:
                     pass
 
-            order.notes = f"{order.notes or ''} [STOCK_DEDUCTED]".strip()
+            for co in created_orders:
+                co["order"].notes = f"{co['order'].notes or ''} [STOCK_DEDUCTED]".strip()
 
         # 9. Clear ordered items from user's cart (preserving any newer cart edits)
         if user and items_to_create and order_status == OrderStatus.CONFIRMED:
@@ -1858,55 +2013,67 @@ async def auto_recover_unplaced_cashfree_order(
                                 remaining_to_deduct = 0
                                 break
 
-        # 10. Enqueue Kitchen KOT for printing ONLY if CONFIRMED
-        if is_restaurant and target_restaurant_id and order_status == OrderStatus.CONFIRMED:
-            try:
-                kot_items = [
-                    {"name": it["name"], "quantity": it["quantity"], "restaurantId": target_restaurant_id, "isRestaurantItem": True}
-                    for it in items_to_create
-                ]
-                kot_text = (
-                    "======================================\n"
-                    "            FASTKIRANA KOT\n"
-                    "======================================\n"
-                    f"TOKEN : #{readable_id} | {customer_name}\n"
-                    f"TYPE  : {recovered_delivery_method}\n"
-                    f"Print : {datetime.now().strftime('%d %b %Y %I:%M %p')}\n"
-                    "--------------------------------------\n"
-                    "QTY   ITEM\n"
-                    "--------------------------------------\n"
-                    + "\n".join([f"{it['quantity']}  x  {it['name']}" for it in items_to_create]) + "\n"
-                    "--------------------------------------\n"
-                    "      *** FASTKIRANA KITCHEN ***\n"
-                    "======================================"
-                )
-                kot_payload = {
-                    "orderId": new_order_id,
-                    "readableId": readable_id,
-                    "restaurantId": target_restaurant_id,
-                    "kotText": kot_text,
-                    "items": kot_items,
-                    "notes": order_notes,
-                    "customerName": customer_name,
-                    "deliveryMethod": recovered_delivery_method,
-                    "shopName": target_shop_name,
-                    "printedAt": datetime.utcnow().isoformat(),
-                    "manual": True,
-                    "source": "webhook_auto_recovery",
-                    "timestamp": int(time.time() * 1000)
-                }
-                kot_insert = text(
-                    "INSERT INTO kitchen_kot_queue (order_id, readable_id, restaurant_id, payload, status, created_at, attempts) "
-                    "VALUES (:oid, :rid, :rest_id, CAST(:payload AS jsonb), 'PENDING', NOW(), 0)"
-                )
-                await db.execute(kot_insert, {
-                    "oid": new_order_id,
-                    "rid": readable_id,
-                    "rest_id": target_restaurant_id,
-                    "payload": json.dumps(kot_payload)
-                })
-            except Exception as kot_err:
-                logger.warning(f"[Auto-Recovery] KOT enqueue error: {kot_err}")
+        # 10. Enqueue Kitchen KOT for printing ONLY if CONFIRMED (per restaurant)
+        if order_status == OrderStatus.CONFIRMED:
+            for co in created_orders:
+                if co["is_restaurant"] and co["restaurant_id"]:
+                    r_ord = co["order"]
+                    r_items = co["items"]
+                    r_target_id = co["restaurant_id"]
+                    r_target_shop = co["shop_name"]
+                    try:
+                        kot_items = [
+                            {"name": it["name"], "quantity": it["quantity"], "restaurantId": r_target_id, "isRestaurantItem": True}
+                            for it in r_items
+                        ]
+                        kot_text = (
+                            "======================================\n"
+                            "            FASTKIRANA KOT\n"
+                            "======================================\n"
+                            f"TOKEN : #{r_ord.readableId} | {customer_name}\n"
+                            f"TYPE  : {recovered_delivery_method}\n"
+                            f"Print : {datetime.now().strftime('%d %b %Y %I:%M %p')}\n"
+                            "--------------------------------------\n"
+                            "QTY   ITEM\n"
+                            "--------------------------------------\n"
+                            + "\n".join([f"{it['quantity']}  x  {it['name']}" for it in r_items]) + "\n"
+                            "--------------------------------------\n"
+                            "      *** FASTKIRANA KITCHEN ***\n"
+                            "======================================"
+                        )
+                        kot_payload = {
+                            "orderId": r_ord.id,
+                            "readableId": r_ord.readableId,
+                            "restaurantId": r_target_id,
+                            "kotText": kot_text,
+                            "items": kot_items,
+                            "notes": r_ord.notes,
+                            "customerName": customer_name,
+                            "deliveryMethod": recovered_delivery_method,
+                            "shopName": r_target_shop,
+                            "printedAt": datetime.utcnow().isoformat(),
+                            "manual": True,
+                            "source": "webhook_auto_recovery",
+                            "timestamp": int(time.time() * 1000)
+                        }
+                        kot_insert = text(
+                            "INSERT INTO kitchen_kot_queue (order_id, readable_id, restaurant_id, payload, status, created_at, attempts) "
+                            "VALUES (:oid, :rid, :rest_id, CAST(:payload AS jsonb), 'PENDING', NOW(), 0)"
+                        )
+                        await db.execute(kot_insert, {
+                            "oid": r_ord.id,
+                            "rid": r_ord.readableId,
+                            "rest_id": r_target_id,
+                            "payload": json.dumps(kot_payload)
+                        })
+                    except Exception as kot_err:
+                        logger.warning(f"[Auto-Recovery] KOT enqueue error for #{r_ord.readableId}: {kot_err}")
+
+        # Choose primary order to track in cons_rec and return
+        primary_order = next((co["order"] for co in created_orders if not co["is_restaurant"]), created_orders[0]["order"])
+        order = primary_order
+        readable_id = order.readableId
+        new_order_id = order.id
 
         if cons_rec:
             cons_rec.status = "COMPLETED"
@@ -1914,21 +2081,22 @@ async def auto_recover_unplaced_cashfree_order(
             cons_rec.userId = user_id
 
         await db.commit()
-        logger.info(f"🎉 [Auto-Recovery SUCCESS] Reconstructed and placed Order #{readable_id} for {customer_name} (₹{order_amount})!")
+        readable_summary = " / ".join([f"#{co['order'].readableId}" for co in created_orders])
+        logger.info(f"🎉 [Auto-Recovery SUCCESS] Reconstructed and placed Order {readable_summary} for {customer_name} (₹{order_amount})!")
 
         # 11. Async Alerts: WhatsApp & FCM & WebSockets
         try:
             from routers.orders import send_whatsapp_alert
             if order_status == OrderStatus.CONFIRMED:
                 admin_msg = (
-                    f"🚨 *AUTO-RECONCILED ONLINE ORDER* #{readable_id}\n"
+                    f"🚨 *AUTO-RECONCILED ONLINE ORDER* {readable_summary}\n"
                     f"Customer: {customer_name} ({clean_phone})\n"
                     f"Total: ₹{order_amount:.0f} (PAID via Cashfree)\n"
                     f"Client dropped before sync — Order recovered and dispatched automatically! ✅"
                 )
             else:
                 admin_msg = (
-                    f"⚠️ *RECONCILIATION REQUIRED ONLINE ORDER* #{readable_id}\n"
+                    f"⚠️ *RECONCILIATION REQUIRED ONLINE ORDER* {readable_summary}\n"
                     f"Customer: {customer_name} ({clean_phone})\n"
                     f"Paid: ₹{order_amount:.0f} (PAID via Cashfree) | Status: ADMIN_PENDING\n"
                     f"Reason: {order_notes}\n"
@@ -1939,55 +2107,63 @@ async def auto_recover_unplaced_cashfree_order(
         except Exception as wa_e:
             logger.warning(f"[Auto-Recovery] WhatsApp alert failed: {wa_e}")
 
-        # FCM Order Buzzer notification (to admin, store, and picker)
-        try:
-            from routers.orders import dispatch_isolated_order_fcm_notifications
-            asyncio.create_task(dispatch_isolated_order_fcm_notifications(
-                order_id=new_order_id,
-                readable_id=readable_id,
-                restaurant_id=target_restaurant_id,
-                shop_name=shop_name,
-                total=float(order_amount),
-                status_val=order_status.value if hasattr(order_status, "value") else str(order_status),
-                store_id=target_store_id,
-                payment_status="PAID"
-            ))
-        except Exception as fcm_err:
-            logger.warning(f"[Auto-Recovery] FCM order buzzer notification failed: {fcm_err}")
+        for co in created_orders:
+            co_ord = co["order"]
+            co_items = co["items"]
+            co_is_rest = co["is_restaurant"]
+            co_rest_id = co["restaurant_id"]
+            co_shop = co["shop_name"]
 
-        # WebSocket broadcast to general channel for Admin Web / Flutter dashboards
-        try:
-            from routers.websockets import manager
-            asyncio.create_task(manager.broadcast_to_channel("general", {
-                "event": "NEW_ORDER",
-                "type": "new-order",
-                "orderId": new_order_id,
-                "readableId": readable_id,
-                "shopName": shop_name,
-                "status": order_status.value if hasattr(order_status, "value") else str(order_status),
-                "paymentStatus": "PAID",
-                "paymentMethod": "UPI",
-                "total": float(order_amount),
-                "createdAt": datetime.utcnow().isoformat(),
-                "restaurantId": target_restaurant_id,
-                "storeId": target_store_id,
-                "isPaid": True,
-            }))
-        except Exception as ws_err:
-            logger.warning(f"[Auto-Recovery] WebSocket broadcast failed: {ws_err}")
-
-        # FCM to Restaurant
-        if target_restaurant_id and order_status == OrderStatus.CONFIRMED:
+            # FCM Order Buzzer notification (to admin, store, and picker)
             try:
-                from utils.firebase import send_fcm_topic_notification
-                asyncio.create_task(send_fcm_topic_notification(
-                    topic=f"restaurant_{target_restaurant_id}",
-                    title=f"🔔 NEW ORDER: #{readable_id} (₹{order_amount:.0f})",
-                    body=f"Auto-Reconciled: {', '.join([it['name'] for it in items_to_create])} - {customer_name}",
-                    data={"orderId": new_order_id, "readableId": readable_id, "restaurantId": target_restaurant_id, "status": "CONFIRMED"}
+                from routers.orders import dispatch_isolated_order_fcm_notifications
+                asyncio.create_task(dispatch_isolated_order_fcm_notifications(
+                    order_id=co_ord.id,
+                    readable_id=co_ord.readableId,
+                    restaurant_id=co_rest_id,
+                    shop_name=co_shop,
+                    total=float(co_ord.total),
+                    status_val=order_status.value if hasattr(order_status, "value") else str(order_status),
+                    store_id=recovered_store_id,
+                    payment_status="PAID"
                 ))
-            except Exception as fcm_e:
-                logger.warning(f"[Auto-Recovery] FCM topic alert failed: {fcm_e}")
+            except Exception as fcm_err:
+                logger.warning(f"[Auto-Recovery] FCM order buzzer notification failed: {fcm_err}")
+
+            # WebSocket broadcast
+            try:
+                from routers.websockets import manager
+                asyncio.create_task(manager.broadcast_to_channel("general", {
+                    "event": "NEW_ORDER",
+                    "type": "new-order",
+                    "orderId": co_ord.id,
+                    "readableId": co_ord.readableId,
+                    "shopName": co_shop,
+                    "status": order_status.value if hasattr(order_status, "value") else str(order_status),
+                    "paymentStatus": "PAID",
+                    "paymentMethod": "UPI",
+                    "total": float(co_ord.total),
+                    "createdAt": datetime.utcnow().isoformat(),
+                    "restaurantId": co_rest_id,
+                    "storeId": recovered_store_id,
+                    "isPaid": True,
+                    "combinedId": co_ord.combinedId,
+                }))
+            except Exception as ws_err:
+                logger.warning(f"[Auto-Recovery] WebSocket broadcast failed: {ws_err}")
+
+            # FCM to Restaurant
+            if co_is_rest and co_rest_id and order_status == OrderStatus.CONFIRMED:
+                try:
+                    from utils.firebase import send_fcm_topic_notification
+                    asyncio.create_task(send_fcm_topic_notification(
+                        topic=f"restaurant_{co_rest_id}",
+                        title=f"🔔 NEW ORDER: #{co_ord.readableId} (₹{co_ord.total:.0f})",
+                        body=f"Auto-Reconciled: {', '.join([it['name'] for it in co_items])} - {customer_name}",
+                        data={"orderId": co_ord.id, "readableId": co_ord.readableId, "restaurantId": co_rest_id, "status": "CONFIRMED"}
+                    ))
+                except Exception as fcm_e:
+                    logger.warning(f"[Auto-Recovery] FCM topic alert failed: {fcm_e}")
 
         return order
 
