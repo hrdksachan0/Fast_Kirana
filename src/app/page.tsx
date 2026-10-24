@@ -6,8 +6,8 @@ import { Metadata } from 'next'
 import { StorefrontClient } from '@/components/home/storefront-client'
 
 export const metadata: Metadata = {
-  title: 'FastMinute - Online Grocery & Food Delivery in Minutes',
-  description: 'FastMinute delivers fresh grocery staples, daily dairy items, fruits, vegetables, and delicious meals from partner restaurants in Ghatampur, Kanpur in minutes.',
+  title: 'FastMinute (Fast Minute) - 10-Minute Grocery & Food Delivery in Ghatampur',
+  description: 'FastMinute (Fast Minute) delivers fresh grocery staples, daily dairy milk, vegetables, fruits, snacks, and restaurant meals in minutes in Ghatampur, Kanpur Nagar (209206). Order online at fastminute.in.',
   alternates: {
     canonical: 'https://www.fastminute.in',
   }

@@ -40,10 +40,10 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: 'FastMinute - Online Grocery & Food Delivery in Minutes | Ghatampur',
+    default: 'FastMinute (Fast Minute) - 10-Minute Grocery & Food Delivery | Ghatampur',
     template: '%s | FastMinute Ghatampur',
   },
-  description: 'Order groceries, fresh milk, vegetables, dairy, snacks, restaurant food & daily essentials online in Ghatampur, Kanpur Nagar (209206). Superfast doorstep delivery with COD & UPI payment support.',
+  description: 'FastMinute (Fast Minute) - Order groceries, fresh milk, vegetables, dairy, snacks, restaurant food & daily essentials online in Ghatampur, Kanpur Nagar (209206). Superfast doorstep delivery with COD & UPI payment support.',
   keywords: [
     'FastMinute',
     'Fast Minute',

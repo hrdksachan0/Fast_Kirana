@@ -3,22 +3,24 @@ export function JsonLdSchema() {
 
   const localBusinessSchema = {
     '@context': 'https://schema.org',
-    '@type': 'GroceryStore',
+    '@type': ['GroceryStore', 'DeliveryService'],
     '@id': `${baseUrl}/#store`,
-    name: 'FastMinute - Online Grocery Delivery Ghatampur',
-    alternateName: 'FastMinute Ghatampur',
+    name: 'FastMinute - 10-Minute Grocery & Food Delivery',
+    alternateName: ['Fast Minute', 'FastMinute Ghatampur', 'Fast Minute Delivery', 'FastKirana', 'FastMinute App'],
     url: baseUrl,
     logo: `${baseUrl}/brand/fastkirana_app_icon.png`,
     image: `${baseUrl}/brand/fastkirana_app_icon.png`,
     description:
-      'FastMinute is Ghatampur’s premier online grocery dark store delivery service. Order fresh fruits, vegetables, milk, dairy, snacks, atta, rice, dal, and daily essentials with fast doorstep delivery in Ghatampur, Kanpur Nagar, Uttar Pradesh.',
-    telephone: '+91-8112849854',
+      'FastMinute (Fast Minute) is Ghatampur’s premier 10-minute online grocery dark store delivery service. Order fresh fruits, vegetables, milk, dairy, snacks, atta, rice, dal, and restaurant meals with fast doorstep delivery in Ghatampur, Kanpur Nagar, Uttar Pradesh (209206).',
+    disambiguatingDescription:
+      'FastMinute (Fast Minute) is an Indian quick-commerce company and delivery service in Ghatampur, Kanpur Nagar, Uttar Pradesh, India. It is a local grocery and food delivery service, not a music track or general timer.',
+    telephone: '+91-7054470303',
     priceRange: '₹',
     currenciesAccepted: 'INR',
-    paymentAccepted: 'Cash, UPI, Google Pay, PhonePe, Paytm, BHIM, Credit Card, Debit Card',
+    paymentAccepted: 'Cash on Delivery, UPI, Google Pay, PhonePe, Paytm, BHIM, Credit Card, Debit Card',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'Main Market Road, Near Power House',
+      streetAddress: 'Main Market Road, Near Power House, NH34',
       addressLocality: 'Ghatampur',
       addressRegion: 'Uttar Pradesh',
       postalCode: '209206',
@@ -56,7 +58,7 @@ export function JsonLdSchema() {
           'Sunday',
         ],
         opens: '06:00',
-        closes: '23:00',
+        closes: '23:59',
       },
     ],
     sameAs: [
@@ -71,7 +73,7 @@ export function JsonLdSchema() {
     '@type': 'MobileApplication',
     '@id': `${baseUrl}/#mobileapp`,
     name: 'FastMinute: Deliver in Minutes',
-    alternateName: ['FastMinute', 'Fast Minute', 'FastMinute App'],
+    alternateName: ['FastMinute', 'Fast Minute', 'FastMinute App', 'Fast Minute Grocery'],
     operatingSystem: 'Android',
     applicationCategory: 'ShoppingApplication',
     identifier: 'com.fastkirana.app',
@@ -90,7 +92,7 @@ export function JsonLdSchema() {
       url: baseUrl,
     },
     description:
-      'Official FastMinute app for instant grocery, daily milk, fresh fruits & vegetables, snacks, and restaurant food delivery in Ghatampur, Kanpur Nagar.',
+      'Official FastMinute (Fast Minute) app for instant 10-minute grocery, daily milk, fresh fruits & vegetables, snacks, and restaurant food delivery in Ghatampur, Kanpur Nagar.',
   }
 
   const websiteSchema = {
@@ -99,8 +101,11 @@ export function JsonLdSchema() {
     '@id': `${baseUrl}/#website`,
     url: baseUrl,
     name: 'FastMinute',
+    alternateName: ['Fast Minute', 'FastMinute Grocery', 'FastMinute India', 'FastMinute Ghatampur'],
+    description:
+      'FastMinute (Fast Minute) - Official website for 10-minute online grocery, dairy, fresh vegetables & food delivery in Ghatampur, Kanpur Nagar.',
     publisher: {
-      '@id': `${baseUrl}/#store`,
+      '@id': `${baseUrl}/#organization`,
     },
     potentialAction: {
       '@type': 'SearchAction',
@@ -118,10 +123,10 @@ export function JsonLdSchema() {
     mainEntity: [
       {
         '@type': 'Question',
-        name: 'What is FastMinute?',
+        name: 'What is FastMinute (Fast Minute)?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'FastMinute is Ghatampur’s premier online grocery delivery platform. We deliver fresh milk, vegetables, fruits, packaged foods, snacks, dairy, beverage, and kirana items directly to your doorstep in Ghatampur, Kanpur Nagar.',
+          text: 'FastMinute (also written as Fast Minute) is Ghatampur’s premier 10-minute online grocery and food delivery platform. We deliver fresh milk, vegetables, fruits, packaged foods, snacks, dairy, cold drinks, and hot restaurant food directly to your doorstep in Ghatampur, Kanpur Nagar (209206).',
         },
       },
       {
@@ -129,7 +134,7 @@ export function JsonLdSchema() {
         name: 'How fast is grocery delivery in Ghatampur?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'FastMinute delivers orders fast across Ghatampur market and surrounding residential areas in Kanpur Nagar.',
+          text: 'FastMinute delivers orders in 10-15 minutes across Ghatampur market and surrounding residential areas in Kanpur Nagar.',
         },
       },
       {
@@ -137,7 +142,7 @@ export function JsonLdSchema() {
         name: 'What payment options are available on FastMinute?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'FastMinute supports Cash on Delivery (COD), UPI payments (Google Pay, PhonePe, Paytm, BHIM), and Cashfree Debit/Credit card options.',
+          text: 'FastMinute supports Cash on Delivery (COD), UPI payments (Google Pay, PhonePe, Paytm, BHIM), and Debit/Credit card options.',
         },
       },
     ],
@@ -145,17 +150,23 @@ export function JsonLdSchema() {
 
   const organizationSchema = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
+    '@type': ['Organization', 'OnlineBusiness'],
     '@id': `${baseUrl}/#organization`,
     name: 'FastMinute',
+    alternateName: ['Fast Minute', 'FastMinute Services', 'FastMinute Grocery', 'FastMinute App', 'FastKirana', 'Fast Minute Delivery'],
     legalName: 'FastMinute Services',
     url: baseUrl,
     logo: `${baseUrl}/brand/fastkirana_app_icon.png`,
+    image: `${baseUrl}/brand/fastkirana_app_icon.png`,
     email: 'help@fastminute.in',
-    telephone: '+91-8112849854',
+    telephone: '+91-7054470303',
+    description:
+      'FastMinute (Fast Minute) is an Indian quick-commerce company providing 10-minute doorstep grocery, daily essentials, and restaurant food delivery in Ghatampur, Kanpur Nagar, Uttar Pradesh.',
+    disambiguatingDescription:
+      'FastMinute is a quick-commerce grocery delivery company in Uttar Pradesh, India. Not affiliated with any musical recording or audio track.',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'Main Market Road, Near Power House',
+      streetAddress: 'Main Market Road, Near Power House, NH34',
       addressLocality: 'Ghatampur',
       addressRegion: 'Uttar Pradesh',
       postalCode: '209206',
@@ -164,7 +175,7 @@ export function JsonLdSchema() {
     contactPoint: [
       {
         '@type': 'ContactPoint',
-        telephone: '+91-8112849854',
+        telephone: '+91-7054470303',
         contactType: 'customer service',
         areaServed: 'IN',
         availableLanguage: ['en', 'hi'],
