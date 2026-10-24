@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/category/', '/product/', '/food/'],
+        allow: ['/', '/category/', '/product/', '/food/', '/about', '/contact', '/faq'],
         disallow: [
           '/api/',
           '/admin/',
@@ -27,7 +27,7 @@ export default function robots(): MetadataRoute.Robots {
       },
       {
         userAgent: 'Googlebot',
-        allow: ['/', '/category/', '/product/', '/food/'],
+        allow: ['/', '/category/', '/product/', '/food/', '/about', '/contact', '/faq'],
         disallow: [
           '/api/',
           '/admin/',

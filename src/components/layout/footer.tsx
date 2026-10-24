@@ -137,6 +137,11 @@ export function Footer() {
               <li className="flex items-center gap-2.5 text-xs font-semibold text-zinc-400 leading-relaxed">
                 <MapPin size={13} className="shrink-0 text-zinc-500" /> {contactAddress}
               </li>
+              <li className="pt-1.5">
+                <Link href="/about" className="text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors inline-flex items-center gap-1">
+                  About FastMinute &rarr;
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -198,6 +203,7 @@ export function Footer() {
             We accept: UPI • Cards • COD • Wallets
           </p>
           <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-4.5 gap-y-2">
+            <Link href="/about" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">About Us</Link>
             <Link href="/privacy-policy" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Terms of Service</Link>
             <Link href="/refund-policy" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Refund Policy</Link>
