@@ -252,7 +252,7 @@ export async function GET(request: Request) {
       orderIds.length > 0
         ? prisma.orderItem.findMany({
             where: { orderId: { in: orderIds } },
-            include: { product: { select: { unit: true, variants: true } } },
+            include: { product: { select: { unit: true, variants: true, restaurantId: true } } },
           })
         : [],
       restaurantIds.length > 0
@@ -412,6 +412,10 @@ export async function GET(request: Request) {
       const items = allOrderItems.filter(item => item.orderId === o.id).map(item => {
         const prod = (item as any).product
         const variant = item.selectedVariant || prod?.unit || null
+        const itemRestId = prod?.restaurantId || null
+        const itemShopName = itemRestId
+          ? (allRestaurants.find(r => r.id === itemRestId)?.name || 'Restaurant')
+          : 'FastMinute Dark Store'
         return {
           id: item.id,
           name: item.name,
@@ -424,6 +428,8 @@ export async function GET(request: Request) {
           unit: variant,
           size: variant,
           weight: variant,
+          restaurantId: itemRestId,
+          shopName: itemShopName,
           notes: item.notes || null,
         }
       })

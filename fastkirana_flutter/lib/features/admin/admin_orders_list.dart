@@ -769,9 +769,12 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
                 ? item.id
                 : '${item.name.toLowerCase().trim()}_${item.selectedVariant?.toLowerCase().trim() ?? ""}_${item.notes?.toLowerCase().trim() ?? ""}';
             if (seenItemKeys.add(key)) {
+              final isRest = item.isRestaurantItem || (sub.isRestaurantOrder && item.restaurantId != null);
               allItems.add(item.copyWith(
-                restaurantId: item.restaurantId ?? sub.restaurantId,
-                shopName: item.shopName ?? sub.shopName,
+                restaurantId: isRest ? (item.restaurantId ?? sub.restaurantId) : null,
+                shopName: isRest
+                    ? (item.shopName ?? sub.shopName ?? 'Restaurant Kitchen')
+                    : 'FastMinute Dark Store',
               ));
             }
           }
@@ -1714,7 +1717,7 @@ $formattedItems
   }
 
   Future<void> _sendWhatsAppKOT(Order order) async {
-    AdminShareSheet.show(context, order);
+    AdminShareSheet.show(context, order, allOrders: _allOrders);
   }
 
   bool _isLiveOrder(Order order) {

@@ -380,9 +380,10 @@ class Order {
         final itemJson = Map<String, dynamic>.from(raw);
         final it = OrderItem.fromJson(itemJson);
         final joinedRestId = itemJson['product'] is Map ? itemJson['product']['restaurantId']?.toString() : null;
-        final effectiveRestId = it.restaurantId ?? joinedRestId ?? (isParentRestOrder ? parsedRestId : null);
+        // Only assign parent restaurantId if item itself has it, product has it, or item is legitimately a dish/food
+        final effectiveRestId = it.restaurantId ?? joinedRestId ?? (isParentRestOrder && it.isRestaurantItem ? parsedRestId : null);
         final effectiveShop = it.shopName ??
-            (effectiveRestId != null ? (RestaurantRegistry.getName(effectiveRestId) ?? resolvedShopName) : resolvedShopName);
+            (effectiveRestId != null ? (RestaurantRegistry.getName(effectiveRestId) ?? resolvedShopName) : (isParentRestOrder && !it.isRestaurantItem ? 'FastMinute Dark Store' : resolvedShopName));
         itemsList.add(it.copyWith(
           restaurantId: effectiveRestId,
           shopName: effectiveShop,
@@ -651,7 +652,30 @@ class OrderItem {
   });
 
   bool get isRestaurantItem {
+    // 1. Explicit cooked food dish check from RestaurantRegistry
+    if (RestaurantRegistry.isFoodDishName(name)) return true;
+
+    // 2. Product ID prefix check
+    final pid = (productId ?? '').toUpperCase();
+    if (pid.startsWith('REST-') || pid.startsWith('DISH-') || pid.startsWith('CAFE-')) return true;
+
+    // 3. Obvious grocery guard: if the name is an excluded grocery item, it is NOT a restaurant item
+    final n = name.toLowerCase().trim();
+    if (n.contains('roll-on') || n.contains('toilet') || n.contains('tissue') ||
+        n.contains('soap') || n.contains('shampoo') || n.contains('oil') ||
+        n.contains('tel ') || n.contains('atta') || n.contains('chana') ||
+        n.contains('dal ') || n.contains('tamatar') || n.contains('tomato') ||
+        n.contains('kaddu') || n.contains('pumpkin') || n.contains('lauki') ||
+        n.contains('guard') || n.contains('odonil') || n.contains('biscuit') ||
+        n.contains('icecream') || n.contains('ice cream') || n.contains('chhachh') ||
+        n.contains('buttermilk') || n.contains('dahi') || n.contains('namkeen')) {
+      return false;
+    }
+
+    // 4. Restaurant ID on item
     if (restaurantId != null && restaurantId!.trim().isNotEmpty && restaurantId != 'null') return true;
+
+    // 5. Shop name on item
     if (shopName != null && shopName!.trim().isNotEmpty) {
       final s = shopName!.toLowerCase().trim();
       if (s != 'fastkirana store' &&
@@ -665,9 +689,7 @@ class OrderItem {
         return true;
       }
     }
-    final pid = (productId ?? '').toUpperCase();
-    if (pid.startsWith('REST-') || pid.startsWith('DISH-') || pid.startsWith('CAFE-')) return true;
-    final n = name.toLowerCase().trim();
+
     const dishKeywords = [
       'roll', 'spring roll', 'burger', 'pizza', 'sandwich', 'chowmein', 'noodle',
       'fried rice', 'paneer', 'manchurian', 'shake', 'coffee', 'pasta', 'thali',
