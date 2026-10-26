@@ -191,17 +191,19 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 2,
                             children: [
                               Text(
                                 'FastMinute Wallet',
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 14),
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontWeight: FontWeight.w800,
                                   color: slateDark,
                                 ),
                               ),
-                              const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
@@ -209,10 +211,10 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  canPayWithWallet ? '⚡ 1-TAP PAY' : 'INSUFFICIENT',
+                                  canPayWithWallet ? '⚡ 1-TAP' : 'LOW BALANCE',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9),
-                                    fontWeight: FontWeight.w900,
+                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontWeight: FontWeight.w800,
                                     color: canPayWithWallet ? const Color(0xFF15803D) : const Color(0xFFB45309),
                                     letterSpacing: 0.2,
                                   ),
@@ -223,13 +225,15 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                           const SizedBox(height: 3),
                           Text(
                             canPayWithWallet
-                                ? 'Available Balance: ₹${wallet.totalUsable.toStringAsFixed(0)} (Instant checkout)'
+                                ? 'Available: ₹${wallet.totalUsable.toStringAsFixed(0)} (Instant checkout)'
                                 : 'Balance: ₹${wallet.totalUsable.toStringAsFixed(0)} • Tap to Top-up',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11.5),
+                              fontSize: Responsive.scaledFontSize(context, 11),
                               color: canPayWithWallet ? slateMuted : const Color(0xFFD97706),
                               fontWeight: FontWeight.w600,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -252,19 +256,26 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                       )
                     else
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
                         decoration: BoxDecoration(
                           color: AppDesignSystem.emerald50,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: AppDesignSystem.emerald200),
                         ),
-                        child: Text(
-                          'Add +',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 11),
-                            fontWeight: FontWeight.w800,
-                            color: AppDesignSystem.emerald700,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.add_rounded, size: 13, color: AppDesignSystem.emerald700),
+                            const SizedBox(width: 1),
+                            Text(
+                              'Add',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: FontWeight.w800,
+                                color: AppDesignSystem.emerald700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],
@@ -315,17 +326,19 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 2,
                             children: [
                               Text(
                                 'Cash on Delivery',
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 14),
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontWeight: FontWeight.w800,
                                   color: slateDark,
                                 ),
                               ),
-                              const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
@@ -335,8 +348,8 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                                 child: Text(
                                   'Default',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9),
-                                    fontWeight: FontWeight.w900,
+                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontWeight: FontWeight.w800,
                                     color: AppDesignSystem.green700,
                                     letterSpacing: 0.2,
                                   ),
@@ -347,7 +360,9 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                           const SizedBox(height: 3),
                           Text(
                             'Pay via cash or UPI QR at your doorstep',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, fontWeight: FontWeight.w500),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted, fontWeight: FontWeight.w500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -415,17 +430,19 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 2,
                             children: [
                               Text(
                                 'Pay Online',
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 14),
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontWeight: FontWeight.w800,
                                   color: slateDark,
                                 ),
                               ),
-                              const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
@@ -436,8 +453,8 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                                 child: Text(
                                   '⚡ INSTANT',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9),
-                                    fontWeight: FontWeight.w900,
+                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontWeight: FontWeight.w800,
                                     color: AppDesignSystem.statusDeliveredText,
                                     letterSpacing: 0.2,
                                   ),
@@ -448,7 +465,9 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                           const SizedBox(height: 3),
                           Text(
                             'Google Pay, PhonePe, Paytm, Cards & UPI',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), color: slateMuted, fontWeight: FontWeight.w500),
+                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted, fontWeight: FontWeight.w500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -517,17 +536,21 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      _selectedPayment == 'wallet'
-                          ? 'Pay ₹${widget.grandTotal.toInt()} with Wallet'
-                          : (_selectedPayment == 'online'
-                              ? 'Pay ₹${widget.grandTotal.toInt()} Online'
-                              : 'Place Order • Pay ₹${widget.grandTotal.toInt()} on Delivery'),
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 14),
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: 0.2,
+                    Flexible(
+                      child: Text(
+                        _selectedPayment == 'wallet'
+                            ? 'Pay ₹${widget.grandTotal.toInt()} with Wallet'
+                            : (_selectedPayment == 'online'
+                                ? 'Pay ₹${widget.grandTotal.toInt()} Online'
+                                : 'Place Order • Pay ₹${widget.grandTotal.toInt()} on Delivery'),
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 13.5),
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),
