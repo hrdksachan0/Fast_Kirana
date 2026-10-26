@@ -47,13 +47,14 @@ class ProfileMenuItem extends StatelessWidget {
           ),
         ),
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
+            Flexible(
               child: Text(
                 title,
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 13.5),
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   color: AppDesignSystem.slate900,
                   letterSpacing: -0.2,
                 ),

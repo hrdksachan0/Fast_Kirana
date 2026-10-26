@@ -7,21 +7,19 @@ import '../../../core/theme/design_system.dart';
 class ProfileQuickStats extends StatelessWidget {
   final int ordersCount;
   final int wishlistCount;
-  final int addressesCount;
   final bool isLoggedIn;
   final VoidCallback onOrdersTap;
   final VoidCallback onWishlistTap;
-  final VoidCallback onAddressesTap;
+  final VoidCallback onHelpTap;
 
   const ProfileQuickStats({
     super.key,
     required this.ordersCount,
     required this.wishlistCount,
-    required this.addressesCount,
     required this.isLoggedIn,
     required this.onOrdersTap,
     required this.onWishlistTap,
-    required this.onAddressesTap,
+    required this.onHelpTap,
   });
 
   @override
@@ -74,17 +72,17 @@ class ProfileQuickStats extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppDesignSystem.green50,
+                color: AppDesignSystem.violet50,
                 borderRadius: BorderRadius.circular(13),
               ),
               child: const Center(
-                child: Icon(Icons.location_on_rounded, color: AppDesignSystem.emerald600, size: 21),
+                child: Icon(Icons.headset_mic_rounded, color: AppDesignSystem.fuchsia700, size: 21),
               ),
             ),
-            title: 'Addresses',
-            subtitle: addressesCount > 0 ? '$addressesCount Saved' : 'Add New',
-            hasValue: addressesCount > 0,
-            onTap: onAddressesTap,
+            title: '24x7 Help',
+            subtitle: 'Chat & Call',
+            hasValue: true,
+            onTap: onHelpTap,
           ),
         ],
       ),

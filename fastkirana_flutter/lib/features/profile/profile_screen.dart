@@ -404,7 +404,6 @@ class ProfileScreen extends ConsumerWidget {
               child: ProfileQuickStats(
                 ordersCount: ordersCount,
                 wishlistCount: wishlist.length,
-                addressesCount: addresses.length,
                 isLoggedIn: user != null,
                 onOrdersTap: () {
                   if (user == null) {
@@ -414,7 +413,7 @@ class ProfileScreen extends ConsumerWidget {
                   }
                 },
                 onWishlistTap: () => Navigator.push(context, FadeSlideRoute(page: const WishlistScreen())),
-                onAddressesTap: () => Navigator.push(context, FadeSlideRoute(page: const AddressBookScreen())),
+                onHelpTap: () => _showSupportModal(context),
               ),
             ),
 
@@ -606,8 +605,8 @@ class ProfileScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Section 1: Account & Preferences
-                    _buildSectionHeader(context, 'ACCOUNT & ADDRESSES'),
+                    // Section 1: Account Settings & Addresses
+                    _buildSectionHeader(context, 'ACCOUNT SETTINGS'),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -626,40 +625,17 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       child: Column(
                         children: [
-                          ProfileMenuItem(
-                            icon: Icons.account_balance_wallet_rounded,
-                            iconBg: const Color(0xFFEEF2FF),
-                            iconColor: const Color(0xFF4F46E5),
-                            title: 'FastMinute Wallet',
-                            subtitle: user != null
-                                ? 'Usable Balance: ₹${walletState.totalUsable.toStringAsFixed(0)} • Instant 1-tap pay'
-                                : 'Login to view balance & 1-tap pay',
-                            badge: user != null ? '₹${walletState.totalUsable.toStringAsFixed(0)}' : null,
-                            onTap: () {
-                              if (user == null) {
-                                Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
-                              } else {
-                                Navigator.push(context, FadeSlideRoute(page: const WalletScreen()));
-                              }
-                            },
-                          ),
-                          const Divider(height: 1, color: AppDesignSystem.slate100),
-                          ProfileMenuItem(
-                            icon: Icons.card_giftcard_rounded,
-                            iconBg: const Color(0xFFECFDF5),
-                            iconColor: const Color(0xFF059669),
-                            title: 'Refer & Earn (Free Cash)',
-                            subtitle: 'Get ₹$referralReward wallet credit for every friend who orders',
-                            badge: '₹$referralReward FREE',
-                            onTap: () {
-                              if (user == null) {
-                                Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
-                              } else {
-                                Navigator.push(context, FadeSlideRoute(page: const ReferralScreen()));
-                              }
-                            },
-                          ),
-                          const Divider(height: 1, color: AppDesignSystem.slate100),
+                          if (user != null) ...[
+                            ProfileMenuItem(
+                              icon: Icons.person_outline_rounded,
+                              iconBg: AppDesignSystem.blue50,
+                              iconColor: AppDesignSystem.blue600,
+                              title: 'Personal Information',
+                              subtitle: 'Edit your name, phone & email',
+                              onTap: () => ProfileEditModal.show(context, ref, user),
+                            ),
+                            const Divider(height: 1, color: AppDesignSystem.slate100),
+                          ],
                           ProfileMenuItem(
                             icon: Icons.location_on_rounded,
                             iconBg: AppDesignSystem.green50,
@@ -684,17 +660,6 @@ class ProfileScreen extends ConsumerWidget {
                               }
                             },
                           ),
-                          if (user != null) ...[
-                            const Divider(height: 1, color: AppDesignSystem.slate100),
-                            ProfileMenuItem(
-                              icon: Icons.edit_note_rounded,
-                              iconBg: AppDesignSystem.slate50,
-                              iconColor: AppDesignSystem.slate600,
-                              title: 'Personal Information',
-                              subtitle: 'Edit your name, phone & email',
-                              onTap: () => ProfileEditModal.show(context, ref, user),
-                            ),
-                          ],
                         ],
                       ),
                     ),
