@@ -1872,6 +1872,18 @@ async def create_order(
                                         logger.warning(f"[Payment Security] Cashfree order missing order_amount")
                     except Exception as cf_e:
                         logger.warning(f"Error checking Cashfree for new order: {cf_e}")
+        if payment_method == "WALLET":
+            from routers.wallet import debit_customer_wallet
+            from decimal import Decimal
+            await debit_customer_wallet(
+                user_id=user_id,
+                amount=Decimal(str(round(final_total, 2))),
+                description="Paid for order via Fastkirana Customer Wallet",
+                db=db,
+                metadata={"finalTotal": final_total}
+            )
+            is_online_paid = True
+
         auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
         is_auto_approve = auto_approve_setting.lower() == "true"
         # Manual confirmation requirement: Even paid online orders start in ADMIN_PENDING for Admin review & KOT dispatch
@@ -3451,6 +3463,13 @@ async def update_order(
         order.deliveryLat = float(delivery_lat) if delivery_lat is not None else None
         order.deliveryLng = float(delivery_lng) if delivery_lng is not None else None
         order.deliveredAt = datetime.utcnow()
+
+        # Trigger Refer & Earn reward for referrer on successful first order delivery
+        try:
+            from routers.referral import process_referral_reward_on_delivery
+            await process_referral_reward_on_delivery(order, db)
+        except Exception as ref_err:
+            logger.warning(f"Referral delivery reward hook error for order {order.id}: {ref_err}")
 
         # Update Rider Wallet for Cash collected ONLY if a genuine delivery rider collected it
         if order_cash_collected > 0 and order.deliveryUserId and (is_delivery or payment_collected_by == "RIDER"):

@@ -107,6 +107,12 @@ DEFAULT_SETTINGS = {
     "restaurant_default_margin": "30",
     "whatsapp_notify_store_phone": "true",
     "store_alert_phones": "",
+    "referral_enabled": "true",
+    "referral_referrer_reward": "100",
+    "referral_referee_discount": "50",
+    "referral_min_order_value": "199",
+    "referral_monthly_cap": "1500",
+    "referral_whatsapp_message": "अरे! Fastkirana से ग्रोसरी मँगवाओ और मेरे कोड {CODE} से पाओ ₹{DISCOUNT} की छूट! {LINK}",
 }
 
 

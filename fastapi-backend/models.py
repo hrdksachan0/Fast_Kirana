@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional, List, Any
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, ForeignKey,
-    Text, JSON, Index, UniqueConstraint, Enum as SAEnum
+    Text, JSON, Index, UniqueConstraint, Enum as SAEnum, Numeric, CheckConstraint
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship, Mapped, mapped_column
@@ -68,6 +68,29 @@ class BogoType(str, enum.Enum):
     CHEAPEST_FREE = "CHEAPEST_FREE"
     FREE_GIFT = "FREE_GIFT"
 
+class WalletTxType(str, enum.Enum):
+    CREDIT_TOPUP = "CREDIT_TOPUP"
+    CREDIT_REFERRAL = "CREDIT_REFERRAL"
+    CREDIT_REFUND = "CREDIT_REFUND"
+    CREDIT_PROMO = "CREDIT_PROMO"
+    DEBIT_ORDER = "DEBIT_ORDER"
+
+
+class WalletTxStatus(str, enum.Enum):
+    INITIATED = "INITIATED"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    REVERSED = "REVERSED"
+
+
+class ReferralStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    FIRST_ORDER_PLACED = "FIRST_ORDER_PLACED"
+    COMPLETED = "COMPLETED"
+    FLAGGED_FRAUD = "FLAGGED_FRAUD"
+    EXPIRED = "EXPIRED"
+
+
 
 # Note: All enum columns use String type since Prisma stores enums as text in PostgreSQL
 # This ensures SQLAlchemy models work with Prisma-managed schema
@@ -93,8 +116,14 @@ class User(Base):
     liveLng: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    referralCode: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
+    referredById: Mapped[Optional[str]] = mapped_column(String, ForeignKey("users.id"), nullable=True)
 
     # Relationships
+    referredBy = relationship("User", remote_side="User.id", foreign_keys=[referredById])
+    customerWallet = relationship("CustomerWallet", uselist=False, back_populates="user", cascade="all, delete-orphan")
+    referralsMade = relationship("Referral", foreign_keys="[Referral.referrerId]", back_populates="referrer")
+    referralReceived = relationship("Referral", uselist=False, foreign_keys="[Referral.refereeId]", back_populates="referee")
     orders = relationship("Order", foreign_keys="[Order.userId]", back_populates="user")
     deliveryOrders = relationship("Order", foreign_keys="[Order.deliveryUserId]", back_populates="deliveryUser")
     pickerOrders = relationship("Order", foreign_keys="[Order.assignedPickerId]", back_populates="assignedPicker")
@@ -106,6 +135,7 @@ class User(Base):
     riderDeposits = relationship("CashDepositTransaction", foreign_keys="[CashDepositTransaction.riderId]", back_populates="rider")
     adminCollectedCash = relationship("CashDepositTransaction", foreign_keys="[CashDepositTransaction.adminId]", back_populates="admin")
     fcmTokens = relationship("FcmToken", back_populates="user", cascade="all, delete-orphan")
+    referredUsers = relationship("User", back_populates="referredBy", foreign_keys="[User.referredById]")
 
 
 class Category(Base):
@@ -854,4 +884,77 @@ class OrphanPayment(Base):
     resolvedOrderId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     resolvedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+# ─── CUSTOMER WALLET & REFERRAL SYSTEM ──────────────────────────────────────────
+
+class CustomerWallet(Base):
+    __tablename__ = "customer_wallets"
+    __table_args__ = (
+        CheckConstraint("balance >= 0", name="positive_wallet_balance"),
+        CheckConstraint('"promoBalance" >= 0', name="positive_promo_balance"),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: f"cw_{uuid.uuid4().hex[:16]}")
+    userId: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    balance: Mapped[float] = mapped_column(Numeric(12, 2), default=0.0)
+    promoBalance: Mapped[float] = mapped_column(Numeric(12, 2), default=0.0)
+    isActive: Mapped[bool] = mapped_column(Boolean, default=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="customerWallet")
+    transactions = relationship("WalletTransaction", back_populates="wallet", cascade="all, delete-orphan")
+
+
+class WalletTransaction(Base):
+    __tablename__ = "wallet_transactions"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: f"wtx_{uuid.uuid4().hex[:16]}")
+    walletId: Mapped[str] = mapped_column(String, ForeignKey("customer_wallets.id", ondelete="CASCADE"))
+    amount: Mapped[float] = mapped_column(Numeric(12, 2))
+    type: Mapped[str] = mapped_column(String)
+    status: Mapped[str] = mapped_column(String, default="INITIATED")
+    cfOrderId: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
+    cfPaymentId: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    paymentGateway: Mapped[str] = mapped_column(String, default="CASHFREE")
+    balanceBefore: Mapped[float] = mapped_column(Numeric(12, 2), default=0.0)
+    balanceAfter: Mapped[float] = mapped_column(Numeric(12, 2), default=0.0)
+    description: Mapped[str] = mapped_column(String)
+    metadata_json: Mapped[Optional[dict]] = mapped_column("metadata", JSON, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    wallet = relationship("CustomerWallet", back_populates="transactions")
+
+    __table_args__ = (
+        Index("ix_wallet_tx_wallet_created", "walletId", "createdAt"),
+        Index("ix_wallet_tx_cf_order", "cfOrderId"),
+    )
+
+
+class Referral(Base):
+    __tablename__ = "referrals"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: f"ref_{uuid.uuid4().hex[:16]}")
+    referrerId: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    refereeId: Mapped[str] = mapped_column(String, ForeignKey("users.id"), unique=True)
+    codeUsed: Mapped[str] = mapped_column(String)
+    status: Mapped[str] = mapped_column(String, default="PENDING")
+    referrerReward: Mapped[float] = mapped_column(Numeric(12, 2), default=0.0)
+    refereeDiscount: Mapped[float] = mapped_column(Numeric(12, 2), default=0.0)
+    qualifyingOrderId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("orders.id"), unique=True, nullable=True)
+    rewardCreditedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    deviceUuid: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    ipAddress: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    referrer = relationship("User", foreign_keys=[referrerId], back_populates="referralsMade")
+    referee = relationship("User", foreign_keys=[refereeId], back_populates="referralReceived")
+    qualifyingOrder = relationship("Order")
+
+    __table_args__ = (
+        Index("ix_referral_referrer_status", "referrerId", "status"),
+        Index("ix_referral_code", "codeUsed"),
+    )

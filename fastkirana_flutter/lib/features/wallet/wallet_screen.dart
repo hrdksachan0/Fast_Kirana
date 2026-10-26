@@ -1,90 +1,413 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
+import '../../providers/wallet_provider.dart';
 
-class WalletScreen extends StatelessWidget {
+class WalletScreen extends ConsumerStatefulWidget {
   const WalletScreen({super.key});
 
   @override
+  ConsumerState<WalletScreen> createState() => _WalletScreenState();
+}
+
+class _WalletScreenState extends ConsumerState<WalletScreen> {
+  final TextEditingController _amountController = TextEditingController(text: '500');
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  void _showAddMoneySheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+                left: 20,
+                right: 20,
+                top: 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Add Money to Wallet',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(ctx, 18),
+                          fontWeight: FontWeight.w800,
+                          color: AppDesignSystem.textPrimary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Instant 1-tap checkout for your daily grocery orders with zero payment failures.',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(ctx, 13),
+                      color: AppDesignSystem.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _amountController,
+                    keyboardType: TextInputType.number,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(ctx, 28),
+                      fontWeight: FontWeight.w800,
+                      color: AppDesignSystem.primary,
+                    ),
+                    decoration: InputDecoration(
+                      prefixText: '₹ ',
+                      prefixStyle: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(ctx, 28),
+                        fontWeight: FontWeight.w800,
+                        color: AppDesignSystem.primary,
+                      ),
+                      hintText: '0',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: AppDesignSystem.borderLight),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: AppDesignSystem.primary, width: 2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [200, 500, 1000, 2000].map((amt) {
+                      return GestureDetector(
+                        onTap: () {
+                          setSheetState(() {
+                            _amountController.text = amt.toString();
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppDesignSystem.surface,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppDesignSystem.borderLight),
+                          ),
+                          child: Text(
+                            '+₹$amt',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(ctx, 13),
+                              fontWeight: FontWeight.w700,
+                              color: AppDesignSystem.textPrimary,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppDesignSystem.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      onPressed: () async {
+                        final val = double.tryParse(_amountController.text.trim()) ?? 0.0;
+                        if (val < 10) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Minimum topup amount is ₹10')),
+                          );
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        final res = await ref.read(walletNotifierProvider.notifier).initiateTopup(val);
+                        if (res != null && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Top-Up initiated for ₹$val! Complete via Cashfree.')),
+                          );
+                        }
+                      },
+                      child: Text(
+                        'Proceed to Pay via UPI / Card',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(ctx, 15),
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> transactions = List.generate(10, (i) => {
-      'title': ['Cashback earned', 'Order refund', 'Wallet top-up', 'Referral bonus', 'Cashback earned'][i % 5],
-      'amount': ['+₹50', '+₹120', '+₹500', '+₹50', '+₹25'][i % 5],
-      'date': 'Aug ${(i % 7) + 1}',
-      'isCredit': i % 3 != 1,
-    });
+    final wallet = ref.watch(walletNotifierProvider);
+    final txAsync = ref.watch(walletTransactionsProvider);
 
     return Scaffold(
       backgroundColor: AppDesignSystem.background,
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
-        title: Text('Wallet', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 18), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark]),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: AppDesignSystem.shadowCard,
-            ),
-            child: Column(
-              children: [
-                Text('Wallet Balance', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: Colors.white.withValues(alpha: 0.9))),
-                const SizedBox(height: 8),
-                Text('₹1,250', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 40), fontWeight: FontWeight.w800, color: Colors.white)),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _action(context, 'Add Money', Icons.add_rounded, () {}),
-                    _action(context, 'Send', Icons.send_rounded, () {}),
-                    _action(context, 'Withdraw', Icons.arrow_downward_rounded, () {}),
-                  ],
-                ),
-              ],
-            ),
+        title: Text(
+          'Fastkirana Wallet',
+          style: GoogleFonts.inter(
+            fontSize: Responsive.scaledFontSize(context, 18),
+            fontWeight: FontWeight.w800,
+            color: AppDesignSystem.textPrimary,
           ),
-          const SizedBox(height: 24),
-          Text('Transaction History', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w800, color: AppDesignSystem.textPrimary)),
-          const SizedBox(height: 12),
-          ...transactions.map((t) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: AppDesignSystem.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppDesignSystem.borderLight), boxShadow: AppDesignSystem.shadowSm),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(color: ((t['isCredit'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                  child: Center(child: Icon((t['isCredit'] as bool) ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded, size: 18, color: (t['isCredit'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger)),
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(walletNotifierProvider.notifier).fetchBalance();
+          ref.invalidate(walletTransactionsProvider);
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Balance Card
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppDesignSystem.primary, AppDesignSystem.primaryDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: AppDesignSystem.shadowCard,
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Available Balance',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 13),
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '₹${wallet.totalUsable.toStringAsFixed(2)}',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 38),
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (wallet.promoBalance > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '(Includes ₹${wallet.promoBalance.toStringAsFixed(2)} Referral/Promo Cash)',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(t['title'] as String, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w700, color: AppDesignSystem.textPrimary)),
-                      Text(t['date'] as String, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: AppDesignSystem.textSecondary)),
+                      _action(
+                        context,
+                        'Add Money',
+                        Icons.add_circle_rounded,
+                        () => _showAddMoneySheet(context),
+                      ),
+                      const SizedBox(width: 16),
+                      _action(
+                        context,
+                        'Invite & Earn',
+                        Icons.card_giftcard_rounded,
+                        () => Navigator.pushNamed(context, '/referral'),
+                      ),
                     ],
                   ),
-                ),
-                Text(
-                  '${(t['isCredit'] as bool) ? '+' : '-'}₹${t['amount']}',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 15),
-                    fontWeight: FontWeight.w800,
-                    color: (t['isCredit'] as bool) ? AppDesignSystem.success : AppDesignSystem.danger,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          )),
-        ],
+            const SizedBox(height: 20),
+
+            // Benefit Pill
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppDesignSystem.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.bolt_rounded, color: AppDesignSystem.primary, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '1-Tap Instant Checkout on grocery orders with zero OTP or bank server failures.',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 12),
+                        fontWeight: FontWeight.w600,
+                        color: AppDesignSystem.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Transaction History Header
+            Text(
+              'Transaction History',
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 16),
+                fontWeight: FontWeight.w800,
+                color: AppDesignSystem.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Transactions List
+            txAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (err, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text('Failed to load transactions: $err'),
+                ),
+              ),
+              data: (txList) {
+                if (txList.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(32),
+                    alignment: Alignment.center,
+                    child: Column(
+                      children: [
+                        Icon(Icons.receipt_long_outlined, size: 48, color: AppDesignSystem.textSecondary.withValues(alpha: 0.4)),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No transactions yet',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 14),
+                            color: AppDesignSystem.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: txList.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, idx) {
+                    final t = txList[idx];
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppDesignSystem.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppDesignSystem.borderLight),
+                        boxShadow: AppDesignSystem.shadowSm,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: (t.isCredit ? AppDesignSystem.success : AppDesignSystem.danger).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                t.isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                size: 18,
+                                color: t.isCredit ? AppDesignSystem.success : AppDesignSystem.danger,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  t.description,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 13),
+                                    fontWeight: FontWeight.w700,
+                                    color: AppDesignSystem.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  t.createdAt != null ? t.createdAt!.split('T').first : 'Recent',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11),
+                                    color: AppDesignSystem.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '${t.isCredit ? '+' : '-'}₹${t.amount.toStringAsFixed(2)}',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 15),
+                              fontWeight: FontWeight.w800,
+                              color: t.isCredit ? AppDesignSystem.success : AppDesignSystem.danger,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -94,12 +417,22 @@ class WalletScreen extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
-        child: Column(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(height: 4),
-            Text(label, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), fontWeight: FontWeight.w700, color: Colors.white)),
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 12),
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ],
         ),
       ),

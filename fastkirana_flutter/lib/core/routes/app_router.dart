@@ -23,6 +23,8 @@ import '../../features/location/map_picker_screen.dart';
 import '../../features/cafe/restaurant_dashboard.dart';
 import '../widgets/contextual_brand_transition_screen.dart';
 import '../../features/offline/offline_zero_signal_screen.dart';
+import '../../features/wallet/wallet_screen.dart';
+import '../../features/referral/referral_screen.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -135,6 +137,11 @@ class AppRouter {
         return FadeSlideRoute(page: OrderTrackingScreen(orderId: orderId));
       case '/profile':
         return ZeptoSlideRoute(page: const ProfileScreen());
+      case '/wallet':
+        return ZeptoSlideRoute(page: const WalletScreen());
+      case '/referral':
+      case '/refer-and-earn':
+        return ZeptoSlideRoute(page: const ReferralScreen());
       case '/search':
         return FadeScaleRoute(page: const SearchScreen());
       case '/restaurant-loading':

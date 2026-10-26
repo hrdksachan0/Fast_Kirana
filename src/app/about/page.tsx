@@ -16,13 +16,13 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'About Us - FastMinute (Fast Minute) | 10-Minute Grocery Delivery in Ghatampur',
-  description: 'FastMinute (Fast Minute) is Ghatampur\'s premier 10-minute grocery and food delivery platform. Learn about our local dark store model, our mission for Kanpur Nagar (209206), and our commitment to fresh daily essentials.',
+  title: 'About Us - FastMinute (Fast Minute) | Grocery Delivery in Ghatampur',
+  description: 'FastMinute (Fast Minute) is Ghatampur\'s premier grocery and food delivery platform. Learn about our local dark store model, our mission for Kanpur Nagar (209206), and our commitment to fresh daily essentials.',
   alternates: {
     canonical: 'https://www.fastminute.in/about',
   },
   openGraph: {
-    title: 'About FastMinute (Fast Minute) - 10-Minute Delivery in Ghatampur',
+    title: 'About FastMinute (Fast Minute) - Grocery & Food Delivery in Ghatampur',
     description: 'FastMinute delivers groceries, fresh vegetables, milk, dairy, and restaurant food to your doorstep in minutes across Ghatampur, Uttar Pradesh.',
     url: 'https://www.fastminute.in/about',
     siteName: 'FastMinute',
@@ -37,7 +37,7 @@ export default function AboutPage() {
     '@type': 'AboutPage',
     name: 'About FastMinute',
     url: 'https://www.fastminute.in/about',
-    description: 'Information about FastMinute (Fast Minute), a 10-minute grocery and food delivery service operating in Ghatampur, Kanpur Nagar, Uttar Pradesh (209206).',
+    description: 'Information about FastMinute (Fast Minute), a grocery and food delivery service operating in Ghatampur, Kanpur Nagar, Uttar Pradesh (209206).',
     mainEntity: {
       '@type': 'Organization',
       name: 'FastMinute',
@@ -58,7 +58,7 @@ export default function AboutPage() {
       areaServed: 'Ghatampur, Kanpur Nagar (209206)',
       knowsAbout: [
         'Quick Commerce',
-        '10-Minute Grocery Delivery',
+        'Grocery Delivery',
         'Online Kirana',
         'Fresh Dairy Milk Delivery',
         'Local Food Ordering',
@@ -79,7 +79,7 @@ export default function AboutPage() {
           <section className="text-center space-y-4 pt-4">
             <div className="inline-flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-full select-none">
               <Sparkles className="h-4 w-4" />
-              Ghatampur&apos;s Own 10-Minute Delivery Platform
+              Ghatampur&apos;s Own Delivery Platform
             </div>
             <h1 className="text-3xl sm:text-5xl font-black text-foreground tracking-tight max-w-3xl mx-auto leading-tight">
               About <span className="text-rose-600">FastMinute</span> (Fast Minute)
@@ -119,7 +119,7 @@ export default function AboutPage() {
                 For years, Tier-2 and Tier-3 towns like Ghatampur were left out of the modern quick-commerce revolution. Big national players only operated in metro cities like Delhi, Mumbai, or Bengaluru, while families in Ghatampur had to step out in harsh weather or traffic just to buy milk, bread, cooking oil, or medicine.
               </p>
               <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
-                FastMinute (also known as <strong className="text-foreground">Fast Minute</strong>) was founded to bridge this gap. We established a hyper-local dark store network right in the heart of Ghatampur on NH34. By combining smart local inventory management, trained delivery riders, and an easy-to-use mobile web &amp; Android app, we made 10-minute grocery delivery a reality for every household in Ghatampur.
+                FastMinute (also known as <strong className="text-foreground">Fast Minute</strong>) was founded to bridge this gap. We established a hyper-local dark store network right in the heart of Ghatampur on NH34. By combining smart local inventory management, trained delivery riders, and an easy-to-use mobile web &amp; Android app, we made grocery delivery a reality for every household in Ghatampur.
               </p>
             </div>
           </section>
@@ -160,7 +160,7 @@ export default function AboutPage() {
                 <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black">
                   <Truck className="h-5 w-5" />
                 </div>
-                <h3 className="font-bold text-foreground text-base">3. 10-Minute Doorstep Drop</h3>
+                <h3 className="font-bold text-foreground text-base">3. Fast Doorstep Drop</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                   Our professional delivery fleet brings the bag right to your door with live tracking and flexible payment options: UPI, Cash on Delivery, or Cards.
                 </p>

@@ -385,7 +385,7 @@ app.include_router(paytm.router)   # Already defines prefix="/api/payment/paytm"
 app.include_router(fcm.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
 
-from routers import cashfree_router, kot, vendors, stores_service, wishlist, push
+from routers import cashfree_router, kot, vendors, stores_service, wishlist, push, wallet, referral
 app.include_router(vendors.vendors_router, prefix="/api")
 app.include_router(vendors.vendors_router, prefix="/api/admin")
 app.include_router(stores_service.router, prefix="/api")
@@ -397,6 +397,8 @@ app.include_router(cashfree_router.router, prefix="/api")
 app.include_router(kot.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 app.include_router(cron.router, prefix="/api")
+app.include_router(wallet.router, prefix="/api")
+app.include_router(referral.router, prefix="/api")
 app.include_router(health.health_router)
 
 @app.get("/")

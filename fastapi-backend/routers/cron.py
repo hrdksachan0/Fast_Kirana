@@ -373,3 +373,79 @@ async def inventory_sync_audit(
     except Exception as e:
         logger.error(f"Inventory sync audit failed: {e}")
         raise HTTPException(status_code=500, detail=f"Inventory sync failed: {str(e)}")
+
+
+@router.get("/wallet-reconcile")
+@router.post("/wallet-reconcile")
+async def reconcile_wallet_topups(
+    db: AsyncSession = Depends(get_db),
+    authorized: bool = Depends(_verify_cron_auth)
+):
+    """
+    Automated Cashfree Wallet Top-Up Reconciliation Cron.
+    Catches any wallet top-up where webhook was dropped or delayed.
+    Finds INITIATED transactions between 3 minutes and 24 hours old,
+    queries Cashfree directly, and credits customer wallets safely.
+    """
+    from models import WalletTransaction, CustomerWallet, WalletTxStatus
+    from routers.cashfree_router import CASHFREE_BASE_URL, _get_cashfree_headers
+    from decimal import Decimal
+
+    now = datetime.utcnow()
+    three_min_ago = now - timedelta(minutes=3)
+    one_day_ago = now - timedelta(hours=24)
+
+    stmt = (
+        select(WalletTransaction)
+        .where(
+            and_(
+                WalletTransaction.status == WalletTxStatus.INITIATED.value,
+                WalletTransaction.createdAt <= three_min_ago,
+                WalletTransaction.createdAt >= one_day_ago,
+                WalletTransaction.cfOrderId.isnot(None)
+            )
+        )
+        .limit(30)
+    )
+    res = await db.execute(stmt)
+    pending_txs = res.scalars().all()
+
+    reconciled_count = 0
+    headers = _get_cashfree_headers()
+
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        for tx in pending_txs:
+            try:
+                cf_res = await client.get(
+                    f"{CASHFREE_BASE_URL}/orders/{tx.cfOrderId}/payments",
+                    headers=headers
+                )
+                if cf_res.status_code == 200:
+                    payments = cf_res.json()
+                    sp = next((p for p in payments if p.get("payment_status") == "SUCCESS"), None)
+                    if sp:
+                        # Lock wallet and credit
+                        wallet_stmt = (
+                            select(CustomerWallet)
+                            .where(CustomerWallet.id == tx.walletId)
+                            .with_for_update()
+                        )
+                        wallet = (await db.execute(wallet_stmt)).scalar_one_or_none()
+                        if wallet:
+                            tx.status = WalletTxStatus.SUCCESS.value
+                            tx.cfPaymentId = str(sp.get("cf_payment_id", ""))
+                            tx.balanceBefore = wallet.balance
+                            wallet.balance = Decimal(str(wallet.balance)) + Decimal(str(tx.amount))
+                            tx.balanceAfter = wallet.balance
+                            reconciled_count += 1
+                            logger.info(f"[Wallet Reconcile] Auto-credited ₹{tx.amount} to wallet {wallet.id}")
+            except Exception as e:
+                logger.warning(f"[Wallet Reconcile] Error checking {tx.cfOrderId}: {e}")
+
+    await db.commit()
+    return {
+        "success": True,
+        "checked": len(pending_txs),
+        "reconciled": reconciled_count,
+        "timestamp": datetime.utcnow().isoformat()
+    }

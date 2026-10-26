@@ -1,0 +1,268 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy import func, desc, and_
+from typing import Optional, Dict, Any
+from decimal import Decimal
+import random
+import string
+import uuid
+import logging
+
+from database import get_db
+from models import User, Referral, ReferralStatus, CustomerWallet, WalletTransaction, WalletTxType, WalletTxStatus, Order, StoreSetting
+from routers.auth import require_auth
+from routers.wallet import get_or_create_wallet
+from utils.firebase import send_fcm_notification
+
+logger = logging.getLogger("referral")
+
+router = APIRouter(prefix="/referral", tags=["Refer & Earn"])
+
+
+def generate_unique_referral_code() -> str:
+    """Generate a clean referral code like FAST9872"""
+    digits = ''.join(random.choices(string.digits, k=4))
+    return f"FAST{digits}"
+
+
+async def get_referral_settings(db: AsyncSession) -> Dict[str, str]:
+    """Fetch referral program settings from StoreSetting with defaults."""
+    from routers.settings import DEFAULT_SETTINGS
+    stmt = select(StoreSetting).where(StoreSetting.key.like("referral_%"))
+    res = await db.execute(stmt)
+    settings_rows = res.scalars().all()
+    
+    config = {
+        "enabled": DEFAULT_SETTINGS.get("referral_enabled", "true"),
+        "referrer_reward": DEFAULT_SETTINGS.get("referral_referrer_reward", "100"),
+        "referee_discount": DEFAULT_SETTINGS.get("referral_referee_discount", "50"),
+        "min_order_value": DEFAULT_SETTINGS.get("referral_min_order_value", "199"),
+        "monthly_cap": DEFAULT_SETTINGS.get("referral_monthly_cap", "1500"),
+        "whatsapp_message": DEFAULT_SETTINGS.get("referral_whatsapp_message", "अरे! Fastkirana से ग्रोसरी मँगवाओ और मेरे कोड {CODE} से पाओ ₹{DISCOUNT} की छूट! {LINK}"),
+    }
+    
+    for row in settings_rows:
+        if row.key == "referral_enabled":
+            config["enabled"] = row.value
+        elif row.key == "referral_referrer_reward":
+            config["referrer_reward"] = row.value
+        elif row.key == "referral_referee_discount":
+            config["referee_discount"] = row.value
+        elif row.key == "referral_min_order_value":
+            config["min_order_value"] = row.value
+        elif row.key == "referral_monthly_cap":
+            config["monthly_cap"] = row.value
+        elif row.key == "referral_whatsapp_message":
+            config["whatsapp_message"] = row.value
+
+    return config
+
+
+@router.get("/my-code")
+async def get_my_referral_code(
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get current user's referral code.
+    If the user doesn't have one yet, auto-generates and persists it.
+    """
+    user_id = current_user.get("id")
+    stmt = select(User).where(User.id == user_id)
+    res = await db.execute(stmt)
+    user = res.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not user.referralCode:
+        # Generate unique code
+        code = generate_unique_referral_code()
+        # Ensure uniqueness
+        while True:
+            chk = await db.execute(select(User).where(User.referralCode == code))
+            if not chk.scalars().first():
+                break
+            code = generate_unique_referral_code()
+        
+        user.referralCode = code
+        await db.commit()
+        await db.refresh(user)
+
+    config = await get_referral_settings(db)
+    app_link = "https://fastkirana.in"
+    share_text = (
+        config["whatsapp_message"]
+        .replace("{CODE}", user.referralCode)
+        .replace("{DISCOUNT}", config["referee_discount"])
+        .replace("{LINK}", f"{app_link}?ref={user.referralCode}")
+    )
+
+    return {
+        "success": True,
+        "referralCode": user.referralCode,
+        "shareLink": f"{app_link}?ref={user.referralCode}",
+        "whatsappShareText": share_text,
+        "referrerReward": float(config["referrer_reward"]),
+        "refereeDiscount": float(config["referee_discount"]),
+        "minOrderValue": float(config["min_order_value"]),
+        "isEnabled": config["enabled"].lower() == "true"
+    }
+
+
+@router.get("/stats")
+async def get_referral_stats(
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get live referral summary:
+    - total friends invited (PENDING + COMPLETED)
+    - successful referrals (COMPLETED)
+    - total wallet cash earned via referrals
+    """
+    user_id = current_user.get("id")
+    
+    # Total count
+    count_stmt = select(func.count(Referral.id)).where(Referral.referrerId == user_id)
+    total_invited = (await db.execute(count_stmt)).scalar() or 0
+
+    # Completed count
+    completed_stmt = select(func.count(Referral.id)).where(
+        Referral.referrerId == user_id,
+        Referral.status == ReferralStatus.COMPLETED.value
+    )
+    completed_count = (await db.execute(completed_stmt)).scalar() or 0
+
+    # Total earned sum
+    earned_stmt = select(func.coalesce(func.sum(Referral.referrerReward), 0.0)).where(
+        Referral.referrerId == user_id,
+        Referral.status == ReferralStatus.COMPLETED.value
+    )
+    total_earned = (await db.execute(earned_stmt)).scalar() or 0.0
+
+    # Recent list
+    recent_stmt = (
+        select(Referral, User)
+        .join(User, Referral.refereeId == User.id)
+        .where(Referral.referrerId == user_id)
+        .order_by(desc(Referral.createdAt))
+        .limit(15)
+    )
+    recent_res = await db.execute(recent_stmt)
+    records = recent_res.all()
+
+    return {
+        "success": True,
+        "totalInvited": total_invited,
+        "completedReferrals": completed_count,
+        "totalEarned": float(total_earned),
+        "recentReferrals": [
+            {
+                "id": ref.id,
+                "friendName": (u.name or "Friend") if u else "Friend",
+                "friendPhone": f"******{(u.phone or '0000')[-4:]}" if u and u.phone else "******",
+                "status": ref.status,
+                "reward": float(ref.referrerReward),
+                "date": ref.createdAt.isoformat() if ref.createdAt else None
+            }
+            for ref, u in records
+        ]
+    }
+
+
+async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
+    """
+    Invoked when an Order transitions to DELIVERED.
+    Checks if the order belongs to a referred user's FIRST DELIVERED order
+    meeting the admin-configured min order value.
+    If valid, awards the referrer reward directly into the referrer's wallet!
+    """
+    try:
+        # 1. Fetch Referral record for this user
+        stmt = (
+            select(Referral)
+            .where(
+                Referral.refereeId == order.userId,
+                Referral.status.in_([ReferralStatus.PENDING.value, ReferralStatus.FIRST_ORDER_PLACED.value])
+            )
+            .with_for_update()
+        )
+        referral = (await db.execute(stmt)).scalar_one_or_none()
+        if not referral:
+            return  # User wasn't referred, or referral already completed/flagged
+
+        # 2. Check admin referral settings
+        config = await get_referral_settings(db)
+        if config["enabled"].lower() != "true":
+            logger.info("Referral reward skipped: referral program is disabled in settings")
+            return
+
+        min_mov = Decimal(config["min_order_value"])
+        order_total = Decimal(str(order.total or 0.0))
+        if order_total < min_mov:
+            logger.info(f"Referral reward skipped: Order total ₹{order_total} < MOV ₹{min_mov}")
+            return
+
+        reward_amount = Decimal(config["referrer_reward"])
+
+        # 3. Monthly cap check on referrer
+        monthly_cap = Decimal(config["monthly_cap"])
+        # Calculate referrer's earnings this month
+        month_start = order.deliveredAt.replace(day=1, hour=0, minute=0, second=0, microsecond=0) if order.deliveredAt else None
+        if month_start:
+            earnings_stmt = select(func.coalesce(func.sum(Referral.referrerReward), 0.0)).where(
+                Referral.referrerId == referral.referrerId,
+                Referral.status == ReferralStatus.COMPLETED.value,
+                Referral.rewardCreditedAt >= month_start
+            )
+            current_month_earnings = Decimal(str((await db.execute(earnings_stmt)).scalar() or 0.0))
+            if current_month_earnings >= monthly_cap:
+                logger.info(f"Referral reward capped: Referrer reached monthly limit ₹{monthly_cap}")
+                referral.status = ReferralStatus.COMPLETED.value
+                referral.referrerReward = Decimal("0.00")
+                await db.commit()
+                return
+
+        # 4. Credit Referrer Wallet
+        referrer_wallet = await get_or_create_wallet(referral.referrerId, db)
+        bal_before = referrer_wallet.balance
+        referrer_wallet.balance = Decimal(str(referrer_wallet.balance)) + reward_amount
+
+        # Log Wallet Transaction
+        tx = WalletTransaction(
+            id=f"wtx_{uuid.uuid4().hex[:16]}",
+            walletId=referrer_wallet.id,
+            amount=reward_amount,
+            type=WalletTxType.CREDIT_REFERRAL.value,
+            status=WalletTxStatus.SUCCESS.value,
+            balanceBefore=bal_before,
+            balanceAfter=referrer_wallet.balance,
+            description=f"Referral reward: friend completed their first order! 🎉",
+            metadata_json={"orderId": order.id, "refereeId": order.userId}
+        )
+        db.add(tx)
+
+        # Update Referral record
+        referral.status = ReferralStatus.COMPLETED.value
+        referral.referrerReward = reward_amount
+        referral.qualifyingOrderId = order.id
+        referral.rewardCreditedAt = order.deliveredAt
+
+        await db.commit()
+        logger.info(f"Credited referral bonus of ₹{reward_amount} to referrer {referral.referrerId} for order {order.id}")
+
+        # Send push notification to Referrer
+        try:
+            await send_fcm_notification(
+                user_id=referral.referrerId,
+                title="Referral Cash Earned! 🎁",
+                body=f"Your friend just completed their first order! ₹{float(reward_amount):.2f} has been added to your Fastkirana wallet.",
+                data={"type": "REFERRAL_REWARD", "amount": str(float(reward_amount))}
+            )
+        except Exception as fcm_err:
+            logger.warning(f"FCM push notification failed for referral bonus: {fcm_err}")
+
+    except Exception as e:
+        logger.error(f"Error processing referral reward for order {order.id}: {e}", exc_info=True)

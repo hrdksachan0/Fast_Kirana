@@ -201,6 +201,8 @@ class SignupRequest(BaseModel):
     password: str = Field(min_length=6)
     name: Optional[str] = None
     role: Optional[str] = "USER"
+    referralCode: Optional[str] = None
+    deviceUuid: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -380,6 +382,20 @@ async def signup(
     # Admin/staff roles must be assigned by an admin via PATCH /admin/users.
     role_value = Role.USER.value
 
+    # Generate unique referral code for this user
+    import string
+    gen_code = "FAST" + "".join(random.choices(string.digits, k=4))
+
+    # Validate referral code if provided
+    referrer_id = None
+    if body.referralCode:
+        ref_clean = body.referralCode.strip().upper()
+        ref_stmt = select(User).where(User.referralCode == ref_clean)
+        ref_res = await db.execute(ref_stmt)
+        referrer = ref_res.scalars().first()
+        if referrer and referrer.phone != phone:
+            referrer_id = referrer.id
+
     # Create user
     new_user = User(
         id=f"c{uuid.uuid4().hex[:24]}",
@@ -389,10 +405,40 @@ async def signup(
         role=role_value,
         passwordHash=hash_password(body.password),
         isBlocked=False,
+        referralCode=gen_code,
+        referredById=referrer_id,
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
+
+    # Auto-create CustomerWallet & Referral record
+    try:
+        from models import CustomerWallet, Referral, ReferralStatus
+        from decimal import Decimal
+        user_wallet = CustomerWallet(
+            id=f"cw_{uuid.uuid4().hex[:16]}",
+            userId=new_user.id,
+            balance=Decimal("0.00"),
+            promoBalance=Decimal("0.00"),
+            isActive=True
+        )
+        db.add(user_wallet)
+
+        if referrer_id:
+            ref_entry = Referral(
+                id=f"ref_{uuid.uuid4().hex[:16]}",
+                referrerId=referrer_id,
+                refereeId=new_user.id,
+                codeUsed=body.referralCode.strip().upper(),
+                status=ReferralStatus.PENDING.value,
+                deviceUuid=body.deviceUuid,
+            )
+            db.add(ref_entry)
+
+        await db.commit()
+    except Exception as init_err:
+        logger.warning(f"Failed to initialize wallet/referral for {new_user.id}: {init_err}")
 
     return SessionResponse(
         id=new_user.id,
