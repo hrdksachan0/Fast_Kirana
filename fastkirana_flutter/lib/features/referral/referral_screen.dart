@@ -47,6 +47,24 @@ class ReferralScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppDesignSystem.background,
         elevation: 0,
+        iconTheme: const IconThemeData(color: AppDesignSystem.textPrimary),
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppDesignSystem.border),
+              boxShadow: AppDesignSystem.shadowSm,
+            ),
+            child: const Icon(Icons.arrow_back_rounded, size: 18, color: AppDesignSystem.textPrimary),
+          ),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Navigator.maybePop(context);
+          },
+        ),
         title: Text(
           'Refer & Earn',
           style: GoogleFonts.inter(

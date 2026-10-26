@@ -492,11 +492,39 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
     );
   }
 
+  String _cleanTxDescription(String raw, String type) {
+    final trimmed = raw.trim();
+    final lower = trimmed.toLowerCase();
+    if (lower.isEmpty) {
+      return type == 'CREDIT' ? 'Wallet Top-up' : 'Wallet Payment';
+    }
+    if (lower.startsWith('wallet top-up') ||
+        lower.startsWith('wallet topup') ||
+        lower.contains('top-up of') ||
+        lower.contains('topup of')) {
+      return 'Wallet Top-up';
+    }
+    if (lower.contains('referral reward') || lower.contains('referral bonus')) {
+      return 'Referral Bonus';
+    }
+    if (lower.contains('cashback')) {
+      return 'Cashback Reward';
+    }
+    if (lower.contains('order #') || lower.contains('payment for order')) {
+      return trimmed.replaceAll(RegExp(r'payment for order', caseSensitive: false), 'Order').trim();
+    }
+    return trimmed;
+  }
+
   String _formatDateTime(String? raw) {
     if (raw == null || raw.isEmpty) return 'Recent';
     try {
       final dt = DateTime.parse(raw).toLocal();
-      return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
+      final now = DateTime.now();
+      if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+        return 'Today, ${DateFormat('hh:mm a').format(dt)}';
+      }
+      return DateFormat('dd MMM, hh:mm a').format(dt);
     } catch (_) {
       return raw.split('T').first;
     }
@@ -513,6 +541,24 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
+        iconTheme: const IconThemeData(color: AppDesignSystem.slate900),
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppDesignSystem.slate200),
+              boxShadow: AppDesignSystem.shadowSm,
+            ),
+            child: const Icon(Icons.arrow_back_rounded, size: 18, color: AppDesignSystem.slate900),
+          ),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Navigator.maybePop(context);
+          },
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1124,7 +1170,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                     final isCredit = t.isCredit;
 
                     return Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -1135,8 +1181,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                         children: [
                           // Icon container
                           Container(
-                            width: 44,
-                            height: 44,
+                            width: 42,
+                            height: 42,
                             decoration: BoxDecoration(
                               color: isCredit ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
                               borderRadius: BorderRadius.circular(12),
@@ -1158,7 +1204,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  t.description,
+                                  _cleanTxDescription(t.description, t.type),
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 13.5),
                                     fontWeight: FontWeight.w700,
@@ -1168,7 +1214,10 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
-                                Row(
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 6,
+                                  runSpacing: 2,
                                   children: [
                                     Text(
                                       _formatDateTime(t.createdAt),
@@ -1178,20 +1227,27 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF1F5F9),
-                                        borderRadius: BorderRadius.circular(6),
+                                        color: const Color(0xFFECFDF5),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
                                       ),
-                                      child: Text(
-                                        '✓ Completed',
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 9.5),
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF059669),
-                                        ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.check_circle_rounded, size: 9, color: Color(0xFF059669)),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            'Success',
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF059669),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -1199,10 +1255,12 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                               ],
                             ),
                           ),
+                          const SizedBox(width: 10),
 
                           // Amount
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 '${isCredit ? '+' : '-'}₹${t.amount.toStringAsFixed(2)}',
@@ -1212,15 +1270,17 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                   color: isCredit ? const Color(0xFF059669) : const Color(0xFFE11D48),
                                 ),
                               ),
-                              if (t.balanceAfter > 0)
+                              if (t.balanceAfter > 0) ...[
+                                const SizedBox(height: 2),
                                 Text(
                                   'Bal: ₹${t.balanceAfter.toStringAsFixed(2)}',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    fontSize: Responsive.scaledFontSize(context, 10),
                                     color: AppDesignSystem.slate400,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                              ],
                             ],
                           ),
                         ],
