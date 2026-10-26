@@ -1,7 +1,17 @@
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfupi.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfupipayment.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cftheme/cftheme.dart';
+import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/config/app_config.dart';
 import '../../core/theme/design_system.dart';
 import '../../providers/wallet_provider.dart';
 
@@ -14,6 +24,15 @@ class WalletScreen extends ConsumerStatefulWidget {
 
 class _WalletScreenState extends ConsumerState<WalletScreen> {
   final TextEditingController _amountController = TextEditingController(text: '500');
+  final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
+
+  @override
+  void initState() {
+    super.initState();
+    if (!kIsWeb) {
+      _cfService.setCallback(_onPaymentSuccess, _onPaymentError);
+    }
+  }
 
   @override
   void dispose() {
@@ -21,7 +40,62 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
     super.dispose();
   }
 
+  void _onPaymentSuccess(String cfOrderId) async {
+    HapticFeedback.heavyImpact();
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            SizedBox(width: 12),
+            Text('Verifying payment & updating wallet...'),
+          ],
+        ),
+        duration: Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    final success = await ref.read(walletNotifierProvider.notifier).syncTopupStatus(cfOrderId);
+    if (!mounted) return;
+    ref.invalidate(walletTransactionsProvider);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🎉 Wallet topped up successfully!'),
+          backgroundColor: AppDesignSystem.emerald600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      await Future.delayed(const Duration(seconds: 2));
+      await ref.read(walletNotifierProvider.notifier).fetchBalance();
+      if (mounted) ref.invalidate(walletTransactionsProvider);
+    }
+  }
+
+  void _onPaymentError(CFErrorResponse error, String cfOrderId) {
+    if (!mounted) return;
+    final msg = error.getMessage() ?? 'Payment was cancelled or failed';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: AppDesignSystem.slate800,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   void _showAddMoneySheet(BuildContext context) {
+    bool isSubmitting = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -57,7 +131,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.pop(ctx),
+                        onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
                       ),
                     ],
                   ),
@@ -73,6 +147,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                   TextField(
                     controller: _amountController,
                     keyboardType: TextInputType.number,
+                    enabled: !isSubmitting,
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(ctx, 28),
                       fontWeight: FontWeight.w800,
@@ -101,11 +176,13 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [200, 500, 1000, 2000].map((amt) {
                       return GestureDetector(
-                        onTap: () {
-                          setSheetState(() {
-                            _amountController.text = amt.toString();
-                          });
-                        },
+                        onTap: isSubmitting
+                            ? null
+                            : () {
+                                setSheetState(() {
+                                  _amountController.text = amt.toString();
+                                });
+                              },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
@@ -135,30 +212,99 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
-                      onPressed: () async {
-                        final val = double.tryParse(_amountController.text.trim()) ?? 0.0;
-                        if (val < 10) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Minimum topup amount is ₹10')),
-                          );
-                          return;
-                        }
-                        Navigator.pop(ctx);
-                        final res = await ref.read(walletNotifierProvider.notifier).initiateTopup(val);
-                        if (res != null && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Top-Up initiated for ₹$val! Complete via Cashfree.')),
-                          );
-                        }
-                      },
-                      child: Text(
-                        'Proceed to Pay via UPI / Card',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(ctx, 15),
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final val = double.tryParse(_amountController.text.trim()) ?? 0.0;
+                              if (val < 10) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Minimum topup amount is ₹10')),
+                                );
+                                return;
+                              }
+
+                              setSheetState(() => isSubmitting = true);
+                              final res = await ref.read(walletNotifierProvider.notifier).initiateTopup(val);
+
+                              if (!ctx.mounted) return;
+                              Navigator.pop(ctx);
+
+                              if (res == null || res['paymentSessionId'] == null) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Payment initiation failed. Please try again.'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
+
+                              final String paymentSessionId = res['paymentSessionId'].toString();
+                              final String cfOrderId = res['cfOrderId']?.toString() ??
+                                  'WTOPUP_${DateTime.now().millisecondsSinceEpoch}';
+
+                              const env = AppConfig.cashfreeEnv == 'SANDBOX'
+                                  ? CFEnvironment.SANDBOX
+                                  : CFEnvironment.PRODUCTION;
+                              final session = CFSessionBuilder()
+                                  .setEnvironment(env)
+                                  .setOrderId(cfOrderId)
+                                  .setPaymentSessionId(paymentSessionId)
+                                  .build();
+
+                              final theme = CFThemeBuilder()
+                                  .setNavigationBarBackgroundColorColor("#E20A22")
+                                  .setNavigationBarTextColor("#FFFFFF")
+                                  .setButtonBackgroundColor("#E20A22")
+                                  .setButtonTextColor("#FFFFFF")
+                                  .setPrimaryTextColor("#0F172A")
+                                  .setBackgroundColor("#FFFFFF")
+                                  .setPrimaryFont("Inter")
+                                  .build();
+
+                              bool upiLaunched = false;
+                              try {
+                                final upi = CFUPIBuilder().setChannel(CFUPIChannel.INTENT_WITH_UI).build();
+                                final cfUpi = CFUPIPaymentBuilder().setSession(session).setUPI(upi).build();
+                                _cfService.doPayment(cfUpi);
+                                upiLaunched = true;
+                              } catch (e) {
+                                debugPrint('Cashfree UPI intent error, falling back to Web Checkout: $e');
+                              }
+
+                              if (!upiLaunched) {
+                                try {
+                                  final cfWeb = CFWebCheckoutPaymentBuilder()
+                                      .setSession(session)
+                                      .setTheme(theme)
+                                      .build();
+                                  _cfService.doPayment(cfWeb);
+                                } catch (e) {
+                                  debugPrint('Cashfree Web Checkout error: $e');
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Payment launch error: $e')),
+                                    );
+                                  }
+                                }
+                              }
+                            },
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                            )
+                          : Text(
+                              'Proceed to Pay via UPI / Card',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(ctx, 15),
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
                 ],
