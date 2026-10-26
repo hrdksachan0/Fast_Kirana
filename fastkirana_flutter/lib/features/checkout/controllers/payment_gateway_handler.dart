@@ -5,8 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfupi.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfupipayment.dart';
 import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cftheme/cftheme.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
@@ -133,35 +131,14 @@ class PaymentGatewayHandler {
             .setPrimaryFont("Inter")
             .build();
 
-        // 1. Direct UPI Intent
-        bool upiLaunched = false;
-        try {
-          final upi = CFUPIBuilder()
-              .setChannel(CFUPIChannel.INTENT_WITH_UI)
-              .build();
+        // Launch full Cashfree Unified Checkout (UPI, Cards, Netbanking & Wallets)
+        final cfPayment = CFWebCheckoutPaymentBuilder()
+            .setSession(session)
+            .setTheme(theme)
+            .build();
 
-          final cfUpiPayment = CFUPIPaymentBuilder()
-              .setSession(session)
-              .setUPI(upi)
-              .build();
-
-          _cfService.doPayment(cfUpiPayment);
-          upiLaunched = true;
-          return cfOrderId;
-        } catch (upiErr) {
-          debugPrint('Cashfree UPI Intent error, using WebCheckout fallback: $upiErr');
-        }
-
-        // 2. Web Checkout fallback
-        if (!upiLaunched) {
-          final cfPayment = CFWebCheckoutPaymentBuilder()
-              .setSession(session)
-              .setTheme(theme)
-              .build();
-
-          _cfService.doPayment(cfPayment);
-          return cfOrderId;
-        }
+        _cfService.doPayment(cfPayment);
+        return cfOrderId;
       }
     } catch (cfErr) {
       debugPrint('Cashfree launch error: $cfErr');

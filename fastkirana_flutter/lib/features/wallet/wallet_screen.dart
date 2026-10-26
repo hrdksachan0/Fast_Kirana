@@ -2,8 +2,6 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfupi.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfupipayment.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
@@ -264,30 +262,19 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                   .setPrimaryFont("Inter")
                                   .build();
 
-                              bool upiLaunched = false;
+                              // Launch full Cashfree Unified Checkout (UPI, Cards, Netbanking & Wallets)
                               try {
-                                final upi = CFUPIBuilder().setChannel(CFUPIChannel.INTENT_WITH_UI).build();
-                                final cfUpi = CFUPIPaymentBuilder().setSession(session).setUPI(upi).build();
-                                _cfService.doPayment(cfUpi);
-                                upiLaunched = true;
+                                final cfWeb = CFWebCheckoutPaymentBuilder()
+                                    .setSession(session)
+                                    .setTheme(theme)
+                                    .build();
+                                _cfService.doPayment(cfWeb);
                               } catch (e) {
-                                debugPrint('Cashfree UPI intent error, falling back to Web Checkout: $e');
-                              }
-
-                              if (!upiLaunched) {
-                                try {
-                                  final cfWeb = CFWebCheckoutPaymentBuilder()
-                                      .setSession(session)
-                                      .setTheme(theme)
-                                      .build();
-                                  _cfService.doPayment(cfWeb);
-                                } catch (e) {
-                                  debugPrint('Cashfree Web Checkout error: $e');
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Payment launch error: $e')),
-                                    );
-                                  }
+                                debugPrint('Cashfree Web Checkout error: $e');
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Payment launch error: $e')),
+                                  );
                                 }
                               }
                             },
