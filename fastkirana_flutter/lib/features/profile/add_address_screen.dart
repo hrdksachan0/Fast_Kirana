@@ -36,7 +36,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
   double _longitude = AppConfig.darkstoreLng;
   double _distanceKm = 0.8;
   bool _isServiceable = true;
-  String _detectedFormattedAddress = 'FastKirana Central Zone, Kanpur Nagar - 209206';
+  String _detectedFormattedAddress = 'FastMinute Central Zone, Kanpur Nagar - 209206';
 
   late AnimationController _pinPulseController;
   late Animation<double> _pinScaleAnimation;

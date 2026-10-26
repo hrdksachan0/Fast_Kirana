@@ -790,7 +790,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Your referral cash is added directly to Fastkirana Wallet. At checkout, tick "Use Wallet Balance" to get instant free groceries on your orders!',
+                          'Your referral cash is added directly to FastMinute Wallet. At checkout, tick "Use Wallet Balance" to get instant free groceries on your orders!',
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
                             color: AppDesignSystem.slate700,

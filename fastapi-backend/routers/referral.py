@@ -349,7 +349,7 @@ async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
             await send_fcm_notification(
                 user_id=referral.referrerId,
                 title="Referral Cash Earned! 🎁",
-                body=f"Your friend just completed their first order! ₹{float(reward_amount):.2f} has been added to your Fastkirana wallet.",
+                body=f"Your friend just completed their first order! ₹{float(reward_amount):.2f} has been added to your FastMinute wallet.",
                 data={"type": "REFERRAL_REWARD", "amount": str(float(reward_amount))}
             )
         except Exception as fcm_err:

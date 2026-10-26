@@ -1879,7 +1879,7 @@ async def create_order(
             await debit_customer_wallet(
                 user_id=user_id,
                 amount=Decimal(str(round(final_total, 2))),
-                description="Paid for order via Fastkirana Customer Wallet",
+                description="Paid for order via FastMinute Customer Wallet",
                 db=db,
                 metadata={"finalTotal": final_total}
             )

@@ -197,12 +197,12 @@ async def initiate_wallet_topup(
             "customer_id": user.id,
             "customer_phone": (user.phone or "9999999999")[-10:],
             "customer_email": user.email or f"{user.id}@fastkirana.in",
-            "customer_name": user.name or "Fastkirana Customer"
+            "customer_name": user.name or "FastMinute Customer"
         },
         "order_meta": {
             "notify_url": f"{settings.API_BASE_URL}/api/wallet/cashfree/webhook"
         },
-        "order_note": f"Fastkirana Wallet Top-Up (User: {user.phone or user.id})"
+        "order_note": f"FastMinute Wallet Top-Up (User: {user.phone or user.id})"
     }
 
     try:
@@ -306,7 +306,7 @@ async def cashfree_wallet_webhook(
                 await send_fcm_notification(
                     user_id=user.id,
                     title="Wallet Top-Up Successful! 💰",
-                    body=f"₹{float(tx.amount):.2f} added to your Fastkirana wallet. Current balance: ₹{float(wallet.balance):.2f}",
+                    body=f"₹{float(tx.amount):.2f} added to your FastMinute wallet. Current balance: ₹{float(wallet.balance):.2f}",
                     data={"type": "WALLET_TOPUP", "walletBalance": str(float(wallet.balance))}
                 )
         except Exception as fcm_err:

@@ -248,7 +248,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
             !rawName.toLowerCase().startsWith('user ') &&
             !rawName.toLowerCase().startsWith('customer ') &&
             rawName.toLowerCase() != 'customer' &&
-            rawName != 'FastKirana Customer';
+            rawName != 'FastKirana Customer' && rawName != 'FastMinute Customer';
 
         // 1. Immediately persist auth token & credentials to encrypted SecureStorage FIRST
         // so Dio interceptor has valid Authorization header for subsequent API calls.

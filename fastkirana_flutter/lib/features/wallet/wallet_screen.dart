@@ -563,7 +563,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Fastkirana Wallet',
+              'FastMinute Wallet',
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 18),
                 fontWeight: FontWeight.w800,
@@ -691,7 +691,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'FASTKIRANA CASH',
+                                  'FASTMINUTE CASH',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 11),
                                     fontWeight: FontWeight.w700,
