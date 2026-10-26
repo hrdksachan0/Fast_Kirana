@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, desc, and_
@@ -10,7 +11,7 @@ import uuid
 import logging
 
 from database import get_db
-from models import User, Referral, ReferralStatus, CustomerWallet, WalletTransaction, WalletTxType, WalletTxStatus, Order, StoreSetting
+from models import User, Referral, ReferralStatus, CustomerWallet, WalletTransaction, WalletTxType, WalletTxStatus, Order, OrderStatus, StoreSetting
 from routers.auth import require_auth
 from routers.wallet import get_or_create_wallet
 from utils.firebase import send_fcm_notification
@@ -18,6 +19,10 @@ from utils.firebase import send_fcm_notification
 logger = logging.getLogger("referral")
 
 router = APIRouter(prefix="/referral", tags=["Refer & Earn"])
+
+
+class ApplyReferralRequest(BaseModel):
+    referralCode: str
 
 
 def generate_unique_referral_code() -> str:
@@ -92,22 +97,108 @@ async def get_my_referral_code(
 
     config = await get_referral_settings(db)
     app_link = "https://fastkirana.in"
+    play_store_link = "https://play.google.com/store/apps/details?id=com.fastkirana.app"
+    discount_val = config.get("referee_discount", "50")
+
     share_text = (
-        config["whatsapp_message"]
-        .replace("{CODE}", user.referralCode)
-        .replace("{DISCOUNT}", config["referee_discount"])
-        .replace("{LINK}", f"{app_link}?ref={user.referralCode}")
+        f"🛒 FastMinute Grocery se order karo aur mere referral code *{user.referralCode}* se paao ₹{discount_val} OFF!\n\n"
+        f"📲 Download Android App:\n{play_store_link}\n\n"
+        f"🌐 Ya Online Order karo: {app_link}\n\n"
+        f"Referral Code: *{user.referralCode}*"
     )
 
     return {
         "success": True,
         "referralCode": user.referralCode,
-        "shareLink": f"{app_link}?ref={user.referralCode}",
+        "shareLink": play_store_link,
+        "webLink": f"{app_link}?ref={user.referralCode}",
         "whatsappShareText": share_text,
         "referrerReward": float(config["referrer_reward"]),
         "refereeDiscount": float(config["referee_discount"]),
         "minOrderValue": float(config["min_order_value"]),
         "isEnabled": config["enabled"].lower() == "true"
+    }
+
+
+@router.post("/apply")
+async def apply_referral_code(
+    body: ApplyReferralRequest,
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Apply a friend's referral code.
+    Validations:
+    - Referral program is enabled in admin settings
+    - Code is valid and exists in users table
+    - Cannot refer self (user cannot enter their own code or phone match)
+    - User has not already used a referral code
+    - User has not already placed a delivered order (first order only)
+    """
+    user_id = current_user.get("id")
+    stmt = select(User).where(User.id == user_id)
+    res = await db.execute(stmt)
+    user = res.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    config = await get_referral_settings(db)
+    if config["enabled"].lower() != "true":
+        raise HTTPException(status_code=400, detail="Referral program is currently unavailable")
+
+    clean_code = body.referralCode.strip().upper()
+    if not clean_code or len(clean_code) < 3:
+        raise HTTPException(status_code=400, detail="Please enter a valid referral code")
+
+    # Find referrer
+    ref_stmt = select(User).where(User.referralCode == clean_code)
+    referrer = (await db.execute(ref_stmt)).scalars().first()
+    if not referrer:
+        raise HTTPException(status_code=400, detail="Invalid referral code. Please check and try again.")
+
+    if referrer.id == user.id or (referrer.phone and user.phone and referrer.phone == user.phone):
+        raise HTTPException(status_code=400, detail="You cannot apply your own referral code")
+
+    # Check if already referred
+    existing_ref = (await db.execute(
+        select(Referral).where(Referral.refereeId == user.id)
+    )).scalars().first()
+    if existing_ref:
+        raise HTTPException(status_code=400, detail="You have already applied a referral code")
+
+    # Check if user already placed delivered orders (only first-time customers are eligible)
+    delivered_orders = (await db.execute(
+        select(func.count(Order.id)).where(
+            Order.userId == user.id,
+            Order.status == OrderStatus.DELIVERED
+        )
+    )).scalar() or 0
+    if delivered_orders > 0:
+        raise HTTPException(status_code=400, detail="Referral code can only be used on your first order")
+
+    # Link referral
+    user.referredById = referrer.id
+    referee_discount = Decimal(config["referee_discount"])
+
+    new_referral = Referral(
+        id=f"ref_{uuid.uuid4().hex[:16]}",
+        referrerId=referrer.id,
+        refereeId=user.id,
+        codeUsed=clean_code,
+        status=ReferralStatus.PENDING,
+        refereeDiscount=referee_discount,
+        referrerReward=Decimal(config["referrer_reward"]),
+    )
+    db.add(new_referral)
+
+    await db.commit()
+    logger.info(f"Referral code {clean_code} applied by user {user.id} (referred by {referrer.id})")
+
+    return {
+        "success": True,
+        "message": f"🎉 Referral code applied! You unlocked ₹{int(referee_discount)} OFF on your first order.",
+        "discountAmount": float(referee_discount),
+        "codeUsed": clean_code
     }
 
 
@@ -163,7 +254,7 @@ async def get_referral_stats(
                 "id": ref.id,
                 "friendName": (u.name or "Friend") if u else "Friend",
                 "friendPhone": f"******{(u.phone or '0000')[-4:]}" if u and u.phone else "******",
-                "status": ref.status,
+                "status": ref.status.value if hasattr(ref.status, "value") else str(ref.status),
                 "reward": float(ref.referrerReward),
                 "date": ref.createdAt.isoformat() if ref.createdAt else None
             }

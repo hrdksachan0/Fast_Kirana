@@ -248,7 +248,9 @@ class CheckoutBottomBar extends StatelessWidget {
                                             child: Text(
                                               isOffline
                                                   ? 'Check Connection & Pay'
-                                                  : 'Proceed to Pay',
+                                                  : (grandTotal == 0.0
+                                                      ? '⚡ 1-Tap Place Order'
+                                                      : 'Proceed to Pay'),
                                               style: GoogleFonts.inter(
                                                 fontSize: Responsive.scaledFontSize(
                                                     context, isOffline ? 11.5 : 13.5),

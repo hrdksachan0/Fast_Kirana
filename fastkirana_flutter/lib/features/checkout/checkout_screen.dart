@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -9,6 +10,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/store_settings_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../core/services/location_service.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/zepto_connectivity_pill.dart';
@@ -137,7 +139,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         : (isCombined
             ? (storeSettings?.combinedMiscFeeLabel ?? 'Combined Packaging Charge')
             : (storeSettings?.miscFeeLabel ?? 'Packaging Charge'));
-    final grandTotal = (subtotal + deliveryFee + packagingFee + widget.tipAmount - widget.discountAmount).clamp(0.0, 999999.0);
+    final grandTotalBeforeWallet = (subtotal + deliveryFee + packagingFee + widget.tipAmount - widget.discountAmount).clamp(0.0, 999999.0);
+    final wallet = ref.watch(walletNotifierProvider);
+    final double walletUsable = wallet.totalUsable;
+    final double walletDeduction = (checkoutState.useWalletBalance && walletUsable > 0)
+        ? (walletUsable >= grandTotalBeforeWallet ? grandTotalBeforeWallet : walletUsable)
+        : 0.0;
+    final grandTotal = (grandTotalBeforeWallet - walletDeduction).clamp(0.0, 999999.0);
 
     final user = ref.watch(authProvider).value;
     final customerName = checkoutState.customReceiverName?.isNotEmpty == true
@@ -346,6 +354,92 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                       const SizedBox(height: 14),
 
+                      // 6.5 FastMinute Wallet Split-Payment Toggle Card
+                      if (walletUsable > 0) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: checkoutState.useWalletBalance ? const Color(0xFFF0FDF4) : Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: checkoutState.useWalletBalance ? AppDesignSystem.emerald600 : AppDesignSystem.slate200,
+                              width: checkoutState.useWalletBalance ? 1.5 : 1.1,
+                            ),
+                            boxShadow: AppDesignSystem.shadowSm,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(9),
+                                decoration: BoxDecoration(
+                                  color: checkoutState.useWalletBalance ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Text('👛', style: TextStyle(fontSize: 18)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'FastMinute Wallet',
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 13.5),
+                                            fontWeight: FontWeight.w800,
+                                            color: slateDark,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFDCFCE7),
+                                            borderRadius: BorderRadius.circular(5),
+                                          ),
+                                          child: Text(
+                                            '₹${walletUsable.toStringAsFixed(0)}',
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFF15803D),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      checkoutState.useWalletBalance
+                                          ? (walletUsable >= grandTotalBeforeWallet
+                                              ? '₹${grandTotalBeforeWallet.toStringAsFixed(0)} deducted • 100% covered!'
+                                              : '-₹${walletUsable.toStringAsFixed(0)} deducted • Pay ₹${grandTotal.toStringAsFixed(0)} left')
+                                          : 'Tap switch to apply wallet balance',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 11),
+                                        color: checkoutState.useWalletBalance ? const Color(0xFF047857) : slateMuted,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: checkoutState.useWalletBalance,
+                                activeThumbColor: const Color(0xFF059669),
+                                onChanged: (val) {
+                                  HapticFeedback.lightImpact();
+                                  controller.setUseWalletBalance(val);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+
                       // 7. Detailed Bill Summary
                       CheckoutBillBreakdown(
                         subtotal: subtotal,
@@ -353,6 +447,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         packagingFee: packagingFee,
                         packagingLabel: packagingLabel,
                         discountAmount: widget.discountAmount,
+                        walletAmountUsed: walletDeduction,
                         grandTotal: grandTotal,
                         tipAmount: widget.tipAmount,
                         tier: tier,

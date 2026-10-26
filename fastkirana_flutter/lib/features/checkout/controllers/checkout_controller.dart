@@ -44,6 +44,7 @@ const _sentinel = Object();
 class CheckoutState {
   final bool isPlacingOrder;
   final String selectedPayment; // 'cod' | 'online'
+  final bool useWalletBalance;
   final String selectedPackaging; // 'NORMAL' | 'PREMIUM'
   final String deliveryMethod; // 'DELIVERY' | 'PICKUP'
   final int selectedAddressIndex;
@@ -59,6 +60,7 @@ class CheckoutState {
   const CheckoutState({
     this.isPlacingOrder = false,
     this.selectedPayment = 'cod',
+    this.useWalletBalance = true,
     this.selectedPackaging = 'NORMAL',
     this.deliveryMethod = 'DELIVERY',
     this.selectedAddressIndex = 0,
@@ -75,6 +77,7 @@ class CheckoutState {
   CheckoutState copyWith({
     bool? isPlacingOrder,
     String? selectedPayment,
+    bool? useWalletBalance,
     String? selectedPackaging,
     String? deliveryMethod,
     int? selectedAddressIndex,
@@ -91,6 +94,7 @@ class CheckoutState {
     return CheckoutState(
       isPlacingOrder: isPlacingOrder ?? this.isPlacingOrder,
       selectedPayment: selectedPayment ?? this.selectedPayment,
+      useWalletBalance: useWalletBalance ?? this.useWalletBalance,
       selectedPackaging: selectedPackaging ?? this.selectedPackaging,
       deliveryMethod: deliveryMethod ?? this.deliveryMethod,
       selectedAddressIndex: selectedAddressIndex ?? this.selectedAddressIndex,
@@ -261,6 +265,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
   void setPaymentMethod(String method) {
     state = state.copyWith(selectedPayment: method);
+  }
+
+  void setUseWalletBalance(bool use) {
+    state = state.copyWith(useWalletBalance: use);
   }
 
   void setPackaging(String packaging) {
@@ -1056,7 +1064,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final effectiveCoupon = draft?.couponCode ?? _couponCode;
     final effectiveDeliveryMethod = draft?.deliveryMethod ?? state.deliveryMethod;
     final effectivePackaging = draft?.selectedPackaging ?? state.selectedPackaging;
-    final effectivePayment = (draft != null && draft.selectedPayment.isNotEmpty)
+    var effectivePayment = (draft != null && draft.selectedPayment.isNotEmpty)
         ? draft.selectedPayment
         : state.selectedPayment;
 
@@ -1310,6 +1318,16 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             );
           }).toList();
 
+    final walletState = ref.read(walletNotifierProvider);
+    final double walletUsable = walletState.totalUsable;
+    final double walletAmountUsed = state.useWalletBalance
+        ? (walletUsable >= grandTotal ? grandTotal : walletUsable)
+        : 0.0;
+    final bool isFullWalletPay = walletAmountUsed >= grandTotal && grandTotal > 0;
+    if (isFullWalletPay) {
+      effectivePayment = 'wallet';
+    }
+
     final newOrder = Order(
       id: serverOrderId ?? orderId,
       readableId: serverReadableId ?? orderId,
@@ -1438,6 +1456,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         'packagingOption': effectivePackaging,
         'packagingFee': packagingFee,
         'tipAmount': effectiveTip,
+        'walletAmountUsed': walletAmountUsed,
         'items': itemsPayload,
       };
 

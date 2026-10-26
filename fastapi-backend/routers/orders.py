@@ -1872,6 +1872,7 @@ async def create_order(
                                         logger.warning(f"[Payment Security] Cashfree order missing order_amount")
                     except Exception as cf_e:
                         logger.warning(f"Error checking Cashfree for new order: {cf_e}")
+        wallet_used_amount = float(payload.get("walletAmountUsed") or 0.0)
         if payment_method == "WALLET":
             from routers.wallet import debit_customer_wallet
             from decimal import Decimal
@@ -1883,6 +1884,21 @@ async def create_order(
                 metadata={"finalTotal": final_total}
             )
             is_online_paid = True
+        elif wallet_used_amount > 0:
+            from routers.wallet import debit_customer_wallet
+            from decimal import Decimal
+            actual_wallet_debit = Decimal(str(round(wallet_used_amount, 2)))
+            try:
+                await debit_customer_wallet(
+                    user_id=user_id,
+                    amount=actual_wallet_debit,
+                    description=f"Wallet deduction for Order #{readable_id}",
+                    db=db,
+                    metadata={"walletDeduction": float(actual_wallet_debit), "readableId": readable_id}
+                )
+                logger.info(f"Deducted ₹{actual_wallet_debit} from wallet for user {user_id}")
+            except Exception as w_err:
+                logger.warning(f"Could not deduct wallet amount ₹{actual_wallet_debit}: {w_err}")
 
         auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
         is_auto_approve = auto_approve_setting.lower() == "true"
@@ -1915,6 +1931,9 @@ async def create_order(
 
         if is_premium_packaging and not any("Premium Thermal Packaging" in p for p in notes_parts):
             notes_parts.append("✨ Premium Thermal Packaging Requested (+₹15)")
+
+        if wallet_used_amount > 0 and payment_method != "WALLET":
+            notes_parts.append(f"💳 Wallet Used: ₹{wallet_used_amount:.2f}")
 
         if is_online_paid and not any("Cashfree PG Paid" in p for p in notes_parts):
             cf_note_ref = f"Cashfree PG Paid (Ref: {incoming_payment_id})" if incoming_payment_id else "Cashfree PG Paid"

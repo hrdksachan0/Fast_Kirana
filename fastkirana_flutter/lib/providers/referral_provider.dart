@@ -1,6 +1,61 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../core/services/logger_service.dart';
+
+class ReferralApplyResult {
+  final bool success;
+  final String message;
+  final double discountAmount;
+  final String codeUsed;
+
+  ReferralApplyResult({
+    required this.success,
+    required this.message,
+    required this.discountAmount,
+    required this.codeUsed,
+  });
+}
+
+Future<ReferralApplyResult> applyReferralCode(WidgetRef ref, String code) async {
+  final dio = ref.read(dioProvider);
+  try {
+    final response = await dio.post(
+      '/api/referral/apply',
+      data: {'referralCode': code.trim().toUpperCase()},
+    );
+    if (response.statusCode == 200 && response.data['success'] == true) {
+      ref.invalidate(referralStatsProvider);
+      return ReferralApplyResult(
+        success: true,
+        message: response.data['message']?.toString() ?? 'Referral code applied successfully!',
+        discountAmount: (response.data['discountAmount'] as num?)?.toDouble() ?? 50.0,
+        codeUsed: response.data['codeUsed']?.toString() ?? code,
+      );
+    } else {
+      return ReferralApplyResult(
+        success: false,
+        message: response.data['detail']?.toString() ?? 'Could not apply referral code',
+        discountAmount: 0,
+        codeUsed: code,
+      );
+    }
+  } catch (e) {
+    String err = 'Error applying code. Please try again.';
+    if (e is DioException && e.response?.data != null) {
+      final d = e.response!.data;
+      if (d is Map && d.containsKey('detail')) {
+        err = d['detail'].toString();
+      }
+    }
+    return ReferralApplyResult(
+      success: false,
+      message: err,
+      discountAmount: 0,
+      codeUsed: code,
+    );
+  }
+}
 
 class ReferralInfo {
   final String referralCode;
