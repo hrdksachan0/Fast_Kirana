@@ -173,8 +173,8 @@ async def initiate_wallet_topup(
         id=f"wtx_{uuid.uuid4().hex[:16]}",
         walletId=wallet.id,
         amount=amount,
-        type=WalletTxType.CREDIT_TOPUP.value,
-        status=WalletTxStatus.INITIATED.value,
+        type=WalletTxType.CREDIT_TOPUP,
+        status=WalletTxStatus.INITIATED,
         cfOrderId=cf_order_id,
         balanceBefore=wallet.balance,
         balanceAfter=wallet.balance,
@@ -274,7 +274,7 @@ async def cashfree_wallet_webhook(
         logger.warning(f"Wallet transaction not found for cfOrderId: {cf_order_id}")
         return {"status": "tx_not_found"}
 
-    if tx.status == WalletTxStatus.SUCCESS.value:
+    if tx.status in [WalletTxStatus.SUCCESS, WalletTxStatus.SUCCESS.value]:
         return {"status": "already_processed"}
 
     if payment_status == "SUCCESS":
@@ -286,7 +286,7 @@ async def cashfree_wallet_webhook(
         )
         wallet = (await db.execute(wallet_stmt)).scalar_one()
 
-        tx.status = WalletTxStatus.SUCCESS.value
+        tx.status = WalletTxStatus.SUCCESS
         tx.cfPaymentId = str(payment_data.get("cf_payment_id", ""))
         tx.balanceBefore = wallet.balance
         wallet.balance = Decimal(str(wallet.balance)) + Decimal(str(tx.amount))
@@ -310,7 +310,7 @@ async def cashfree_wallet_webhook(
             logger.warning(f"FCM push failed for wallet topup: {fcm_err}")
 
     else:
-        tx.status = WalletTxStatus.FAILED.value
+        tx.status = WalletTxStatus.FAILED
         await db.commit()
         logger.info(f"Wallet topup failed for order: {cf_order_id}")
 
@@ -341,7 +341,7 @@ async def sync_wallet_topup_status(
         raise HTTPException(status_code=404, detail="Transaction not found")
 
     # If already marked success, return immediately
-    if tx.status == WalletTxStatus.SUCCESS.value:
+    if tx.status in [WalletTxStatus.SUCCESS, WalletTxStatus.SUCCESS.value]:
         wallet = await get_or_create_wallet(user_id, db)
         return {
             "success": True,
@@ -367,7 +367,7 @@ async def sync_wallet_topup_status(
                     )
                     wallet = (await db.execute(wallet_stmt)).scalar_one()
 
-                    tx.status = WalletTxStatus.SUCCESS.value
+                    tx.status = WalletTxStatus.SUCCESS
                     tx.cfPaymentId = str(success_payment.get("cf_payment_id", ""))
                     tx.balanceBefore = wallet.balance
                     wallet.balance = Decimal(str(wallet.balance)) + Decimal(str(tx.amount))
@@ -440,8 +440,8 @@ async def debit_customer_wallet(
         id=f"wtx_{uuid.uuid4().hex[:16]}",
         walletId=wallet.id,
         amount=amount,
-        type=WalletTxType.DEBIT_ORDER.value,
-        status=WalletTxStatus.SUCCESS.value,
+        type=WalletTxType.DEBIT_ORDER,
+        status=WalletTxStatus.SUCCESS,
         balanceBefore=bal_before,
         balanceAfter=wallet.balance,
         description=description,

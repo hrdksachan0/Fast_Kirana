@@ -131,14 +131,14 @@ async def get_referral_stats(
     # Completed count
     completed_stmt = select(func.count(Referral.id)).where(
         Referral.referrerId == user_id,
-        Referral.status == ReferralStatus.COMPLETED.value
+        Referral.status == ReferralStatus.COMPLETED
     )
     completed_count = (await db.execute(completed_stmt)).scalar() or 0
 
     # Total earned sum
     earned_stmt = select(func.coalesce(func.sum(Referral.referrerReward), 0.0)).where(
         Referral.referrerId == user_id,
-        Referral.status == ReferralStatus.COMPLETED.value
+        Referral.status == ReferralStatus.COMPLETED
     )
     total_earned = (await db.execute(earned_stmt)).scalar() or 0.0
 
@@ -185,7 +185,7 @@ async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
             select(Referral)
             .where(
                 Referral.refereeId == order.userId,
-                Referral.status.in_([ReferralStatus.PENDING.value, ReferralStatus.FIRST_ORDER_PLACED.value])
+                Referral.status.in_([ReferralStatus.PENDING, ReferralStatus.FIRST_ORDER_PLACED])
             )
             .with_for_update()
         )
@@ -214,13 +214,13 @@ async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
         if month_start:
             earnings_stmt = select(func.coalesce(func.sum(Referral.referrerReward), 0.0)).where(
                 Referral.referrerId == referral.referrerId,
-                Referral.status == ReferralStatus.COMPLETED.value,
+                Referral.status == ReferralStatus.COMPLETED,
                 Referral.rewardCreditedAt >= month_start
             )
             current_month_earnings = Decimal(str((await db.execute(earnings_stmt)).scalar() or 0.0))
             if current_month_earnings >= monthly_cap:
                 logger.info(f"Referral reward capped: Referrer reached monthly limit ₹{monthly_cap}")
-                referral.status = ReferralStatus.COMPLETED.value
+                referral.status = ReferralStatus.COMPLETED
                 referral.referrerReward = Decimal("0.00")
                 await db.commit()
                 return
@@ -235,8 +235,8 @@ async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
             id=f"wtx_{uuid.uuid4().hex[:16]}",
             walletId=referrer_wallet.id,
             amount=reward_amount,
-            type=WalletTxType.CREDIT_REFERRAL.value,
-            status=WalletTxStatus.SUCCESS.value,
+            type=WalletTxType.CREDIT_REFERRAL,
+            status=WalletTxStatus.SUCCESS,
             balanceBefore=bal_before,
             balanceAfter=referrer_wallet.balance,
             description=f"Referral reward: friend completed their first order! 🎉",
@@ -245,7 +245,7 @@ async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
         db.add(tx)
 
         # Update Referral record
-        referral.status = ReferralStatus.COMPLETED.value
+        referral.status = ReferralStatus.COMPLETED
         referral.referrerReward = reward_amount
         referral.qualifyingOrderId = order.id
         referral.rewardCreditedAt = order.deliveredAt

@@ -3466,8 +3466,9 @@ async def update_order(
 
         # Trigger Refer & Earn reward for referrer on successful first order delivery
         try:
-            from routers.referral import process_referral_reward_on_delivery
-            await process_referral_reward_on_delivery(order, db)
+            async with db.begin_nested():
+                from routers.referral import process_referral_reward_on_delivery
+                await process_referral_reward_on_delivery(order, db)
         except Exception as ref_err:
             logger.warning(f"Referral delivery reward hook error for order {order.id}: {ref_err}")
 
