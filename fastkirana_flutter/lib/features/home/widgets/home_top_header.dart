@@ -12,6 +12,8 @@ import '../../../widgets/brand_logo.dart';
 import '../../../widgets/address_selector_sheet.dart';
 import '../../../widgets/unserviceable_location_banner.dart';
 import '../../../widgets/voice_search_sheet.dart';
+import '../../../providers/wallet_provider.dart';
+import '../../wallet/wallet_screen.dart';
 import '../../profile/notifications_screen.dart';
 import '../../search/search_screen.dart';
 
@@ -187,6 +189,43 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                 ),
               ),
 
+              Consumer(
+                builder: (context, ref, _) {
+                  final wallet = ref.watch(walletNotifierProvider);
+                  return InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      Navigator.push(context, FadeSlideRoute(page: const WalletScreen()));
+                    },
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('👛', style: TextStyle(fontSize: 14)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '₹${wallet.totalUsable.toStringAsFixed(0)}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: Responsive.scaledFontSize(context, 12.5),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 6),
               IconButton(
                 tooltip: 'Notifications',
                 padding: const EdgeInsets.all(4),

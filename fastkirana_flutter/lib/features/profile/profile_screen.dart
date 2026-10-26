@@ -13,8 +13,12 @@ import '../../providers/address_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../widgets/app_confirmation_dialog.dart';
+import '../../providers/wallet_provider.dart';
+import '../../providers/referral_provider.dart';
 import '../auth/login_screen.dart';
 import '../orders/orders_screen.dart';
+import '../wallet/wallet_screen.dart';
+import '../referral/referral_screen.dart';
 import 'address_book_screen.dart';
 import 'notifications_screen.dart';
 import 'widgets/profile_edit_modal.dart';
@@ -320,6 +324,9 @@ class ProfileScreen extends ConsumerWidget {
     final ordersAsync = ref.watch(ordersProvider(userId));
     final wishlist = ref.watch(wishlistProvider);
     final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
+    final walletState = ref.watch(walletNotifierProvider);
+    final referralAsync = ref.watch(referralInfoProvider);
+    final referralReward = referralAsync.valueOrNull?.referrerReward.toInt() ?? 100;
 
     final ordersCount = ordersAsync.valueOrNull?.length ?? 0;
     final role = (user?.role ?? 'USER').toUpperCase();
@@ -411,6 +418,187 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
 
+            // ─── 3b. Wallet & Refer Prominent Action Cards ────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                child: Row(
+                  children: [
+                    // Fastkirana Wallet Card
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          if (user == null) {
+                            Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
+                          } else {
+                            Navigator.push(context, FadeSlideRoute(page: const WalletScreen()));
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0F172A).withValues(alpha: 0.14),
+                                blurRadius: 14,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(7),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Text('👛', style: TextStyle(fontSize: 18)),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppDesignSystem.emerald600,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Add +',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'FastMinute Wallet',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                user != null ? '₹${walletState.totalUsable.toStringAsFixed(0)}' : '₹0',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: Responsive.scaledFontSize(context, 18),
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Refer & Earn Card
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          if (user == null) {
+                            Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
+                          } else {
+                            Navigator.push(context, FadeSlideRoute(page: const ReferralScreen()));
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF047857), Color(0xFF065F46)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF047857).withValues(alpha: 0.14),
+                                blurRadius: 14,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(7),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Text('🎁', style: TextStyle(fontSize: 18)),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEF08A),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '₹$referralReward Free',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 9.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFF854D0E),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Refer & Earn',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFA7F3D0),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Invite Friends',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: Responsive.scaledFontSize(context, 15),
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             // ─── 4. Structured Clean Settings Groups ───────────────────────
             SliverToBoxAdapter(
               child: Padding(
@@ -438,6 +626,40 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       child: Column(
                         children: [
+                          ProfileMenuItem(
+                            icon: Icons.account_balance_wallet_rounded,
+                            iconBg: const Color(0xFFEEF2FF),
+                            iconColor: const Color(0xFF4F46E5),
+                            title: 'FastMinute Wallet',
+                            subtitle: user != null
+                                ? 'Usable Balance: ₹${walletState.totalUsable.toStringAsFixed(0)} • Instant 1-tap pay'
+                                : 'Login to view balance & 1-tap pay',
+                            badge: user != null ? '₹${walletState.totalUsable.toStringAsFixed(0)}' : null,
+                            onTap: () {
+                              if (user == null) {
+                                Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
+                              } else {
+                                Navigator.push(context, FadeSlideRoute(page: const WalletScreen()));
+                              }
+                            },
+                          ),
+                          const Divider(height: 1, color: AppDesignSystem.slate100),
+                          ProfileMenuItem(
+                            icon: Icons.card_giftcard_rounded,
+                            iconBg: const Color(0xFFECFDF5),
+                            iconColor: const Color(0xFF059669),
+                            title: 'Refer & Earn (Free Cash)',
+                            subtitle: 'Get ₹$referralReward wallet credit for every friend who orders',
+                            badge: '₹$referralReward FREE',
+                            onTap: () {
+                              if (user == null) {
+                                Navigator.push(context, FadeSlideRoute(page: const LoginScreen()));
+                              } else {
+                                Navigator.push(context, FadeSlideRoute(page: const ReferralScreen()));
+                              }
+                            },
+                          ),
+                          const Divider(height: 1, color: AppDesignSystem.slate100),
                           ProfileMenuItem(
                             icon: Icons.location_on_rounded,
                             iconBg: AppDesignSystem.green50,

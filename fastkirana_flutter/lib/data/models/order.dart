@@ -56,7 +56,8 @@ enum OrderStatus {
 enum PaymentMethod {
   cod,
   upi,
-  card;
+  card,
+  wallet;
 
   String get displayName {
     switch (this) {
@@ -65,7 +66,9 @@ enum PaymentMethod {
       case PaymentMethod.upi:
         return 'UPI';
       case PaymentMethod.card:
-        return 'Card / Wallet';
+        return 'Card';
+      case PaymentMethod.wallet:
+        return 'FastMinute Wallet';
     }
   }
 }
@@ -244,8 +247,9 @@ class Order {
   static PaymentMethod _parsePaymentMethod(dynamic val) {
     if (val == null) return PaymentMethod.cod;
     final str = val.toString().toLowerCase().trim();
+    if (str.contains('wallet')) return PaymentMethod.wallet;
     if (str.contains('upi')) return PaymentMethod.upi;
-    if (str.contains('card') || str.contains('wallet') || str.contains('online')) return PaymentMethod.card;
+    if (str.contains('card') || str.contains('online')) return PaymentMethod.card;
     return PaymentMethod.cod;
   }
 

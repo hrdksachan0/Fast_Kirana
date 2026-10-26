@@ -31,6 +31,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/store_hub_provider.dart';
 import '../../../providers/store_settings_provider.dart';
+import '../../../providers/wallet_provider.dart';
 import '../../orders/orders_screen.dart';
 import '../order_success_screen.dart';
 import '../widgets/payment_failed_cod_sheet.dart';
@@ -1316,15 +1317,17 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       addressId: selectedAddress?.id ?? 'addr_default',
       restaurantId: restaurantId,
       shopName: shopName,
-      status: isOnlinePaid ? OrderStatus.confirmed : OrderStatus.adminPending,
+      status: (isOnlinePaid || effectivePayment == 'wallet') ? OrderStatus.confirmed : OrderStatus.adminPending,
       subtotal: subtotal,
       discount: effectiveDiscount,
       deliveryFee: deliveryFee,
       taxes: 0,
       miscFee: packagingFee + effectiveTip,
       total: grandTotal,
-      paymentMethod: effectivePayment == 'online' ? PaymentMethod.upi : PaymentMethod.cod,
-      paymentStatus: isOnlinePaid ? 'PAID' : 'PENDING',
+      paymentMethod: effectivePayment == 'online'
+          ? PaymentMethod.upi
+          : (effectivePayment == 'wallet' ? PaymentMethod.wallet : PaymentMethod.cod),
+      paymentStatus: (isOnlinePaid || effectivePayment == 'wallet') ? 'PAID' : 'PENDING',
       deliveryMethod: effectiveDeliveryMethod,
       customerName: receiverName,
       customerPhone: receiverPhone,
@@ -1413,8 +1416,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         'phone': buyerPhone.isNotEmpty ? buyerPhone : receiverPhone,
         'storeId': (draft != null && draft.hubId != null && draft.hubId!.isNotEmpty) ? draft.hubId! : nearestHub.id,
         'addressId': selectedAddress?.id ?? 'addr_default',
-        'paymentMethod': effectivePayment == 'online' ? 'UPI' : 'COD',
-        'paymentStatus': isOnlinePaid ? 'PAID' : 'PENDING',
+        'paymentMethod': effectivePayment == 'online'
+            ? 'UPI'
+            : (effectivePayment == 'wallet' ? 'WALLET' : 'COD'),
+        'paymentStatus': (isOnlinePaid || effectivePayment == 'wallet') ? 'PAID' : 'PENDING',
         'paymentId': paymentId,
         'cfOrderId': effectiveCfOrderId,
         'traceId': TracerService.activeTraceId,
@@ -1596,6 +1601,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     // Guaranteed instant cart clearance on placement to ensure zero leftover items
     final orderId = placedOrder.id;
     unawaited(ref.read(cartProvider.notifier).clearCart(orderId: orderId));
+    // Refresh customer wallet balance
+    unawaited(ref.read(walletNotifierProvider.notifier).fetchBalance());
 
     // Fast-track navigation to OrderSuccessScreen using active or root navigator key
     final rootContext = (context != null && context.mounted) ? context : AppRouter.navigatorKey.currentContext;
@@ -1604,7 +1611,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       orderId: placedOrder.displayId,
       totalAmount: grandTotal,
       deliveryAddress: selectedAddr,
-      paymentMethod: placedOrder.paymentMethod == PaymentMethod.upi ? 'CASHFREE (PAID)' : 'CASH ON DELIVERY',
+      paymentMethod: placedOrder.paymentMethod == PaymentMethod.wallet
+          ? 'WALLET (PAID)'
+          : (placedOrder.paymentMethod == PaymentMethod.upi ? 'CASHFREE (PAID)' : 'CASH ON DELIVERY'),
       order: placedOrder,
     );
 

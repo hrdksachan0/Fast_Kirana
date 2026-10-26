@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/design_system.dart';
+import '../../../providers/wallet_provider.dart';
+import '../../wallet/wallet_screen.dart';
 
-class CheckoutPaymentSelectorSheet extends StatefulWidget {
+class CheckoutPaymentSelectorSheet extends ConsumerStatefulWidget {
   final String initialPayment;
   final double grandTotal;
   final bool isPlacingOrder;
@@ -47,10 +50,10 @@ class CheckoutPaymentSelectorSheet extends StatefulWidget {
   }
 
   @override
-  State<CheckoutPaymentSelectorSheet> createState() => _CheckoutPaymentSelectorSheetState();
+  ConsumerState<CheckoutPaymentSelectorSheet> createState() => _CheckoutPaymentSelectorSheetState();
 }
 
-class _CheckoutPaymentSelectorSheetState extends State<CheckoutPaymentSelectorSheet> {
+class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSelectorSheet> {
   late String _selectedPayment;
 
   @override
@@ -64,6 +67,9 @@ class _CheckoutPaymentSelectorSheetState extends State<CheckoutPaymentSelectorSh
 
   @override
   Widget build(BuildContext context) {
+    final wallet = ref.watch(walletNotifierProvider);
+    final bool canPayWithWallet = wallet.totalUsable >= widget.grandTotal;
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -131,6 +137,141 @@ class _CheckoutPaymentSelectorSheetState extends State<CheckoutPaymentSelectorSh
               ],
             ),
             const SizedBox(height: 18),
+
+            // Option 0: FastMinute Wallet
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                if (canPayWithWallet) {
+                  setState(() => _selectedPayment = 'wallet');
+                  widget.onPaymentChanged('wallet');
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const WalletScreen()),
+                  );
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _selectedPayment == 'wallet'
+                      ? const Color(0xFFF0FDF4)
+                      : (canPayWithWallet ? AppDesignSystem.slate50 : const Color(0xFFF8FAFC)),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: _selectedPayment == 'wallet'
+                        ? AppDesignSystem.emerald600
+                        : (canPayWithWallet ? AppDesignSystem.slate300 : AppDesignSystem.slate200),
+                    width: _selectedPayment == 'wallet' ? 1.8 : 1.1,
+                  ),
+                  boxShadow: _selectedPayment == 'wallet'
+                      ? [
+                          BoxShadow(
+                            color: AppDesignSystem.emerald600.withValues(alpha: 0.12),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: canPayWithWallet ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Text('👛', style: TextStyle(fontSize: 20)),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'FastMinute Wallet',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 14),
+                                  fontWeight: FontWeight.w900,
+                                  color: slateDark,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: canPayWithWallet ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  canPayWithWallet ? '⚡ 1-TAP PAY' : 'INSUFFICIENT',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9),
+                                    fontWeight: FontWeight.w900,
+                                    color: canPayWithWallet ? const Color(0xFF15803D) : const Color(0xFFB45309),
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            canPayWithWallet
+                                ? 'Available Balance: ₹${wallet.totalUsable.toStringAsFixed(0)} (Instant checkout)'
+                                : 'Balance: ₹${wallet.totalUsable.toStringAsFixed(0)} • Tap to Top-up',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
+                              color: canPayWithWallet ? slateMuted : const Color(0xFFD97706),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (canPayWithWallet)
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _selectedPayment == 'wallet' ? AppDesignSystem.emerald600 : Colors.white,
+                          border: Border.all(
+                            color: _selectedPayment == 'wallet' ? AppDesignSystem.emerald600 : AppDesignSystem.slate500,
+                            width: 2,
+                          ),
+                        ),
+                        child: _selectedPayment == 'wallet'
+                            ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                            : null,
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppDesignSystem.emerald50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppDesignSystem.emerald200),
+                        ),
+                        child: Text(
+                          'Add +',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            fontWeight: FontWeight.w800,
+                            color: AppDesignSystem.emerald700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
 
             // Option 1: Cash on Delivery (COD)
             GestureDetector(
@@ -377,9 +518,11 @@ class _CheckoutPaymentSelectorSheetState extends State<CheckoutPaymentSelectorSh
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      _selectedPayment == 'online'
-                          ? 'Pay ₹${widget.grandTotal.toInt()} Online'
-                          : 'Place Order • Pay ₹${widget.grandTotal.toInt()} on Delivery',
+                      _selectedPayment == 'wallet'
+                          ? 'Pay ₹${widget.grandTotal.toInt()} with Wallet'
+                          : (_selectedPayment == 'online'
+                              ? 'Pay ₹${widget.grandTotal.toInt()} Online'
+                              : 'Place Order • Pay ₹${widget.grandTotal.toInt()} on Delivery'),
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 14),
                         fontWeight: FontWeight.w900,
