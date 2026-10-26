@@ -139,7 +139,10 @@ final walletTransactionsProvider = FutureProvider.autoDispose<List<WalletTransac
     final response = await dio.get('/api/wallet/transactions');
     if (response.statusCode == 200 && response.data['success'] == true) {
       final list = response.data['transactions'] as List<dynamic>? ?? [];
-      return list.map((item) => WalletTransactionItem.fromJson(item as Map<String, dynamic>)).toList();
+      return list
+          .map((item) => WalletTransactionItem.fromJson(item as Map<String, dynamic>))
+          .where((item) => item.status.toUpperCase() == 'SUCCESS')
+          .toList();
     }
   } catch (e) {
     LoggerService.error('Error fetching wallet transactions', e);

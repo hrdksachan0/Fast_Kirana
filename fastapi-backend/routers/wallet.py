@@ -112,7 +112,10 @@ async def get_wallet_transactions(
     offset = (page - 1) * limit
     stmt = (
         select(WalletTransaction)
-        .where(WalletTransaction.walletId == wallet.id)
+        .where(
+            WalletTransaction.walletId == wallet.id,
+            WalletTransaction.status == WalletTxStatus.SUCCESS
+        )
         .order_by(desc(WalletTransaction.createdAt))
         .offset(offset)
         .limit(limit)
