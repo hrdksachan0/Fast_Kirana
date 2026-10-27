@@ -317,7 +317,7 @@ const nextConfig: NextConfig = {
       },
       // Campaign editing uses the local verified NextAuth route. Other admin APIs use FastAPI.
       {
-        source: '/api/admin/:path((?!(campaign|push-notifications)(?:/|$)).*)',
+        source: '/api/admin/:path((?!(?:campaign|push-notifications)(?:/|$)).*)',
         destination: `${apiDest}/api/admin/:path`,
       },
       {
