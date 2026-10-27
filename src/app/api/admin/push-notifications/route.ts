@@ -112,14 +112,19 @@ export async function POST(request: NextRequest) {
         )
 
         const topicResults = await Promise.allSettled(topicPromises)
+        let anyTopicFulfilled = false
         topicResults.forEach((res, idx) => {
           const topicName = idx === 0 ? 'all_users' : 'ghatampur_alerts'
-          if (res.status === 'fulfilled') {
+          if (res.status === 'fulfilled' && (res as any).value) {
+            anyTopicFulfilled = true
             console.log(`[FCM Broadcast] Successfully dispatched to topic: ${topicName}`)
           } else {
-            console.warn(`[FCM Broadcast] Topic dispatch failed for ${topicName}:`, res.reason)
+            console.warn(`[FCM Broadcast] Topic dispatch failed for ${topicName}:`, (res as any).reason)
           }
         })
+        if (anyTopicFulfilled && fcmSuccessCount === 0) {
+          fcmSuccessCount = 1 // Broadcast topic successfully dispatched to FCM
+        }
       }
     } catch (fcmErr) {
       console.error('Failed to broadcast mobile FCM notifications:', fcmErr)

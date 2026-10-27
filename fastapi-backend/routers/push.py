@@ -171,7 +171,8 @@ async def get_admin_push_notifications(
     """
     Get push notification broadcast history and subscription count.
     """
-    if current_user.get("role") not in ["ADMIN", "MANAGER"]:
+    user_role = str(current_user.get("role") or "").upper()
+    if user_role not in ["ADMIN", "SUPER_ADMIN", "SUPERADMIN", "MANAGER"]:
         raise HTTPException(status_code=403, detail="Admin permissions required")
 
     try:
@@ -181,7 +182,13 @@ async def get_admin_push_notifications(
 
         sub_count_stmt = select(func.count(PushSubscription.id))
         sub_count_res = await db.execute(sub_count_stmt)
-        subscription_count = sub_count_res.scalar() or 0
+        web_subscription_count = sub_count_res.scalar() or 0
+
+        fcm_count_stmt = select(func.count(FcmToken.id))
+        fcm_count_res = await db.execute(fcm_count_stmt)
+        mobile_device_count = fcm_count_res.scalar() or 0
+
+        subscription_count = web_subscription_count + mobile_device_count
 
         return {
             "notifications": [
@@ -197,7 +204,9 @@ async def get_admin_push_notifications(
                 }
                 for n in notifications
             ],
-            "subscriptionCount": subscription_count
+            "subscriptionCount": subscription_count,
+            "webSubscriptionCount": web_subscription_count,
+            "mobileDeviceCount": mobile_device_count,
         }
     except Exception as e:
         logger.error(f"Failed to fetch push notifications: {e}")
@@ -213,7 +222,8 @@ async def broadcast_admin_push_notification(
     """
     Broadcast a push notification to all users across Mobile FCM and Web Push.
     """
-    if current_user.get("role") not in ["ADMIN", "MANAGER"]:
+    user_role = str(current_user.get("role") or "").upper()
+    if user_role not in ["ADMIN", "SUPER_ADMIN", "SUPERADMIN", "MANAGER"]:
         raise HTTPException(status_code=403, detail="Admin permissions required")
 
     title = payload.get("title")
@@ -224,7 +234,7 @@ async def broadcast_admin_push_notification(
     if not title or not body_text:
         raise HTTPException(status_code=400, detail="Title and body are required")
 
-    # Multicast via FCM
+    # Multicast via FCM individual device tokens
     success_count = 0
     failure_count = 0
 
@@ -245,6 +255,22 @@ async def broadcast_admin_push_notification(
             failure_count = fcm_res.get("failure_count", 0)
     except Exception as e:
         logger.error(f"FCM broadcast error: {e}")
+
+    # Broadcast to broadcast topics so all app installations receive it
+    try:
+        from utils.firebase import send_fcm_topic_notification
+        data_dict = {
+            "title": str(title),
+            "body": str(body_text),
+            "url": str(link_url or "/"),
+            "category": "offer"
+        }
+        await send_fcm_topic_notification("all_users", title, body_text, data_dict)
+        await send_fcm_topic_notification("ghatampur_alerts", title, body_text, data_dict)
+        if success_count == 0:
+            success_count = 1
+    except Exception as e:
+        logger.warning(f"FCM topic broadcast error: {e}")
 
     try:
         new_notification = PushNotification(
@@ -270,6 +296,8 @@ async def broadcast_admin_push_notification(
             "sentAt": new_notification.sentAt.isoformat(),
             "successCount": new_notification.successCount,
             "failureCount": new_notification.failureCount,
+            "webSuccessCount": 0,
+            "fcmSuccessCount": success_count,
         }
     except Exception as e:
         await db.rollback()

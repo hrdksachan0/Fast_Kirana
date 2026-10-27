@@ -33,9 +33,22 @@ export function AdminPushNotifications() {
     fetchNotificationData()
   }, [])
 
+  const getAuthHeaders = () => {
+    const fastToken = typeof window !== 'undefined'
+      ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token'))
+      : null
+    return {
+      'Content-Type': 'application/json',
+      ...(fastToken ? { Authorization: `Bearer ${fastToken}` } : {}),
+    }
+  }
+
   const fetchNotificationData = async () => {
     try {
-      const res = await fetch(`${apiUrl()}/api/admin/push-notifications`)
+      const res = await fetch(`${apiUrl()}/api/admin/push-notifications`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      })
       if (res.ok) {
         const data = await res.json()
         setHistory(data.notifications || [])
@@ -63,7 +76,8 @@ export function AdminPushNotifications() {
     try {
       const res = await fetch(`${apiUrl()}/api/admin/push-notifications`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify({
           title: title.trim(),
           body: body.trim(),
@@ -84,8 +98,8 @@ export function AdminPushNotifications() {
         // Refresh counts to update the active subscriber stats
         fetchNotificationData()
       } else {
-        const errData = await res.json()
-        toast.error(errData.error || 'Failed to send notification')
+        const errData = await res.json().catch(() => ({}))
+        toast.error(errData.error || errData.detail || 'Failed to send notification')
       }
     } catch (error) {
       toast.error('Failed to send notification: Connection error')
