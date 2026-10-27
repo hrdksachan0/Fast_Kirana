@@ -3431,7 +3431,6 @@ async def update_order(
         # Automatic refund for wallet balance if applied
         if "[WALLET_USED:" in (order.notes or "") and "[WALLET_REFUNDED]" not in (order.notes or ""):
             try:
-                import re
                 from routers.wallet import credit_customer_wallet
                 from decimal import Decimal
                 w_match = re.search(r"\[WALLET_USED:([0-9.]+)\]", order.notes or "")
