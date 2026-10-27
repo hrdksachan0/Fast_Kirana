@@ -198,12 +198,30 @@ async def apply_referral_code(
     )
     db.add(new_referral)
 
+    # Instant Wallet Credit: Credit ₹50 welcome discount to referee's FastMinute Wallet immediately
+    referee_wallet = await get_or_create_wallet(user.id, db)
+    bal_before = referee_wallet.balance
+    referee_wallet.balance = Decimal(str(referee_wallet.balance)) + referee_discount
+
+    welcome_tx = WalletTransaction(
+        id=f"wtx_{uuid.uuid4().hex[:16]}",
+        walletId=referee_wallet.id,
+        amount=referee_discount,
+        type=WalletTxType.CREDIT_REFERRAL,
+        status=WalletTxStatus.SUCCESS,
+        balanceBefore=bal_before,
+        balanceAfter=referee_wallet.balance,
+        description=f"Welcome bonus! Referral code {clean_code} applied 🎉",
+        metadata={"referralId": new_referral.id, "code": clean_code}
+    )
+    db.add(welcome_tx)
+
     await db.commit()
-    logger.info(f"Referral code {clean_code} applied by user {user.id} (referred by {referrer.id})")
+    logger.info(f"Referral code {clean_code} applied by user {user.id}. Credited ₹{referee_discount} to wallet (referred by {referrer.id})")
 
     return {
         "success": True,
-        "message": f"🎉 Referral code applied! You unlocked ₹{int(referee_discount)} OFF on your first order.",
+        "message": f"🎉 ₹{int(referee_discount)} Cash credited to your FastMinute Wallet! Use it on orders above ₹{config.get('min_order_value', '199')}.",
         "discountAmount": float(referee_discount),
         "codeUsed": clean_code
     }

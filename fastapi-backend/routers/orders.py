@@ -1873,6 +1873,12 @@ async def create_order(
                     except Exception as cf_e:
                         logger.warning(f"Error checking Cashfree for new order: {cf_e}")
         wallet_used_amount = float(payload.get("walletAmountUsed") or 0.0)
+        min_wallet_mov = float(settings_map.get("referral_min_order_value", "199"))
+        if wallet_used_amount > 0 and subtotal < min_wallet_mov:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Minimum order of ₹{int(min_wallet_mov)} is required to use FastMinute Wallet balance"
+            )
         if payment_method == "WALLET":
             from routers.wallet import debit_customer_wallet
             from decimal import Decimal

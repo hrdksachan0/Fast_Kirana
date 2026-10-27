@@ -142,7 +142,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final grandTotalBeforeWallet = (subtotal + deliveryFee + packagingFee + widget.tipAmount - widget.discountAmount).clamp(0.0, 999999.0);
     final wallet = ref.watch(walletNotifierProvider);
     final double walletUsable = wallet.totalUsable;
-    final double walletDeduction = (checkoutState.useWalletBalance && walletUsable > 0)
+    const double minWalletOrderValue = 199.0;
+    final bool isEligibleForWallet = subtotal >= minWalletOrderValue;
+    final double walletDeduction = (checkoutState.useWalletBalance && walletUsable > 0 && isEligibleForWallet)
         ? (walletUsable >= grandTotalBeforeWallet ? grandTotalBeforeWallet : walletUsable)
         : 0.0;
     final grandTotal = (grandTotalBeforeWallet - walletDeduction).clamp(0.0, 999999.0);
@@ -359,11 +361,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: checkoutState.useWalletBalance ? const Color(0xFFF0FDF4) : Colors.white,
+                            color: !isEligibleForWallet
+                                ? const Color(0xFFF8FAFC)
+                                : (checkoutState.useWalletBalance ? const Color(0xFFF0FDF4) : Colors.white),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
-                              color: checkoutState.useWalletBalance ? AppDesignSystem.emerald600 : AppDesignSystem.slate200,
-                              width: checkoutState.useWalletBalance ? 1.5 : 1.1,
+                              color: !isEligibleForWallet
+                                  ? AppDesignSystem.slate200
+                                  : (checkoutState.useWalletBalance ? AppDesignSystem.emerald600 : AppDesignSystem.slate200),
+                              width: (isEligibleForWallet && checkoutState.useWalletBalance) ? 1.5 : 1.1,
                             ),
                             boxShadow: AppDesignSystem.shadowSm,
                           ),
@@ -372,7 +378,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               Container(
                                 padding: const EdgeInsets.all(9),
                                 decoration: BoxDecoration(
-                                  color: checkoutState.useWalletBalance ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                                  color: !isEligibleForWallet
+                                      ? const Color(0xFFF1F5F9)
+                                      : (checkoutState.useWalletBalance ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9)),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Text('👛', style: TextStyle(fontSize: 18)),
@@ -389,14 +397,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                           style: GoogleFonts.inter(
                                             fontSize: Responsive.scaledFontSize(context, 13.5),
                                             fontWeight: FontWeight.w800,
-                                            color: slateDark,
+                                            color: isEligibleForWallet ? slateDark : AppDesignSystem.slate500,
                                           ),
                                         ),
                                         const SizedBox(width: 6),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFDCFCE7),
+                                            color: isEligibleForWallet ? const Color(0xFFDCFCE7) : AppDesignSystem.slate200,
                                             borderRadius: BorderRadius.circular(5),
                                           ),
                                           child: Text(
@@ -404,7 +412,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                             style: GoogleFonts.inter(
                                               fontSize: Responsive.scaledFontSize(context, 9.5),
                                               fontWeight: FontWeight.w800,
-                                              color: const Color(0xFF15803D),
+                                              color: isEligibleForWallet ? const Color(0xFF15803D) : AppDesignSystem.slate600,
                                             ),
                                           ),
                                         ),
@@ -412,27 +420,45 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      checkoutState.useWalletBalance
-                                          ? (walletUsable >= grandTotalBeforeWallet
-                                              ? '₹${grandTotalBeforeWallet.toStringAsFixed(0)} deducted • 100% covered!'
-                                              : '-₹${walletUsable.toStringAsFixed(0)} deducted • Pay ₹${grandTotal.toStringAsFixed(0)} left')
-                                          : 'Tap switch to apply wallet balance',
+                                      !isEligibleForWallet
+                                          ? 'Min. order ₹199 required to use wallet (Add ₹${(minWalletOrderValue - subtotal).toInt()} more)'
+                                          : (checkoutState.useWalletBalance
+                                              ? (walletUsable >= grandTotalBeforeWallet
+                                                  ? '₹${grandTotalBeforeWallet.toStringAsFixed(0)} deducted • 100% covered!'
+                                                  : '-₹${walletUsable.toStringAsFixed(0)} deducted • Pay ₹${grandTotal.toStringAsFixed(0)} left')
+                                              : 'Tap switch to apply wallet balance'),
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 11),
-                                        color: checkoutState.useWalletBalance ? const Color(0xFF047857) : slateMuted,
-                                        fontWeight: FontWeight.w500,
+                                        color: !isEligibleForWallet
+                                            ? const Color(0xFFB45309)
+                                            : (checkoutState.useWalletBalance ? const Color(0xFF047857) : slateMuted),
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               Switch(
-                                value: checkoutState.useWalletBalance,
+                                value: isEligibleForWallet && checkoutState.useWalletBalance,
                                 activeThumbColor: const Color(0xFF059669),
-                                onChanged: (val) {
-                                  HapticFeedback.lightImpact();
-                                  controller.setUseWalletBalance(val);
-                                },
+                                onChanged: isEligibleForWallet
+                                    ? (val) {
+                                        HapticFeedback.lightImpact();
+                                        controller.setUseWalletBalance(val);
+                                      }
+                                    : (val) {
+                                        HapticFeedback.heavyImpact();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Minimum order of ₹199 required to use FastMinute Wallet. Add ₹${(minWalletOrderValue - subtotal).toInt()} more items!',
+                                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                            ),
+                                            backgroundColor: AppDesignSystem.amber800,
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                      },
                               ),
                             ],
                           ),

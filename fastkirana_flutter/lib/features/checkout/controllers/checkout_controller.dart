@@ -1320,7 +1320,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     final walletState = ref.read(walletNotifierProvider);
     final double walletUsable = walletState.totalUsable;
-    final double walletAmountUsed = state.useWalletBalance
+    const double minWalletOrderValue = 199.0;
+    final bool isEligibleForWallet = subtotal >= minWalletOrderValue;
+    final double walletAmountUsed = (state.useWalletBalance && isEligibleForWallet)
         ? (walletUsable >= grandTotal ? grandTotal : walletUsable)
         : 0.0;
     final bool isFullWalletPay = walletAmountUsed >= grandTotal && grandTotal > 0;
