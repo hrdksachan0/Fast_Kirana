@@ -186,10 +186,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     );
   }
 
-  void _shareProduct(Product p, double activePrice) {
+  void _shareProduct(Product p, double activePrice, {String? variantName}) {
     HapticFeedback.lightImpact();
     final priceStr = '₹${activePrice.toStringAsFixed(0)}';
-    final shareText = '''🛒 Check out ${p.name} ($priceStr) on FastMinute!\n\n⚡ Fast Express Delivery in Ghatampur!\n📲 Download FastMinute App on Play Store to Order:
+    final variantLabel = (variantName != null && variantName.trim().isNotEmpty) ? ' ($variantName)' : '';
+    final shareText = '''🛒 Check out ${p.name}$variantLabel ($priceStr) on FastMinute!\n\n⚡ Fast Express Delivery in Ghatampur!\n📲 Download FastMinute App on Play Store to Order:
 https://play.google.com/store/apps/details?id=com.fastkirana.app''';
     Share.share(shareText, subject: 'Buy ${p.name} on FastMinute');
   }
@@ -855,7 +856,7 @@ https://play.google.com/store/apps/details?id=com.fastkirana.app''';
                         ),
                         const SizedBox(width: 8),
                         Bounceable(
-                          onTap: () => _shareProduct(p, activePrice),
+                          onTap: () => _shareProduct(p, activePrice, variantName: activeVariant?.name),
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(

@@ -837,9 +837,24 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         ? 0.0
         : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
     final packagingFee = state.selectedPackaging == 'PREMIUM' ? 15.0 : basePackagingFee;
-    final grandTotal = (subtotal + deliveryFee + packagingFee + _tipAmount - _discountAmount).clamp(0.0, 999999.0);
+    final grandTotalBeforeWallet = (subtotal + deliveryFee + packagingFee + _tipAmount - _discountAmount).clamp(0.0, 999999.0);
 
-    // 4. Online Payment Gateway Trigger
+    final walletState = ref.read(walletNotifierProvider);
+    final double walletUsable = walletState.totalUsable;
+    const double minWalletOrderValue = 199.0;
+    final bool isEligibleForWallet = subtotal >= minWalletOrderValue;
+    final double walletAmountUsed = (state.useWalletBalance && isEligibleForWallet)
+        ? (walletUsable >= grandTotalBeforeWallet ? grandTotalBeforeWallet : walletUsable)
+        : 0.0;
+    final grandTotal = (grandTotalBeforeWallet - walletAmountUsed).clamp(0.0, 999999.0);
+
+    // 4A. Full Wallet Payment Auto-Route
+    if (walletAmountUsed >= grandTotalBeforeWallet && grandTotalBeforeWallet > 0) {
+      await completeOrderPlacement(context, cart: cart, paymentId: 'WALLET_${DateTime.now().millisecondsSinceEpoch}');
+      return;
+    }
+
+    // 4B. Online Payment Gateway Trigger
     if (state.selectedPayment == 'online') {
       if (grandTotal <= 0.0) {
         await completeOrderPlacement(context, cart: cart, paymentId: 'FREE_PROMO_${DateTime.now().millisecondsSinceEpoch}');
@@ -1174,7 +1189,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final packagingFee = (draft != null && draft.hasFeeBreakdown)
         ? draft.packagingFee
         : (effectivePackaging == 'PREMIUM' ? 15.0 : basePackagingFee);
-    final grandTotal = (draft != null && draft.grandTotal > 0)
+    final grandTotalBeforeWallet = (draft != null && draft.grandTotal > 0)
         ? draft.grandTotal
         : (subtotal + deliveryFee + packagingFee + effectiveTip - effectiveDiscount).clamp(0.0, 999999.0);
 
@@ -1323,9 +1338,11 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     const double minWalletOrderValue = 199.0;
     final bool isEligibleForWallet = subtotal >= minWalletOrderValue;
     final double walletAmountUsed = (state.useWalletBalance && isEligibleForWallet)
-        ? (walletUsable >= grandTotal ? grandTotal : walletUsable)
+        ? (walletUsable >= grandTotalBeforeWallet ? grandTotalBeforeWallet : walletUsable)
         : 0.0;
-    final bool isFullWalletPay = walletAmountUsed >= grandTotal && grandTotal > 0;
+    final double grandTotal = (grandTotalBeforeWallet - walletAmountUsed).clamp(0.0, 999999.0);
+    final bool isFullWalletPay = (walletAmountUsed >= grandTotalBeforeWallet && grandTotalBeforeWallet > 0) ||
+        (paymentId != null && paymentId.startsWith('WALLET_'));
     if (isFullWalletPay) {
       effectivePayment = 'wallet';
     }

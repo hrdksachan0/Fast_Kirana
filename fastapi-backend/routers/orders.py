@@ -1810,6 +1810,16 @@ async def create_order(
             except Exception as idemp_err:
                 logger.warning(f"FastAPI idempotency check error: {idemp_err}")
 
+        wallet_used_amount = float(payload.get("walletAmountUsed") or 0.0)
+        min_wallet_mov = float(settings_map.get("referral_min_order_value", "199"))
+        if (payment_method == "WALLET" or wallet_used_amount > 0) and subtotal < min_wallet_mov:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Minimum order of ₹{int(min_wallet_mov)} is required to use FastMinute Wallet balance"
+            )
+
+        expected_online_total = max(0.0, round(final_total - wallet_used_amount, 2))
+
         if payment_method != "COD":
             if incoming_cf_order_id:
                 # 0. Check pending session intent binding to verify initiating user
@@ -1841,10 +1851,10 @@ async def create_order(
                         cached_amount = None
                         if isinstance(cached_val, dict):
                             cached_amount = cached_val.get("amount")
-                        if cached_amount is not None and abs(float(cached_amount) - float(final_total)) <= 0.05:
+                        if cached_amount is not None and (abs(float(cached_amount) - float(expected_online_total)) <= 0.05 or abs(float(cached_amount) - float(final_total)) <= 0.05):
                             is_online_paid = True
                         else:
-                            logger.warning(f"[Payment Security] Cached Cashfree amount {cached_amount} invalid or != final_total {final_total}")
+                            logger.warning(f"[Payment Security] Cached Cashfree amount {cached_amount} invalid or != final_total {final_total} / expected {expected_online_total}")
                 except Exception:
                     pass
 
@@ -1862,49 +1872,42 @@ async def create_order(
                                     cf_amt = cf_data.get("order_amount")
                                     if cf_amt is not None:
                                         try:
-                                            if abs(float(cf_amt) - float(final_total)) <= 0.05:
+                                            if abs(float(cf_amt) - float(expected_online_total)) <= 0.05 or abs(float(cf_amt) - float(final_total)) <= 0.05:
                                                 is_online_paid = True
                                             else:
-                                                logger.warning(f"[Payment Security] Cashfree order amount ₹{cf_amt} != final_total ₹{final_total}")
+                                                logger.warning(f"[Payment Security] Cashfree order amount ₹{cf_amt} != final_total ₹{final_total} or ₹{expected_online_total}")
                                         except (ValueError, TypeError):
                                             pass
                                     else:
                                         logger.warning(f"[Payment Security] Cashfree order missing order_amount")
                     except Exception as cf_e:
                         logger.warning(f"Error checking Cashfree for new order: {cf_e}")
-        wallet_used_amount = float(payload.get("walletAmountUsed") or 0.0)
-        min_wallet_mov = float(settings_map.get("referral_min_order_value", "199"))
-        if wallet_used_amount > 0 and subtotal < min_wallet_mov:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Minimum order of ₹{int(min_wallet_mov)} is required to use FastMinute Wallet balance"
-            )
+
+        from decimal import Decimal
+        actual_wallet_debit = Decimal("0.00")
         if payment_method == "WALLET":
             from routers.wallet import debit_customer_wallet
-            from decimal import Decimal
+            actual_wallet_debit = Decimal(str(round(final_total, 2)))
             await debit_customer_wallet(
                 user_id=user_id,
-                amount=Decimal(str(round(final_total, 2))),
-                description="Paid for order via FastMinute Customer Wallet",
+                amount=actual_wallet_debit,
+                description=f"Paid for order #{readable_id} via FastMinute Wallet",
                 db=db,
-                metadata={"finalTotal": final_total}
+                metadata={"finalTotal": final_total, "readableId": readable_id}
             )
             is_online_paid = True
         elif wallet_used_amount > 0:
             from routers.wallet import debit_customer_wallet
-            from decimal import Decimal
-            actual_wallet_debit = Decimal(str(round(wallet_used_amount, 2)))
-            try:
-                await debit_customer_wallet(
-                    user_id=user_id,
-                    amount=actual_wallet_debit,
-                    description=f"Wallet deduction for Order #{readable_id}",
-                    db=db,
-                    metadata={"walletDeduction": float(actual_wallet_debit), "readableId": readable_id}
-                )
-                logger.info(f"Deducted ₹{actual_wallet_debit} from wallet for user {user_id}")
-            except Exception as w_err:
-                logger.warning(f"Could not deduct wallet amount ₹{actual_wallet_debit}: {w_err}")
+            actual_wallet_debit = Decimal(str(round(min(wallet_used_amount, final_total), 2)))
+            # Edge case defense: Insufficient balance or inactive wallet must raise HTTPException and abort order creation
+            await debit_customer_wallet(
+                user_id=user_id,
+                amount=actual_wallet_debit,
+                description=f"Wallet deduction for Order #{readable_id}",
+                db=db,
+                metadata={"walletDeduction": float(actual_wallet_debit), "readableId": readable_id}
+            )
+            logger.info(f"Deducted ₹{actual_wallet_debit} from wallet for user {user_id}")
 
         auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
         is_auto_approve = auto_approve_setting.lower() == "true"
@@ -1938,8 +1941,12 @@ async def create_order(
         if is_premium_packaging and not any("Premium Thermal Packaging" in p for p in notes_parts):
             notes_parts.append("✨ Premium Thermal Packaging Requested (+₹15)")
 
-        if wallet_used_amount > 0 and payment_method != "WALLET":
-            notes_parts.append(f"💳 Wallet Used: ₹{wallet_used_amount:.2f}")
+        if actual_wallet_debit > Decimal("0.00") and payment_method != "WALLET":
+            notes_parts.append(f"💳 Wallet Used: ₹{float(actual_wallet_debit):.2f}")
+            notes_parts.append(f"[WALLET_USED:{float(actual_wallet_debit):.2f}]")
+        elif payment_method == "WALLET":
+            notes_parts.append(f"💳 Paid via Wallet: ₹{float(actual_wallet_debit):.2f}")
+            notes_parts.append(f"[WALLET_USED:{float(actual_wallet_debit):.2f}]")
 
         if is_online_paid and not any("Cashfree PG Paid" in p for p in notes_parts):
             cf_note_ref = f"Cashfree PG Paid (Ref: {incoming_payment_id})" if incoming_payment_id else "Cashfree PG Paid"
@@ -1965,9 +1972,15 @@ async def create_order(
 
         # Plan sub-order specifications
         order_specs = []
+        wallet_debit_val = float(actual_wallet_debit)
         if is_combined:
             # 1. Grocery Companion Order (takes the combined packaging fee configured by admin + tip)
             grocery_misc = misc_fee_charge
+            g_gross = max(0.0, round(grocery_subtotal - grocery_disc + delivery_fee_charge + grocery_misc, 2))
+            g_wallet_deduct = min(g_gross, wallet_debit_val)
+            g_net = max(0.0, round(g_gross - g_wallet_deduct, 2))
+            rem_wallet_debit = wallet_debit_val - g_wallet_deduct
+
             order_specs.append({
                 "type": OrderType.GROCERY,
                 "readableId": f"{readable_id}-G",
@@ -1978,10 +1991,12 @@ async def create_order(
                 "discount": round(grocery_disc, 2),
                 "deliveryFee": round(delivery_fee_charge, 2),
                 "miscFee": round(grocery_misc, 2),
-                "total": max(0.0, round(grocery_subtotal - grocery_disc + delivery_fee_charge + grocery_misc, 2)),
+                "total": g_net,
                 "items": grocery_items
             })
             # 2. Restaurant Companion Order (miscFee 0.0 so combined packaging charge is strictly charged once)
+            r_gross = max(0.0, round(restaurant_data[0]["subtotal"] - restaurant_disc, 2))
+            r_net = max(0.0, round(r_gross - rem_wallet_debit, 2))
             order_specs.append({
                 "type": OrderType.RESTAURANT,
                 "readableId": f"{readable_id}-R",
@@ -1992,10 +2007,11 @@ async def create_order(
                 "discount": round(restaurant_disc, 2),
                 "deliveryFee": 0.0,
                 "miscFee": 0.0,
-                "total": max(0.0, round(restaurant_data[0]["subtotal"] - restaurant_disc, 2)),
+                "total": r_net,
                 "items": restaurant_data[0]["items"]
             })
         elif has_restaurant_items:
+            r_gross = max(0.0, round(combined_subtotal - combined_discount + delivery_fee_charge + misc_fee_charge, 2))
             order_specs.append({
                 "type": OrderType.RESTAURANT,
                 "readableId": f"{readable_id}-R",
@@ -2006,11 +2022,12 @@ async def create_order(
                 "discount": round(combined_discount, 2),
                 "deliveryFee": round(delivery_fee_charge, 2),
                 "miscFee": round(misc_fee_charge, 2),
-                "total": max(0.0, round(combined_subtotal - combined_discount + delivery_fee_charge + misc_fee_charge, 2)),
+                "total": max(0.0, round(r_gross - wallet_debit_val, 2)),
                 "items": restaurant_data[0]["items"]
             })
         else:
             grocery_misc = misc_fee_charge
+            g_gross = max(0.0, round(combined_subtotal - combined_discount + delivery_fee_charge + grocery_misc, 2))
             order_specs.append({
                 "type": OrderType.GROCERY,
                 "readableId": f"{readable_id}-G",
@@ -2021,7 +2038,7 @@ async def create_order(
                 "discount": round(combined_discount, 2),
                 "deliveryFee": round(delivery_fee_charge, 2),
                 "miscFee": round(grocery_misc, 2),
-                "total": max(0.0, round(combined_subtotal - combined_discount + delivery_fee_charge + grocery_misc, 2)),
+                "total": max(0.0, round(g_gross - wallet_debit_val, 2)),
                 "items": grocery_items
             })
 
@@ -3410,6 +3427,28 @@ async def update_order(
                         logger.warning(f"Could not restore StoreInventory for product {item.productId} at store {order.storeId}: {inv_restore_err}")
 
             order.notes = (order.notes or "").replace("[STOCK_DEDUCTED]", "[STOCK_RESTORED]").strip()
+
+        # Automatic refund for wallet balance if applied
+        if "[WALLET_USED:" in (order.notes or "") and "[WALLET_REFUNDED]" not in (order.notes or ""):
+            try:
+                import re
+                from routers.wallet import credit_customer_wallet
+                from decimal import Decimal
+                w_match = re.search(r"\[WALLET_USED:([0-9.]+)\]", order.notes or "")
+                if w_match:
+                    refund_amt = Decimal(w_match.group(1))
+                    if refund_amt > Decimal("0.00"):
+                        await credit_customer_wallet(
+                            user_id=order.userId,
+                            amount=refund_amt,
+                            description=f"Refund for cancelled order #{order.readableId} 👛",
+                            db=db,
+                            metadata={"orderId": order.id, "readableId": order.readableId}
+                        )
+                        order.notes = f"{order.notes or ''} | [WALLET_REFUNDED]".strip(" |")
+                        logger.info(f"Refunded ₹{refund_amt} to customer {order.userId} for cancelled order #{order.readableId}")
+            except Exception as ref_err:
+                logger.error(f"Error refunding wallet for cancelled order {order.id}: {ref_err}")
 
     # Cloudinary upload on deliver pings
     final_delivery_photo = delivery_photo

@@ -212,7 +212,7 @@ async def apply_referral_code(
         balanceBefore=bal_before,
         balanceAfter=referee_wallet.balance,
         description=f"Welcome bonus! Referral code {clean_code} applied 🎉",
-        metadata={"referralId": new_referral.id, "code": clean_code}
+        metadata_json={"referralId": new_referral.id, "code": clean_code}
     )
     db.add(welcome_tx)
 
@@ -316,9 +316,11 @@ async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
             return
 
         min_mov = Decimal(config["min_order_value"])
-        order_total = Decimal(str(order.total or 0.0))
-        if order_total < min_mov:
-            logger.info(f"Referral reward skipped: Order total ₹{order_total} < MOV ₹{min_mov}")
+        # Edge case defense: Qualifying order check should be based on items' subtotal (cart value >= 199),
+        # so customer using their ₹50 wallet discount does not unfairly disqualify the referrer!
+        order_subtotal = Decimal(str(order.subtotal or 0.0))
+        if order_subtotal < min_mov:
+            logger.info(f"Referral reward skipped: Order subtotal ₹{order_subtotal} < MOV ₹{min_mov}")
             return
 
         reward_amount = Decimal(config["referrer_reward"])

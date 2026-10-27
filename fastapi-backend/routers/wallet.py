@@ -452,3 +452,34 @@ async def debit_customer_wallet(
     )
     db.add(tx)
     return wallet
+
+
+async def credit_customer_wallet(
+    user_id: str,
+    amount: Decimal,
+    description: str,
+    db: AsyncSession,
+    tx_type: WalletTxType = WalletTxType.CREDIT_REFUND,
+    metadata: Optional[Dict[str, Any]] = None
+) -> CustomerWallet:
+    """
+    Atomic wallet credit helper used during refunds, top-ups, or rewards.
+    Uses Postgres Row-Level Lock (SELECT FOR UPDATE) to ensure concurrency safety.
+    """
+    wallet = await get_or_create_wallet(user_id, db)
+    bal_before = wallet.balance
+    wallet.balance = Decimal(str(wallet.balance)) + amount
+
+    tx = WalletTransaction(
+        id=f"wtx_{uuid.uuid4().hex[:16]}",
+        walletId=wallet.id,
+        amount=amount,
+        type=tx_type,
+        status=WalletTxStatus.SUCCESS,
+        balanceBefore=bal_before,
+        balanceAfter=wallet.balance,
+        description=description,
+        metadata_json=metadata or {}
+    )
+    db.add(tx)
+    return wallet
