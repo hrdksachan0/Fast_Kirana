@@ -634,7 +634,13 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
       const wsOnlineSold = XLSX.utils.aoa_to_sheet([soldHeader, ...soldRows, [], soldTotalRow])
 
-      // Dedicated Tab: Date-Wise Product Sales & Vendor Payout Ledger
+      // Dedicated Tab: Date-Wise Product Sales & Vendor Payout Ledger (Filtered by scope: all/grocery/restaurant)
+      const targetDatewiseItems = rawDailyProductSales.filter((item: DailyProductSale) => {
+        if (scope === 'grocery') return item.type === 'grocery'
+        if (scope === 'restaurant') return item.type === 'restaurant'
+        return true
+      })
+
       const datewiseHeader = [
         'Date',
         'Product / Item Name',
@@ -650,7 +656,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
         'Net Profit (INR)',
         'Margin (%)'
       ]
-      const datewiseRows = rawDailyProductSales.map((item: DailyProductSale) => {
+      const datewiseRows = targetDatewiseItems.map((item: DailyProductSale) => {
         const margin = item.totalSales > 0 ? ((item.profit / item.totalSales) * 100) : 0
         return [
           item.date,
@@ -668,15 +674,15 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
           `${margin.toFixed(1)}%`
         ]
       })
-      const totalDatewiseUnits = rawDailyProductSales.reduce((sum, i) => sum + i.quantity, 0)
-      const totalDatewisePayable = Math.round(rawDailyProductSales.reduce((sum, i) => sum + i.totalCost, 0) * 100) / 100
-      const totalDatewiseSales = Math.round(rawDailyProductSales.reduce((sum, i) => sum + i.totalSales, 0) * 100) / 100
-      const totalDatewiseProfit = Math.round(rawDailyProductSales.reduce((sum, i) => sum + i.profit, 0) * 100) / 100
+      const totalDatewiseUnits = targetDatewiseItems.reduce((sum, i) => sum + i.quantity, 0)
+      const totalDatewisePayable = Math.round(targetDatewiseItems.reduce((sum, i) => sum + i.totalCost, 0) * 100) / 100
+      const totalDatewiseSales = Math.round(targetDatewiseItems.reduce((sum, i) => sum + i.totalSales, 0) * 100) / 100
+      const totalDatewiseProfit = Math.round(targetDatewiseItems.reduce((sum, i) => sum + i.profit, 0) * 100) / 100
       const totalDatewiseMargin = totalDatewiseSales > 0 ? (totalDatewiseProfit / totalDatewiseSales) * 100 : 0
 
       const datewiseTotalRow = [
         'TOTAL DATE-WISE PAYOUT',
-        `${rawDailyProductSales.length} Entries`,
+        `${targetDatewiseItems.length} Entries`,
         '',
         '',
         '',
@@ -717,8 +723,12 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
   // Quick Standalone Date-Wise Product Payout Exporter
   const handleDownloadDatewisePayoutXLSX = () => {
     try {
-      if (rawDailyProductSales.length === 0) {
-        toast.error('No online sold products found for this date range')
+      const targetItems = selectedDateFilter !== 'all'
+        ? rawDailyProductSales.filter(item => item.date === selectedDateFilter)
+        : rawDailyProductSales
+
+      if (targetItems.length === 0) {
+        toast.error('No online sold products found for this date')
         return
       }
       const datewiseHeader = [
@@ -736,7 +746,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
         'Net Profit (INR)',
         'Margin (%)'
       ]
-      const datewiseRows = rawDailyProductSales.map((item: DailyProductSale) => {
+      const datewiseRows = targetItems.map((item: DailyProductSale) => {
         const margin = item.totalSales > 0 ? ((item.profit / item.totalSales) * 100) : 0
         return [
           item.date,
@@ -754,15 +764,15 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
           `${margin.toFixed(1)}%`
         ]
       })
-      const totalUnits = rawDailyProductSales.reduce((s, i) => s + i.quantity, 0)
-      const totalPayable = Math.round(rawDailyProductSales.reduce((s, i) => s + i.totalCost, 0) * 100) / 100
-      const totalSales = Math.round(rawDailyProductSales.reduce((s, i) => s + i.totalSales, 0) * 100) / 100
-      const totalProfit = Math.round(rawDailyProductSales.reduce((s, i) => s + i.profit, 0) * 100) / 100
+      const totalUnits = targetItems.reduce((s, i) => s + i.quantity, 0)
+      const totalPayable = Math.round(targetItems.reduce((s, i) => s + i.totalCost, 0) * 100) / 100
+      const totalSales = Math.round(targetItems.reduce((s, i) => s + i.totalSales, 0) * 100) / 100
+      const totalProfit = Math.round(targetItems.reduce((s, i) => s + i.profit, 0) * 100) / 100
       const totalMargin = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0
 
       const totalRow = [
         'TOTAL DATE-WISE PAYOUT',
-        `${rawDailyProductSales.length} Entries`,
+        `${targetItems.length} Entries`,
         '',
         '',
         '',
@@ -783,8 +793,9 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       ]
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Date-Wise Product Payout')
-      XLSX.writeFile(wb, `FastMinute_DateWise_Payout_${startDate}_to_${endDate}.xlsx`)
-      toast.success('Date-Wise Product Payout Excel exported successfully!')
+      const fileNameSuffix = selectedDateFilter !== 'all' ? selectedDateFilter : `${startDate}_to_${endDate}`
+      XLSX.writeFile(wb, `FastMinute_DateWise_Payout_${fileNameSuffix}.xlsx`)
+      toast.success(`Date-Wise Product Payout exported (${targetItems.length} items)!`)
     } catch (e) {
       console.error(e)
       toast.error('Failed to export Date-Wise Payout Excel')

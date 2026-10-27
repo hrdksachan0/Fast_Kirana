@@ -21,15 +21,23 @@ export async function GET(request: NextRequest) {
     let start: Date
     let end: Date
 
+    // Helper to format any date to Indian Standard Time (IST) YYYY-MM-DD
+    const getISTDateString = (d: Date | string | null | undefined): string => {
+      if (!d) return ''
+      const dt = d instanceof Date ? d : new Date(d)
+      if (isNaN(dt.getTime())) return ''
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(dt)
+    }
+
     if (startDateParam) {
-      start = new Date(`${startDateParam}T00:00:00.000`)
+      start = new Date(`${startDateParam}T00:00:00.000+05:30`)
     } else {
       start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
       start.setHours(0, 0, 0, 0)
     }
 
     if (endDateParam) {
-      end = new Date(`${endDateParam}T23:59:59.999`)
+      end = new Date(`${endDateParam}T23:59:59.999+05:30`)
     } else {
       end = new Date(now.getTime())
       end.setHours(23, 59, 59, 999)
@@ -208,8 +216,8 @@ export async function GET(request: NextRequest) {
       }
 
       let targetVariant = (item.selectedVariant || '').trim()
-      if (!targetVariant && item.name && item.name.includes('(')) {
-        const match = item.name.match(/\(([^)]+)\)/)
+      if (!targetVariant && item.name) {
+        const match = item.name.match(/[\(\[]([^\)\]]+)[\)\]]/)
         if (match) targetVariant = match[1].trim()
       }
 
@@ -325,8 +333,10 @@ export async function GET(request: NextRequest) {
     // Initialize days in range with 0 to ensure continuous charts
     const currentDate = new Date(start)
     while (currentDate <= end) {
-      const dateString = currentDate.toISOString().split('T')[0]
-      dailyData[dateString] = { date: dateString, sales: 0, profit: 0, orders: 0 }
+      const dateString = getISTDateString(currentDate)
+      if (dateString && !dailyData[dateString]) {
+        dailyData[dateString] = { date: dateString, sales: 0, profit: 0, orders: 0 }
+      }
       currentDate.setDate(currentDate.getDate() + 1)
     }
 
@@ -403,17 +413,16 @@ export async function GET(request: NextRequest) {
       const isPickup = order.deliveryMethod === 'PICKUP'
       const isRetail = order.deliveryMethod === 'RETAIL'
       const orderMasterKey = order.combinedId || order.id
-      const createdAtDate = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt)
-      const dateString = createdAtDate.toISOString().split('T')[0]
+      const dateString = getISTDateString(order.createdAt)
       const rawSales = isRetail ? (order.total || order.subtotal || 0) : ((order.subtotal || 0) - (order.discount || 0))
       const orderSales = Math.max(0, rawSales - (order.refundAmount || 0))
       
       // Ensure dailyData has the key (in case it fell outside initialized range due to timezone)
-      if (!dailyData[dateString]) {
+      if (dateString && !dailyData[dateString]) {
         dailyData[dateString] = { date: dateString, sales: 0, profit: 0, orders: 0 }
       }
 
-      if (!isRetail) {
+      if (!isRetail && dateString) {
         const dailyKey = `${dateString}_${orderMasterKey}`
         if (!seenDailyCombined.has(dailyKey)) {
           seenDailyCombined.add(dailyKey)
@@ -436,6 +445,7 @@ export async function GET(request: NextRequest) {
         orderCost += cost
 
         if (isRetail) continue // Skip adding retail items to category and product breakdown
+        if (item.isRefunded && itemRev === 0) continue // Skip fully refunded items from sold breakdown
 
         // Strict Category Resolution
         const isGrocery = Boolean(item.isGroceryProduct)
@@ -476,13 +486,13 @@ export async function GET(request: NextRequest) {
 
         // Robust variant resolution for order items (handles explicit variant, name parsing, and deduplication)
         let resolvedVariant = (item.selectedVariant || '').trim()
-        if (!resolvedVariant && item.name && item.name.includes('(')) {
-          const match = item.name.match(/\(([^)]+)\)/)
+        if (!resolvedVariant && item.name) {
+          const match = item.name.match(/[\(\[]([^\)\]]+)[\)\]]/)
           if (match) resolvedVariant = match[1].trim()
         }
 
         const rawItemName = (item.name || 'Unnamed Product').trim()
-        const baseNameWithoutParen = rawItemName.replace(/\s*\([^)]*\)\s*$/g, '').trim()
+        const baseNameWithoutParen = rawItemName.replace(/\s*[\(\[][^\)\]]*[\)\]]\s*$/g, '').trim()
         const displayName = resolvedVariant
           ? (rawItemName.toLowerCase().includes(resolvedVariant.toLowerCase())
               ? rawItemName

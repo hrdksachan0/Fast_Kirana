@@ -21,14 +21,14 @@ export async function GET(request: NextRequest) {
     let end: Date
 
     if (startDateParam) {
-      start = new Date(`${startDateParam}T00:00:00.000`)
+      start = new Date(`${startDateParam}T00:00:00.000+05:30`)
     } else {
       start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
       start.setHours(0, 0, 0, 0)
     }
 
     if (endDateParam) {
-      end = new Date(`${endDateParam}T23:59:59.999`)
+      end = new Date(`${endDateParam}T23:59:59.999+05:30`)
     } else {
       end = new Date(now.getTime())
       end.setHours(23, 59, 59, 999)
@@ -171,8 +171,8 @@ export async function GET(request: NextRequest) {
       }
 
       let targetVariant = (item.selectedVariant || '').trim()
-      if (!targetVariant && item.name && item.name.includes('(')) {
-        const match = item.name.match(/\(([^)]+)\)/)
+      if (!targetVariant && item.name) {
+        const match = item.name.match(/[\(\[]([^\)\]]+)[\)\]]/)
         if (match) targetVariant = match[1].trim()
       }
 
