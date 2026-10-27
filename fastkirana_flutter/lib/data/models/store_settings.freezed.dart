@@ -353,7 +353,7 @@ class _$StoreSettingsImpl extends _StoreSettings {
       this.avgDeliveryTime = 'Fast',
       this.adminWhatsappPhone = '',
       this.contactPhone = '',
-      this.supportPhone = '8112849854',
+      this.supportPhone = '9450358388',
       final Map<String, dynamic> raw = const {}})
       : _raw = raw,
         super._();

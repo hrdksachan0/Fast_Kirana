@@ -24,7 +24,7 @@ class StoreSettings with _$StoreSettings {
     @Default('Fast') String avgDeliveryTime,
     @Default('') String adminWhatsappPhone,
     @Default('') String contactPhone,
-    @Default('8112849854') String supportPhone,
+    @Default('9450358388') String supportPhone,
     @Default({}) Map<String, dynamic> raw,
   }) = _StoreSettings;
 
@@ -70,7 +70,7 @@ class StoreSettings with _$StoreSettings {
               ? json['admin_phone'].toString()
               : ''),
       contactPhone: json['contact_phone']?.toString() ?? '',
-      supportPhone: json['support_phone']?.toString() ?? '8112849854',
+      supportPhone: json['support_phone']?.toString() ?? '9450358388',
       raw: json,
     );
   }

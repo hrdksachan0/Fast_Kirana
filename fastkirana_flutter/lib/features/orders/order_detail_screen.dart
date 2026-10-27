@@ -144,7 +144,7 @@ class OrderDetailScreen extends StatelessWidget {
               ),
               child: const Icon(Icons.headset_mic_rounded, color: primaryRed, size: 18),
             ),
-            onPressed: () => _makeCall('+918112849854'),
+            onPressed: () => _makeCall('+919450358388'),
           ),
           const SizedBox(width: 6),
         ],
@@ -452,7 +452,7 @@ class OrderDetailScreen extends StatelessWidget {
                       Row(
                         children: [
                           IconButton(
-                            onPressed: () => _openWhatsApp('918112849854', orderIdDisplay),
+                            onPressed: () => _openWhatsApp('919450358388', orderIdDisplay),
                             icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppDesignSystem.green600, size: 18),
                             style: IconButton.styleFrom(
                               backgroundColor: AppDesignSystem.green100,
@@ -462,7 +462,7 @@ class OrderDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton.icon(
-                            onPressed: () => _makeCall('+918112849854'),
+                            onPressed: () => _makeCall('+919450358388'),
                             icon: const Icon(Icons.phone, size: 13, color: Colors.white),
                             label: const Text('Call Store'),
                             style: ElevatedButton.styleFrom(

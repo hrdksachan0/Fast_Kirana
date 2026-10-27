@@ -14,7 +14,7 @@ export const STORE_LNG = 80.1714024
 
 export const STORE_PINCODE = '209206'
 export const STORE_ADDRESS = 'NH34, Ghatampur, Kanpur Nagar'
-export const STORE_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE || '+91 8112849854'
+export const STORE_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE || '+91 9450358388'
 export const SHOP_NAME = 'FastMinute Dark Store'
 export const SERVICE_AREA_NAME = 'Ghatampur'
 

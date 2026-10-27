@@ -855,7 +855,7 @@ async def create_order(
     settings_stmt = select(StoreSetting)
     settings_res = await db.execute(settings_stmt)
     settings_map = {s.key: s.value for s in settings_res.scalars().all()}
-    default_support_phone = settings_map.get("contact_phone") or os.getenv("SUPPORT_PHONE", "+918112849854")
+    default_support_phone = settings_map.get("contact_phone") or os.getenv("SUPPORT_PHONE", "+919450358388")
     
     # 1. Resolve address
     final_address_id = address_id
@@ -2606,15 +2606,15 @@ async def create_order(
 
                 if settings_map.get(f"{store_prefix}whatsapp_notify_7054470303", "false") != "false" and "7054470303" not in hub_phones:
                     hub_phones.append("7054470303")
-                if settings_map.get(f"{store_prefix}whatsapp_notify_8112849854", "true") != "false" and "8112849854" not in hub_phones:
-                    hub_phones.append("8112849854")
+                if settings_map.get(f"{store_prefix}whatsapp_notify_9450358388", "true") != "false" and "9450358388" not in hub_phones:
+                    hub_phones.append("9450358388")
 
             # Fallback to global admin if no store-specific phones found
             if not hub_phones:
                 if settings_map.get("whatsapp_notify_7054470303") != "false":
                     hub_phones.append("7054470303")
-                if settings_map.get("whatsapp_notify_8112849854") != "false":
-                    hub_phones.append("8112849854")
+                if settings_map.get("whatsapp_notify_9450358388") != "false":
+                    hub_phones.append("9450358388")
                 if settings_map.get("contact_phone") and settings_map.get("whatsapp_notify_store_phone", "true") != "false":
                     clean = re.sub(r'\D', '', str(settings_map["contact_phone"]))[-10:]
                     if clean and clean not in hub_phones:

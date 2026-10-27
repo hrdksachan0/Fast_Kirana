@@ -95,7 +95,7 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 20),
             ListTile(
               onTap: () async {
-                final uri = Uri.parse('tel:+918112849854');
+                final uri = Uri.parse('tel:+919450358388');
                 if (await canLaunchUrl(uri)) await launchUrl(uri);
               },
               leading: Container(
@@ -113,7 +113,7 @@ class ProfileScreen extends ConsumerWidget {
             const Divider(height: 1, color: AppDesignSystem.slate100),
             ListTile(
               onTap: () async {
-                final uri = Uri.parse('https://wa.me/918112849854?text=Hello%20FastMinute%20Support');
+                final uri = Uri.parse('https://wa.me/919450358388?text=Hello%20FastMinute%20Support');
                 if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
               },
               leading: Container(
@@ -252,7 +252,7 @@ class ProfileScreen extends ConsumerWidget {
                       } else {
                         // 1-3 stars: route to direct WhatsApp support to solve grievance
                         final waUri = Uri.parse(
-                          'https://wa.me/918112849854?text=${Uri.encodeComponent('Hi FastMinute Support, I gave a $selectedStars-star rating. Here is my feedback: ')}',
+                          'https://wa.me/919450358388?text=${Uri.encodeComponent('Hi FastMinute Support, I gave a $selectedStars-star rating. Here is my feedback: ')}',
                         );
                         if (await canLaunchUrl(waUri)) {
                           await launchUrl(waUri, mode: LaunchMode.externalApplication);

@@ -34,7 +34,7 @@ async def api_clear_settings_cache():
     clear_stores_cache()
     return {"success": True, "message": "Settings and stores cache cleared"}
 
-DEFAULT_SUPPORT_PHONE = os.getenv("SUPPORT_PHONE", "+91 8112849854")
+DEFAULT_SUPPORT_PHONE = os.getenv("SUPPORT_PHONE", "+91 9450358388")
 
 DEFAULT_SETTINGS = {
     "deliveries_count": "10,000+",
