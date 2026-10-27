@@ -220,12 +220,15 @@ export function MobileOrderCard({
                 : 'bg-zinc-100 dark:bg-zinc-800 text-text-primary border-border'
             }`}
           >
-            <option value="">🛵 Unassigned (Assign Rider...)</option>
-            {storeRiders.map((r) => (
-              <option key={r.id} value={r.id}>
-                🛵 {r.name} ({r.activeOrdersCount || 0} active) · {r.activeOrdersCount === 0 ? '🟢 Free' : '🟡 Busy'}
-              </option>
-            ))}
+            <option value="">🛵 Assign Rider...</option>
+            {storeRiders.map((r) => {
+              const count = Number(r.activeOrdersCount || 0)
+              return (
+                <option key={r.id} value={r.id}>
+                  🛵 {r.name} ({count} active) · {count === 0 ? '🟢 Free' : '🟡 Busy'}
+                </option>
+              )
+            })}
           </select>
         </div>
       )}

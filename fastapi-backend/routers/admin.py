@@ -118,7 +118,7 @@ async def get_admin_rider_cash_summary(
         active_stmt = select(func.count(Order.id)).where(
             and_(
                 Order.deliveryUserId == r.id,
-                Order.status.in_([OrderStatus.PACKED, OrderStatus.SHIPPED])
+                Order.status.notin_([OrderStatus.DELIVERED, OrderStatus.CANCELLED])
             )
         )
         active_res = await db.execute(active_stmt)
@@ -1302,6 +1302,24 @@ async def get_admin_riders(
 
     res = await db.execute(stmt)
     riders = res.scalars().all()
+
+    # Compute active orders count for each rider
+    rider_ids = [r.id for r in riders]
+    active_counts_map = {}
+    if rider_ids:
+        active_stmt = select(
+            Order.deliveryUserId,
+            func.count(Order.id)
+        ).where(
+            and_(
+                Order.deliveryUserId.in_(rider_ids),
+                Order.status.notin_([OrderStatus.DELIVERED, OrderStatus.CANCELLED])
+            )
+        ).group_by(Order.deliveryUserId)
+        active_res = await db.execute(active_stmt)
+        for d_uid, count_val in active_res.all():
+            active_counts_map[d_uid] = int(count_val or 0)
+
     return {
         "success": True,
         "riders": [
@@ -1311,6 +1329,7 @@ async def get_admin_riders(
                 "phone": r.phone or "",
                 "role": r.role.value if hasattr(r.role, 'value') else str(r.role),
                 "assignedStoreId": r.assignedStoreId,
+                "activeOrdersCount": active_counts_map.get(r.id, 0),
             } for r in riders
         ]
     }

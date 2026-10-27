@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         assignedStoreId: true,
         deliveryOrders: {
           where: {
-            status: { in: ['PACKED', 'SHIPPED'] },
+            status: { notIn: ['DELIVERED', 'CANCELLED'] },
           },
           select: { id: true },
         },

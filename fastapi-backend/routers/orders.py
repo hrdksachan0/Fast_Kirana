@@ -3712,6 +3712,23 @@ async def update_order(
             else:
                 order.deliveryUserId = str(raw_duid).strip()
 
+    # General Rider Assignment Guard: Always update deliveryUserId if explicitly passed in payload
+    if "deliveryUserId" in payload and target_status != OrderStatus.DELIVERED:
+        raw_duid = payload.get("deliveryUserId")
+        if not raw_duid or str(raw_duid).strip().upper() in ["", "UNASSIGNED", "NONE", "NULL"]:
+            order.deliveryUserId = None
+            order.deliveryLat = None
+            order.deliveryLng = None
+        else:
+            order.deliveryUserId = str(raw_duid).strip()
+            if order.deliveryUserId != "store_admin_self":
+                r_stmt = select(User).where(User.id == order.deliveryUserId)
+                r_res = await db.execute(r_stmt)
+                r_user = r_res.scalars().first()
+                if r_user and r_user.liveLat is not None and r_user.liveLng is not None:
+                    order.deliveryLat = float(r_user.liveLat)
+                    order.deliveryLng = float(r_user.liveLng)
+
     # Sibling synchronization (H6 FIX: outlet isolation, never cascade-cancel sibling)
     is_explicit_all = payload.get("scope") == "ALL" or payload.get("updateCombined") is True
     is_customer_cancel = is_owner and target_status == OrderStatus.CANCELLED

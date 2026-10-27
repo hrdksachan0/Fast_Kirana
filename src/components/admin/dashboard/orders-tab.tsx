@@ -67,29 +67,26 @@ export function OrdersTab({
   const [storeRiders, setStoreRiders] = React.useState<any[]>([])
   const [assigningRiderOrderId, setAssigningRiderOrderId] = React.useState<string | null>(null)
 
-  React.useEffect(() => {
-    let isMounted = true
-    const fetchRiders = async () => {
-      try {
-        const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-        const res = await fetch(`${apiUrl()}/api/admin/riders${storeParam}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (isMounted && Array.isArray(data.riders)) {
-            setStoreRiders(data.riders)
-          }
+  const fetchRiders = React.useCallback(async () => {
+    try {
+      const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
+      const res = await fetch(`${apiUrl()}/api/admin/riders${storeParam}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data.riders)) {
+          setStoreRiders(data.riders)
         }
-      } catch (e) {
-        console.warn('Failed to load store riders:', e)
       }
-    }
-    fetchRiders()
-    const interval = setInterval(fetchRiders, 15000)
-    return () => {
-      isMounted = false
-      clearInterval(interval)
+    } catch (e) {
+      console.warn('Failed to load store riders:', e)
     }
   }, [storeId])
+
+  React.useEffect(() => {
+    fetchRiders()
+    const interval = setInterval(fetchRiders, 15000)
+    return () => clearInterval(interval)
+  }, [fetchRiders])
 
   const handleAssignRider = async (order: any, riderId: string) => {
     setAssigningRiderOrderId(order.id)
@@ -97,10 +94,10 @@ export function OrdersTab({
       const selectedRider = storeRiders.find((r) => r.id === riderId)
       const riderName = selectedRider?.name || 'Rider'
 
-      // Preserve status: if unpicked (PENDING/CONFIRMED), mark PACKED so rider sees Ready for Pickup.
+      // If unpicked (ADMIN_PENDING / PENDING / CONFIRMED / PROCESSING), mark PACKED so rider sees Ready for Pickup.
       // If already PACKED or SHIPPED, preserve the status!
       const targetStatus = riderId
-        ? (order.status === 'SHIPPED' ? 'SHIPPED' : (order.status === 'PENDING' || order.status === 'CONFIRMED' ? 'PACKED' : order.status))
+        ? (order.status === 'SHIPPED' ? 'SHIPPED' : (['ADMIN_PENDING', 'PENDING', 'CONFIRMED', 'PROCESSING'].includes(order.status) ? 'PACKED' : order.status))
         : order.status
 
       const res = await fetch(`${apiUrl()}/api/orders/${order.id}`, {
@@ -130,6 +127,7 @@ export function OrdersTab({
           })
         }
         onUpdateOrderStatus(order.id, targetStatus)
+        fetchRiders()
         toast.success(
           riderId
             ? `🛵 ${riderName} assigned to Order #${order.readableId || order.id.slice(0, 8)} (${targetStatus === 'SHIPPED' ? 'Out for Delivery' : 'Ready for Pickup'})!`
@@ -1251,12 +1249,15 @@ export function OrdersTab({
                                   }`}
                                   title="1-click assign or reassign rider"
                                 >
-                                  <option value="">🛵 Unassigned (Assign Rider...)</option>
-                                  {storeRiders.map((r) => (
-                                    <option key={r.id} value={r.id}>
-                                      🛵 {r.name} ({r.activeOrdersCount || 0} active) · {r.activeOrdersCount === 0 ? '🟢 Free' : '🟡 Busy'}
-                                    </option>
-                                  ))}
+                                  <option value="">🛵 Assign Rider...</option>
+                                  {storeRiders.map((r) => {
+                                    const count = Number(r.activeOrdersCount || 0)
+                                    return (
+                                      <option key={r.id} value={r.id}>
+                                        🛵 {r.name} ({count} active) · {count === 0 ? '🟢 Free' : '🟡 Busy'}
+                                      </option>
+                                    )
+                                  })}
                                 </select>
                                 {(o.deliveryUser?.phone || o.deliveryBoyPhone) && (
                                   <a
