@@ -526,7 +526,8 @@ async def get_sales_reports(
                    COALESCE(oi."isRefunded", false) as "isRefunded",
                    CASE WHEN p.id IS NOT NULL AND p."restaurantId" IS NULL THEN true ELSE false END as "isGroceryProduct",
                    p."readableId" as "readableId",
-                   p.stock as "stock"
+                   p.stock as "stock",
+                   p.unit as "unit"
             FROM order_items oi
             JOIN orders o ON oi."orderId" = o.id
             LEFT JOIN products p ON oi."productId" = p.id
@@ -758,19 +759,44 @@ async def get_sales_reports(
                 category_data[target_category_name]["profit"] += profit
                 category_data[target_category_name]["quantity"] += int(item.get("quantity") or 1)
 
-                # Robust Variant-Aware Product aggregation
-                resolved_variant = (item.get("selectedVariant") or "").strip()
+                # Smart Variant & Unit-Aware Product aggregation
+                raw_variant = (item.get("selectedVariant") or "").strip()
                 item_name = (item.get("name") or "Unnamed Product").strip()
-                if not resolved_variant and item_name:
-                    m = re.search(r'[\(\[]([^\)\]]+)[\)\]]', item_name)
-                    if m:
-                        resolved_variant = m.group(1).strip()
+                prod_unit = (item.get("unit") or "").strip()
 
-                base_name = re.sub(r'\s*[\(\[][^\)\]]*[\)\]]\s*$', '', item_name).strip()
-                display_name = (
-                    item_name if not resolved_variant or (resolved_variant.lower() in item_name.lower())
-                    else f"{base_name} ({resolved_variant})"
-                )
+                # Check if product name has a parenthetical unit/size (e.g., "500 g", "1 kg", "250 ml", "1 pc")
+                # Distinguish from Hindi/English descriptors like (Atta), (Sabun), (Toast), (Oil), (Cumin Seeds)
+                bracket_val = ""
+                m = re.search(r'[\(\[]([^\)\]]+)[\)\]]', item_name)
+                if m:
+                    candidate = m.group(1).strip()
+                    if re.search(r'\b(\d+|half|full|serving|pc|pcs|kg|g|gm|gms|ml|l|ltr|pack)\b', candidate, re.IGNORECASE):
+                        bracket_val = candidate
+
+                # Priority:
+                # 1. Explicit selectedVariant if it contains a measurable unit/pack size
+                # 2. bracket_val if it contains a measurable unit/pack size
+                # 3. prod_unit from product master database (e.g., "100 g", "500 g", "250 g", "1 kg")
+                # 4. Fallback to raw_variant or bracket_val
+                if raw_variant and re.search(r'\b(\d+|half|full|serving|pc|pcs|kg|g|gm|gms|ml|l|ltr|pack)\b', raw_variant, re.IGNORECASE):
+                    resolved_variant = raw_variant
+                elif bracket_val:
+                    resolved_variant = bracket_val
+                elif prod_unit:
+                    resolved_variant = prod_unit
+                elif raw_variant:
+                    resolved_variant = raw_variant
+                else:
+                    resolved_variant = ""
+
+                # Build clean display name with variant
+                if resolved_variant:
+                    if resolved_variant.lower() in item_name.lower():
+                        display_name = item_name
+                    else:
+                        display_name = f"{item_name} ({resolved_variant})"
+                else:
+                    display_name = item_name
 
                 norm_var = re.sub(r'[^a-z0-9]', '', resolved_variant.lower()) if resolved_variant else ''
                 raw_pid = item.get("productId")
