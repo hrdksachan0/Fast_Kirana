@@ -1576,7 +1576,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                   heroAccent = const Color(0xFF0284C7);
                                   heroIcon = Icons.inventory_2_rounded;
                                   statusBadgeText = 'PACKED';
-                                  heroTitle = 'Packed & Ready for Pickup';
+                                  heroTitle = 'Order Packed';
                                   heroSubtitle = riderName.isNotEmpty
                                       ? '$riderName is assigned & picking up package'
                                       : 'Delivery partner is picking up your package';
@@ -1585,14 +1585,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                   heroAccent = const Color(0xFF059669);
                                   heroIcon = Icons.storefront_rounded;
                                   statusBadgeText = 'CONFIRMED';
-                                  heroTitle = 'Order Confirmed & Preparing';
+                                  heroTitle = 'Order Confirmed';
                                   heroSubtitle = 'Store team is packing fresh items';
                                 } else {
                                   // Placed / Pending
                                   heroAccent = const Color(0xFFD97706);
                                   heroIcon = Icons.schedule_rounded;
                                   statusBadgeText = 'PLACED';
-                                  heroTitle = 'Order Placed Successfully';
+                                  heroTitle = 'Order Placed';
                                   heroSubtitle = 'Awaiting store confirmation';
                                 }
 
@@ -1641,22 +1641,20 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Row(
+                                            Wrap(
+                                              crossAxisAlignment: WrapCrossAlignment.center,
+                                              spacing: 8,
+                                              runSpacing: 4,
                                               children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    heroTitle,
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: Responsive.scaledFontSize(context, 15.5),
-                                                      fontWeight: FontWeight.w900,
-                                                      color: const Color(0xFF0F172A),
-                                                      letterSpacing: -0.3,
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
+                                                Text(
+                                                  heroTitle,
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: Responsive.scaledFontSize(context, 15.5),
+                                                    fontWeight: FontWeight.w900,
+                                                    color: const Color(0xFF0F172A),
+                                                    letterSpacing: -0.3,
                                                   ),
                                                 ),
-                                                const SizedBox(width: 6),
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                                                   decoration: BoxDecoration(
@@ -1666,7 +1664,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                                   child: Text(
                                                     statusBadgeText,
                                                     style: GoogleFonts.inter(
-                                                      fontSize: Responsive.scaledFontSize(context, 9),
+                                                      fontSize: Responsive.scaledFontSize(context, 9.5),
                                                       fontWeight: FontWeight.w800,
                                                       color: heroAccent,
                                                       letterSpacing: 0.4,

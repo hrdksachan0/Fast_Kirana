@@ -346,7 +346,7 @@ async def cleanup_abandoned_guests_lifecycle(db: AsyncSession, days: int = 2) ->
         u_res = await db.execute(user_del_stmt)
         summary["deletedUsers"] = u_res.rowcount if hasattr(u_res, "rowcount") else len(target_ids)
         await db.commit()
-        logger.info(f"Cleanup completed: Purged {summary[\"deletedUsers\"]} abandoned guest accounts older than {days} days.")
+        logger.info(f"Cleanup completed: Purged {summary.get('deletedUsers', 0)} abandoned guest accounts older than {days} days.")
     except Exception as e:
         await db.rollback()
         logger.error(f"Error in cleanup_abandoned_guests_lifecycle: {e}")
@@ -429,7 +429,7 @@ async def cleanup_guests_cron(
     summary = await cleanup_abandoned_guests_lifecycle(db, days=days)
     return {
         "success": True,
-        "message": f"Purged {summary.get(\"deletedUsers\", 0)} guest accounts older than {days} days",
+        "message": f"Purged {summary.get('deletedUsers', 0)} guest accounts older than {days} days",
         "summary": summary,
         "timestamp": datetime.utcnow().isoformat()
     }

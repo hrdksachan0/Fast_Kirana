@@ -359,9 +359,14 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            'Pay via cash or UPI QR at your doorstep',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted, fontWeight: FontWeight.w500),
-                            maxLines: 1,
+                            'Cash or UPI QR on delivery',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              color: slateMuted,
+                              fontWeight: FontWeight.w500,
+                              height: 1.25,
+                            ),
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -465,8 +470,13 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                           const SizedBox(height: 3),
                           Text(
                             'Google Pay, PhonePe, Paytm, Cards & UPI',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted, fontWeight: FontWeight.w500),
-                            maxLines: 1,
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              color: slateMuted,
+                              fontWeight: FontWeight.w500,
+                              height: 1.25,
+                            ),
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
