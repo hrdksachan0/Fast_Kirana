@@ -44,7 +44,7 @@ async def get_referral_settings(db: AsyncSession) -> Dict[str, str]:
         "referee_discount": DEFAULT_SETTINGS.get("referral_referee_discount", "50"),
         "min_order_value": DEFAULT_SETTINGS.get("referral_min_order_value", "199"),
         "monthly_cap": DEFAULT_SETTINGS.get("referral_monthly_cap", "1500"),
-        "whatsapp_message": DEFAULT_SETTINGS.get("referral_whatsapp_message", "🛒 FastMinute se grocery order karo aur mere code {CODE} se paao ₹{DISCOUNT} OFF!\n\n📲 Download App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Ya Order karo: https://fastkirana.in"),
+        "whatsapp_message": DEFAULT_SETTINGS.get("referral_whatsapp_message", "🛒 FastMinute se grocery order karo aur mere code {CODE} se paao ₹{DISCOUNT} OFF!\n\n📲 Download FastMinute App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🎁 Referral Code: {CODE}"),
     }
     
     for row in settings_rows:
@@ -62,11 +62,11 @@ async def get_referral_settings(db: AsyncSession) -> Dict[str, str]:
             msg = row.value
             if "Fastkirana" in msg:
                 msg = msg.replace("Fastkirana", "FastMinute")
-            if "play.google.com" not in msg:
+            if "fastkirana.in" in msg or "play.google.com" not in msg:
                 msg = (
                     f"🛒 FastMinute se grocery order karo aur mere code {{CODE}} se paao ₹{{DISCOUNT}} OFF!\n\n"
-                    f"📲 Download App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n"
-                    f"🌐 Ya Order karo: https://fastkirana.in"
+                    f"📲 Download FastMinute App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n"
+                    f"🎁 Referral Code: {{CODE}}"
                 )
             config["whatsapp_message"] = msg
 
@@ -105,22 +105,20 @@ async def get_my_referral_code(
         await db.refresh(user)
 
     config = await get_referral_settings(db)
-    app_link = "https://fastkirana.in"
     play_store_link = "https://play.google.com/store/apps/details?id=com.fastkirana.app"
     discount_val = config.get("referee_discount", "50")
 
     share_text = (
         f"🛒 FastMinute Grocery se order karo aur mere referral code *{user.referralCode}* se paao ₹{discount_val} OFF!\n\n"
-        f"📲 Download Android App:\n{play_store_link}\n\n"
-        f"🌐 Ya Online Order karo: {app_link}\n\n"
-        f"Referral Code: *{user.referralCode}*"
+        f"📲 Download Android App on Play Store:\n{play_store_link}\n\n"
+        f"🎁 Referral Code: *{user.referralCode}*"
     )
 
     return {
         "success": True,
         "referralCode": user.referralCode,
         "shareLink": play_store_link,
-        "webLink": f"{app_link}?ref={user.referralCode}",
+        "webLink": play_store_link,
         "whatsappShareText": share_text,
         "referrerReward": float(config["referrer_reward"]),
         "refereeDiscount": float(config["referee_discount"]),
