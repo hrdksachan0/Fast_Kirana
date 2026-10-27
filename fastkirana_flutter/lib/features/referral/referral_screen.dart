@@ -108,6 +108,24 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
     }
   }
 
+  String _getShareMessage(ReferralInfo info) {
+    final code = info.referralCode;
+    final discount = info.refereeDiscount > 0 ? info.refereeDiscount.toInt() : 50;
+
+    if (info.whatsappShareText.isNotEmpty &&
+        info.whatsappShareText.contains('play.google.com') &&
+        !info.whatsappShareText.contains('Fastkirana')) {
+      return info.whatsappShareText;
+    }
+
+    return '🛒 *FastMinute* se grocery order karo aur mere code *${code}* se paao ₹${discount} OFF!\n\n'
+        '📲 *Download App on Play Store:*\n'
+        'https://play.google.com/store/apps/details?id=com.fastkirana.app\n\n'
+        '🌐 *Ya Web par order karo:*\n'
+        'https://fastkirana.in?ref=${code}\n\n'
+        '🎁 Referral Code: *${code}*';
+  }
+
   @override
   Widget build(BuildContext context) {
     final infoAsync = ref.watch(referralInfoProvider);
@@ -382,7 +400,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          onPressed: () => _shareOnWhatsApp(context, info.whatsappShareText),
+                          onPressed: () => _shareOnWhatsApp(context, _getShareMessage(info)),
                         ),
                       ),
                     ),
@@ -406,7 +424,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          onPressed: () => _shareMore(info.whatsappShareText),
+                          onPressed: () => _shareMore(_getShareMessage(info)),
                         ),
                       ),
                     ),

@@ -44,7 +44,7 @@ async def get_referral_settings(db: AsyncSession) -> Dict[str, str]:
         "referee_discount": DEFAULT_SETTINGS.get("referral_referee_discount", "50"),
         "min_order_value": DEFAULT_SETTINGS.get("referral_min_order_value", "199"),
         "monthly_cap": DEFAULT_SETTINGS.get("referral_monthly_cap", "1500"),
-        "whatsapp_message": DEFAULT_SETTINGS.get("referral_whatsapp_message", "अरे! Fastkirana से ग्रोसरी मँगवाओ और मेरे कोड {CODE} से पाओ ₹{DISCOUNT} की छूट! {LINK}"),
+        "whatsapp_message": DEFAULT_SETTINGS.get("referral_whatsapp_message", "🛒 FastMinute se grocery order karo aur mere code {CODE} se paao ₹{DISCOUNT} OFF!\n\n📲 Download App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Ya Order karo: https://fastkirana.in"),
     }
     
     for row in settings_rows:
@@ -59,7 +59,16 @@ async def get_referral_settings(db: AsyncSession) -> Dict[str, str]:
         elif row.key == "referral_monthly_cap":
             config["monthly_cap"] = row.value
         elif row.key == "referral_whatsapp_message":
-            config["whatsapp_message"] = row.value
+            msg = row.value
+            if "Fastkirana" in msg:
+                msg = msg.replace("Fastkirana", "FastMinute")
+            if "play.google.com" not in msg:
+                msg = (
+                    f"🛒 FastMinute se grocery order karo aur mere code {{CODE}} se paao ₹{{DISCOUNT}} OFF!\n\n"
+                    f"📲 Download App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n"
+                    f"🌐 Ya Order karo: https://fastkirana.in"
+                )
+            config["whatsapp_message"] = msg
 
     return config
 
