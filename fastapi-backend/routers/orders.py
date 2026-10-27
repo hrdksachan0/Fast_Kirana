@@ -1810,7 +1810,37 @@ async def create_order(
             except Exception as idemp_err:
                 logger.warning(f"FastAPI idempotency check error: {idemp_err}")
 
-        wallet_used_amount = float(payload.get("walletAmountUsed") or 0.0)
+        wallet_used_amount = float(
+            payload.get("walletAmountUsed")
+            or payload.get("wallet_amount_used")
+            or payload.get("walletDeduction")
+            or 0.0
+        )
+        if wallet_used_amount <= 0.0 and incoming_cf_order_id:
+            try:
+                from utils.cache import get_cache
+                p_clean = re.sub(r"_r\d+$", "", incoming_cf_order_id)
+                p_intent_obj = await get_cache(f"cf_pending:{incoming_cf_order_id}") or await get_cache(f"cf_pending:{p_clean}")
+                if not p_intent_obj:
+                    from models import IdempotencyRecord
+                    i_res = await db.execute(
+                        select(IdempotencyRecord).where(
+                            IdempotencyRecord.key.in_([f"cf_intent:{incoming_cf_order_id}", f"cf_intent:{p_clean}"])
+                        )
+                    )
+                    i_rec = i_res.scalars().first()
+                    if i_rec and isinstance(i_rec.response, dict):
+                        p_intent_obj = i_rec.response
+                if p_intent_obj and isinstance(p_intent_obj, dict):
+                    wallet_used_amount = float(
+                        (p_intent_obj.get("validated_quote") or p_intent_obj.get("validatedQuote") or {}).get("walletAmountUsed")
+                        or (p_intent_obj.get("validated_quote") or p_intent_obj.get("validatedQuote") or {}).get("wallet_amount_used")
+                        or p_intent_obj.get("walletAmountUsed")
+                        or p_intent_obj.get("wallet_amount_used")
+                        or 0.0
+                    )
+            except Exception:
+                pass
         min_wallet_mov = float(settings_map.get("referral_wallet_redeem_min_order_value", "99"))
         allow_promo_wallet = subtotal >= min_wallet_mov
 

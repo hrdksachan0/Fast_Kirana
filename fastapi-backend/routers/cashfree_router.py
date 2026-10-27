@@ -129,7 +129,11 @@ async def _save_pending_checkout_intent(
         "createdAt": time.time(),
     }
     if validated_quote:
+        w_used = float(validated_quote.get("walletAmountUsed") or validated_quote.get("wallet_amount_used") or 0.0)
         pending_payload["validated_quote"] = validated_quote
+        pending_payload["validatedQuote"] = validated_quote
+        pending_payload["walletAmountUsed"] = w_used
+        pending_payload["wallet_amount_used"] = w_used
         pending_payload["discount"] = float(validated_quote.get("discount", 0.0))
         pending_payload["couponCode"] = validated_quote.get("couponCode")
         pending_payload["deliveryFee"] = float(validated_quote.get("deliveryFee", 0.0))
@@ -1131,6 +1135,44 @@ async def verify_cashfree_payment(
                 if co.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
                     co.status = OrderStatus.ADMIN_PENDING
 
+        # Check if wallet deduction was part of this order and debit if not yet processed
+        if "[WALLET_USED:" not in (order.notes or ""):
+            try:
+                from utils.cache import get_cache
+                p_intent_verify = await get_cache(f"cf_pending:{clean_id}") or await get_cache(f"cf_pending:{sanitized_check_id}")
+                if not p_intent_verify:
+                    from models import IdempotencyRecord
+                    v_stmt = select(IdempotencyRecord).where(
+                        IdempotencyRecord.key.in_([f"cf_intent:{clean_id}", f"cf_intent:{sanitized_check_id}"])
+                    )
+                    v_rec = (await db.execute(v_stmt)).scalars().first()
+                    if v_rec and isinstance(v_rec.response, dict):
+                        p_intent_verify = v_rec.response
+                w_used_verify = float(
+                    (p_intent_verify.get("validated_quote") or p_intent_verify.get("validatedQuote") or {}).get("walletAmountUsed")
+                    or (p_intent_verify.get("validated_quote") or p_intent_verify.get("validatedQuote") or {}).get("wallet_amount_used")
+                    or p_intent_verify.get("walletAmountUsed")
+                    or p_intent_verify.get("wallet_amount_used")
+                    or 0.0
+                ) if p_intent_verify and isinstance(p_intent_verify, dict) else 0.0
+                if w_used_verify > 0 and order.userId and not str(order.userId).startswith("guest_"):
+                    from routers.wallet import debit_customer_wallet
+                    from decimal import Decimal
+                    await debit_customer_wallet(
+                        user_id=order.userId,
+                        amount=Decimal(str(w_used_verify)),
+                        description=f"Wallet deduction for Order #{order.readableId}",
+                        db=db,
+                        metadata={"walletDeduction": w_used_verify, "cfOrderId": sanitized_check_id},
+                        allow_promo=True,
+                    )
+                    wallet_note = f"💳 Wallet Used: ₹{w_used_verify:.2f} | [WALLET_USED:{w_used_verify:.2f}]"
+                    order.notes = f"{order.notes} | {wallet_note}" if order.notes else wallet_note
+                    for co in comb_orders:
+                        co.notes = f"{co.notes} | {wallet_note}" if co.notes else wallet_note
+            except Exception as w_v_err:
+                logger.warning(f"Error debiting wallet on verify for order #{order.readableId}: {w_v_err}")
+
         # Pre-cache payment confirmation in Redis
         try:
             from utils.cache import set_cache
@@ -1422,11 +1464,25 @@ async def auto_recover_unplaced_cashfree_order(
         order_amount = float(order_data.get("order_amount") or (pending_data.get("amount") if pending_data else 0.0) or (payment_data.get("payment_amount") or 0.0))
 
         # 3. Find user in database
-        u_stmt = select(User).where(User.phone == clean_phone)
-        u_res = await db.execute(u_stmt)
-        user = u_res.scalars().first()
+        # 3a. Prefer the authenticated user who initiated this checkout intent
+        authenticated_user_id = pending_data.get("userId") if pending_data and not str(pending_data.get("userId")).startswith("guest_") else None
+        user = None
+        if authenticated_user_id:
+            u_stmt = select(User).where(User.id == authenticated_user_id)
+            user = (await db.execute(u_stmt)).scalars().first()
 
-        user_id = user.id if user else (pending_data.get("userId") if pending_data and not str(pending_data.get("userId")).startswith("guest_") else None)
+        # 3b. Fallback to phone lookup (supporting 10-digit, +91, and suffix match)
+        if not user:
+            u_stmt = select(User).where(
+                or_(
+                    User.phone == clean_phone,
+                    User.phone == f"+91{clean_phone}",
+                    User.phone.endswith(clean_phone)
+                )
+            ).order_by(User.createdAt.asc())
+            user = (await db.execute(u_stmt)).scalars().first()
+
+        user_id = user.id if user else authenticated_user_id
         if not user_id:
             # Create user if missing
             user_id = f"usr_{uuid.uuid4().hex[:16]}"
@@ -1434,7 +1490,7 @@ async def auto_recover_unplaced_cashfree_order(
                 id=user_id,
                 name=customer_name,
                 email=f"{clean_phone}@fastkirana.in",
-                phone=clean_phone,
+                phone=f"+91{clean_phone}",
                 role="USER"
             )
             db.add(user)
@@ -1780,7 +1836,7 @@ async def auto_recover_unplaced_cashfree_order(
                     deliveryMethod=recovered_delivery_method,
                     isB2B=False,
                     shopName="FastKirana Grocery",
-                    shopPhone="+918112849854",
+                    shopPhone="9450358388",
                     storeId=recovered_store_id,
                     couponCode=recovered_coupon,
                     createdAt=datetime.utcnow(),
@@ -1837,7 +1893,7 @@ async def auto_recover_unplaced_cashfree_order(
                     deliveryMethod=recovered_delivery_method,
                     isB2B=False,
                     shopName=r_shop,
-                    shopPhone="+918112849854",
+                    shopPhone="9450358388",
                     storeId=recovered_store_id,
                     couponCode=recovered_coupon,
                     createdAt=datetime.utcnow(),
@@ -1891,7 +1947,7 @@ async def auto_recover_unplaced_cashfree_order(
                 deliveryMethod=recovered_delivery_method,
                 isB2B=False,
                 shopName=target_shop_name,
-                shopPhone="+918112849854",
+                shopPhone="9450358388",
                 storeId=recovered_store_id,
                 couponCode=recovered_coupon,
                 createdAt=datetime.utcnow(),
@@ -1912,10 +1968,25 @@ async def auto_recover_unplaced_cashfree_order(
 
         # If wallet deduction was part of this order, debit user's wallet
         recovered_wallet_used = float(
-            (pending_data.get("validatedQuote") or {}).get("walletAmountUsed")
+            (pending_data.get("validated_quote") or pending_data.get("validatedQuote") or {}).get("walletAmountUsed")
+            or (pending_data.get("validated_quote") or pending_data.get("validatedQuote") or {}).get("wallet_amount_used")
             or pending_data.get("walletAmountUsed")
+            or pending_data.get("wallet_amount_used")
             or 0.0
         ) if pending_data else 0.0
+
+        # Defensive fallback: If pending_data did not extract wallet amount, check gross total vs gateway paid amount
+        if recovered_wallet_used == 0.0 and user_id and not str(user_id).startswith("guest_"):
+            gross_total = max(0.0, round(calculated_subtotal - recovered_discount + recovered_delivery_fee + order_misc_fee, 2))
+            diff = round(gross_total - order_amount, 2)
+            if diff >= 1.0:
+                try:
+                    from routers.wallet import get_or_create_wallet
+                    w_obj = await get_or_create_wallet(user_id, db)
+                    if (float(w_obj.balance or 0) + float(w_obj.promoBalance or 0)) >= diff:
+                        recovered_wallet_used = diff
+                except Exception:
+                    pass
 
         if recovered_wallet_used > 0 and user_id and not str(user_id).startswith("guest_"):
             try:
@@ -1929,8 +2000,9 @@ async def auto_recover_unplaced_cashfree_order(
                     metadata={"walletDeduction": recovered_wallet_used, "cfOrderId": clean_cf_id},
                     allow_promo=True,
                 )
+                wallet_note = f"💳 Wallet Used: ₹{recovered_wallet_used:.2f} | [WALLET_USED:{recovered_wallet_used:.2f}]"
                 for co in created_orders:
-                    co["order"].notes = f"{co['order'].notes} | [WALLET_USED:{recovered_wallet_used:.2f}]"
+                    co["order"].notes = f"{co['order'].notes} | {wallet_note}" if co["order"].notes else wallet_note
             except Exception as w_err:
                 logger.warning(f"Error debiting wallet on auto-recover for user {user_id}: {w_err}")
 
@@ -2389,6 +2461,44 @@ async def cashfree_webhook(
                         co.notes = f"{co.notes} | {cf_note}" if co.notes else cf_note
                     if co.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
                         co.status = OrderStatus.ADMIN_PENDING
+
+            # Check if wallet deduction was part of this order and debit if not yet processed
+            if "[WALLET_USED:" not in (order.notes or ""):
+                try:
+                    from utils.cache import get_cache
+                    p_intent_wh = await get_cache(f"cf_pending:{clean_id}") or await get_cache(f"cf_pending:{cf_order_id}")
+                    if not p_intent_wh:
+                        from models import IdempotencyRecord
+                        wh_stmt = select(IdempotencyRecord).where(
+                            IdempotencyRecord.key.in_([f"cf_intent:{clean_id}", f"cf_intent:{cf_order_id}"])
+                        )
+                        wh_rec = (await db.execute(wh_stmt)).scalars().first()
+                        if wh_rec and isinstance(wh_rec.response, dict):
+                            p_intent_wh = wh_rec.response
+                    w_used_wh = float(
+                        (p_intent_wh.get("validated_quote") or p_intent_wh.get("validatedQuote") or {}).get("walletAmountUsed")
+                        or (p_intent_wh.get("validated_quote") or p_intent_wh.get("validatedQuote") or {}).get("wallet_amount_used")
+                        or p_intent_wh.get("walletAmountUsed")
+                        or p_intent_wh.get("wallet_amount_used")
+                        or 0.0
+                    ) if p_intent_wh and isinstance(p_intent_wh, dict) else 0.0
+                    if w_used_wh > 0 and order.userId and not str(order.userId).startswith("guest_"):
+                        from routers.wallet import debit_customer_wallet
+                        from decimal import Decimal
+                        await debit_customer_wallet(
+                            user_id=order.userId,
+                            amount=Decimal(str(w_used_wh)),
+                            description=f"Wallet deduction for Order #{order.readableId}",
+                            db=db,
+                            metadata={"walletDeduction": w_used_wh, "cfOrderId": str(cf_order_id)},
+                            allow_promo=True,
+                        )
+                        wallet_note = f"💳 Wallet Used: ₹{w_used_wh:.2f} | [WALLET_USED:{w_used_wh:.2f}]"
+                        order.notes = f"{order.notes} | {wallet_note}" if order.notes else wallet_note
+                        for co in comb_orders:
+                            co.notes = f"{co.notes} | {wallet_note}" if co.notes else wallet_note
+                except Exception as w_wh_err:
+                    logger.warning(f"Error debiting wallet on webhook for order #{order.readableId}: {w_wh_err}")
 
             # ── DISTRIBUTED ATOMIC DEDUPLICATION GUARD: Ensure alerts are sent EXACTLY ONCE ──
             order_key = str(order.combinedId or order.id)
