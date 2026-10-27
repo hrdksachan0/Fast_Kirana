@@ -524,7 +524,9 @@ async def get_sales_reports(
                    o."orderType"::text as "orderType",
                    COALESCE(oi."refundAmount", 0)::float as "refundAmount",
                    COALESCE(oi."isRefunded", false) as "isRefunded",
-                   CASE WHEN p.id IS NOT NULL AND p."restaurantId" IS NULL THEN true ELSE false END as "isGroceryProduct"
+                   CASE WHEN p.id IS NOT NULL AND p."restaurantId" IS NULL THEN true ELSE false END as "isGroceryProduct",
+                   p."readableId" as "readableId",
+                   p.stock as "stock"
             FROM order_items oi
             JOIN orders o ON oi."orderId" = o.id
             LEFT JOIN products p ON oi."productId" = p.id
@@ -672,6 +674,7 @@ async def get_sales_reports(
 
         category_data = {}
         product_data = {}
+        daily_product_data = {}
 
         delivery_orders_count = 0
         delivery_sales = 0.0
@@ -755,25 +758,75 @@ async def get_sales_reports(
                 category_data[target_category_name]["profit"] += profit
                 category_data[target_category_name]["quantity"] += int(item.get("quantity") or 1)
 
-                # Product aggregation
-                p_id = item.get("productId") or f"manual_{re.sub(r'[^a-z0-9]', '_', (item.get('name') or 'item').lower())}"
+                # Robust Variant-Aware Product aggregation
+                resolved_variant = (item.get("selectedVariant") or "").strip()
+                item_name = (item.get("name") or "Unnamed Product").strip()
+                if not resolved_variant and item_name:
+                    m = re.search(r'[\(\[]([^\)\]]+)[\)\]]', item_name)
+                    if m:
+                        resolved_variant = m.group(1).strip()
+
+                base_name = re.sub(r'\s*[\(\[][^\)\]]*[\)\]]\s*$', '', item_name).strip()
+                display_name = (
+                    item_name if not resolved_variant or (resolved_variant.lower() in item_name.lower())
+                    else f"{base_name} ({resolved_variant})"
+                )
+
+                norm_var = re.sub(r'[^a-z0-9]', '', resolved_variant.lower()) if resolved_variant else ''
+                raw_pid = item.get("productId")
+                if raw_pid:
+                    p_id = f"{raw_pid}_{norm_var}" if norm_var else raw_pid
+                else:
+                    p_id = f"manual_{re.sub(r'[^a-z0-9]', '_', display_name.lower())}"
+
                 if p_id not in product_data:
                     product_data[p_id] = {
                         "productId": p_id,
-                        "name": item.get("name") or "Unnamed Product",
+                        "baseProductId": raw_pid,
+                        "readableId": item.get("readableId"),
+                        "stock": item.get("stock"),
+                        "name": display_name,
+                        "variantName": resolved_variant or None,
                         "mrp": float(item.get("mrp") or item.get("price") or 0.0),
                         "price": float(item.get("price") or 0.0),
                         "costPrice": float(item.get("costPrice") or 0.0),
                         "quantity": 0,
                         "sales": 0.0,
+                        "totalCost": 0.0,
                         "profit": 0.0,
                         "categoryName": target_category_name,
-                        "vendor": item.get("vendor") or "Direct / FastKirana",
+                        "vendor": item.get("vendor") or "Direct / FastMinute",
                         "type": target_type
                     }
                 product_data[p_id]["quantity"] += int(item.get("quantity") or 1)
                 product_data[p_id]["sales"] += rev
+                product_data[p_id]["totalCost"] += cost
                 product_data[p_id]["profit"] += profit
+
+                # Date-wise product tracking for ledger & Excel
+                daily_prod_key = f"{date_str}__{p_id}"
+                if daily_prod_key not in daily_product_data:
+                    daily_product_data[daily_prod_key] = {
+                        "date": date_str,
+                        "productId": p_id,
+                        "baseProductId": raw_pid,
+                        "name": display_name,
+                        "variantName": resolved_variant or None,
+                        "categoryName": target_category_name,
+                        "vendor": item.get("vendor") or "Direct / FastMinute",
+                        "type": target_type,
+                        "quantity": int(item.get("quantity") or 1),
+                        "price": float(item.get("price") or 0.0),
+                        "costPrice": float(item.get("costPrice") or 0.0),
+                        "totalCost": cost,
+                        "totalSales": rev,
+                        "profit": profit
+                    }
+                else:
+                    daily_product_data[daily_prod_key]["quantity"] += int(item.get("quantity") or 1)
+                    daily_product_data[daily_prod_key]["totalSales"] += rev
+                    daily_product_data[daily_prod_key]["totalCost"] += cost
+                    daily_product_data[daily_prod_key]["profit"] += profit
 
             order_profit = float(order.total or 0.0) - order_cost
 
@@ -805,6 +858,7 @@ async def get_sales_reports(
         category_list = sorted(list(category_data.values()), key=lambda x: x["sales"], reverse=True)
         # Return 100% complete product list without arbitrary cutoff (prevents lower revenue items from disappearing)
         product_list = sorted(list(product_data.values()), key=lambda x: x["sales"], reverse=True)
+        daily_product_list = sorted(list(daily_product_data.values()), key=lambda x: (x["date"], x["totalSales"]), reverse=True)
 
         average_order_value = total_rev / total_orders if total_orders > 0 else 0.0
         profit_margin = (total_profit / total_rev) * 100.0 if total_rev > 0 else 0.0
@@ -841,6 +895,7 @@ async def get_sales_reports(
                 }
             },
             "dailySales": daily_list,
+            "dailyProductSales": daily_product_list,
             "categorySales": category_list,
             "topProducts": product_list,
             "missingCostProducts": list(missing_cost_products_map.values())
