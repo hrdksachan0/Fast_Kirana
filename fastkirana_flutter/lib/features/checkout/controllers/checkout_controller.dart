@@ -840,9 +840,14 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final grandTotalBeforeWallet = (subtotal + deliveryFee + packagingFee + _tipAmount - _discountAmount).clamp(0.0, 999999.0);
 
     final walletState = ref.read(walletNotifierProvider);
-    final double walletUsable = walletState.totalUsable;
-    const double minWalletOrderValue = 199.0;
-    final bool isEligibleForWallet = subtotal >= minWalletOrderValue;
+    final double realCash = walletState.balance;
+    final double promoCash = walletState.promoBalance;
+    const double minPromoOrderValue = 199.0;
+    final bool canUsePromo = subtotal >= minPromoOrderValue;
+    // Deposited real cash (Cashfree/refunds) has ZERO minimum order value.
+    // Promotional/referral bonus cash unlocks when subtotal >= ₹199.
+    final double walletUsable = realCash + (canUsePromo ? promoCash : 0.0);
+    final bool isEligibleForWallet = walletUsable > 0;
     final double walletAmountUsed = (state.useWalletBalance && isEligibleForWallet)
         ? (walletUsable >= grandTotalBeforeWallet ? grandTotalBeforeWallet : walletUsable)
         : 0.0;
@@ -1334,9 +1339,14 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           }).toList();
 
     final walletState = ref.read(walletNotifierProvider);
-    final double walletUsable = walletState.totalUsable;
-    const double minWalletOrderValue = 199.0;
-    final bool isEligibleForWallet = subtotal >= minWalletOrderValue;
+    final double realCash = walletState.balance;
+    final double promoCash = walletState.promoBalance;
+    const double minPromoOrderValue = 199.0;
+    final bool canUsePromo = subtotal >= minPromoOrderValue;
+    // Deposited real cash (Cashfree/refunds) has ZERO minimum order value.
+    // Promotional/referral bonus cash unlocks when subtotal >= ₹199.
+    final double walletUsable = realCash + (canUsePromo ? promoCash : 0.0);
+    final bool isEligibleForWallet = walletUsable > 0;
     final double walletAmountUsed = (state.useWalletBalance && isEligibleForWallet)
         ? (walletUsable >= grandTotalBeforeWallet ? grandTotalBeforeWallet : walletUsable)
         : 0.0;

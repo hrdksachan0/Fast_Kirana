@@ -155,6 +155,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       } else {
         Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
       }
+
+      // If app was launched from a notification tap or deep link while terminated, navigate to it after /home mounts
+      if (NotificationService.pendingDeepLinkUrl != null) {
+        final targetLink = NotificationService.pendingDeepLinkUrl!;
+        NotificationService.pendingDeepLinkUrl = null;
+        Future.delayed(const Duration(milliseconds: 350), () {
+          NotificationService.navigateToLink(targetLink);
+        });
+      }
     } catch (e) {
       debugPrint('Splash navigation error: $e');
       if (mounted) {

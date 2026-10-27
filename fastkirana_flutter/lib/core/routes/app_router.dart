@@ -25,6 +25,8 @@ import '../widgets/contextual_brand_transition_screen.dart';
 import '../../features/offline/offline_zero_signal_screen.dart';
 import '../../features/wallet/wallet_screen.dart';
 import '../../features/referral/referral_screen.dart';
+import '../../data/models/category.dart';
+import '../../features/categories/category_products_screen.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -58,6 +60,30 @@ class AppRouter {
       final orderId = orderDetailMatch.group(1) ?? '';
       if (orderId.isNotEmpty && orderId != 'track' && orderId != 'success') {
         return FadeSlideRoute(page: OrderTrackingScreen(orderId: orderId));
+      }
+    }
+
+    // Handle deep links like /category/<slug> or /categories/<slug>
+    final categoryMatch = RegExp(r'^/(?:categories|category)/([^/?#]+)/?$').firstMatch(cleanPath);
+    if (categoryMatch != null) {
+      final slug = categoryMatch.group(1) ?? '';
+      if (slug.isNotEmpty) {
+        final catName = slug.replaceAll('-', ' ');
+        final titleCase = catName.split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
+        return FadeSlideRoute(
+          page: CategoryProductsScreen(
+            category: Category(id: slug, name: titleCase, slug: slug),
+          ),
+        );
+      }
+    }
+
+    // Handle deep links like /product/<slug> or /products/<slug>
+    final productMatch = RegExp(r'^/(?:products|product)/([^/?#]+)/?$').firstMatch(cleanPath);
+    if (productMatch != null) {
+      final slug = productMatch.group(1) ?? '';
+      if (slug.isNotEmpty && slug != 'track') {
+        return FadeScaleRoute(page: SearchScreen(initialQuery: slug.replaceAll('-', ' ')));
       }
     }
 

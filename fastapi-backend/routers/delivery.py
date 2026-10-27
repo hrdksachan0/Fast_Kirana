@@ -522,7 +522,12 @@ async def get_rider_delivery_location(
     stmt = select(Order).options(
         selectinload(Order.address),
         selectinload(Order.restaurant)
-    ).where(or_(Order.id == clean_id, Order.readableId == clean_id))
+    ).where(or_(
+        Order.id == clean_id,
+        Order.readableId == clean_id,
+        Order.readableId.like(f"{clean_id}-%"),
+        Order.id.like(f"%{clean_id}%")
+    )).order_by(Order.createdAt.asc())
     res = await db.execute(stmt)
     order = res.scalars().first()
 
@@ -534,7 +539,17 @@ async def get_rider_delivery_location(
     cust_lat = float(order.address.lat) if (order.address and order.address.lat is not None) else rest_lat
     cust_lng = float(order.address.lng) if (order.address and order.address.lng is not None) else rest_lng
 
-    if not order.deliveryUserId:
+    target_delivery_uid = order.deliveryUserId
+    if not target_delivery_uid and order.combinedId:
+        comb_uid_res = await db.execute(
+            select(Order.deliveryUserId).where(
+                Order.combinedId == order.combinedId,
+                Order.deliveryUserId.isnot(None)
+            )
+        )
+        target_delivery_uid = comb_uid_res.scalars().first()
+
+    if not target_delivery_uid:
         return {
             "rider": None,
             "restaurant": {"lat": rest_lat, "lng": rest_lng},
@@ -544,7 +559,7 @@ async def get_rider_delivery_location(
         }
 
     # Fetch active coordinates from User model
-    r_stmt = select(User).where(User.id == order.deliveryUserId)
+    r_stmt = select(User).where(User.id == target_delivery_uid)
     r_res = await db.execute(r_stmt)
     rider = r_res.scalars().first()
 
@@ -815,7 +830,12 @@ async def _dispatch_nearest_rider_internal(order_id: str, db: AsyncSession, max_
     stmt = select(Order).options(
         selectinload(Order.restaurant),
         selectinload(Order.address)
-    ).where(or_(Order.id == clean_id, Order.readableId == clean_id))
+    ).where(or_(
+        Order.id == clean_id,
+        Order.readableId == clean_id,
+        Order.readableId.like(f"{clean_id}-%"),
+        Order.id.like(f"%{clean_id}%")
+    )).order_by(Order.createdAt.asc())
     res = await db.execute(stmt)
     order = res.scalars().first()
 

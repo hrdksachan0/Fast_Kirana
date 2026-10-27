@@ -106,7 +106,12 @@ class DeepLinkService {
 
             // Category browsing: /category/{slug} or /categories
             if (firstSegment == 'category' || firstSegment == 'categories') {
-              _navigateToProducts();
+              final slug = pathSegments.length >= 2 ? pathSegments[1] : '';
+              if (slug.isNotEmpty) {
+                AppRouter.navigatorKey.currentState?.pushNamed('/category/$slug');
+              } else {
+                AppRouter.navigatorKey.currentState?.pushNamed('/categories');
+              }
               return;
             }
 

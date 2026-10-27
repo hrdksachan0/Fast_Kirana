@@ -123,19 +123,14 @@ class TrackingStatusStepper extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: (isDelivered ? const Color(0xFF00B140) : const Color(0xFF2563EB)).withValues(alpha: 0.28),
+          color: const Color(0xFFE2E8F0),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: (isDelivered ? const Color(0xFF00B140) : const Color(0xFF2563EB)).withValues(alpha: 0.06),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
             blurRadius: 16,
             offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -145,30 +140,37 @@ class TrackingStatusStepper extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Live Order Status',
-                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark),
-                  ),
-                  if (!isDelivered && order?.status == OrderStatus.shipped && (etaText.isNotEmpty || distanceText.isNotEmpty))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        [
-                          if (etaText.isNotEmpty) 'Estimated: $etaText',
-                          if (distanceText.isNotEmpty) distanceText,
-                        ].join(' • '),
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF00A344),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Live Order Status',
+                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (!isDelivered && order?.status == OrderStatus.shipped && (etaText.isNotEmpty || distanceText.isNotEmpty))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          [
+                            if (etaText.isNotEmpty) 'Estimated: $etaText',
+                            if (distanceText.isNotEmpty) distanceText,
+                          ].join(' • '),
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF16A34A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(

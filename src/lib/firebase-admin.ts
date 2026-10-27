@@ -112,6 +112,7 @@ export function buildOptimizedFcmPayload(opts: OptimizedFcmPayloadOptions): any 
         visibility: 'PUBLIC' as const,
         priority: 'HIGH' as const,
         clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+        tag: opts.collapseKey || 'fastminute_broadcast',
         ...(opts.imageUrl ? { imageUrl: opts.imageUrl } : {}),
       },
     },

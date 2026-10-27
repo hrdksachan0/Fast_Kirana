@@ -1812,11 +1812,21 @@ async def create_order(
 
         wallet_used_amount = float(payload.get("walletAmountUsed") or 0.0)
         min_wallet_mov = float(settings_map.get("referral_min_order_value", "199"))
-        if (payment_method == "WALLET" or wallet_used_amount > 0) and subtotal < min_wallet_mov:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Minimum order of ₹{int(min_wallet_mov)} is required to use FastMinute Wallet balance"
-            )
+        allow_promo_wallet = subtotal >= min_wallet_mov
+
+        if payment_method == "WALLET" or wallet_used_amount > 0:
+            from routers.wallet import get_or_create_wallet
+            cust_wallet = await get_or_create_wallet(user_id, db)
+            real_cash = float(cust_wallet.balance or 0.0)
+            target_wallet_debit = final_total if payment_method == "WALLET" else min(wallet_used_amount, final_total)
+
+            # Real cash deposited via Cashfree or refunds has ZERO minimum order value!
+            # Only promo/referral bonus balance requires subtotal >= min_wallet_mov.
+            if not allow_promo_wallet and target_wallet_debit > (real_cash + 0.01):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Minimum order of ₹{int(min_wallet_mov)} is required to use referral/promotional bonus. Available real cash: ₹{real_cash:.2f}"
+                )
 
         expected_online_total = max(0.0, round(final_total - wallet_used_amount, 2))
 
@@ -1893,7 +1903,8 @@ async def create_order(
                 amount=actual_wallet_debit,
                 description=f"Paid for order #{readable_id} via FastMinute Wallet",
                 db=db,
-                metadata={"finalTotal": final_total, "readableId": readable_id}
+                metadata={"finalTotal": final_total, "readableId": readable_id},
+                allow_promo=allow_promo_wallet,
             )
             is_online_paid = True
         elif wallet_used_amount > 0:
@@ -1905,7 +1916,8 @@ async def create_order(
                 amount=actual_wallet_debit,
                 description=f"Wallet deduction for Order #{readable_id}",
                 db=db,
-                metadata={"walletDeduction": float(actual_wallet_debit), "readableId": readable_id}
+                metadata={"walletDeduction": float(actual_wallet_debit), "readableId": readable_id},
+                allow_promo=allow_promo_wallet,
             )
             logger.info(f"Deducted ₹{actual_wallet_debit} from wallet for user {user_id}")
 
@@ -2940,11 +2952,19 @@ async def get_order_details(
     if cache_key in _order_details_cache and (now - _order_details_cache_time.get(cache_key, 0)) < ORDER_DETAILS_CACHE_TTL:
         return _order_details_cache[cache_key]
 
+    clean_id = id.strip().lstrip("#")
     stmt = select(Order).options(
         selectinload(Order.items),
         selectinload(Order.address),
         selectinload(Order.user)
-    ).where(or_(Order.id == id, Order.readableId == id))
+    ).where(or_(
+        Order.id == id,
+        Order.readableId == id,
+        Order.id == clean_id,
+        Order.readableId == clean_id,
+        Order.readableId.like(f"{clean_id}-%"),
+        Order.id.like(f"%{clean_id}%")
+    )).order_by(Order.createdAt.asc())
     res = await db.execute(stmt)
     order = res.scalars().first()
 
@@ -2967,16 +2987,31 @@ async def get_order_details(
         if assigned_store and order.storeId and order.storeId != assigned_store and role not in ["CHEF", "RESTAURANT_OWNER"]:
             raise HTTPException(status_code=403, detail="Forbidden: Order belongs to a different store hub")
 
-    # Fetch delivery executive details
+    # Fetch delivery executive details (checking order and combined siblings)
     delivery_user = None
-    if order.deliveryUserId:
-        rider_stmt = select(User).where(User.id == order.deliveryUserId)
+    rider_lat = None
+    rider_lng = None
+    target_delivery_uid = order.deliveryUserId
+
+    if not target_delivery_uid and order.combinedId:
+        comb_uid_res = await db.execute(
+            select(Order.deliveryUserId).where(
+                Order.combinedId == order.combinedId,
+                Order.deliveryUserId.isnot(None)
+            )
+        )
+        target_delivery_uid = comb_uid_res.scalars().first()
+
+    if target_delivery_uid:
+        rider_stmt = select(User).where(User.id == target_delivery_uid)
         rider_res = await db.execute(rider_stmt)
         rider = rider_res.scalars().first()
         if rider:
             name = rider.name or "FastMinute Delivery Executive"
             phone = rider.phone or "+919696503759"
-            
+            rider_lat = float(rider.liveLat) if rider.liveLat is not None else None
+            rider_lng = float(rider.liveLng) if rider.liveLng is not None else None
+
             # Mask internal Admin details
             if rider.role == Role.ADMIN or name == "Admin":
                 main_rider_stmt = select(User).where(User.role == Role.DELIVERY)
@@ -2985,8 +3020,17 @@ async def get_order_details(
                 if main_rider:
                     name = main_rider.name or "FastMinute Delivery Executive"
                     phone = main_rider.phone or "+919696503759"
-            
-            delivery_user = {"name": name, "phone": phone}
+                    if main_rider.liveLat is not None:
+                        rider_lat = float(main_rider.liveLat)
+                        rider_lng = float(main_rider.liveLng)
+
+            delivery_user = {
+                "id": str(target_delivery_uid),
+                "name": name,
+                "phone": phone,
+                "lat": rider_lat,
+                "lng": rider_lng,
+            }
 
     # Sibling orders formatting for combined order types
     if order.combinedId:
@@ -3078,8 +3122,12 @@ async def get_order_details(
                 "isB2B": bool(order.isB2B),
                 "shopName": order.shopName,
                 "shopPhone": order.shopPhone,
-                "deliveryLat": order.deliveryLat,
-                "deliveryLng": order.deliveryLng,
+                "deliveryLat": rider_lat if rider_lat is not None else order.deliveryLat,
+                "deliveryLng": rider_lng if rider_lng is not None else order.deliveryLng,
+                "deliveryUserId": target_delivery_uid,
+                "deliveryBoyName": delivery_user["name"] if delivery_user else None,
+                "deliveryBoyPhone": delivery_user["phone"] if delivery_user else None,
+                "deliveryUser": delivery_user,
                 "notes": order.notes,
                 "couponCode": order.couponCode,
                 "userName": user_name,
@@ -3158,8 +3206,12 @@ async def get_order_details(
         "isB2B": bool(order.isB2B),
         "shopName": order.shopName,
         "shopPhone": order.shopPhone,
-        "deliveryLat": order.deliveryLat,
-        "deliveryLng": order.deliveryLng,
+        "deliveryLat": rider_lat if rider_lat is not None else order.deliveryLat,
+        "deliveryLng": rider_lng if rider_lng is not None else order.deliveryLng,
+        "deliveryUserId": target_delivery_uid,
+        "deliveryBoyName": delivery_user["name"] if delivery_user else None,
+        "deliveryBoyPhone": delivery_user["phone"] if delivery_user else None,
+        "deliveryUser": delivery_user,
         "notes": order.notes,
         "couponCode": order.couponCode,
         "userName": user_name,

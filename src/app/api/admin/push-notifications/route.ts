@@ -79,51 +79,24 @@ export async function POST(request: NextRequest) {
           ttlSeconds: 86400, // 24 hours
         })
 
-        // Fetch stored mobile device tokens
+        // Count stored mobile devices for audit stats
         const allTokens = await prisma.fcmToken.findMany({ select: { token: true } })
         const uniqueTokens = Array.from(new Set(allTokens.map((t) => t.token)))
 
-        if (uniqueTokens.length > 0) {
-          for (let i = 0; i < uniqueTokens.length; i += 500) {
-            const chunk = uniqueTokens.slice(i, i + 500)
-            const resp = await fcmMessaging.sendEachForMulticast({
-              tokens: chunk,
-              notification: fcmPayload.notification,
-              data: fcmPayload.data,
-              android: fcmPayload.android,
-              apns: fcmPayload.apns,
-            })
-            if (resp) {
-              fcmSuccessCount += resp.successCount || 0
-              fcmFailureCount += resp.failureCount || 0
-              if (resp.responses && resp.responses.length > 0) {
-                await cleanupInvalidTokens(chunk, resp.responses).catch(() => {})
-              }
-            }
-          }
-        }
-
-        // Broadcast to broadcast topics so all app installations (including guest users) receive it
-        const topicPromises = ['all_users', 'ghatampur_alerts'].map((topic) =>
-          fcmMessaging.send({
-            topic,
-            ...fcmPayload,
-          })
-        )
-
-        const topicResults = await Promise.allSettled(topicPromises)
-        let anyTopicFulfilled = false
-        topicResults.forEach((res, idx) => {
-          const topicName = idx === 0 ? 'all_users' : 'ghatampur_alerts'
-          if (res.status === 'fulfilled' && (res as any).value) {
-            anyTopicFulfilled = true
-            console.log(`[FCM Broadcast] Successfully dispatched to topic: ${topicName}`)
-          } else {
-            console.warn(`[FCM Broadcast] Topic dispatch failed for ${topicName}:`, (res as any).reason)
-          }
+        // Broadcast ONCE to the universal 'all_users' topic.
+        // Every installed Flutter app automatically subscribes to 'all_users' upon launch.
+        // Sending strictly to 'all_users' guarantees that each device receives EXACTLY ONE notification,
+        // eliminating the 3x duplication caused by sending to individual tokens + all_users + ghatampur_alerts.
+        const topicResp = await fcmMessaging.send({
+          topic: 'all_users',
+          ...fcmPayload,
         })
-        if (anyTopicFulfilled && fcmSuccessCount === 0) {
-          fcmSuccessCount = 1 // Broadcast topic successfully dispatched to FCM
+
+        if (topicResp) {
+          fcmSuccessCount = Math.max(1, uniqueTokens.length)
+          console.log(`[FCM Broadcast] Successfully dispatched to universal topic 'all_users':`, topicResp)
+        } else {
+          fcmFailureCount = 1
         }
       }
     } catch (fcmErr) {

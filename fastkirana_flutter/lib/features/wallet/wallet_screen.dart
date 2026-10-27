@@ -493,10 +493,23 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
   }
 
   String _cleanTxDescription(String raw, String type) {
-    final trimmed = raw.trim();
+    final trimmed = raw.replaceAll('👛', '').trim();
     final lower = trimmed.toLowerCase();
     if (lower.isEmpty) {
       return type == 'CREDIT' ? 'Wallet Top-up' : 'Wallet Payment';
+    }
+
+    // Extract Order ID if present (e.g. Order #2989, #2989, Order 2989, or #FM-2989)
+    final orderMatch = RegExp(r'(?:order\s*#?|#)([A-Za-z0-9\-]+)', caseSensitive: false).firstMatch(trimmed);
+    final orderId = orderMatch != null ? '#${orderMatch.group(1)}' : '';
+
+    if (lower.contains('refund')) {
+      return orderId.isNotEmpty ? 'Refund • $orderId' : 'Order Refund';
+    }
+    if (lower.contains('wallet deduction') ||
+        lower.contains('payment for order') ||
+        lower.contains('paid for order')) {
+      return orderId.isNotEmpty ? 'Paid for $orderId' : 'Order Payment';
     }
     if (lower.startsWith('wallet top-up') ||
         lower.startsWith('wallet topup') ||
@@ -504,14 +517,14 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
         lower.contains('topup of')) {
       return 'Wallet Top-up';
     }
-    if (lower.contains('referral reward') || lower.contains('referral bonus')) {
-      return 'Referral Bonus';
+    if (lower.contains('referral reward') || lower.contains('referral bonus') || lower.contains('referral')) {
+      return 'Referral Cashback';
     }
     if (lower.contains('cashback')) {
       return 'Cashback Reward';
     }
-    if (lower.contains('order #') || lower.contains('payment for order')) {
-      return trimmed.replaceAll(RegExp(r'payment for order', caseSensitive: false), 'Order').trim();
+    if (orderId.isNotEmpty) {
+      return 'Order $orderId';
     }
     return trimmed;
   }
@@ -1209,9 +1222,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                     fontSize: Responsive.scaledFontSize(context, 13.5),
                                     fontWeight: FontWeight.w700,
                                     color: AppDesignSystem.slate900,
+                                    height: 1.25,
                                   ),
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
+                                  softWrap: true,
                                 ),
                                 const SizedBox(height: 4),
                                 Wrap(

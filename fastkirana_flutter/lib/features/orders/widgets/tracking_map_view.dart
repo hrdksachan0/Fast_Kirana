@@ -36,8 +36,8 @@ class TrackingMapView extends StatelessWidget {
   final OutletLocation? primaryOutlet;
   final OutletLocation? restaurantOutlet;
   final void Function(GoogleMapController controller)? onMapCreated;
-  final VoidCallback onZoomIn;
-  final VoidCallback onZoomOut;
+  final VoidCallback? onZoomIn;
+  final VoidCallback? onZoomOut;
   final VoidCallback onFitBounds;
 
   const TrackingMapView({
@@ -50,34 +50,10 @@ class TrackingMapView extends StatelessWidget {
     this.primaryOutlet,
     this.restaurantOutlet,
     this.onMapCreated,
-    required this.onZoomIn,
-    required this.onZoomOut,
+    this.onZoomIn,
+    this.onZoomOut,
     required this.onFitBounds,
   });
-
-  Widget _buildZoomBtn({required IconData icon, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.95),
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Icon(icon, size: 18, color: const Color(0xFF334155)),
-        ),
-      ),
-    );
-  }
 
   Widget _buildRouteStep({
     required String emoji,
@@ -86,24 +62,31 @@ class TrackingMapView extends StatelessWidget {
     required BuildContext context,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.20), width: 0.8),
+        border: Border.all(color: color.withValues(alpha: 0.20), width: 0.9),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 12.5)),
+          Text(emoji, style: const TextStyle(fontSize: 12)),
           const SizedBox(width: 5),
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: Responsive.scaledFontSize(context, 10.5),
-              fontWeight: FontWeight.w800,
-              color: color,
-              letterSpacing: -0.1,
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: Responsive.isTablet(context) ? 140 : 85,
+            ),
+            child: Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: Responsive.scaledFontSize(context, 10.5),
+                fontWeight: FontWeight.w800,
+                color: color,
+                letterSpacing: -0.1,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -114,7 +97,7 @@ class TrackingMapView extends StatelessWidget {
   Widget _buildArrow() {
     return const Padding(
       padding: EdgeInsets.symmetric(horizontal: 4),
-      child: Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFFCBD5E1)),
+      child: Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFF94A3B8)),
     );
   }
 
@@ -126,29 +109,23 @@ class TrackingMapView extends StatelessWidget {
     return RepaintBoundary(
       child: Column(
         children: [
-          // ── Map Container with Vengeance Specular Border & Adaptive Height ──
+          // ── Map Container with Clean Modern Card Border & Adaptive Height ──
           Container(
             height: Responsive.isTablet(context)
                 ? 380.0
                 : (MediaQuery.sizeOf(context).height * 0.33).clamp(230.0, 310.0),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: const Color(0xFF00B140).withValues(alpha: 0.35),
-                width: 1.4,
+                color: const Color(0xFFE2E8F0),
+                width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF00B140).withValues(alpha: 0.10),
-                  blurRadius: 22,
-                  spreadRadius: -2,
-                  offset: const Offset(0, 6),
-                ),
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -179,7 +156,7 @@ class TrackingMapView extends StatelessWidget {
                   onMapCreated: onMapCreated,
                 ),
 
-                // Top fade gradient for depth
+                // Top fade gradient for clean aesthetic depth
                 Positioned(
                   top: 0,
                   left: 0,
@@ -201,15 +178,16 @@ class TrackingMapView extends StatelessWidget {
                   ),
                 ),
 
-                // Live GPS Badge — top left
+                // Live GPS Badge — top left (Blinkit / Zepto style pill)
                 Positioned(
                   top: 12,
                   left: 12,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
+                      color: Colors.white.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.06),
@@ -229,7 +207,7 @@ class TrackingMapView extends StatelessWidget {
                             color: const Color(0xFF16A34A),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF16A34A).withValues(alpha: 0.4),
+                                color: const Color(0xFF16A34A).withValues(alpha: 0.5),
                                 blurRadius: 4,
                                 spreadRadius: 1,
                               ),
@@ -240,9 +218,9 @@ class TrackingMapView extends StatelessWidget {
                         Text(
                           'Live GPS',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 10),
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF334155),
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF0F172A),
                             letterSpacing: 0.2,
                           ),
                         ),
@@ -251,19 +229,31 @@ class TrackingMapView extends StatelessWidget {
                   ),
                 ),
 
-                // Zoom Controls — bottom right
+                // Sleek Floating Re-center FAB — bottom right (replaces bulky desktop zoom buttons)
                 Positioned(
-                  bottom: 14,
+                  bottom: 12,
                   right: 12,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildZoomBtn(icon: Icons.add_rounded, onTap: onZoomIn),
-                      const SizedBox(height: 6),
-                      _buildZoomBtn(icon: Icons.remove_rounded, onTap: onZoomOut),
-                      const SizedBox(height: 6),
-                      _buildZoomBtn(icon: Icons.fullscreen_rounded, onTap: onFitBounds),
-                    ],
+                  child: GestureDetector(
+                    onTap: onFitBounds,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.10),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.my_location_rounded, size: 20, color: Color(0xFF0F172A)),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -272,25 +262,26 @@ class TrackingMapView extends StatelessWidget {
 
           const SizedBox(height: 8),
 
-          // ── Route Trail Bar ──
+          // ── Route Trail Bar (Fully Responsive, Zero Overflow) ──
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: order?.isCombined == true
-                ? SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    child: Row(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: order?.isCombined == true
+                  ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _buildRouteStep(
@@ -321,52 +312,52 @@ class TrackingMapView extends StatelessWidget {
                           context: context,
                         ),
                       ],
+                    )
+                  : Builder(
+                      builder: (context) {
+                        final rawName = primaryOutlet?.name ?? shopName;
+                        String displayStoreName = rawName;
+                        final lower = displayStoreName.toLowerCase();
+                        if (lower.contains('dark store') || lower.contains('fastkirana') || lower.contains('fastminute')) {
+                          displayStoreName = 'FastMinute';
+                        } else if (lower.contains('a.s') || lower.contains('as ')) {
+                          displayStoreName = 'A.S. Restaurant';
+                        } else if (lower.contains('wedson')) {
+                          displayStoreName = 'Wedson';
+                        } else if (lower.contains('bal udyan') || lower.contains('baludyan')) {
+                          displayStoreName = 'Bal Udyan';
+                        }
+
+                        final isRest = primaryOutlet?.isRestaurant == true;
+
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildRouteStep(
+                              emoji: isRest ? '🍽️' : '🏪',
+                              label: displayStoreName,
+                              color: isRest ? const Color(0xFF7C3AED) : const Color(0xFF15803D),
+                              context: context,
+                            ),
+                            _buildArrow(),
+                            _buildRouteStep(
+                              emoji: '🛵',
+                              label: 'On the Way',
+                              color: const Color(0xFFEA580C),
+                              context: context,
+                            ),
+                            _buildArrow(),
+                            _buildRouteStep(
+                              emoji: '🏠',
+                              label: 'Your Home',
+                              color: const Color(0xFFDC2626),
+                              context: context,
+                            ),
+                          ],
+                        );
+                      },
                     ),
-                  )
-                : Builder(
-                    builder: (context) {
-                      final rawName = primaryOutlet?.name ?? shopName;
-                      String displayStoreName = rawName;
-                      final lower = displayStoreName.toLowerCase();
-                      if (lower.contains('dark store') || lower.contains('fastkirana') || lower.contains('fastminute')) {
-                        displayStoreName = 'FastMinute';
-                      } else if (lower.contains('a.s') || lower.contains('as ')) {
-                        displayStoreName = 'A.S. Restaurant';
-                      } else if (lower.contains('wedson')) {
-                        displayStoreName = 'Wedson';
-                      } else if (lower.contains('bal udyan') || lower.contains('baludyan')) {
-                        displayStoreName = 'Bal Udyan';
-                      }
-
-                      final isRest = primaryOutlet?.isRestaurant == true;
-
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildRouteStep(
-                            emoji: isRest ? '🍽️' : '🏪',
-                            label: displayStoreName,
-                            color: isRest ? const Color(0xFF7C3AED) : const Color(0xFF15803D),
-                            context: context,
-                          ),
-                          _buildArrow(),
-                          _buildRouteStep(
-                            emoji: '🛵',
-                            label: 'On the Way',
-                            color: const Color(0xFFEA580C),
-                            context: context,
-                          ),
-                          _buildArrow(),
-                          _buildRouteStep(
-                            emoji: '🏠',
-                            label: 'Your Home',
-                            color: const Color(0xFFDC2626),
-                            context: context,
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+            ),
           ),
         ],
       ),

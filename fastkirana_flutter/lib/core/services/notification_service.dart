@@ -9,6 +9,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/secure_storage_service.dart';
+import '../routes/app_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 final logger = Logger();
 
@@ -257,7 +259,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         title.toString(),
         body.toString(),
         NotificationDetails(android: androidDetails),
-        payload: data.toString(),
+        payload: (data['url'] ?? data['linkUrl'] ?? data['link'] ?? (cleanOrderId != null ? '/orders/track' : '')).toString(),
       );
     } catch (e) {
       debugPrint("Background notification show error: $e");
@@ -269,6 +271,59 @@ class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
+
+  /// Stored target link for cold-launch from a tapped notification
+  static String? pendingDeepLinkUrl;
+
+  /// Centralized link router for push notification taps and deep links
+  static void navigateToLink(String rawUrl) {
+    if (rawUrl.trim().isEmpty || rawUrl.trim() == '/') return;
+
+    String link = rawUrl.trim();
+
+    // 1. Strip domain if full URL (e.g. https://fastminute.in/category/cleaning -> /category/cleaning)
+    if (link.startsWith('http://') || link.startsWith('https://')) {
+      final uri = Uri.tryParse(link);
+      if (uri != null) {
+        if (uri.host.contains('fastminute.in') || uri.host.contains('fastkirana.in')) {
+          link = uri.path + (uri.hasQuery ? '?${uri.query}' : '');
+        } else {
+          // External web link
+          try {
+            launchUrl(uri, mode: LaunchMode.externalApplication);
+          } catch (_) {}
+          return;
+        }
+      }
+    }
+
+    // 2. Strip custom scheme (e.g. fastminute://category/cleaning -> /category/cleaning)
+    if (link.startsWith('fastminute://') || link.startsWith('fastkirana://')) {
+      final uri = Uri.tryParse(link);
+      if (uri != null) {
+        link = '/${uri.host}${uri.path}';
+      }
+    }
+
+    if (!link.startsWith('/')) {
+      link = '/$link';
+    }
+
+    debugPrint('[NotificationService] Navigating to link: $link');
+
+    final nav = AppRouter.navigatorKey.currentState;
+    if (nav == null) {
+      debugPrint('[NotificationService] Navigator not ready, queued pending link: $link');
+      pendingDeepLinkUrl = link;
+      return;
+    }
+
+    try {
+      nav.pushNamed(link);
+    } catch (e) {
+      debugPrint('[NotificationService] Navigation failed: $e');
+    }
+  }
 
   FirebaseMessaging? get _fcm {
     if (kIsWeb) return null;
@@ -386,6 +441,10 @@ class NotificationService {
         initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse details) {
           logger.d("Notification tapped: ${details.payload}");
+          final payload = details.payload;
+          if (payload != null && payload.trim().isNotEmpty) {
+            NotificationService.navigateToLink(payload.trim());
+          }
         },
       );
 
@@ -394,10 +453,28 @@ class NotificationService {
         _handleForegroundMessage(message);
       });
 
-      // 6. Handle App Opened from Notification
+      // 6. Handle App Opened from Background Notification Tap
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         logger.d("App opened from notification: ${message.data}");
+        final url = message.data['url'] ?? message.data['linkUrl'] ?? message.data['link'];
+        if (url != null && url.toString().trim().isNotEmpty) {
+          NotificationService.navigateToLink(url.toString().trim());
+        }
       });
+
+      // 6.1 Check Cold Launch from Notification (when app was terminated)
+      try {
+        final initialMsg = await _fcm?.getInitialMessage();
+        if (initialMsg != null) {
+          final url = initialMsg.data['url'] ?? initialMsg.data['linkUrl'] ?? initialMsg.data['link'];
+          if (url != null && url.toString().trim().isNotEmpty) {
+            pendingDeepLinkUrl = url.toString().trim();
+            debugPrint('[NotificationService] Stored initial notification link: $pendingDeepLinkUrl');
+          }
+        }
+      } catch (e) {
+        debugPrint('[NotificationService] getInitialMessage error: $e');
+      }
 
       // 7. Auto-save refreshed tokens for re-registration
       FirebaseMessaging.instance.onTokenRefresh.listen((String newToken) async {
@@ -675,7 +752,7 @@ class NotificationService {
           interruptionLevel: InterruptionLevel.timeSensitive,
         ),
       ),
-      payload: message.data.toString(),
+      payload: (message.data['url'] ?? message.data['linkUrl'] ?? message.data['link'] ?? (cleanOrderId != null ? '/orders/track' : '')).toString(),
     );
   }
 

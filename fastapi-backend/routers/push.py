@@ -234,29 +234,11 @@ async def broadcast_admin_push_notification(
     if not title or not body_text:
         raise HTTPException(status_code=400, detail="Title and body are required")
 
-    # Multicast via FCM individual device tokens
+    # Broadcast ONCE to universal 'all_users' topic (every app installation is subscribed).
+    # This eliminates the 3x duplicate notification bug caused by sending to tokens + all_users + ghatampur_alerts.
     success_count = 0
     failure_count = 0
 
-    try:
-        tokens_stmt = select(FcmToken.token)
-        tokens_res = await db.execute(tokens_stmt)
-        tokens = list(set(tokens_res.scalars().all()))
-
-        if tokens:
-            data_dict = {
-                "title": str(title),
-                "body": str(body_text),
-                "url": str(link_url or "/"),
-                "category": "offer"
-            }
-            fcm_res = await send_fcm_notification(tokens, title, body_text, data_dict)
-            success_count = fcm_res.get("sent_count", 0)
-            failure_count = fcm_res.get("failure_count", 0)
-    except Exception as e:
-        logger.error(f"FCM broadcast error: {e}")
-
-    # Broadcast to broadcast topics so all app installations receive it
     try:
         from utils.firebase import send_fcm_topic_notification
         data_dict = {
@@ -265,12 +247,16 @@ async def broadcast_admin_push_notification(
             "url": str(link_url or "/"),
             "category": "offer"
         }
-        await send_fcm_topic_notification("all_users", title, body_text, data_dict)
-        await send_fcm_topic_notification("ghatampur_alerts", title, body_text, data_dict)
-        if success_count == 0:
-            success_count = 1
+        sent = await send_fcm_topic_notification("all_users", title, body_text, data_dict)
+        if sent:
+            tokens_stmt = select(func.count(FcmToken.id))
+            tokens_res = await db.execute(tokens_stmt)
+            success_count = max(1, tokens_res.scalar() or 1)
+        else:
+            failure_count = 1
     except Exception as e:
-        logger.warning(f"FCM topic broadcast error: {e}")
+        logger.error(f"FCM broadcast error: {e}")
+        failure_count = 1
 
     try:
         new_notification = PushNotification(

@@ -398,12 +398,16 @@ async def debit_customer_wallet(
     amount: Decimal,
     description: str,
     db: AsyncSession,
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    allow_promo: bool = True,
 ) -> CustomerWallet:
     """
     Atomic wallet deduction helper used during order checkout.
-    Uses Postgres Row-Level Lock and burns promo balance first, then real balance.
-    Raises HTTPException(400) if balance is insufficient.
+    Uses Postgres Row-Level Lock (SELECT FOR UPDATE).
+    If allow_promo is True, burns promo balance first, then real balance.
+    If allow_promo is False (e.g. order subtotal < referral min order value),
+    only debits from real liquid balance and leaves promoBalance untouched.
+    Raises HTTPException(400) if usable balance is insufficient.
     """
     wallet_stmt = (
         select(CustomerWallet)
@@ -416,18 +420,19 @@ async def debit_customer_wallet(
     if not wallet or not wallet.isActive:
         raise HTTPException(status_code=400, detail="Customer wallet is not active")
 
-    total_available = wallet.balance + wallet.promoBalance
+    total_available = (wallet.balance + wallet.promoBalance) if allow_promo else wallet.balance
     if total_available < amount:
+        reason = "Total available" if allow_promo else "Real cash balance available"
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient wallet balance. Total available: ₹{float(total_available):.2f}, Required: ₹{float(amount):.2f}"
+            detail=f"Insufficient wallet balance. {reason}: ₹{float(total_available):.2f}, Required: ₹{float(amount):.2f}"
         )
 
     bal_before = wallet.balance
     remaining_to_debit = amount
 
-    # Burn promo balance first
-    if wallet.promoBalance > 0:
+    # Burn promo balance first only if allowed
+    if allow_promo and wallet.promoBalance > 0:
         if wallet.promoBalance >= remaining_to_debit:
             wallet.promoBalance -= remaining_to_debit
             remaining_to_debit = Decimal("0.00")

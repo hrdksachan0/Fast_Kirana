@@ -803,7 +803,8 @@ async def get_sales_reports(
 
         daily_list = sorted(list(daily_data.values()), key=lambda x: x["date"])
         category_list = sorted(list(category_data.values()), key=lambda x: x["sales"], reverse=True)
-        product_list = sorted(list(product_data.values()), key=lambda x: x["sales"], reverse=True)[:200]
+        # Return 100% complete product list without arbitrary cutoff (prevents lower revenue items from disappearing)
+        product_list = sorted(list(product_data.values()), key=lambda x: x["sales"], reverse=True)
 
         average_order_value = total_rev / total_orders if total_orders > 0 else 0.0
         profit_margin = (total_profit / total_rev) * 100.0 if total_rev > 0 else 0.0

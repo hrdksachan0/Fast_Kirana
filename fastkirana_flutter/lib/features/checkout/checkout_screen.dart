@@ -141,10 +141,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             : (storeSettings?.miscFeeLabel ?? 'Packaging Charge'));
     final grandTotalBeforeWallet = (subtotal + deliveryFee + packagingFee + widget.tipAmount - widget.discountAmount).clamp(0.0, 999999.0);
     final wallet = ref.watch(walletNotifierProvider);
-    final double walletUsable = wallet.totalUsable;
-    const double minWalletOrderValue = 199.0;
-    final bool isEligibleForWallet = subtotal >= minWalletOrderValue;
-    final double walletDeduction = (checkoutState.useWalletBalance && walletUsable > 0 && isEligibleForWallet)
+    final double realCash = wallet.balance;
+    final double promoCash = wallet.promoBalance;
+    const double minPromoOrderValue = 199.0;
+    final bool canUsePromo = subtotal >= minPromoOrderValue;
+    // Deposited real cash (Cashfree/refunds) has ZERO minimum order value!
+    // Referral / promo cash unlocks when subtotal >= ₹199.
+    final double walletUsable = realCash + (canUsePromo ? promoCash : 0.0);
+    final bool isEligibleForWallet = walletUsable > 0;
+    final double walletDeduction = (checkoutState.useWalletBalance && isEligibleForWallet)
         ? (walletUsable >= grandTotalBeforeWallet ? grandTotalBeforeWallet : walletUsable)
         : 0.0;
     final grandTotal = (grandTotalBeforeWallet - walletDeduction).clamp(0.0, 999999.0);
@@ -357,7 +362,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       const SizedBox(height: 14),
 
                       // 6.5 FastMinute Wallet Split-Payment Toggle Card
-                      if (walletUsable > 0) ...[
+                      if (wallet.totalUsable > 0) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
@@ -421,12 +426,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       !isEligibleForWallet
-                                          ? 'Min. order ₹199 required to use wallet (Add ₹${(minWalletOrderValue - subtotal).toInt()} more)'
+                                          ? 'Min. order ₹199 required to use referral bonus (Add ₹${(minPromoOrderValue - subtotal).toInt()} more)'
                                           : (checkoutState.useWalletBalance
                                               ? (walletUsable >= grandTotalBeforeWallet
                                                   ? '₹${grandTotalBeforeWallet.toStringAsFixed(0)} deducted • 100% covered!'
                                                   : '-₹${walletUsable.toStringAsFixed(0)} deducted • Pay ₹${grandTotal.toStringAsFixed(0)} left')
-                                              : 'Tap switch to apply wallet balance'),
+                                              : (realCash > 0 && promoCash > 0 && !canUsePromo
+                                                  ? '₹${realCash.toStringAsFixed(0)} Real Cash ready • Add ₹${(minPromoOrderValue - subtotal).toInt()} more for ₹${promoCash.toStringAsFixed(0)} bonus'
+                                                  : 'Tap switch to apply wallet balance')),
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 11),
                                         color: !isEligibleForWallet
@@ -451,7 +458,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              'Minimum order of ₹199 required to use FastMinute Wallet. Add ₹${(minWalletOrderValue - subtotal).toInt()} more items!',
+                                              'Minimum order of ₹199 required to use Referral Bonus. Add ₹${(minPromoOrderValue - subtotal).toInt()} more items!',
                                               style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                                             ),
                                             backgroundColor: AppDesignSystem.amber800,

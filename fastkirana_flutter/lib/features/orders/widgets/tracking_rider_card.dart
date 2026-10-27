@@ -170,19 +170,14 @@ class TrackingRiderCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFF00B140).withValues(alpha: 0.35),
+          color: const Color(0xFFE2E8F0),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00B140).withValues(alpha: 0.08),
-            blurRadius: 18,
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            blurRadius: 16,
             offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 1),
           ),
         ],
       ),
