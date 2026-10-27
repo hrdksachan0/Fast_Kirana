@@ -714,7 +714,7 @@ class ProfileScreen extends ConsumerWidget {
                             onTap: () {
                               HapticFeedback.lightImpact();
                               Share.share(
-                                '⚡ FastMinute Express: Order Groceries, Daily Essentials & Food delivered right to your doorstep!\n\n📲 Download FastMinute App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Or Order Online: https://www.fastkirana.in',
+                                '⚡ FastMinute Express: Order Groceries, Daily Essentials & Food delivered right to your doorstep!\n\n📲 Download FastMinute App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app',
                                 subject: 'FastMinute Express App',
                               );
                             },

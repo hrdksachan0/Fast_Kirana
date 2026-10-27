@@ -137,7 +137,7 @@ class ReferEarnScreen extends ConsumerWidget {
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   Share.share(
-                    '⚡ Join FastMinute Express! Use my referral code "$referralCode" to get special discounts on your grocery & food orders.\n\n📲 Download FastMinute App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🌐 Or Order Online: https://www.fastkirana.in',
+                    '⚡ Join FastMinute Express! Use my referral code "$referralCode" to get special discounts on your grocery & food orders.\n\n📲 Download FastMinute App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app',
                     subject: 'FastMinute Referral Code: $referralCode',
                   );
                 },

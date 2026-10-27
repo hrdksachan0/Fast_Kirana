@@ -189,8 +189,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   void _shareProduct(Product p, double activePrice) {
     HapticFeedback.lightImpact();
     final priceStr = '₹${activePrice.toStringAsFixed(0)}';
-    final productSlug = p.slug.isNotEmpty ? p.slug : p.id;
-    final shareText = '''🛒 Check out ${p.name} ($priceStr) on FastMinute!\n\n⚡ Fast Express Delivery in Ghatampur!\nOrder now: https://www.fastkirana.in/products/$productSlug''';
+    final shareText = '''🛒 Check out ${p.name} ($priceStr) on FastMinute!\n\n⚡ Fast Express Delivery in Ghatampur!\n📲 Download FastMinute App on Play Store to Order:
+https://play.google.com/store/apps/details?id=com.fastkirana.app''';
     Share.share(shareText, subject: 'Buy ${p.name} on FastMinute');
   }
 
