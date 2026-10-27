@@ -189,19 +189,28 @@ export async function GET(request: NextRequest) {
         return { costPerUnit: Number(item.costPrice), isEstimated: false }
       }
 
-      // 2. Parse variants
+      // 2. Parse variants (supports both array and { productVariants: [...] } with addons)
       const rawVariants = item.variants
       let variantsList: any[] = []
       if (rawVariants) {
         try {
-          variantsList = typeof rawVariants === 'string' ? JSON.parse(rawVariants) : rawVariants
+          const parsed = typeof rawVariants === 'string' ? JSON.parse(rawVariants) : rawVariants
+          if (Array.isArray(parsed)) {
+            variantsList = parsed
+          } else if (parsed && typeof parsed === 'object') {
+            if (Array.isArray(parsed.productVariants)) {
+              variantsList = parsed.productVariants
+            } else if (Array.isArray(parsed.variants)) {
+              variantsList = parsed.variants
+            }
+          }
         } catch {}
       }
 
-      let targetVariant = item.selectedVariant
+      let targetVariant = (item.selectedVariant || '').trim()
       if (!targetVariant && item.name && item.name.includes('(')) {
         const match = item.name.match(/\(([^)]+)\)/)
-        if (match) targetVariant = match[1]
+        if (match) targetVariant = match[1].trim()
       }
 
       if (Array.isArray(variantsList) && variantsList.length > 0) {
@@ -213,21 +222,27 @@ export async function GET(request: NextRequest) {
             const vUnit = normalizeText(v.unit)
             return vName === normTarget || vUnit === normTarget || normTarget.includes(vName) || vName.includes(normTarget)
           })
-          if (matched && Number(matched.costPrice) > 0) {
-            return { costPerUnit: Number(matched.costPrice), isEstimated: false }
+          const matchedCp = matched?.costPrice ?? matched?.cp ?? matched?.cost
+          if (matchedCp !== undefined && matchedCp !== null && Number(matchedCp) > 0) {
+            return { costPerUnit: Number(matchedCp), isEstimated: false }
           }
         }
 
         // Try price match fallback against variants
         const priceMatched = variantsList.find((v: any) => v && Number(v.price) === Number(item.price))
-        if (priceMatched && Number(priceMatched.costPrice) > 0) {
-          return { costPerUnit: Number(priceMatched.costPrice), isEstimated: false }
+        const priceCp = priceMatched?.costPrice ?? priceMatched?.cp ?? priceMatched?.cost
+        if (priceCp !== undefined && priceCp !== null && Number(priceCp) > 0) {
+          return { costPerUnit: Number(priceCp), isEstimated: false }
         }
 
         // Check if any variant has costPrice
-        const anyWithCost = variantsList.find((v: any) => v && Number(v.costPrice) > 0 && Number(v.price) > 0)
+        const anyWithCost = variantsList.find((v: any) => {
+          const cp = v?.costPrice ?? v?.cp ?? v?.cost
+          return cp !== undefined && cp !== null && Number(cp) > 0 && Number(v?.price) > 0
+        })
         if (anyWithCost && Number(item.price) > 0) {
-          const marginRatio = Number(anyWithCost.costPrice) / Number(anyWithCost.price)
+          const anyCp = Number(anyWithCost.costPrice ?? anyWithCost.cp ?? anyWithCost.cost)
+          const marginRatio = anyCp / Number(anyWithCost.price)
           if (marginRatio > 0 && marginRatio < 1) {
             return { costPerUnit: Math.round(Number(item.price) * marginRatio * 100) / 100, isEstimated: false }
           }
@@ -438,14 +453,22 @@ export async function GET(request: NextRequest) {
         categoryData[targetCategoryName].profit += itemProf
         categoryData[targetCategoryName].quantity += (item.quantity || 1)
 
-        // Product breakdown with distinct variant tracking
-        const variantSuffix = item.selectedVariant && item.selectedVariant.trim() ? item.selectedVariant.trim() : null
-        const cleanName = (item.name || 'Unnamed Product').trim()
-        const displayName = variantSuffix && !cleanName.toLowerCase().includes(variantSuffix.toLowerCase())
-          ? `${cleanName} (${variantSuffix})`
-          : cleanName
+        // Robust variant resolution for order items (handles explicit variant, name parsing, and deduplication)
+        let resolvedVariant = (item.selectedVariant || '').trim()
+        if (!resolvedVariant && item.name && item.name.includes('(')) {
+          const match = item.name.match(/\(([^)]+)\)/)
+          if (match) resolvedVariant = match[1].trim()
+        }
+
+        const rawItemName = (item.name || 'Unnamed Product').trim()
+        const baseNameWithoutParen = rawItemName.replace(/\s*\([^)]*\)\s*$/g, '').trim()
+        const displayName = resolvedVariant
+          ? (rawItemName.toLowerCase().includes(resolvedVariant.toLowerCase())
+              ? rawItemName
+              : `${baseNameWithoutParen} (${resolvedVariant})`)
+          : rawItemName
         
-        const normVar = variantSuffix ? normalizeText(variantSuffix) : ''
+        const normVar = resolvedVariant ? normalizeText(resolvedVariant) : ''
         const prodKey = item.productId
           ? `${item.productId}${normVar ? `_${normVar}` : ''}`
           : `manual_${normalizeText(displayName)}`
@@ -469,7 +492,7 @@ export async function GET(request: NextRequest) {
             parentCategoryName: (item.parentCategoryName || '').trim(),
             vendor: (item.vendor || 'Direct / FastKirana').trim(),
             type: targetType,
-            variantName: variantSuffix || undefined,
+            variantName: resolvedVariant || undefined,
             minPrice: itemSellingPrice,
             maxPrice: itemSellingPrice,
             minCost: itemUnitCost,

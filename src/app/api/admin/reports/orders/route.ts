@@ -153,18 +153,27 @@ export async function GET(request: NextRequest) {
         return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
       }
 
-      // 2. Variants match
+      // 2. Parse variants (supports both array and { productVariants: [...] } with addons)
       let variantsList: any[] = []
       if (item.variants) {
         try {
-          variantsList = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants
+          const parsed = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants
+          if (Array.isArray(parsed)) {
+            variantsList = parsed
+          } else if (parsed && typeof parsed === 'object') {
+            if (Array.isArray(parsed.productVariants)) {
+              variantsList = parsed.productVariants
+            } else if (Array.isArray(parsed.variants)) {
+              variantsList = parsed.variants
+            }
+          }
         } catch {}
       }
 
-      let targetVariant = item.selectedVariant
+      let targetVariant = (item.selectedVariant || '').trim()
       if (!targetVariant && item.name && item.name.includes('(')) {
         const match = item.name.match(/\(([^)]+)\)/)
-        if (match) targetVariant = match[1]
+        if (match) targetVariant = match[1].trim()
       }
 
       if (Array.isArray(variantsList) && variantsList.length > 0) {
@@ -176,15 +185,17 @@ export async function GET(request: NextRequest) {
             const vUnit = normalizeText(v.unit)
             return vName === normTarget || vUnit === normTarget || normTarget.includes(vName) || vName.includes(normTarget)
           })
-          if (matched && Number(matched.costPrice) > 0) {
-            unitCost = Number(matched.costPrice)
+          const matchedCp = matched?.costPrice ?? matched?.cp ?? matched?.cost
+          if (matchedCp !== undefined && matchedCp !== null && Number(matchedCp) > 0) {
+            unitCost = Number(matchedCp)
             return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
           }
         }
 
         const priceMatched = variantsList.find((v: any) => v && Number(v.price) === Number(item.price))
-        if (priceMatched && Number(priceMatched.costPrice) > 0) {
-          unitCost = Number(priceMatched.costPrice)
+        const priceCp = priceMatched?.costPrice ?? priceMatched?.cp ?? priceMatched?.cost
+        if (priceCp !== undefined && priceCp !== null && Number(priceCp) > 0) {
+          unitCost = Number(priceCp)
           return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
         }
       }
@@ -211,7 +222,14 @@ export async function GET(request: NextRequest) {
     // Build order-wise rows
     const orderRows = orders.map(o => {
       const items = itemsByOrder[o.id] || []
-      const itemNames = items.map(i => `${i.name}${i.selectedVariant ? ` (${i.selectedVariant})` : ''} x${i.quantity}`).join(', ')
+      const itemNames = items.map(i => {
+        const vSuffix = (i.selectedVariant || '').trim()
+        const iName = (i.name || '').trim()
+        const cleanDisplayName = vSuffix && !iName.toLowerCase().includes(vSuffix.toLowerCase())
+          ? `${iName} (${vSuffix})`
+          : iName
+        return `${cleanDisplayName} x${i.quantity}`
+      }).join(', ')
       let totalCost = 0
       const detailedItems = items.map(i => {
         const { totalCost: iCost, unitCost: iUnitCost } = resolveItemCost(i)

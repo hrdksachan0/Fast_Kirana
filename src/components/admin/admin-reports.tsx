@@ -166,6 +166,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
   // Active Category Filter: 'all' or specific category name (e.g., 'Dairy & Breakfast', 'Wedson Restaurant')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [productSearch, setProductSearch] = useState('')
+  const [soldOnlyFilter, setSoldOnlyFilter] = useState<'sold' | 'all'>('sold')
   
   // Loaded report data from server
   const [rawSummary, setRawSummary] = useState<ReportSummary>({
@@ -239,9 +240,12 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
     }
   }, [startDate, endDate, storeId, authHeaders])
 
-  // Filtered Products based on Selected Category & Search Query
+  // Filtered Products based on Selected Category, Search Query & Sold-Only Toggle
   const filteredProducts = useMemo(() => {
     let list = rawTopProducts
+    if (soldOnlyFilter === 'sold') {
+      list = list.filter(p => (p.quantity || 0) > 0)
+    }
     if (selectedCategory !== 'all') {
       const target = selectedCategory.toLowerCase().trim()
       list = list.filter(p => {
@@ -254,12 +258,13 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       const q = productSearch.toLowerCase().trim()
       list = list.filter(p => 
         p.name.toLowerCase().includes(q) || 
+        (p.variantName && p.variantName.toLowerCase().includes(q)) ||
         (p.categoryName && p.categoryName.toLowerCase().includes(q)) ||
         (p.parentCategoryName && p.parentCategoryName.toLowerCase().includes(q))
       )
     }
     return list
-  }, [rawTopProducts, selectedCategory, productSearch])
+  }, [rawTopProducts, selectedCategory, productSearch, soldOnlyFilter])
 
   // Filtered Summary based on Selected Category
   const summary = useMemo(() => {
@@ -341,6 +346,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       })
 
       const targetProducts = (rawTopProducts || []).filter((prod: TopProduct) => {
+        if (scope === 'all') return true // Do not restrict comprehensive store report by UI category filter
         if (selectedCategory !== 'all' && prod.categoryName !== selectedCategory) return false
         if (scope === 'grocery') return prod.type === 'grocery'
         if (scope === 'restaurant') return prod.type === 'restaurant'
@@ -508,12 +514,79 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
       const wsVendor = XLSX.utils.aoa_to_sheet([vendorHeader, ...vendorRows, [], vendorTotalRow])
 
+      // 5. Dedicated Tab: Online Sold Products (Only products with actual sales > 0)
+      const soldProducts = targetProducts.filter(p => (p.quantity || 0) > 0)
+      const soldHeader = [
+        'Item ID',
+        'Product / Dish Name',
+        'Variant',
+        'Category / Outlet',
+        'Type',
+        'Vendor / Supplier',
+        'Current Stock',
+        'Selling Rate Avg (INR)',
+        'Cost Rate Avg (INR)',
+        'Units Sold (Online)',
+        'Total Sales Revenue (INR)',
+        'Total Cost / Payout (INR)',
+        'Net Profit (INR)',
+        'Margin (%)'
+      ]
+      const soldRows = soldProducts.map((prod: TopProduct) => {
+        const margin = prod.sales > 0 ? ((prod.profit / prod.sales) * 100) : 0
+        const totalCostVal = prod.totalCost !== undefined ? prod.totalCost : ((prod.costPrice || 0) * prod.quantity)
+        const itemId = prod.readableId ? `#${prod.readableId}` : prod.productId
+        const stockVal = prod.stock !== undefined ? prod.stock : '-'
+        return [
+          itemId,
+          prod.name,
+          prod.variantName || '-',
+          prod.categoryName || '-',
+          prod.type === 'restaurant' ? 'Restaurant' : 'Grocery',
+          prod.vendor || 'Direct / FastMinute',
+          stockVal,
+          prod.price || 0,
+          prod.costPrice || 0,
+          prod.quantity,
+          Math.round(prod.sales * 100) / 100,
+          Math.round(totalCostVal * 100) / 100,
+          Math.round(prod.profit * 100) / 100,
+          `${margin.toFixed(1)}%`
+        ]
+      })
+
+      const totalSoldUnits = soldProducts.reduce((sum, p) => sum + (p.quantity || 0), 0)
+      const totalSoldSales = Math.round(soldProducts.reduce((sum, p) => sum + (p.sales || 0), 0) * 100) / 100
+      const totalSoldCost = Math.round(soldProducts.reduce((sum, p) => sum + (p.totalCost !== undefined ? p.totalCost : ((p.costPrice || 0) * (p.quantity || 0))), 0) * 100) / 100
+      const totalSoldProfit = Math.round(soldProducts.reduce((sum, p) => sum + (p.profit || 0), 0) * 100) / 100
+      const totalSoldMargin = totalSoldSales > 0 ? (totalSoldProfit / totalSoldSales) * 100 : 0
+
+      const soldTotalRow = [
+        'TOTAL ONLINE SALES',
+        `${soldProducts.length} Products Sold`,
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        totalSoldUnits,
+        totalSoldSales,
+        totalSoldCost,
+        totalSoldProfit,
+        `${totalSoldMargin.toFixed(1)}%`
+      ]
+
+      const wsOnlineSold = XLSX.utils.aoa_to_sheet([soldHeader, ...soldRows, [], soldTotalRow])
+
       // Create Workbook and Append Sheets
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary')
-      XLSX.utils.book_append_sheet(wb, wsVendor, 'Vendor Payout Summary')
+      XLSX.utils.book_append_sheet(wb, wsOnlineSold, 'Online Sold Products')
+      XLSX.utils.book_append_sheet(wb, wsProduct, 'All Catalog Products')
       XLSX.utils.book_append_sheet(wb, wsCategory, 'Categories')
-      XLSX.utils.book_append_sheet(wb, wsProduct, 'Products')
+      XLSX.utils.book_append_sheet(wb, wsVendor, 'Vendor Payout Summary')
 
       // Save Workbook
       XLSX.writeFile(wb, `FastMinute_${scopeLabel}_Report_${startDate}_to_${endDate}.xlsx`)
@@ -777,6 +850,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       })
 
       const targetProducts = (rawTopProducts || []).filter((prod: TopProduct) => {
+        if (scope === 'all') return true // Do not restrict comprehensive store report by UI category filter
         if (selectedCategory !== 'all' && prod.categoryName !== selectedCategory) return false
         if (scope === 'grocery') return prod.type === 'grocery'
         if (scope === 'restaurant') return prod.type === 'restaurant'
@@ -1347,22 +1421,50 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                     Itemized Product Sales ({filteredProducts.length} Products)
                   </h4>
                   <p className="text-[10px] text-text-muted font-medium">
-                    {selectedCategory === 'all'
-                      ? 'Showing products sold across all categories.'
-                      : `Filtered to products under "${selectedCategory}".`}
+                    {soldOnlyFilter === 'sold'
+                      ? 'Showing products sold online in delivered orders.'
+                      : 'Showing all catalog items including unsold inventory.'}
                   </p>
                 </div>
               </div>
 
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
-                <input
-                  type="text"
-                  placeholder="Search product name..."
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  className="bg-muted border border-border pl-9 pr-3 py-1.5 rounded-2xl text-xs font-bold text-text-primary focus:outline-none w-full"
-                />
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Sold Online vs Full Catalog Toggle */}
+                <div className="flex items-center gap-1 bg-muted/70 p-0.5 rounded-xl border border-border/60">
+                  <button
+                    type="button"
+                    onClick={() => setSoldOnlyFilter('sold')}
+                    className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                      soldOnlyFilter === 'sold'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    📦 Bike Huye Only ({rawTopProducts.filter(p => (p.quantity || 0) > 0).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSoldOnlyFilter('all')}
+                    className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                      soldOnlyFilter === 'all'
+                        ? 'bg-card text-text-primary shadow-xs border border-border/80'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    All Catalog ({rawTopProducts.length})
+                  </button>
+                </div>
+
+                <div className="relative w-full sm:w-56">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Search product / variant..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="bg-muted border border-border pl-9 pr-3 py-1.5 rounded-xl text-xs font-bold text-text-primary focus:outline-none w-full"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1370,7 +1472,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
               <table className="w-full text-left border-collapse text-xs">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="text-[10px] font-black text-text-secondary uppercase tracking-wider border-b border-border/80">
-                    <th className="pb-2.5 pl-2">Product Name</th>
+                    <th className="pb-2.5 pl-2">Product & Variant</th>
                     <th className="pb-2.5">Category</th>
                     <th className="pb-2.5 text-right">Selling Price</th>
                     <th className="pb-2.5 text-right">Cost Price</th>
@@ -1390,9 +1492,14 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                     return (
                       <tr key={prod.productId} className="hover:bg-muted/15 transition-colors">
                         <td className="py-2.5 pl-2">
-                          <span className="font-bold text-text-primary block truncate max-w-[200px]" title={prod.name}>
+                          <span className="font-bold text-text-primary block truncate max-w-[220px]" title={prod.name}>
                             {prod.name}
                           </span>
+                          {prod.variantName && (
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-muted text-text-secondary border border-border/40 mt-0.5">
+                              {prod.variantName}
+                            </span>
+                          )}
                         </td>
 
                         <td className="py-2.5">
