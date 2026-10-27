@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../services/secure_storage_service.dart';
+import '../services/guest_device_service.dart';
 import '../services/tracer_service.dart';
 import '../../data/models/user_session.dart';
 
@@ -66,13 +67,9 @@ final dioProvider = Provider<Dio>((ref) {
           options.headers.putIfAbsent('x-store-id', () => effectiveStoreId);
         }
 
-        // Guest Shopper device-level ID for cart sync & live cart tracking
-        var guestId = prefs.getString('fastkirana_guest_id');
-        if (guestId == null || guestId.isEmpty) {
-          guestId = 'g_app_${DateTime.now().millisecondsSinceEpoch}_${(1000 + DateTime.now().microsecond % 9000)}';
-          await prefs.setString('fastkirana_guest_id', guestId);
-        }
-        options.headers.putIfAbsent('x-guest-id', () => guestId);
+        // Guest Shopper device-level ID for cart sync & live cart tracking (singleton persistence)
+        final guestId = await GuestDeviceService.getGuestId();
+        options.headers['x-guest-id'] = guestId;
 
         final isAuthRoute = options.path.contains('/api/auth');
         final isPublicGetRoute = kIsWeb &&

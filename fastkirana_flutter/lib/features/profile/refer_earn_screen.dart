@@ -103,7 +103,7 @@ class ReferEarnScreen extends ConsumerWidget {
               children: [
                 _stepCard(context, '1', 'Share Code', 'Send your referral code to friends'),
                 _stepCard(context, '2', 'They Sign Up', 'Friend uses your code & first order'),
-                _stepCard(context, '3', 'You Earn', 'Get ₹50 in your wallet'),
+                _stepCard(context, '3', 'You Earn', 'Get ₹25 in your wallet'),
               ],
             ),
 

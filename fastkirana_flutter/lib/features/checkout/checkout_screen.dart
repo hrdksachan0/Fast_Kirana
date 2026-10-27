@@ -143,10 +143,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final wallet = ref.watch(walletNotifierProvider);
     final double realCash = wallet.balance;
     final double promoCash = wallet.promoBalance;
-    const double minPromoOrderValue = 199.0;
+    const double minPromoOrderValue = 99.0;
     final bool canUsePromo = subtotal >= minPromoOrderValue;
     // Deposited real cash (Cashfree/refunds) has ZERO minimum order value!
-    // Referral / promo cash unlocks when subtotal >= ₹199.
+    // Referral / promo cash unlocks when subtotal >= ₹99.
     final double walletUsable = realCash + (canUsePromo ? promoCash : 0.0);
     final bool isEligibleForWallet = walletUsable > 0;
     final double walletDeduction = (checkoutState.useWalletBalance && isEligibleForWallet)
@@ -426,7 +426,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       !isEligibleForWallet
-                                          ? 'Min. order ₹199 required to use referral bonus (Add ₹${(minPromoOrderValue - subtotal).toInt()} more)'
+                                          ? 'Min. order ₹99 required to use referral bonus (Add ₹${(minPromoOrderValue - subtotal).toInt()} more)'
                                           : (checkoutState.useWalletBalance
                                               ? (walletUsable >= grandTotalBeforeWallet
                                                   ? '₹${grandTotalBeforeWallet.toStringAsFixed(0)} deducted • 100% covered!'
@@ -458,7 +458,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              'Minimum order of ₹199 required to use Referral Bonus. Add ₹${(minPromoOrderValue - subtotal).toInt()} more items!',
+                                              'Minimum order of ₹99 required to use Referral Bonus. Add ₹${(minPromoOrderValue - subtotal).toInt()} more items!',
                                               style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                                             ),
                                             backgroundColor: AppDesignSystem.amber800,
@@ -494,9 +494,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                 ),
 
-                // Processing Overlay
-                if (checkoutState.isPlacingOrder)
-                  const Positioned.fill(child: CheckoutPlacingOrderOverlay()),
+                // Processing Overlay — smooth fade in/out
+                Positioned.fill(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 260),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: checkoutState.isPlacingOrder
+                        ? const CheckoutPlacingOrderOverlay(key: ValueKey('placing_overlay'))
+                        : const SizedBox.shrink(key: ValueKey('idle_overlay')),
+                  ),
+                ),
 
                 // Floating Dynamic Island connectivity pill
                 const ZeptoConnectivityPill(),

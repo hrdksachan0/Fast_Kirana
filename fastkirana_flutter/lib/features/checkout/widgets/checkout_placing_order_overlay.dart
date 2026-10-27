@@ -1,4 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Full-Screen Ultra-Smooth Zepto & Blinkit Style Order Placement Overlay
@@ -14,9 +16,11 @@ class _CheckoutPlacingOrderOverlayState extends State<CheckoutPlacingOrderOverla
   late AnimationController _pulseController;
   late AnimationController _progressController;
   late AnimationController _bounceController;
+  late AnimationController _cardScaleController;
   late Animation<double> _pulseAnimation;
   late Animation<double> _progressAnimation;
   late Animation<double> _bounceAnimation;
+  late Animation<double> _cardScaleAnimation;
 
   int _currentStep = 0;
 
@@ -72,12 +76,27 @@ class _CheckoutPlacingOrderOverlayState extends State<CheckoutPlacingOrderOverla
       CurvedAnimation(parent: _progressController, curve: Curves.easeOutCubic),
     );
 
-    // Step switching timer - snappy Zepto style milestones
-    Future.delayed(const Duration(milliseconds: 350), () {
-      if (mounted) setState(() => _currentStep = 1);
+    // Card scale-in entrance animation (0.92 -> 1.0)
+    _cardScaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    )..forward();
+    _cardScaleAnimation = Tween<double>(begin: 0.92, end: 1.0).animate(
+      CurvedAnimation(parent: _cardScaleController, curve: Curves.easeOutBack),
+    );
+
+    // Step switching timer - snappy Zepto style milestones with micro-haptics
+    Future.delayed(const Duration(milliseconds: 450), () {
+      if (mounted) {
+        setState(() => _currentStep = 1);
+        HapticFeedback.selectionClick();
+      }
     });
-    Future.delayed(const Duration(milliseconds: 750), () {
-      if (mounted) setState(() => _currentStep = 2);
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) {
+        setState(() => _currentStep = 2);
+        HapticFeedback.selectionClick();
+      }
     });
   }
 
@@ -86,18 +105,25 @@ class _CheckoutPlacingOrderOverlayState extends State<CheckoutPlacingOrderOverla
     _pulseController.dispose();
     _progressController.dispose();
     _bounceController.dispose();
+    _cardScaleController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.72),
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-          decoration: BoxDecoration(
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.55),
+        child: Center(
+          child: ScaleTransition(
+            scale: _cardScaleAnimation,
+            child: FadeTransition(
+              opacity: _cardScaleAnimation,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
@@ -362,6 +388,9 @@ class _CheckoutPlacingOrderOverlayState extends State<CheckoutPlacingOrderOverla
                 }),
               ),
             ],
+          ),
+        ),
+            ),
           ),
         ),
       ),

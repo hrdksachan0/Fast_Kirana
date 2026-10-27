@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../core/services/logger_service.dart';
+import 'wallet_provider.dart';
 
 class ReferralApplyResult {
   final bool success;
@@ -26,10 +27,13 @@ Future<ReferralApplyResult> applyReferralCode(WidgetRef ref, String code) async 
     );
     if (response.statusCode == 200 && response.data['success'] == true) {
       ref.invalidate(referralStatsProvider);
+      ref.invalidate(referralInfoProvider);
+      ref.read(walletNotifierProvider.notifier).fetchBalance();
+      ref.invalidate(walletTransactionsProvider);
       return ReferralApplyResult(
         success: true,
         message: response.data['message']?.toString() ?? 'Referral code applied successfully!',
-        discountAmount: (response.data['discountAmount'] as num?)?.toDouble() ?? 50.0,
+        discountAmount: (response.data['discountAmount'] as num?)?.toDouble() ?? 25.0,
         codeUsed: response.data['codeUsed']?.toString() ?? code,
       );
     } else {
@@ -65,6 +69,9 @@ class ReferralInfo {
   final double refereeDiscount;
   final double minOrderValue;
   final bool isEnabled;
+  final bool hasAppliedReferral;
+  final bool canApplyReferral;
+  final String? appliedCode;
 
   ReferralInfo({
     required this.referralCode,
@@ -74,6 +81,9 @@ class ReferralInfo {
     required this.refereeDiscount,
     required this.minOrderValue,
     required this.isEnabled,
+    this.hasAppliedReferral = false,
+    this.canApplyReferral = true,
+    this.appliedCode,
   });
 
   factory ReferralInfo.fromJson(Map<String, dynamic> json) {
@@ -81,10 +91,13 @@ class ReferralInfo {
       referralCode: json['referralCode']?.toString() ?? '',
       shareLink: json['shareLink']?.toString() ?? 'https://fastkirana.in',
       whatsappShareText: json['whatsappShareText']?.toString() ?? '',
-      referrerReward: (json['referrerReward'] as num?)?.toDouble() ?? 100.0,
-      refereeDiscount: (json['refereeDiscount'] as num?)?.toDouble() ?? 50.0,
+      referrerReward: (json['referrerReward'] as num?)?.toDouble() ?? 25.0,
+      refereeDiscount: (json['refereeDiscount'] as num?)?.toDouble() ?? 25.0,
       minOrderValue: (json['minOrderValue'] as num?)?.toDouble() ?? 199.0,
       isEnabled: json['isEnabled'] == true,
+      hasAppliedReferral: json['hasAppliedReferral'] == true,
+      canApplyReferral: json['canApplyReferral'] ?? true,
+      appliedCode: json['appliedCode']?.toString(),
     );
   }
 }

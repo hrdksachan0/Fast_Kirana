@@ -52,12 +52,12 @@ class ZeptoSlideRoute<T> extends PageRouteBuilder<T> {
 
             final parallaxSlide = Tween<Offset>(
               begin: Offset.zero,
-              end: const Offset(-0.15, 0.0), // subtle 15% parallax shift
+              end: const Offset(-0.08, 0.0), // calmer 8% parallax shift (Zepto standard)
             ).animate(secondaryCurved);
 
             final scaleUnderlay = Tween<double>(
               begin: 1.0,
-              end: 0.96, // subtle zoom out depth
+              end: 0.98, // gentle zoom out depth (less motion sickness)
             ).animate(secondaryCurved);
 
             return SlideTransition(

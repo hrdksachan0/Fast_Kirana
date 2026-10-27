@@ -4,6 +4,8 @@ import 'dart:convert';
 import '../models/cart.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/network/api_client.dart';
+import '../../core/services/guest_device_service.dart';
+import 'dart:async' show unawaited;
 
 class CartRepository {
   final Dio dio;
@@ -57,11 +59,7 @@ class CartRepository {
     final prefs = await SharedPreferences.getInstance();
     final key = targetSyncKey ?? await _getPendingSyncKey();
     try {
-      var guestId = prefs.getString('fastkirana_guest_id');
-      if (guestId == null || guestId.isEmpty) {
-        guestId = 'g_app_${DateTime.now().millisecondsSinceEpoch}_${(1000 + DateTime.now().microsecond % 9000)}';
-        await prefs.setString('fastkirana_guest_id', guestId);
-      }
+      final guestId = await GuestDeviceService.getGuestId();
 
       if (items.isEmpty) {
         // Only delete cart on server if explicitly requested (e.g. order placed or user cleared cart)
@@ -300,6 +298,12 @@ class CartRepository {
       return false;
     }
 
+    // Keep hub-agnostic fallback envelope so location/hub changes never lose cart items
+    final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final owner = cleanPhone.isNotEmpty ? cleanPhone : 'guest';
+    unawaited(prefs.setString('local_cart_${owner}_last_active', rawEnvelope).catchError((_) => false));
+
     if (appliedOrderId != null && appliedOrderId.isNotEmpty) {
       _failedAppliedOrderIds.remove(appliedOrderId);
     }
@@ -340,7 +344,11 @@ class CartRepository {
       // 2. Hub-shift or login recovery: check guest scoped keys across known hubs
       if (data == null) {
         final hubId = prefs.getString('selected_hub_id') ?? 'default';
-        data = prefs.getString('local_cart_guest_$hubId') ??
+        final phone = prefs.getString('user_phone') ?? prefs.getString('user_id') ?? 'guest';
+        final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+        final owner = cleanPhone.isNotEmpty ? cleanPhone : 'guest';
+        data = prefs.getString('local_cart_${owner}_last_active') ??
+               prefs.getString('local_cart_guest_$hubId') ??
                prefs.getString('local_cart_guest_hub-209206') ??
                prefs.getString('local_cart_guest_default') ??
                prefs.getString('local_cart_guest');

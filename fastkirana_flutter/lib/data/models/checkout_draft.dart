@@ -23,6 +23,7 @@ class CheckoutDraft {
   final String? activePaymentSessionId;
   final List<Map<String, dynamic>> items;
   final double grandTotal;
+  final double walletAmountUsed;
   final String? cfOrderId;
   final bool hasFeeBreakdown;
 
@@ -47,6 +48,7 @@ class CheckoutDraft {
     this.activePaymentSessionId,
     this.items = const [],
     this.grandTotal = 0.0,
+    this.walletAmountUsed = 0.0,
     this.cfOrderId,
     this.hasFeeBreakdown = true,
   });
@@ -76,6 +78,7 @@ class CheckoutDraft {
     bool clearPaymentSession = false,
     List<Map<String, dynamic>>? items,
     double? grandTotal,
+    double? walletAmountUsed,
     String? cfOrderId,
     bool clearCfOrderId = false,
     bool? hasFeeBreakdown,
@@ -101,6 +104,7 @@ class CheckoutDraft {
       activePaymentSessionId: clearPaymentSession ? null : (activePaymentSessionId ?? this.activePaymentSessionId),
       items: items ?? this.items,
       grandTotal: grandTotal ?? this.grandTotal,
+      walletAmountUsed: walletAmountUsed ?? this.walletAmountUsed,
       cfOrderId: clearCfOrderId ? null : (cfOrderId ?? this.cfOrderId),
       hasFeeBreakdown: hasFeeBreakdown ?? this.hasFeeBreakdown,
     );
@@ -127,6 +131,7 @@ class CheckoutDraft {
     'activePaymentSessionId': activePaymentSessionId,
     'items': items,
     'grandTotal': grandTotal,
+    'walletAmountUsed': walletAmountUsed,
     'cfOrderId': cfOrderId,
     'hasFeeBreakdown': hasFeeBreakdown,
   };
@@ -161,6 +166,7 @@ class CheckoutDraft {
               .toList() ??
           const [],
       grandTotal: (json['grandTotal'] as num?)?.toDouble() ?? 0.0,
+      walletAmountUsed: (json['walletAmountUsed'] as num?)?.toDouble() ?? 0.0,
       cfOrderId: json['cfOrderId'] as String?,
       hasFeeBreakdown: json['hasFeeBreakdown'] as bool? ?? (json.containsKey('deliveryFee') || json.containsKey('packagingFee')),
     );

@@ -157,7 +157,24 @@ export default async function AdminPage(props: {
       `,
       prisma.user.count({
         where: {
-          NOT: { email: { startsWith: 'guest-' } },
+          deletedAt: null,
+          OR: [
+            { role: { not: 'USER' } },
+            {
+              AND: [
+                { phone: { not: null } },
+                { phone: { not: '' } }
+              ]
+            },
+            {
+              AND: [
+                { email: { not: null } },
+                { NOT: { email: { startsWith: 'guest-' } } },
+                { NOT: { email: { startsWith: 'anon-fcm-' } } },
+                { NOT: { name: { startsWith: 'Guest' } } }
+              ]
+            }
+          ],
           ...(initialStoreId && initialStoreId !== 'all' ? { assignedStoreId: initialStoreId } : {})
         }
       }),

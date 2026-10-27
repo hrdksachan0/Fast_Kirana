@@ -2,7 +2,6 @@ import 'package:fastminute_flutter/core/theme/design_system.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/services/logger_service.dart';
-import '../../core/services/customer_sound_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -205,8 +204,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
     );
 
     _animController.forward();
-    // Swiggy-like pleasant confirmation chime & coin sound
-    CustomerSoundService.instance.playOrderSuccessSound();
+    HapticFeedback.lightImpact();
 
     // Start auto navigation to live tracking
     _startAutoNavigateTimer();

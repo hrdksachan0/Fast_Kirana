@@ -108,9 +108,10 @@ DEFAULT_SETTINGS = {
     "whatsapp_notify_store_phone": "true",
     "store_alert_phones": "",
     "referral_enabled": "true",
-    "referral_referrer_reward": "100",
-    "referral_referee_discount": "50",
+    "referral_referrer_reward": "25",
+    "referral_referee_discount": "25",
     "referral_min_order_value": "199",
+    "referral_wallet_redeem_min_order_value": "99",
     "referral_monthly_cap": "1500",
     "referral_whatsapp_message": "🛒 FastMinute se grocery order karo aur mere code {CODE} se paao ₹{DISCOUNT} OFF!\n\n📲 Download FastMinute App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🎁 Referral Code: {CODE}",
 }

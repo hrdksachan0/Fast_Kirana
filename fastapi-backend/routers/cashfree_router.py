@@ -20,7 +20,8 @@ from config import settings
 from database import get_db
 from models import (
     Order, User, Address, OrderStatus, PaymentStatus, PaymentMethod,
-    OrderItem, OrderType, Cart, CartItem, Product, Restaurant, Coupon
+    OrderItem, OrderType, Cart, CartItem, Product, Restaurant, Coupon,
+    StoreSetting
 )
 from utils.firebase import send_fcm_topic_notification
 
@@ -81,6 +82,8 @@ class CashfreeCreateOrderRequest(BaseModel):
     deliveryFee: Optional[float] = None
     packagingFee: Optional[float] = None
     packagingOption: Optional[str] = None
+    walletAmountUsed: Optional[float] = None
+    walletAmount: Optional[float] = None
 
 
 class CashfreeVerifyRequest(BaseModel):
@@ -542,7 +545,40 @@ async def create_cashfree_order(
             except Exception:
                 pass
 
-        expected_quote_total = max(1.0, round(authoritative_items_subtotal - validated_discount + (0.0 if delivery_method == "PICKUP" else delivery_fee) + tip_amount + (0.0 if delivery_method == "PICKUP" else misc_fee), 2))
+        expected_gross_total = max(0.0, round(authoritative_items_subtotal - validated_discount + (0.0 if delivery_method == "PICKUP" else delivery_fee) + tip_amount + (0.0 if delivery_method == "PICKUP" else misc_fee), 2))
+
+        # Authoritative wallet deduction verification
+        req_wallet_amount = (
+            req.walletAmountUsed
+            if req.walletAmountUsed is not None
+            else (
+                req.walletAmount
+                if req.walletAmount is not None
+                else (
+                    payload_dict.get("walletAmountUsed")
+                    or payload_dict.get("walletAmount")
+                    or 0.0
+                )
+            )
+        )
+        validated_wallet_deduction = 0.0
+        if req_wallet_amount and float(req_wallet_amount) > 0 and resolved_user_id and not str(resolved_user_id).startswith("guest_"):
+            try:
+                from routers.wallet import get_or_create_wallet
+                cust_wallet = await get_or_create_wallet(resolved_user_id, db)
+                real_cash = float(cust_wallet.balance or 0.0)
+                promo_cash = float(cust_wallet.promoBalance or 0.0)
+                settings_stmt = select(StoreSetting).where(StoreSetting.key == "referral_wallet_redeem_min_order_value")
+                s_row = (await db.execute(settings_stmt)).scalars().first()
+                min_wallet_mov = float(s_row.value if s_row else "99")
+                can_use_promo = authoritative_items_subtotal >= min_wallet_mov
+                wallet_usable = real_cash + (promo_cash if can_use_promo else 0.0)
+                validated_wallet_deduction = round(min(float(req_wallet_amount), wallet_usable, expected_gross_total), 2)
+            except Exception as w_err:
+                logger.warning(f"Error validating wallet balance for user {resolved_user_id}: {w_err}")
+                validated_wallet_deduction = 0.0
+
+        expected_quote_total = max(1.0, round(expected_gross_total - validated_wallet_deduction, 2))
         if total_amount is not None and abs(float(total_amount) - expected_quote_total) <= 0.05:
             total_amount = expected_quote_total
         elif total_amount is not None and float(total_amount) < (expected_quote_total - 0.05):
@@ -561,6 +597,8 @@ async def create_cashfree_order(
             "packagingFee": 0.0 if delivery_method == "PICKUP" else round(misc_fee, 2),
             "tipAmount": round(tip_amount, 2),
             "total": round(total_amount, 2),
+            "grossTotal": round(expected_gross_total, 2),
+            "walletAmountUsed": round(validated_wallet_deduction, 2),
             "deliveryMethod": delivery_method,
             "storeId": store_id,
             "cartItemIds": active_cart_item_ids,
@@ -1871,6 +1909,30 @@ async def auto_recover_unplaced_cashfree_order(
                 "restaurant_id": target_restaurant_id,
                 "shop_name": target_shop_name
             })
+
+        # If wallet deduction was part of this order, debit user's wallet
+        recovered_wallet_used = float(
+            (pending_data.get("validatedQuote") or {}).get("walletAmountUsed")
+            or pending_data.get("walletAmountUsed")
+            or 0.0
+        ) if pending_data else 0.0
+
+        if recovered_wallet_used > 0 and user_id and not str(user_id).startswith("guest_"):
+            try:
+                from routers.wallet import debit_customer_wallet
+                from decimal import Decimal
+                await debit_customer_wallet(
+                    user_id=user_id,
+                    amount=Decimal(str(recovered_wallet_used)),
+                    description=f"Wallet deduction for Order #{next_seq}",
+                    db=db,
+                    metadata={"walletDeduction": recovered_wallet_used, "cfOrderId": clean_cf_id},
+                    allow_promo=True,
+                )
+                for co in created_orders:
+                    co["order"].notes = f"{co['order'].notes} | [WALLET_USED:{recovered_wallet_used:.2f}]"
+            except Exception as w_err:
+                logger.warning(f"Error debiting wallet on auto-recover for user {user_id}: {w_err}")
 
         # 8. Create Order Items for each order
         for co in created_orders:

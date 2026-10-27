@@ -378,6 +378,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         key: ValueKey(
                             'hero_carousel_${_isGrocerySelected ? "grocery" : "food"}'),
                         type: _isGrocerySelected ? 'grocery' : 'food',
+                        onSwitchMode: (isGrocery) {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _isGrocerySelected = isGrocery;
+                          });
+                        },
                       ),
                     ),
                     if (_isGrocerySelected) ...[

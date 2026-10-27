@@ -87,8 +87,21 @@ async def get_admin_dashboard(
     today_orders_result = await db.execute(today_orders_stmt)
     today_orders_count, today_revenue = today_orders_result.first() or (0, 0.0)
 
-    # Total users
-    total_users_stmt = select(func.count(User.id)).where(User.deletedAt.is_(None))
+    # Total users (Excluding anonymous device and guest placeholders)
+    real_user_filter = and_(
+        User.deletedAt.is_(None),
+        or_(
+            User.role != Role.USER,
+            and_(User.phone.is_not(None), User.phone != ""),
+            and_(
+                User.email.is_not(None),
+                not_(User.email.like("guest-%")),
+                not_(User.email.like("anon-fcm-%")),
+                not_(User.name.like("Guest%"))
+            )
+        )
+    )
+    total_users_stmt = select(func.count(User.id)).where(real_user_filter)
     total_users = (await db.execute(total_users_stmt)).scalar() or 0
 
     # Total products
@@ -1206,6 +1219,7 @@ async def admin_get_users(
     role: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     storeId: Optional[str] = Query(None),
+    include_guests: bool = Query(False),
     current_admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
@@ -1213,9 +1227,23 @@ async def admin_get_users(
     skip = (page - 1) * limit
     and_clauses = [
         User.deletedAt.is_(None),
-        or_(User.email.is_(None), not_(User.email.like("guest-%"))),
-        or_(User.name.is_(None), not_(User.name.like("Guest Shopper%"))),
     ]
+
+    if not include_guests:
+        # Exclude anonymous push device placeholders and guest shopping sessions
+        # Real customers have a mobile phone, non-guest email, or staff role
+        and_clauses.append(
+            or_(
+                User.role != Role.USER,
+                and_(User.phone.is_not(None), User.phone != ""),
+                and_(
+                    User.email.is_not(None),
+                    not_(User.email.like("guest-%")),
+                    not_(User.email.like("anon-fcm-%")),
+                    not_(User.name.like("Guest%"))
+                )
+            )
+        )
 
     if role and role != 'ALL':
         try:

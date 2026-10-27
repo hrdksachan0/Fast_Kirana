@@ -11,6 +11,7 @@ import '../data/repositories/address_repository.dart';
 import '../data/repositories/order_repository.dart';
 import 'address_provider.dart';
 import 'cart_provider.dart';
+import 'wallet_provider.dart';
 import '../features/orders/orders_screen.dart';
 
 /// Holds the currently authenticated user, loaded from SharedPreferences.
@@ -101,6 +102,13 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     await SecureStorage.loadCache();
     state = AsyncValue.data(user);
 
+    // Invalidate wallet providers so the newly logged in user gets their own fresh wallet state
+    try {
+      _ref.read(walletNotifierProvider.notifier).reset();
+      _ref.read(walletNotifierProvider.notifier).fetchBalance();
+      _ref.invalidate(walletTransactionsProvider);
+    } catch (_) {}
+
     // Register device FCM push token on login with explicit role and restaurant ID
     try {
       final dio = _ref.read(dioProvider);
@@ -148,6 +156,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       if (key.startsWith('user_') ||
           key.startsWith('auth_') ||
           key.startsWith('cart_') ||
+          key.startsWith('wallet_') ||
           key.startsWith('local_restaurant_') ||
           key.startsWith('cached_admin_') ||
           key == 'has_chosen_location' ||
@@ -168,6 +177,9 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       _ref.read(selectedAddressProvider.notifier).state = null;
       await _ref.read(cartProvider.notifier).clearCart();
       _ref.invalidate(ordersProvider);
+      _ref.read(walletNotifierProvider.notifier).reset();
+      _ref.invalidate(walletNotifierProvider);
+      _ref.invalidate(walletTransactionsProvider);
     } catch (e) {
       LoggerService.error('AuthProvider: error clearing state on logout', e);
     }

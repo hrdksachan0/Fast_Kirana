@@ -8,10 +8,10 @@ Handles:
 4. /cron/settle-wallets: Rider wallet ledger reconciliation
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Request, Response, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import text, and_, or_, delete
+from sqlalchemy import text, and_, or_, delete, not_, exists
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 import logging
@@ -20,7 +20,7 @@ import uuid
 import httpx
 
 from database import get_db
-from models import Order, OrderItem, Product, StockLog, Cart, CartItem, User, OrderStatus, PaymentStatus, PaymentMethod
+from models import Order, OrderItem, Product, StockLog, Cart, CartItem, User, OrderStatus, PaymentStatus, PaymentMethod, Role, FcmToken, Address
 from config import settings
 from routers.websockets import manager as ws_manager
 
@@ -275,6 +275,85 @@ async def run_payment_recovery_cron(db: AsyncSession) -> Dict[str, Any]:
     return summary
 
 
+async def cleanup_abandoned_guests_lifecycle(db: AsyncSession, days: int = 2) -> Dict[str, Any]:
+    """
+    Enterprise Guest & Abandoned Device Token Cleanup.
+    Identifies and purges anonymous guest and FCM device records older than `days` (default 2 days / 48 hours)
+    who have never placed an order and have no phone number.
+    Safely cascades through fcm_tokens, cart_items, carts, and addresses.
+    Reclaims database storage and stops database bloat.
+    """
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    summary = {
+        "deletedUsers": 0,
+        "deletedCarts": 0,
+        "deletedTokens": 0,
+        "cutoff": cutoff.isoformat(),
+        "errors": []
+    }
+    try:
+        has_orders_subq = select(Order.id).where(Order.userId == User.id)
+        guest_target_stmt = (
+            select(User.id)
+            .where(
+                and_(
+                    User.createdAt < cutoff,
+                    User.role == Role.USER,
+                    or_(User.phone.is_(None), User.phone == ""),
+                    or_(
+                        User.email.like("anon-fcm-%"),
+                        User.email.like("guest-%"),
+                        User.name.like("Guest%"),
+                        User.email.is_(None)
+                    ),
+                    not_(exists(has_orders_subq))
+                )
+            )
+            .limit(2000)
+        )
+        res = await db.execute(guest_target_stmt)
+        target_ids = res.scalars().all()
+        if not target_ids:
+            return summary
+
+        # 1. Delete FCM tokens
+        try:
+            token_del_stmt = delete(FcmToken).where(FcmToken.userId.in_(target_ids))
+            t_res = await db.execute(token_del_stmt)
+            summary["deletedTokens"] = t_res.rowcount if hasattr(t_res, "rowcount") else 0
+        except Exception as te:
+            logger.warning(f"FcmToken cleanup note: {te}")
+
+        # 2. Delete carts & cart items
+        try:
+            cart_ids_stmt = select(Cart.id).where(Cart.userId.in_(target_ids))
+            cart_ids = (await db.execute(cart_ids_stmt)).scalars().all()
+            if cart_ids:
+                await db.execute(delete(CartItem).where(CartItem.cartId.in_(cart_ids)))
+                c_res = await db.execute(delete(Cart).where(Cart.id.in_(cart_ids)))
+                summary["deletedCarts"] = c_res.rowcount if hasattr(c_res, "rowcount") else 0
+        except Exception as ce:
+            logger.warning(f"Cart cleanup note: {ce}")
+
+        # 3. Delete addresses
+        try:
+            await db.execute(delete(Address).where(Address.userId.in_(target_ids)))
+        except Exception as ae:
+            logger.warning(f"Address cleanup note: {ae}")
+
+        # 4. Delete the guest users
+        user_del_stmt = delete(User).where(User.id.in_(target_ids))
+        u_res = await db.execute(user_del_stmt)
+        summary["deletedUsers"] = u_res.rowcount if hasattr(u_res, "rowcount") else len(target_ids)
+        await db.commit()
+        logger.info(f"Cleanup completed: Purged {summary[\"deletedUsers\"]} abandoned guest accounts older than {days} days.")
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error in cleanup_abandoned_guests_lifecycle: {e}")
+        summary["errors"].append(str(e))
+    return summary
+
+
 @router.get("/keep-alive")
 @router.post("/keep-alive")
 async def keep_alive_cron(
@@ -291,11 +370,14 @@ async def keep_alive_cron(
 
         # Execute recovery engine
         recovery_summary = await run_payment_recovery_cron(db)
+        # Run guest cleanup (purges 2-day-old inactive anonymous devices)
+        guest_cleanup_summary = await cleanup_abandoned_guests_lifecycle(db, days=2)
 
         return {
             "success": True,
             "message": "Database kept warm & payment recovery cycle executed",
             "recovery": recovery_summary,
+            "guestCleanup": guest_cleanup_summary,
             "timestamp": datetime.utcnow().isoformat()
         }
     except Exception as e:
@@ -332,6 +414,25 @@ async def cleanup_abandoned_carts(
         logger.error(f"Cart cleanup failed: {e}")
         raise HTTPException(status_code=500, detail=f"Cart cleanup failed: {str(e)}")
 
+
+
+@router.get("/cleanup-guests")
+@router.post("/cleanup-guests")
+async def cleanup_guests_cron(
+    days: int = Query(2, ge=1, le=30),
+    db: AsyncSession = Depends(get_db),
+    authorized: bool = Depends(_verify_cron_auth)
+):
+    """
+    Clean up abandoned guest and anonymous FCM users older than specified days (default 2 days).
+    """
+    summary = await cleanup_abandoned_guests_lifecycle(db, days=days)
+    return {
+        "success": True,
+        "message": f"Purged {summary.get(\"deletedUsers\", 0)} guest accounts older than {days} days",
+        "summary": summary,
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 @router.get("/inventory-sync")
 @router.post("/inventory-sync")

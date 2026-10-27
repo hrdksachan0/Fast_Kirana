@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
 import { runPaymentRecoveryCron } from '@/services/payment-recovery.service'
+import { runGuestCleanup } from '@/services/guest-cleanup.service'
 
 export async function GET(request: Request) {
   // If CRON_SECRET is set in environment, check it; otherwise allow keep-alive ping
@@ -20,11 +20,15 @@ export async function GET(request: Request) {
 
     // Run automated payment recovery & timeout lifecycle
     const recoverySummary = await runPaymentRecoveryCron()
-    
+
+    // Run 2-day-old inactive anonymous guest device purge
+    const guestCleanupSummary = await runGuestCleanup(2)
+
     return NextResponse.json({
       success: true,
-      message: 'Database kept warm & payment recovery cycle executed',
+      message: 'Database kept warm, payment recovery executed & abandoned guests cleaned',
       recovery: recoverySummary,
+      guestCleanup: guestCleanupSummary,
       timestamp: new Date().toISOString()
     })
   } catch (error: any) {

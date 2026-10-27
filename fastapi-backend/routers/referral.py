@@ -40,8 +40,8 @@ async def get_referral_settings(db: AsyncSession) -> Dict[str, str]:
     
     config = {
         "enabled": DEFAULT_SETTINGS.get("referral_enabled", "true"),
-        "referrer_reward": DEFAULT_SETTINGS.get("referral_referrer_reward", "100"),
-        "referee_discount": DEFAULT_SETTINGS.get("referral_referee_discount", "50"),
+        "referrer_reward": DEFAULT_SETTINGS.get("referral_referrer_reward", "25"),
+        "referee_discount": DEFAULT_SETTINGS.get("referral_referee_discount", "25"),
         "min_order_value": DEFAULT_SETTINGS.get("referral_min_order_value", "199"),
         "monthly_cap": DEFAULT_SETTINGS.get("referral_monthly_cap", "1500"),
         "whatsapp_message": DEFAULT_SETTINGS.get("referral_whatsapp_message", "🛒 FastMinute se grocery order karo aur mere code {CODE} se paao ₹{DISCOUNT} OFF!\n\n📲 Download FastMinute App on Play Store:\nhttps://play.google.com/store/apps/details?id=com.fastkirana.app\n\n🎁 Referral Code: {CODE}"),
@@ -106,13 +106,39 @@ async def get_my_referral_code(
 
     config = await get_referral_settings(db)
     play_store_link = "https://play.google.com/store/apps/details?id=com.fastkirana.app"
-    discount_val = config.get("referee_discount", "50")
+    discount_val = config.get("referee_discount", "25")
 
     share_text = (
         f"🛒 FastMinute Grocery se order karo aur mere referral code *{user.referralCode}* se paao ₹{discount_val} OFF!\n\n"
         f"📲 Download Android App on Play Store:\n{play_store_link}\n\n"
         f"🎁 Referral Code: *{user.referralCode}*"
     )
+
+    # Check if this user was already referred by someone or has applied a code
+    existing_ref = (await db.execute(
+        select(Referral).where(Referral.refereeId == user.id)
+    )).scalars().first()
+    has_applied = bool(user.referredById or existing_ref)
+
+    # Check total orders
+    total_orders = (await db.execute(
+        select(func.count(Order.id)).where(Order.userId == user.id)
+    )).scalar() or 0
+
+    # Check account registration age (must be within 24 hours of registration)
+    is_new_account = True
+    if user.createdAt:
+        user_created = user.createdAt.replace(tzinfo=None) if hasattr(user.createdAt, "tzinfo") and user.createdAt.tzinfo else user.createdAt
+        from datetime import datetime
+        age_in_hours = (datetime.utcnow() - user_created).total_seconds() / 3600.0
+        if age_in_hours > 24.0:
+            is_new_account = False
+
+    user_role_str = (user.role.value if hasattr(user.role, "value") else str(user.role or "")).upper()
+    if user_role_str.startswith("ROLE."):
+        user_role_str = user_role_str.replace("ROLE.", "")
+    is_user_role = (not user_role_str or user_role_str == "USER")
+    can_apply = (not has_applied) and (total_orders == 0) and is_new_account and is_user_role
 
     return {
         "success": True,
@@ -123,7 +149,10 @@ async def get_my_referral_code(
         "referrerReward": float(config["referrer_reward"]),
         "refereeDiscount": float(config["referee_discount"]),
         "minOrderValue": float(config["min_order_value"]),
-        "isEnabled": config["enabled"].lower() == "true"
+        "isEnabled": config["enabled"].lower() == "true",
+        "hasAppliedReferral": has_applied,
+        "canApplyReferral": can_apply,
+        "appliedCode": existing_ref.codeUsed if existing_ref else None,
     }
 
 
@@ -140,7 +169,9 @@ async def apply_referral_code(
     - Code is valid and exists in users table
     - Cannot refer self (user cannot enter their own code or phone match)
     - User has not already used a referral code
-    - User has not already placed a delivered order (first order only)
+    - User role must be USER (no staff / admin)
+    - User account must be new (registered within 24 hours)
+    - User has not placed ANY orders yet (strictly first order only)
     """
     user_id = current_user.get("id")
     stmt = select(User).where(User.id == user_id)
@@ -157,6 +188,13 @@ async def apply_referral_code(
     if not clean_code or len(clean_code) < 3:
         raise HTTPException(status_code=400, detail="Please enter a valid referral code")
 
+    # Staff / Non-customer check
+    user_role_str = (user.role.value if hasattr(user.role, "value") else str(user.role or "")).upper()
+    if user_role_str.startswith("ROLE."):
+        user_role_str = user_role_str.replace("ROLE.", "")
+    if user_role_str and user_role_str != "USER":
+        raise HTTPException(status_code=400, detail="Staff and Admin accounts cannot apply referral codes")
+
     # Find referrer
     ref_stmt = select(User).where(User.referralCode == clean_code)
     referrer = (await db.execute(ref_stmt)).scalars().first()
@@ -170,18 +208,26 @@ async def apply_referral_code(
     existing_ref = (await db.execute(
         select(Referral).where(Referral.refereeId == user.id)
     )).scalars().first()
-    if existing_ref:
+    if existing_ref or user.referredById:
         raise HTTPException(status_code=400, detail="You have already applied a referral code")
 
-    # Check if user already placed delivered orders (only first-time customers are eligible)
-    delivered_orders = (await db.execute(
-        select(func.count(Order.id)).where(
-            Order.userId == user.id,
-            Order.status == OrderStatus.DELIVERED
-        )
+    # Check if user already placed ANY order (only first-time customers are eligible)
+    total_orders = (await db.execute(
+        select(func.count(Order.id)).where(Order.userId == user.id)
     )).scalar() or 0
-    if delivered_orders > 0:
+    if total_orders > 0:
         raise HTTPException(status_code=400, detail="Referral code can only be used on your first order")
+
+    # Check account registration age: Referral code can only be used by new accounts (within 24 hours of joining)
+    if user.createdAt:
+        user_created = user.createdAt.replace(tzinfo=None) if hasattr(user.createdAt, "tzinfo") and user.createdAt.tzinfo else user.createdAt
+        from datetime import datetime
+        age_in_hours = (datetime.utcnow() - user_created).total_seconds() / 3600.0
+        if age_in_hours > 24.0:
+            raise HTTPException(
+                status_code=400,
+                detail="Referral code can only be claimed by new accounts within 24 hours of registration"
+            )
 
     # Link referral
     user.referredById = referrer.id
@@ -198,10 +244,10 @@ async def apply_referral_code(
     )
     db.add(new_referral)
 
-    # Instant Wallet Credit: Credit ₹50 welcome discount to referee's FastMinute Wallet immediately
+    # Instant Wallet Credit: Credit ₹25 welcome discount to referee's FastMinute Wallet promo balance
     referee_wallet = await get_or_create_wallet(user.id, db)
-    bal_before = referee_wallet.balance
-    referee_wallet.balance = Decimal(str(referee_wallet.balance)) + referee_discount
+    bal_before = referee_wallet.promoBalance or Decimal("0.00")
+    referee_wallet.promoBalance = Decimal(str(bal_before)) + referee_discount
 
     welcome_tx = WalletTransaction(
         id=f"wtx_{uuid.uuid4().hex[:16]}",
@@ -210,18 +256,18 @@ async def apply_referral_code(
         type=WalletTxType.CREDIT_REFERRAL,
         status=WalletTxStatus.SUCCESS,
         balanceBefore=bal_before,
-        balanceAfter=referee_wallet.balance,
+        balanceAfter=referee_wallet.promoBalance,
         description=f"Welcome bonus! Referral code {clean_code} applied 🎉",
         metadata_json={"referralId": new_referral.id, "code": clean_code}
     )
     db.add(welcome_tx)
 
     await db.commit()
-    logger.info(f"Referral code {clean_code} applied by user {user.id}. Credited ₹{referee_discount} to wallet (referred by {referrer.id})")
+    logger.info(f"Referral code {clean_code} applied by user {user.id}. Credited ₹{referee_discount} to promo wallet (referred by {referrer.id})")
 
     return {
         "success": True,
-        "message": f"🎉 ₹{int(referee_discount)} Cash credited to your FastMinute Wallet! Use it on orders above ₹{config.get('min_order_value', '199')}.",
+        "message": f"🎉 ₹{int(referee_discount)} Cash credited to your FastMinute Wallet! Use it on orders above ₹99.",
         "discountAmount": float(referee_discount),
         "codeUsed": clean_code
     }
@@ -316,11 +362,29 @@ async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
             return
 
         min_mov = Decimal(config["min_order_value"])
-        # Edge case defense: Qualifying order check should be based on items' subtotal (cart value >= 199),
-        # so customer using their ₹50 wallet discount does not unfairly disqualify the referrer!
         order_subtotal = Decimal(str(order.subtotal or 0.0))
+
+        # Strict Rule (Option A): Referral reward is ONLY eligible on the friend's very FIRST delivered order.
+        # Check if the friend already has any previous delivered orders:
+        prev_delivered = (await db.execute(
+            select(func.count(Order.id)).where(
+                Order.userId == order.userId,
+                Order.status == OrderStatus.DELIVERED,
+                Order.id != order.id
+            )
+        )).scalar() or 0
+
+        if prev_delivered > 0:
+            logger.info(f"Referral disqualified: Order {order.id} is not the referee's first delivered order (prev count: {prev_delivered})")
+            referral.status = ReferralStatus.EXPIRED
+            await db.commit()
+            return
+
+        # If the first order is below the minimum qualifying threshold (e.g. ₹99), referral is expired permanently
         if order_subtotal < min_mov:
-            logger.info(f"Referral reward skipped: Order subtotal ₹{order_subtotal} < MOV ₹{min_mov}")
+            logger.info(f"Referral disqualified: First order subtotal ₹{order_subtotal} < MOV ₹{min_mov}. Expiring referral permanently.")
+            referral.status = ReferralStatus.EXPIRED
+            await db.commit()
             return
 
         reward_amount = Decimal(config["referrer_reward"])
@@ -343,10 +407,10 @@ async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
                 await db.commit()
                 return
 
-        # 4. Credit Referrer Wallet
+        # 4. Credit Referrer Wallet (as promotional referral bonus balance)
         referrer_wallet = await get_or_create_wallet(referral.referrerId, db)
-        bal_before = referrer_wallet.balance
-        referrer_wallet.balance = Decimal(str(referrer_wallet.balance)) + reward_amount
+        bal_before = referrer_wallet.promoBalance
+        referrer_wallet.promoBalance = Decimal(str(referrer_wallet.promoBalance or 0.0)) + reward_amount
 
         # Log Wallet Transaction
         tx = WalletTransaction(
@@ -356,7 +420,7 @@ async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
             type=WalletTxType.CREDIT_REFERRAL,
             status=WalletTxStatus.SUCCESS,
             balanceBefore=bal_before,
-            balanceAfter=referrer_wallet.balance,
+            balanceAfter=referrer_wallet.promoBalance,
             description=f"Referral reward: friend completed their first order! 🎉",
             metadata_json={"orderId": order.id, "refereeId": order.userId}
         )
@@ -373,14 +437,16 @@ async def process_referral_reward_on_delivery(order: Order, db: AsyncSession):
 
         # Send push notification to Referrer
         try:
-            await send_fcm_notification(
+            from routers.orders import send_pwa_notification_to_user
+            await send_pwa_notification_to_user(
                 user_id=referral.referrerId,
                 title="Referral Cash Earned! 🎁",
                 body=f"Your friend just completed their first order! ₹{float(reward_amount):.2f} has been added to your FastMinute wallet.",
-                data={"type": "REFERRAL_REWARD", "amount": str(float(reward_amount))}
+                data={"type": "REFERRAL_REWARD", "amount": str(float(reward_amount))},
+                db=db
             )
         except Exception as fcm_err:
-            logger.warning(f"FCM push notification failed for referral bonus: {fcm_err}")
+            logger.warning(f"Push notification failed for referral bonus: {fcm_err}")
 
     except Exception as e:
         logger.error(f"Error processing referral reward for order {order.id}: {e}", exc_info=True)

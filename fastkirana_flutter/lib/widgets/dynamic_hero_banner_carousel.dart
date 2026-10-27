@@ -18,10 +18,12 @@ import 'curated_brand_offer_card.dart';
 /// (Sneaker Street Dark Hero, 2x2 Bento Grid, and HRX Editorial).
 class DynamicHeroBannerCarousel extends ConsumerWidget {
   final String? type; // 'grocery', 'food', etc.
+  final ValueChanged<bool>? onSwitchMode;
 
   const DynamicHeroBannerCarousel({
     super.key,
     this.type = 'grocery',
+    this.onSwitchMode,
   });
 
   Future<void> _handleCardTap(BuildContext context, WidgetRef ref, BrandOfferCardData card) async {
@@ -29,15 +31,66 @@ class DynamicHeroBannerCarousel extends ConsumerWidget {
     var link = (card.ctaUrl ?? card.redirectUrl ?? '').trim();
     if (link.isEmpty) return;
 
-    // Normalize if link is full FastKirana URL (e.g. https://www.fastkirana.in/category/fruits-vegetables)
+    // Normalize if link is full FastMinute / FastKirana URL (e.g. https://www.fastminute.in/?mode=food)
     if (link.startsWith('http://fastkirana.in') ||
         link.startsWith('https://fastkirana.in') ||
         link.startsWith('http://www.fastkirana.in') ||
-        link.startsWith('https://www.fastkirana.in')) {
+        link.startsWith('https://www.fastkirana.in') ||
+        link.startsWith('http://fastminute.in') ||
+        link.startsWith('https://fastminute.in') ||
+        link.startsWith('http://www.fastminute.in') ||
+        link.startsWith('https://www.fastminute.in')) {
       final uri = Uri.tryParse(link);
       if (uri != null) {
         link = uri.path + (uri.hasQuery ? '?${uri.query}' : '');
       }
+    }
+
+    final lower = link.toLowerCase().trim();
+
+    // 0. Mode Switch: Food / Restaurants
+    final isFoodSwitch = lower.contains('mode=food') ||
+        lower == '/food' ||
+        lower == 'food' ||
+        lower == '/restaurants' ||
+        lower == 'restaurants' ||
+        lower == '/cafe' ||
+        lower == 'cafe' ||
+        card.title.toLowerCase() == 'restaurant';
+
+    if (isFoodSwitch) {
+      if (onSwitchMode != null) {
+        onSwitchMode!(false);
+        return;
+      }
+      final restaurants = ref.read(restaurantsProvider).valueOrNull ?? [];
+      if (restaurants.isNotEmpty && context.mounted) {
+        final rest = restaurants.first;
+        Navigator.push(
+          context,
+          FadeSlideRoute(
+            page: CafeMenuScreen(
+              restaurantId: rest.id,
+              restaurantName: rest.name,
+              restaurant: rest,
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Mode Switch: Grocery
+    final isGrocerySwitch = lower.contains('mode=grocery') ||
+        lower == '/grocery' ||
+        lower == 'grocery';
+
+    if (isGrocerySwitch) {
+      if (onSwitchMode != null) {
+        onSwitchMode!(true);
+        return;
+      }
+      return;
     }
 
     // 1. External Social / Web URLs (Instagram, WhatsApp, YouTube, External Website)

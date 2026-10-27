@@ -33,10 +33,11 @@ async def get_or_create_guest_user(guest_id: str, db: AsyncSession) -> Optional[
     result = await db.execute(select(User).where(User.email == guest_email))
     user = result.scalars().first()
     if not user:
+        display_name = f"Guest Shopper (App #{clean_id[-4:]})" if "g_app_" in clean_id else f"Guest Shopper ({clean_id[:6]})"
         user = User(
             id=generate_id("usr_"),
             email=guest_email,
-            name=f"Guest Shopper ({clean_id[:6]})",
+            name=display_name,
             role="USER",
         )
         db.add(user)
@@ -272,6 +273,17 @@ async def sync_cart(
     cart = await get_or_create_cart(user_id, db)
     if not cart:
         raise HTTPException(status_code=500, detail="Failed to find or create cart")
+
+    # Guard against accidental empty-cart wipes from transient local states
+    is_explicit_clear = bool(payload.get("isExplicitClear") or payload.get("clearCart"))
+    if not items_data and not is_explicit_clear:
+        items_result = await db.execute(select(CartItem).where(CartItem.cartId == cart.id))
+        existing_items = items_result.scalars().all()
+        return {
+            "success": True,
+            "message": "Cart preserved (empty sync without explicit clear intent)",
+            "itemCount": len(existing_items),
+        }
 
     # Validate replacement items BEFORE deleting existing cart items to prevent silent cart loss
     deduped_items: Dict[tuple, Dict[str, Any]] = {}

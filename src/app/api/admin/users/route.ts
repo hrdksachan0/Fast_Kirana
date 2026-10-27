@@ -22,12 +22,22 @@ export async function GET(request: Request) {
 
   try {
     const where: any = {
+      deletedAt: null,
       OR: [
-        { email: null },
+        { role: { not: 'USER' } },
         {
-          NOT: {
-            email: { startsWith: 'guest-' }
-          }
+          AND: [
+            { phone: { not: null } },
+            { phone: { not: '' } }
+          ]
+        },
+        {
+          AND: [
+            { email: { not: null } },
+            { NOT: { email: { startsWith: 'guest-' } } },
+            { NOT: { email: { startsWith: 'anon-fcm-' } } },
+            { NOT: { name: { startsWith: 'Guest' } } }
+          ]
         }
       ]
     }

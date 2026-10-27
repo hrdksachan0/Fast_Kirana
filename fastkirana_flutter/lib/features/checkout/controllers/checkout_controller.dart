@@ -323,70 +323,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return;
     }
 
-    // Ensure placing overlay is dismissed so only the sleek high-trust payment dialog shows
-    state = state.copyWith(isPlacingOrder: false);
-
-    // 1. High-trust fullscreen confirmation dialog
-    bool dialogShown = false;
-    final navContext = _currentContext ?? AppRouter.navigatorKey.currentContext;
-
-    void dismissConfirmingDialog() {
-      try {
-        AppRouter.navigatorKey.currentState?.popUntil((route) => route.settings.name != 'payment_confirming_dialog');
-      } catch (_) {}
-    }
-
-    if (navContext != null && navContext.mounted) {
-      dialogShown = true;
-      showDialog(
-        context: navContext,
-        barrierDismissible: true,
-        routeSettings: const RouteSettings(name: 'payment_confirming_dialog'),
-        builder: (dialogCtx) => PopScope(
-          canPop: true,
-          child: Dialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00A344)),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Confirming Payment...',
-                    style: GoogleFonts.inter(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0F172A),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Securing your order with the kitchen.\nPlease do not press back.',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF64748B),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+    // Keep the premium Zepto overlay visible throughout verification
+    state = state.copyWith(isPlacingOrder: true);
 
     PaymentVerificationResult? verification;
     try {
@@ -394,11 +332,6 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       verification = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 4);
     } catch (vErr) {
       debugPrint('Cashfree verification error: $vErr');
-    } finally {
-      // GUARANTEED: Dialog is ALWAYS dismissed!
-      if (dialogShown) {
-        dismissConfirmingDialog();
-      }
     }
 
     final verifiedPaid = verification?.isPaid == true;
@@ -429,12 +362,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             final existingOrder = Order.fromJson(matchingOrderData);
             await PaymentGatewayHandler.clearPendingPaymentRecovery();
             await CheckoutDraft.clearAcceptedDraft();
-            state = state.copyWith(
-              isPlacingOrder: false,
-              pendingCashfreeOrderId: null,
-              pendingGrandTotal: null,
-              pendingCart: null,
-            );
+            // Keep isPlacingOrder active so the frosted overlay smoothly transitions into OrderSuccessScreen
             final activeCtx = (context != null && context.mounted)
                 ? context
                 : AppRouter.navigatorKey.currentContext;
@@ -486,8 +414,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     // 4. Payment verified! Clear recovery flags immediately so warning banner NEVER displays
     await PaymentGatewayHandler.clearPendingPaymentRecovery();
     await CheckoutDraft.clearAcceptedDraft();
+    // Keep isPlacingOrder active so the frosted overlay smoothly transitions into OrderSuccessScreen
     state = state.copyWith(
-      isPlacingOrder: false,
       pendingCashfreeOrderId: null,
       pendingGrandTotal: null,
       pendingCart: null,
@@ -842,10 +770,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final walletState = ref.read(walletNotifierProvider);
     final double realCash = walletState.balance;
     final double promoCash = walletState.promoBalance;
-    const double minPromoOrderValue = 199.0;
+    const double minPromoOrderValue = 99.0;
     final bool canUsePromo = subtotal >= minPromoOrderValue;
     // Deposited real cash (Cashfree/refunds) has ZERO minimum order value.
-    // Promotional/referral bonus cash unlocks when subtotal >= ₹199.
+    // Promotional/referral bonus cash unlocks when subtotal >= ₹99.
     final double walletUsable = realCash + (canUsePromo ? promoCash : 0.0);
     final bool isEligibleForWallet = walletUsable > 0;
     final double walletAmountUsed = (state.useWalletBalance && isEligibleForWallet)
@@ -933,11 +861,13 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           activePaymentSessionId: state.pendingCashfreeOrderId,
           items: itemsPayload,
           grandTotal: grandTotal,
+          walletAmountUsed: walletAmountUsed,
           cfOrderId: state.pendingCashfreeOrderId,
         );
 
         final cfOrderId = await _paymentHandler.launchPayment(
           amount: grandTotal,
+          walletAmountUsed: walletAmountUsed,
           customerPhone: cleanPhone.isNotEmpty ? cleanPhone : rawPhone,
           customerEmail: hasValidEmail ? userEmail : null,
           customerName: customerName,
@@ -1341,10 +1271,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final walletState = ref.read(walletNotifierProvider);
     final double realCash = walletState.balance;
     final double promoCash = walletState.promoBalance;
-    const double minPromoOrderValue = 199.0;
+    const double minPromoOrderValue = 99.0;
     final bool canUsePromo = subtotal >= minPromoOrderValue;
     // Deposited real cash (Cashfree/refunds) has ZERO minimum order value.
-    // Promotional/referral bonus cash unlocks when subtotal >= ₹199.
+    // Promotional/referral bonus cash unlocks when subtotal >= ₹99.
     final double walletUsable = realCash + (canUsePromo ? promoCash : 0.0);
     final bool isEligibleForWallet = walletUsable > 0;
     final double walletAmountUsed = (state.useWalletBalance && isEligibleForWallet)
@@ -1637,6 +1567,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   }) async {
     // Subtle pleasant confirmation chime and haptic sensation immediately
     unawaited(CustomerSoundService.instance.playOrderSuccessSound());
+    HapticFeedback.heavyImpact();
 
     // Update state to unblock UI immediately
     state = state.copyWith(

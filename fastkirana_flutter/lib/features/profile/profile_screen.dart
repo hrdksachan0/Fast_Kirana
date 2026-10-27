@@ -326,7 +326,7 @@ class ProfileScreen extends ConsumerWidget {
     final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
     final walletState = ref.watch(walletNotifierProvider);
     final referralAsync = ref.watch(referralInfoProvider);
-    final referralReward = referralAsync.valueOrNull?.referrerReward.toInt() ?? 100;
+    final referralReward = referralAsync.valueOrNull?.referrerReward.toInt() ?? 25;
 
     final ordersCount = ordersAsync.valueOrNull?.length ?? 0;
     final role = (user?.role ?? 'USER').toUpperCase();

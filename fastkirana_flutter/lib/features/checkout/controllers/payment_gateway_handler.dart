@@ -40,6 +40,7 @@ class PaymentGatewayHandler {
   /// Returns the initiated Cashfree orderId, or null on failure.
   Future<String?> launchPayment({
     required double amount,
+    double? walletAmountUsed,
     required String customerPhone,
     required String? customerEmail,
     required String customerName,
@@ -66,6 +67,10 @@ class PaymentGatewayHandler {
         '/api/payment/cashfree/create-order',
         data: {
           'amount': amount,
+          if (walletAmountUsed != null && walletAmountUsed > 0) ...{
+            'walletAmountUsed': walletAmountUsed,
+            'walletAmount': walletAmountUsed,
+          },
           if (existingOrderId != null) 'orderId': existingOrderId,
           'customerPhone': phone10.length == 10 ? phone10 : '9999999999',
           if (hasValidEmail) 'customerEmail': customerEmail.trim(),

@@ -1811,7 +1811,7 @@ async def create_order(
                 logger.warning(f"FastAPI idempotency check error: {idemp_err}")
 
         wallet_used_amount = float(payload.get("walletAmountUsed") or 0.0)
-        min_wallet_mov = float(settings_map.get("referral_min_order_value", "199"))
+        min_wallet_mov = float(settings_map.get("referral_wallet_redeem_min_order_value", "99"))
         allow_promo_wallet = subtotal >= min_wallet_mov
 
         if payment_method == "WALLET" or wallet_used_amount > 0:

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../core/services/logger_service.dart';
+import '../data/models/user.dart';
+import 'auth_provider.dart';
 
 class WalletState {
   final double balance;
@@ -72,17 +74,45 @@ class WalletNotifier extends StateNotifier<WalletState> {
   final Ref _ref;
 
   WalletNotifier(this._ref) : super(const WalletState()) {
-    fetchBalance();
+    // Listen to authentication changes so wallet balance is NEVER leaked across accounts
+    _ref.listen<AsyncValue<User?>>(authProvider, (previous, next) {
+      final prevUser = previous?.value;
+      final nextUser = next.value;
+
+      if (nextUser == null) {
+        // User logged out -> reset to empty state immediately
+        reset();
+      } else if (prevUser?.id != nextUser.id) {
+        // Different user logged in -> reset and fetch balance for new account
+        reset();
+        fetchBalance();
+      }
+    });
+
+    final currentUser = _ref.read(authProvider).value;
+    if (currentUser != null) {
+      fetchBalance();
+    }
+  }
+
+  void reset() {
+    state = const WalletState();
   }
 
   Future<void> fetchBalance() async {
+    final currentUser = _ref.read(authProvider).value;
+    if (currentUser == null) {
+      reset();
+      return;
+    }
+
     state = state.copyWith(isLoading: true, error: null);
     try {
       final dio = _ref.read(dioProvider);
       final response = await dio.get('/api/wallet/balance');
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data;
-        state = state.copyWith(
+        state = WalletState(
           balance: (data['balance'] as num?)?.toDouble() ?? 0.0,
           promoBalance: (data['promoBalance'] as num?)?.toDouble() ?? 0.0,
           totalUsable: (data['totalUsable'] as num?)?.toDouble() ?? 0.0,
@@ -93,7 +123,12 @@ class WalletNotifier extends StateNotifier<WalletState> {
       }
     } catch (e) {
       LoggerService.error('Error fetching wallet balance', e);
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final user = _ref.read(authProvider).value;
+      if (user == null) {
+        reset();
+      } else {
+        state = state.copyWith(isLoading: false, error: e.toString());
+      }
     }
   }
 
@@ -134,6 +169,9 @@ final walletNotifierProvider = StateNotifierProvider<WalletNotifier, WalletState
 });
 
 final walletTransactionsProvider = FutureProvider.autoDispose<List<WalletTransactionItem>>((ref) async {
+  final user = ref.watch(authProvider).value;
+  if (user == null) return [];
+
   final dio = ref.read(dioProvider);
   try {
     final response = await dio.get('/api/wallet/transactions');

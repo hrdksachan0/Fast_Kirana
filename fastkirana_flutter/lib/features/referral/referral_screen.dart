@@ -96,7 +96,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
     try {
       await Share.share(
         text,
-        subject: 'FastMinute Grocery Referral: Get ₹50 OFF!',
+        subject: 'FastMinute Grocery Referral: Get ₹25 OFF!',
       );
     } catch (_) {
       await Clipboard.setData(ClipboardData(text: text));
@@ -110,12 +110,12 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
 
   String _getShareMessage(ReferralInfo info) {
     final code = info.referralCode;
-    final discount = info.refereeDiscount > 0 ? info.refereeDiscount.toInt() : 50;
+    final discount = info.refereeDiscount > 0 ? info.refereeDiscount.toInt() : 25;
 
-    return '🛒 *FastMinute* se grocery order karo aur mere code *${code}* se paao ₹${discount} OFF!\n\n'
+    return '🛒 *FastMinute* se grocery order karo aur mere code *$code* se paao ₹$discount OFF!\n\n'
         '📲 *Download FastMinute App on Play Store:*\n'
         'https://play.google.com/store/apps/details?id=com.fastkirana.app\n\n'
-        '🎁 Referral Code: *${code}*';
+        '🎁 Referral Code: *$code*';
   }
 
   @override
@@ -159,7 +159,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
               ),
             ),
             Text(
-              'Give ₹50, Get ₹100 Free Grocery Cash',
+              'Give ₹25, Get ₹25 Free Grocery Cash',
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 11),
                 color: AppDesignSystem.slate500,
@@ -257,7 +257,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Invite your friends & family. They get ₹${info.refereeDiscount.toInt()} OFF on their 1st order. When delivered, ₹${info.referrerReward.toInt()} is added to your Wallet instantly!',
+                        'Invite your friends & family. When their 1st order of ₹${info.minOrderValue.toInt()}+ is delivered, ₹${info.referrerReward.toInt()} is added to your Wallet instantly!',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: Responsive.scaledFontSize(context, 12),
@@ -278,9 +278,9 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                           children: [
                             _buildStepBadge(context, '1', 'Share\nCode', Icons.share_rounded),
                             _buildArrow(),
-                            _buildStepBadge(context, '2', 'Friend\nGets ₹50', Icons.discount_rounded),
+                            _buildStepBadge(context, '2', 'Friend\nGets ₹${info.refereeDiscount.toInt()}', Icons.discount_rounded),
                             _buildArrow(),
-                            _buildStepBadge(context, '3', 'You Get\n₹100 Cash', Icons.account_balance_wallet_rounded),
+                            _buildStepBadge(context, '3', 'You Get\n₹${info.referrerReward.toInt()} Cash', Icons.account_balance_wallet_rounded),
                           ],
                         ),
                       ),
@@ -450,128 +450,53 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Apply their code to get ₹50 OFF on your first grocery order',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
-                          color: AppDesignSystem.slate500,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 46,
-                              child: TextField(
-                                controller: _codeController,
-                                textCapitalization: TextCapitalization.characters,
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 14),
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.5,
-                                  color: AppDesignSystem.slate900,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'Enter code (e.g. FAST1234)',
-                                  hintStyle: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 12),
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: 0,
-                                    color: AppDesignSystem.slate400,
-                                  ),
-                                  filled: true,
-                                  fillColor: const Color(0xFFF8FAFC),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: AppDesignSystem.slate200),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: AppDesignSystem.slate200),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          SizedBox(
-                            height: 46,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF059669),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                              ),
-                              onPressed: _isApplying ? null : _handleApplyCode,
-                              child: _isApplying
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : Text(
-                                      'Apply',
-                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800),
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_applySuccessMessage != null) ...[
+                      if (info.hasAppliedReferral) ...[
                         const SizedBox(height: 10),
                         Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: const Color(0xFFECFDF5),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0xFFA7F3D0)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 16),
-                              const SizedBox(width: 8),
+                              const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 20),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  _applySuccessMessage!,
+                                  info.appliedCode != null && info.appliedCode!.isNotEmpty
+                                      ? '🎉 Referral code ${info.appliedCode} applied! ₹${info.refereeDiscount.toInt()} Welcome Cash is in your FastMinute Wallet.'
+                                      : '🎉 Referral code applied! ₹${info.refereeDiscount.toInt()} Welcome Cash is in your FastMinute Wallet.',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                                    fontSize: Responsive.scaledFontSize(context, 12),
                                     color: const Color(0xFF065F46),
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                      if (_applyErrorMessage != null) ...[
+                      ] else if (!info.canApplyReferral) ...[
                         const SizedBox(height: 10),
                         Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF1F2),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFFECDD3)),
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppDesignSystem.slate200),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.error_outline_rounded, color: Color(0xFFE11D48), size: 16),
-                              const SizedBox(width: 8),
+                              const Icon(Icons.info_outline_rounded, color: AppDesignSystem.slate500, size: 20),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  _applyErrorMessage!,
+                                  'Referral codes can only be applied by new accounts before placing their first order.',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 11.5),
-                                    color: const Color(0xFF9F1239),
+                                    color: AppDesignSystem.slate600,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -579,6 +504,137 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                             ],
                           ),
                         ),
+                      ] else ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Apply their code to get ₹${info.refereeDiscount.toInt()} Welcome Cash for your orders (Min ₹${info.minOrderValue.toInt()})',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            color: AppDesignSystem.slate500,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 46,
+                                child: TextField(
+                                  controller: _codeController,
+                                  textCapitalization: TextCapitalization.characters,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 14),
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.5,
+                                    color: AppDesignSystem.slate900,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter code (e.g. FAST1234)',
+                                    hintStyle: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 12),
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0,
+                                      color: AppDesignSystem.slate400,
+                                    ),
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(color: AppDesignSystem.slate200),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(color: AppDesignSystem.slate200),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            SizedBox(
+                              height: 46,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF059669),
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                ),
+                                onPressed: _isApplying ? null : _handleApplyCode,
+                                child: _isApplying
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : Text(
+                                        'Apply',
+                                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_applySuccessMessage != null) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFA7F3D0)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _applySuccessMessage!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                                      color: const Color(0xFF065F46),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (_applyErrorMessage != null) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF1F2),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFFECDD3)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded, color: Color(0xFFE11D48), size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _applyErrorMessage!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                                      color: const Color(0xFF9F1239),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ],
                   ),
@@ -698,7 +754,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    'Share your code on WhatsApp to earn your first ₹100 grocery cash!',
+                                    'Share your code on WhatsApp to earn your first ₹${info.referrerReward.toInt()} grocery cash!',
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 11.5),
                                       color: AppDesignSystem.slate600,
@@ -721,7 +777,9 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                           ),
                           const SizedBox(height: 8),
                           ...recentList.map((r) {
-                            final isDone = r['status'] == 'COMPLETED';
+                            final statusStr = (r['status'] ?? '').toString().toUpperCase();
+                            final isDone = statusStr == 'COMPLETED';
+                            final isExpired = statusStr == 'EXPIRED';
                             return Container(
                               margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.all(12),
@@ -735,11 +793,17 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 17,
-                                    backgroundColor: (isDone ? const Color(0xFF059669) : const Color(0xFFF59E0B)).withValues(alpha: 0.12),
+                                    backgroundColor: (isDone
+                                        ? const Color(0xFF059669)
+                                        : (isExpired ? const Color(0xFFE11D48) : const Color(0xFFF59E0B))).withValues(alpha: 0.12),
                                     child: Icon(
-                                      isDone ? Icons.check_circle_rounded : Icons.hourglass_top_rounded,
+                                      isDone
+                                          ? Icons.check_circle_rounded
+                                          : (isExpired ? Icons.cancel_outlined : Icons.hourglass_top_rounded),
                                       size: 17,
-                                      color: isDone ? const Color(0xFF059669) : const Color(0xFFF59E0B),
+                                      color: isDone
+                                          ? const Color(0xFF059669)
+                                          : (isExpired ? const Color(0xFFE11D48) : const Color(0xFFF59E0B)),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -756,10 +820,14 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                                           ),
                                         ),
                                         Text(
-                                          isDone ? 'First order delivered! Reward credited.' : 'Waiting for 1st order delivery',
+                                          isDone
+                                              ? 'First order delivered! Reward credited.'
+                                              : (isExpired
+                                                  ? '1st order was below ₹${info.minOrderValue.toInt()} (Disqualified)'
+                                                  : 'Waiting for 1st order delivery'),
                                           style: GoogleFonts.inter(
                                             fontSize: Responsive.scaledFontSize(context, 11),
-                                            color: AppDesignSystem.slate500,
+                                            color: isExpired ? const Color(0xFFE11D48) : AppDesignSystem.slate500,
                                           ),
                                         ),
                                       ],
@@ -767,7 +835,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                                   ),
                                   if (isDone)
                                     Text(
-                                      '+₹${(r['reward'] as num?)?.toInt() ?? 100}',
+                                      '+₹${(r["reward"] as num?)?.toInt() ?? 25}',
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 14),
                                         fontWeight: FontWeight.w900,
@@ -785,37 +853,142 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // 6. How Wallet Cash Works Explainer Box
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppDesignSystem.slate200),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.info_outline_rounded, size: 18, color: AppDesignSystem.slate600),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Your referral cash is added directly to FastMinute Wallet. At checkout, tick "Use Wallet Balance" to get instant free groceries on your orders!',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 11),
-                            color: AppDesignSystem.slate700,
-                            height: 1.45,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // 6. Referral Process, Rules & Conditions Box
+                _buildRulesAndConditions(context, info),
+                const SizedBox(height: 24),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildRulesAndConditions(BuildContext context, ReferralInfo info) {
+    final mov = info.minOrderValue.toInt();
+    final reward = info.referrerReward.toInt();
+    final discount = info.refereeDiscount.toInt();
+
+    final rules = [
+      {
+        'icon': Icons.share_rounded,
+        'title': '1. Invite Friend',
+        'desc': 'Share your unique referral code or link with friends & family.',
+      },
+      {
+        'icon': Icons.person_add_alt_1_rounded,
+        'title': '2. Friend Signs Up & Gets ₹$discount',
+        'desc': 'Friend registers and applies your code to unlock ₹$discount discount.',
+      },
+      {
+        'icon': Icons.shopping_bag_rounded,
+        'title': '3. Qualifying First Order (Min ₹$mov)',
+        'desc': 'Friend\'s first delivered order must be ₹$mov or above to qualify.',
+      },
+      {
+        'icon': Icons.account_balance_wallet_rounded,
+        'title': '4. Instant ₹$reward Wallet Reward',
+        'desc': 'As soon as the 1st qualifying order is delivered, ₹$reward is credited to your wallet.',
+      },
+      {
+        'icon': Icons.warning_amber_rounded,
+        'title': '5. Strict 1st Order Condition',
+        'desc': 'If the friend\'s first order is below ₹$mov, the referral is permanently disqualified (no reward).',
+      },
+      {
+        'icon': Icons.check_circle_outline_rounded,
+        'title': '6. 100% Usable on ₹99+ Orders',
+        'desc': 'Your earned wallet cash can be 100% redeemed on orders of ₹99 or more at checkout.',
+      },
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppDesignSystem.slate200),
+        boxShadow: AppDesignSystem.shadowSm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.rule_folder_rounded, size: 18, color: Color(0xFF059669)),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Referral Rules & Conditions',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 14),
+                  fontWeight: FontWeight.w800,
+                  color: AppDesignSystem.slate900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AppDesignSystem.slate200),
+          const SizedBox(height: 12),
+          ...rules.map((rule) {
+            final isWarning = rule['icon'] == Icons.warning_amber_rounded;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: isWarning
+                          ? const Color(0xFFFEF2F2)
+                          : const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      rule['icon'] as IconData,
+                      size: 14,
+                      color: isWarning ? const Color(0xFFE11D48) : const Color(0xFF059669),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          rule['title'] as String,
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 12),
+                            fontWeight: FontWeight.w700,
+                            color: isWarning ? const Color(0xFF991B1B) : AppDesignSystem.slate900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          rule['desc'] as String,
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            color: AppDesignSystem.slate600,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
