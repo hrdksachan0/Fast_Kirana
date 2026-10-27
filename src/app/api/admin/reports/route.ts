@@ -362,6 +362,27 @@ export async function GET(request: NextRequest) {
       }
     > = {}
 
+    // Date-wise product breakdown for vendor & supplier payouts
+    type DailyProductSale = {
+      date: string
+      productId: string
+      baseProductId?: string
+      name: string
+      variantName?: string
+      categoryName: string
+      parentCategoryName?: string
+      vendor: string
+      type: 'restaurant' | 'grocery'
+      quantity: number
+      price: number
+      costPrice: number
+      totalCost: number
+      totalSales: number
+      profit: number
+      sales?: number
+    }
+    const dailyProductData: Record<string, DailyProductSale> = {}
+
     let deliveryOrdersCount = 0
     let deliverySales = 0
     let deliveryProfit = 0
@@ -521,6 +542,36 @@ export async function GET(request: NextRequest) {
         productData[prodKey].sales += itemRev
         productData[prodKey].totalCost += cost
         productData[prodKey].profit += itemProf
+
+        // Date-wise product tracking for vendor/supplier payout reconciliation
+        const dailyProdKey = `${dateString}__${prodKey}`
+        if (!dailyProductData[dailyProdKey]) {
+          dailyProductData[dailyProdKey] = {
+            date: dateString,
+            productId: prodKey,
+            baseProductId: item.productId,
+            name: displayName,
+            variantName: resolvedVariant || undefined,
+            categoryName: targetCategoryName,
+            parentCategoryName: (item.parentCategoryName || '').trim(),
+            vendor: (item.vendor || 'Direct / FastKirana').trim(),
+            type: targetType,
+            quantity: item.quantity || 1,
+            price: itemSellingPrice,
+            costPrice: itemUnitCost,
+            totalCost: cost,
+            totalSales: itemRev,
+            profit: itemProf,
+          }
+        } else {
+          dailyProductData[dailyProdKey].quantity += (item.quantity || 1)
+          dailyProductData[dailyProdKey].totalSales += itemRev
+          dailyProductData[dailyProdKey].totalCost += cost
+          dailyProductData[dailyProdKey].profit += itemProf
+          if (dailyProductData[dailyProdKey].costPrice === 0 && itemUnitCost > 0) {
+            dailyProductData[dailyProdKey].costPrice = itemUnitCost
+          }
+        }
       }
 
       // Order profit = order.total - orderCost
@@ -663,6 +714,20 @@ export async function GET(request: NextRequest) {
       return (b.quantity || 0) - (a.quantity || 0)
     })
 
+    const dailyProductList = Object.values(dailyProductData)
+      .map(p => {
+        const qty = p.quantity || 1
+        return {
+          ...p,
+          costPrice: Math.round((p.totalCost / qty) * 100) / 100,
+          price: Math.round((p.totalSales / qty) * 100) / 100,
+          totalCost: Math.round(p.totalCost * 100) / 100,
+          totalSales: Math.round(p.totalSales * 100) / 100,
+          profit: Math.round(p.profit * 100) / 100,
+        }
+      })
+      .sort((a, b) => b.date.localeCompare(a.date) || b.totalCost - a.totalCost)
+
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
 
@@ -698,6 +763,7 @@ export async function GET(request: NextRequest) {
         }
       },
       dailySales: dailyList,
+      dailyProductSales: dailyProductList,
       categorySales: categoryList,
       topProducts: productList,
       missingCostProducts: Object.values(missingCostProductsMap),

@@ -68,6 +68,24 @@ interface TopProduct {
   hasPriceVaried?: boolean
 }
 
+export interface DailyProductSale {
+  date: string
+  productId: string
+  baseProductId?: string
+  name: string
+  variantName?: string
+  categoryName: string
+  parentCategoryName?: string
+  vendor: string
+  type: 'restaurant' | 'grocery'
+  quantity: number
+  price: number
+  costPrice: number
+  totalCost: number
+  totalSales: number
+  profit: number
+}
+
 interface ChannelMetrics {
   ordersCount: number
   sales: number
@@ -167,6 +185,8 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [productSearch, setProductSearch] = useState('')
   const [soldOnlyFilter, setSoldOnlyFilter] = useState<'sold' | 'all'>('sold')
+  const [productViewMode, setProductViewMode] = useState<'consolidated' | 'datewise'>('consolidated')
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('all')
   
   // Loaded report data from server
   const [rawSummary, setRawSummary] = useState<ReportSummary>({
@@ -183,6 +203,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
     missingCostCount: 0
   })
   const [rawDailySales, setRawDailySales] = useState<DailySale[]>([])
+  const [rawDailyProductSales, setRawDailyProductSales] = useState<DailyProductSale[]>([])
   const [rawCategorySales, setRawCategorySales] = useState<CategorySale[]>([])
   const [rawTopProducts, setRawTopProducts] = useState<TopProduct[]>([])
   const [missingCostProducts, setMissingCostProducts] = useState<any[]>([])
@@ -223,6 +244,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
       const data = await res.json()
       setRawSummary(data.summary)
       setRawDailySales(data.dailySales || [])
+      setRawDailyProductSales(data.dailyProductSales || [])
       setRawCategorySales(data.categorySales || [])
       setRawTopProducts(data.topProducts || [])
       setMissingCostProducts(data.missingCostProducts || [])
@@ -265,6 +287,38 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
     }
     return list
   }, [rawTopProducts, selectedCategory, productSearch, soldOnlyFilter])
+
+  // Distinct dates in loaded product sales for date-wise filter
+  const availableDates = useMemo(() => {
+    return Array.from(new Set(rawDailyProductSales.map(d => d.date))).sort().reverse()
+  }, [rawDailyProductSales])
+
+  // Filtered Date-Wise Product Sales
+  const filteredDailyProductSales = useMemo(() => {
+    let list = rawDailyProductSales
+    if (selectedDateFilter !== 'all') {
+      list = list.filter(d => d.date === selectedDateFilter)
+    }
+    if (selectedCategory !== 'all') {
+      const target = selectedCategory.toLowerCase().trim()
+      list = list.filter(d => {
+        const cat = (d.categoryName || '').toLowerCase().trim()
+        const parent = (d.parentCategoryName || '').toLowerCase().trim()
+        return cat === target || parent === target || cat.includes(target) || target.includes(cat)
+      })
+    }
+    if (productSearch.trim()) {
+      const q = productSearch.toLowerCase().trim()
+      list = list.filter(d =>
+        d.name.toLowerCase().includes(q) ||
+        d.date.includes(q) ||
+        (d.variantName && d.variantName.toLowerCase().includes(q)) ||
+        (d.vendor && d.vendor.toLowerCase().includes(q)) ||
+        d.categoryName.toLowerCase().includes(q)
+      )
+    }
+    return list
+  }, [rawDailyProductSales, selectedDateFilter, selectedCategory, productSearch])
 
   // Filtered Summary based on Selected Category
   const summary = useMemo(() => {
@@ -580,9 +634,72 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
 
       const wsOnlineSold = XLSX.utils.aoa_to_sheet([soldHeader, ...soldRows, [], soldTotalRow])
 
+      // Dedicated Tab: Date-Wise Product Sales & Vendor Payout Ledger
+      const datewiseHeader = [
+        'Date',
+        'Product / Item Name',
+        'Variant',
+        'Category / Outlet',
+        'Vendor / Supplier',
+        'Type',
+        'Units Sold',
+        'Purchase Cost Rate (INR)',
+        'TOTAL PAYABLE TO VENDOR (INR)',
+        'Selling Rate Avg (INR)',
+        'Total Sales Revenue (INR)',
+        'Net Profit (INR)',
+        'Margin (%)'
+      ]
+      const datewiseRows = rawDailyProductSales.map((item: DailyProductSale) => {
+        const margin = item.totalSales > 0 ? ((item.profit / item.totalSales) * 100) : 0
+        return [
+          item.date,
+          item.name,
+          item.variantName || '-',
+          item.categoryName,
+          item.vendor || 'Direct / FastMinute',
+          item.type === 'restaurant' ? 'Restaurant' : 'Grocery',
+          item.quantity,
+          item.costPrice,
+          item.totalCost,
+          item.price,
+          item.totalSales,
+          item.profit,
+          `${margin.toFixed(1)}%`
+        ]
+      })
+      const totalDatewiseUnits = rawDailyProductSales.reduce((sum, i) => sum + i.quantity, 0)
+      const totalDatewisePayable = Math.round(rawDailyProductSales.reduce((sum, i) => sum + i.totalCost, 0) * 100) / 100
+      const totalDatewiseSales = Math.round(rawDailyProductSales.reduce((sum, i) => sum + i.totalSales, 0) * 100) / 100
+      const totalDatewiseProfit = Math.round(rawDailyProductSales.reduce((sum, i) => sum + i.profit, 0) * 100) / 100
+      const totalDatewiseMargin = totalDatewiseSales > 0 ? (totalDatewiseProfit / totalDatewiseSales) * 100 : 0
+
+      const datewiseTotalRow = [
+        'TOTAL DATE-WISE PAYOUT',
+        `${rawDailyProductSales.length} Entries`,
+        '',
+        '',
+        '',
+        '',
+        totalDatewiseUnits,
+        '',
+        totalDatewisePayable,
+        '',
+        totalDatewiseSales,
+        totalDatewiseProfit,
+        `${totalDatewiseMargin.toFixed(1)}%`
+      ]
+      const wsDatewise = XLSX.utils.aoa_to_sheet([datewiseHeader, ...datewiseRows, [], datewiseTotalRow])
+      wsDatewise['!cols'] = [
+        { wch: 12 }, { wch: 32 }, { wch: 14 }, { wch: 20 }, { wch: 22 },
+        { wch: 12 }, { wch: 12 }, { wch: 22 }, { wch: 26 }, { wch: 18 },
+        { wch: 22 }, { wch: 16 }, { wch: 12 }
+      ]
+
       // Create Workbook and Append Sheets
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary')
+      XLSX.utils.book_append_sheet(wb, wsDatewise, 'Date-Wise Product Payout')
       XLSX.utils.book_append_sheet(wb, wsOnlineSold, 'Online Sold Products')
       XLSX.utils.book_append_sheet(wb, wsProduct, 'All Catalog Products')
       XLSX.utils.book_append_sheet(wb, wsCategory, 'Categories')
@@ -594,6 +711,83 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
     } catch (e) {
       console.error('Error exporting Excel report:', e)
       toast.error('Failed to export Excel report')
+    }
+  }
+
+  // Quick Standalone Date-Wise Product Payout Exporter
+  const handleDownloadDatewisePayoutXLSX = () => {
+    try {
+      if (rawDailyProductSales.length === 0) {
+        toast.error('No online sold products found for this date range')
+        return
+      }
+      const datewiseHeader = [
+        'Date',
+        'Product / Item Name',
+        'Variant',
+        'Category / Outlet',
+        'Vendor / Supplier',
+        'Type',
+        'Units Sold',
+        'Purchase Cost Rate (INR)',
+        'TOTAL PAYABLE TO VENDOR (INR)',
+        'Selling Rate Avg (INR)',
+        'Total Sales Revenue (INR)',
+        'Net Profit (INR)',
+        'Margin (%)'
+      ]
+      const datewiseRows = rawDailyProductSales.map((item: DailyProductSale) => {
+        const margin = item.totalSales > 0 ? ((item.profit / item.totalSales) * 100) : 0
+        return [
+          item.date,
+          item.name,
+          item.variantName || '-',
+          item.categoryName,
+          item.vendor || 'Direct / FastMinute',
+          item.type === 'restaurant' ? 'Restaurant' : 'Grocery',
+          item.quantity,
+          item.costPrice,
+          item.totalCost,
+          item.price,
+          item.totalSales,
+          item.profit,
+          `${margin.toFixed(1)}%`
+        ]
+      })
+      const totalUnits = rawDailyProductSales.reduce((s, i) => s + i.quantity, 0)
+      const totalPayable = Math.round(rawDailyProductSales.reduce((s, i) => s + i.totalCost, 0) * 100) / 100
+      const totalSales = Math.round(rawDailyProductSales.reduce((s, i) => s + i.totalSales, 0) * 100) / 100
+      const totalProfit = Math.round(rawDailyProductSales.reduce((s, i) => s + i.profit, 0) * 100) / 100
+      const totalMargin = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0
+
+      const totalRow = [
+        'TOTAL DATE-WISE PAYOUT',
+        `${rawDailyProductSales.length} Entries`,
+        '',
+        '',
+        '',
+        '',
+        totalUnits,
+        '',
+        totalPayable,
+        '',
+        totalSales,
+        totalProfit,
+        `${totalMargin.toFixed(1)}%`
+      ]
+      const ws = XLSX.utils.aoa_to_sheet([datewiseHeader, ...datewiseRows, [], totalRow])
+      ws['!cols'] = [
+        { wch: 12 }, { wch: 32 }, { wch: 14 }, { wch: 20 }, { wch: 22 },
+        { wch: 12 }, { wch: 12 }, { wch: 22 }, { wch: 26 }, { wch: 18 },
+        { wch: 22 }, { wch: 16 }, { wch: 12 }
+      ]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Date-Wise Product Payout')
+      XLSX.writeFile(wb, `FastMinute_DateWise_Payout_${startDate}_to_${endDate}.xlsx`)
+      toast.success('Date-Wise Product Payout Excel exported successfully!')
+    } catch (e) {
+      console.error(e)
+      toast.error('Failed to export Date-Wise Payout Excel')
     }
   }
 
@@ -1014,7 +1208,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
             </button>
           </div>
 
-          {/* Order-Wise Excel Export Buttons */}
+          {/* Order-Wise & Date-Wise Payout Excel Export Buttons */}
           <div className="flex items-center gap-1.5 bg-violet-500/5 p-1 rounded-2xl border border-violet-500/20">
             <button
               onClick={() => handleDownloadOrderWiseXLSX('all')}
@@ -1033,6 +1227,15 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
             >
               <span>🍽️</span>
               <span>Restaurant Orders</span>
+            </button>
+            <button
+              onClick={handleDownloadDatewisePayoutXLSX}
+              disabled={loading || rawDailyProductSales.length === 0}
+              className="h-8 px-3 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
+              title="Download Date-Wise Product Sales & Vendor Payout Excel"
+            >
+              <Calendar className="h-3 w-3" />
+              <span>📅 Date Payout</span>
             </button>
           </div>
         </div>
@@ -1409,57 +1612,97 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
             </div>
           </div>
 
-          {/* Itemized Product Sales Table */}
+          {/* Itemized Product Sales Table & Date-Wise Payout */}
           <div className="bg-card border border-border p-5 md:p-6 rounded-3xl shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3.5">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
-                  <Award className="h-4 w-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-text-primary">
-                    Itemized Product Sales ({filteredProducts.length} Products)
-                  </h4>
-                  <p className="text-[10px] text-text-muted font-medium">
-                    {soldOnlyFilter === 'sold'
-                      ? 'Showing products sold online in delivered orders.'
-                      : 'Showing all catalog items including unsold inventory.'}
-                  </p>
-                </div>
-              </div>
-
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-border/60 pb-3.5">
               <div className="flex flex-wrap items-center gap-2">
-                {/* Sold Online vs Full Catalog Toggle */}
-                <div className="flex items-center gap-1 bg-muted/70 p-0.5 rounded-xl border border-border/60">
+                <div className="flex items-center gap-1 bg-muted p-1 rounded-2xl border border-border">
                   <button
                     type="button"
-                    onClick={() => setSoldOnlyFilter('sold')}
-                    className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
-                      soldOnlyFilter === 'sold'
+                    onClick={() => setProductViewMode('consolidated')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      productViewMode === 'consolidated'
+                        ? 'bg-card text-text-primary shadow-xs border border-border'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    <Award className="h-3.5 w-3.5 text-amber-500" />
+                    <span>📦 Period Total ({filteredProducts.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProductViewMode('datewise')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      productViewMode === 'datewise'
                         ? 'bg-emerald-600 text-white shadow-xs'
                         : 'text-text-muted hover:text-text-primary'
                     }`}
                   >
-                    📦 Bike Huye Only ({rawTopProducts.filter(p => (p.quantity || 0) > 0).length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSoldOnlyFilter('all')}
-                    className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
-                      soldOnlyFilter === 'all'
-                        ? 'bg-card text-text-primary shadow-xs border border-border/80'
-                        : 'text-text-muted hover:text-text-primary'
-                    }`}
-                  >
-                    All Catalog ({rawTopProducts.length})
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>📅 Date-Wise Payout ({rawDailyProductSales.length})</span>
                   </button>
                 </div>
+
+                {productViewMode === 'datewise' && availableDates.length > 0 && (
+                  <select
+                    value={selectedDateFilter}
+                    onChange={(e) => setSelectedDateFilter(e.target.value)}
+                    className="bg-muted border border-border px-3 py-1.5 rounded-xl text-xs font-bold text-text-primary focus:outline-none cursor-pointer"
+                  >
+                    <option value="all">All Dates ({availableDates.length} Days)</option>
+                    {availableDates.map(d => (
+                      <option key={d} value={d}>📅 {d}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {productViewMode === 'consolidated' && (
+                  <div className="flex items-center gap-1 bg-muted/70 p-0.5 rounded-xl border border-border/60">
+                    <button
+                      type="button"
+                      onClick={() => setSoldOnlyFilter('sold')}
+                      className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                        soldOnlyFilter === 'sold'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      📦 Bike Huye Only ({rawTopProducts.filter(p => (p.quantity || 0) > 0).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSoldOnlyFilter('all')}
+                      className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                        soldOnlyFilter === 'all'
+                          ? 'bg-card text-text-primary shadow-xs border border-border/80'
+                          : 'text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      All Catalog ({rawTopProducts.length})
+                    </button>
+                  </div>
+                )}
+
+                {productViewMode === 'datewise' && (
+                  <button
+                    type="button"
+                    onClick={handleDownloadDatewisePayoutXLSX}
+                    disabled={rawDailyProductSales.length === 0}
+                    className="px-2.5 py-1.5 text-xs font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="Export Date-Wise Product Payout Sheet"
+                  >
+                    <Download className="h-3 w-3" />
+                    <span>Export Payout</span>
+                  </button>
+                )}
 
                 <div className="relative w-full sm:w-56">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
                   <input
                     type="text"
-                    placeholder="Search product / variant..."
+                    placeholder="Search product / date / vendor..."
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
                     className="bg-muted border border-border pl-9 pr-3 py-1.5 rounded-xl text-xs font-bold text-text-primary focus:outline-none w-full"
@@ -1468,108 +1711,240 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
               </div>
             </div>
 
-            <div className="overflow-x-auto max-h-96 overflow-y-auto pr-1">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead className="sticky top-0 bg-card z-10">
-                  <tr className="text-[10px] font-black text-text-secondary uppercase tracking-wider border-b border-border/80">
-                    <th className="pb-2.5 pl-2">Product & Variant</th>
-                    <th className="pb-2.5">Category</th>
-                    <th className="pb-2.5 text-right">Selling Price</th>
-                    <th className="pb-2.5 text-right">Cost Price</th>
-                    <th className="pb-2.5 text-center">Qty Sold</th>
-                    <th className="pb-2.5 text-right">Total Revenue</th>
-                    <th className="pb-2.5 text-right">Total Cost</th>
-                    <th className="pb-2.5 text-right">Net Profit</th>
-                    <th className="pb-2.5 text-center pr-2">Margin</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
-                  {filteredProducts.map((prod) => {
-                    const margin = prod.sales > 0 ? Math.round((prod.profit / prod.sales) * 100) : 0
-                    const meta = getCategoryMeta(prod.categoryName || '')
-                    const effectiveCost = prod.totalCost !== undefined ? prod.totalCost : ((prod.costPrice || 0) * prod.quantity)
+            {/* Date-Wise Payout Summary Banner */}
+            {productViewMode === 'datewise' && (
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-emerald-500/10 border border-emerald-500/20 p-3.5 rounded-2xl">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm shadow-xs">
+                    ₹
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-black text-emerald-950 dark:text-emerald-100 flex items-center gap-1.5">
+                      Vendor & Supplier Settlement Payout
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200">
+                        {selectedDateFilter === 'all' ? `All ${availableDates.length} Days` : selectedDateFilter}
+                      </span>
+                    </h5>
+                    <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80">
+                      {filteredDailyProductSales.length} items sold • {filteredDailyProductSales.reduce((s, p) => s + p.quantity, 0)} units • Total Sales: {formatPrice(filteredDailyProductSales.reduce((s, p) => s + p.totalSales, 0))}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-emerald-800/80 dark:text-emerald-300/80 uppercase tracking-wider block">
+                      Total Payable to Vendors
+                    </span>
+                    <span className="text-lg font-black text-emerald-700 dark:text-emerald-300">
+                      {formatPrice(filteredDailyProductSales.reduce((s, p) => s + p.totalCost, 0))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
-                    return (
-                      <tr key={prod.productId} className="hover:bg-muted/15 transition-colors">
-                        <td className="py-2.5 pl-2">
-                          <span className="font-bold text-text-primary block truncate max-w-[220px]" title={prod.name}>
-                            {prod.name}
-                          </span>
-                          {prod.variantName && (
-                            <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-muted text-text-secondary border border-border/40 mt-0.5">
-                              {prod.variantName}
+            {productViewMode === 'datewise' ? (
+              <div className="overflow-x-auto max-h-96 overflow-y-auto pr-1">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="sticky top-0 bg-card z-10">
+                    <tr className="text-[10px] font-black text-text-secondary uppercase tracking-wider border-b border-border/80">
+                      <th className="pb-2.5 pl-2">Date</th>
+                      <th className="pb-2.5">Product & Variant</th>
+                      <th className="pb-2.5">Category / Vendor</th>
+                      <th className="pb-2.5 text-center">Qty</th>
+                      <th className="pb-2.5 text-right">Purchase Rate</th>
+                      <th className="pb-2.5 text-right">Payable to Vendor</th>
+                      <th className="pb-2.5 text-right">Selling Rate</th>
+                      <th className="pb-2.5 text-right">Total Revenue</th>
+                      <th className="pb-2.5 text-right">Net Profit</th>
+                      <th className="pb-2.5 text-center pr-2">Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {filteredDailyProductSales.map((item, idx) => {
+                      const margin = item.totalSales > 0 ? Math.round((item.profit / item.totalSales) * 100) : 0
+                      const meta = getCategoryMeta(item.categoryName || '')
+
+                      return (
+                        <tr key={`${item.date}_${item.productId}_${idx}`} className="hover:bg-muted/15 transition-colors">
+                          <td className="py-2.5 pl-2 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-muted text-text-primary border border-border/60">
+                              <Calendar className="h-2.5 w-2.5 text-primary" />
+                              {item.date}
                             </span>
-                          )}
-                        </td>
+                          </td>
 
-                        <td className="py-2.5">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9.5px] font-bold border ${meta.badge}`}>
-                            <span>{meta.icon}</span>
-                            <span className="truncate max-w-[110px]">{prod.categoryName || 'General'}</span>
-                          </span>
-                        </td>
-
-                        <td className="py-2.5 text-right">
-                          <span className="font-black text-text-primary block">
-                            {formatPrice(prod.price || 0)}
-                          </span>
-                          {prod.hasPriceVaried && prod.minPrice !== undefined && prod.maxPrice !== undefined && prod.minPrice !== prod.maxPrice && (
-                            <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold block" title="Selling rate changed during this period">
-                              ₹{prod.minPrice} - ₹{prod.maxPrice}
+                          <td className="py-2.5">
+                            <span className="font-bold text-text-primary block truncate max-w-[200px]" title={item.name}>
+                              {item.name}
                             </span>
-                          )}
-                        </td>
+                            {item.variantName && (
+                              <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-muted text-text-secondary border border-border/40 mt-0.5">
+                                {item.variantName}
+                              </span>
+                            )}
+                          </td>
 
-                        <td className="py-2.5 text-right">
-                          <span className="font-semibold text-blue-600 dark:text-blue-400 block">
-                            {formatPrice(prod.costPrice || 0)}
-                          </span>
-                          {prod.hasPriceVaried && prod.minCost !== undefined && prod.maxCost !== undefined && prod.minCost !== prod.maxCost && (
-                            <span className="text-[9px] text-blue-500/80 dark:text-blue-400/80 font-bold block" title="Purchase cost changed during this period">
-                              ₹{prod.minCost} - ₹{prod.maxCost}
+                          <td className="py-2.5">
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${meta.badge}`}>
+                              <span>{meta.icon}</span>
+                              <span className="truncate max-w-[100px]">{item.vendor || item.categoryName}</span>
                             </span>
-                          )}
-                        </td>
+                          </td>
 
-                        <td className="py-2.5 text-center font-black text-text-secondary">
-                          {prod.quantity}
-                        </td>
+                          <td className="py-2.5 text-center font-black text-text-primary">
+                            {item.quantity}
+                          </td>
 
-                        <td className="py-2.5 text-right font-black text-text-primary">
-                          {formatPrice(prod.sales)}
-                        </td>
+                          <td className="py-2.5 text-right font-semibold text-blue-600 dark:text-blue-400">
+                            {formatPrice(item.costPrice)}
+                          </td>
 
-                        <td className="py-2.5 text-right font-bold text-blue-600 dark:text-blue-400">
-                          {formatPrice(effectiveCost)}
-                        </td>
+                          <td className="py-2.5 text-right">
+                            <span className="inline-block px-2 py-0.5 rounded-lg text-xs font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                              {formatPrice(item.totalCost)}
+                            </span>
+                          </td>
 
-                        <td className="py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400">
-                          {formatPrice(prod.profit)}
-                        </td>
+                          <td className="py-2.5 text-right font-black text-text-primary">
+                            {formatPrice(item.price)}
+                          </td>
 
-                        <td className="py-2.5 text-center pr-2">
-                          <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-                            margin >= 30 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' :
-                            margin >= 15 ? 'text-blue-600 dark:text-blue-400 bg-blue-500/10' :
-                            'text-amber-600 dark:text-amber-400 bg-amber-500/10'
-                          }`}>
-                            {margin}%
-                          </span>
+                          <td className="py-2.5 text-right font-bold text-text-primary">
+                            {formatPrice(item.totalSales)}
+                          </td>
+
+                          <td className="py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400">
+                            {formatPrice(item.profit)}
+                          </td>
+
+                          <td className="py-2.5 text-center pr-2">
+                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                              margin >= 30 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' :
+                              margin >= 15 ? 'text-blue-600 dark:text-blue-400 bg-blue-500/10' :
+                              'text-amber-600 dark:text-amber-400 bg-amber-500/10'
+                            }`}>
+                              {margin}%
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+
+                    {filteredDailyProductSales.length === 0 && (
+                      <tr>
+                        <td colSpan={10} className="py-10 text-center text-text-muted text-xs font-bold">
+                          {productSearch ? `No products found matching "${productSearch}".` : 'No online sold products found for this date.'}
                         </td>
                       </tr>
-                    )
-                  })}
-
-                  {filteredProducts.length === 0 && (
-                    <tr>
-                      <td colSpan={9} className="py-10 text-center text-text-muted text-xs font-bold">
-                        {productSearch ? `No products found matching "${productSearch}".` : 'No products sold in this category.'}
-                      </td>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="overflow-x-auto max-h-96 overflow-y-auto pr-1">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="sticky top-0 bg-card z-10">
+                    <tr className="text-[10px] font-black text-text-secondary uppercase tracking-wider border-b border-border/80">
+                      <th className="pb-2.5 pl-2">Product & Variant</th>
+                      <th className="pb-2.5">Category</th>
+                      <th className="pb-2.5 text-right">Selling Price</th>
+                      <th className="pb-2.5 text-right">Cost Price</th>
+                      <th className="pb-2.5 text-center">Qty Sold</th>
+                      <th className="pb-2.5 text-right">Total Revenue</th>
+                      <th className="pb-2.5 text-right">Total Cost</th>
+                      <th className="pb-2.5 text-right">Net Profit</th>
+                      <th className="pb-2.5 text-center pr-2">Margin</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {filteredProducts.map((prod) => {
+                      const margin = prod.sales > 0 ? Math.round((prod.profit / prod.sales) * 100) : 0
+                      const meta = getCategoryMeta(prod.categoryName || '')
+                      const effectiveCost = prod.totalCost !== undefined ? prod.totalCost : ((prod.costPrice || 0) * prod.quantity)
+
+                      return (
+                        <tr key={prod.productId} className="hover:bg-muted/15 transition-colors">
+                          <td className="py-2.5 pl-2">
+                            <span className="font-bold text-text-primary block truncate max-w-[220px]" title={prod.name}>
+                              {prod.name}
+                            </span>
+                            {prod.variantName && (
+                              <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-muted text-text-secondary border border-border/40 mt-0.5">
+                                {prod.variantName}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-2.5">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9.5px] font-bold border ${meta.badge}`}>
+                              <span>{meta.icon}</span>
+                              <span className="truncate max-w-[110px]">{prod.categoryName || 'General'}</span>
+                            </span>
+                          </td>
+
+                          <td className="py-2.5 text-right">
+                            <span className="font-black text-text-primary block">
+                              {formatPrice(prod.price || 0)}
+                            </span>
+                            {prod.hasPriceVaried && prod.minPrice !== undefined && prod.maxPrice !== undefined && prod.minPrice !== prod.maxPrice && (
+                              <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold block" title="Selling rate changed during this period">
+                                ₹{prod.minPrice} - ₹{prod.maxPrice}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-2.5 text-right">
+                            <span className="font-semibold text-blue-600 dark:text-blue-400 block">
+                              {formatPrice(prod.costPrice || 0)}
+                            </span>
+                            {prod.hasPriceVaried && prod.minCost !== undefined && prod.maxCost !== undefined && prod.minCost !== prod.maxCost && (
+                              <span className="text-[9px] text-blue-500/80 dark:text-blue-400/80 font-bold block" title="Purchase cost changed during this period">
+                                ₹{prod.minCost} - ₹{prod.maxCost}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-2.5 text-center font-black text-text-secondary">
+                            {prod.quantity}
+                          </td>
+
+                          <td className="py-2.5 text-right font-black text-text-primary">
+                            {formatPrice(prod.sales)}
+                          </td>
+
+                          <td className="py-2.5 text-right font-bold text-blue-600 dark:text-blue-400">
+                            {formatPrice(effectiveCost)}
+                          </td>
+
+                          <td className="py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400">
+                            {formatPrice(prod.profit)}
+                          </td>
+
+                          <td className="py-2.5 text-center pr-2">
+                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                              margin >= 30 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' :
+                              margin >= 15 ? 'text-blue-600 dark:text-blue-400 bg-blue-500/10' :
+                              'text-amber-600 dark:text-amber-400 bg-amber-500/10'
+                            }`}>
+                              {margin}%
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+
+                    {filteredProducts.length === 0 && (
+                      <tr>
+                        <td colSpan={9} className="py-10 text-center text-text-muted text-xs font-bold">
+                          {productSearch ? `No products found matching "${productSearch}".` : 'No products sold in this category.'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Revenue & Fee Diagnostic Summary */}
