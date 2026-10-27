@@ -162,7 +162,10 @@ class Order {
   });
 
   ({String? name, String? phone})? get deliveryUser =>
-      (deliveryBoyName != null || deliveryBoyPhone != null) ? (name: deliveryBoyName, phone: deliveryBoyPhone) : null;
+      ((deliveryBoyName != null && deliveryBoyName!.trim().isNotEmpty) ||
+       (deliveryBoyPhone != null && deliveryBoyPhone!.trim().isNotEmpty))
+          ? (name: deliveryBoyName, phone: deliveryBoyPhone)
+          : null;
 
   bool get isRestaurantOrder {
     if (restaurantId != null && restaurantId!.trim().isNotEmpty && restaurantId != 'null') return true;

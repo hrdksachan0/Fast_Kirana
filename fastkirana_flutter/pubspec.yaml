@@ -2,7 +2,7 @@ name: fastminute_flutter
 description: FastMinute Mobile App - Grocery & Food Delivery in Minutes
 
 publish_to: 'none'
-version: 2.0.51+2051
+version: 2.0.52+2052
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

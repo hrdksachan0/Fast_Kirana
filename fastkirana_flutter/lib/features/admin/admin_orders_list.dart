@@ -1245,6 +1245,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
   Future<void> _assignRider(Order order, String riderId, String riderName, String riderPhone) async {
     HapticFeedback.heavyImpact();
+    final bool isUnassigning = riderId.isEmpty || riderId == 'UNASSIGNED';
     final List<String> idsToAssign = (order.isCombined && order.subOrders != null && order.subOrders!.isNotEmpty)
         ? order.subOrders!.map((s) => s.id).toList()
         : [order.id];
@@ -1252,9 +1253,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     // Status preservation:
     // If order was ALREADY picked up (SHIPPED), keep it SHIPPED so new rider sees it in "Out for Delivery".
     // If order was still in store (PENDING/CONFIRMED/PACKED), keep it PACKED so new rider sees it in "Ready for Pickup".
+    // If unassigning, always reset to PACKED so other riders can claim from Open Pool!
     final bool wasShipped = order.status == OrderStatus.shipped;
-    final targetStatus = wasShipped ? OrderStatus.shipped : OrderStatus.packed;
-    final targetStatusStr = wasShipped ? 'SHIPPED' : 'PACKED';
+    final targetStatus = isUnassigning ? OrderStatus.packed : (wasShipped ? OrderStatus.shipped : OrderStatus.packed);
+    final targetStatusStr = isUnassigning ? 'PACKED' : (wasShipped ? 'SHIPPED' : 'PACKED');
 
     // 1. Instant Optimistic UI Update (0ms)
     setState(() {
@@ -1262,8 +1264,8 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         if (o.id == order.id || idsToAssign.contains(o.id) || (order.combinedId != null && o.combinedId == order.combinedId)) {
           return o.copyWith(
             status: targetStatus,
-            deliveryBoyName: riderName,
-            deliveryBoyPhone: riderPhone,
+            deliveryBoyName: isUnassigning ? '' : riderName,
+            deliveryBoyPhone: isUnassigning ? '' : riderPhone,
           );
         }
         return o;
@@ -1271,20 +1273,22 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     });
 
     if (mounted) {
-      final statusLabel = wasShipped ? 'Out for Delivery' : 'Ready for Pickup';
+      final statusLabel = isUnassigning
+          ? 'Order moved to Open Pool (Unassigned)'
+          : 'Assigned to $riderName · Status: ${wasShipped ? "Out for Delivery" : "Ready for Pickup"}!';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 18),
+              Icon(isUnassigning ? Icons.refresh_rounded : Icons.two_wheeler_rounded, color: Colors.white, size: 18),
               const SizedBox(width: 8),
               Text(
-                'Assigned to $riderName · Status: $statusLabel!',
+                statusLabel,
                 style: GoogleFonts.inter(fontWeight: FontWeight.w700),
               ),
             ],
           ),
-          backgroundColor: AppDesignSystem.cyan600,
+          backgroundColor: isUnassigning ? AppDesignSystem.slate700 : AppDesignSystem.cyan600,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -1300,7 +1304,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           action: 'ASSIGN_RIDER',
           payload: {
             'id': cleanId,
-            'riderId': riderId,
+            'riderId': isUnassigning ? '' : riderId,
             'status': targetStatusStr,
             if (order.combinedId != null && order.combinedId!.trim().isNotEmpty)
               'combinedId': order.combinedId!.trim(),
@@ -1315,7 +1319,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           var cleanId = id.trim();
           if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
           futures.add(sb.from('orders').update({
-            'deliveryUserId': riderId,
+            'deliveryUserId': isUnassigning ? null : riderId,
             'status': targetStatusStr,
             'updatedAt': DateTime.now().toIso8601String(),
           }).eq('id', cleanId).catchError((_) {}));
@@ -1323,7 +1327,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
         if (order.combinedId != null && order.combinedId!.trim().isNotEmpty) {
           futures.add(sb.from('orders').update({
-            'deliveryUserId': riderId,
+            'deliveryUserId': isUnassigning ? null : riderId,
             'status': targetStatusStr,
             'updatedAt': DateTime.now().toIso8601String(),
           }).eq('combinedId', order.combinedId!.trim()).catchError((_) {}));
@@ -1334,7 +1338,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         var cleanId = id.trim();
         if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
         futures.add(ref.read(dioProvider).patch('/api/orders/$cleanId', data: {
-          'deliveryUserId': riderId,
+          'deliveryUserId': isUnassigning ? '' : riderId,
           'status': targetStatusStr,
         }).catchError((_) => Response(requestOptions: RequestOptions())));
       }

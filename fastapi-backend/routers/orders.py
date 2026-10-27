@@ -3609,10 +3609,35 @@ async def update_order(
 
     elif target_status == OrderStatus.SHIPPED:
         if role == Role.DELIVERY:
+            # Concurrency check / Double-claim guard:
+            if order.deliveryUserId and order.deliveryUserId != user_id and order.status == OrderStatus.SHIPPED:
+                raise HTTPException(status_code=409, detail="Order has already been picked up by another rider")
             order.deliveryUserId = user_id
+            # Query rider live lat/lng
+            r_stmt = select(User).where(User.id == user_id)
+            r_res = await db.execute(r_stmt)
+            r_rider = r_res.scalars().first()
+            if r_rider and r_rider.liveLat is not None and r_rider.liveLng is not None:
+                order.deliveryLat = float(r_rider.liveLat)
+                order.deliveryLng = float(r_rider.liveLng)
+        elif "deliveryUserId" in payload:
+            raw_duid = payload.get("deliveryUserId")
+            if not raw_duid or str(raw_duid).strip().upper() in ["", "UNASSIGNED", "NONE", "NULL"]:
+                order.deliveryUserId = None
+                order.deliveryLat = None
+                order.deliveryLng = None
+            else:
+                order.deliveryUserId = str(raw_duid).strip()
+                if order.deliveryUserId != "store_admin_self":
+                    r_stmt = select(User).where(User.id == order.deliveryUserId)
+                    r_res = await db.execute(r_stmt)
+                    r_user = r_res.scalars().first()
+                    if r_user and r_user.liveLat is not None and r_user.liveLng is not None:
+                        order.deliveryLat = float(r_user.liveLat)
+                        order.deliveryLng = float(r_user.liveLng)
         elif delivery_user_id:
             order.deliveryUserId = delivery_user_id
-        # Never auto-assign a fallback rider! Order stays unassigned until a rider claims it or admin assigns it.
+
         if delivery_lat is not None and delivery_lng is not None:
             order.deliveryLat = float(delivery_lat)
             order.deliveryLng = float(delivery_lng)
@@ -3620,14 +3645,23 @@ async def update_order(
 
     elif target_status == OrderStatus.PACKED:
         order.packedAt = datetime.utcnow()
-        # Automated nearest rider dispatch if order is unassigned
-        if not order.deliveryUserId:
-            try:
-                from routers.delivery import dispatch_nearest_rider_for_order
-                background_tasks.add_task(dispatch_nearest_rider_for_order, order.id, None)
-            except Exception as disp_err:
-                logger.warning(f"Could not queue auto dispatch on PACKED: {disp_err}")
-
+        # Open Pool Model: Order stays unassigned for store riders to claim manually from "Ready for Pickup"
+        # or for Admin to assign/reassign via dropdown. No blind auto-dispatch.
+        if "deliveryUserId" in payload:
+            raw_duid = payload.get("deliveryUserId")
+            if not raw_duid or str(raw_duid).strip().upper() in ["", "UNASSIGNED", "NONE", "NULL"]:
+                order.deliveryUserId = None
+                order.deliveryLat = None
+                order.deliveryLng = None
+            else:
+                order.deliveryUserId = str(raw_duid).strip()
+                if order.deliveryUserId != "store_admin_self":
+                    r_stmt = select(User).where(User.id == order.deliveryUserId)
+                    r_res = await db.execute(r_stmt)
+                    r_user = r_res.scalars().first()
+                    if r_user and r_user.liveLat is not None and r_user.liveLng is not None:
+                        order.deliveryLat = float(r_user.liveLat)
+                        order.deliveryLng = float(r_user.liveLng)
 
     elif target_status == OrderStatus.CONFIRMED:
         order.confirmedAt = datetime.utcnow()
@@ -3638,6 +3672,15 @@ async def update_order(
 
         if prep_time and str(prep_time).isdigit():
             order.estimatedDelivery = datetime.utcnow() + timedelta(minutes=int(prep_time))
+
+        if "deliveryUserId" in payload:
+            raw_duid = payload.get("deliveryUserId")
+            if not raw_duid or str(raw_duid).strip().upper() in ["", "UNASSIGNED", "NONE", "NULL"]:
+                order.deliveryUserId = None
+                order.deliveryLat = None
+                order.deliveryLng = None
+            else:
+                order.deliveryUserId = str(raw_duid).strip()
 
     # Sibling synchronization (H6 FIX: outlet isolation, never cascade-cancel sibling)
     is_explicit_all = payload.get("scope") == "ALL" or payload.get("updateCombined") is True
@@ -3665,7 +3708,11 @@ async def update_order(
         if should_sync_status:
             companion.status = order.status
             companion.updatedAt = datetime.utcnow()
-        if order.deliveryUserId:
+        if "deliveryUserId" in payload or role == Role.DELIVERY:
+            companion.deliveryUserId = order.deliveryUserId
+            companion.deliveryLat = order.deliveryLat
+            companion.deliveryLng = order.deliveryLng
+        elif order.deliveryUserId:
             companion.deliveryUserId = order.deliveryUserId
         if target_status == OrderStatus.DELIVERED:
             companion.paymentStatus = PaymentStatus.PAID

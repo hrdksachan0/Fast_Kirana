@@ -960,13 +960,16 @@ class AdminOrderCard extends ConsumerWidget {
                               return 'UNASSIGNED';
                             }
                             final norm = order.deliveryBoyName!.trim().toLowerCase();
+                            if (norm == 'store partner' || norm == 'store partner (self delivery)' || order.deliveryBoyName == 'store_admin_self') {
+                              return 'STORE_PARTNER';
+                            }
                             final matched = availableRiders.firstWhereOrNull(
                               (r) => r['name']?.trim().toLowerCase() == norm ||
                                      r['id'] == order.deliveryBoyName ||
                                      r['phone'] == order.deliveryBoyPhone,
                             );
                             if (matched != null) return matched['id'];
-                            return 'STORE_PARTNER';
+                            return 'UNASSIGNED';
                           }(),
                           isExpanded: true,
                           icon: const Icon(Icons.arrow_drop_down_rounded, color: AppDesignSystem.slate600, size: 20),
@@ -1015,18 +1018,21 @@ class AdminOrderCard extends ConsumerWidget {
                           ],
                           onChanged: (val) {
                             if (val != null) {
-                              if (val == 'STORE_PARTNER') {
+                              if (val == 'UNASSIGNED') {
+                                onAssignRider?.call(order, 'UNASSIGNED', '', '');
+                              } else if (val == 'STORE_PARTNER') {
                                 final settings = ref.read(storeSettingsProvider).valueOrNull;
                                 final storePhone = settings?.contactPhone.isNotEmpty == true
                                     ? settings!.contactPhone
                                     : AppConfig.supportPhone;
                                 onAssignRider?.call(order, 'store_admin_self', 'Store Partner', storePhone);
                               } else {
-                                final rider = availableRiders.firstWhere(
+                                final rider = availableRiders.firstWhereOrNull(
                                   (r) => r['id'] == val,
-                                  orElse: () => availableRiders.first,
                                 );
-                                onAssignRider?.call(order, rider['id']!, rider['name']!, rider['phone']!);
+                                if (rider != null) {
+                                  onAssignRider?.call(order, rider['id']!, rider['name']!, rider['phone']!);
+                                }
                               }
                             }
                           },
