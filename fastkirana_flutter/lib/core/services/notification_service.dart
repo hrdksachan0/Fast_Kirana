@@ -162,19 +162,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       title.toString().toLowerCase().contains('cancel') ||
       (body ?? '').toString().toLowerCase().contains('cancel');
 
-  final isOrderAlert = !isCancelledOrTerminal && (
-      data['screen'] == 'restaurant-console' ||
-      data['screen'] == 'admin-orders' ||
-      data['screen'] == 'delivery' ||
-      data['screen'] == 'picker' ||
-      data['restaurantId'] != null ||
-      data['type'] == 'NEW_ORDER' ||
-      title.toString().contains('👨‍🍳') ||
-      title.toString().contains('🛎️') ||
-      title.toString().contains('💳') ||
-      title.toString().toLowerCase().contains('kitchen') ||
-      title.toString().toLowerCase().contains('new order'));
-
   final isOrderStatusUpdate = !isCancelledOrTerminal && (
       orderStatus == 'OUT_FOR_DELIVERY' ||
       orderStatus == 'DISPATCHED' ||
@@ -196,6 +183,23 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       (body ?? '').toString().toLowerCase().contains('delivered') ||
       (body ?? '').toString().toLowerCase().contains('on the way') ||
       (body ?? '').toString().toLowerCase().contains('arriving'));
+
+  final isDeliveryRiderAlert = (data['screen'] == 'delivery' || data['role'] == 'DELIVERY') &&
+      (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED');
+
+  final isOrderAlert = isDeliveryRiderAlert || (!isCancelledOrTerminal && !isOrderStatusUpdate && (
+      data['type'] == 'NEW_ORDER' ||
+      data['type'] == 'VENDOR_NEW_ORDER' ||
+      orderStatus == 'PENDING' ||
+      orderStatus == 'PLACED' ||
+      data['screen'] == 'admin-orders' ||
+      (data['screen'] == 'restaurant-console' && (orderStatus == 'PENDING' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
+      (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
+      title.toString().contains('👨‍🍳') ||
+      title.toString().contains('🛎️') ||
+      title.toString().contains('💳') ||
+      title.toString().toLowerCase().contains('kitchen') ||
+      title.toString().toLowerCase().contains('new order')));
 
   if (notification != null) {
     // Android OS FCM client displays notification directly in system tray.
@@ -720,18 +724,22 @@ class NotificationService {
         body.toString().toLowerCase().contains('on the way') ||
         body.toString().toLowerCase().contains('arriving'));
 
-    final isOrderAlert = !isCancelledOrTerminal && (
-        data['screen'] == 'restaurant-console' ||
-        data['screen'] == 'admin-orders' ||
-        data['screen'] == 'delivery' ||
-        data['screen'] == 'picker' ||
-        data['restaurantId'] != null ||
+    final isDeliveryRiderAlert = (data['screen'] == 'delivery' || data['role'] == 'DELIVERY') &&
+        (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED');
+
+    final isOrderAlert = isDeliveryRiderAlert || (!isCancelledOrTerminal && !isOrderStatusUpdate && (
         data['type'] == 'NEW_ORDER' ||
+        data['type'] == 'VENDOR_NEW_ORDER' ||
+        orderStatus == 'PENDING' ||
+        orderStatus == 'PLACED' ||
+        data['screen'] == 'admin-orders' ||
+        (data['screen'] == 'restaurant-console' && (orderStatus == 'PENDING' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
+        (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
         title.toString().contains('👨‍🍳') ||
         title.toString().contains('🛎️') ||
         title.toString().contains('💳') ||
         title.toString().toLowerCase().contains('kitchen') ||
-        title.toString().toLowerCase().contains('new order'));
+        title.toString().toLowerCase().contains('new order')));
 
     final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
         ? (cleanOrderId.hashCode & 0x7FFFFFFF)

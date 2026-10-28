@@ -94,6 +94,15 @@ def is_order_buzzer_alert(title: str, body: str, data: Optional[Dict[str, Any]])
     if is_cancelled:
         return False
 
+    # Status updates for restaurant / store / customer must NEVER ring the loud order buzzer.
+    # Only riders need a buzzer alert when an order is confirmed/packed for pickup.
+    is_rider_target = (role == "DELIVERY" or screen == "delivery")
+    if not is_rider_target:
+        if msg_type in ["ORDER_STATUS_UPDATE", "STATUS_UPDATE"]:
+            return False
+        if status_val in ["CONFIRMED", "PREPARING", "COOKING", "PACKED", "OUT_FOR_DELIVERY", "DISPATCHED", "DELIVERED"]:
+            return False
+
     return (
         screen in ["restaurant-console", "admin-orders", "delivery", "picker", "vendor-console"] or
         bool(d.get("restaurantId")) or

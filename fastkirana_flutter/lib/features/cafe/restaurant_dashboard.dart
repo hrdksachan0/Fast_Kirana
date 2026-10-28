@@ -664,6 +664,8 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
 
               if (newStatus == 'PENDING' || newStatus == 'PLACED') {
                 _startPendingAlarm();
+              } else {
+                _syncAlarmStateWithOrders(_orders);
               }
             },
           );
@@ -740,8 +742,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       if (!mounted) return;
       final hasPending = _orders.any((o) {
         final st = (o['status'] ?? '').toString().toUpperCase();
-        final assignedChef = o['assignedChefId'] ?? o['assignedChef'];
-        return st == 'PENDING' || (st == 'CONFIRMED' && (assignedChef == null || assignedChef.toString().isEmpty));
+        return st == 'PENDING' || st == 'PLACED';
       });
       if (!hasPending) {
         _stopPendingAlarm();
@@ -766,8 +767,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   void _syncAlarmStateWithOrders(List<Map<String, dynamic>> orders) {
     final hasPending = orders.any((o) {
       final st = (o['status'] ?? '').toString().toUpperCase();
-      final assignedChef = o['assignedChefId'] ?? o['assignedChef'];
-      return st == 'PENDING' || (st == 'CONFIRMED' && (assignedChef == null || assignedChef.toString().isEmpty));
+      return st == 'PENDING' || st == 'PLACED';
     });
     if (hasPending) {
       _startPendingAlarm();
