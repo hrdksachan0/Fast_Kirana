@@ -122,6 +122,16 @@ const nextConfig: NextConfig = {
         destination: '/terms',
         permanent: true,
       },
+      {
+        source: '/bio',
+        destination: '/app',
+        permanent: false,
+      },
+      {
+        source: '/install',
+        destination: '/app',
+        permanent: false,
+      },
     ];
   },
   async rewrites() {

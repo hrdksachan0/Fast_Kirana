@@ -63,6 +63,15 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
+            <!-- Deep Links: fastminute:// & fastkirana:// (General App Launch & Home) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fastminute" />
+                <data android:scheme="fastkirana" />
+            </intent-filter>
+
             <!-- Deep Links: fastminute://order/{id} & fastkirana://order/{id} -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
