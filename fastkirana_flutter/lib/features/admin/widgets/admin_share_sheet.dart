@@ -174,6 +174,51 @@ class _AdminShareSheetContentState extends State<_AdminShareSheetContent> {
           phone: sub.shopPhone ?? (isRest ? RestaurantRegistry.find(sub.restaurantId)?.phone : null),
         ));
       }
+    } else if (order.isRestaurantOrder && !order.isCombined) {
+      // Pure non-combined Restaurant order: ALL items belong to this restaurant KOT!
+      final restToken = order.readableId ?? order.displayId;
+      final restOutletName = (order.shopName != null &&
+              order.shopName!.trim().isNotEmpty &&
+              !order.shopName!.toLowerCase().contains('dark store') &&
+              !order.shopName!.toLowerCase().contains('fastminute store') &&
+              !order.shopName!.toLowerCase().contains('fastkirana store'))
+          ? order.shopName!.trim()
+          : (RestaurantRegistry.getName(order.restaurantId) ?? 'Restaurant Kitchen');
+
+      list.add(_ShareOutletOption(
+        id: 'restaurant',
+        title: restOutletName,
+        subtitle: '${allItems.length} food items',
+        icon: '🍽️',
+        isRestaurant: true,
+        token: restToken,
+        items: allItems,
+        message: AdminNotificationService.formatRestaurantKOTMessage(
+          order,
+          specificItems: allItems,
+          outletName: restOutletName,
+          orderToken: restToken,
+        ),
+        phone: order.shopPhone ?? RestaurantRegistry.find(order.restaurantId)?.phone,
+      ));
+    } else if (!order.isRestaurantOrder && !order.isCombined) {
+      // Pure non-combined Grocery order: ALL items belong to FastMinute Mart!
+      final groceryToken = order.readableId ?? order.displayId;
+      list.add(_ShareOutletOption(
+        id: 'grocery',
+        title: 'FastMinute Mart',
+        subtitle: '${allItems.length} grocery items',
+        icon: '🛒',
+        isRestaurant: false,
+        token: groceryToken,
+        items: allItems,
+        message: AdminNotificationService.formatGroceryPackingMessage(
+          order,
+          specificItems: allItems,
+          outletName: 'FastMinute Mart (Dark Store)',
+          orderToken: groceryToken,
+        ),
+      ));
     } else {
       // 2. Partition items by isRestaurantItem
       final restItems = allItems.where((i) => i.isRestaurantItem).toList();

@@ -388,9 +388,9 @@ class Order {
         final it = OrderItem.fromJson(itemJson);
         final joinedRestId = itemJson['product'] is Map ? itemJson['product']['restaurantId']?.toString() : null;
         // Only assign parent restaurantId if item itself has it, product has it, or item is legitimately a dish/food
-        final effectiveRestId = it.restaurantId ?? joinedRestId ?? (isParentRestOrder && it.isRestaurantItem ? parsedRestId : null);
+        final effectiveRestId = it.restaurantId ?? joinedRestId ?? (isParentRestOrder ? parsedRestId : (it.isRestaurantItem ? parsedRestId : null));
         final effectiveShop = it.shopName ??
-            (effectiveRestId != null ? (RestaurantRegistry.getName(effectiveRestId) ?? resolvedShopName) : (isParentRestOrder && !it.isRestaurantItem ? 'FastMinute Dark Store' : resolvedShopName));
+            (effectiveRestId != null ? (RestaurantRegistry.getName(effectiveRestId) ?? resolvedShopName) : resolvedShopName);
         itemsList.add(it.copyWith(
           restaurantId: effectiveRestId,
           shopName: effectiveShop,
@@ -659,42 +659,39 @@ class OrderItem {
   });
 
   bool get isRestaurantItem {
-    // 1. Explicit cooked food dish check from RestaurantRegistry
+    // 1. STRICT ID-FIRST (Single Source of Truth)
+    // If restaurantId is present on item, it is 100% a restaurant food item!
+    if (restaurantId != null && restaurantId!.trim().isNotEmpty && restaurantId != 'null') {
+      return true;
+    }
+
+    // 2. Product ID prefix
+    final pid = (productId ?? '').toUpperCase();
+    if (pid.startsWith('REST-') || pid.startsWith('DISH-') || pid.startsWith('CAFE-')) {
+      return true;
+    }
+
+    // 3. Shop name on item: if assigned to a known restaurant shop
+    if (shopName != null && shopName!.trim().isNotEmpty) {
+      final s = shopName!.toLowerCase().trim();
+      if (!s.contains('dark store') &&
+          !s.contains('darkstore') &&
+          !s.contains('mart') &&
+          !s.contains('grocery') &&
+          !s.contains('store')) {
+        return true;
+      }
+    }
+
+    // 4. Fallback checks for legacy items without explicit IDs:
     if (RestaurantRegistry.isFoodDishName(name)) return true;
 
-    // 2. Product ID prefix check
-    final pid = (productId ?? '').toUpperCase();
-    if (pid.startsWith('REST-') || pid.startsWith('DISH-') || pid.startsWith('CAFE-')) return true;
-
-    // 3. Obvious grocery guard: if the name is an excluded grocery item, it is NOT a restaurant item
     final n = name.toLowerCase().trim();
     if (n.contains('roll-on') || n.contains('toilet') || n.contains('tissue') ||
         n.contains('soap') || n.contains('shampoo') || n.contains('oil') ||
         n.contains('tel ') || n.contains('atta') || n.contains('chana') ||
-        n.contains('dal ') || n.contains('tamatar') || n.contains('tomato') ||
-        n.contains('kaddu') || n.contains('pumpkin') || n.contains('lauki') ||
-        n.contains('guard') || n.contains('odonil') || n.contains('biscuit') ||
-        n.contains('icecream') || n.contains('ice cream') || n.contains('chhachh') ||
-        n.contains('buttermilk') || n.contains('dahi') || n.contains('namkeen')) {
+        n.contains('odonil') || n.contains('biscuit')) {
       return false;
-    }
-
-    // 4. Restaurant ID on item
-    if (restaurantId != null && restaurantId!.trim().isNotEmpty && restaurantId != 'null') return true;
-
-    // 5. Shop name on item
-    if (shopName != null && shopName!.trim().isNotEmpty) {
-      final s = shopName!.toLowerCase().trim();
-      if (s != 'fastkirana store' &&
-          s != 'fastkirana dark store' &&
-          s != 'fastkirana darkstore' &&
-          s != 'fastkirana grocery' &&
-          s != 'fastminute store' &&
-          s != 'fastminute dark store' &&
-          s != 'fastminute darkstore' &&
-          s != 'fastminute grocery') {
-        return true;
-      }
     }
 
     const dishKeywords = [
@@ -702,7 +699,8 @@ class OrderItem {
       'fried rice', 'paneer', 'manchurian', 'shake', 'coffee', 'pasta', 'thali',
       'roti', 'naan', 'gravy', 'curry', 'biryani', 'pav bhaji', 'fries', 'momos',
       'samosa', 'maggi', 'soup', 'kulfi', 'matka kulfi', 'chaat', 'tikki', 'chole',
-      'bhature', 'kulcha', 'paratha', 'dosa', 'idli', 'vada', 'beverage'
+      'bhature', 'kulcha', 'paratha', 'dosa', 'idli', 'vada', 'beverage',
+      'puri', 'poori', 'kachori', 'sabji', 'sabzi', 'raita', 'gulab jamun', 'rasgulla'
     ];
     return dishKeywords.any((k) => n.contains(k));
   }
@@ -749,10 +747,12 @@ class OrderItem {
     final itemRefund = (json['refundAmount'] as num?)?.toDouble() ?? 0.0;
     final rawRestId = json['restaurantId']?.toString() ??
         json['restaurant_id']?.toString() ??
-        (json['restaurant'] is Map ? json['restaurant']['id']?.toString() : null);
+        (json['restaurant'] is Map ? json['restaurant']['id']?.toString() : null) ??
+        (json['product'] is Map ? (json['product']['restaurantId'] ?? json['product']['restaurant_id'])?.toString() : null);
     final rawShopName = json['shopName']?.toString() ??
         json['shop_name']?.toString() ??
-        (json['restaurant'] is Map ? json['restaurant']['name']?.toString() : null);
+        (json['restaurant'] is Map ? json['restaurant']['name']?.toString() : null) ??
+        (json['product'] is Map ? (json['product']['shopName'] ?? json['product']['shop_name'])?.toString() : null);
 
     final rawVariant = json['selectedVariant']?.toString() ??
         json['selected_variant']?.toString() ??

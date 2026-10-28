@@ -146,6 +146,8 @@ class RestaurantRegistry {
       'chilli potato', 'crispy corn', 'paneer tikka', 'soya chaap', 'chaap',
       'handi paneer', 'kadhai paneer', 'shahi paneer', 'dal makhani', 'tandoori roti',
       'butter naan', 'garlic naan', 'missi roti', 'paneer paratha', 'aloo paratha',
+      'roti', 'naan', 'paratha', 'puri', 'poori', 'kachori', 'sabji', 'sabzi', 'raita',
+      'chole', 'tadka', 'jeera aloo', 'dum aloo', 'bhature', 'kulcha',
       'shake', 'cold coffee', 'hot coffee', 'kulhad chai', 'cutting chai', 'mocktail', 'sweet lassi',
       'samosa', 'cutlet', 'tikki', 'curry', 'gravy', 'kofta', 'korma',
       'jeera rice', 'pulao', 'pastry', 'waffle'
