@@ -375,29 +375,31 @@ async def save_admin_settings(
         res = await db.execute(stmt)
         current_settings = res.scalars().all()
         current_map = {s.key: s.value for s in current_settings}
+        current_settings_by_key = {s.key: s for s in current_settings}
 
         for key, val in payload.items():
             str_val = str(val)
             scoped_key = f"{prefix}{key}" if is_store_scoped else key
             
-            stmt_key = select(StoreSetting).where(StoreSetting.key == scoped_key)
-            res_key = await db.execute(stmt_key)
-            existing = res_key.scalars().first()
+            existing = current_settings_by_key.get(scoped_key)
             if existing:
-                existing.value = str_val
+                if existing.value != str_val:
+                    existing.value = str_val
             else:
                 new_s = StoreSetting(id=f"ss_{uuid.uuid4().hex[:16]}", key=scoped_key, value=str_val)
                 db.add(new_s)
+                current_settings_by_key[scoped_key] = new_s
 
             # If base Ghatampur hub, sync un-scoped legacy keys too
             if store_id == "hub-209206":
-                base_stmt = select(StoreSetting).where(StoreSetting.key == key)
-                base_res = await db.execute(base_stmt)
-                base_existing = base_res.scalars().first()
+                base_existing = current_settings_by_key.get(key)
                 if base_existing:
-                    base_existing.value = str_val
+                    if base_existing.value != str_val:
+                        base_existing.value = str_val
                 else:
-                    db.add(StoreSetting(id=f"ss_{uuid.uuid4().hex[:16]}", key=key, value=str_val))
+                    new_base = StoreSetting(id=f"ss_{uuid.uuid4().hex[:16]}", key=key, value=str_val)
+                    db.add(new_base)
+                    current_settings_by_key[key] = new_base
 
         # Sync DarkStore table fields for this specific hub or default central hub
         target_hub_id = store_id if is_store_scoped else "hub-209206"
