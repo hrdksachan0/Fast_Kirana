@@ -3,45 +3,52 @@ import { Metadata } from 'next'
 import { AppRedirectClient } from './app-redirect-client'
 
 export const metadata: Metadata = {
-  title: 'FastMinute App - 10-Minute Grocery & Food Delivery in Ghatampur',
+  title: 'FastMinute on Google Play Store',
   description:
-    'Download or open the FastMinute app for 10-25 minute delivery of fresh vegetables, daily dairy milk, grocery essentials, and hot restaurant food in Ghatampur.',
+    'Download FastMinute (Fast Minute) from Google Play Store for 10-Minute Grocery & Food Delivery in Ghatampur.',
   openGraph: {
-    title: '⚡ FastMinute App - 10-Minute Delivery in Ghatampur',
+    title: 'FastMinute - 10-Minute Delivery App',
     description:
-      'Fresh groceries, milk, vegetables & delicious restaurant meals delivered straight to your door in 10-25 mins. Tap to open or install!',
-    url: 'https://www.fastminute.in/app',
-    siteName: 'FastMinute Express',
+      'Download FastMinute from Google Play Store for fresh groceries, milk, vegetables & delicious restaurant meals in Ghatampur.',
+    url: 'https://play.google.com/store/apps/details?id=com.fastkirana.app',
+    siteName: 'Google Play Store',
     images: [
       {
         url: 'https://www.fastminute.in/brand/fastkirana_app_icon.png',
         width: 512,
         height: 512,
-        alt: 'FastMinute App Icon',
+        alt: 'FastMinute on Google Play',
       },
     ],
-    type: 'website',
   },
   twitter: {
     card: 'summary',
-    title: '⚡ FastMinute - 10-Minute Delivery App',
+    title: 'FastMinute - 10-Minute Delivery App on Google Play',
     description:
-      'Ghatampur’s fastest delivery app. Order groceries & food in 10-25 minutes.',
+      'Download FastMinute on Google Play Store for 10-minute grocery delivery in Ghatampur.',
     images: ['https://www.fastminute.in/brand/fastkirana_app_icon.png'],
   },
 }
 
 export default function AppPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-4">
-          <div className="w-12 h-12 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin mb-4" />
-          <p className="text-neutral-400 text-sm font-medium">Opening FastMinute...</p>
-        </div>
-      }
-    >
-      <AppRedirectClient />
-    </Suspense>
+    <>
+      <head>
+        <meta
+          httpEquiv="refresh"
+          content="0; url=https://play.google.com/store/apps/details?id=com.fastkirana.app"
+        />
+      </head>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-4">
+            <div className="w-10 h-10 rounded-full border-3 border-emerald-500 border-t-transparent animate-spin mb-4" />
+            <p className="text-neutral-400 text-sm font-medium">Opening Google Play Store...</p>
+          </div>
+        }
+      >
+        <AppRedirectClient />
+      </Suspense>
+    </>
   )
 }
