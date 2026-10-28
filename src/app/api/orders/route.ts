@@ -1502,7 +1502,7 @@ export async function POST(request: NextRequest) {
           if (orderInfo.type === 'RESTAURANT') {
             label = `STORE_PICKUP_${orderInfo.restaurantId}`
             defaultPickupAddress = orderInfo.restaurant?.address ? `${orderInfo.restaurant.address}, ${orderInfo.restaurant.city || 'Ghatampur'}` : (settingsMap['restaurant_pickup_address'] || RESTAURANT_PICKUP_ADDRESS)
-            phone = orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 81128 49854'
+            phone = orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 9450358388'
           } else {
             label = 'STORE_PICKUP'
             defaultPickupAddress = settingsMap['grocery_pickup_address'] || GROCERY_PICKUP_ADDRESS
@@ -1674,8 +1674,8 @@ export async function POST(request: NextRequest) {
                 ? (orderInfo.restaurant?.name || 'Restaurant')
                 : 'FastMinute Dark Store',
               shopPhone: orderInfo.type === 'RESTAURANT'
-                ? (orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 81128 49854')
-                : (settingsMap['contact_phone'] || '+91 81128 49854'),
+                ? (orderInfo.restaurant?.ownerPhone || settingsMap['contact_phone'] || '+91 9450358388')
+                : (settingsMap['contact_phone'] || '+91 9450358388'),
               notes: resolvedOrderNotes,
               restaurantId: orderInfo.type === 'RESTAURANT' ? orderInfo.restaurantId : null,
               deliveryLat: address.lat,

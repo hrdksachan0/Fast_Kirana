@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fastminute_flutter/core/theme/design_system.dart';
+import 'package:fastminute_flutter/core/config/app_config.dart';
 
 class HomeFooter extends StatelessWidget {
   const HomeFooter({super.key});
@@ -59,7 +60,7 @@ class HomeFooter extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '+91 81128 49854 | fastkiranadelivery@gmail.com',
+              '${AppConfig.supportPhone} | ${AppConfig.supportEmail}',
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 10.5),
                 fontWeight: FontWeight.w600,

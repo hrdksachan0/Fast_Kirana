@@ -96,6 +96,19 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       debugPrint('NotificationService: Suppressing restaurant alert for grocery picker in background.');
       return;
     }
+
+    // 3B. STRICT RIDER HUB ISOLATION IN BACKGROUND:
+    // If rider is assigned to a specific hub (e.g. hub-209206 Ghatampur) and order belongs to another hub, SUPPRESS!
+    final assignedStoreId = prefs.getString('assigned_store_id') ?? prefs.getString('rider_store_id') ?? '';
+    final notifStoreId = (data['storeId'] ?? '').toString().trim();
+    final isRider = userRole == 'DELIVERY' || userRole == 'RIDER' || userRole == 'DELIVERY_PARTNER' || userRole == 'DRIVER';
+
+    if (isRider && assignedStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
+      if (assignedStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
+        debugPrint('NotificationService: Suppressing alert in background for different hub rider ($notifStoreId != $assignedStoreId)');
+        return;
+      }
+    }
     // 4. If VENDOR, strictly suppress restaurant, picker, rider, and non-vendor alerts!
     if (userRole == 'VENDOR' && data['type'] != 'VENDOR_NEW_ORDER' && data['screen'] != 'vendor-console') {
       debugPrint('NotificationService: Suppressing non-vendor alert for vendor in background.');
@@ -456,7 +469,11 @@ class NotificationService {
       // 6. Handle App Opened from Background Notification Tap
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         logger.d("App opened from notification: ${message.data}");
-        final url = message.data['url'] ?? message.data['linkUrl'] ?? message.data['link'];
+        final rawUrl = message.data['url'] ?? message.data['linkUrl'] ?? message.data['link'];
+        final screen = message.data['screen']?.toString();
+        final url = (rawUrl != null && rawUrl.toString().trim().isNotEmpty)
+            ? rawUrl.toString().trim()
+            : (screen == 'delivery' ? '/delivery' : (screen == 'admin-orders' ? '/admin' : null));
         if (url != null && url.toString().trim().isNotEmpty) {
           NotificationService.navigateToLink(url.toString().trim());
         }
@@ -466,7 +483,11 @@ class NotificationService {
       try {
         final initialMsg = await _fcm?.getInitialMessage();
         if (initialMsg != null) {
-          final url = initialMsg.data['url'] ?? initialMsg.data['linkUrl'] ?? initialMsg.data['link'];
+          final rawUrl = initialMsg.data['url'] ?? initialMsg.data['linkUrl'] ?? initialMsg.data['link'];
+          final screen = initialMsg.data['screen']?.toString();
+          final url = (rawUrl != null && rawUrl.toString().trim().isNotEmpty)
+              ? rawUrl.toString().trim()
+              : (screen == 'delivery' ? '/delivery' : (screen == 'admin-orders' ? '/admin' : null));
           if (url != null && url.toString().trim().isNotEmpty) {
             pendingDeepLinkUrl = url.toString().trim();
             debugPrint('[NotificationService] Stored initial notification link: $pendingDeepLinkUrl');
@@ -581,6 +602,18 @@ class NotificationService {
       if (userRole == 'PICKER' && (notifScreen == 'restaurant-console' || notifRestId.isNotEmpty)) {
         debugPrint('NotificationService: Suppressing restaurant alert for grocery picker in foreground.');
         return;
+      }
+
+      // 3B. STRICT RIDER HUB ISOLATION IN FOREGROUND:
+      final assignedStoreId = prefs.getString('assigned_store_id') ?? prefs.getString('rider_store_id') ?? '';
+      final notifStoreId = (data['storeId'] ?? '').toString().trim();
+      final isRider = userRole == 'DELIVERY' || userRole == 'RIDER' || userRole == 'DELIVERY_PARTNER' || userRole == 'DRIVER';
+
+      if (isRider && assignedStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
+        if (assignedStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
+          debugPrint('NotificationService: Suppressing alert in foreground for different hub rider ($notifStoreId != $assignedStoreId)');
+          return;
+        }
       }
       // 4. If VENDOR, strictly suppress restaurant, picker, rider, and non-vendor alerts!
       if (userRole == 'VENDOR' && data['type'] != 'VENDOR_NEW_ORDER' && data['screen'] != 'vendor-console') {
@@ -752,7 +785,7 @@ class NotificationService {
           interruptionLevel: InterruptionLevel.timeSensitive,
         ),
       ),
-      payload: (message.data['url'] ?? message.data['linkUrl'] ?? message.data['link'] ?? (cleanOrderId != null ? '/orders/track' : '')).toString(),
+      payload: (message.data['url'] ?? message.data['linkUrl'] ?? message.data['link'] ?? (message.data['screen'] == 'delivery' ? '/delivery' : (cleanOrderId != null ? '/orders/track' : ''))).toString(),
     );
   }
 
@@ -919,9 +952,13 @@ class NotificationService {
               try { await _fcm?.unsubscribeFromTopic('delivery_orders_$storeId'); } catch (_) {}
             }
           } else {
-            // Delivery / Rider
-            final topic = (storeId != null && storeId.isNotEmpty) ? 'delivery_orders_$storeId' : 'delivery_orders';
-            await _fcm?.subscribeToTopic(topic);
+            // Delivery / Rider - Strict Hub Subscription
+            if (storeId != null && storeId.isNotEmpty) {
+              await _fcm?.subscribeToTopic('delivery_orders_$storeId');
+              try { await _fcm?.unsubscribeFromTopic('delivery_orders'); } catch (_) {}
+            } else {
+              await _fcm?.subscribeToTopic('delivery_orders');
+            }
             try { await _fcm?.unsubscribeFromTopic('staff_orders'); } catch (_) {}
             try { await _fcm?.unsubscribeFromTopic('picker_orders'); } catch (_) {}
             if (storeId != null && storeId.isNotEmpty) {

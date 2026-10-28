@@ -26,6 +26,7 @@ import '../../core/utils/app_toast.dart';
 import '../../data/models/order.dart';
 import '../../data/models/product.dart';
 import '../../data/repositories/order_repository.dart';
+import '../../data/repositories/restaurant_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/restaurant_provider.dart';
 import '../../providers/store_settings_provider.dart';
@@ -1926,9 +1927,11 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
         await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {
           'discountBadge': val ? 'HIGH RUSH' : null,
         });
+        RestaurantRepository.invalidateCache();
+        ref.invalidate(restaurantsProvider);
       }
     } catch (e) {
       LoggerService.error('Busy mode toggle error: $e');
     }
   }
-}
+}

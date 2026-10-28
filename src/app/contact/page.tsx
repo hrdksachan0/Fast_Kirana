@@ -54,10 +54,10 @@ export default function ContactPage() {
               <p className="text-xs text-muted-foreground mt-1">For business queries &amp; refunds</p>
             </div>
             <a 
-              href="mailto:fastkiranadelivery@gmail.com"
+              href="mailto:fastminutedelivery@gmail.com"
               className="mt-auto inline-flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl border border-border transition-all"
             >
-              fastkiranadelivery@gmail.com
+              fastminutedelivery@gmail.com
             </a>
           </div>
 

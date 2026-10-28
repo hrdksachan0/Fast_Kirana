@@ -104,7 +104,7 @@ export default function RefundPolicyPage() {
             </p>
             <div className="mt-3 text-muted-foreground space-y-1">
               <p>WhatsApp / Call Support: <a href="https://wa.me/917054470303" className="text-rose-600 hover:underline font-bold">+91 70544 70303</a></p>
-              <p>Email: <a href="mailto:fastkiranadelivery@gmail.com" className="text-rose-600 hover:underline font-bold">fastkiranadelivery@gmail.com</a></p>
+              <p>Email: <a href="mailto:fastminutedelivery@gmail.com" className="text-rose-600 hover:underline font-bold">fastminutedelivery@gmail.com</a></p>
               <p>Hours: <strong>6:00 AM – 12:00 Midnight (Daily)</strong></p>
             </div>
           </section>

@@ -48,7 +48,7 @@ export default function PrivacyPolicyPage() {
               You have the right to request the deletion of your account and all associated personal data at any time.
             </p>
             <p className="text-muted-foreground mt-2">
-              Users can delete their account directly inside the FastMinute App via <strong>Settings &gt; Delete Account</strong>, or submit a data deletion request by emailing us at <a href="mailto:fastkiranadelivery@gmail.com" className="text-primary hover:underline font-medium">fastkiranadelivery@gmail.com</a>. Upon receipt, all personal identity records, saved addresses, and profile data will be permanently purged from our active databases within 7 business days.
+              Users can delete their account directly inside the FastMinute App via <strong>Settings &gt; Delete Account</strong>, or submit a data deletion request by emailing us at <a href="mailto:fastminutedelivery@gmail.com" className="text-primary hover:underline font-medium">fastminutedelivery@gmail.com</a>. Upon receipt, all personal identity records, saved addresses, and profile data will be permanently purged from our active databases within 7 business days.
             </p>
           </section>
 
@@ -85,7 +85,7 @@ export default function PrivacyPolicyPage() {
               If you have any questions, feedback, or data deletion requests regarding this Privacy Policy, please contact us:
             </p>
             <p className="text-foreground font-semibold mt-2">
-              Email: <a href="mailto:fastkiranadelivery@gmail.com" className="text-rose-600 hover:underline font-medium">fastkiranadelivery@gmail.com</a>
+              Email: <a href="mailto:fastminutedelivery@gmail.com" className="text-rose-600 hover:underline font-medium">fastminutedelivery@gmail.com</a>
             </p>
           </section>
         </div>

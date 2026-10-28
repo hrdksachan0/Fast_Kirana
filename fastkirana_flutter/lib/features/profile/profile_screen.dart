@@ -107,7 +107,7 @@ class ProfileScreen extends ConsumerWidget {
                 child: const Icon(Icons.phone_rounded, color: AppDesignSystem.blue600, size: 22),
               ),
               title: Text('Call Support', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800)),
-              subtitle: Text('+91 81128 49854 (Instant Call)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500)),
+              subtitle: Text('${AppConfig.supportPhone} (Instant Call)', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500)),
               trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.slate400),
             ),
             const Divider(height: 1, color: AppDesignSystem.slate100),
@@ -131,7 +131,7 @@ class ProfileScreen extends ConsumerWidget {
             const Divider(height: 1, color: AppDesignSystem.slate100),
             ListTile(
               onTap: () async {
-                final uri = Uri.parse('mailto:fastkiranadelivery@gmail.com?subject=FastMinute%20Customer%20Support');
+                final uri = Uri.parse('mailto:${AppConfig.supportEmail}?subject=FastMinute%20Customer%20Support');
                 if (await canLaunchUrl(uri)) await launchUrl(uri);
               },
               leading: Container(
@@ -143,7 +143,7 @@ class ProfileScreen extends ConsumerWidget {
                 child: const Icon(Icons.email_outlined, color: AppDesignSystem.red600, size: 22),
               ),
               title: Text('Email Support', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 14), fontWeight: FontWeight.w800)),
-              subtitle: Text('fastkiranadelivery@gmail.com', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500)),
+              subtitle: Text(AppConfig.supportEmail, style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), color: AppDesignSystem.slate500)),
               trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppDesignSystem.slate400),
             ),
           ],

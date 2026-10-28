@@ -78,7 +78,7 @@ export default function TermsPage() {
             <div className="mt-3 text-muted-foreground space-y-1">
               <p><strong>FastMinute Support Desk</strong></p>
               <p>NH34, Ghatampur Market, Kanpur Nagar, UP - 209206</p>
-              <p>Email: <a href="mailto:fastkiranadelivery@gmail.com" className="text-rose-600 hover:underline font-medium">fastkiranadelivery@gmail.com</a></p>
+              <p>Email: <a href="mailto:fastminutedelivery@gmail.com" className="text-rose-600 hover:underline font-medium">fastminutedelivery@gmail.com</a></p>
               <p>Phone / WhatsApp: <a href="tel:+917054470303" className="text-rose-600 hover:underline font-medium">+91 70544 70303</a></p>
             </div>
           </section>

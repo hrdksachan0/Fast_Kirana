@@ -463,6 +463,45 @@ async def dispatch_isolated_order_fcm_notifications(
             picker_topic = f"picker_orders_{store_id}" if store_id else "picker_orders"
             await send_fcm_topic_notification(picker_topic, grocery_title, grocery_body, grocery_data)
 
+        # ── 2B. ALERT RIDERS FOR DELIVERY (Rider phone rings with loud Order Buzzer) ──
+        rider_title = f"🛵 New Delivery Order #{readable_id}!"
+        rider_body = f"Order #{readable_id} ({safe_shop_name or 'FastMinute'}, ₹{total:.2f}) verified! Tap to deliver."
+        rider_data = {
+            "orderId": order_id,
+            "readableId": str(readable_id),
+            "storeId": str(store_id or ""),
+            "restaurantId": str(restaurant_id or ""),
+            "status": status_val,
+            "paymentStatus": "PAID" if is_paid else "PENDING",
+            "screen": "delivery",
+            "url": "/delivery",
+            "type": "NEW_ORDER",
+            "role": "DELIVERY",
+            "timestamp": now_ts,
+        }
+        # Strict Hub Isolation: Send ONLY to this hub's rider topic
+        rider_topic = f"delivery_orders_{store_id}" if store_id else "delivery_orders"
+        await send_fcm_topic_notification(rider_topic, rider_title, rider_body, rider_data)
+
+        # Direct multicast strictly to registered riders assigned to THIS store/hub
+        try:
+            async with AsyncSessionLocal() as session:
+                if store_id:
+                    r_stmt = select(FcmToken.token).join(User, FcmToken.userId == User.id).where(
+                        User.role.in_([Role.DELIVERY]),
+                        User.assignedStoreId == store_id
+                    )
+                else:
+                    r_stmt = select(FcmToken.token).join(User, FcmToken.userId == User.id).where(
+                        User.role.in_([Role.DELIVERY])
+                    )
+                r_res = await session.execute(r_stmt)
+                rider_tokens = [t[0] for t in r_res.fetchall() if t[0]]
+                if rider_tokens:
+                    await send_fcm_notification(rider_tokens, rider_title, rider_body, rider_data)
+        except Exception as r_err:
+            logger.warning(f"Direct rider tokens multicast warning: {r_err}")
+
         # ── 3. BROADCAST TO HUB MANAGER & MASTER ADMIN ──
         admin_title = f"💳 Online Paid Order #{readable_id}!" if is_paid else f"🛎️ New Order Received #{readable_id}"
         admin_body = f"Order #{readable_id} of ₹{total:.2f} is PAID online. Tap to review." if is_paid else f"New order #{readable_id} of ₹{total:.2f} has been placed. Tap to review."
@@ -505,10 +544,17 @@ async def dispatch_isolated_status_update_notifications(
         base_order_no = re.sub(r'-[GR\d]+$', '', readable_id or "")
         safe_shop_name = (shop_name or "").replace("FastKirana", "FastMinute")
 
-        # ── RIDER NOTIFICATION: Triggered ONLY when order is PACKED ──
-        if status_val == "PACKED" or (restaurant_id and status_val in ["COOKED", "PREPARED", "PACKED"]):
-            rider_title = f"🛵 Order #{base_order_no} is Packed & Ready!"
-            rider_body = f"Order #{base_order_no} ({safe_shop_name or 'Store'}) is packed. Tap to pick up & deliver."
+        # ── RIDER NOTIFICATION: Triggered when order is CONFIRMED (Admin verified) or PACKED ──
+        if status_val in ["CONFIRMED", "PACKED"] or (restaurant_id and status_val in ["COOKED", "PREPARED", "PACKED"]):
+            if status_val == "CONFIRMED":
+                rider_title = f"🛵 New Order #{base_order_no} Verified!"
+                rider_body = f"Order #{base_order_no} ({safe_shop_name or 'Store'}) verified by Admin! Tap to view details."
+                msg_type = "NEW_ORDER"
+            else:
+                rider_title = f"🛵 Order #{base_order_no} is Packed & Ready!"
+                rider_body = f"Order #{base_order_no} ({safe_shop_name or 'Store'}) is packed. Tap to pick up & deliver."
+                msg_type = "ORDER_PACKED"
+
             rider_data = {
                 "orderId": order_id,
                 "readableId": str(readable_id),
@@ -516,10 +562,12 @@ async def dispatch_isolated_status_update_notifications(
                 "restaurantId": str(restaurant_id or ""),
                 "status": status_val,
                 "screen": "delivery",
-                "type": "ORDER_PACKED",
+                "url": "/delivery",
+                "type": msg_type,
                 "role": "DELIVERY",
                 "timestamp": now_ts,
             }
+            # Strict Hub Isolation: Send ONLY to this hub's rider topic
             rider_topic = f"delivery_orders_{store_id}" if store_id else "delivery_orders"
             await send_fcm_topic_notification(rider_topic, rider_title, rider_body, rider_data)
 
@@ -1301,7 +1349,7 @@ async def create_order(
                 res_stmt = select(User).where(User.assignedRestaurantId == canonical_r_id)
                 res_res = await db.execute(res_stmt)
                 owner = res_res.scalars().first()
-                owner_phone = owner.phone if owner else (restaurant.ownerPhone or "+91 81128 49854")
+                owner_phone = owner.phone if owner else (restaurant.ownerPhone or "+91 9450358388")
 
                 restaurant_groups[canonical_r_id] = {
                     "id": canonical_r_id,

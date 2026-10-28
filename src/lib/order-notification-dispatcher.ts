@@ -526,6 +526,45 @@ export async function dispatchAdminApprovedNotifications(orderId: string, origin
         }
       }
 
+      // 2B. Direct FCM & Topic Broadcast to Delivery Riders (Both Restaurant & Grocery)
+      if (fcmMessaging) {
+        const riderApprovalPayload = buildOrderFcmPayload(
+          `🛵 New Delivery Order #${displayId}!`,
+          `Order #${displayId} (${outletName}, ₹${order.total}) approved by Admin! Ready to deliver.`,
+          {
+            title: `🛵 New Delivery Order #${displayId}!`,
+            body: `Order #${displayId} (${outletName}, ₹${order.total}) approved by Admin! Ready to deliver.`,
+            orderId: order.id,
+            readableId: displayId,
+            status: order.status || 'PENDING',
+            screen: 'delivery',
+            url: '/delivery',
+            role: 'DELIVERY',
+            type: 'NEW_ORDER',
+            timestamp: Date.now().toString(),
+          }
+        )
+
+        // Strict Hub Isolation: Send ONLY to this hub's rider topic
+        const riderTopic = order.storeId ? `delivery_orders_${order.storeId}` : 'delivery_orders'
+        sendTopicWithRetry(fcmMessaging, { topic: riderTopic, ...riderApprovalPayload }).catch(() => {})
+
+        // Direct tokens strictly for riders assigned to THIS store/hub
+        prisma.fcmToken.findMany({
+          where: {
+            user: {
+              role: Role.DELIVERY,
+              ...(order.storeId ? { assignedStoreId: order.storeId } : {}),
+            },
+          },
+          select: { token: true },
+        }).then((riderTokens) => {
+          for (const rToken of riderTokens) {
+            fcmMessaging.send({ token: rToken.token, ...riderApprovalPayload }).catch(() => {})
+          }
+        }).catch(() => {})
+      }
+
       // 3. Direct Customer Phone Broadcast
       const customerPhone = order.address?.phone || order.user?.phone || ''
       const cleanPhone = getLast10Digits(customerPhone)

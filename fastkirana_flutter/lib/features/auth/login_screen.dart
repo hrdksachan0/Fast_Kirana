@@ -8,6 +8,7 @@ import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/network/api_client.dart';
 import '../../core/routes/page_transitions.dart';
+import '../../core/config/app_config.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../widgets/brand_logo.dart';
@@ -855,7 +856,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     _buildTncSection(
                       context,
                       '7. Customer Support & Grievances',
-                      'For any queries, missing items, or delivery assistance, reach our Ghatampur Central Support directly at +91 81128 49854 or email fastkiranadelivery@gmail.com.',
+                      'For any queries, missing items, or delivery assistance, reach our Ghatampur Central Support directly at ${AppConfig.supportPhone} or email ${AppConfig.supportEmail}.',
                     ),
                     const SizedBox(height: 20),
                   ],

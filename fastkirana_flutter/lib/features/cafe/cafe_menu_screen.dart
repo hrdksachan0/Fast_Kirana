@@ -904,7 +904,10 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         ),
                         if ((currentRestaurant != null && currentRestaurant.activeOrdersCount >= 6) ||
                             currentRestaurant?.discountBadge?.toUpperCase().contains('RUSH') == true ||
-                            currentRestaurant?.discountBadge?.toUpperCase().contains('BUSY') == true) ...[
+                            currentRestaurant?.discountBadge?.toUpperCase().contains('BUSY') == true ||
+                            currentRestaurant?.discountBadge?.toUpperCase().contains('SURGE') == true ||
+                            currentRestaurant?.pauseReason == 'HIGH_ORDER_SURGE' ||
+                            currentRestaurant?.pauseReason?.toUpperCase().contains('SURGE') == true) ...[
                           const SizedBox(width: 8),
                           Flexible(
                             child: Container(
@@ -929,7 +932,9 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                                   const SizedBox(width: 3),
                                   Flexible(
                                     child: Text(
-                                      'HIGH DEMAND (NO SURGE FEE)',
+                                      currentRestaurant?.discountBadge?.toUpperCase().contains('SURGE') == true || currentRestaurant?.pauseReason == 'HIGH_ORDER_SURGE'
+                                          ? 'KITCHEN SURGE ⚡'
+                                          : 'HIGH DEMAND RUSH ⚡',
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 9.5),
                                         fontWeight: FontWeight.w900,
@@ -949,6 +954,72 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     ),
                   ),
                 ),
+
+                if ((currentRestaurant != null && currentRestaurant.activeOrdersCount >= 6) ||
+                    currentRestaurant?.discountBadge?.toUpperCase().contains('RUSH') == true ||
+                    currentRestaurant?.discountBadge?.toUpperCase().contains('BUSY') == true ||
+                    currentRestaurant?.discountBadge?.toUpperCase().contains('SURGE') == true ||
+                    currentRestaurant?.pauseReason == 'HIGH_ORDER_SURGE')
+                  SliverToBoxAdapter(
+                    child: Container(
+                      margin: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFF7ED), Color(0xFFFEF2F2)],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFFDBA74)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFEA580C).withValues(alpha: 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEA580C).withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Text('⚡', style: TextStyle(fontSize: 15)),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  currentRestaurant?.discountBadge?.toUpperCase().contains('SURGE') == true || currentRestaurant?.pauseReason == 'HIGH_ORDER_SURGE'
+                                      ? 'Kitchen Surge Active'
+                                      : 'High Demand Rush Active',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12),
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF9A3412),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'This kitchen is currently experiencing high rush. Fresh food preparation may take a few extra minutes.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    color: const Color(0xFFC2410C),
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
 
                 // ─── 2.5 RESTAURANT OFFERS / BOGO TICKETS STRIP ───
                 _buildRestaurantOffersStrip(currentRestaurant),

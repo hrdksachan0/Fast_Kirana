@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/order.dart';
+import '../../core/config/app_config.dart';
 import '../../core/utils/order_item_helper.dart';
 import 'order_tracking_screen.dart';
 
@@ -440,7 +441,7 @@ class OrderDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 1),
                           Text(
-                            '+91 81128 49854',
+                            AppConfig.supportPhone,
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,

@@ -3,7 +3,7 @@ import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Send, Bell, History, CheckCircle2, XCircle, Loader2, Sparkles, Smartphone } from 'lucide-react'
+import { Send, Bell, History, CheckCircle2, XCircle, Loader2, Sparkles, Smartphone, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface PushNotificationHistory {
@@ -28,6 +28,8 @@ export function AdminPushNotifications() {
   const [webCount, setWebCount] = useState<number | null>(null)
   const [history, setHistory] = useState<PushNotificationHistory[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [isClearingAll, setIsClearingAll] = useState(false)
 
   useEffect(() => {
     fetchNotificationData()
@@ -105,6 +107,62 @@ export function AdminPushNotifications() {
       toast.error('Failed to send notification: Connection error')
     } finally {
       setIsSending(false)
+    }
+  }
+
+  const handleDeleteNotification = async (id: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}" from campaign history?`)) {
+      return
+    }
+
+    setDeletingId(id)
+    try {
+      const res = await fetch(`${apiUrl()}/api/admin/push-notifications?id=${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      })
+
+      if (res.ok) {
+        setHistory((prev) => prev.filter((item) => item.id !== id))
+        toast.success('Campaign history record deleted')
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Failed to delete campaign')
+      }
+    } catch (error) {
+      console.error('Error deleting campaign:', error)
+      toast.error('Failed to delete campaign')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleClearAllHistory = async () => {
+    if (!confirm('Are you sure you want to delete ALL broadcast campaigns history?')) {
+      return
+    }
+
+    setIsClearingAll(true)
+    try {
+      const res = await fetch(`${apiUrl()}/api/admin/push-notifications?all=true`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      })
+
+      if (res.ok) {
+        setHistory([])
+        toast.success('All broadcast campaigns history cleared')
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Failed to clear history')
+      }
+    } catch (error) {
+      console.error('Error clearing campaign history:', error)
+      toast.error('Failed to clear history')
+    } finally {
+      setIsClearingAll(false)
     }
   }
 
@@ -265,9 +323,27 @@ export function AdminPushNotifications() {
 
         {/* Campaign History Log */}
         <div className="lg:col-span-3 bg-card border border-border/60 rounded-2xl p-5 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 border-b border-border/40 pb-3">
-            <History className="h-4.5 w-4.5 text-text-secondary" />
-            <h4 className="font-extrabold text-text-primary text-sm">Broadcast Campaigns History</h4>
+          <div className="flex items-center justify-between border-b border-border/40 pb-3">
+            <div className="flex items-center gap-2">
+              <History className="h-4.5 w-4.5 text-text-secondary" />
+              <h4 className="font-extrabold text-text-primary text-sm">Broadcast Campaigns History</h4>
+            </div>
+            {history.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAllHistory}
+                disabled={isClearingAll}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors border border-red-200/60 dark:border-red-900/40 disabled:opacity-50 cursor-pointer"
+                title="Clear all campaign history"
+              >
+                {isClearingAll ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+                <span>Clear All</span>
+              </button>
+            )}
           </div>
 
           {isLoadingHistory ? (
@@ -290,6 +366,7 @@ export function AdminPushNotifications() {
                     <th className="py-2.5 px-3 text-left font-extrabold text-text-secondary">Notification</th>
                     <th className="py-2.5 px-3 text-right font-extrabold text-text-secondary">Delivered</th>
                     <th className="py-2.5 px-3 text-right font-extrabold text-text-secondary">Failed</th>
+                    <th className="py-2.5 px-2 text-center font-extrabold text-text-secondary w-10">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
@@ -319,6 +396,21 @@ export function AdminPushNotifications() {
                       </td>
                       <td className="py-2.5 px-3 text-right font-extrabold text-red-500">
                         {item.failureCount}
+                      </td>
+                      <td className="py-2.5 px-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNotification(item.id, item.title)}
+                          disabled={deletingId === item.id}
+                          className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
+                          title="Delete campaign history"
+                        >
+                          {deletingId === item.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </button>
                       </td>
                     </tr>
                   ))}

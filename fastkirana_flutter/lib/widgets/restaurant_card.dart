@@ -219,7 +219,12 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
             : '');
     final hasOffer = rawOffer.isNotEmpty;
     final offer = rawOffer;
-    final isSurgeAlert = r.activeOrdersCount >= 6;
+    final isSurgeAlert = r.activeOrdersCount >= 6 ||
+        r.discountBadge?.toUpperCase().contains('RUSH') == true ||
+        r.discountBadge?.toUpperCase().contains('SURGE') == true ||
+        r.discountBadge?.toUpperCase().contains('BUSY') == true ||
+        r.pauseReason == 'HIGH_ORDER_SURGE' ||
+        r.pauseReason?.toUpperCase().contains('SURGE') == true;
     final isPaused = r.pauseUntil != null && r.pauseUntil!.isNotEmpty && DateTime.tryParse(r.pauseUntil!) != null && DateTime.parse(r.pauseUntil!).isAfter(DateTime.now());
     final pauseMinsLeft = isPaused ? DateTime.parse(r.pauseUntil!).difference(DateTime.now()).inMinutes : 0;
 

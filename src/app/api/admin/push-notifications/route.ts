@@ -132,3 +132,43 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to send push notification' }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const adminResult = await requireAdmin(request)
+  if (adminResult.error) return adminResult.error
+
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    const deleteAll = searchParams.get('all') === 'true'
+
+    if (deleteAll) {
+      const deleted = await prisma.pushNotification.deleteMany({})
+      return NextResponse.json({
+        success: true,
+        message: 'All campaign history cleared successfully',
+        count: deleted.count,
+      })
+    }
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Notification ID or all=true query parameter is required' },
+        { status: 400 }
+      )
+    }
+
+    await prisma.pushNotification.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Campaign deleted successfully',
+    })
+  } catch (error) {
+    console.error('Failed to delete push notification:', error)
+    return NextResponse.json({ error: 'Failed to delete push notification' }, { status: 500 })
+  }
+}
+

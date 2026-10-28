@@ -117,6 +117,9 @@ async def get_restaurants(
             "isOpen": check_restaurant_is_open(r),
             "isCurrentlyOpen": check_restaurant_is_open(r),
             "isManuallyOpen": r.isOpen,
+            "pauseUntil": r.pauseUntil.isoformat() if r.pauseUntil else None,
+            "closeReason": r.closeReason,
+            "pauseReason": r.closeReason,
             "openTime": r.openTime,
             "closeTime": r.closeTime,
             "sortOrder": r.sortOrder,
@@ -298,6 +301,9 @@ async def get_restaurant_details(
         "isOpen": check_restaurant_is_open(restaurant),
         "isCurrentlyOpen": check_restaurant_is_open(restaurant),
         "isManuallyOpen": restaurant.isOpen,
+        "pauseUntil": restaurant.pauseUntil.isoformat() if restaurant.pauseUntil else None,
+        "closeReason": restaurant.closeReason,
+        "pauseReason": restaurant.closeReason,
         "openTime": restaurant.openTime,
         "closeTime": restaurant.closeTime,
         "sortOrder": restaurant.sortOrder,
@@ -377,7 +383,8 @@ async def update_restaurant(
         'cuisineTags', 'deliveryTime', 'distance', 'lat', 'lng', 'isVeg',
         'isPureVeg', 'isOpen', 'openTime', 'closeTime', 'sortOrder',
         'discountOffer', 'discountBadge', 'commissionRate', 'ownerPhone',
-        'ownerEmail', 'isActive', 'rating', 'menuSections', 'storeId', 'deliveryRadiusKm'
+        'ownerEmail', 'isActive', 'rating', 'menuSections', 'storeId', 'deliveryRadiusKm',
+        'pauseUntil', 'closeReason', 'pauseReason'
     ]
 
     float_keys = ['lat', 'lng', 'commissionRate', 'rating', 'deliveryRadiusKm']
@@ -417,7 +424,10 @@ async def update_restaurant(
                 val = str(val).strip() if val and str(val).strip() else None
             elif key == 'menuSections':
                 flag_modified(restaurant, 'menuSections')
-            setattr(restaurant, key, val)
+            if key == 'pauseReason':
+                setattr(restaurant, 'closeReason', val)
+            else:
+                setattr(restaurant, key, val)
 
     restaurant.slug = final_slug
 

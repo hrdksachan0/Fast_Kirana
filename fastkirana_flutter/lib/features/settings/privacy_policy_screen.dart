@@ -7,8 +7,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
   static const _effectiveDate = '2026-01-01';
-  static const _supportEmail = 'fastkiranadelivery@gmail.com';
-  static const _supportPhone = '+91 81128 49854';
+  static const _supportEmail = 'fastminutedelivery@gmail.com';
+  static const _supportPhone = '+91 9450358388';
 
   @override
   Widget build(BuildContext context) {

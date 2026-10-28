@@ -64,8 +64,8 @@ class AppConfig {
   static const String exactLogoAsset = 'assets/brand/fastkirana_exact_logo.webp';
 
   // ─── Support ────────────────────────────────────────────────────
-  static const String supportPhone = '+91 81128 49854';
-  static const String supportEmail = 'fastkiranadelivery@gmail.com';
+  static const String supportPhone = '+91 9450358388';
+  static const String supportEmail = 'fastminutedelivery@gmail.com';
 
   // ─── Admin Contact ──────────────────────────────────────────────
   // Loaded from /api/settings at runtime. No hardcoded admin phone.

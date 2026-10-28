@@ -15,6 +15,16 @@ class RestaurantRepository {
 
   RestaurantRepository(this._dio);
 
+  static void invalidateCache([String? storeId]) {
+    if (storeId != null && storeId.isNotEmpty && storeId != 'all') {
+      _cachedRestaurantsByStore.removeWhere((k, _) => k.startsWith(storeId));
+      _lastRestaurantsFetchByStore.removeWhere((k, _) => k.startsWith(storeId));
+    } else {
+      _cachedRestaurantsByStore.clear();
+      _lastRestaurantsFetchByStore.clear();
+    }
+  }
+
   Future<List<Restaurant>> getRestaurants({
     String? storeId,
     String? cuisine,

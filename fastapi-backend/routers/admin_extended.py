@@ -1145,7 +1145,7 @@ async def admin_update_order_status(
         logger.warning(f"Admin status ws broadcast note: {ws_e}")
 
     # If admin just APPROVED an ADMIN_PENDING order to PENDING:
-    if old_status == OrderStatus.ADMIN_PENDING and order.status == OrderStatus.PENDING:
+    if old_status == OrderStatus.ADMIN_PENDING and order.status in [OrderStatus.PENDING, OrderStatus.CONFIRMED]:
         background_tasks.add_task(
             dispatch_isolated_order_fcm_notifications,
             order.id,

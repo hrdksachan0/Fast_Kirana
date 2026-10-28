@@ -489,7 +489,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
     _userPhone ??= prefs.getString('user_phone');
     _currentUserId ??= prefs.getString('user_id') ?? prefs.getString('delivery_user_id');
-    _assignedStoreId ??= prefs.getString('rider_store_id');
+    _assignedStoreId ??= prefs.getString('assigned_store_id') ?? prefs.getString('rider_store_id');
     _assignedStoreName ??= prefs.getString('rider_store_name');
 
     if (mounted) {

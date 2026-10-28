@@ -146,8 +146,8 @@ class Restaurant {
       lat: parseLat(),
       lng: parseLng(),
       activeOrdersCount: json['activeOrdersCount'] != null ? int.tryParse(json['activeOrdersCount'].toString()) ?? 0 : 0,
-      pauseUntil: json['pauseUntil']?.toString(),
-      pauseReason: json['pauseReason']?.toString(),
+      pauseUntil: (json['pauseUntil'] ?? json['pause_until'])?.toString(),
+      pauseReason: (json['pauseReason'] ?? json['closeReason'] ?? json['close_reason'])?.toString(),
     );
   }
 
