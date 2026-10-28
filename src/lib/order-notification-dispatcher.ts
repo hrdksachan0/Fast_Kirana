@@ -246,12 +246,12 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     const primaryOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
     const orderAlertPhones = new Set<string>()
 
-    const storePrefix = primaryOrder.storeId ? store:: : ''
+    const storePrefix = primaryOrder.storeId ? `store:${primaryOrder.storeId}:` : ''
     const settingsMap = ctx.settingsMap || {}
 
     const getVal = (k: string): string | undefined => {
-      if (storePrefix && settingsMap[${storePrefix}] !== undefined && settingsMap[${storePrefix}] !== '') {
-        return settingsMap[${storePrefix}]
+      if (storePrefix && settingsMap[`${storePrefix}${k}`] !== undefined && settingsMap[`${storePrefix}${k}`] !== '') {
+        return settingsMap[`${storePrefix}${k}`]
       }
       return settingsMap[k]
     }

@@ -400,10 +400,10 @@ export async function POST(req: NextRequest) {
         settingsMap[s.key] = s.value
       }
 
-      const storePrefix = updatedOrder.storeId ? store:: : ''
+      const storePrefix = updatedOrder.storeId ? `store:${updatedOrder.storeId}:` : ''
       const getVal = (k: string): string | undefined => {
-        if (storePrefix && settingsMap[${storePrefix}] !== undefined && settingsMap[${storePrefix}] !== '') {
-          return settingsMap[${storePrefix}]
+        if (storePrefix && settingsMap[`${storePrefix}${k}`] !== undefined && settingsMap[`${storePrefix}${k}`] !== '') {
+          return settingsMap[`${storePrefix}${k}`]
         }
         return settingsMap[k]
       }
@@ -426,7 +426,7 @@ export async function POST(req: NextRequest) {
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'
       const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-      const adminText = 💳 *PAID Online Order* # for [] of ₹ from  (). Payment: Cashfree PAID ✅. Manage: /admin
+      const adminText = `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${notifyTotal} from ${customerName} (${customerPhone}). Payment: Cashfree PAID ✅. Manage: ${cleanAppUrl}/admin`
 
       for (const adminPhone of Array.from(adminPhones)) {
         sendWhatsAppOrderAlert(adminPhone, adminText).catch(() => {})

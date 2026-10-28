@@ -220,11 +220,11 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       // 4. WhatsApp Order Alerts: Strictly route ONLY to Admin selected numbers
       try {
         const orderAlertPhones = new Set<string>()
-        const storePrefix = order.storeId ? store:: : ''
+        const storePrefix = order.storeId ? `store:${order.storeId}:` : ''
 
         const getVal = (k: string): string | undefined => {
-          if (storePrefix && settingsMap && settingsMap[${storePrefix}] !== undefined && settingsMap[${storePrefix}] !== '') {
-            return settingsMap[${storePrefix}]
+          if (storePrefix && settingsMap && settingsMap[`${storePrefix}${k}`] !== undefined && settingsMap[`${storePrefix}${k}`] !== '') {
+            return settingsMap[`${storePrefix}${k}`]
           }
           return settingsMap ? settingsMap[k] : undefined
         }
