@@ -1253,8 +1253,10 @@ async def verify_cashfree_payment(
                 else:
                     admin_text = f"💳 *PAID Online Order (Cashfree)* #{order.readableId or order.id[:6].upper()} of ₹{float(order.total):.0f}. Payment: PAID ✅"
 
+                from routers.orders import get_active_alert_phones
+                target_phones = await get_active_alert_phones(db, order.storeId)
                 dedupe_ref = order.readableId or order.id
-                for admin_phone in ["7054470303", "8112849854"]:
+                for admin_phone in target_phones:
                     if background_tasks:
                         background_tasks.add_task(send_whatsapp_alert, admin_phone, admin_text, dedupe_ref)
                     else:
@@ -2236,7 +2238,9 @@ async def auto_recover_unplaced_cashfree_order(
                     f"Reason: {order_notes}\n"
                     f"Review required before dispatch! ⚠️"
                 )
-            for ap in ["7054470303", "8112849854"]:
+            from routers.orders import get_active_alert_phones
+            target_phones = await get_active_alert_phones(db, None)
+            for ap in target_phones:
                 asyncio.create_task(send_whatsapp_alert(ap, admin_msg, readable_id))
         except Exception as wa_e:
             logger.warning(f"[Auto-Recovery] WhatsApp alert failed: {wa_e}")
@@ -2307,7 +2311,9 @@ async def auto_recover_unplaced_cashfree_order(
         try:
             from routers.orders import send_whatsapp_alert
             err_msg = f"⚠️ *CRITICAL: UNRECONCILED CASHFREE PAYMENT!*\nOrder Ref: {cf_order_id}\nPayment Ref: {cf_ref}\nPlease check Cashfree dashboard immediately!"
-            for ap in ["7054470303", "8112849854"]:
+            from routers.orders import get_active_alert_phones
+            target_phones = await get_active_alert_phones(db, None)
+            for ap in target_phones:
                 asyncio.create_task(send_whatsapp_alert(ap, err_msg, cf_order_id))
         except Exception:
             pass
@@ -2576,8 +2582,10 @@ async def cashfree_webhook(
                     if was_cod:
                         admin_text = f"⚠️ *LATE PAYMENT RECONCILED* (Cashfree) #{order.readableId or order.id[:6].upper()} of ₹{float(order.total or 0):.0f}. Paid Online ✅. DO NOT COLLECT CASH!"
 
+                    from routers.orders import get_active_alert_phones
+                    target_phones = await get_active_alert_phones(db, order.storeId)
                     dedupe_ref = order.readableId or order.id
-                    for admin_phone in ["7054470303", "8112849854"]:
+                    for admin_phone in target_phones:
                         asyncio.create_task(send_whatsapp_alert(admin_phone, admin_text, dedupe_ref))
                 except Exception as wa_err:
                     logger.warning(f"[Cashfree Webhook] WhatsApp notification error: {wa_err}")

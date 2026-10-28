@@ -265,7 +265,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
         if (data.cafe_pickup_address) setCafePickupAddress(data.cafe_pickup_address)
         if (data.restaurant_pickup_address) setRestaurantPickupAddress(data.restaurant_pickup_address)
         if (data.whatsapp_notify_7054470303 !== undefined) setNotifyPhone1(data.whatsapp_notify_7054470303 !== 'false')
-        if (data.whatsapp_notify_8112849854 !== undefined) setNotifyPhone2(data.whatsapp_notify_8112849854 !== 'false')
+        if (data.whatsapp_notify_9450358388 !== undefined) setNotifyPhone2(data.whatsapp_notify_9450358388 !== 'false')
         if (data.whatsapp_notify_store_phone !== undefined) setNotifyStorePhone(data.whatsapp_notify_store_phone !== 'false')
         if (data.store_alert_phones !== undefined) setStoreAlertPhones(data.store_alert_phones)
         if (data.grocery_free_delivery_threshold) setGroceryFreeDeliveryThreshold(data.grocery_free_delivery_threshold)
@@ -450,7 +450,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
           contact_address: cleanContactAddress,
           grocery_pickup_address: cleanGroceryPickupAddress,
           whatsapp_notify_7054470303: notifyPhone1 ? 'true' : 'false',
-          whatsapp_notify_8112849854: notifyPhone2 ? 'true' : 'false',
+          whatsapp_notify_9450358388: notifyPhone2 ? 'true' : 'false',
           whatsapp_notify_store_phone: notifyStorePhone ? 'true' : 'false',
           store_alert_phones: storeAlertPhones.trim(),
           hero_greeting_closed: cleanHeroGreetingClosed,
@@ -814,7 +814,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
                             onChange={(e) => setNotifyPhone2(e.target.checked)}
                             className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
                           />
-                          <span>Send alerts to Ops Admin (+91 81128 49854)</span>
+                          <span>Send alerts to Ops Admin (+91 94503 58388)</span>
                         </label>
                       </div>
                     </div>

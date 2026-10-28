@@ -118,7 +118,7 @@ export function TrackerRiderCard({
       {order.status !== 'SHIPPED' && order.deliveryMethod !== 'PICKUP' && (
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
           <a
-            href={`tel:${supportPhone.replace(/\D/g, '') || '8112849854'}`}
+            href={`tel:${supportPhone.replace(/\D/g, '') || '9450358388'}`}
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-black text-xs rounded-xl transition-all"
           >
             <Phone className="h-4 w-4" />

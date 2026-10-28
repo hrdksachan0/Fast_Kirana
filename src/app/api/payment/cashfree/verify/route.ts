@@ -393,24 +393,42 @@ export async function POST(req: NextRequest) {
         }).catch((err: any) => console.error('Push delivery late payment error:', err))
       }
 
-      // WhatsApp Alert
-      const settings = await prisma.storeSetting.findMany({
-        where: { key: { in: ['whatsapp_notify_7054470303', 'whatsapp_notify_8112849854'] } }
-      })
+      // WhatsApp Alert: Strictly route ONLY to Admin selected numbers
+      const allSettings = await prisma.storeSetting.findMany()
       const settingsMap: Record<string, string> = {}
-      for (const s of settings) {
+      for (const s of allSettings) {
         settingsMap[s.key] = s.value
       }
 
-      const adminPhones: string[] = []
-      if (settingsMap['whatsapp_notify_7054470303'] !== 'false') adminPhones.push('7054470303')
-      if (settingsMap['whatsapp_notify_8112849854'] !== 'false') adminPhones.push('8112849854')
+      const storePrefix = updatedOrder.storeId ? store:: : ''
+      const getVal = (k: string): string | undefined => {
+        if (storePrefix && settingsMap[${storePrefix}] !== undefined && settingsMap[${storePrefix}] !== '') {
+          return settingsMap[${storePrefix}]
+        }
+        return settingsMap[k]
+      }
+
+      const adminPhones = new Set<string>()
+      if (getVal('whatsapp_notify_7054470303') === 'true') adminPhones.add('7054470303')
+      if (getVal('whatsapp_notify_9450358388') === 'true') adminPhones.add('9450358388')
+      if (getVal('whatsapp_notify_store_phone') === 'true') {
+        const storeContact = getVal('contact_phone') || getVal('store_phone')
+        if (storeContact) {
+          const clean = storeContact.replace(/\D/g, '').slice(-10)
+          if (clean.length === 10) adminPhones.add(clean)
+        }
+      }
+      const addl = getVal('store_alert_phones') || getVal('order_alert_phone')
+      if (addl) {
+        const matches = addl.match(/\b\d{10}\b/g)
+        if (matches) matches.forEach((m: string) => adminPhones.add(m))
+      }
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastkirana.in'
       const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')
-      const adminText = `💳 *PAID Online Order* #${displayId} for [${outletName}] of ₹${notifyTotal} from ${customerName} (${customerPhone}). Payment: Cashfree PAID ✅. Manage: ${cleanAppUrl}/admin`
+      const adminText = 💳 *PAID Online Order* # for [] of ₹ from  (). Payment: Cashfree PAID ✅. Manage: /admin
 
-      for (const adminPhone of adminPhones) {
+      for (const adminPhone of Array.from(adminPhones)) {
         sendWhatsAppOrderAlert(adminPhone, adminText).catch(() => {})
       }
     } catch (notifErr) {

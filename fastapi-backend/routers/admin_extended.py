@@ -3022,7 +3022,7 @@ async def admin_create_store(
         city_name = re.sub(r"\s+(Hub|Market|Central|Dark\s*Store|Branch).*$", "", name, flags=re.IGNORECASE).strip()
         address = payload.get("address") or payload.get("contactAddress")
         pickup = payload.get("pickupAddress") or payload.get("groceryPickupAddress")
-        phone = payload.get("phone") or payload.get("storePhone") or payload.get("managerPhone") or "+918112849854"
+        phone = payload.get("phone") or payload.get("storePhone") or payload.get("managerPhone") or "+919450358388"
         upi = payload.get("upiVpa") or payload.get("storeUpiVpa") or ""
 
         resolved_address = (address or f"{city_name}{', ' + clean_pincode if clean_pincode else ''}").strip()

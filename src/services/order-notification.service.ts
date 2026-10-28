@@ -33,11 +33,11 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     }
 
     const notifyPhone1 = settingsMap['whatsapp_notify_7054470303'] !== 'false'
-    const notifyPhone2 = settingsMap['whatsapp_notify_8112849854'] !== 'false'
+    const notifyPhone2 = settingsMap['whatsapp_notify_9450358388'] !== 'false'
     const adminPhones: string[] = []
 
     if (notifyPhone1) adminPhones.push('7054470303')
-    if (notifyPhone2) adminPhones.push('8112849854')
+    if (notifyPhone2) adminPhones.push('9450358388')
 
     if (settingsMap['order_alert_phone']) {
       const clean = settingsMap['order_alert_phone'].replace(/\D/g, '').slice(-10)
@@ -217,35 +217,42 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         console.warn('FCM dispatch note:', fcmErr)
       }
 
-      // 4. WhatsApp Order Alerts: Strictly route ONLY to Hub Admin — NO restaurant owner
+      // 4. WhatsApp Order Alerts: Strictly route ONLY to Admin selected numbers
       try {
         const orderAlertPhones = new Set<string>()
+        const storePrefix = order.storeId ? store:: : ''
 
-        if (order.storeId && settingsMap) {
-          // Location-wise to this hub's staff/phones
-          const storePrefix = `store:${order.storeId}:`
-          const storeContact = settingsMap[`${storePrefix}contact_phone`] || settingsMap[`${storePrefix}store_phone`]
-          const notifyStore = settingsMap[`${storePrefix}whatsapp_notify_store_phone`] !== 'false'
-          if (notifyStore && storeContact) {
+        const getVal = (k: string): string | undefined => {
+          if (storePrefix && settingsMap && settingsMap[${storePrefix}] !== undefined && settingsMap[${storePrefix}] !== '') {
+            return settingsMap[${storePrefix}]
+          }
+          return settingsMap ? settingsMap[k] : undefined
+        }
+
+        // 1. Master Admin 7054470303
+        if (getVal('whatsapp_notify_7054470303') === 'true') {
+          orderAlertPhones.add('7054470303')
+        }
+
+        // 2. Ops Admin 9450358388
+        if (getVal('whatsapp_notify_9450358388') === 'true') {
+          orderAlertPhones.add('9450358388')
+        }
+
+        // 3. Store Contact Phone
+        if (getVal('whatsapp_notify_store_phone') === 'true') {
+          const storeContact = getVal('contact_phone') || getVal('store_phone')
+          if (storeContact) {
             const clean = storeContact.replace(/\D/g, '').slice(-10)
             if (clean.length === 10) orderAlertPhones.add(clean)
           }
-          const addl = settingsMap[`${storePrefix}store_alert_phones`] || settingsMap[`${storePrefix}order_alert_phone`]
-          if (addl) {
-            const matches = addl.match(/\b\d{10}\b/g)
-            if (matches) matches.forEach((m: string) => orderAlertPhones.add(m))
-          }
-          if (settingsMap[`${storePrefix}whatsapp_notify_7054470303`] === 'true') {
-            orderAlertPhones.add('7054470303')
-          }
-          if (settingsMap[`${storePrefix}whatsapp_notify_8112849854`] !== 'false') {
-            orderAlertPhones.add('8112849854')
-          }
         }
 
-        if (orderAlertPhones.size === 0) {
-          // Fallback to global admin
-          adminPhones.forEach((p) => orderAlertPhones.add(p))
+        // 4. Additional store alert numbers
+        const addl = getVal('store_alert_phones') || getVal('order_alert_phone')
+        if (addl) {
+          const matches = addl.match(/\b\d{10}\b/g)
+          if (matches) matches.forEach((m: string) => orderAlertPhones.add(m))
         }
 
         const adminText = isOnlinePaid

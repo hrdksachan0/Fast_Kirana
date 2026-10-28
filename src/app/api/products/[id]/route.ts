@@ -124,8 +124,8 @@ export async function PATCH(
     role === 'CHEF' || 
     role === 'RESTAURANT_OWNER' || 
     role === 'PICKER' ||
-    userPhone.includes('8112849854') ||
-    userEmail.includes('8112849854') ||
+    userPhone.includes('9450358388') ||
+    userEmail.includes('9450358388') ||
     userEmail.startsWith('admin') || 
     userEmail.includes('hrdk') || 
     userEmail.startsWith('restaurant') ||
@@ -156,7 +156,7 @@ export async function PATCH(
     // Restaurant staff can edit products belonging to their restaurant or general items
     const isSuper = role === 'ADMIN' || 
       role === 'RESTAURANT_OWNER' || 
-      userPhone.includes('8112849854') || 
+      userPhone.includes('9450358388') || 
       userEmail.startsWith('admin') || 
       userEmail.includes('hrdk')
 

@@ -246,31 +246,41 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     const primaryOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
     const orderAlertPhones = new Set<string>()
 
-    if (primaryOrder.storeId && ctx.settingsMap) {
-      const storePrefix = `store:${primaryOrder.storeId}:`
-      const storeContact = ctx.settingsMap[`${storePrefix}contact_phone`] || ctx.settingsMap[`${storePrefix}store_phone`]
-      const notifyStore = ctx.settingsMap[`${storePrefix}whatsapp_notify_store_phone`] !== 'false'
-      if (notifyStore && storeContact) {
+    const storePrefix = primaryOrder.storeId ? store:: : ''
+    const settingsMap = ctx.settingsMap || {}
+
+    const getVal = (k: string): string | undefined => {
+      if (storePrefix && settingsMap[${storePrefix}] !== undefined && settingsMap[${storePrefix}] !== '') {
+        return settingsMap[${storePrefix}]
+      }
+      return settingsMap[k]
+    }
+
+    // 1. Master Admin 7054470303
+    if (getVal('whatsapp_notify_7054470303') === 'true') {
+      orderAlertPhones.add('7054470303')
+    }
+
+    // 2. Ops Admin 9450358388
+    if (getVal('whatsapp_notify_9450358388') === 'true') {
+      orderAlertPhones.add('9450358388')
+    }
+
+    // 3. Store Contact Phone
+    if (getVal('whatsapp_notify_store_phone') === 'true') {
+      const storeContact = getVal('contact_phone') || getVal('store_phone')
+      if (storeContact) {
         const clean = storeContact.replace(/\D/g, '').slice(-10)
         if (clean.length === 10) orderAlertPhones.add(clean)
       }
-      const addl = ctx.settingsMap[`${storePrefix}store_alert_phones`] || ctx.settingsMap[`${storePrefix}order_alert_phone`]
-      if (addl) {
-        const matches = addl.match(/\b\d{10}\b/g)
-        if (matches) matches.forEach((m: string) => orderAlertPhones.add(m))
-      }
-      if (ctx.settingsMap[`${storePrefix}whatsapp_notify_7054470303`] !== 'false') {
-        orderAlertPhones.add('7054470303')
-      }
-      if (ctx.settingsMap[`${storePrefix}whatsapp_notify_8112849854`] !== 'false') {
-        orderAlertPhones.add('8112849854')
-      }
     }
 
-    if (orderAlertPhones.size === 0) {
-      adminPhones.forEach((p) => orderAlertPhones.add(p))
+    // 4. Additional store alert numbers
+    const addl = getVal('store_alert_phones') || getVal('order_alert_phone')
+    if (addl) {
+      const matches = addl.match(/\b\d{10}\b/g)
+      if (matches) matches.forEach((m: string) => orderAlertPhones.add(m))
     }
-
     if (orderAlertPhones.size > 0) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastminute.in'
       const cleanAppUrl = appUrl.replace('https://', '').replace('http://', '')

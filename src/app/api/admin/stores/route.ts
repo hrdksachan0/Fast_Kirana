@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       const cityName = name.replace(/\s+(Hub|Market|Central|Dark\s*Store|Branch).*$/i, '').trim()
       const resolvedAddress = (address || contactAddress || `${cityName}${cleanPincode ? `, ${cleanPincode}` : ''}`).trim()
       const resolvedPickup = (pickupAddress || groceryPickupAddress || `FastKirana Dark Store, ${cityName}${cleanPincode ? ` - ${cleanPincode}` : ''}`).trim()
-      const resolvedPhone = (phone || storePhone || managerPhone || '+918112849854').trim()
+      const resolvedPhone = (phone || storePhone || managerPhone || '+919450358388').trim()
       const resolvedUpi = (upiVpa || storeUpiVpa || '').trim()
 
       const initialSettings = [

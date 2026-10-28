@@ -223,7 +223,7 @@ export default async function FoodRestaurantPage({ params }: { params: Promise<{
     name: restaurant.name,
     image: restaurant.bannerUrl || restaurant.logoUrl || 'https://www.fastminute.in/brand/fastkirana_app_icon.png',
     url: `https://www.fastminute.in/food/${restaurant.slug || slug}`,
-    telephone: '+91-8112849854',
+    telephone: '+91-9450358388',
     priceRange: '₹₹',
     servesCuisine: (restaurant as any).cuisineTags?.join(', ') || 'Fast Food, North Indian, Snacks',
     address: {

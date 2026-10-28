@@ -104,7 +104,7 @@ export function useOrderTracker({
   const [packingStep, setPackingStep] = useState(0)
   const [storeLat, setStoreLat] = useState(26.1534185)
   const [storeLng, setStoreLng] = useState(80.1714024)
-  const [supportPhone, setSupportPhone] = useState('+91 8112849854')
+  const [supportPhone, setSupportPhone] = useState('+91 9450358388')
   const [isCafeOpen, setIsCafeOpen] = useState(initialIsCafeOpen)
 
   // Customer Edit Order Modal States & Handlers

@@ -342,7 +342,7 @@ export async function PATCH(
   const headerUserRole = request.headers.get('x-user-role')
 
   // Super-admin phone check is ONLY valid if verified cryptographically via session or JWT
-  const isSuperPhone = Boolean(verifiedUserPhone && (verifiedUserPhone.includes('7054470303') || verifiedUserPhone.includes('8112849854')))
+  const isSuperPhone = Boolean(verifiedUserPhone && (verifiedUserPhone.includes('7054470303') || verifiedUserPhone.includes('9450358388')))
   const isVerifiedAdmin = (verifiedUserRole?.toUpperCase() === 'ADMIN') || isSuperPhone
 
   // Never fall back to 'admin' or 'ADMIN' for unauthenticated/untrusted requests

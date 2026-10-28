@@ -197,6 +197,68 @@ async def send_whatsapp_alert(phone: str, text: str, dedupe_key: Optional[str] =
         return False
 
 
+def resolve_admin_alert_phones(settings_map: dict, store_id: Optional[str] = None) -> list[str]:
+    """
+    Strictly resolves ONLY the phone numbers selected/enabled by admin in Settings.
+    Checks store-scoped setting first, falling back to global setting.
+    """
+    alert_phones: list[str] = []
+    store_prefix = f"store:{store_id}:" if store_id else ""
+
+    def get_setting_val(key_name: str) -> Optional[str]:
+        if store_prefix:
+            store_val = settings_map.get(f"{store_prefix}{key_name}")
+            if store_val is not None and str(store_val).strip() != "":
+                return str(store_val).strip()
+        global_val = settings_map.get(key_name)
+        if global_val is not None and str(global_val).strip() != "":
+            return str(global_val).strip()
+        return None
+
+    # 1. Master Admin 7054470303
+    val_70544 = get_setting_val("whatsapp_notify_7054470303")
+    if val_70544 and val_70544.lower() in ("true", "1", "yes"):
+        if "7054470303" not in alert_phones:
+            alert_phones.append("7054470303")
+
+    # 2. Ops Admin 9450358388
+    val_94503 = get_setting_val("whatsapp_notify_9450358388")
+    if val_94503 and val_94503.lower() in ("true", "1", "yes"):
+        if "9450358388" not in alert_phones:
+            alert_phones.append("9450358388")
+
+    # 3. Store Contact Phone toggle
+    val_store_phone_toggle = get_setting_val("whatsapp_notify_store_phone")
+    if val_store_phone_toggle and val_store_phone_toggle.lower() in ("true", "1", "yes"):
+        store_phone = get_setting_val("contact_phone") or get_setting_val("store_phone")
+        if store_phone:
+            clean = re.sub(r'\D', '', str(store_phone))[-10:]
+            if len(clean) == 10 and clean not in alert_phones:
+                alert_phones.append(clean)
+
+    # 4. Additional Store Alert Phones
+    addl = get_setting_val("store_alert_phones") or get_setting_val("order_alert_phone")
+    if addl:
+        for p in re.findall(r'\b\d{10}\b', str(addl)):
+            if p not in alert_phones:
+                alert_phones.append(p)
+
+    return alert_phones
+
+
+async def get_active_alert_phones(db: AsyncSession, store_id: Optional[str] = None) -> list[str]:
+    """
+    Fetches StoreSetting records from DB and returns strictly the numbers selected/enabled by admin.
+    """
+    try:
+        from models import StoreSetting
+        res = await db.execute(select(StoreSetting))
+        settings_map = {s.key: s.value for s in res.scalars().all()}
+        return resolve_admin_alert_phones(settings_map, store_id)
+    except Exception as e:
+        logger.warning(f"Error fetching active alert phones: {e}")
+        return []
+
 @router.get("/test-whatsapp-alert")
 async def test_whatsapp_alert_endpoint(phone: str = "7054470303"):
     """Live diagnostic endpoint to test WhatsApp alert delivery and inspect Meta response."""
@@ -2618,53 +2680,25 @@ async def create_order(
         # Consolidated WhatsApp alert to Hub Admin (Single alert even for multi-outlet combined orders)
         try:
             target_hub_id = main_order.storeId or store_id
-            hub_phones = []
-
-            if target_hub_id:
-                store_prefix = f"store:{target_hub_id}:"
-                store_contact = settings_map.get(f"{store_prefix}contact_phone") or settings_map.get(f"{store_prefix}store_phone")
-                if settings_map.get(f"{store_prefix}whatsapp_notify_store_phone", "true") != "false" and store_contact:
-                    clean_sc = re.sub(r'\D', '', str(store_contact))[-10:]
-                    if len(clean_sc) == 10 and clean_sc not in hub_phones:
-                        hub_phones.append(clean_sc)
-
-                addl_phones = settings_map.get(f"{store_prefix}store_alert_phones") or settings_map.get(f"{store_prefix}order_alert_phone")
-                if addl_phones:
-                    for p in re.findall(r'\b\d{10}\b', str(addl_phones)):
-                        if p not in hub_phones:
-                            hub_phones.append(p)
-
-                if settings_map.get(f"{store_prefix}whatsapp_notify_7054470303", "false") != "false" and "7054470303" not in hub_phones:
-                    hub_phones.append("7054470303")
-                if settings_map.get(f"{store_prefix}whatsapp_notify_9450358388", "true") != "false" and "9450358388" not in hub_phones:
-                    hub_phones.append("9450358388")
-
-            # Fallback to global admin if no store-specific phones found
-            if not hub_phones:
-                if settings_map.get("whatsapp_notify_7054470303") != "false":
-                    hub_phones.append("7054470303")
-                if settings_map.get("whatsapp_notify_9450358388") != "false":
-                    hub_phones.append("9450358388")
-                if settings_map.get("contact_phone") and settings_map.get("whatsapp_notify_store_phone", "true") != "false":
-                    clean = re.sub(r'\D', '', str(settings_map["contact_phone"]))[-10:]
-                    if clean and clean not in hub_phones:
-                        hub_phones.append(clean)
+            hub_phones = resolve_admin_alert_phones(settings_map, target_hub_id)
 
             cust_name = user_obj.name or "Customer"
             cust_phone = address.phone if address else (user_obj.phone or "N/A")
+            pay_str = "PAID (Online)" if is_online_paid else "COD"
 
             if len(created_orders) > 1:
                 combined_total = sum(safe_float(o.total) for o in created_orders)
                 base_id = str(main_order.readableId or "").split("-")[0]
                 outlets = " + ".join(dict.fromkeys(o.shopName for o in created_orders if o.shopName)) or "Store & Restaurant"
-                admin_text = f"#{base_id} [{outlets}, Rs.{combined_total:.0f}, {cust_name}: {cust_phone}]"
+                admin_text = f"#{base_id} [{outlets}, Rs.{combined_total:.0f} ({pay_str}), {cust_name}: {cust_phone}]"
             else:
                 o = created_orders[0]
                 outlet = o.shopName or ("Restaurant" if o.restaurantId else "Dark Store")
-                admin_text = f"#{o.readableId} [{outlet}, Rs.{safe_float(o.total):.0f}, {cust_name}: {cust_phone}]"
+                admin_text = f"#{o.readableId} [{outlet}, Rs.{safe_float(o.total):.0f} ({pay_str}), {cust_name}: {cust_phone}]"
 
+            dedupe_id = str(main_order.readableId or main_order.id)
             for phone in hub_phones:
-                background_tasks.add_task(send_whatsapp_alert, phone, admin_text)
+                background_tasks.add_task(send_whatsapp_alert, phone, admin_text, dedupe_id)
         except Exception as wa_err:
             logger.warning(f"Error scheduling consolidated WhatsApp admin alert: {wa_err}")
 

@@ -1764,14 +1764,14 @@ export async function POST(request: NextRequest) {
       try {
         // Build admin phones list to notify based on settings
         const adminPhones: string[] = []
-        const notifyPhone1 = settingsMap['whatsapp_notify_7054470303'] !== 'false'
-        const notifyPhone2 = settingsMap['whatsapp_notify_8112849854'] !== 'false'
+        const notifyPhone1 = settingsMap['whatsapp_notify_7054470303'] === 'true'
+        const notifyPhone2 = settingsMap['whatsapp_notify_9450358388'] === 'true'
 
         if (notifyPhone1) {
           adminPhones.push('7054470303')
         }
         if (notifyPhone2) {
-          adminPhones.push('8112849854')
+          adminPhones.push('9450358388')
         }
         if (settingsMap['order_alert_phone']) {
           const clean = settingsMap['order_alert_phone'].replace(/\D/g, '').slice(-10)
