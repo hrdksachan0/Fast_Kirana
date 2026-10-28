@@ -439,28 +439,64 @@ async def get_doorstep_qr(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    upi_vpa_stmt = select(StoreSetting).where(StoreSetting.key == "store_upi_vpa")
-    upi_vpa_res = await db.execute(upi_vpa_stmt)
-    upi_vpa_setting = upi_vpa_res.scalars().first()
+    # Detect companion orders if this is part of a combined order (e.g. Grocery + Restaurant)
+    companions = []
+    if order.combinedId:
+        c_stmt = select(Order).where(
+            Order.combinedId == order.combinedId,
+            Order.id != order.id,
+            Order.status != OrderStatus.CANCELLED
+        )
+        c_res = await db.execute(c_stmt)
+        companions = c_res.scalars().all()
+    elif order.readableId and ("-G" in order.readableId or "-R" in order.readableId):
+        base_readable = re.sub(r'-[GR\d]+$', '', order.readableId)
+        if base_readable:
+            base_stmt = select(Order).where(
+                Order.readableId.like(f"{base_readable}-%"),
+                Order.id != order.id,
+                Order.status != OrderStatus.CANCELLED
+            )
+            c_res = await db.execute(base_stmt)
+            companions = c_res.scalars().all()
 
-    upi_vpa = upi_vpa_setting.value if upi_vpa_setting else "7054470303@paytm"
-    payee_name = urllib.parse.quote("FastKirana Store")
-    note = urllib.parse.quote(f"Payment for Order #{order.readableId or order.id[:8]}")
-    amount = f"{float(order.total):.2f}"
-    tr = f"FK{order.readableId or order.id[:8]}"
+    all_orders = [order] + list(companions)
+    # Total to collect is the sum of all orders in this combined group that are not yet paid
+    unpaid_orders = [o for o in all_orders if o.paymentStatus != PaymentStatus.PAID]
+    orders_to_charge = unpaid_orders if unpaid_orders else all_orders
+    total_amount = sum(float(o.total or 0.0) for o in orders_to_charge)
+
+    # Resolve store-scoped UPI VPA, falling back to global store_upi_vpa
+    store_prefix = f"store:{order.storeId}:" if order.storeId else ""
+    upi_vpa_keys = [f"{store_prefix}store_upi_vpa", "store_upi_vpa"] if store_prefix else ["store_upi_vpa"]
+    s_stmt = select(StoreSetting).where(StoreSetting.key.in_(upi_vpa_keys))
+    s_res = await db.execute(s_stmt)
+    s_map = {s.key: s.value for s in s_res.scalars().all()}
+    upi_vpa = (s_map.get(f"{store_prefix}store_upi_vpa") or s_map.get("store_upi_vpa") or "").strip()
+    if not upi_vpa:
+        upi_vpa = "7054470303-2@ibl"
+
+    base_display = str(order.readableId or "").split("-")[0] or order.readableId or order.id[:8]
+    payee_name = urllib.parse.quote("FastMinute")
+    note = urllib.parse.quote(f"Payment for Order #{base_display}")
+    amount = f"{total_amount:.2f}"
+    tr = f"FM{base_display}"
 
     upi_uri = f"upi://pay?pa={upi_vpa}&pn={payee_name}&am={amount}&cu=INR&tn={note}&tr={tr}"
     qr_image_url = f"https://api.qrserver.com/v1/create-qr-code/?size=280x280&data={urllib.parse.quote(upi_uri)}"
 
     return {
         "orderId": order.id,
-        "readableId": order.readableId,
-        "amount": float(order.total),
+        "readableId": base_display if companions else order.readableId,
+        "amount": round(total_amount, 2),
         "upiVpa": upi_vpa,
         "upiUri": upi_uri,
         "qrImageUrl": qr_image_url,
         "paymentStatus": order.paymentStatus.value,
-        "paymentMethod": order.paymentMethod.value
+        "paymentMethod": order.paymentMethod.value,
+        "isCombined": bool(companions),
+        "combinedTotal": round(total_amount, 2),
+        "subOrderIds": [o.id for o in all_orders]
     }
 
 
@@ -484,14 +520,38 @@ async def confirm_doorstep_qr_payment(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
+    # Detect companion orders if this is part of a combined order
+    companions = []
+    if order.combinedId:
+        c_stmt = select(Order).where(
+            Order.combinedId == order.combinedId,
+            Order.id != order.id,
+            Order.status != OrderStatus.CANCELLED
+        )
+        c_res = await db.execute(c_stmt)
+        companions = c_res.scalars().all()
+    elif order.readableId and ("-G" in order.readableId or "-R" in order.readableId):
+        base_readable = re.sub(r'-[GR\d]+$', '', order.readableId)
+        if base_readable:
+            base_stmt = select(Order).where(
+                Order.readableId.like(f"{base_readable}-%"),
+                Order.id != order.id,
+                Order.status != OrderStatus.CANCELLED
+            )
+            c_res = await db.execute(base_stmt)
+            companions = c_res.scalars().all()
+
+    all_orders = [order] + list(companions)
     try:
-        order.paymentMethod = PaymentMethod.UPI
-        order.paymentStatus = PaymentStatus.PAID
         ref_text = f"Doorstep UPI Paid (Ref: {reference_id or 'QR Scan'})"
-        order.notes = f"{order.notes} | {ref_text}" if order.notes else ref_text
+        for o in all_orders:
+            o.paymentMethod = PaymentMethod.UPI
+            o.paymentStatus = PaymentStatus.PAID
+            o.notes = f"{o.notes} | {ref_text}" if o.notes else ref_text
 
         await db.commit()
-        await db.refresh(order)
+        for o in all_orders:
+            await db.refresh(o)
 
         return {
             "success": True,
