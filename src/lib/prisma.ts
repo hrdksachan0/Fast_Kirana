@@ -63,3 +63,5 @@ export const prisma: PrismaClient = (() => {
     return new PrismaClient()
   }
 })()
+
+export default prisma
