@@ -1034,7 +1034,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           : <String>[];
       final riderId = _currentUserId ?? 'rider_current';
 
-      if (!_locationService.isTracking || _locationService.activeOrderId != orderId) {
+      if (!_locationService.isTrackingActiveOrder || _locationService.activeOrderId != orderId) {
         _locationService.startTracking(
           orderId: orderId,
           readableId: readableId,
@@ -1043,7 +1043,17 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           dioClient: ref.read(dioProvider),
         );
       }
+    } else if (_isOnline) {
+      // Rider is ON DUTY / Online, but has no active deliveries -> Battery-saver 100m Idle mode
+      final riderId = _currentUserId ?? 'rider_current';
+      if (!_locationService.isTrackingIdle) {
+        _locationService.startIdleTracking(
+          riderId: riderId,
+          dioClient: ref.read(dioProvider),
+        );
+      }
     } else {
+      // Rider is OFF DUTY / Offline -> Stop all GPS tracking
       if (_locationService.isTracking) {
         _locationService.stopTracking();
       }
@@ -1119,7 +1129,15 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     if (newStatus == 'DELIVERED') {
       _confettiController.play();
       HapticFeedback.heavyImpact();
-      _locationService.stopTracking();
+      final riderId = _currentUserId ?? 'rider_current';
+      if (_isOnline) {
+        _locationService.startIdleTracking(
+          riderId: riderId,
+          dioClient: ref.read(dioProvider),
+        );
+      } else {
+        _locationService.stopTracking();
+      }
     } else if (newStatus == 'SHIPPED') {
       HapticFeedback.heavyImpact();
       _locationService.startTracking(

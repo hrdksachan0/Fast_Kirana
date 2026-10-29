@@ -9,6 +9,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import 'supabase_service.dart';
 
+/// Operational modes for Rider GPS tracking
+enum RiderTrackingMode {
+  stopped,
+  idle,
+  activeOrder,
+}
+
 class RiderLocationService {
   static final RiderLocationService _instance = RiderLocationService._internal();
   factory RiderLocationService() => _instance;
@@ -22,11 +29,14 @@ class RiderLocationService {
   DateTime? _lastUploadTime;
   DateTime? _lastDbInsertTime;
   Position? _lastPosition;
-  bool _isTracking = false;
+  RiderTrackingMode _trackingMode = RiderTrackingMode.stopped;
   Dio? _dio;
   final Map<String, RealtimeChannel> _activeChannels = {};
 
-  bool get isTracking => _isTracking;
+  bool get isTracking => _trackingMode != RiderTrackingMode.stopped;
+  bool get isTrackingActiveOrder => _trackingMode == RiderTrackingMode.activeOrder;
+  bool get isTrackingIdle => _trackingMode == RiderTrackingMode.idle;
+  RiderTrackingMode get trackingMode => _trackingMode;
   String? get activeOrderId => _activeOrderId;
 
   void setDio(Dio dio) {
@@ -63,7 +73,8 @@ class RiderLocationService {
     }
   }
 
-  /// Start live location broadcast for an active delivery
+  /// Mode A: High-Precision Live Delivery Tracking (5-7 seconds interval)
+  /// Used when rider is actively delivering an order to a customer.
   Future<bool> startTracking({
     required String orderId,
     required String riderId,
@@ -72,6 +83,18 @@ class RiderLocationService {
     Dio? dioClient,
   }) async {
     if (dioClient != null) _dio = dioClient;
+
+    // If already in active order tracking for the same order, just refresh target aliases
+    if (_trackingMode == RiderTrackingMode.activeOrder && _activeOrderId == orderId) {
+      _activeReadableId = readableId;
+      _activeRelatedOrderIds = relatedOrderIds ?? [];
+      _riderId = riderId;
+      return true;
+    }
+
+    // Cancel any existing idle or previous order subscription
+    await _cancelPositionSubscriptionOnly();
+
     _activeOrderId = orderId;
     _activeReadableId = readableId;
     _activeRelatedOrderIds = relatedOrderIds ?? [];
@@ -79,61 +102,56 @@ class RiderLocationService {
 
     final hasPermission = await requestPermissions();
     if (!hasPermission) {
-      debugPrint('[RiderLocation] Cannot start tracking: permission denied');
+      debugPrint('[RiderLocation] Cannot start active tracking: permission denied');
+      _trackingMode = RiderTrackingMode.stopped;
       return false;
     }
 
-    if (_isTracking && _positionSubscription != null) {
-      debugPrint('[RiderLocation] Already tracking order $_activeOrderId, updated targets ($orderId, $readableId)');
-      return true;
-    }
+    _trackingMode = RiderTrackingMode.activeOrder;
+    debugPrint('[RiderLocation] Starting High-Precision Active GPS (5-7s) for Order #$orderId (Readable: $readableId)');
 
-    _isTracking = true;
-    debugPrint('[RiderLocation] Starting real-time GPS stream for Order #$orderId (Readable: $readableId)');
-
-    // Send immediate initial position
+    // Immediate initial GPS fix
     try {
       final initialPos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 5),
+        timeLimit: const Duration(seconds: 4),
       );
       _handleNewPosition(initialPos);
     } catch (e) {
-      debugPrint('[RiderLocation] Initial GPS acquisition error: $e');
+      debugPrint('[RiderLocation] Initial GPS acquisition: $e');
     }
 
-    // Configure foreground service with battery-optimized throttling for tier-2/3 conditions
     late LocationSettings locationSettings;
     if (defaultTargetPlatform == TargetPlatform.android) {
       locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 15, // Battery-efficient: Trigger only after 15 meters of movement
-        intervalDuration: const Duration(seconds: 15), // 15s battery-optimized interval to prevent phone heating & battery drain
-        foregroundNotificationConfig: const ForegroundNotificationConfig(
+        distanceFilter: 6, // 6 meters threshold for active route tracking
+        intervalDuration: const Duration(seconds: 5), // 5 seconds hardware interval
+        foregroundNotificationConfig: ForegroundNotificationConfig(
           notificationTitle: 'FastMinute Delivery Partner 🛵',
-          notificationText: 'Sharing live location with customer (Battery Optimized)',
+          notificationText: 'Live GPS Active: Delivering Order #${readableId ?? orderId}',
           notificationChannelName: 'Live Delivery Tracking',
-          notificationIcon: AndroidResource(
+          notificationIcon: const AndroidResource(
             name: 'ic_launcher',
             defType: 'mipmap',
           ),
           enableWakeLock: true,
           setOngoing: true,
-          color: Color(0xFFE20A22),
+          color: const Color(0xFFE20A22),
         ),
       );
     } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
       locationSettings = AppleSettings(
         accuracy: LocationAccuracy.bestForNavigation,
         activityType: ActivityType.automotiveNavigation,
-        distanceFilter: 15,
+        distanceFilter: 6,
         pauseLocationUpdatesAutomatically: true,
         showBackgroundLocationIndicator: true,
       );
     } else {
       locationSettings = const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 15,
+        distanceFilter: 6,
       );
     }
 
@@ -142,7 +160,7 @@ class RiderLocationService {
     ).listen(
       (Position position) => _handleNewPosition(position),
       onError: (error) {
-        debugPrint('[RiderLocation] Location stream error: $error');
+        debugPrint('[RiderLocation] Active location stream error: $error');
       },
       cancelOnError: false,
     );
@@ -150,37 +168,136 @@ class RiderLocationService {
     return true;
   }
 
-  /// Handle incoming GPS fix with battery-optimized 15-second debounce
+  /// Mode B: Ultra Battery-Optimized Idle Tracking (100m Distance Filter)
+  /// Used when rider is ON DUTY / Online, but waiting for new orders.
+  /// Prevents battery drain by allowing phone CPU to sleep until moving 100+ meters.
+  Future<bool> startIdleTracking({
+    required String riderId,
+    Dio? dioClient,
+  }) async {
+    if (dioClient != null) _dio = dioClient;
+
+    if (_trackingMode == RiderTrackingMode.idle && _riderId == riderId) {
+      return true; // Already running in idle mode
+    }
+
+    // Cancel active order subscription and close order-specific channels
+    await _cancelPositionSubscriptionOnly();
+    _clearActiveChannels();
+
+    _activeOrderId = null;
+    _activeReadableId = null;
+    _activeRelatedOrderIds.clear();
+    _riderId = riderId;
+
+    final hasPermission = await requestPermissions();
+    if (!hasPermission) {
+      debugPrint('[RiderLocation] Cannot start idle tracking: permission denied');
+      _trackingMode = RiderTrackingMode.stopped;
+      return false;
+    }
+
+    _trackingMode = RiderTrackingMode.idle;
+    debugPrint('[RiderLocation] Starting Battery-Optimized Idle Tracking (100m filter) for Rider #$riderId');
+
+    late LocationSettings locationSettings;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      locationSettings = AndroidSettings(
+        accuracy: LocationAccuracy.medium, // Cell/WiFi + coarse GPS (drastically lowers power)
+        distanceFilter: 100, // Trigger only after 100 meters of actual movement
+        intervalDuration: const Duration(seconds: 60), // Check at most once a minute
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationTitle: 'FastMinute Delivery Partner 🛵',
+          notificationText: 'Online & Waiting for orders (Battery Saver Active)',
+          notificationChannelName: 'Live Delivery Tracking',
+          notificationIcon: AndroidResource(
+            name: 'ic_launcher',
+            defType: 'mipmap',
+          ),
+          enableWakeLock: false, // Allow device CPU deep sleep
+          setOngoing: true,
+          color: Color(0xFF16A34A),
+        ),
+      );
+    } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
+      locationSettings = AppleSettings(
+        accuracy: LocationAccuracy.medium,
+        activityType: ActivityType.otherNavigation,
+        distanceFilter: 100,
+        pauseLocationUpdatesAutomatically: true,
+        showBackgroundLocationIndicator: false,
+      );
+    } else {
+      locationSettings = const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+        distanceFilter: 100,
+      );
+    }
+
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: locationSettings,
+    ).listen(
+      (Position position) => _handleNewPosition(position),
+      onError: (error) {
+        debugPrint('[RiderLocation] Idle location stream error: $error');
+      },
+      cancelOnError: false,
+    );
+
+    return true;
+  }
+
+  /// Handle incoming GPS fix according to active operational mode
   void _handleNewPosition(Position position) {
     final now = DateTime.now();
 
-    // Check if rider is virtually stationary (e.g. waiting at restaurant kitchen or traffic)
-    final isStationary = position.speed < 1.0; // < 1m/s (~3.6 km/h)
+    if (_trackingMode == RiderTrackingMode.idle) {
+      // IDLE MODE: Throttled to 60s or >= 80m movement
+      if (_lastUploadTime != null && _lastPosition != null) {
+        final elapsedMs = now.difference(_lastUploadTime!).inMilliseconds;
+        final distanceMoved = Geolocator.distanceBetween(
+          _lastPosition!.latitude,
+          _lastPosition!.longitude,
+          position.latitude,
+          position.longitude,
+        );
 
-    if (_lastUploadTime != null && _lastPosition != null) {
-      final elapsedMs = now.difference(_lastUploadTime!).inMilliseconds;
-      final distanceMoved = Geolocator.distanceBetween(
-        _lastPosition!.latitude,
-        _lastPosition!.longitude,
-        position.latitude,
-        position.longitude,
-      );
-
-      // Battery-optimized 15s debounce:
-      // Stationary rider: update every 30s or on moving >= 20m
-      // Moving rider: 15s debounce or on moving >= 15m
-      final requiredIntervalMs = isStationary ? 30000 : 15000;
-      final minDistanceMeters = isStationary ? 20.0 : 15.0;
-
-      if (elapsedMs < requiredIntervalMs && distanceMoved < minDistanceMeters) {
-        return;
+        if (elapsedMs < 45000 && distanceMoved < 80.0) {
+          return;
+        }
       }
+
+      _lastUploadTime = now;
+      _lastPosition = position;
+      _sendIdleLocationUpdate(position);
+      return;
     }
 
-    _lastUploadTime = now;
-    _lastPosition = position;
+    if (_trackingMode == RiderTrackingMode.activeOrder) {
+      // ACTIVE ORDER MODE: 5-7 seconds interval when moving, 15s when stationary
+      final isStationary = position.speed < 0.8; // < 0.8 m/s (~2.8 km/h)
 
-    _sendLocationUpdate(position);
+      if (_lastUploadTime != null && _lastPosition != null) {
+        final elapsedMs = now.difference(_lastUploadTime!).inMilliseconds;
+        final distanceMoved = Geolocator.distanceBetween(
+          _lastPosition!.latitude,
+          _lastPosition!.longitude,
+          position.latitude,
+          position.longitude,
+        );
+
+        final requiredIntervalMs = isStationary ? 15000 : 5000;
+        final minDistanceMeters = isStationary ? 10.0 : 5.0;
+
+        if (elapsedMs < requiredIntervalMs && distanceMoved < minDistanceMeters) {
+          return;
+        }
+      }
+
+      _lastUploadTime = now;
+      _lastPosition = position;
+      _sendActiveLocationUpdate(position);
+    }
   }
 
   Set<String> _getChannelKeys() {
@@ -206,8 +323,8 @@ class RiderLocationService {
     return keys;
   }
 
-  /// Broadcast GPS coordinate update to Backend and Supabase Realtime
-  Future<void> _sendLocationUpdate(Position position) async {
+  /// Broadcast Active Order GPS update (Realtime WebSocket + DB)
+  Future<void> _sendActiveLocationUpdate(Position position) async {
     final payload = {
       'order_id': _activeOrderId,
       'rider_id': _riderId,
@@ -221,16 +338,48 @@ class RiderLocationService {
       'timestamp': DateTime.now().toIso8601String(),
     };
 
-    debugPrint('[RiderLocation] Live GPS: Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}, Heading: ${position.heading.toStringAsFixed(1)}°, Speed: ${position.speed.toStringAsFixed(1)}m/s');
+    debugPrint('[RiderLocation] Active GPS (5s): Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}, Speed: ${position.speed.toStringAsFixed(1)}m/s');
 
-    // 1. Post to /api/delivery/location (15s debounce when moving, 30s when stationary)
+    // 1. Instant WebSocket Broadcast via Supabase Channels (0ms lag for customer animation)
+    try {
+      final sb = SupabaseService.client;
+      if (sb != null) {
+        final channelKeys = _getChannelKeys();
+        for (final key in channelKeys) {
+          RealtimeChannel? chan = _activeChannels[key];
+          if (chan == null) {
+            chan = sb.channel('order-live-tracking-$key');
+            chan.subscribe();
+            _activeChannels[key] = chan;
+          }
+
+          chan.sendBroadcastMessage(
+            event: 'location_update',
+            payload: {
+              'lat': position.latitude,
+              'lng': position.longitude,
+              'heading': position.heading,
+              'speed': position.speed,
+              'accuracy': position.accuracy,
+              'timestamp': DateTime.now().toIso8601String(),
+            },
+          );
+        }
+      }
+    } catch (e) {
+      // WebSocket failover handled silently
+    }
+
+    // 2. HTTP Backend update & DB Persist (throttled to 5s moving / 15s stationary)
     final now = DateTime.now();
-    final isStationary = position.speed < 1.0;
-    final minHttpIntervalMs = isStationary ? 30000 : 15000;
+    final isStationary = position.speed < 0.8;
+    final minHttpIntervalMs = isStationary ? 15000 : 5000;
     final shouldPostHttp = _lastDbInsertTime == null || now.difference(_lastDbInsertTime!).inMilliseconds >= minHttpIntervalMs;
 
-    if (shouldPostHttp && _dio != null) {
-      try {
+    if (shouldPostHttp) {
+      _lastDbInsertTime = now;
+
+      if (_dio != null) {
         _dio!.post(
           '/api/delivery/location',
           data: {
@@ -252,48 +401,17 @@ class RiderLocationService {
             },
           ),
         ).catchError((e) {
-          debugPrint('[RiderLocation] API upload failed: $e');
+          debugPrint('[RiderLocation] Active location API error: $e');
           _queueOfflineLocation(payload);
           return Response(requestOptions: RequestOptions(path: ''));
         });
-      } catch (e) {
-        _queueOfflineLocation(payload);
       }
-    }
 
-    // 2. Direct Supabase Broadcast & DB Update across all channel aliases
-    try {
-      final sb = SupabaseService.client;
-      if (sb != null) {
-        final channelKeys = _getChannelKeys();
-
-        for (final key in channelKeys) {
-          RealtimeChannel? chan = _activeChannels[key];
-          if (chan == null) {
-            chan = sb.channel('order-live-tracking-$key');
-            chan.subscribe();
-            _activeChannels[key] = chan;
-          }
-
-          // Instant in-memory WebSocket broadcast (0ms latency to customer app)
-          chan.sendBroadcastMessage(
-            event: 'location_update',
-            payload: {
-              'lat': position.latitude,
-              'lng': position.longitude,
-              'heading': position.heading,
-              'speed': position.speed,
-              'accuracy': position.accuracy,
-              'timestamp': DateTime.now().toIso8601String(),
-            },
-          );
-        }
-
-        // Direct database record update every 4 seconds
-        if (shouldPostHttp && _activeOrderId != null) {
-          _lastDbInsertTime = now;
+      // Direct Supabase table sync
+      try {
+        final sb = SupabaseService.client;
+        if (sb != null && _activeOrderId != null) {
           var cleanId = _activeOrderId!.trim().replaceAll('#', '');
-
           sb.from('orders').update({
             'deliveryLat': position.latitude,
             'deliveryLng': position.longitude,
@@ -317,9 +435,40 @@ class RiderLocationService {
             'timestamp': now.toIso8601String(),
           }).then((_) {}).catchError((_) {});
         }
+      } catch (_) {}
+    }
+  }
+
+  /// Broadcast Idle Location update (Only updates rider presence for dispatching)
+  Future<void> _sendIdleLocationUpdate(Position position) async {
+    debugPrint('[RiderLocation] Idle GPS (100m): Lat: ${position.latitude.toStringAsFixed(5)}, Lng: ${position.longitude.toStringAsFixed(5)}');
+
+    // Update rider presence in Supabase users table
+    try {
+      final sb = SupabaseService.client;
+      if (sb != null && _riderId != null && _riderId!.isNotEmpty) {
+        sb.from('users').update({
+          'liveLat': position.latitude,
+          'liveLng': position.longitude,
+        }).eq('id', _riderId!).then((_) {}).catchError((_) {});
       }
-    } catch (e) {
-      // Handled silently
+    } catch (_) {}
+
+    // Update backend dispatcher
+    if (_dio != null && _riderId != null) {
+      _dio!.post(
+        '/api/delivery/location',
+        data: {
+          'lat': position.latitude,
+          'lng': position.longitude,
+          'riderId': _riderId,
+          'idle': true,
+        },
+        options: Options(
+          sendTimeout: const Duration(seconds: 4),
+          headers: {'x-rider-id': _riderId},
+        ),
+      ).catchError((_) => Response(requestOptions: RequestOptions(path: '')));
     }
   }
 
@@ -369,22 +518,30 @@ class RiderLocationService {
     }
   }
 
-  /// Stop tracking and cancel GPS stream
-  Future<void> stopTracking() async {
-    debugPrint('[RiderLocation] Stopping GPS tracking for Order #$_activeOrderId');
+  Future<void> _cancelPositionSubscriptionOnly() async {
     await _positionSubscription?.cancel();
     _positionSubscription = null;
+  }
 
+  void _clearActiveChannels() {
     for (final chan in _activeChannels.values) {
       SupabaseService.unsubscribe(chan);
     }
     _activeChannels.clear();
+  }
 
-    _isTracking = false;
+  /// Stop all tracking and release GPS completely
+  Future<void> stopTracking() async {
+    debugPrint('[RiderLocation] Stopping all GPS tracking');
+    await _cancelPositionSubscriptionOnly();
+    _clearActiveChannels();
+
+    _trackingMode = RiderTrackingMode.stopped;
     _activeOrderId = null;
     _activeReadableId = null;
     _activeRelatedOrderIds.clear();
     _lastPosition = null;
     _lastUploadTime = null;
+    _lastDbInsertTime = null;
   }
 }
