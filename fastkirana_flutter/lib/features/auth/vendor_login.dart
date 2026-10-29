@@ -336,7 +336,7 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
         } else if (roleUpper == 'PICKER') {
           targetConsole = const PickerDashboard();
         } else if (roleUpper == 'VENDOR') {
-          final isPari = (user.phone?.contains('8175865613') ?? false) || email.contains('8175865613');
+          final isPari = (user.phone?.contains('8175865613') ?? false) || (user.email?.contains('8175865613') ?? false) || _phoneController.text.contains('8175865613');
           targetConsole = VendorConsoleScreen(
             initialVendorId: isPari ? 'cmtypsvqm000204jrz78vea5n' : null,
             isVendorSelf: true,
