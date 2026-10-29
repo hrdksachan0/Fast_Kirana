@@ -78,12 +78,57 @@ async def get_current_user(
             stmt = select(User).where(User.id == user_id)
             res = await db.execute(stmt)
             db_user = res.scalars().first()
-            if not db_user or db_user.isBlocked or db_user.deletedAt is not None:
+
+            if not db_user:
+                # Check if this token belongs directly to an active Vendor
+                from models import Vendor
+                v_stmt = select(Vendor).where(Vendor.id == user_id, Vendor.isActive.is_(True))
+                v_res = await db.execute(v_stmt)
+                db_vendor = v_res.scalars().first()
+                if db_vendor:
+                    return {
+                        "id": db_vendor.id,
+                        "sub": db_vendor.id,
+                        "vendorId": db_vendor.id,
+                        "assignedVendorId": db_vendor.id,
+                        "name": db_vendor.name,
+                        "phone": db_vendor.phone,
+                        "email": db_vendor.email,
+                        "role": "VENDOR",
+                        "assignedStoreId": db_vendor.storeId,
+                    }
                 return None
+
+            if db_user.isBlocked or db_user.deletedAt is not None:
+                return None
+
             role_str = db_user.role.value if hasattr(db_user.role, "value") else str(db_user.role or "USER")
             user["role"] = role_str
             user["assignedStoreId"] = db_user.assignedStoreId
             user["assignedRestaurantId"] = db_user.assignedRestaurantId
+
+            # Check if user is linked to an active Vendor
+            from models import Vendor
+            clean_p = re.sub(r"\D", "", db_user.phone or "")
+            if len(clean_p) >= 10:
+                last10 = clean_p[-10:]
+                v_stmt = select(Vendor).where(
+                    and_(
+                        Vendor.isActive.is_(True),
+                        or_(
+                            Vendor.phone == last10,
+                            Vendor.phone == f"+91{last10}",
+                            Vendor.phone == f"91{last10}",
+                            Vendor.phone.like(f"%{last10}%")
+                        )
+                    )
+                )
+                v_res = await db.execute(v_stmt)
+                matched_vendor = v_res.scalars().first()
+                if matched_vendor:
+                    user["vendorId"] = matched_vendor.id
+                    user["assignedVendorId"] = matched_vendor.id
+                    user["role"] = "VENDOR"
         except Exception as e:
             logger.error(f"Error querying db_user in get_current_user token validation: {e}")
             return None
@@ -1041,8 +1086,37 @@ async def verify_otp(
         raise HTTPException(status_code=403, detail=block_msg)
 
     role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
-    # Admin role from database — no hardcoded phone overrides
     clean_email = user.email or ""
+
+    # Check if user phone links to an active Vendor
+    from models import Vendor
+    matched_vendor = None
+    clean_p = phone[-10:] if len(phone) >= 10 else phone
+    if clean_p:
+        v_stmt = select(Vendor).where(
+            and_(
+                Vendor.isActive.is_(True),
+                or_(
+                    Vendor.phone == clean_p,
+                    Vendor.phone == f"+91{clean_p}",
+                    Vendor.phone == f"91{clean_p}",
+                    Vendor.phone.like(f"%{clean_p}%")
+                )
+            )
+        )
+        v_res = await db.execute(v_stmt)
+        matched_vendor = v_res.scalars().first()
+
+    if matched_vendor:
+        role_val = "VENDOR"
+        if user.role != Role.VENDOR.value:
+            user.role = Role.VENDOR.value
+            try:
+                await db.commit()
+            except Exception:
+                pass
+
+    assigned_v_id = matched_vendor.id if matched_vendor else None
 
     # H18 FIX: Determine if new or unnamed user needs profile onboarding
     user_name = (user.name or "").strip()
@@ -1062,6 +1136,8 @@ async def verify_otp(
         "phone": user.phone,
         "assignedStoreId": user.assignedStoreId,
         "assignedRestaurantId": user.assignedRestaurantId,
+        "vendorId": assigned_v_id,
+        "assignedVendorId": assigned_v_id,
     })
 
     return SessionResponse(
@@ -1083,6 +1159,8 @@ async def verify_otp(
             "phone": user.phone,
             "assignedStoreId": user.assignedStoreId,
             "assignedRestaurantId": user.assignedRestaurantId,
+            "assignedVendorId": assigned_v_id,
+            "vendorId": assigned_v_id,
             "isBlocked": user.isBlocked,
         }
     )
