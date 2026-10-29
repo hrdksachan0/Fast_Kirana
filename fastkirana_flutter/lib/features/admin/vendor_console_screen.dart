@@ -1031,7 +1031,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                 ],
               ),
               actions: [
-                if (_selectedVendorId != null)
+                if (_selectedVendorId != null && !widget.isVendorSelf)
                   IconButton(
                     icon: const Icon(Icons.shield_outlined, color: Color(0xFFFBBF24)),
                     tooltip: 'Pause / Manage Serviceability',
@@ -1072,7 +1072,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
               ],
             )
           : null,
-      body: (_isLoadingVendors && !widget.isVendorSelf)
+      body: ((_isLoadingVendors && !widget.isVendorSelf) || (widget.isVendorSelf && (_isLoadingDetails || _vendorProfile == null)))
           ? const VendorConsoleSkeleton()
           : (!widget.isVendorSelf && _vendors.isEmpty)
               ? _buildEmptyVendorsView()
@@ -1145,46 +1145,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                       ),
                     ),
 
-                    // Search Strip
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
-                      child: Container(
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          style: GoogleFonts.inter(fontSize: 12.5, color: slateDark, fontWeight: FontWeight.w600),
-                          decoration: InputDecoration(
-                            hintText: 'Search product name, weight or barcode...',
-                            hintStyle: GoogleFonts.inter(fontSize: 12, color: slateMuted),
-                            prefixIcon: const Icon(Icons.search_rounded, size: 18, color: slateMuted),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear_rounded, size: 16, color: slateMuted),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _searchQuery = '');
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                          ),
-                        ),
-                      ),
-                    ),
+
 
                     // Tab Content
                     Expanded(
@@ -1243,39 +1204,57 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       final code = _vendorProfile?['vendorCode'] ?? '';
       return Container(
         color: slateDark,
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: slateCard,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFF334155)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: primaryRed.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: primaryRed.withValues(alpha: 0.3)),
-                ),
-                child: const Center(
-                  child: Icon(Icons.storefront_rounded, color: primaryRed, size: 22),
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFDC2626), Color(0xFF991B1B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.storefront_rounded, color: Colors.white, size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Flexible(
                           child: Text(
                             name,
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white),
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1287,77 +1266,116 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                             decoration: BoxDecoration(
                               color: const Color(0xFF0F172A),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: const Color(0xFF334155)),
+                              border: Border.all(color: const Color(0xFF475569)),
                             ),
                             child: Text(
                               code,
-                              style: GoogleFonts.jetBrainsMono(fontSize: 9, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w700),
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 9.5,
+                                color: const Color(0xFFCBD5E1),
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ],
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    Row(
+                  ),
+                  const SizedBox(width: 8),
+                  Bounceable(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      final vendorName = _vendorProfile?['name'] ?? 'Supplier Partner';
+                      StoreServiceabilitySheet.show(
+                        context,
+                        targetType: 'RESTAURANT',
+                        targetId: _selectedVendorId ?? widget.initialVendorId ?? '',
+                        storeName: vendorName,
+                        currentIsOpen: true,
+                        dio: ref.read(dioProvider),
+                        onStatusChanged: (newOpen, pauseUntil) {
+                          if (_selectedVendorId != null) {
+                            _fetchVendorDetails(_selectedVendorId!);
+                            _fetchLiveOrders(_selectedVendorId!);
+                          }
+                        },
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.35)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.shield_outlined, size: 13, color: Color(0xFFFBBF24)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Pause',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFFBBF24),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                height: 1,
+                color: const Color(0xFF334155).withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 7),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: brandGreen.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.verified_rounded, size: 12, color: brandGreen),
+                        const Icon(Icons.verified_rounded, size: 11, color: brandGreen),
                         const SizedBox(width: 4),
                         Text(
-                          'Authorized Supplier Partner',
-                          style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                          'Verified Partner',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: brandGreen,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                        if (phone.isNotEmpty) ...[
-                          const SizedBox(width: 6),
-                          Text('·  $phone', style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFF94A3B8))),
-                        ],
+                      ],
+                    ),
+                  ),
+                  if (phone.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.phone_rounded, size: 11, color: Color(0xFF94A3B8)),
+                        const SizedBox(width: 4),
+                        Text(
+                          phone,
+                          style: GoogleFonts.inter(
+                            fontSize: 10.5,
+                            color: const Color(0xFFCBD5E1),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Bounceable(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  final vendorName = _vendorProfile?['name'] ?? 'Supplier Partner';
-                  StoreServiceabilitySheet.show(
-                    context,
-                    targetType: 'RESTAURANT',
-                    targetId: _selectedVendorId ?? widget.initialVendorId ?? '',
-                    storeName: vendorName,
-                    currentIsOpen: true,
-                    dio: ref.read(dioProvider),
-                    onStatusChanged: (newOpen, pauseUntil) {
-                      if (_selectedVendorId != null) {
-                        _fetchVendorDetails(_selectedVendorId!);
-                        _fetchLiveOrders(_selectedVendorId!);
-                      }
-                    },
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.shield_outlined, size: 14, color: Color(0xFFFBBF24)),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Pause',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFFFBBF24),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                ],
               ),
             ],
           ),
@@ -1597,16 +1615,16 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     required Color iconColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 1.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
+            color: iconColor.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -1614,14 +1632,14 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
+              color: iconColor.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(icon, size: 15, color: iconColor),
+            child: Icon(icon, size: 16, color: iconColor),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 9),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1632,21 +1650,22 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
                     color: textColor.withValues(alpha: 0.75),
-                    letterSpacing: 0.3,
+                    letterSpacing: 0.4,
                   ),
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
                 Text(
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    fontSize: 13.5,
+                    fontSize: 14.5,
                     fontWeight: FontWeight.w900,
                     color: textColor,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ],
@@ -2321,13 +2340,53 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       return name.contains(_searchQuery) || barcode.contains(_searchQuery) || unit.contains(_searchQuery);
     }).toList();
 
-    if (filtered.isEmpty) {
-      return Center(
-        child: Text('No attached products found for this vendor', style: GoogleFonts.inter(color: slateMuted, fontSize: 13)),
-      );
-    }
-
-    return ListView.separated(
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+          child: Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _searchController,
+              style: GoogleFonts.inter(fontSize: 12.5, color: slateDark, fontWeight: FontWeight.w600),
+              decoration: InputDecoration(
+                hintText: 'Search catalog by name, weight or barcode...',
+                hintStyle: GoogleFonts.inter(fontSize: 12, color: slateMuted),
+                prefixIcon: const Icon(Icons.search_rounded, size: 18, color: slateMuted),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 16, color: slateMuted),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Text('No attached products found for this vendor', style: GoogleFonts.inter(color: slateMuted, fontSize: 13)),
+                )
+              : ListView.separated(
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 80),
       itemCount: filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -2481,6 +2540,9 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
           ),
         );
       },
+    ),
+        ),
+      ],
     );
   }
 

@@ -170,77 +170,124 @@ class VendorConsoleSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // KPI Metric Banner Skeleton
+          // 1. Top Header Strip Skeleton
           Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+            color: const Color(0xFF0F172A),
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF334155)),
+              ),
+              child: Row(
+                children: [
+                  ShimmerBox(width: 44, height: 44, borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShimmerBox(width: 140, height: 16, borderRadius: BorderRadius.circular(4)),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            ShimmerBox(width: 60, height: 12, borderRadius: BorderRadius.circular(4)),
+                            const SizedBox(width: 8),
+                            ShimmerBox(width: 90, height: 12, borderRadius: BorderRadius.circular(4)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  ShimmerBox(width: 68, height: 32, borderRadius: BorderRadius.circular(10)),
+                ],
+              ),
             ),
+          ),
+
+          // 2. 4-Grid Financial KPI Tiles Skeleton
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
             child: Column(
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    ShimmerBox(width: 120, height: 14, borderRadius: BorderRadius.circular(4)),
-                    ShimmerBox(width: 70, height: 14, borderRadius: BorderRadius.circular(4)),
+                    Expanded(child: _buildKPITileSkeleton()),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildKPITileSkeleton()),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ShimmerBox(width: 50, height: 10, borderRadius: BorderRadius.circular(3)),
-                            const SizedBox(height: 6),
-                            ShimmerBox(width: 70, height: 16, borderRadius: BorderRadius.circular(4)),
-                          ],
-                        ),
-                      ),
-                    ),
+                    Expanded(child: _buildKPITileSkeleton()),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ShimmerBox(width: 50, height: 10, borderRadius: BorderRadius.circular(3)),
-                            const SizedBox(height: 6),
-                            ShimmerBox(width: 70, height: 16, borderRadius: BorderRadius.circular(4)),
-                          ],
-                        ),
-                      ),
-                    ),
+                    Expanded(child: _buildKPITileSkeleton()),
                   ],
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 14),
+          // 3. Tab Bar Skeleton
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                ShimmerBox(width: 90, height: 26, borderRadius: BorderRadius.circular(8)),
+                const SizedBox(width: 10),
+                ShimmerBox(width: 90, height: 26, borderRadius: BorderRadius.circular(8)),
+                const SizedBox(width: 10),
+                ShimmerBox(width: 90, height: 26, borderRadius: BorderRadius.circular(8)),
+              ],
+            ),
+          ),
 
-          // Order / Sales Cards Skeletons
-          const AdminOrderCardSkeleton(),
-          const AdminOrderCardSkeleton(),
-          const AdminOrderCardSkeleton(),
+          const SizedBox(height: 10),
+
+          // 4. Content Cards Skeletons
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14),
+            child: Column(
+              children: [
+                AdminOrderCardSkeleton(),
+                AdminOrderCardSkeleton(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _buildKPITileSkeleton() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          ShimmerBox(width: 32, height: 32, borderRadius: BorderRadius.circular(8)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerBox(width: 70, height: 10, borderRadius: BorderRadius.circular(3)),
+                const SizedBox(height: 6),
+                ShimmerBox(width: 85, height: 15, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
+          ),
         ],
       ),
     );

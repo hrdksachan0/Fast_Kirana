@@ -246,9 +246,9 @@ class ProfileOperationsSuite extends StatelessWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              'Supplier Partner Portal',
+                              'Supplier Partner Hub',
                               style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 14),
+                                fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 letterSpacing: -0.2,
@@ -363,7 +363,7 @@ class ProfileOperationsSuite extends StatelessWidget {
                             child: Text(
                               'Delivery Partner Dashboard',
                               style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 14),
+                                fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 letterSpacing: -0.2,
@@ -492,7 +492,7 @@ class ProfileOperationsSuite extends StatelessWidget {
                             child: Text(
                               'Restaurant Kitchen Console',
                               style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 14),
+                                fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 letterSpacing: -0.2,
@@ -601,7 +601,7 @@ class ProfileOperationsSuite extends StatelessWidget {
                             child: Text(
                               'Picker Hub Console',
                               style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 14),
+                                fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 letterSpacing: -0.2,
