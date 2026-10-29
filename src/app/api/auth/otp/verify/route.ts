@@ -197,7 +197,27 @@ export async function POST(request: NextRequest) {
       user.phone?.includes('7054470303') ||
       user.phone?.includes('9170942500')
     )
-    const effectiveRole = isRootAdmin ? 'ADMIN' : (user.role || 'USER')
+
+    // Check if user is linked to an active supplier / vendor
+    const matchedVendor = await prisma.vendor.findFirst({
+      where: {
+        OR: [
+          ...(phoneDigits ? [{ phone: phoneDigits }, { phone: `+91${phoneDigits}` }, { phone: `91${phoneDigits}` }] : []),
+          ...(user.phone ? [{ phone: user.phone }, { phone: getLast10Digits(user.phone) }] : []),
+        ],
+        isActive: true,
+      },
+      select: { id: true, name: true, vendorCode: true, phone: true }
+    })
+
+    let effectiveRole = isRootAdmin ? 'ADMIN' : (user.role || 'USER')
+    if (effectiveRole === 'USER' && matchedVendor) {
+      effectiveRole = 'VENDOR'
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'VENDOR' },
+      }).catch(() => {})
+    }
 
     // Generate cryptographic signed JWT token (valid for 30 days)
     const { signFastKiranaJWT } = await import('@/lib/jwt')
@@ -208,6 +228,9 @@ export async function POST(request: NextRequest) {
       role: effectiveRole,
       assignedStoreId: user.assignedStoreId || null,
       assignedRestaurantId: user.assignedRestaurantId || null,
+      assignedVendorId: matchedVendor?.id || null,
+      vendorId: matchedVendor?.id || null,
+      vendor: matchedVendor || null,
     })
 
     return NextResponse.json({
@@ -221,6 +244,9 @@ export async function POST(request: NextRequest) {
       role: effectiveRole,
       assignedStoreId: user.assignedStoreId || null,
       assignedRestaurantId: user.assignedRestaurantId || null,
+      assignedVendorId: matchedVendor?.id || null,
+      vendorId: matchedVendor?.id || null,
+      vendor: matchedVendor || null,
       user: {
         id: user.id,
         name: user.name || '',
@@ -229,6 +255,9 @@ export async function POST(request: NextRequest) {
         role: effectiveRole,
         assignedStoreId: user.assignedStoreId || null,
         assignedRestaurantId: user.assignedRestaurantId || null,
+        assignedVendorId: matchedVendor?.id || null,
+        vendorId: matchedVendor?.id || null,
+        vendor: matchedVendor || null,
         isBlocked: user.isBlocked || false,
       }
     })

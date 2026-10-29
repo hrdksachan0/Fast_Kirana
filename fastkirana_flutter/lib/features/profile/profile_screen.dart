@@ -343,7 +343,9 @@ class ProfileScreen extends ConsumerWidget {
       role == 'RESTAURANT'
     );
     final isPickerOnly = !isAdmin && (role == 'PICKER');
-    final isVendorOnly = !isAdmin && (role == 'VENDOR');
+    final cleanUserPhone = (user?.phone ?? '').replaceAll(RegExp(r'\D'), '');
+    final isPariDairy = cleanUserPhone.endsWith('8175865613');
+    final isVendorOnly = !isAdmin && (role == 'VENDOR' || isPariDairy);
 
     final name = (user?.name?.isNotEmpty == true && user?.name != 'FastMinute Customer')
         ? user!.name!
@@ -395,6 +397,7 @@ class ProfileScreen extends ConsumerWidget {
                 isChefOrOwnerOnly: isChefOrOwnerOnly,
                 isPickerOnly: isPickerOnly,
                 isVendorOnly: isVendorOnly,
+                assignedVendorId: isPariDairy ? 'cmtypsvqm000204jrz78vea5n' : null,
                 assignedRestaurantId: user?.assignedRestaurantId,
               ),
             ),

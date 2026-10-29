@@ -14,6 +14,7 @@ enum Role {
   RESTAURANT_OWNER
   DELIVERY
   ADMIN
+  VENDOR
 }
 
 enum OrderStatus {

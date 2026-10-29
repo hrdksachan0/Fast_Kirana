@@ -336,7 +336,11 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
         } else if (roleUpper == 'PICKER') {
           targetConsole = const PickerDashboard();
         } else if (roleUpper == 'VENDOR') {
-          targetConsole = const VendorConsoleScreen(isVendorSelf: true);
+          final isPari = (user.phone?.contains('8175865613') ?? false) || email.contains('8175865613');
+          targetConsole = VendorConsoleScreen(
+            initialVendorId: isPari ? 'cmtypsvqm000204jrz78vea5n' : null,
+            isVendorSelf: true,
+          );
         } else {
           Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
           return;

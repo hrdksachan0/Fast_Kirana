@@ -150,13 +150,35 @@ export async function POST(request: NextRequest) {
         user.email === 'superadmin@fastkirana.com' ||
         user.phone?.includes('7054470303') ||
         user.phone?.includes('9170942500')
-      const effectiveRole = isMasterAdmin ? 'ADMIN' : user.role
+      // Check if user is linked to an active supplier / vendor
+      const matchedVendor = await prisma.vendor.findFirst({
+        where: {
+          OR: [
+            ...(phoneForSignup ? [{ phone: getLast10Digits(phoneForSignup) }, { phone: phoneForSignup }] : []),
+            ...(user.phone ? [{ phone: user.phone }, { phone: getLast10Digits(user.phone) }] : [])
+          ],
+          isActive: true,
+        },
+        select: { id: true, name: true, vendorCode: true, phone: true }
+      })
+
+      let effectiveRole = isMasterAdmin ? 'ADMIN' : user.role
+      if (effectiveRole === 'USER' && matchedVendor) {
+        effectiveRole = 'VENDOR'
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { role: 'VENDOR' },
+        }).catch(() => {})
+      }
 
       return NextResponse.json({
         success: true,
         token: `token_${user.id}_${Date.now()}`,
         role: effectiveRole,
         assignedStoreId: user.assignedStoreId || null,
+        assignedVendorId: matchedVendor?.id || null,
+        vendorId: matchedVendor?.id || null,
+        vendor: matchedVendor || null,
         user: {
           id: user.id,
           name: user.name,
@@ -166,6 +188,9 @@ export async function POST(request: NextRequest) {
           image: user.image,
           assignedStoreId: user.assignedStoreId || null,
           assignedRestaurantId: user.assignedRestaurantId || null,
+          assignedVendorId: matchedVendor?.id || null,
+          vendorId: matchedVendor?.id || null,
+          vendor: matchedVendor || null,
         }
       })
     }

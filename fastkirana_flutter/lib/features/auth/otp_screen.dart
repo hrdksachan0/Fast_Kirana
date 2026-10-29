@@ -233,6 +233,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
           user = user.copyWith(role: 'ADMIN');
         }
 
+        final cleanPhone = widget.identifier.replaceAll(RegExp(r'\D'), '');
+        final isPariDairy = cleanPhone.endsWith('8175865613') || (user.phone != null && user.phone!.replaceAll(RegExp(r'\D'), '').endsWith('8175865613'));
+
         final isStaffRole = roleUpper == 'ADMIN' ||
             roleUpper == 'DELIVERY' ||
             roleUpper == 'RIDER' ||
@@ -241,7 +244,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
             roleUpper == 'CHEF' ||
             roleUpper == 'RESTAURANT' ||
             roleUpper == 'PICKER' ||
-            roleUpper == 'VENDOR';
+            roleUpper == 'VENDOR' ||
+            isPariDairy;
 
         final rawName = (user.name ?? '').trim();
         final isExistingUser = rawName.isNotEmpty &&
@@ -341,7 +345,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
             consoleTitle = 'Picker Hub';
           } else {
             normalizedRole = 'VENDOR';
-            consolePage = const VendorConsoleScreen(isVendorSelf: true);
+            final vId = isPariDairy ? 'cmtypsvqm000204jrz78vea5n' : null;
+            consolePage = VendorConsoleScreen(
+              initialVendorId: vId,
+              isVendorSelf: true,
+            );
             consoleTitle = 'Partner Hub';
           }
 
