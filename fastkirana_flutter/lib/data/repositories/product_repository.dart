@@ -306,6 +306,13 @@ class ProductRepository {
       case 'household-essentials':
       case 'home-needs-and-cleaning':
         return 'CAT-107';
+      case 'pooja-path':
+      case 'pooja':
+      case 'puja':
+      case 'karwa':
+      case 'karwa-chauth':
+      case 'karwachauth':
+        return 'SUB-107-04';
       default:
         return slugOrId;
     }

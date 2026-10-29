@@ -318,7 +318,8 @@ class NotificationService {
     if (link.startsWith('fastminute://') || link.startsWith('fastkirana://')) {
       final uri = Uri.tryParse(link);
       if (uri != null) {
-        link = '/${uri.host}${uri.path}';
+        final queryStr = uri.hasQuery ? '?${uri.query}' : '';
+        link = '/${uri.host}${uri.path}$queryStr';
       }
     }
 
@@ -477,7 +478,7 @@ class NotificationService {
         final screen = message.data['screen']?.toString();
         final url = (rawUrl != null && rawUrl.toString().trim().isNotEmpty)
             ? rawUrl.toString().trim()
-            : (screen == 'delivery' ? '/delivery' : (screen == 'admin-orders' ? '/admin' : null));
+            : (screen == 'delivery' ? '/delivery' : (screen == 'admin-orders' ? '/admin' : (screen == 'karwachauth' || screen == 'karwa-chauth' || screen == 'pooja' ? '/category/pooja-path' : null)));
         if (url != null && url.toString().trim().isNotEmpty) {
           NotificationService.navigateToLink(url.toString().trim());
         }
@@ -491,7 +492,7 @@ class NotificationService {
           final screen = initialMsg.data['screen']?.toString();
           final url = (rawUrl != null && rawUrl.toString().trim().isNotEmpty)
               ? rawUrl.toString().trim()
-              : (screen == 'delivery' ? '/delivery' : (screen == 'admin-orders' ? '/admin' : null));
+              : (screen == 'delivery' ? '/delivery' : (screen == 'admin-orders' ? '/admin' : (screen == 'karwachauth' || screen == 'karwa-chauth' || screen == 'pooja' ? '/category/pooja-path' : null)));
           if (url != null && url.toString().trim().isNotEmpty) {
             pendingDeepLinkUrl = url.toString().trim();
             debugPrint('[NotificationService] Stored initial notification link: $pendingDeepLinkUrl');

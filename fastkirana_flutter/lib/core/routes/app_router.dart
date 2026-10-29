@@ -68,11 +68,25 @@ class AppRouter {
     if (categoryMatch != null) {
       final slug = categoryMatch.group(1) ?? '';
       if (slug.isNotEmpty) {
-        final catName = slug.replaceAll('-', ' ');
-        final titleCase = catName.split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
+        final isPoojaOrKarwa = slug.toLowerCase() == 'pooja-path' ||
+            slug.toLowerCase() == 'pooja' ||
+            slug.toLowerCase() == 'puja' ||
+            slug.toLowerCase() == 'karwachauth' ||
+            slug.toLowerCase() == 'karwa-chauth';
+        final catId = isPoojaOrKarwa ? 'SUB-107-04' : slug;
+        final catName = isPoojaOrKarwa
+            ? 'Pooja Path & Karwa Chauth'
+            : slug.replaceAll('-', ' ').split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
         return FadeSlideRoute(
           page: CategoryProductsScreen(
-            category: Category(id: slug, name: titleCase, slug: slug),
+            category: Category(
+              id: catId,
+              name: catName,
+              slug: isPoojaOrKarwa ? 'pooja-path' : slug,
+              imageUrl: isPoojaOrKarwa
+                  ? 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1790234252804-wkt4th.jpg'
+                  : null,
+            ),
           ),
         );
       }
@@ -87,7 +101,7 @@ class AppRouter {
       }
     }
 
-    switch (settings.name) {
+    switch (cleanPath) {
       case '/':
       case '/splash':
         return MaterialPageRoute(builder: (_) => const SplashScreen());
@@ -146,9 +160,44 @@ class AppRouter {
         final identifier = (settings.arguments as String?) ?? '';
         return ZeptoSlideRoute(page: OtpScreen(identifier: identifier));
       case '/products':
+        final catParam = uri?.queryParameters['category'] ?? uri?.queryParameters['categoryId'];
+        if (catParam != null && catParam.isNotEmpty) {
+          final isPooja = catParam.toLowerCase() == 'pooja-path' ||
+              catParam.toLowerCase() == 'pooja' ||
+              catParam.toLowerCase() == 'puja' ||
+              catParam.toLowerCase() == 'karwachauth' ||
+              catParam.toLowerCase() == 'karwa-chauth';
+          return FadeSlideRoute(
+            page: CategoryProductsScreen(
+              category: Category(
+                id: isPooja ? 'SUB-107-04' : catParam,
+                name: isPooja ? 'Pooja Path & Karwa Chauth' : catParam,
+                slug: isPooja ? 'pooja-path' : catParam,
+                imageUrl: isPooja
+                    ? 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1790234252804-wkt4th.jpg'
+                    : null,
+              ),
+            ),
+          );
+        }
         return ZeptoSlideRoute(page: const ProductsScreen());
       case '/categories':
         return ZeptoSlideRoute(page: const CategoriesScreen());
+      case '/karwa-chauth':
+      case '/karwachauth':
+      case '/karwa':
+      case '/pooja':
+      case '/pooja-path':
+        return FadeSlideRoute(
+          page: const CategoryProductsScreen(
+            category: Category(
+              id: 'SUB-107-04',
+              name: 'Pooja Path & Karwa Chauth',
+              slug: 'pooja-path',
+              imageUrl: 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1790234252804-wkt4th.jpg',
+            ),
+          ),
+        );
       case '/cart':
         return SwiggyModalRoute(page: const CartScreen());
       case '/checkout':
@@ -169,7 +218,13 @@ class AppRouter {
       case '/refer-and-earn':
         return ZeptoSlideRoute(page: const ReferralScreen());
       case '/search':
-        return FadeScaleRoute(page: const SearchScreen());
+        final q = uri?.queryParameters['q'] ??
+            uri?.queryParameters['query'] ??
+            uri?.queryParameters['search'] ??
+            (settings.arguments is String ? settings.arguments as String : null);
+        return FadeScaleRoute(
+          page: SearchScreen(initialQuery: (q != null && q.trim().isNotEmpty) ? q.trim() : null),
+        );
       case '/restaurant-loading':
       case '/food-loading':
       case '/cafe-loading':
