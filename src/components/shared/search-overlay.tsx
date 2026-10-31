@@ -36,6 +36,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Product[]>([])
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1)
   const [loading, setLoading] = useState(false)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [isListening, setIsListening] = useState(false)
@@ -224,6 +225,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     const controller = new AbortController()
     abortControllerRef.current = controller
 
+    const debounceMs = cleanQuery.length <= 2 ? 180 : 100
     const handler = setTimeout(async () => {
       setLoading(true)
       try {
@@ -236,6 +238,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
           const items = data.products || []
           searchCacheRef.current.set(cacheKey, items)
           setSuggestions(items)
+          setSelectedIndex(-1)
         }
       } catch (err: any) {
         if (err?.name !== 'AbortError') {
@@ -246,7 +249,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
           setLoading(false)
         }
       }
-    }, 180)
+    }, debounceMs)
 
     return () => {
       clearTimeout(handler)
@@ -254,16 +257,33 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     }
   }, [query, activeStoreId])
 
-  // Close on Escape key
+  // Keyboard navigation (Escape, ArrowUp, ArrowDown, Enter)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && open) {
+      if (!open) return
+      if (e.key === 'Escape') {
+        onClose()
+      } else if (e.key === 'ArrowDown') {
+        if (suggestions.length > 0) {
+          e.preventDefault()
+          setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0))
+        }
+      } else if (e.key === 'ArrowUp') {
+        if (suggestions.length > 0) {
+          e.preventDefault()
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1))
+        }
+      } else if (e.key === 'Enter' && selectedIndex >= 0 && suggestions[selectedIndex]) {
+        e.preventDefault()
+        const selected = suggestions[selectedIndex]
+        saveSearchTerm(selected.name)
+        router.push(`/product/${selected.slug}`)
         onClose()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
+  }, [open, onClose, suggestions, selectedIndex, router, saveSearchTerm])
 
   const handleSearch = useCallback(
     (searchQuery: string) => {
@@ -399,7 +419,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                       {loading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                     </div>
                     <div className="divide-y divide-border/40 overflow-hidden rounded-2xl border border-border/60 bg-card/60 shadow-sm glass">
-                      {suggestions.map((product) => {
+                      {suggestions.map((product, idx) => {
                         const quantity = getItemQuantity(product.id)
                         const isStoreClosed = isProductStoreClosed(
                           product,
@@ -427,6 +447,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                             key={product.id}
                             className={cn(
                               "flex items-center justify-between p-3 transition-colors hover:bg-muted/40",
+                              selectedIndex === idx && "bg-primary/10 border-l-4 border-l-primary dark:bg-primary/20",
                               isProductSoldOut && "opacity-80"
                             )}
                           >

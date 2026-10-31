@@ -82,7 +82,7 @@ final searchProductsProvider = FutureProvider.family<List<Product>, String>((ref
     search: clean,
     limit: 100,
     storeId: hub.id,
-    includeRestaurants: false,
+    includeRestaurants: true,
     forceRefresh: true,
   );
 });

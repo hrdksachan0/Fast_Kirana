@@ -6,6 +6,7 @@ import { SearchResultsClient } from '@/components/search/search-results-client'
 import { Product } from '@/types'
 import { Search, Frown } from 'lucide-react'
 import { sortProductsByStock } from '@/lib/utils'
+import { ProductSearchService } from '@/services/product-search.service'
 
 interface SearchPageProps {
   searchParams: Promise<{ q?: string }>
@@ -36,135 +37,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   let restaurants: any[] = []
 
   if (query) {
-    const rawWords = query.split(/\s+/).filter(Boolean)
-    const STOP_WORDS = new Set(['ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from'])
-    const filteredWords = rawWords.filter(w => !STOP_WORDS.has(w.toLowerCase()))
-    const words = filteredWords.length > 0 ? filteredWords : rawWords
-
-    // Run restaurant and product queries in parallel
-    const [restaurantsRaw, productsRawInitial] = await Promise.all([
-      prisma.restaurant.findMany({
-        where: {
-          isActive: true,
-          OR: [
-            {
-              AND: words.map((word) => {
-                const lowerWord = word.toLowerCase()
-                const wordOptions = [word]
-                if (lowerWord === 'as' || lowerWord === 'a.s' || lowerWord === 'a.s.') {
-                  wordOptions.push('A.S.', 'as-restaurant')
-                }
-                return {
-                  OR: [
-                    ...wordOptions.map(opt => ({ name: { contains: opt, mode: 'insensitive' as const } })),
-                    ...wordOptions.map(opt => ({ slug: { contains: opt, mode: 'insensitive' as const } })),
-                    { description: { contains: word, mode: 'insensitive' as const } },
-                    { cuisineTags: { hasSome: [lowerWord] } },
-                  ],
-                }
-              }),
-            },
-            { name: { contains: query, mode: 'insensitive' } },
-            { slug: { contains: query, mode: 'insensitive' } }
-          ]
-        },
-      }).catch(() => []),
-
-      prisma.product.findMany({
-        where: {
-          isAvailable: true,
-          AND: words.map((word) => {
-            const lowerWord = word.toLowerCase()
-            const wordOptions = [word]
-            if (lowerWord === 'as' || lowerWord === 'a.s' || lowerWord === 'a.s.') {
-              wordOptions.push('as-restaurant', 'as', 'a.s')
-            }
-            return {
-              OR: [
-                ...wordOptions.map(opt => ({ name: { contains: opt, mode: 'insensitive' as const } })),
-                { description: { contains: word, mode: 'insensitive' as const } },
-                { tags: { hasSome: wordOptions.map(w => w.toLowerCase()) } },
-                { category: { name: { contains: word, mode: 'insensitive' as const } } },
-                { restaurant: { name: { contains: word, mode: 'insensitive' as const } } },
-                { restaurant: { slug: { contains: word, mode: 'insensitive' as const } } },
-                ...(lowerWord === 'veg' ? [
-                  { restaurant: { isVeg: true } },
-                  { tags: { has: 'veg' } },
-                  { tags: { has: 'pure-veg' } }
-                ] : [])
-              ],
-            }
-          }),
-        },
-        include: {
-          category: true,
-          restaurant: true,
-        },
-        take: 100,
-      }).catch(() => []),
-    ])
-
-    restaurants = restaurantsRaw || []
-    let productsRaw = productsRawInitial || []
-
-    // If AND query returned few/no results, fallback to OR query across words for broader discovery
-    if (productsRaw.length < 3 && words.length > 1) {
-      const existingIds = new Set(productsRaw.map((p: any) => p.id))
-      const orMatches = await prisma.product.findMany({
-        where: {
-          isAvailable: true,
-          id: { notIn: Array.from(existingIds) },
-          OR: words.map((word) => {
-            const lowerWord = word.toLowerCase()
-            return {
-              OR: [
-                { name: { contains: word, mode: 'insensitive' } },
-                { description: { contains: word, mode: 'insensitive' } },
-                { tags: { hasSome: [lowerWord] } },
-                { category: { name: { contains: word, mode: 'insensitive' } } },
-                { restaurant: { name: { contains: word, mode: 'insensitive' } } },
-                ...(lowerWord === 'veg' ? [{ restaurant: { isVeg: true } }] : [])
-              ],
-            }
-          }),
-        },
-        include: {
-          category: true,
-          restaurant: true,
-        },
-        take: 30,
-      }).catch(() => [])
-
-      productsRaw = [...productsRaw, ...orMatches]
-    }
-
-    products = sortProductsByStock(productsRaw.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      description: p.description,
-      imageUrl: p.imageUrl,
-      categoryId: p.categoryId,
-      restaurantId: p.restaurantId,
-      mrp: p.mrp,
-      price: p.price,
-      discount: p.discount,
-      unit: p.unit,
-      stock: p.stock,
-      isAvailable: p.isAvailable,
-      tags: p.tags,
-      minStock: p.minStock,
-      variants: p.variants as any,
-      restaurant: p.restaurant as any,
-      category: p.category ? {
-        id: p.category.id,
-        name: p.category.name,
-        slug: p.category.slug,
-        imageUrl: p.category.imageUrl,
-        parentId: p.category.parentId,
-        sortOrder: p.category.sortOrder,
-      } : undefined,
-    })))
+    const searchResult = await ProductSearchService.search({
+      query,
+      limit: 100,
+      includeRestaurants: true,
+    })
+    products = searchResult.products as any
+    restaurants = searchResult.restaurants
   }
 
   // Get dynamic suggestions (trending/popular items in DB) — only needed when showing empty/no-results state

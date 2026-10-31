@@ -14,6 +14,7 @@ import { normalizeRestaurantId } from '@/lib/restaurant-ids'
 import { extractCityFromStoreName } from '@/lib/store-resolver'
 
 import { SYNONYM_DICTIONARY } from '@/lib/synonyms'
+import { ProductSearchService } from '@/services/product-search.service'
 
 const SEARCH_STOP_WORDS = new Set([
   'ke', 'ka', 'ki', 'ko', 'se', 'me', 'mein', 'par', 'pe', 'aur', 'and', 'the', 'of', 'in', 'for', 'with', 'from'
@@ -411,122 +412,23 @@ export async function GET(request: NextRequest) {
     let total = 0
     let nextCursor: string | null = null
     if (normalizedSearch) {
-      // 1. Split query into tokens, filter stop words, expand with synonyms, and build an intersection query
-      const rawWords = normalizedSearch.split(/\s+/).filter(Boolean)
-      const filteredWords = rawWords.filter(w => !SEARCH_STOP_WORDS.has(w))
-      const searchWords = filteredWords.length > 0 ? filteredWords : rawWords
-
-      const wordClauses = searchWords.map(w => {
-        const syns = SYNONYM_DICTIONARY[w] || []
-        const wordOptions = [w, ...syns]
-
-        // Restaurant alias expansions
-        if (w === 'as' || w === 'a.s' || w === 'a.s.') {
-          wordOptions.push('as-restaurant', 'REST-101', 'a.s. restaurant')
-        } else if (w === 'wedson') {
-          wordOptions.push('wedson-restaurant', 'REST-102')
-        } else if (w === 'bal' || w === 'udyan') {
-          wordOptions.push('bal-udyan-restaurant', 'REST-103')
-        } else if (w === 'hot' || w === 'pizza' || w === 'lovers') {
-          wordOptions.push('hot-pizza-lovers', 'REST-104')
-        }
-        
-        return {
-          OR: [
-            ...wordOptions.flatMap(opt => [
-              { name: { contains: opt, mode: 'insensitive' as const } },
-              { tags: { has: opt } },
-              { category: { name: { contains: opt, mode: 'insensitive' as const } } },
-              { restaurant: { name: { contains: opt, mode: 'insensitive' as const } } },
-            ]),
-            ...(w.toLowerCase() === 'veg' ? [
-              { restaurant: { isVeg: true } },
-              { tags: { has: 'veg' } },
-              { tags: { has: 'pure-veg' } }
-            ] : [])
-          ]
-        }
+      const searchResult = await ProductSearchService.search({
+        query: normalizedSearch,
+        storeId,
+        restaurantId,
+        restaurantSlug,
+        categoryId,
+        category,
+        sort,
+        page,
+        limit,
+        includeUnavailable,
+        isWorker,
+        excludeRestaurant,
+        includeRestaurants,
       })
-
-      const existingAnd = Array.isArray(where.AND) ? where.AND : (where.AND ? [where.AND] : [])
-      const searchWhere: Prisma.ProductWhereInput = {
-        ...(where.category ? { category: where.category } : {}),
-        ...(where.restaurantId !== undefined ? { restaurantId: where.restaurantId } : {}),
-        ...(where.restaurant ? { restaurant: where.restaurant } : {}),
-        ...(!isWorker && !includeUnavailable ? { isAvailable: true } : (where.isAvailable !== undefined ? { isAvailable: where.isAvailable } : {})),
-        ...(existingAnd.length > 0 ? { AND: existingAnd } : {}),
-      }
-
-      const queryOptions: any = {
-        where: {
-          ...searchWhere,
-          AND: [...existingAnd, ...wordClauses]
-        },
-        take: 40,
-      }
-      if (isWorker) {
-        queryOptions.include = { category: true }
-      } else {
-        queryOptions.select = productSelect
-      }
-
-      let matchedProducts: any[] = await prisma.product.findMany(queryOptions)
-
-      // If no direct database matches are found, fallback to fetching products to perform typo-tolerant fuzzy search
-      if (matchedProducts.length === 0) {
-        const fallbackOptions: any = {
-          where: searchWhere,
-          take: 50,
-        }
-        if (isWorker) {
-          fallbackOptions.include = { category: true }
-        } else {
-          fallbackOptions.select = productSelect
-        }
-        matchedProducts = await prisma.product.findMany(fallbackOptions)
-      }
-
-      // 2. Score each product using the fuzzy text matcher & Supabase Semantic AI engine (fast: name and tags only)
-      const scoredProducts = matchedProducts.map((p: any) => {
-        let nameScore = getFuzzyScore(normalizedSearch, p.name)
-        let tagScore = p.tags && Array.isArray(p.tags) && p.tags.some((t: string) => getFuzzyScore(normalizedSearch, t) > 60) ? 85 : 0
-        const semanticAiScore = getSemanticAiScore(normalizedSearch, p)
-
-        const pNameLower = (p.name || '').toLowerCase()
-        const catSlug = ((p.category?.slug || p.categorySlug || '') as string).toLowerCase()
-        const isNoodleQuery = ['maggi', 'maggie', 'magi', 'megi', 'noodle', 'instant noodle'].some(k => normalizedSearch.includes(k))
-        if (isNoodleQuery) {
-          if (catSlug.includes('sauce') || pNameLower.includes('ketchup') || pNameLower.includes('masala') || pNameLower.includes('seasoning')) {
-            nameScore = Math.min(nameScore, 45)
-            tagScore = Math.min(tagScore, 45)
-          } else if (catSlug.includes('breakfast') || pNameLower === 'maggi' || pNameLower.includes('noodle')) {
-            nameScore = Math.max(nameScore, 180)
-          }
-        }
-
-        const score = Math.max(nameScore, tagScore, semanticAiScore)
-        return { product: p, score }
-      })
-
-      // 3. Filter products with acceptable match similarity (> 35) and sort by score
-      const matches = scoredProducts
-        .filter((item) => item.score > 35)
-        .sort((a, b) => b.score - a.score)
-
-      total = matches.length
-
-      // Apply sort overrides if requested
-      if (sort === 'price-asc') {
-        matches.sort((a, b) => a.product.price - b.product.price)
-      } else if (sort === 'price-desc') {
-        matches.sort((a, b) => b.product.price - a.product.price)
-      } else if (sort === 'discount-desc') {
-        matches.sort((a, b) => b.product.discount - a.product.discount)
-      }
-
-      // 4. Paginate in memory
-      const memorySkip = (page - 1) * limit
-      products = matches.slice(memorySkip, memorySkip + limit).map((m) => m.product)
+      products = searchResult.products
+      total = searchResult.pagination.total
     } else {
       // Standard database query for normal non-search listings.
       // For page 1, we still skip/limit for client compatibility; deeper pages
@@ -582,7 +484,7 @@ export async function GET(request: NextRequest) {
 
     // Override stock and availability with localized dark store inventory
     const activeStoreId = storeId || 'hub-209206'
-    if (activeStoreId && products.length > 0) {
+    if (!normalizedSearch && activeStoreId && products.length > 0) {
       const inventories = await prisma.storeInventory.findMany({
         where: {
           storeId: activeStoreId,
@@ -602,7 +504,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Automatically sort in-stock products first, out-of-stock products at the end for customer storefronts
-    if (!isWorker && !includeUnavailable && products.length > 0) {
+    if (!normalizedSearch && !isWorker && !includeUnavailable && products.length > 0) {
       products.sort((a: any, b: any) => {
         const aInStock = (a.isAvailable && (a.stock ?? 0) > 0) ? 1 : 0
         const bInStock = (b.isAvailable && (b.stock ?? 0) > 0) ? 1 : 0

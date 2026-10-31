@@ -32,7 +32,8 @@ class SearchScreen extends ConsumerStatefulWidget {
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends ConsumerState<SearchScreen> {
+class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _progressController;
   final TextEditingController _controller = TextEditingController();
   String _query = '';
   Timer? _debounce;
@@ -45,6 +46,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void initState() {
     super.initState();
     _loadRecentSearches();
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
     if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
       _controller.text = widget.initialQuery!.trim();
       _query = widget.initialQuery!.trim();
@@ -88,6 +93,61 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     setState(() => _recentSearches.clear());
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_recentSearchesKey);
+  }
+
+  static const Map<String, String> _hindiDevanagariMap = {
+    'आलू': 'aloo',
+    'प्याज': 'pyaz',
+    'प्याज़': 'pyaz',
+    'टमाटर': 'tamatar',
+    'दूध': 'doodh',
+    'दही': 'dahi',
+    'पनीर': 'paneer',
+    'मक्खन': 'butter',
+    'घी': 'ghee',
+    'छाछ': 'chhaas',
+    'लस्सी': 'lassi',
+    'अंडा': 'egg',
+    'अंडे': 'eggs',
+    'ब्रेड': 'bread',
+    'चाय': 'tea',
+    'कॉफी': 'coffee',
+    'कॉफ़ी': 'coffee',
+    'चीनी': 'sugar',
+    'नमक': 'salt',
+    'तेल': 'oil',
+    'सरसों': 'sarson oil',
+    'रिफाइंड': 'refined oil',
+    'आटा': 'atta',
+    'चावल': 'rice',
+    'दाल': 'dal',
+    'मैगी': 'maggi',
+    'चिप्स': 'chips',
+    'बिस्कुट': 'biscuit',
+    'बिस्किट': 'biscuit',
+    'साबुन': 'soap',
+    'सर्फ': 'surf',
+    'डिटर्जेंट': 'detergent',
+    'शैम्पू': 'shampoo',
+    'कोलगेट': 'colgate',
+    'पानी': 'water',
+    'मसाला': 'masala',
+    'अमूल': 'amul',
+    'पारले': 'parle',
+    'फॉर्च्यून': 'fortune',
+    'टाटा': 'tata',
+    'लेज': 'lays',
+    'कुरकुरे': 'kurkure',
+  };
+
+  static String normalizeQuery(String raw) {
+    String res = raw.trim().toLowerCase();
+    _hindiDevanagariMap.forEach((hindi, roman) {
+      if (res.contains(hindi)) {
+        res = res.replaceAll(hindi, ' $roman ');
+      }
+    });
+    return res.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   // Common Hindi / Hinglish grocery and food synonyms
@@ -172,6 +232,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _progressController.dispose();
     _placeholderTimer?.cancel();
     _controller.dispose();
     super.dispose();
@@ -279,44 +340,85 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: TextField(
-                              controller: _controller,
-                              autofocus: widget.initialQuery == null || widget.initialQuery!.isEmpty,
-                              onChanged: (val) {
-                                _debounce?.cancel();
-                                _debounce = Timer(const Duration(milliseconds: 250), () {
-                                  if (mounted) setState(() => _query = val.trim());
-                                });
-                              },
-                              onSubmitted: (val) {
-                                if (val.trim().isNotEmpty) {
-                                  _saveRecentSearch(val.trim());
-                                }
-                              },
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 14.5),
-                                fontWeight: FontWeight.w600,
-                                color: AppDesignSystem.slate900,
-                              ),
-                              decoration: InputDecoration(
-                                filled: false,
-                                fillColor: Colors.transparent,
-                                hintText: currentHint,
-                                hintStyle: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13),
-                                  fontWeight: FontWeight.w500,
-                                  color: AppDesignSystem.slate400,
-                                  letterSpacing: -0.1,
-                                ),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                disabledBorder: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
-                                isDense: true,
+                            child: Stack(
+                                alignment: Alignment.centerLeft,
+                                children: [
+                                  if (_controller.text.isEmpty)
+                                    IgnorePointer(
+                                      child: ClipRect(
+                                        child: AnimatedSwitcher(
+                                          duration: const Duration(milliseconds: 380),
+                                          transitionBuilder: (Widget child, Animation<double> animation) {
+                                            final inAnimation = Tween<Offset>(
+                                              begin: const Offset(0.0, 0.85),
+                                              end: Offset.zero,
+                                            ).animate(CurvedAnimation(
+                                              parent: animation,
+                                              curve: Curves.easeOutCubic,
+                                            ));
+                                            final outAnimation = Tween<Offset>(
+                                              begin: const Offset(0.0, -0.85),
+                                              end: Offset.zero,
+                                            ).animate(CurvedAnimation(
+                                              parent: animation,
+                                              curve: Curves.easeInCubic,
+                                            ));
+                                            return SlideTransition(
+                                              position: animation.status == AnimationStatus.reverse ? outAnimation : inAnimation,
+                                              child: FadeTransition(
+                                                opacity: animation,
+                                                child: child,
+                                              ),
+                                            );
+                                          },
+                                          child: Text(
+                                            currentHint,
+                                            key: ValueKey<String>(currentHint),
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 13),
+                                              fontWeight: FontWeight.w500,
+                                              color: AppDesignSystem.slate400,
+                                              letterSpacing: -0.1,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  TextField(
+                                    controller: _controller,
+                                    autofocus: widget.initialQuery == null || widget.initialQuery!.isEmpty,
+                                    onChanged: (val) {
+                                      _debounce?.cancel();
+                                      _debounce = Timer(const Duration(milliseconds: 160), () {
+                                        if (mounted) setState(() => _query = val.trim());
+                                      });
+                                    },
+                                    onSubmitted: (val) {
+                                      if (val.trim().isNotEmpty) {
+                                        _saveRecentSearch(val.trim());
+                                      }
+                                    },
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 14.5),
+                                      fontWeight: FontWeight.w600,
+                                      color: AppDesignSystem.slate900,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      filled: false,
+                                      fillColor: Colors.transparent,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      disabledBorder: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
                           if (_query.isNotEmpty)
                             GestureDetector(
                               onTap: () {
@@ -386,6 +488,40 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                 ],
               ),
+            ),
+
+
+            // ⚡ Glowing Micro-Progress Line
+            Consumer(
+              builder: (context, ref, _) {
+                final serverSearchAsync = ref.watch(searchProductsProvider(_query));
+                final isSearching = _query.isNotEmpty && ((_debounce?.isActive ?? false) || serverSearchAsync.isLoading);
+                return AnimatedBuilder(
+                  animation: _progressController,
+                  builder: (context, _) {
+                    return AnimatedOpacity(
+                      duration: const Duration(milliseconds: 250),
+                      opacity: isSearching ? 1.0 : 0.0,
+                      child: Container(
+                        height: 2.2,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment(-2.0 + (_progressController.value * 4.0), 0),
+                            end: Alignment(-0.5 + (_progressController.value * 4.0), 0),
+                            colors: const [
+                              Color(0x0000B140),
+                              Color(0xFF00B140),
+                              Color(0xFF34D399),
+                              Color(0x0000B140),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
 
             // Content Area
@@ -731,7 +867,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return productsAsync.when(
       data: (products) {
-        final queryClean = _query.toLowerCase().trim();
+        final queryClean = normalizeQuery(_query);
         final rawWords = queryClean.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
 
         // Filter common Hindi / English prepositions & stop words (e.g. "ke", "ka", "ki", "ka pizza", "as ke pizza")
@@ -1304,7 +1440,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               final isVeg = !tags.any((t) => t.contains('non-veg') || t.contains('nonveg') || t == 'egg' || t.contains('chicken')) &&
                   !nameLower.contains('chicken') && !nameLower.contains('egg') && !nameLower.contains('mutton');
 
-              return GestureDetector(
+              final itemCard = GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
                   Navigator.push(
@@ -1342,6 +1478,27 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                 ),
               );
+
+              if (productIndex < 8) {
+                return TweenAnimationBuilder<double>(
+                  key: ValueKey('stagger_${product.id}_$productIndex'),
+                  tween: Tween<double>(begin: 0.0, end: 1.0),
+                  duration: Duration(milliseconds: 200 + (productIndex * 30)),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Transform.translate(
+                        offset: Offset(0, 10 * (1.0 - value)),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: itemCard,
+                );
+              }
+
+              return itemCard;
             }),
             if (showRestaurantsSection && !showRestaurantsFirst)
               const SizedBox(height: 20),
@@ -1387,7 +1544,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget _buildShimmerGrid() {
     return Shimmer.fromColors(
       baseColor: Colors.grey[200]!,
-      highlightColor: Colors.grey[50]!,
+      highlightColor: Colors.white,
       child: GridView.builder(
         padding: EdgeInsets.fromLTRB(Responsive.horizontalPadding(context), 16, Responsive.horizontalPadding(context), 100),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -1398,9 +1555,68 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         ),
         itemCount: 6,
         itemBuilder: (_, __) => Container(
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.grey[150] ?? const Color(0xFFF1F5F9)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Center(
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                height: 12,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Container(
+                height: 10,
+                width: 70,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    height: 16,
+                    width: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  Container(
+                    height: 28,
+                    width: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
