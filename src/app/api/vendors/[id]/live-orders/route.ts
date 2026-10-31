@@ -67,9 +67,24 @@ export async function GET(
         status: true,
         createdAt: true,
         total: true,
-        customerName: true,
-        customerPhone: true,
-        deliveryAddress: true,
+        shopName: true,
+        shopPhone: true,
+        user: {
+          select: {
+            name: true,
+            phone: true,
+          },
+        },
+        address: {
+          select: {
+            houseNo: true,
+            street: true,
+            area: true,
+            city: true,
+            pincode: true,
+            phone: true,
+          },
+        },
         items: {
           where: {
             productId: { in: productIds },
@@ -99,6 +114,12 @@ export async function GET(
         totalVendorValue += (it.quantity || 1) * cost
       }
 
+      const customerName = ord.shopName || ord.user?.name || 'Customer'
+      const customerPhone = ord.shopPhone || ord.user?.phone || ord.address?.phone || ''
+      const deliveryAddress = ord.address
+        ? [ord.address.houseNo, ord.address.street, ord.address.area, ord.address.city, ord.address.pincode].filter(Boolean).join(', ')
+        : ''
+
       return {
         id: ord.id,
         orderId: ord.id,
@@ -108,9 +129,9 @@ export async function GET(
         createdAt: ord.createdAt.toISOString(),
         total: ord.total,
         totalVendorValue: Math.round(totalVendorValue * 100) / 100,
-        customerName: ord.customerName || 'Customer',
-        customerPhone: ord.customerPhone || '',
-        deliveryAddress: ord.deliveryAddress || '',
+        customerName,
+        customerPhone,
+        deliveryAddress,
         items: activeItems.map((it) => ({
           id: it.id,
           name: it.name,
