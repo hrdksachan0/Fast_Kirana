@@ -46,7 +46,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
             session.user = null as any
             return session
           }
-          token.role = dbUser.role
+          token.role = dbUser.role as any
           token.assignedRestaurantId = dbUser.assignedRestaurantId
           token.assignedStoreId = dbUser.assignedStoreId
           if (dbUser.phone) token.phone = dbUser.phone
@@ -207,7 +207,7 @@ const { handlers, auth: nextAuthAuth, signIn, signOut } = NextAuth({
         if (isBypass) {
           if (!user) {
             // Auto-detect role based on email prefix for developer convenience
-            let role: 'USER' | 'ADMIN' | 'CHEF' | 'RESTAURANT_OWNER' | 'PICKER' | 'DELIVERY' = 'USER'
+            let role: 'USER' | 'ADMIN' | 'CHEF' | 'RESTAURANT_OWNER' | 'PICKER' | 'DELIVERY' | 'VENDOR' = 'USER'
             if (input.startsWith('admin') || input.startsWith('superadmin')) role = 'ADMIN'
             else if (input.startsWith('chef')) role = 'CHEF'
             else if (input.startsWith('restaurant') || input.startsWith('owner')) role = 'RESTAURANT_OWNER'

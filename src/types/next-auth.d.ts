@@ -1,9 +1,11 @@
 import { DefaultSession } from 'next-auth'
 
+export type UserRole = 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN' | 'VENDOR'
+
 declare module 'next-auth' {
   interface User {
     id?: string
-    role?: 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN'
+    role?: UserRole
     phone?: string | null
     assignedRestaurantId?: string | null
     assignedStoreId?: string | null
@@ -15,7 +17,7 @@ declare module 'next-auth' {
     fastapiToken?: string
     user: {
       id?: string
-      role?: 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN'
+      role?: UserRole
       phone?: string | null
       assignedRestaurantId?: string | null
       assignedStoreId?: string | null
@@ -28,7 +30,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id?: string
-    role?: 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN'
+    role?: UserRole
     phone?: string | null
     assignedRestaurantId?: string | null
     assignedStoreId?: string | null

@@ -31,7 +31,7 @@ interface AccountDashboardProps {
     name: string | null
     email: string
     phone: string | null
-    role: 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN'
+    role: 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN' | 'VENDOR' | string
   }
   addresses: any[]
   orders: any[]

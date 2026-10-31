@@ -102,7 +102,7 @@ export default async function AccountPage() {
     name: activeUser.name || 'User',
     email: activeUser.email || sessionEmail,
     phone: activeUser.phone || sessionPhone,
-    role: activeUser.role as 'USER' | 'PICKER' | 'CHEF' | 'RESTAURANT_OWNER' | 'DELIVERY' | 'ADMIN',
+    role: activeUser.role as any,
   }
 
   const serializedAddresses = addresses.map((addr) => ({
