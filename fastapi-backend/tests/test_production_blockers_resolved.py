@@ -935,7 +935,8 @@ async def test_durable_idempotency_survives_redis_outage():
 async def test_concurrent_workers_idempotency_with_redis_down():
     """Verify that multiple concurrent workers attempting the same order with Redis down are serialized safely."""
     from models import Product, Category, IdempotencyRecord
-    import concurrent.futures
+    import httpx
+    import asyncio
 
     async with TestingSessionLocal() as session:
         cat = Category(id="cat_idemp_workers", name="Worker Cat", slug="worker-cat")
@@ -991,14 +992,12 @@ async def test_concurrent_workers_idempotency_with_redis_down():
         "deliveryMethod": "PICKUP"
     }
 
-    # Simulate 4 concurrent workers with Redis down
+    # Simulate 4 concurrent requests with Redis down
     with patch("utils.cache.get_redis_connection", side_effect=Exception("Redis connection refused")):
-        def send_request():
-            return client.post("/api/orders", json=payload, headers=headers)
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-            futures = [executor.submit(send_request) for _ in range(4)]
-            responses = [f.result() for f in futures]
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as ac:
+            tasks = [ac.post("/api/orders", json=payload, headers=headers) for _ in range(4)]
+            responses = await asyncio.gather(*tasks)
 
         status_codes = [r.status_code for r in responses]
         assert any(c in (200, 201) for c in status_codes)
