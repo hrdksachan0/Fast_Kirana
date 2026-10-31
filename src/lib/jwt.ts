@@ -21,6 +21,9 @@ export interface FastKiranaJWTPayload {
   role: string
   assignedStoreId?: string | null
   assignedRestaurantId?: string | null
+  assignedVendorId?: string | null
+  vendorId?: string | null
+  vendor?: any
 }
 
 /**
@@ -35,6 +38,9 @@ export async function signFastKiranaJWT(payload: FastKiranaJWTPayload): Promise<
     role: payload.role,
     assignedStoreId: payload.assignedStoreId || null,
     assignedRestaurantId: payload.assignedRestaurantId || null,
+    assignedVendorId: payload.assignedVendorId || null,
+    vendorId: payload.vendorId || null,
+    vendor: payload.vendor || null,
   })
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setIssuedAt()
@@ -72,6 +78,9 @@ export async function verifyFastKiranaJWT(token: string): Promise<FastKiranaJWTP
       role: (payload.role as string) || 'USER',
       assignedStoreId: (payload.assignedStoreId as string) || null,
       assignedRestaurantId: (payload.assignedRestaurantId as string) || null,
+      assignedVendorId: (payload.assignedVendorId as string) || null,
+      vendorId: (payload.vendorId as string) || null,
+      vendor: payload.vendor || null,
     }
   } catch (err) {
     return null
