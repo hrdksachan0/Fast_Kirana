@@ -97,6 +97,9 @@ interface ProductsTabProps {
   editingProduct: any
   savingProductId: string | null
   allProducts?: Product[]
+  selectedHubId?: string
+  storesList?: Array<{ id: string; name: string; city?: string }>
+  onSelectHub?: (hubId: string) => void
   // Setters
   setShowAddProduct: (v: boolean) => void
   setShowSortManager: (v: boolean) => void
@@ -208,7 +211,14 @@ export function ProductsTab({
   handleReplenishCsv,
   renderPagination,
   resetNewProductForm,
+  selectedHubId,
+  storesList,
+  onSelectHub,
 }: ProductsTabProps) {
+  const activeHubObj = storesList?.find((s) => s.id === selectedHubId)
+  const currentHubName = selectedHubId === 'all' || !selectedHubId
+    ? 'All Stores (Global Master)'
+    : (activeHubObj?.name || selectedHubId)
   // Resolve dynamic menu sections for new product strictly based on selected restaurant
   const resolvedNewMenuSections = useMemo(() => {
     if (!newProduct.restaurantId) return []
@@ -291,6 +301,44 @@ export function ProductsTab({
 
       {/* Controls row */}
       <div className="bg-card p-4 rounded-2xl border border-border shadow-sm space-y-4">
+        {/* Dark Store Hub Switcher & Active Indicator */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 p-3 rounded-xl border border-border/70">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-xl bg-accent/15 border border-accent/30 flex items-center justify-center text-accent font-bold text-sm">
+              🏪
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase text-text-muted tracking-wider flex items-center gap-1.5">
+                <span>Active Dark Store Hub</span>
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <div className="font-extrabold text-xs text-text-primary">
+                {currentHubName}
+              </div>
+            </div>
+          </div>
+
+          {storesList && storesList.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-bold text-text-secondary hidden sm:inline">
+                Select Store Hub:
+              </label>
+              <select
+                value={selectedHubId || 'all'}
+                onChange={(e) => onSelectHub?.(e.target.value)}
+                className="px-3 py-1.5 text-xs rounded-xl border border-border bg-card font-extrabold text-text-primary focus:ring-2 focus:ring-accent outline-none cursor-pointer shadow-xs"
+              >
+                <option value="all">🌐 All Hubs (Global Master Catalog)</option>
+                {storesList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    📍 {s.name} {s.city ? `(${s.city})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
         {/* Row 1: Search & Type & Category Filters */}
         <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
           <div className="relative w-full md:max-w-md">
@@ -1608,7 +1656,20 @@ export function ProductsTab({
 
       {/* Products Inventory List */}
       <div className="bg-card border border-border rounded-2xl p-6 shadow-sm overflow-hidden">
-        <h3 className="font-extrabold text-text-primary text-base mb-4">Stock Levels & Pricing</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 className="font-extrabold text-text-primary text-base">Stock Levels & Pricing</h3>
+            <p className="text-[11px] text-text-muted">
+              Live inventory and availability for <span className="font-bold text-accent">{currentHubName}</span>
+            </p>
+          </div>
+          {selectedHubId && selectedHubId !== 'all' && (
+            <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-2.5 py-1 rounded-full text-[10px] font-black">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{activeHubObj?.name || selectedHubId}</span>
+            </span>
+          )}
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
@@ -1618,7 +1679,14 @@ export function ProductsTab({
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4 w-[110px]">MRP (₹)</th>
                 <th className="py-3 px-4 w-[110px]">Price (₹)</th>
-                <th className="py-3 px-4 w-[90px]">Stock</th>
+                <th className="py-3 px-4 w-[110px]">
+                  <div className="flex flex-col">
+                    <span>Stock</span>
+                    <span className="text-[9px] font-semibold text-accent normal-case tracking-normal">
+                      {selectedHubId && selectedHubId !== 'all' ? (activeHubObj?.name?.split(' ')[0] || 'Hub') : 'Global'}
+                    </span>
+                  </div>
+                </th>
                 <th className="py-3 px-4 w-[110px]">Location</th>
                 <th className="py-3 px-4 w-[100px] text-center">Status</th>
                 <th className="py-3 px-4 text-right">Actions</th>
@@ -1710,6 +1778,17 @@ export function ProductsTab({
                               </span>
                             )}
                           </div>
+                        )}
+                      </td>
+
+                      {/* Location */}
+                      <td className="py-3 px-4 text-text-secondary">
+                        {p.location ? (
+                          <span className="font-mono text-[10px] bg-muted px-2 py-0.5 rounded border border-border/80">
+                            {p.location}
+                          </span>
+                        ) : (
+                          <span className="text-text-muted text-[11px]">—</span>
                         )}
                       </td>
 

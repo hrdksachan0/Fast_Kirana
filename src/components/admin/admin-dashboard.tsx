@@ -1115,6 +1115,9 @@ export function AdminDashboard({
                 renderPagination: renderPagination,
                 allProducts: productHook.allProducts,
                 resetNewProductForm: productHook.resetNewProductForm,
+                selectedHubId: selectedHubId,
+                storesList: storesList,
+                onSelectHub: handleSelectHub,
               }}
               categoryProps={{
                 categories: categoryHook.categories,

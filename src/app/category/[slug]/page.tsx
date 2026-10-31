@@ -381,6 +381,22 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
       category: true,
 
+      inventories: {
+
+        where: { storeId: 'hub-209206' },
+
+        select: {
+
+          stock: true,
+
+          isAvailable: true,
+
+          priceOverride: true,
+
+        },
+
+      },
+
     },
 
   }).catch((err) => {
@@ -579,37 +595,51 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
 
 
-  const products: Product[] = sortProductsByStock(finalProductsRaw.map((p) => ({
+  const products: Product[] = sortProductsByStock(finalProductsRaw.map((p) => {
 
-    id: p.id,
+    const hubInv = (p as any).inventories?.[0]
 
-    name: p.name,
+    const effectiveStock = (hubInv && typeof hubInv.stock === 'number') ? hubInv.stock : (typeof p.stock === 'number' ? p.stock : 0)
 
-    slug: p.slug,
+    const effectiveIsAvailable = (hubInv && typeof hubInv.isAvailable === 'boolean') ? hubInv.isAvailable : (p.isAvailable !== false)
 
-    description: p.description,
+    const effectivePrice = (hubInv && typeof hubInv.priceOverride === 'number' && hubInv.priceOverride > 0) ? hubInv.priceOverride : p.price
 
-    imageUrl: p.imageUrl,
+    const effectiveDiscount = p.mrp > effectivePrice ? Math.max(0, Math.round(((p.mrp - effectivePrice) / p.mrp) * 100)) : p.discount
 
-    categoryId: p.categoryId,
 
-    mrp: p.mrp,
 
-    price: p.price,
+    return {
 
-    discount: p.discount,
+      id: p.id,
 
-    unit: p.unit,
+      name: p.name,
 
-    stock: p.stock,
+      slug: p.slug,
 
-    isAvailable: p.isAvailable,
+      description: p.description,
 
-    tags: p.tags,
+      imageUrl: p.imageUrl,
 
-    minStock: p.minStock,
+      categoryId: p.categoryId,
 
-    variants: p.variants as any,
+      mrp: p.mrp,
+
+      price: effectivePrice,
+
+      discount: effectiveDiscount,
+
+      unit: p.unit,
+
+      stock: effectiveStock,
+
+      isAvailable: effectiveIsAvailable,
+
+      tags: p.tags,
+
+      minStock: p.minStock,
+
+      variants: p.variants as any,
 
     category: {
 
@@ -627,7 +657,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
     },
 
-  })))
+  }
+
+  }))
 
   const categoryJsonLd = {
     '@context': 'https://schema.org',
