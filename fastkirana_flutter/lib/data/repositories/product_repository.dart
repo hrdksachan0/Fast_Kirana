@@ -489,6 +489,17 @@ class ProductRepository {
         _hubLastFetchTime[effectiveStoreId] = DateTime.now();
         return _filterProducts(diskProducts, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
       }
+
+      // 4. Resilience Fallback: If current hub has no cache, use any cached catalog
+      for (final products in _hubCachedProducts.values) {
+        if (products.isNotEmpty) {
+          return _filterProducts(products, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
+        }
+      }
+      if (preloadedProducts.isNotEmpty) {
+        return _filterProducts(preloadedProducts, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
+      }
+
       return _filterProducts(_getStaticFallbackProducts(), category: category ?? resolvedId, search: search, restaurantId: restaurantId);
     }
   }

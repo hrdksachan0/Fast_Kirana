@@ -63,6 +63,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
+            <!-- FCM Notification Click Handler -->
+            <intent-filter>
+                <action android:name="FLUTTER_NOTIFICATION_CLICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
             <!-- Deep Links: fastminute:// & fastkirana:// (General App Launch & Home) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />

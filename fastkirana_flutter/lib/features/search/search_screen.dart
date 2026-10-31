@@ -1533,12 +1533,34 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
       },
       loading: () => _buildShimmerGrid(),
       error: (err, _) => Center(
-        child: Text(
-          'Error loading products: $err',
-          style: GoogleFonts.inter(color: AppDesignSystem.red600),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.wifi_off_rounded, size: 44, color: AppDesignSystem.slate400),
+              const SizedBox(height: 12),
+              Text(
+                'Network connection lost',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppDesignSystem.slate800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Please check your internet and try again.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12.5,
+                  color: AppDesignSystem.slate500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      )    );
   }
 
   Widget _buildShimmerGrid() {

@@ -96,11 +96,16 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                   builder: (context, ref, _) {
                     final selectedAddress = ref.watch(selectedAddressProvider);
                     final currentHub = ref.watch(currentStoreHubProvider);
-                    final selectedArea = selectedAddress != null
+                    final hasLocation = selectedAddress != null &&
+                        selectedAddress.latitude != null &&
+                        selectedAddress.latitude != 0.0;
+
+                    final selectedArea = hasLocation
                         ? selectedAddress.displayArea
-                        : currentHub.city;
-                    final shortLocation =
-                        selectedAddress?.shortAddress ?? currentHub.city;
+                        : '';
+                    final shortLocation = hasLocation
+                        ? selectedAddress.shortAddress
+                        : 'Select Location';
 
                     return GestureDetector(
                       onTap: () {
@@ -129,27 +134,27 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Line 1: Delivering to [Selected Area] with Live Active Dot (Zero mention of time)
+                          // Line 1: Delivering to [Selected Area] or Set Delivery Location
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
                                 width: 6,
                                 height: 6,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF16A34A),
+                                decoration: BoxDecoration(
+                                  color: hasLocation ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
                                   shape: BoxShape.circle,
                                 ),
                               ),
                               const SizedBox(width: 5),
                               Flexible(
                                 child: Text(
-                                  'Delivering to $selectedArea',
+                                  hasLocation ? (selectedArea.isNotEmpty ? 'Delivering to $selectedArea' : 'Delivery') : 'Delivery',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize:
                                         Responsive.scaledFontSize(context, 10.5),
                                     fontWeight: FontWeight.w700,
-                                    color: AppDesignSystem.textSecondary,
+                                    color: hasLocation ? AppDesignSystem.textSecondary : const Color(0xFFEA580C),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -199,8 +204,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                     },
                     borderRadius: BorderRadius.circular(18),
                     child: Container(
-                      height: 38,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(18),
@@ -228,8 +233,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
               const SizedBox(width: 6),
               IconButton(
                 tooltip: 'Notifications',
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+                padding: EdgeInsets.zero,
                 onPressed: () {
                   HapticFeedback.selectionClick();
                   Navigator.push(context,

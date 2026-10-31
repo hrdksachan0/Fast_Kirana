@@ -83,7 +83,7 @@ final searchProductsProvider = FutureProvider.family<List<Product>, String>((ref
     limit: 100,
     storeId: hub.id,
     includeRestaurants: true,
-    forceRefresh: true,
+    forceRefresh: false,
   );
 });
 
@@ -117,13 +117,18 @@ final adminProductsProvider = FutureProvider.family<List<Product>, String>((ref,
   );
 });
 
-final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<String>>((ref, productIds) async {
-  if (productIds.isEmpty) return [];
+final cartUpsellProductsProvider = FutureProvider.family<List<Product>, String>((ref, productIdsKey) async {
+  final cleanIdsList = productIdsKey
+      .split(',')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
+  if (cleanIdsList.isEmpty) return [];
   final repo = ref.watch(productRepositoryProvider);
 
   final cart = ref.read(cartProvider).valueOrNull;
   final cartItems = cart?.items ?? [];
-  final cleanIds = productIds.map((id) => id.split('_').first).toSet();
+  final cleanIds = cleanIdsList.map((id) => id.split('_').first).toSet();
 
   // 1. Detect active restaurant and food items in cart
   String? activeOutlet;
@@ -200,7 +205,7 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, List<Str
   }
 
   // 3. Fetch from Upsell API
-  final upsells = await repo.getUpsellRecommendations(productIds);
+  final upsells = await repo.getUpsellRecommendations(cleanIdsList);
   final filteredUpsells = upsells.where(isAllowed).toList();
   if (filteredUpsells.isNotEmpty) {
     if (hasFoodItem) {

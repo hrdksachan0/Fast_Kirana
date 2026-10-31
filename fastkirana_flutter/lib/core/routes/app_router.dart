@@ -17,6 +17,8 @@ import '../../features/auth/admin_login.dart';
 import '../../features/auth/delivery_login.dart';
 import '../../features/auth/vendor_login.dart';
 import '../../features/admin/vendor_console_screen.dart';
+import '../../features/admin/admin_dashboard.dart';
+import '../../features/delivery/picker_dashboard.dart';
 import '../../features/delivery/delivery_dashboard.dart';
 import '../../features/location/delivery_location_screen.dart';
 import '../../features/location/map_picker_screen.dart';
@@ -118,6 +120,15 @@ class AppRouter {
       case '/admin':
       case '/admin/login':
         return ZeptoSlideRoute(page: const AdminLoginScreen());
+      case '/admin-orders':
+      case '/admin/orders':
+      case '/admin/dashboard':
+      case '/store-manager':
+      case '/store-manager/dashboard':
+        return FadeSlideRoute(page: const AdminDashboard());
+      case '/picker':
+      case '/picker/dashboard':
+        return FadeSlideRoute(page: const PickerDashboard());
       case '/delivery':
       case '/delivery/dashboard':
         return FadeThroughRoute(page: const DeliveryDashboard());

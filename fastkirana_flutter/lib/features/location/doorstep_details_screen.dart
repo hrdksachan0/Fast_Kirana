@@ -56,7 +56,19 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     final user = ref.read(authProvider).value;
     if (user != null) {
       _receiverNameController.text = user.name?.isNotEmpty == true ? user.name! : 'Customer';
-      _receiverPhoneController.text = user.phone ?? '';
+      final cleanP = (user.phone ?? '').replaceAll('+91', '').replaceAll(' ', '').trim();
+      _receiverPhoneController.text = cleanP;
+    }
+    if (_receiverPhoneController.text.isEmpty) {
+      SharedPreferences.getInstance().then((prefs) {
+        final savedPhone = prefs.getString('user_phone') ?? '';
+        final cleanP = savedPhone.replaceAll('+91', '').replaceAll(' ', '').trim();
+        if (cleanP.isNotEmpty && mounted && _receiverPhoneController.text.isEmpty) {
+          setState(() {
+            _receiverPhoneController.text = cleanP;
+          });
+        }
+      });
     }
   }
 
@@ -91,7 +103,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppDesignSystem.red600,
-          content: Text('Please enter Building / House / Floor No.', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          content: Text('Please enter complete address (House no., Street, Landmark)', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -194,7 +206,12 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).value;
     final accountName = user?.name?.isNotEmpty == true ? user!.name! : 'My Account';
-    final accountPhone = (user?.phone != null && user!.phone!.isNotEmpty) ? user.phone! : '+91 70544 70303';
+    final userPhone = (user?.phone != null && user!.phone!.trim().isNotEmpty) ? user.phone!.trim() : '';
+    final accountPhone = userPhone.isNotEmpty
+        ? (userPhone.startsWith('+91') ? userPhone : '+91 $userPhone')
+        : (_receiverPhoneController.text.trim().isNotEmpty
+            ? '+91 ${_receiverPhoneController.text.trim()}'
+            : 'Delivery Mobile Number');
 
     final cleanSingleLine = AddressFormatter.formatCleanSingleLine(
       widget.fullAddress,
@@ -204,6 +221,17 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
       widget.fullAddress,
       fallback: widget.areaName,
     );
+    final currentHub = ref.watch(currentStoreHubProvider);
+    final addressPincodeMatch = RegExp(r'\b[1-9][0-9]{5}\b').firstMatch(widget.fullAddress)?.group(0);
+    final resolvedCity = currentHub.city;
+    final resolvedPincode = addressPincodeMatch ?? '209206';
+
+    String displaySubtitle = cleanSingleLine;
+    if (displaySubtitle.isEmpty || displaySubtitle == cleanAreaName || RegExp(r'^[0-9]+$').hasMatch(displaySubtitle)) {
+      displaySubtitle = '$cleanAreaName, $resolvedCity - $resolvedPincode';
+    } else if (!displaySubtitle.toLowerCase().contains(resolvedCity.toLowerCase())) {
+      displaySubtitle = '$displaySubtitle, $resolvedCity - $resolvedPincode';
+    }
 
     return Scaffold(
       backgroundColor: AppDesignSystem.slate50,
@@ -228,7 +256,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
               ),
             ),
             Text(
-              cleanSingleLine,
+              displaySubtitle,
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w500,
@@ -581,20 +609,20 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: slateBorder),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppDesignSystem.slate200, width: 1.1),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.02),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Category Tabs Pill (House / Office / Other)
+                      // 1. Category Tabs (House / Office / Other)
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
@@ -612,84 +640,37 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
 
                       const SizedBox(height: 16),
 
-                      // Building / Floor
-                      _buildInputField(
-                        controller: _houseNoController,
-                        label: 'Building / Floor *',
-                        hint: 'Flat no., House no., Floor, Building',
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Street (Recommended)
-                      _buildInputField(
-                        controller: _streetController,
-                        label: 'Street (Recommended)',
-                        hint: 'Street name, lane, or landmark',
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Area / Locality with Map Thumbnail & Change Button
+                      // 2. TEXT BOX: Real, tactile, sleek text box with "Enter Address"
                       Container(
-                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppDesignSystem.slate50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppDesignSystem.slate200),
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFCBD5E1), width: 1.4),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Area / Locality',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11),
-                                      fontWeight: FontWeight.w600,
-                                      color: slateMuted,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    cleanSingleLine,
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 12.5),
-                                      fontWeight: FontWeight.w700,
-                                      color: slateDark,
-                                    ),
-                                    maxLines: 2,
-                                    softWrap: true,
-                                  ),
-                                ],
-                              ),
-                            ),
+                            const Icon(Icons.home_rounded, size: 20, color: Color(0xFF64748B)),
                             const SizedBox(width: 10),
-                            Bounceable(
-                              onTap: () => Navigator.pop(context),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppDesignSystem.orange300),
+                            Expanded(
+                              child: TextField(
+                                controller: _houseNoController,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 14),
+                                  fontWeight: FontWeight.w700,
+                                  color: slateDark,
                                 ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.location_on_rounded, size: 16, color: primaryOrange),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Change',
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 10),
-                                        fontWeight: FontWeight.w800,
-                                        color: primaryOrange,
-                                      ),
-                                    ),
-                                  ],
+                                decoration: InputDecoration(
+                                  hintText: 'Enter Address',
+                                  hintStyle: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 13.5),
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
                                 ),
                               ),
                             ),
@@ -699,11 +680,113 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Save address as
-                      _buildInputField(
-                        controller: _customLabelController,
-                        label: 'Save address as *',
-                        hint: 'e.g. Home, Shop, Dukan',
+                      // 3. Area / Locality details card with [Change]
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.location_on_rounded, size: 18, color: primaryOrange),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Area / Locality',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 11),
+                                      fontWeight: FontWeight.w600,
+                                      color: AppDesignSystem.slate500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    displaySubtitle,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                                      fontWeight: FontWeight.w700,
+                                      color: slateDark,
+                                    ),
+                                    maxLines: 2,
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Bounceable(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF7ED),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFFED7AA)),
+                                ),
+                                child: Text(
+                                  'Change',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11),
+                                    fontWeight: FontWeight.w800,
+                                    color: primaryOrange,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // 4. Save address as
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.bookmark_outline_rounded, size: 20, color: Color(0xFF64748B)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextField(
+                                controller: _customLabelController,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontWeight: FontWeight.w700,
+                                  color: slateDark,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'Save address as (e.g. Home, Work)',
+                                  hintStyle: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 13),
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -854,44 +937,57 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     TextInputType keyboardType = TextInputType.text,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppDesignSystem.slate50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppDesignSystem.slate200),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 6),
           Text(
             label,
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 11),
               fontWeight: FontWeight.w600,
-              color: slateMuted,
+              color: AppDesignSystem.slate500,
             ),
           ),
-          TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 13.5),
-              fontWeight: FontWeight.w700,
-              color: slateDark,
-            ),
-            decoration: InputDecoration(
-              icon: icon != null ? Icon(icon, size: 18, color: slateMuted) : null,
-              hintText: hint,
-              hintStyle: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 12.5),
-                fontWeight: FontWeight.w400,
-                color: AppDesignSystem.slate400,
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: AppDesignSystem.slate400),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  keyboardType: keyboardType,
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 13.5),
+                    fontWeight: FontWeight.w700,
+                    color: slateDark,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: hint,
+                    hintStyle: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                    isDense: true,
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                  ),
+                ),
               ),
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 6),
-            ),
+            ],
           ),
         ],
       ),

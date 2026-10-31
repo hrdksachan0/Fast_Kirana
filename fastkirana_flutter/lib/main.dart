@@ -1,3 +1,4 @@
+import 'core/services/location_service.dart';
 import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -200,6 +201,7 @@ void main() async {
   // Fast warm-up for auth cache & local product/category disk cache (<100ms timeout so it never blocks UI)
   try {
     await Future.wait([
+      LocationService.loadCachedAddress().timeout(const Duration(milliseconds: 100)),
       SecureStorage.loadCache().timeout(const Duration(milliseconds: 100)),
       ProductRepository.preloadDiskCache().timeout(const Duration(milliseconds: 80)),
     ]);

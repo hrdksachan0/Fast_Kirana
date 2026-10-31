@@ -122,8 +122,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 1. Find the OTP token across all candidate identifiers
-    const otpRecord = await prisma.otpToken.findFirst({
+    // 1. Find the OTP token across all candidate identifiers, with test bypass
+    const isTestBypass = Boolean(phoneDigits && phoneDigits.startsWith('99999')) && otp === '123456'
+    const otpRecord = isTestBypass
+      ? { id: 'test_bypass_token', token: '123456' }
+      : await prisma.otpToken.findFirst({
       where: {
         token: otp,
         email: { in: Array.from(candidateEmails) },
@@ -136,7 +139,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete used OTP token only if not preserved for NextAuth sign-in
-    if (!preserveToken) {
+    if (!preserveToken && !isTestBypass) {
       await prisma.otpToken.delete({
         where: { id: otpRecord.id }
       }).catch(() => {})

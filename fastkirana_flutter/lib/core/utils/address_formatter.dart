@@ -8,6 +8,17 @@ class AddressFormatter {
     return RegExp(r'\b[A-Z0-9]{2,8}\+[A-Z0-9]{2,8}\b', caseSensitive: false).hasMatch(clean);
   }
 
+  /// Capitalizes first letter of words for clean, professional display
+  static String titleCase(String text) {
+    if (text.isEmpty) return text;
+    // Don't modify if it contains numbers like 209206 or mixed casing already
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      if (RegExp(r'^[0-9]+$').hasMatch(word)) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
   /// Cleans a raw address string to a concise, human-readable single line without plus codes,
   /// redundant country/state, or ellipses.
   static String formatCleanSingleLine(String? rawAddress, {String? areaFallback}) {
@@ -27,9 +38,9 @@ class AddressFormatter {
     // 3. Remove country suffix ", India"
     text = text.replaceAll(RegExp(r',?\s*India\s*$', caseSensitive: false), '');
 
-    // 4. Split into clean tokens
+    // 4. Split into clean tokens (splitting by comma, newline, or multiple spaces)
     final rawTokens = text
-        .split(',')
+        .split(RegExp(r'[,\n]+'))
         .map((t) => t.trim())
         .where((t) => t.isNotEmpty && t != '.' && t.toLowerCase() != 'n/a')
         .toList();
@@ -38,14 +49,16 @@ class AddressFormatter {
     final seen = <String>{};
     final cleanTokens = <String>[];
     for (final token in rawTokens) {
-      final lower = token.toLowerCase();
+      final clean = token.replaceAll(RegExp(r'^[-,\s.]+|[-,\s.]+$'), '').trim();
+      if (clean.isEmpty) continue;
+      final lower = clean.toLowerCase();
       // Skip plus code residual
       if (lower.contains('+')) continue;
       // Skip "India"
       if (lower == 'india') continue;
       if (!seen.contains(lower)) {
         seen.add(lower);
-        cleanTokens.add(token);
+        cleanTokens.add(titleCase(clean));
       }
     }
 
@@ -71,13 +84,13 @@ class AddressFormatter {
   /// Extracts the primary locality/area name (e.g. "Sihari") without plus codes
   static String extractAreaName(String? rawAddress, {String? fallback}) {
     if (fallback != null && fallback.trim().isNotEmpty && !fallback.contains('+')) {
-      return fallback.trim();
+      return titleCase(fallback.trim());
     }
     final singleLine = formatCleanSingleLine(rawAddress, areaFallback: fallback);
     final parts = singleLine.split(',');
     if (parts.isNotEmpty && parts.first.trim().isNotEmpty) {
-      return parts.first.trim();
+      return titleCase(parts.first.trim());
     }
-    return fallback?.trim().isNotEmpty == true ? fallback!.trim() : 'Delivery Location';
+    return fallback?.trim().isNotEmpty == true ? titleCase(fallback!.trim()) : 'Delivery Location';
   }
 }

@@ -50,11 +50,13 @@ class NearestHubResult {
   final StoreHub hub;
   final double distanceKm;
   final bool isServiceable;
+  final bool hasSelectedLocation;
 
   const NearestHubResult({
     required this.hub,
     required this.distanceKm,
     required this.isServiceable,
+    this.hasSelectedLocation = true,
   });
 }
 
@@ -68,12 +70,27 @@ final nearestHubResultProvider = Provider<NearestHubResult>((ref) {
     return const NearestHubResult(
       hub: StoreHub.defaultGhatampur,
       distanceKm: 0.0,
-      isServiceable: true,
+      isServiceable: false,
+      hasSelectedLocation: false,
     );
   }
 
-  final customerLat = address?.latitude ?? StoreHub.defaultGhatampur.latitude;
-  final customerLng = address?.longitude ?? StoreHub.defaultGhatampur.longitude;
+  // 1. If customer has NOT selected or granted any location yet (GPS off / fresh install)
+  // Strict rule: NEVER assume or hallucinate a default hub like Ghatampur.
+  if (address == null ||
+      address.latitude == null ||
+      address.longitude == null ||
+      (address.latitude == 0.0 && address.longitude == 0.0)) {
+    return NearestHubResult(
+      hub: hubs.first,
+      distanceKm: 0.0,
+      isServiceable: false,
+      hasSelectedLocation: false,
+    );
+  }
+
+  final customerLat = address.latitude!;
+  final customerLng = address.longitude!;
 
   StoreHub nearest = hubs.first;
   double minDistanceKm = double.infinity;
@@ -131,6 +148,7 @@ final nearestHubResultProvider = Provider<NearestHubResult>((ref) {
     hub: resolvedHub,
     distanceKm: resolvedDistanceKm,
     isServiceable: isServiceable,
+    hasSelectedLocation: true,
   );
 });
 

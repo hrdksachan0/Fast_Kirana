@@ -1,3 +1,5 @@
+import 'auth_provider.dart';
+import '../core/services/location_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/address.dart';
 import '../data/repositories/address_repository.dart';
@@ -50,6 +52,9 @@ class AddressesNotifier extends StateNotifier<AsyncValue<List<Address>>> {
 }
 
 final addressesProvider = StateNotifierProvider.autoDispose<AddressesNotifier, AsyncValue<List<Address>>>((ref) {
+  // Watch authProvider so whenever login state changes (login, switch user, logout),
+  // addresses are automatically refreshed immediately!
+  ref.watch(authProvider);
   final notifier = AddressesNotifier(ref.watch(addressRepositoryProvider));
   ref.keepAlive();
   return notifier;
@@ -58,7 +63,7 @@ final addressesProvider = StateNotifierProvider.autoDispose<AddressesNotifier, A
 // Active chosen address for delivery / header
 final selectedAddressProvider = StateProvider<Address?>((ref) {
   final addressesAsync = ref.watch(addressesProvider);
-  return addressesAsync.when(
+  final fromAddresses = addressesAsync.when(
     data: (addresses) {
       if (addresses.isEmpty) return null;
       return addresses.firstWhere(
@@ -69,4 +74,8 @@ final selectedAddressProvider = StateProvider<Address?>((ref) {
     loading: () => null,
     error: (_, __) => null,
   );
+  if (fromAddresses != null) return fromAddresses;
+
+  // Restore offline cached location on app startup / force close
+  return LocationService.cachedAddress;
 });

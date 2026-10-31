@@ -1,3 +1,4 @@
+import '../../core/utils/address_formatter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'address.freezed.dart';
@@ -59,16 +60,28 @@ class Address with _$Address {
       };
 
   String get fullAddress {
-    final parts = [houseNo, street, area, city]
-        .map((p) => p.trim())
-        .where((p) => p.isNotEmpty && p != '.' && p.toLowerCase() != 'n/a')
-        .toList();
-    final main = parts.join(', ');
-    final cleanPin = pincode.trim();
-    if (cleanPin.isNotEmpty && cleanPin != '.') {
-      return main.isNotEmpty ? '$main - $cleanPin' : cleanPin;
+    final rawTokens = <String>[];
+    for (final p in [houseNo, street, area, city]) {
+      final clean = p.trim();
+      if (clean.isNotEmpty && clean != '.' && clean.toLowerCase() != 'n/a') {
+        for (final token in clean.split(',')) {
+          final t = token.trim();
+          if (t.isNotEmpty && t != '.' && t.toLowerCase() != 'n/a') {
+            rawTokens.add(t);
+          }
+        }
+      }
     }
-    return main.isNotEmpty ? main : 'Delivery Location';
+    final formatted = AddressFormatter.formatCleanSingleLine(rawTokens.join(', '));
+    final cleanPin = pincode.trim();
+    if (cleanPin.isNotEmpty && cleanPin != '.' && cleanPin.toLowerCase() != 'n/a') {
+      if (!formatted.contains(cleanPin)) {
+        return formatted.isNotEmpty && formatted != 'Delivery Location'
+            ? '$formatted - $cleanPin'
+            : cleanPin;
+      }
+    }
+    return formatted.isNotEmpty ? formatted : 'Delivery Location';
   }
 
   String get displayArea {

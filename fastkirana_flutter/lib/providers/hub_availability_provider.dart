@@ -8,6 +8,7 @@ enum HubStatus {
   serviceable,
   comingSoon,
   outsideZone,
+  noLocation,
 }
 
 class HubAvailabilityInfo {
@@ -27,6 +28,7 @@ class HubAvailabilityInfo {
     required this.status,
   });
 
+  bool get isNoLocation => status == HubStatus.noLocation;
   bool get isComingSoon => status == HubStatus.comingSoon;
   bool get isOutsideZone => status == HubStatus.outsideZone;
   bool get isServiceableWithItems => status == HubStatus.serviceable;
@@ -42,6 +44,18 @@ final hubAvailabilityProvider = Provider<HubAvailabilityInfo>((ref) {
   final hub = nearestResult.hub;
   final isServiceable = nearestResult.isServiceable;
   final distanceKm = nearestResult.distanceKm;
+
+  // 0. Customer has not selected or granted any location yet
+  if (!nearestResult.hasSelectedLocation) {
+    return HubAvailabilityInfo(
+      hub: hub,
+      distanceKm: 0.0,
+      isServiceable: false,
+      groceryCount: 0,
+      restaurantCount: 0,
+      status: HubStatus.noLocation,
+    );
+  }
 
   // 1. Outside all active delivery zones
   if (!isServiceable) {

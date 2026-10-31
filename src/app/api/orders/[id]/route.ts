@@ -9,6 +9,7 @@ import { sseEmitter } from '@/lib/sse-emitter'
 import { getLast10Digits } from '@/lib/phone'
 import { validateBodyLegacy, updateOrderStatusSchema } from '@/lib/validation'
 import { dispatchAdminApprovedNotifications } from '@/lib/order-notification-dispatcher'
+import { RiderBatchingService } from '@/services/rider-batching.service'
 
 const STAFF_ROLES = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER']
 const VALID_STATUSES = ['ADMIN_PENDING', 'PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
@@ -522,6 +523,11 @@ export async function PATCH(
           console.warn('Error sending rider assignment notification:', notifErr)
         }
       }
+
+      // Attempt automated multi-drop batching for nearby orders heading same way
+      RiderBatchingService.attemptAutoBatchForOrder(existingOrder.id).catch(err => {
+        console.warn('[RiderBatching] Silent error in assignment hook:', err)
+      })
 
       return NextResponse.json({ success: true, deliveryUserId, status: targetStatus })
     }

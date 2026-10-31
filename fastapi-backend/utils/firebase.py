@@ -192,8 +192,7 @@ async def send_fcm_notification(
                     default_sound=default_sound,
                     default_vibrate_timings=default_vibrate,
                     priority=priority,
-                    visibility="public",
-                    click_action="FLUTTER_NOTIFICATION_CLICK"
+                    visibility="public"
                 )
             ),
             apns=messaging.APNSConfig(
@@ -301,8 +300,7 @@ async def send_fcm_topic_notification(
                     default_sound=default_sound,
                     default_vibrate_timings=default_vibrate,
                     priority=priority,
-                    visibility="public",
-                    click_action="FLUTTER_NOTIFICATION_CLICK"
+                    visibility="public"
                 )
             ),
             apns=messaging.APNSConfig(

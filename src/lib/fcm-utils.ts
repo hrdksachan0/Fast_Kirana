@@ -105,7 +105,6 @@ export function buildOrderFcmPayload(
         ...(isOrderAlert ? { vibrateTimingsMillis: [0, 1000, 500, 1000, 500, 1000, 500, 1000] } : {}),
         visibility: 'PUBLIC' as const,
         priority: isOrderAlert ? ('MAX' as const) : ('HIGH' as const),
-        clickAction: 'FLUTTER_NOTIFICATION_CLICK',
         ...(collapseId ? { tag: collapseId } : {}),
       },
     },

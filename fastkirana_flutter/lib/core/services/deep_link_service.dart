@@ -73,6 +73,7 @@ class DeepLinkService {
           }
         }
         if (host == 'product' || host == 'products') {
+          // ignore: unused_local_variable
           final slug = pathSegments.isNotEmpty ? pathSegments.first : uri.queryParameters['slug'];
           _navigateToProducts();
           return;
@@ -106,7 +107,8 @@ class DeepLinkService {
 
             // Category browsing: /category/{slug} or /categories
             if (firstSegment == 'category' || firstSegment == 'categories') {
-              final slug = pathSegments.length >= 2 ? pathSegments[1] : '';
+              // ignore: unused_local_variable
+          final slug = pathSegments.length >= 2 ? pathSegments[1] : '';
               if (slug.isNotEmpty) {
                 AppRouter.navigatorKey.currentState?.pushNamed('/category/$slug');
               } else {

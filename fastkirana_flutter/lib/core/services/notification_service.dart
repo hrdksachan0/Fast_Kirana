@@ -289,6 +289,45 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
+  /// Centralized route resolver for push notifications across Customer, Admin, Store Manager, Restaurant, and Rider
+  static String? _resolveNotificationRoute(Map<String, dynamic> data) {
+    final rawUrl = data['url'] ?? data['linkUrl'] ?? data['link'];
+    if (rawUrl != null && rawUrl.toString().trim().isNotEmpty) {
+      final str = rawUrl.toString().trim();
+      if (str == '/admin' || str == 'admin') return '/admin-orders';
+      return str;
+    }
+    final screen = data['screen']?.toString().toLowerCase().trim();
+    if (screen == 'admin-orders' || screen == 'admin' || screen == 'store-manager' || screen == 'admin_orders') {
+      return '/admin-orders';
+    }
+    if (screen == 'delivery' || screen == 'rider') {
+      return '/delivery';
+    }
+    if (screen == 'picker') {
+      return '/picker';
+    }
+    if (screen == 'restaurant-console' || screen == 'kitchen' || screen == 'restaurant') {
+      return '/kitchen';
+    }
+    if (screen == 'categories' || screen == 'category') {
+      final cat = data['categoryId'] ?? data['category'];
+      return cat != null ? '/products?category=$cat' : '/categories';
+    }
+    if (screen == 'products' || screen == 'product') {
+      final pId = data['productId'] ?? data['id'];
+      return pId != null ? '/product/$pId' : '/products';
+    }
+    if (screen == 'order-tracking' || screen == 'track' || screen == 'order') {
+      final oId = data['orderId'] ?? data['readableId'] ?? data['id'];
+      return oId != null ? '/orders/$oId/track' : '/orders';
+    }
+    if (screen == 'karwachauth' || screen == 'karwa-chauth' || screen == 'pooja') {
+      return '/category/pooja-path';
+    }
+    return null;
+  }
+
   /// Stored target link for cold-launch from a tapped notification
   static String? pendingDeepLinkUrl;
 
@@ -333,6 +372,20 @@ class NotificationService {
     if (nav == null) {
       debugPrint('[NotificationService] Navigator not ready, queued pending link: $link');
       pendingDeepLinkUrl = link;
+      for (final delayMs in [300, 700, 1500, 2500]) {
+        Future.delayed(Duration(milliseconds: delayMs), () {
+          final retryNav = AppRouter.navigatorKey.currentState;
+          if (retryNav != null && pendingDeepLinkUrl == link) {
+            pendingDeepLinkUrl = null;
+            debugPrint('[NotificationService] Executing delayed navigation to: $link');
+            try {
+              retryNav.pushNamed(link);
+            } catch (e) {
+              debugPrint('[NotificationService] Delayed navigation error: $e');
+            }
+          }
+        });
+      }
       return;
     }
 
@@ -474,11 +527,7 @@ class NotificationService {
       // 6. Handle App Opened from Background Notification Tap
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         logger.d("App opened from notification: ${message.data}");
-        final rawUrl = message.data['url'] ?? message.data['linkUrl'] ?? message.data['link'];
-        final screen = message.data['screen']?.toString();
-        final url = (rawUrl != null && rawUrl.toString().trim().isNotEmpty)
-            ? rawUrl.toString().trim()
-            : (screen == 'delivery' ? '/delivery' : (screen == 'admin-orders' ? '/admin' : (screen == 'karwachauth' || screen == 'karwa-chauth' || screen == 'pooja' ? '/category/pooja-path' : null)));
+        final url = _resolveNotificationRoute(Map<String, dynamic>.from(message.data));
         if (url != null && url.toString().trim().isNotEmpty) {
           NotificationService.navigateToLink(url.toString().trim());
         }
@@ -488,14 +537,12 @@ class NotificationService {
       try {
         final initialMsg = await _fcm?.getInitialMessage();
         if (initialMsg != null) {
-          final rawUrl = initialMsg.data['url'] ?? initialMsg.data['linkUrl'] ?? initialMsg.data['link'];
-          final screen = initialMsg.data['screen']?.toString();
-          final url = (rawUrl != null && rawUrl.toString().trim().isNotEmpty)
-              ? rawUrl.toString().trim()
-              : (screen == 'delivery' ? '/delivery' : (screen == 'admin-orders' ? '/admin' : (screen == 'karwachauth' || screen == 'karwa-chauth' || screen == 'pooja' ? '/category/pooja-path' : null)));
+          final url = _resolveNotificationRoute(Map<String, dynamic>.from(initialMsg.data));
           if (url != null && url.toString().trim().isNotEmpty) {
-            pendingDeepLinkUrl = url.toString().trim();
+            final cleanTarget = url.toString().trim();
+            pendingDeepLinkUrl = cleanTarget;
             debugPrint('[NotificationService] Stored initial notification link: $pendingDeepLinkUrl');
+            NotificationService.navigateToLink(cleanTarget);
           }
         }
       } catch (e) {
@@ -794,7 +841,7 @@ class NotificationService {
           interruptionLevel: InterruptionLevel.timeSensitive,
         ),
       ),
-      payload: (message.data['url'] ?? message.data['linkUrl'] ?? message.data['link'] ?? (message.data['screen'] == 'delivery' ? '/delivery' : (cleanOrderId != null ? '/orders/track' : ''))).toString(),
+      payload: (_resolveNotificationRoute(Map<String, dynamic>.from(message.data)) ?? (cleanOrderId != null ? '/orders/track' : '')).toString(),
     );
   }
 

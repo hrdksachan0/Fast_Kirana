@@ -81,7 +81,6 @@ export async function POST(request: NextRequest) {
             notification: {
               channelId: 'fastkirana_alerts',
               sound: 'default',
-              clickAction: 'FLUTTER_NOTIFICATION_CLICK',
               tag: collapseTag,
             },
           },

@@ -36,8 +36,11 @@ class RiderBatchRoadmapCard extends StatelessWidget {
     final lng1 = (addr1?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
     final recip1 = OrderRecipientDetails.fromOrder(stop1Order);
     final name1 = recip1.recipientName;
+    final area1 = addr1?['area']?.toString().trim();
+    final city1 = addr1?['city']?.toString().trim();
+    final locality1 = (area1 != null && area1.isNotEmpty) ? area1 : (city1 ?? '');
     final formattedAddr1 = addr1?['formattedAddress']?.toString().trim() ??
-        '${addr1?['houseNo'] ?? ''} ${addr1?['area'] ?? 'Ghatampur'}'.trim();
+        '${addr1?['houseNo'] ?? ''} $locality1'.trim();
 
     final order2Id = stop2Order['id']?.toString() ?? '';
     final order2Num = stop2Order['readableId'] ?? order2Id.substring(0, math.min(8, order2Id.length));
@@ -46,8 +49,11 @@ class RiderBatchRoadmapCard extends StatelessWidget {
     final lng2 = (addr2?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
     final recip2 = OrderRecipientDetails.fromOrder(stop2Order);
     final name2 = recip2.recipientName;
+    final area2 = addr2?['area']?.toString().trim();
+    final city2 = addr2?['city']?.toString().trim();
+    final locality2 = (area2 != null && area2.isNotEmpty) ? area2 : (city2 ?? '');
     final formattedAddr2 = addr2?['formattedAddress']?.toString().trim() ??
-        '${addr2?['houseNo'] ?? ''} ${addr2?['area'] ?? 'Ghatampur'}'.trim();
+        '${addr2?['houseNo'] ?? ''} $locality2'.trim();
 
     final dist = distanceBetweenMeters ?? 650;
     final distText = dist < 1000 ? '$dist m' : '${(dist / 1000).toStringAsFixed(1)} km';
@@ -250,33 +256,40 @@ class RiderBatchRoadmapCard extends StatelessWidget {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          'STOP 1: $name1',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 12),
-                                            fontWeight: FontWeight.w900,
-                                            color: slateDark,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFDBEAFE),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            'CURRENT',
-                                            style: GoogleFonts.inter(
-                                              fontSize: Responsive.scaledFontSize(context, 8.5),
-                                              fontWeight: FontWeight.w900,
-                                              color: const Color(0xFF1E40AF),
+                                    Expanded(
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              'STOP 1: $name1',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 12),
+                                                fontWeight: FontWeight.w900,
+                                                color: slateDark,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFDBEAFE),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              'CURRENT',
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 8.5),
+                                                fontWeight: FontWeight.w900,
+                                                color: const Color(0xFF1E40AF),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                     Text(
                                       '#$order1Num',
@@ -369,33 +382,40 @@ class RiderBatchRoadmapCard extends StatelessWidget {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          'STOP 2: $name2',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 12),
-                                            fontWeight: FontWeight.w800,
-                                            color: slateDark,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                          decoration: BoxDecoration(
-                                            color: AppDesignSystem.slate200,
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            'NEXT',
-                                            style: GoogleFonts.inter(
-                                              fontSize: Responsive.scaledFontSize(context, 8.5),
-                                              fontWeight: FontWeight.w900,
-                                              color: AppDesignSystem.slate600,
+                                    Expanded(
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              'STOP 2: $name2',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 12),
+                                                fontWeight: FontWeight.w800,
+                                                color: slateDark,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: AppDesignSystem.slate200,
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              'NEXT',
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 8.5),
+                                                fontWeight: FontWeight.w900,
+                                                color: AppDesignSystem.slate600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                     Text(
                                       '#$order2Num',

@@ -45,6 +45,12 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       // Role and assignedStoreId are provided securely by the authenticated server session/token.
       if (mounted) state = AsyncValue.data(user);
 
+    // Invalidate and reload addresses immediately for the logged-in user!
+    try {
+      _ref.invalidate(addressesProvider);
+      _ref.read(addressesProvider.notifier).loadAddresses();
+    } catch (_) {}
+
       // Register device FCM push token on startup with user role and restaurant ID
       try {
         final dio = _ref.read(dioProvider);

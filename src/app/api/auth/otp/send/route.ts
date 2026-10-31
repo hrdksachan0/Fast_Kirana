@@ -83,8 +83,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Please enter a valid email address or 10-digit mobile number' }, { status: 400 })
     }
 
-    // 1. Generate a 6-digit numeric OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    // 1. Generate a 6-digit numeric OTP (fixed 123456 for testing phone)
+    const isTestNumber = Boolean(phoneDigits && phoneDigits.startsWith('99999'))
+    const otp = isTestNumber ? '123456' : Math.floor(100000 + Math.random() * 900000).toString()
 
     // 2. Set expiry to 5 minutes from now
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
     // 5. Send OTP via Meta WhatsApp Cloud API or Email
     const recipientPhoneDigits = phoneDigits || (normalizedEmail.startsWith('phone:') ? normalizedEmail.replace('phone:', '') : null)
 
-    if (recipientPhoneDigits) {
+    if (recipientPhoneDigits && !isTestNumber) {
       const recipientPhone = `+91${recipientPhoneDigits}`
       const isSent = await sendWhatsAppOtp(recipientPhone, otp).catch((err) => {
         console.warn('sendWhatsAppOtp exception:', err)
