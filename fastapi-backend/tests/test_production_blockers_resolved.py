@@ -2616,11 +2616,23 @@ async def test_cart_sync_mixed_invalid_rejection_and_preservation():
     get_resp = client.get("/api/cart", headers=headers)
     assert get_resp.json()["items"][0]["quantity"] == 3
 
-    # 5. Explicit empty list sync (client clearing cart)
-    clear_resp = client.post(
+    # 5. Implicit empty list sync (accidental empty-cart wipe protection)
+    accidental_resp = client.post(
         "/api/cart",
         headers=headers,
         json={"items": []},
+    )
+    assert accidental_resp.status_code == 200
+    assert accidental_resp.json()["itemCount"] == 1
+    # Verify original cart still preserved
+    get_resp = client.get("/api/cart", headers=headers)
+    assert len(get_resp.json()["items"]) == 1
+
+    # 6. Explicit empty list sync (client clearing cart)
+    clear_resp = client.post(
+        "/api/cart",
+        headers=headers,
+        json={"items": [], "isExplicitClear": True},
     )
     assert clear_resp.status_code == 200
     assert clear_resp.json()["itemCount"] == 0

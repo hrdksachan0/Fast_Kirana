@@ -55,6 +55,11 @@ def test_order_tracking_websocket_lifecycle():
     ticket = _make_ticket(f"order_{order_id}", "customer_1")
 
     with client.websocket_connect(f"/ws/orders/{order_id}?ticket={ticket}") as ws:
+        # Initial greeting from websocket connection
+        init_msg = json.loads(ws.receive_text())
+        assert init_msg["event"] == "CONNECTED"
+        assert init_msg["orderId"] == order_id
+
         # Send location update
         ws.send_text(json.dumps({
             "event": "LOCATION_UPDATE",
