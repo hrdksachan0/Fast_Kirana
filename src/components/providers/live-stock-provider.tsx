@@ -25,13 +25,14 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
   const registryRef = useRef<Record<string, number>>({})
   const lastFetchedRef = useRef<Record<string, number>>({})
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const activeStoreId = useUIStore((s) => s.activeStoreId)
 
   const triggerBatchFetch = useCallback((force = false) => {
     if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current)
 
     fetchTimeoutRef.current = setTimeout(async () => {
       const now = Date.now()
-      const CACHE_TTL = 240000 // 240 seconds (4 minutes) client cache TTL — optimized for lower serverless traffic
+      const CACHE_TTL = 60000 // 60 seconds client cache TTL
 
       const onScreenIds = Object.entries(registryRef.current)
         .filter(([_, count]) => count > 0)
@@ -91,17 +92,22 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Failed to fetch live stock:', err)
       }
-    }, 400) // 400ms batch window to aggregate product mounts
+    }, 150) // Fast 150ms batch window to aggregate product mounts
   }, [])
+
+  // When activeStoreId changes (e.g. user selects different address/hub), invalidate cache and re-fetch immediately
+  useEffect(() => {
+    lastFetchedRef.current = {}
+    setLiveStock({})
+    triggerBatchFetch(true)
+  }, [activeStoreId, triggerBatchFetch])
 
   const registerProduct = useCallback((id: string) => {
     const currentCount = registryRef.current[id] || 0
     registryRef.current[id] = currentCount + 1
-    // Mark newly mounted products from SSR as fresh so we don't hit Supabase immediately on mount
-    if (!lastFetchedRef.current[id]) {
-      lastFetchedRef.current[id] = Date.now()
-    }
-  }, [])
+    // Trigger batch fetch for newly mounted products
+    triggerBatchFetch(false)
+  }, [triggerBatchFetch])
 
   const unregisterProduct = useCallback((id: string) => {
     const currentCount = registryRef.current[id] || 0

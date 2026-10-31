@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
 
 import { prisma } from '@/lib/prisma'
 
@@ -66,6 +67,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function CategoryPage({ params }: CategoryPageProps) {
 
   const { slug } = await params
+
+  const cookieStore = await cookies().catch(() => null)
+
+  const targetStoreId = cookieStore?.get('fk_store_id')?.value || 'hub-209206'
 
 
 
@@ -383,7 +388,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
       inventories: {
 
-        where: { storeId: 'hub-209206' },
+        where: { storeId: targetStoreId },
 
         select: {
 
