@@ -252,11 +252,25 @@ async def create_cashfree_order(
                         candidate_pids.add("_".join(parts[:i]))
 
         db_p_map = {}
+        store_inv_map = {}
         if candidate_pids:
             p_stmt = select(Product).where(Product.id.in_(list(candidate_pids)))
             p_res = await db.execute(p_stmt)
             for p in p_res.scalars().all():
                 db_p_map[p.id] = p
+
+            try:
+                from models import StoreInventory
+                resolved_hub = getattr(req, "storeId", None) or "hub-209206"
+                si_stmt = select(StoreInventory).where(
+                    StoreInventory.productId.in_(list(candidate_pids)),
+                    StoreInventory.storeId == resolved_hub
+                )
+                si_res = await db.execute(si_stmt)
+                for si in si_res.scalars().all():
+                    store_inv_map[si.productId] = int(si.stock or 0)
+            except Exception as si_err:
+                logger.warning(f"Could not load StoreInventory for checkout validation: {si_err}")
 
         for it in effective_items:
             prod_info = it.get("product") or it
@@ -362,10 +376,12 @@ async def create_cashfree_order(
                             detail=f"Insufficient stock for \"{db_p.name} ({sel_var})\". Available: {v_match.get('stock', 0)}, requested: {p_qty}."
                         )
             else:
-                if not db_p.restaurantId and (db_p.stock or 0) < p_qty:
+                hub_stock = store_inv_map.get(db_p.id)
+                effective_stock = hub_stock if hub_stock is not None else int(db_p.stock or 0)
+                if not db_p.restaurantId and effective_stock < p_qty:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Insufficient stock for \"{db_p.name}\". Available: {db_p.stock or 0}, requested: {p_qty}."
+                        detail=f"Insufficient stock for \"{db_p.name}\". Available: {effective_stock}, requested: {p_qty}."
                     )
             authoritative_items_subtotal += item_price * p_qty
             canonical_accepted_lines.append({

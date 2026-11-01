@@ -2363,6 +2363,10 @@ async def create_order(
                             raise HTTPException(status_code=400, detail=f"Product '{prod.name}' not found")
 
                         prev_stock = locked_prod.stock or 0
+                        if store_id and store_inv_map.get(locked_prod.id):
+                            hub_inv = store_inv_map.get(locked_prod.id)
+                            if hub_inv and (hub_inv.stock or 0) > prev_stock:
+                                prev_stock = int(hub_inv.stock or 0)
 
                         if var_name and locked_prod.variants and isinstance(locked_prod.variants, list):
                             updated_variants = []
