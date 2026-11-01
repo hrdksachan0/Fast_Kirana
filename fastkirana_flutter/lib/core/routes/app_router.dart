@@ -23,6 +23,8 @@ import '../../features/delivery/delivery_dashboard.dart';
 import '../../features/location/delivery_location_screen.dart';
 import '../../features/location/map_picker_screen.dart';
 import '../../features/cafe/restaurant_dashboard.dart';
+import '../../features/cafe/restaurants_list_screen.dart';
+import '../../features/cafe/cafe_menu_screen.dart';
 import '../widgets/contextual_brand_transition_screen.dart';
 import '../../features/offline/offline_zero_signal_screen.dart';
 import '../../features/wallet/wallet_screen.dart';
@@ -103,6 +105,24 @@ class AppRouter {
       }
     }
 
+    // Handle deep links like /restaurants/<id> or /restaurant/<id> or /cafe/<id> (customer restaurant menu)
+    final restMatch = RegExp(r'^/(?:restaurants?|cafe)/([^/?#]+)/?$').firstMatch(cleanPath);
+    if (restMatch != null) {
+      final restId = restMatch.group(1) ?? '';
+      if (restId.isNotEmpty &&
+          restId != 'dashboard' &&
+          restId != 'login' &&
+          restId != 'console' &&
+          restId != 'list') {
+        return FadeSlideRoute(
+          page: CafeMenuScreen(
+            restaurantId: restId,
+            restaurantName: 'Restaurant Menu',
+          ),
+        );
+      }
+    }
+
     switch (cleanPath) {
       case '/':
       case '/splash':
@@ -134,6 +154,12 @@ class AppRouter {
         return FadeThroughRoute(page: const DeliveryDashboard());
       case '/delivery/login':
         return ZeptoSlideRoute(page: const DeliveryLoginScreen());
+      case '/restaurants':
+      case '/restaurants-list':
+      case '/food':
+      case '/cafe':
+      case '/dining':
+        return FadeThroughRoute(page: const RestaurantsListScreen());
       case '/restaurant':
       case '/restaurant/dashboard':
       case '/kitchen':

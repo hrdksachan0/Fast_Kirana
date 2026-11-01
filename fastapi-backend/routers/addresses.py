@@ -23,6 +23,31 @@ def get_user_id(user: dict) -> str:
     return user.get("id") or user.get("sub") or ""
 
 
+def resolve_fallback_coordinates(lat, lng, pincode, city, street="", area=""):
+    try:
+        if lat is not None and lng is not None:
+            f_lat = float(lat)
+            f_lng = float(lng)
+            if f_lat != 0.0 or f_lng != 0.0:
+                return f_lat, f_lng
+    except (ValueError, TypeError):
+        pass
+
+    pin = str(pincode or "").strip()
+    c = str(city or "").lower().strip()
+    s = str(street or "").lower().strip()
+    a = str(area or "").lower().strip()
+
+    if pin == "209206" or "ghatampur" in c or "ghatampur" in s or "ghatampur" in a:
+        return 26.1534185, 80.1714024
+    if pin == "224122" or "akbarpur" in c or "akbarpur" in s:
+        return 26.4289124, 82.5399322
+    if pin == "816107" or "pakur" in c or "pakur" in s:
+        return 24.857778, 87.774167
+
+    return None, None
+
+
 @router.get("")
 async def get_addresses(
     current_user: dict = Depends(require_auth),
@@ -86,6 +111,8 @@ async def create_address(
                 Address.__table__.update().where(Address.userId == user_id).values(isDefault=False)
             )
 
+        final_lat, final_lng = resolve_fallback_coordinates(lat, lng, pincode, city, street, area)
+
         address = Address(
             id=f"addr_{uuid.uuid4().hex[:16]}",
             userId=user_id,
@@ -97,8 +124,8 @@ async def create_address(
             pincode=str(pincode).strip(),
             phone=clean_phone,
             isDefault=bool(is_default),
-            lat=float(lat) if lat is not None else None,
-            lng=float(lng) if lng is not None else None
+            lat=final_lat,
+            lng=final_lng
         )
 
         db.add(address)
@@ -164,8 +191,9 @@ async def update_address(
         address.pincode = str(pincode).strip()
         address.phone = clean_phone
         address.isDefault = bool(is_default)
-        address.lat = float(lat) if lat is not None else None
-        address.lng = float(lng) if lng is not None else None
+        final_lat, final_lng = resolve_fallback_coordinates(lat, lng, pincode, city, street, area)
+        address.lat = final_lat
+        address.lng = final_lng
 
         await db.commit()
         await db.refresh(address)
@@ -205,8 +233,9 @@ async def update_address_coordinates(
         if not address or address.userId != user_id:
             raise HTTPException(status_code=404, detail="Address not found or unauthorized")
 
-        address.lat = float(lat) if lat is not None else None
-        address.lng = float(lng) if lng is not None else None
+        final_lat, final_lng = resolve_fallback_coordinates(lat, lng, pincode, city, street, area)
+        address.lat = final_lat
+        address.lng = final_lng
 
         await db.commit()
         await db.refresh(address)

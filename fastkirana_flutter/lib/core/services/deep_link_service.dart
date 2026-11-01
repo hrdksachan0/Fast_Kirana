@@ -7,6 +7,11 @@ import 'package:fastminute_flutter/core/services/logger_service.dart';
 /// Supports:
 /// - fastkirana://order/{id}
 /// - fastkirana://product/{slug}
+/// - fastminute://food / fastminute://restaurants
+/// - https://fastminute.in/food
+/// - https://fastminute.in/restaurants
+/// - https://fastminute.in/order/{id}
+/// - https://fastminute.in/orders/{id}
 /// - https://fastkirana.in/order/{id}
 /// - https://fastkirana.in/orders/{id}
 /// - https://www.fastkirana.in/order/{id}
@@ -82,6 +87,15 @@ class DeepLinkService {
           AppRouter.navigatorKey.currentState?.pushNamed('/cart');
           return;
         }
+        if (host == 'food' || host == 'restaurants' || host == 'cafe') {
+          final restId = pathSegments.isNotEmpty ? pathSegments.first : uri.queryParameters['id'];
+          if (restId != null && restId.isNotEmpty) {
+            AppRouter.navigatorKey.currentState?.pushNamed('/restaurants/$restId');
+          } else {
+            AppRouter.navigatorKey.currentState?.pushNamed('/restaurants');
+          }
+          return;
+        }
       }
 
       // ─── Case 2: Universal HTTPS Links (https://fastminute.in/order/123) ───
@@ -89,6 +103,17 @@ class DeepLinkService {
         if (host.contains('fastminute.in') || host.contains('fastkirana.in')) {
           if (pathSegments.isNotEmpty) {
             final firstSegment = pathSegments[0].toLowerCase();
+
+            // Food & Restaurants: /food or /restaurants or /cafe
+            if (firstSegment == 'food' || firstSegment == 'restaurants' || firstSegment == 'cafe') {
+              final restId = pathSegments.length >= 2 ? pathSegments[1] : null;
+              if (restId != null && restId.isNotEmpty) {
+                AppRouter.navigatorKey.currentState?.pushNamed('/restaurants/$restId');
+              } else {
+                AppRouter.navigatorKey.currentState?.pushNamed('/restaurants');
+              }
+              return;
+            }
 
             // Order tracking: /order/{id} or /orders/{id}
             if ((firstSegment == 'order' || firstSegment == 'orders') && pathSegments.length >= 2) {
@@ -108,7 +133,7 @@ class DeepLinkService {
             // Category browsing: /category/{slug} or /categories
             if (firstSegment == 'category' || firstSegment == 'categories') {
               // ignore: unused_local_variable
-          final slug = pathSegments.length >= 2 ? pathSegments[1] : '';
+              final slug = pathSegments.length >= 2 ? pathSegments[1] : '';
               if (slug.isNotEmpty) {
                 AppRouter.navigatorKey.currentState?.pushNamed('/category/$slug');
               } else {

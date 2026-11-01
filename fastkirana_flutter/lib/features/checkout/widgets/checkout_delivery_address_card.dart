@@ -233,7 +233,9 @@ class CheckoutDeliveryAddressCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     !tier.isServiceable
-                        ? '⚠️ Outside 5.0 km Hub (${tier.distanceKm.toStringAsFixed(1)} km) • Delivery Unavailable'
+                        ? (tier.distanceKm > 0.0
+                            ? '⚠️ Outside 5.0 km Hub (${tier.distanceKm.toStringAsFixed(1)} km) • Delivery Unavailable'
+                            : '⚠️ Map Location Needed • Tap CHANGE to set location')
                         : '${tier.tierName} (${tier.distanceKm.toStringAsFixed(1)} km) • ${tier.freeDeliveryLabel}',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 11),

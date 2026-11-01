@@ -307,8 +307,12 @@ class NotificationService {
     if (screen == 'picker') {
       return '/picker';
     }
-    if (screen == 'restaurant-console' || screen == 'kitchen' || screen == 'restaurant') {
+    if (screen == 'restaurant-console' || screen == 'kitchen') {
       return '/kitchen';
+    }
+    if (screen == 'restaurants' || screen == 'food' || screen == 'cafe' || screen == 'dining' || screen == 'restaurant-list') {
+      final rId = data['restaurantId'] ?? data['id'];
+      return (rId != null && rId.toString().trim().isNotEmpty) ? '/restaurants/$rId' : '/restaurants';
     }
     if (screen == 'categories' || screen == 'category') {
       final cat = data['categoryId'] ?? data['category'];

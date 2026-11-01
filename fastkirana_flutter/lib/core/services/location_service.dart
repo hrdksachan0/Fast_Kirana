@@ -1261,78 +1261,58 @@ class LocationService {
 
 
 
-    if (address == null || address.latitude == null || address.longitude == null || (address.latitude == 0.0 && address.longitude == 0.0)) {
-
-
-
+    if (address == null) {
       final fee = settings?.deliveryFee ?? 25.0;
-
-
-
       return DeliveryTierInfo(
-
-
-
         distanceKm: 0.0,
-
-
-
         deliveryFee: fee,
-
-
-
         baseFee: fee,
-
-
-
         freeDeliveryThreshold: (settings?.freeDeliveryThreshold ?? 199.0),
-
-
-
         isServiceable: false,
-
-
-
         tierName: 'Select Address',
-
-
-
         freeDeliveryLabel: 'Select address to check free delivery',
-
-
-
         feeDescription: 'Please select a delivery address to verify coverage and delivery fee.',
-
-
-
       );
-
-
-
     }
 
+    double? lat = address.latitude;
+    double? lng = address.longitude;
 
+    // Defensive fallback: If address is in Ghatampur zone but coordinates were missing,
+    // fallback to central hub coords so checkout is never blocked with misleading "0.0 km" error.
+    if (lat == null || lng == null || (lat == 0.0 && lng == 0.0)) {
+      final pin = address.pincode.trim();
+      final city = address.city.toLowerCase().trim();
+      final street = address.street.toLowerCase().trim();
+      final area = address.area.toLowerCase().trim();
+      final isGhatampurZone = pin == '209206' ||
+          city.contains('ghatampur') ||
+          street.contains('ghatampur') ||
+          area.contains('ghatampur');
+
+      if (isGhatampurZone) {
+        lat = originLat ?? AppConfig.darkstoreLat;
+        lng = originLng ?? AppConfig.darkstoreLng;
+      } else {
+        final fee = settings?.deliveryFee ?? 25.0;
+        return DeliveryTierInfo(
+          distanceKm: 0.0,
+          deliveryFee: fee,
+          baseFee: fee,
+          freeDeliveryThreshold: (settings?.freeDeliveryThreshold ?? 199.0),
+          isServiceable: false,
+          tierName: 'Set Map Location',
+          freeDeliveryLabel: 'Set map location to check delivery',
+          feeDescription: 'Please tap Change to pin your address location on the map.',
+        );
+      }
+    }
 
     final dist = getDistanceKm(
-
-
-
-      address.latitude!,
-
-
-
-      address.longitude!,
-
-
-
+      lat,
+      lng,
       originLat: originLat,
-
-
-
       originLng: originLng,
-
-
-
     );
 
 

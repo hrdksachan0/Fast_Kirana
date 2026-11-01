@@ -86,6 +86,44 @@ async function resolveUserId(request: NextRequest | Request, session: any): Prom
   return null
 }
 
+function resolveFallbackCoordinates(
+  lat: any,
+  lng: any,
+  pincode: string,
+  city: string,
+  street?: string,
+  area?: string
+): { lat: number | null; lng: number | null } {
+  const parsedLat = lat != null ? parseFloat(lat.toString()) : null
+  const parsedLng = lng != null ? parseFloat(lng.toString()) : null
+
+  if (parsedLat != null && !isNaN(parsedLat) && parsedLng != null && !isNaN(parsedLng) && (parsedLat !== 0 || parsedLng !== 0)) {
+    return { lat: parsedLat, lng: parsedLng }
+  }
+
+  const pin = (pincode || '').toString().trim()
+  const c = (city || '').toString().toLowerCase().trim()
+  const s = (street || '').toString().toLowerCase().trim()
+  const a = (area || '').toString().toLowerCase().trim()
+
+  // Ghatampur Central Hub (209206)
+  if (pin === '209206' || c.includes('ghatampur') || s.includes('ghatampur') || a.includes('ghatampur')) {
+    return { lat: 26.1534185, lng: 80.1714024 }
+  }
+
+  // Akbarpur Central Hub (224122)
+  if (pin === '224122' || c.includes('akbarpur') || s.includes('akbarpur')) {
+    return { lat: 26.4289124, lng: 82.5399322 }
+  }
+
+  // Pakur Central Hub (816107)
+  if (pin === '816107' || c.includes('pakur') || s.includes('pakur')) {
+    return { lat: 24.857778, lng: 87.774167 }
+  }
+
+  return { lat: null, lng: null }
+}
+
 export async function GET(request: NextRequest) {
   const session = await auth()
   const userId = await resolveUserId(request, session)
@@ -141,8 +179,8 @@ export async function POST(request: NextRequest) {
         pincode: pincode.trim(),
         phone: phone.trim(),
         isDefault: !!isDefault,
-        lat: lat ? parseFloat(lat.toString()) : null,
-        lng: lng ? parseFloat(lng.toString()) : null,
+        lat: resolveFallbackCoordinates(lat, lng, pincode, city, street, area).lat,
+        lng: resolveFallbackCoordinates(lat, lng, pincode, city, street, area).lng,
       },
     })
 
@@ -238,8 +276,8 @@ export async function PUT(request: Request) {
         pincode: pincode.trim(),
         phone: phone.trim(),
         isDefault: !!isDefault,
-        lat: lat ? parseFloat(lat.toString()) : null,
-        lng: lng ? parseFloat(lng.toString()) : null,
+        lat: resolveFallbackCoordinates(lat, lng, pincode, city, street, area).lat,
+        lng: resolveFallbackCoordinates(lat, lng, pincode, city, street, area).lng,
       },
     })
 
@@ -271,8 +309,8 @@ export async function PATCH(request: Request) {
     const updatedAddress = await prisma.address.update({
       where: { id },
       data: {
-        lat: lat ? parseFloat(lat.toString()) : null,
-        lng: lng ? parseFloat(lng.toString()) : null,
+        lat: resolveFallbackCoordinates(lat, lng, pincode, city, street, area).lat,
+        lng: resolveFallbackCoordinates(lat, lng, pincode, city, street, area).lng,
       },
     })
 

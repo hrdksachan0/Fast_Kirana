@@ -4858,6 +4858,7 @@ async def edit_order(
 
     grocery_in_prepared = any(p["spec"]["type"] == OrderType.GROCERY for p in prepared)
     delivery_fee_charged = is_combined_free
+    misc_fee_charged = str(order.deliveryMethod) != "DELIVERY"
 
     # Discount preservation and proportional apportionment
     total_combined_discount = float(order.discount or 0.0) + sum(float(ec.discount or 0.0) for ec in existing_companions)
@@ -4879,10 +4880,13 @@ async def edit_order(
             if not delivery_fee_charged and p["subtotalVal"] > 0:
                 calc_del = delivery_fee_setting
                 delivery_fee_charged = True
-            if str(order.deliveryMethod) == "DELIVERY":
+            if not misc_fee_charged and p["subtotalVal"] > 0:
                 calc_misc = misc_fee_setting
+                misc_fee_charged = True
         elif p_type == OrderType.RESTAURANT:
-            calc_misc = float(settings_map.get("packaging_fee") or 5.0)
+            if not misc_fee_charged and p["subtotalVal"] > 0:
+                calc_misc = float(settings_map.get("packaging_fee") or 5.0)
+                misc_fee_charged = True
             if not grocery_in_prepared and not delivery_fee_charged and p["subtotalVal"] > 0:
                 calc_del = delivery_fee_setting
                 delivery_fee_charged = True

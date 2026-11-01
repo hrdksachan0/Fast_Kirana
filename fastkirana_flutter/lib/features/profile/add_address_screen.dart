@@ -174,6 +174,13 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
       final userId = prefs.getString('user_id') ?? 'usr_current';
       final label = _addressTypes[_selectedTypeIndex]['tag'] as String;
 
+      double safeLat = _latitude;
+      double safeLng = _longitude;
+      if (safeLat == 0.0 || safeLng == 0.0) {
+        safeLat = AppConfig.darkstoreLat;
+        safeLng = AppConfig.darkstoreLng;
+      }
+
       final addressData = {
         if (widget.initialAddress != null) 'id': widget.initialAddress!.id,
         'userId': userId,
@@ -185,8 +192,8 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
         'city': city.isNotEmpty ? city : 'Kanpur Nagar',
         'pincode': pincode.isNotEmpty ? pincode : '209206',
         'phone': phone,
-        'lat': _latitude,
-        'lng': _longitude,
+        'lat': safeLat,
+        'lng': safeLng,
         'isDefault': _isDefault,
       };
 

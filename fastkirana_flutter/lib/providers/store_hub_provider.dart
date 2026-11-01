@@ -81,6 +81,24 @@ final nearestHubResultProvider = Provider<NearestHubResult>((ref) {
       address.latitude == null ||
       address.longitude == null ||
       (address.latitude == 0.0 && address.longitude == 0.0)) {
+    final pin = address?.pincode.trim() ?? '';
+    final city = address?.city.toLowerCase().trim() ?? '';
+    final street = address?.street.toLowerCase().trim() ?? '';
+    final area = address?.area.toLowerCase().trim() ?? '';
+    final isGhatampur = pin == '209206' ||
+        city.contains('ghatampur') ||
+        street.contains('ghatampur') ||
+        area.contains('ghatampur');
+
+    if (isGhatampur) {
+      return const NearestHubResult(
+        hub: StoreHub.defaultGhatampur,
+        distanceKm: 0.5,
+        isServiceable: true,
+        hasSelectedLocation: true,
+      );
+    }
+
     return NearestHubResult(
       hub: hubs.first,
       distanceKm: 0.0,

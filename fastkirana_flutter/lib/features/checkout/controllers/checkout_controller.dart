@@ -743,13 +743,16 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         final originLabel = cartRestaurant != null ? cartRestaurant.name : 'our central hub';
         final maxRad = (cartRestaurant?.deliveryRadiusKm ?? 5.0).toStringAsFixed(1);
+        final errorMsg = tier.distanceKm > 0.0
+            ? 'Delivery is currently limited to a maximum of $maxRad km from $originLabel. (Selected location is ${tier.distanceKm.toStringAsFixed(1)} km away)'
+            : 'Please tap CHANGE on your delivery address to set your location on the map.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: AppDesignSystem.red600,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Text(
-              'Delivery is currently limited to a maximum of $maxRad km from $originLabel. (Selected location is ${tier.distanceKm.toStringAsFixed(1)} km away)',
+              errorMsg,
               style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
             ),
           ),
@@ -1092,13 +1095,16 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         final originLabel = cartRestaurant != null ? cartRestaurant.name : 'our central hub';
         final maxRad = (cartRestaurant?.deliveryRadiusKm ?? 5.0).toStringAsFixed(1);
+        final errorMsg = tier.distanceKm > 0.0
+            ? 'Delivery is currently limited to a maximum of $maxRad km from $originLabel. (Selected address is ${tier.distanceKm.toStringAsFixed(1)} km away)'
+            : 'Please tap CHANGE on your delivery address to set your location on the map.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: AppDesignSystem.red600,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Text(
-              'Delivery is currently limited to a maximum of $maxRad km from $originLabel. (Selected address is ${tier.distanceKm.toStringAsFixed(1)} km away)',
+              errorMsg,
               style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
             ),
           ),

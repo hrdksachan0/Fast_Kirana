@@ -283,7 +283,9 @@ class _UnserviceableSheetContentState extends ConsumerState<_UnserviceableSheetC
                 const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFFE11D48)),
                 const SizedBox(width: 6),
                 Text(
-                  'Your location is ${widget.distanceKm.toStringAsFixed(1)} km outside our delivery zone',
+                  widget.distanceKm > 0.0
+                      ? 'Your location is ${widget.distanceKm.toStringAsFixed(1)} km outside our delivery zone'
+                      : 'Location coordinates missing. Tap below to select on map',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: FontWeight.w800,

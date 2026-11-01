@@ -25,6 +25,24 @@ class Address with _$Address {
   factory Address.fromJson(Map<String, dynamic> json) {
     final rawLat = json['latitude'] ?? json['lat'];
     final rawLng = json['longitude'] ?? json['lng'];
+    double? lat = rawLat != null ? double.tryParse(rawLat.toString()) : null;
+    double? lng = rawLng != null ? double.tryParse(rawLng.toString()) : null;
+
+    final pin = json['pincode']?.toString().trim() ?? '';
+    final city = json['city']?.toString().toLowerCase().trim() ?? '';
+    final street = json['street']?.toString().toLowerCase().trim() ?? '';
+    final area = json['area']?.toString().toLowerCase().trim() ?? '';
+    final isGhatampur = pin == '209206' ||
+        city.contains('ghatampur') ||
+        street.contains('ghatampur') ||
+        area.contains('ghatampur');
+
+    // Safe fallback: If coordinates were missing in database but address is confirmed in Ghatampur zone,
+    // fallback to central hub coordinates so order placement is never blocked with "0.0 km" error.
+    if ((lat == null || lng == null || (lat == 0.0 && lng == 0.0)) && isGhatampur) {
+      lat = 26.1534185;
+      lng = 80.1714024;
+    }
 
     return Address(
       id: json['id']?.toString() ?? '',
@@ -36,8 +54,8 @@ class Address with _$Address {
       city: json['city']?.toString() ?? '',
       pincode: json['pincode']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
-      latitude: rawLat != null ? double.tryParse(rawLat.toString()) : null,
-      longitude: rawLng != null ? double.tryParse(rawLng.toString()) : null,
+      latitude: lat,
+      longitude: lng,
       isDefault: json['isDefault'] == true,
     );
   }

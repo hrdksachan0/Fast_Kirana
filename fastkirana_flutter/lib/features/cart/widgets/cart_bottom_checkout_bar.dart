@@ -83,7 +83,9 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                 Flexible(
                   child: Text(
                     !tier.isServiceable
-                        ? 'Outside 5.0 km Central Hub Delivery Zone'
+                        ? (tier.distanceKm > 0.0
+                            ? 'Outside Delivery Zone (${tier.distanceKm.toStringAsFixed(1)} km)'
+                            : 'Location Missing • Tap to Set on Map')
                         : (isFreeUnlocked
                             ? 'FREE Delivery Unlocked • You saved ₹${(totalSavings + tier.baseFee).toInt()}!'
                             : 'Add ₹${remainingForFree.toInt()} more to get FREE Delivery'),
