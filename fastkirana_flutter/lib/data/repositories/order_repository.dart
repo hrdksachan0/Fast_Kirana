@@ -34,13 +34,15 @@ class OrderRepository {
     List<Order> localOrders = [];
 
     final rawJson = prefs.getString(cacheKey);
-    if (rawJson != null && rawJson.isNotEmpty) {
+    if (rawJson != null && rawJson.trim().isNotEmpty) {
       try {
-        final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
-        localOrders = decoded
-            .whereType<Map<String, dynamic>>()
-            .map((j) => Order.fromJson(j))
-            .toList();
+        final res = jsonDecode(rawJson);
+        if (res is List) {
+          localOrders = res
+              .whereType<Map<String, dynamic>>()
+              .map((j) => Order.fromJson(j))
+              .toList();
+        }
       } catch (e, st) { LoggerService.error('OrderRepository: map Orders', e, st); }
     }
 
@@ -163,13 +165,15 @@ class OrderRepository {
     List<Order> localOrders = [];
 
     final rawJson = prefs.getString(cacheKey);
-    if (rawJson != null && rawJson.isNotEmpty) {
+    if (rawJson != null && rawJson.trim().isNotEmpty) {
       try {
-        final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
-        localOrders = decoded
-            .whereType<Map<String, dynamic>>()
-            .map((j) => Order.fromJson(j))
-            .toList();
+        final res = jsonDecode(rawJson);
+        if (res is List) {
+          localOrders = res
+              .whereType<Map<String, dynamic>>()
+              .map((j) => Order.fromJson(j))
+              .toList();
+        }
       } catch (e, st) { LoggerService.error('OrderRepository: map Orders', e, st); }
     }
 
@@ -276,7 +280,15 @@ class OrderRepository {
       final rawJson = prefs.getString(key);
       if (rawJson == null || rawJson.isEmpty) continue;
 
-      final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
+      List<dynamic> decoded;
+      try {
+        if (rawJson.trim().isEmpty) continue;
+        final res = jsonDecode(rawJson);
+        if (res is! List) continue;
+        decoded = res;
+      } catch (_) {
+        continue;
+      }
       final localOrders = decoded
           .whereType<Map<String, dynamic>>()
           .map((j) => Order.fromJson(j))
@@ -328,10 +340,11 @@ class OrderRepository {
     // ── Update local cache first so UI reflects cancellation immediately ──
     for (final key in keys) {
       final rawJson = prefs.getString(key);
-      if (rawJson == null || rawJson.isEmpty) continue;
+      if (rawJson == null || rawJson.trim().isEmpty) continue;
       try {
-        final List<dynamic> decoded = jsonDecode(rawJson) as List<dynamic>;
-        final List<Order> localOrders = decoded
+        final res = jsonDecode(rawJson);
+        if (res is! List) continue;
+        final List<Order> localOrders = res
             .whereType<Map<String, dynamic>>()
             .map((j) => Order.fromJson(j))
             .toList();

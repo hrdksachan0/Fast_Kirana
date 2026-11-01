@@ -207,7 +207,7 @@ class ProfileEditModal {
                     final newEmail = emailCtrl.text.trim();
 
                     if (newName.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
                         const SnackBar(
                           content: Text('Please enter a valid name'),
                           behavior: SnackBarBehavior.floating,
@@ -233,7 +233,7 @@ class ProfileEditModal {
                         if (!verified) return;
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
                             SnackBar(
                               content: Text('Failed to send phone OTP: $e'),
                               behavior: SnackBarBehavior.floating,
@@ -245,7 +245,7 @@ class ProfileEditModal {
                     }
 
                     // 2. Email changed -> Require Email OTP Verification
-                    if (newEmail.isNotEmpty && newEmail.toLowerCase() != (user.email.toLowerCase())) {
+                    if (newEmail.isNotEmpty && newEmail.toLowerCase() != user.email.toLowerCase()) {
                       try {
                         await authRepo.sendEmailOtp(newEmail);
                         if (!context.mounted) return;
@@ -258,7 +258,7 @@ class ProfileEditModal {
                         if (!verified) return;
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
                             SnackBar(
                               content: Text('Failed to send email OTP: $e'),
                               behavior: SnackBarBehavior.floating,
@@ -292,9 +292,11 @@ class ProfileEditModal {
 
                     await ref.read(authProvider.notifier).updateUser(updatedUser);
 
-                    if (context.mounted) {
+                    if (ctx.mounted && Navigator.canPop(ctx)) {
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                    }
+                    if (context.mounted) {
+                      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
                         const SnackBar(
                           backgroundColor: AppDesignSystem.green700,
                           content: Row(

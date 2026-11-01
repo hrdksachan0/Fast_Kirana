@@ -31,7 +31,23 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         if (mounted) state = const AsyncValue.data(null);
         return;
       }
-      final json = jsonDecode(raw) as Map<String, dynamic>;
+      if (raw.trim().isEmpty) {
+        if (mounted) state = const AsyncValue.data(null);
+        return;
+      }
+      Map<String, dynamic> json;
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is! Map<String, dynamic>) {
+          if (mounted) state = const AsyncValue.data(null);
+          return;
+        }
+        json = decoded;
+      } catch (e) {
+        LoggerService.error("AuthNotifier: Corrupt user_data json in storage: $e");
+        if (mounted) state = const AsyncValue.data(null);
+        return;
+      }
       var user = User.fromJson(json);
 
       // Check if assigned_store_id was saved separately or in json

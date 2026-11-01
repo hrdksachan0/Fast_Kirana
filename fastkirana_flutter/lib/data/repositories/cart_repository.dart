@@ -166,7 +166,7 @@ class CartRepository {
       }
       final cacheKey = await _getCartCacheKey();
       final existingData = prefs.getString(cacheKey);
-      if (existingData != null) {
+      if (existingData != null && existingData.trim().isNotEmpty) {
         final decoded = jsonDecode(existingData);
         if (decoded is Map<String, dynamic>) {
           final deltas = (decoded['appliedOrderDeltas'] as List?)?.map((e) => e.toString()).toList() ?? [];
@@ -243,7 +243,7 @@ class CartRepository {
 
     List<String> preservedDeltas = [];
     final existingData = prefs.getString(cacheKey);
-    if (existingData != null) {
+    if (existingData != null && existingData.trim().isNotEmpty) {
       try {
         final decoded = jsonDecode(existingData);
         if (decoded is Map && decoded['appliedOrderDeltas'] is List) {

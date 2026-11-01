@@ -622,7 +622,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with WidgetsBindingObserv
       await authRepo.sendOtp(widget.identifier);
       _startResendCooldown();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         SnackBar(
           content: const Text('OTP code resent successfully!'),
           backgroundColor: const Color(0xFF16A34A),

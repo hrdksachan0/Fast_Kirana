@@ -120,12 +120,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   @override
   void initState() {
     super.initState();
-    if (widget.initialOrder != null) {
-      _order = widget.initialOrder;
-      _isLoading = false;
-      _setupCoordinatesFromOrder(widget.initialOrder!);
-    }
-
+    // Initialize animation & confetti controllers first so subroutines (_setupCoordinatesFromOrder) never hit LateInitializationError
     _confettiController = ConfettiController(duration: const Duration(seconds: 4));
     _riderAnimController = AnimationController(
       vsync: this,
@@ -136,6 +131,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..addListener(_onPolyTweenTick);
+
+    if (widget.initialOrder != null) {
+      _order = widget.initialOrder;
+      _isLoading = false;
+      _setupCoordinatesFromOrder(widget.initialOrder!);
+    }
 
     _initCustomMarkers();
     _checkAndRequestLocationPermission();
@@ -165,9 +166,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _pollTimer?.cancel();
     _etaUpdateTimer?.cancel();
     _sseLineSubscription?.cancel();
-    _riderAnimController.dispose();
-    _polyTweenController.dispose();
-    _confettiController.dispose();
+    try {
+      _riderAnimController.dispose();
+    } catch (_) {}
+    try {
+      _polyTweenController.dispose();
+    } catch (_) {}
+    try {
+      _confettiController.dispose();
+    } catch (_) {}
     _mapController?.dispose();
     _audioPlayer.dispose();
     for (final ch in _supabaseChannels) {
@@ -791,15 +798,17 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
 
     // Manage animated Polyline tween lifecycle during active delivery
-    if (order.status == OrderStatus.shipped) {
-      if (!_polyTweenController.isAnimating) {
-        _polyTweenController.repeat();
+    try {
+      if (order.status == OrderStatus.shipped) {
+        if (!_polyTweenController.isAnimating) {
+          _polyTweenController.repeat();
+        }
+      } else if (order.status == OrderStatus.delivered || order.status == OrderStatus.cancelled) {
+        if (_polyTweenController.isAnimating) {
+          _polyTweenController.stop();
+        }
       }
-    } else if (order.status == OrderStatus.delivered || order.status == OrderStatus.cancelled) {
-      if (_polyTweenController.isAnimating) {
-        _polyTweenController.stop();
-      }
-    }
+    } catch (_) {}
 
     _refreshMapElements();
     _calculateETA();
