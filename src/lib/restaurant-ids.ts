@@ -3,7 +3,9 @@
  * Maps legacy CUIDs, slugs, and variations to canonical database IDs:
  * - REST-101: A.S. Restaurant
  * - REST-102: Wedson Restaurant
+ * - REST-103: Bal Udyan Restaurant
  * - REST-104: Hot Pizza Lovers
+ * - REST-105: Zayka Non Veg Hotel
  */
 export interface SessionLike {
   user?: {
@@ -60,6 +62,17 @@ export function normalizeRestaurantId(id: string | null | undefined): string | n
     clean.includes('pizza')
   ) {
     return 'REST-104'
+  }
+
+  if (
+    clean === '0b2470fa-8221-49e1-aa3b-4c98b2bb5941' ||
+    clean === 'rest-105' ||
+    clean === 'zayka' ||
+    clean === 'zayka-non-veg' ||
+    clean === 'zayka-non-veg-hotel' ||
+    clean.includes('zayka')
+  ) {
+    return 'REST-105'
   }
 
   return id

@@ -3069,18 +3069,20 @@ async def get_order_details(
         return _order_details_cache[cache_key]
 
     clean_id = id.strip().lstrip("#")
-    stmt = select(Order).options(
-        selectinload(Order.items),
-        selectinload(Order.address),
-        selectinload(Order.user)
-    ).where(or_(
+    order_conditions = [
         Order.id == id,
         Order.readableId == id,
         Order.id == clean_id,
         Order.readableId == clean_id,
         Order.readableId.like(f"{clean_id}-%"),
-        Order.id.like(f"%{clean_id}%")
-    )).order_by(Order.createdAt.asc())
+    ]
+    if len(clean_id) >= 15:
+        order_conditions.append(Order.id.like(f"{clean_id}%"))
+    stmt = select(Order).options(
+        selectinload(Order.items),
+        selectinload(Order.address),
+        selectinload(Order.user)
+    ).where(or_(*order_conditions)).order_by(Order.createdAt.desc())
     res = await db.execute(stmt)
     order = res.scalars().first()
 
@@ -4330,6 +4332,8 @@ def normalize_restaurant_id(rid: Optional[str]) -> Optional[str]:
         return "REST-103"
     if "pizza" in r or "104" in r:
         return "REST-104"
+    if "zayka" in r or "105" in r or "0b2470fa" in r:
+        return "REST-105"
     return str(rid).strip()
 
 
