@@ -180,6 +180,18 @@ function ProductCardComponent({ product, isCompact = false, renderArtwork }: Pro
   const productType = getProductType(product)
   const isCafe = productType === 'CAFE'
   const isRestaurant = productType === 'RESTAURANT' || Boolean(product.restaurantId) || Boolean((product as any).restaurantId)
+  const isNonVeg = useMemo(() => {
+    const pTags = (product.tags || []).map((t: string) => String(t).toLowerCase())
+    if (pTags.some((t: string) => t === 'non-veg' || t === 'nonveg' || t.includes('non-veg') || t.includes('nonveg') || t === 'egg' || t.includes('chicken') || t.includes('mutton') || t.includes('fish'))) {
+      return true
+    }
+    const pName = (product.name || '').toLowerCase()
+    const nonVegKeywords = ['chicken', 'mutton', 'egg', 'fish', 'meat', 'non-veg', 'nonveg', 'seekh kebab', 'shami kebab', 'prawn', 'keema']
+    if (nonVegKeywords.some(kw => pName.includes(kw))) {
+      return true
+    }
+    return false
+  }, [product.tags, product.name])
   const categorySlug = product.category?.slug || (product as any).categorySlug || ''
   const isCategoryOpen = categoryStatus[categorySlug] !== false
   const isStoreClosed = isProductStoreClosed(
@@ -663,9 +675,15 @@ function ProductCardComponent({ product, isCompact = false, renderArtwork }: Pro
           {/* ROW 3: Product Name / Title */}
           <div className="flex items-start gap-1 mb-0.5 min-w-0">
             {isRestaurant && (
-              <div className="mt-0.5 shrink-0 flex items-center justify-center h-3 w-3 rounded-2xs border border-emerald-600 bg-white dark:bg-zinc-900 shadow-2xs" title="Pure Veg Dish">
-                <div className="h-1 w-1 rounded-full bg-emerald-600" />
-              </div>
+              isNonVeg ? (
+                <div className="mt-0.5 shrink-0 flex items-center justify-center h-3 w-3 rounded-2xs border border-rose-600 bg-white dark:bg-zinc-900 shadow-2xs" title="Non-Veg Dish">
+                  <div className="h-1.5 w-1.5 rounded-full bg-rose-600" />
+                </div>
+              ) : (
+                <div className="mt-0.5 shrink-0 flex items-center justify-center h-3 w-3 rounded-2xs border border-emerald-600 bg-white dark:bg-zinc-900 shadow-2xs" title="Pure Veg Dish">
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                </div>
+              )
             )}
             <h3 className={cn(
               "font-bold text-zinc-850 dark:text-zinc-100 line-clamp-2 leading-[1.3] transition-colors flex-1 min-w-0 group-hover:text-emerald-600 dark:group-hover:text-emerald-400",

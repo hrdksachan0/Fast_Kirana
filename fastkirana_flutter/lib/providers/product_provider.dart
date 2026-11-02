@@ -96,11 +96,18 @@ final productsByRestaurantProvider = FutureProvider.family<List<Product>, String
 
 // Single shared product catalog for home screen — fetches ALL products once,
 // sections filter locally instead of each making separate API calls.
+// Stale-While-Revalidate (SWR): uses disk cache on cold start (<10ms) and refreshes in background.
 final homeProductCatalogProvider = FutureProvider<List<Product>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
-  return repo.getProducts(limit: 1000, storeId: hub.id, includeRestaurants: false, forceRefresh: true);
+  final forceRefresh = ref.read(catalogRecoveryEpochProvider) > 0;
+  return repo.getProducts(
+    limit: 1000,
+    storeId: hub.id,
+    includeRestaurants: false,
+    forceRefresh: forceRefresh,
+  );
 });
 
 // Dedicated admin products provider that fetches 100% of products (including 0 stock and unavailable)

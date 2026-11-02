@@ -80,8 +80,11 @@ export default function RestaurantKitchenPage() {
 
   // Fetch available restaurants for selection
   useEffect(() => {
-    const storeParam = (session?.user as any)?.assignedStoreId ? `?storeId=${encodeURIComponent((session?.user as any).assignedStoreId)}` : ''
-    fetch(`${apiUrl()}/api/restaurants${storeParam}`)
+    const base = apiUrl('/api/restaurants') || ''
+    const storeParam = (session?.user as any)?.assignedStoreId ? `storeId=${encodeURIComponent((session?.user as any).assignedStoreId)}&` : ''
+    fetch(`${base}/api/restaurants?${storeParam}all=true&_t=${Date.now()}`, {
+      cache: 'no-store'
+    })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         const list = Array.isArray(data) ? data : (data?.restaurants || [])

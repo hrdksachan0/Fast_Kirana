@@ -276,8 +276,18 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
 
   const hasNonVegItems = useMemo(() => {
     if (restaurant.isPureVeg) return false
-    return products.some((p: any) => p.tags?.some((t: string) => t.toLowerCase() === 'non-veg' || t.toLowerCase() === 'nonveg'))
-  }, [restaurant.isPureVeg, products])
+    const rName = (restaurant.name || '').toLowerCase()
+    const rTags = (restaurant.cuisineTags || []).map((t: string) => t.toLowerCase())
+    if (rName.includes('non veg') || rName.includes('non-veg') || rTags.includes('non-veg') || rTags.includes('nonveg')) {
+      return true
+    }
+    return products.some((p: any) => {
+      const pTags = (p.tags || []).map((t: string) => t.toLowerCase())
+      const pName = (p.name || '').toLowerCase()
+      const nonVegKeywords = ['chicken', 'mutton', 'egg', 'fish', 'meat', 'non-veg', 'nonveg', 'kebab', 'prawn', 'keema']
+      return pTags.some((t: string) => nonVegKeywords.some(kw => t.includes(kw))) || nonVegKeywords.some(kw => pName.includes(kw))
+    })
+  }, [restaurant.isPureVeg, restaurant.name, restaurant.cuisineTags, products])
 
   // Generate categories from products and menu sections (strictly restaurant-defined)
   const categories = useMemo(() => {
@@ -311,7 +321,11 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
     if (isVegOnly) {
       filteredProducts = filteredProducts.filter(p => {
         const pTags = (p.tags || []).map((t: string) => t.toLowerCase())
-        const isNonVeg = pTags.includes('non-veg') || pTags.includes('nonveg')
+        const pName = (p.name || '').toLowerCase()
+        const nonVegKeywords = ['non-veg', 'nonveg', 'chicken', 'mutton', 'fish', 'egg', 'meat', 'prawn', 'keema']
+        const isNonVeg =
+          pTags.some((t: string) => nonVegKeywords.some(kw => t.includes(kw))) ||
+          nonVegKeywords.some(kw => pName.includes(kw))
         return !isNonVeg
       })
     }
@@ -767,9 +781,13 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
                 <Leaf size={12} className={isVegOnly ? "text-white" : "text-emerald-600"} />
                 <span>Veg Only</span>
               </button>
-            ) : (
+            ) : restaurant.isPureVeg ? (
               <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 shrink-0">
                 <Leaf size={12} className="text-emerald-500" /> 100% Pure Veg Kitchen
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] font-black text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20 shrink-0">
+                🍗 Non-Veg Kitchen
               </span>
             )}
           </div>

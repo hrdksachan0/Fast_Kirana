@@ -148,48 +148,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
 
 
-    // Keep splash active until essential catalog and auth are loaded (minimum 1200ms)
-
-    Future.wait([
-
-      Future.delayed(const Duration(milliseconds: 1200)),
-
-      prefFuture,
-
-      locationFuture,
-
-      hubsFuture,
-
-      categoriesFuture,
-
-      catalogFuture,
-
-      bannersFuture,
-
-    ]).then((results) {
-
-      final prefs = results[1] as SharedPreferences;
-
-      _safeNavigate(prefs: prefs);
-
-    }).catchError((_) {
-
-      _safeNavigate();
-
-    });
-
-
-
-    // Guaranteed watchdog timeout: App will NEVER stay stuck on splash screen for more than 4.0s
-
-    Future.delayed(const Duration(milliseconds: 4000), () {
-
-      if (!_hasNavigated && mounted) {
-
-        _safeNavigate();
-
-      }
-
+    // Ultra-Fast Cold Start (<1s):
+    // Only wait for the smooth splash logo animation (600ms) and local auth credentials check.
+    // Disk cache (Stale-While-Revalidate) instantly hydrates Home screen with zero network blockage!
+    Future.wait([
+      Future.delayed(const Duration(milliseconds: 600)),
+      prefFuture,
+    ]).then((results) {
+      final prefs = results[1] as SharedPreferences;
+      _safeNavigate(prefs: prefs);
+    }).catchError((_) {
+      _safeNavigate();
+    });
+
+    // Failsafe watchdog: App will NEVER stay stuck on splash screen for more than 1.5s
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (!_hasNavigated && mounted) {
+        _safeNavigate();
+      }
     });
 
   }

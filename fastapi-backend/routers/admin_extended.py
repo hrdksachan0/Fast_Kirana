@@ -363,12 +363,13 @@ async def admin_create_product(
         stores_res = await db.execute(select(DarkStore.id))
         all_store_ids = stores_res.scalars().all()
         for sid in all_store_ids:
-            store_stock = initial_stock_num if (not target_store_id or sid == target_store_id) else 0
+            is_target = not target_store_id or sid == target_store_id
+            store_stock = initial_stock_num if is_target else 0
             db.add(StoreInventory(
                 productId=product.id,
                 storeId=sid,
                 stock=store_stock,
-                isAvailable=True
+                isAvailable=is_target
             ))
     except Exception as e:
         logger.warning(f"StoreInventory seed error in admin_create_product: {e}")

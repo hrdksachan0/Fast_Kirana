@@ -74,8 +74,9 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
 
   // Fetch outlets dynamically scoped by storeId
   useEffect(() => {
-    const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-    fetch(`${apiUrl()}/api/restaurants${storeParam}`, { headers: authHeaders })
+    const base = apiUrl('/api/restaurants') || ''
+    const storeParam = storeId && storeId !== 'all' ? `storeId=${encodeURIComponent(storeId)}&` : ''
+    fetch(`${base}/api/restaurants?${storeParam}all=true&_t=${Date.now()}`, { headers: authHeaders, cache: 'no-store' })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         const list = Array.isArray(data) ? data : (data?.restaurants || [])

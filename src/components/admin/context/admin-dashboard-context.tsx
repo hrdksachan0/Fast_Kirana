@@ -108,7 +108,7 @@ export function AdminDashboardProvider({
       try {
         const [storesRes, restRes] = await Promise.all([
           fetch(`${apiUrl()}/api/admin/stores`).then((r) => (r.ok ? r.json() : [])),
-          fetch(`${apiUrl()}/api/restaurants`).then((r) => (r.ok ? r.json() : [])),
+          fetch(`${apiUrl('/api/restaurants') || ''}/api/restaurants?all=true&_t=${Date.now()}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : [])),
         ])
         if (isMounted) {
           if (Array.isArray(storesRes) && storesRes.length > 0) {

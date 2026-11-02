@@ -472,7 +472,10 @@ async def get_products(
     elif excludeRestaurant or (not is_worker and not includeUnavailable and not category and not normalized_search):
         filters.append(Product.restaurantId == None)
 
-    # Store ID Isolation: Customers only see in-stock products in target store.
+    # Store ID Isolation: Blinkit-style 3-State Visibility.
+    # State 1 (In-Stock): Assorted in target store (isAvailable == True) and stock > 0.
+    # State 2 (Out-of-Stock): Assorted in target store (isAvailable == True) and stock == 0.
+    # State 3 (Not Assorted / Local to another store): isAvailable == False or no inventory row -> 100% HIDDEN.
     # Admins/Workers see the entire catalog so they can manage, toggle availability, and replenish stock.
     if admin or is_worker or includeUnavailable:
         grocery_scope = Product.restaurantId.is_(None)
@@ -481,7 +484,6 @@ async def get_products(
         inv_sub_conditions = [
             StoreInventory.productId == Product.id,
             StoreInventory.storeId == target_store,
-            StoreInventory.stock > 0,
             StoreInventory.isAvailable == True
         ]
         grocery_scope = and_(
@@ -858,6 +860,10 @@ async def get_products(
                 local_prc = None
                 local_avail = p.isAvailable
         serialized_products.append(serialize_product(p, local_stock=local_stk, is_admin=is_admin_mode, local_price=local_prc, local_is_available=local_avail))
+
+    # Blinkit UX standard: In-stock items (stock > 0 and available) appear first; out-of-stock items sit at the bottom.
+    if not is_admin_mode and not sort:
+        serialized_products.sort(key=lambda x: 0 if (x.get("isAvailable") and (x.get("stock", 0) or 0) > 0) else 1)
 
     response_data = {
         "products": serialized_products,
@@ -1533,12 +1539,13 @@ async def create_product(
             stores_res = await db.execute(select(DarkStore.id))
             all_store_ids = stores_res.scalars().all()
             for sid in all_store_ids:
-                store_stock = initial_stock_num if (not target_store_id or sid == target_store_id) else 0
+                is_target = not target_store_id or sid == target_store_id
+                store_stock = initial_stock_num if is_target else 0
                 db.add(StoreInventory(
                     productId=product.id,
                     storeId=sid,
                     stock=store_stock,
-                    isAvailable=True
+                    isAvailable=is_target
                 ))
         except Exception as seed_err:
             logger.warning(f"Could not seed store_inventories for product {product.id}: {seed_err}")
