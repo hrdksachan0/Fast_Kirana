@@ -187,8 +187,26 @@ async def create_restaurant(
         except Exception:
             return default
 
+    # Auto-generate sequential canonical ID (REST-106, REST-107, etc.)
+    custom_id = payload.get("id")
+    if custom_id and str(custom_id).strip():
+        rest_id = str(custom_id).strip().upper()
+    else:
+        stmt_max = select(Restaurant.id).where(Restaurant.id.like("REST-%"))
+        res_max = await db.execute(stmt_max)
+        existing_ids = res_max.scalars().all()
+        max_num = 100
+        for rid in existing_ids:
+            try:
+                num = int(str(rid).replace("REST-", "").strip())
+                if num > max_num:
+                    max_num = num
+            except Exception:
+                pass
+        rest_id = f"REST-{max_num + 1}"
+
     restaurant = Restaurant(
-        id=str(uuid.uuid4()),
+        id=rest_id,
         name=name,
         slug=slug,
         description=payload.get("description"),
