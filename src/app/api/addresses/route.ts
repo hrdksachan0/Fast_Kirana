@@ -309,8 +309,8 @@ export async function PATCH(request: Request) {
     const updatedAddress = await prisma.address.update({
       where: { id },
       data: {
-        lat: resolveFallbackCoordinates(lat, lng, pincode, city, street, area).lat,
-        lng: resolveFallbackCoordinates(lat, lng, pincode, city, street, area).lng,
+        lat: resolveFallbackCoordinates(lat, lng, address.pincode, address.city, address.street, address.area).lat,
+        lng: resolveFallbackCoordinates(lat, lng, address.pincode, address.city, address.street, address.area).lng,
       },
     })
 
