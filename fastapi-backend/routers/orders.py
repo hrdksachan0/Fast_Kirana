@@ -1211,8 +1211,68 @@ async def create_order(
         or_(Product.id.in_(product_ids), Product.slug.in_(product_slugs))
     ).with_for_update()
     p_res = await db.execute(p_stmt)
-    db_products = p_res.scalars().all()
+    db_products = list(p_res.scalars().all())
     db_product_ids = {p.id for p in db_products}
+
+    # ── COMBO / BUNDLE EXPANSION ──
+    # Automatically unpacks meal combos into constituent restaurant dishes and darkstore drinks
+    # Ensures grocery cold drinks route to FastMinute Darkstore (-G) and food routes to Restaurant (-R)
+    expanded_items = []
+    missing_bundle_pids = []
+    has_combos = False
+
+    for item in items:
+        prod_payload = item.get("product") or {}
+        raw_id = str(prod_payload.get("id") or item.get("productId") or "")
+        lookup_id = raw_id.split("_")[0] if "_" in raw_id else raw_id
+        db_prod = next((p for p in db_products if p.id == lookup_id or (prod_payload.get("slug") and p.slug == prod_payload["slug"])), None)
+
+        combo_variants = None
+        if db_prod and db_prod.variants:
+            if isinstance(db_prod.variants, dict):
+                combo_variants = db_prod.variants
+            elif isinstance(db_prod.variants, str):
+                try:
+                    import json
+                    parsed = json.loads(db_prod.variants)
+                    if isinstance(parsed, dict):
+                        combo_variants = parsed
+                except Exception:
+                    pass
+
+        if combo_variants and combo_variants.get("isCombo") and combo_variants.get("bundleItems"):
+            has_combos = True
+            item_qty = int(item.get("quantity") or 1)
+            for b_item in combo_variants["bundleItems"]:
+                b_qty = item_qty * int(b_item.get("quantity") or 1)
+                b_vname = b_item.get("selectedVariant") or b_item.get("variantName")
+                b_comp_id = f"{b_item['productId']}_{b_vname}" if b_vname else b_item["productId"]
+                expanded_items.append({
+                    "product": {
+                        "id": b_comp_id,
+                        "name": b_item.get("name") or "FastMinute Item",
+                        "price": float(b_item.get("price") or 0),
+                        "slug": b_item.get("slug"),
+                        "imageUrl": b_item.get("imageUrl"),
+                        "restaurantId": b_item.get("restaurantId"),
+                    },
+                    "quantity": b_qty,
+                    "selectedVariant": b_vname,
+                    "notes": f"Combo: {prod_payload.get('name') or 'Meal'}",
+                })
+                if b_item["productId"] not in db_product_ids:
+                    missing_bundle_pids.append(b_item["productId"])
+        else:
+            expanded_items.append(item)
+
+    if has_combos:
+        items = expanded_items
+        if missing_bundle_pids:
+            extra_stmt = select(Product).options(selectinload(Product.category)).where(Product.id.in_(missing_bundle_pids)).with_for_update()
+            extra_res = await db.execute(extra_stmt)
+            extra_prods = extra_res.scalars().all()
+            db_products.extend(extra_prods)
+            db_product_ids = {p.id for p in db_products}
 
     # Query localized store inventory (e.g. Ghatampur hub-209206)
     effective_store_id = store_id or "hub-209206"

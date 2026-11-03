@@ -465,7 +465,7 @@ export async function POST(request: NextRequest) {
     }).filter(Boolean)
     const productSlugs = normalizedItems.map((i: any) => i.product.slug).filter(Boolean)
 
-    const dbProducts = await prisma.product.findMany({
+    let dbProducts = await prisma.product.findMany({
       where: {
         OR: [
           { id: { in: productIds } },
@@ -478,11 +478,83 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // 2.1 Expand Combo/Bundle items (e.g. Biryani + Cold Drink Meal)
+    // Automatically splits meals into constituent restaurant items (REST-105) and grocery items (null / -G)
+    // This ensures grocery cold drinks are routed to Darkstore (-G) and food is routed to Restaurant (-R)
+    let activeOrderItems = [...normalizedItems]
+    const missingBundleProductIds: string[] = []
+    let hasCombos = false
+
+    const newActiveItems: typeof normalizedItems = []
+    for (const item of normalizedItems) {
+      const rawId = item.product.id
+      const isVariant = rawId.includes('_')
+      const [productId] = isVariant ? rawId.split('_') : [rawId]
+      const dbP = dbProducts.find((p) => p.id === productId || (item.product.slug && p.slug === item.product.slug))
+
+      const rawVariants = dbP?.variants
+      let variantsObj: any = null
+      if (rawVariants && typeof rawVariants === 'object' && !Array.isArray(rawVariants)) {
+        variantsObj = rawVariants
+      } else if (typeof rawVariants === 'string') {
+        try {
+          const parsed = JSON.parse(rawVariants)
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            variantsObj = parsed
+          }
+        } catch {}
+      }
+
+      if (variantsObj?.isCombo && Array.isArray(variantsObj.bundleItems) && variantsObj.bundleItems.length > 0) {
+        hasCombos = true
+        for (const bItem of variantsObj.bundleItems) {
+          const bQty = Number(item.quantity || 1) * Number(bItem.quantity || 1)
+          const bVariantName = bItem.selectedVariant || bItem.variantName || null
+          const bCompositeId = bVariantName ? `${bItem.productId}_${bVariantName}` : bItem.productId
+          newActiveItems.push({
+            product: {
+              id: bCompositeId,
+              name: bItem.name || 'FastMinute Item',
+              price: typeof bItem.price === 'number' ? bItem.price : (parseFloat(bItem.price || '0') || 0),
+              slug: bItem.slug,
+              imageUrl: bItem.imageUrl,
+              restaurantId: bItem.restaurantId ?? null,
+            },
+            quantity: bQty,
+            selectedVariant: bVariantName,
+            selectedAddons: [],
+            notes: item.notes ? `${item.notes} | Combo: ${item.product.name}` : `Combo: ${item.product.name}`,
+          } as any)
+          if (!dbProducts.some(p => p.id === bItem.productId)) {
+            missingBundleProductIds.push(bItem.productId)
+          }
+        }
+      } else {
+        newActiveItems.push(item)
+      }
+    }
+
+    if (hasCombos) {
+      activeOrderItems = newActiveItems
+      if (missingBundleProductIds.length > 0) {
+        const extraProducts = await prisma.product.findMany({
+          where: { id: { in: missingBundleProductIds } },
+          include: { category: true, restaurant: true }
+        })
+        dbProducts = [...dbProducts, ...extraProducts]
+      }
+    }
+
+    const activeProductIds = activeOrderItems.map((i: any) => {
+      const rawId = i.product.id
+      return rawId.includes('_') ? rawId.split('_')[0] : rawId
+    }).filter(Boolean)
+
     const effectiveStoreId = resolvedStoreId || 'hub-209206'
     const storeInventories = await prisma.storeInventory.findMany({
       where: {
         storeId: effectiveStoreId,
-        productId: { in: productIds }
+        productId: { in: activeProductIds }
       }
     })
     const invMap = new Map(storeInventories.map((inv) => [inv.productId, inv]))
@@ -491,7 +563,7 @@ export async function POST(request: NextRequest) {
 
     // Aggregate quantities for duplicate lines by (productId, variantName)
     const aggregatedQuantities = new Map<string, number>()
-    for (const item of normalizedItems) {
+    for (const item of activeOrderItems) {
       const rawId = item.product.id
       const isVariant = rawId.includes('_')
       const [productId, variantNameFromId] = isVariant ? rawId.split('_') : [rawId, null]
@@ -500,7 +572,7 @@ export async function POST(request: NextRequest) {
       aggregatedQuantities.set(key, (aggregatedQuantities.get(key) || 0) + Number(item.quantity || 1))
     }
 
-    for (const item of normalizedItems) {
+    for (const item of activeOrderItems) {
       const rawId = item.product.id
       const isVariant = rawId.includes('_')
       const [productId, variantNameFromId] = isVariant ? rawId.split('_') : [rawId, null]
