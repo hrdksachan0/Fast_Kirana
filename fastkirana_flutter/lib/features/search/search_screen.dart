@@ -982,13 +982,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
               outlet.contains('a.s') ||
               outlet.contains('as restaurant');
 
-          if (isAsQuery && isFromAsRestaurant) {
-            score += 250;
+          final matchedRestIds = matchedRestaurants.map((r) => r.id.toLowerCase()).toSet();
+          final pRestId = (p.restaurantId ?? p.restaurant?.id ?? '').toLowerCase();
+          final pOutlet = outlet.toLowerCase();
+          final isFromMatchedRestaurant = isFromAsRestaurant ||
+              (matchedRestIds.isNotEmpty && (matchedRestIds.contains(pRestId) || matchedRestaurants.any((r) => pOutlet.contains(r.name.toLowerCase()) || pOutlet.contains(r.slug.toLowerCase()))));
+
+          if (isFromMatchedRestaurant) {
+            score += 9000; // Whole restaurant menu boost!
           }
 
           // Check query words matching in product fields
           final nameTokens = pName.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
-          final matchingWordsInTitle = effectiveQueryWords.where((w) => nameTokens.contains(w) || pName.contains(w)).toList();
+          // Short tokens (<= 3 chars, e.g. "as", "tea", "dal") MUST be exact whole-word matches, not substring inside words like "Namaste", "Dark Fantasy", or "Masala"
+          final matchingWordsInTitle = effectiveQueryWords.where((w) {
+            if (w.length <= 3) {
+              return nameTokens.contains(w);
+            }
+            return nameTokens.contains(w) || pName.contains(w);
+          }).toList();
           final allWordsInTitle = effectiveQueryWords.isNotEmpty && matchingWordsInTitle.length == effectiveQueryWords.length;
           final anyWordInTitle = matchingWordsInTitle.isNotEmpty;
           final anyWordInVariants = variantNames.any((vn) => effectiveQueryWords.any((w) => vn.contains(w)));
@@ -997,8 +1009,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           final anyWordInCat = effectiveQueryWords.any((w) => catName.contains(w) || catSlug.contains(w));
 
           // ── UNIVERSAL EXCLUSION GUARD (Applied to EVERY product in the store) ──
-          // If product does not match ANY search token in title, variants, tags, description, or category -> SKIP!
-          if (!anyWordInTitle && !anyWordInVariants && !anyWordInTags && !anyWordInDesc && !anyWordInCat) {
+          // If query explicitly targets a restaurant, exclude products from OTHER outlets or retail
+          if (isExplicitRestaurantQuery && !isFromMatchedRestaurant && matchingWordsInTitle.isEmpty) {
+            continue;
+          }
+
+          // If product does not match ANY search token in title, variants, tags, description, category, or restaurant -> SKIP!
+          if (!isFromMatchedRestaurant && !anyWordInTitle && !anyWordInVariants && !anyWordInTags && !anyWordInDesc && !anyWordInCat) {
             continue;
           }
 

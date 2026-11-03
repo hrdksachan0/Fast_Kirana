@@ -79,10 +79,44 @@ export class ProductSearchService {
 
       const tsquery = tokenGroups.join(' & ')
 
+      // Restaurant search detection
+      const isAsQuery = normalizedQuery === 'as' || normalizedQuery.startsWith('as ') || normalizedQuery.includes('as restaurant') || normalizedQuery.includes('a.s')
+      const matchedRestIds = new Set<string>()
+      if (isAsQuery) matchedRestIds.add('REST-101')
+      const RESTAURANTS = [
+        { id: 'REST-101', name: 'a.s. restaurant', slug: 'as-restaurant' },
+        { id: 'REST-102', name: 'wedson restaurant', slug: 'wedson-restaurant' },
+        { id: 'REST-103', name: 'bal udyan restaurant', slug: 'bal-udyan-restaurant' },
+        { id: 'REST-104', name: 'hot pizza lovers', slug: 'hot-pizza-lovers' },
+        { id: 'REST-105', name: 'zayka non veg hotel', slug: 'zayka-non-veg-hotel' },
+      ]
+      for (const r of RESTAURANTS) {
+        if (searchTokens.some(w => w.length >= 3 && (r.name.includes(w) || r.slug.includes(w)))) {
+          matchedRestIds.add(r.id)
+        }
+      }
+      const isRestaurantSearch = matchedRestIds.size > 0 || searchTokens.some(w => ['restaurant', 'cafe', 'dhaba', 'kitchen', 'hotel'].includes(w))
+
       // 2.5 Supabase PgVector Semantic AI Search (Option 1 + 3)
       let candidateIds: string[] = []
       let rankMap = new Map<string, number>()
       let vectorMap = new Map<string, number>()
+
+      // If restaurant explicitly searched, pull its entire menu
+      if (matchedRestIds.size > 0) {
+        try {
+          const restRows: any[] = await prisma.$queryRawUnsafe(`
+            SELECT p.id
+            FROM products p
+            WHERE ${includeUnavailable ? 'TRUE' : 'p."isAvailable" = TRUE'}
+              AND p."restaurantId" = ANY($1::text[])
+            LIMIT 100;
+          `, Array.from(matchedRestIds))
+          restRows.forEach(r => candidateIds.push(r.id))
+        } catch (rErr) {
+          console.warn('[ProductSearchService] Restaurant candidate fetch error:', rErr)
+        }
+      }
 
       if (normalizedQuery.length >= 2) {
         try {
@@ -234,25 +268,33 @@ export class ProductSearchService {
           const ftsRank = (rankMap.get(p.id) || 0) * 100
           const semanticScore = getSemanticAiScore(normalizedQuery, p)
           const pNameLower = (p.name || '').toLowerCase().trim()
+          const pWords = new Set(pNameLower.split(/\s+/).filter(Boolean))
           const pTags = (p.tags || []).map((t: string) => t.toLowerCase().trim())
           const catSlug = (p.category?.slug || '').toLowerCase().trim()
           const pDesc = (p.description || '').toLowerCase().trim()
+          const isFromTargetRestaurant = Boolean(p.restaurantId && matchedRestIds.has(p.restaurantId))
 
-          // Check query words matching in product fields
-          const matchingTitleWords = searchTokens.filter(w => pNameLower.includes(w))
-          const matchingTagWords = searchTokens.filter(w => pTags.some((t: string) => t.includes(w)))
-          const matchingDesc = searchTokens.some(w => pDesc.includes(w))
+          // Short tokens (<= 3 chars, e.g. "as", "tea", "dal") MUST be whole-word matches, not substring inside words like "Namaste", "Dark Fantasy", or "Masala"
+          const matchingTitleWords = searchTokens.filter(w => w.length <= 3 ? pWords.has(w) : pNameLower.includes(w))
+          const matchingTagWords = searchTokens.filter(w => pTags.some((t: string) => w.length <= 3 ? t === w : t.includes(w)))
+          const matchingDesc = searchTokens.some(w => w.length > 3 && pDesc.includes(w))
 
           // ── UNIVERSAL EXCLUSION GUARD (Applied to EVERY product in the store) ──
+          // If user specifically searched for a restaurant brand, discard products from other outlets/retail
+          if (isRestaurantSearch && matchedRestIds.size > 0 && !isFromTargetRestaurant && pNameLower !== normalizedQuery) {
+            return { product: p, score: 0 }
+          }
+
           // If candidate has vector similarity < 0.38 AND no token match in title/tags/desc -> Discard!
-          if (vectorSim < 0.38 && matchingTitleWords.length === 0 && matchingTagWords.length === 0 && !matchingDesc) {
+          if (!isFromTargetRestaurant && vectorSim < 0.38 && matchingTitleWords.length === 0 && matchingTagWords.length === 0 && !matchingDesc) {
             return { product: p, score: 0 }
           }
 
           let tierScore = 0
-          // ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) ──
-          // Guarantees the searched product is strictly #1 at the TOP for ANY product!
-          if (pNameLower === normalizedQuery) {
+          // ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) / RESTAURANT MENU MATCH (9,000) ──
+          if (isFromTargetRestaurant) {
+            tierScore = 9000 // Entire restaurant menu ranks at the TOP!
+          } else if (pNameLower === normalizedQuery) {
             tierScore = 10000
           } else if (pNameLower.startsWith(normalizedQuery + ' ') || pNameLower.startsWith(normalizedQuery)) {
             tierScore = 8000

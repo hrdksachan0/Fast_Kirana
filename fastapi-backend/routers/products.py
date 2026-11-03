@@ -651,7 +651,15 @@ async def get_products(
         search_words = filtered_words if filtered_words else raw_words
 
         # Detect if query explicitly targets a restaurant name
-        is_explicit_restaurant_search = any(
+        is_as_query = normalized_search in ['as', 'a.s', 'a.s.', 'as restaurant', 'a.s restaurant', 'as cafe'] or normalized_search.startswith('as ')
+        matched_rest_ids = set()
+        if is_as_query:
+            matched_rest_ids.add('REST-101')
+        for r_id, r_name, r_slug in [('REST-101', 'a.s. restaurant', 'as-restaurant'), ('REST-102', 'wedson restaurant', 'wedson-restaurant'), ('REST-103', 'bal udyan restaurant', 'bal-udyan-restaurant'), ('REST-104', 'hot pizza lovers', 'hot-pizza-lovers'), ('REST-105', 'zayka non veg hotel', 'zayka-non-veg-hotel')]:
+            if any(w in r_name or w in r_slug for w in search_words if len(w) >= 3):
+                matched_rest_ids.add(r_id)
+
+        is_explicit_restaurant_search = bool(matched_rest_ids) or any(
             rw in normalized_search for rw in ['restaurant', 'cafe', 'dhaba', 'kitchen', 'hotel', 'bhojnalaya', 'sweets', 'bakery']
         )
 
@@ -697,6 +705,16 @@ async def get_products(
             res_or = await db.execute(stmt_or)
             or_prods = res_or.scalars().all()
             matched_products = list({p.id: p for p in matched_products + list(or_prods)}.values())
+
+        # If searching for a restaurant brand, make sure all dishes from that restaurant are fetched
+        if matched_rest_ids:
+            stmt_rest = select(Product).options(
+                selectinload(Product.category),
+                selectinload(Product.restaurant)
+            ).where(and_(*filters, Product.restaurantId.in_(list(matched_rest_ids))))
+            res_rest = await db.execute(stmt_rest)
+            rest_prods = list(res_rest.scalars().all())
+            matched_products = list({p.id: p for p in rest_prods + matched_products}.values())
 
         # Fallback to general list if no matches
         is_sql_match = bool(matched_products)
@@ -754,9 +772,15 @@ async def get_products(
             p_desc = (p.description or "").lower().strip()
             vec_sim = vec_sim_map.get(p.id, 0.0)
 
-            matching_title_words = [w for w in search_words if w in p_name_lower or w in p_words]
-            matching_tag_words = [w for w in search_words if any(w in t for t in p_tags)]
-            matching_desc = any(w in p_desc for w in search_words)
+            is_from_target_restaurant = bool(p.restaurantId and p.restaurantId in matched_rest_ids)
+
+            # Short tokens (<= 3 chars, e.g. "as", "tea", "dal") MUST be whole-word matches, not substring inside words like "Namaste", "Dark Fantasy", or "Masala"
+            matching_title_words = [
+                w for w in search_words 
+                if (w in p_words if len(w) <= 3 else (w in p_name_lower or w in p_words))
+            ]
+            matching_tag_words = [w for w in search_words if any((w == t if len(w) <= 3 else w in t) for t in p_tags)]
+            matching_desc = any(w in p_desc for w in search_words if len(w) > 3)
 
             p_variants = p.variants or []
             has_matching_variant = False
@@ -765,21 +789,26 @@ async def get_products(
                 for v in p_variants:
                     if isinstance(v, dict):
                         v_name = str(v.get("name") or "").lower()
-                        if any(w in v_name for w in search_words):
+                        if any((w in v_name.split() if len(w) <= 3 else w in v_name) for w in search_words):
                             has_matching_variant = True
                         if v_name == normalized_search or v_name.startswith(normalized_search):
                             variant_exact = True
 
             # ── UNIVERSAL EXCLUSION GUARD (Applied to EVERY product in the store) ──
+            # If user explicitly searched for a restaurant brand, discard products from other outlets/retail
+            if is_explicit_restaurant_search and matched_rest_ids and not is_from_target_restaurant and p_name_lower != normalized_search:
+                continue
+
             # If candidate has vector similarity < 0.38 AND no token match in title/tags/desc -> Discard!
-            if vec_sim < 0.38 and not matching_title_words and not matching_tag_words and not matching_desc and not has_matching_variant:
+            if not is_from_target_restaurant and vec_sim < 0.38 and not matching_title_words and not matching_tag_words and not matching_desc and not has_matching_variant:
                 continue
 
             name_score = 0.0
 
-            # ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) ──
-            # Guarantees the searched product is strictly #1 at the TOP for ANY product!
-            if p_name_lower == normalized_search:
+            # ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) / RESTAURANT MENU MATCH (9,000) ──
+            if is_from_target_restaurant:
+                name_score = 9000.0  # Whole restaurant menu matches at TOP!
+            elif p_name_lower == normalized_search:
                 name_score = 10000.0
             elif p_name_lower.startswith(normalized_search + " ") or p_name_lower.startswith(normalized_search):
                 name_score = 8000.0
