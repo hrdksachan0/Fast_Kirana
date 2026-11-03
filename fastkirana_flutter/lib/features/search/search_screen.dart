@@ -1214,87 +1214,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
         });
         final localFiltered = scoredProducts.map((e) => e.key).toList();
 
-        // Authoritative live server search results from FastAPI (Zepto/Blinkit architecture)
+        // Authoritative live server search results from Backend (AI PgVector architecture)
         final serverProducts = serverSearchAsync.valueOrNull;
-        List<Product> filtered = localFiltered;
+        List<Product> filtered;
         if (serverProducts != null && serverProducts.isNotEmpty) {
-          final serverIds = serverProducts.map((p) => p.id).toSet();
-          final remaining = localFiltered.where((p) => !serverIds.contains(p.id)).toList();
-          filtered = [...serverProducts, ...remaining];
+          // Strictly preserve server's AI vector ranking (exact match #1, semantic similarity #2-#10)
+          filtered = List<Product>.from(serverProducts);
+        } else {
+          filtered = localFiltered;
         }
-
-        final Map<String, int> productScoreMap = {
-          for (final entry in scoredProducts) entry.key.id: entry.value,
-        };
-
-        int getProductScore(Product p) {
-          final cached = productScoreMap[p.id];
-          if (cached != null) return cached;
-
-          final pName = p.name.toLowerCase().trim();
-          int s = 0;
-          if (pName == queryClean) {
-            s += 10000;
-          } else if (pName.startsWith('$queryClean ') || pName.startsWith(queryClean)) {
-            s += 8000;
-          } else if (pName.contains(queryClean)) {
-            s += 6000;
-          } else if (effectiveQueryWords.isNotEmpty && effectiveQueryWords.every((w) => pName.contains(w))) {
-            s += 4500;
-          } else {
-            for (final w in effectiveQueryWords) {
-              if (pName.contains(w)) {
-                s += 1500;
-              }
-            }
-          }
-
-          final catSlug = (p.category?.slug ?? p.categoryId ?? '').toLowerCase();
-          const cookedMealKeywords = {
-            'biryani', 'chicken', 'paneer', 'mutton', 'dal', 'curry', 'gravy',
-            'pasta', 'chole', 'rajma', 'sabzi', 'kadhai', 'handi', 'fish', 'egg'
-          };
-          final isMealSearch = effectiveQueryWords.any((w) => cookedMealKeywords.contains(w));
-          if (isMealSearch && (catSlug.contains('spices') || catSlug.contains('masala') || pName.contains('masala powder') || pName.contains('chicken masala'))) {
-            if (!queryClean.contains('masala')) {
-              s = (s * 0.25).round();
-            }
-          }
-
-          if (queryClean.contains('maggi') || queryClean.contains('maggie') || queryClean.contains('noodle')) {
-            if (catSlug.contains('sauce') || pName.contains('ketchup')) {
-              s = (s * 0.25).round();
-            }
-          }
-
-          if (p.isInStock) s += 50;
-          if (p.isBestsellerProduct) s += 20;
-          if (p.isTrending) s += 10;
-          return s;
-        }
-
-        // Universal Double-guard: Remove any product with zero relevant word matches for EVERY search
-        filtered = filtered.where((p) {
-          final pName = p.name.toLowerCase().trim();
-          final pTags = p.tags.map((t) => t.toLowerCase().trim()).toList();
-          final vNames = (p.variants ?? []).map((v) => v.name.toLowerCase().trim()).toList();
-          final pDesc = (p.description ?? '').toLowerCase().trim();
-          final anyTitle = effectiveQueryWords.any((w) => pName.contains(w));
-          final anyVariant = vNames.any((vn) => effectiveQueryWords.any((w) => vn.contains(w)));
-          final anyTag = pTags.any((t) => effectiveQueryWords.any((w) => t.contains(w)));
-          final anyDesc = effectiveQueryWords.any((w) => pDesc.contains(w));
-          return anyTitle || anyVariant || anyTag || anyDesc;
-        }).toList();
-
-        // Zepto/Blinkit architecture: prioritize in-stock products first, ranked by relevance score
-        filtered.sort((a, b) {
-          final aIn = a.isInStock ? 0 : 1;
-          final bIn = b.isInStock ? 0 : 1;
-          if (aIn != bIn) return aIn.compareTo(bIn);
-          final scoreA = getProductScore(a);
-          final scoreB = getProductScore(b);
-          return scoreB.compareTo(scoreA);
-        });
 
         if (filtered.isEmpty && matchedRestaurants.isEmpty) {
           if (serverSearchAsync.isLoading) {
