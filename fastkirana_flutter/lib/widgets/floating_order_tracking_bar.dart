@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/routes/page_transitions.dart';
 import '../core/network/api_client.dart';
+import '../core/services/notification_service.dart';
 import '../data/models/order.dart';
 import '../data/repositories/order_repository.dart';
 import '../features/orders/order_tracking_screen.dart';
@@ -48,14 +49,18 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
       if (active.isNotEmpty) {
         ref.invalidate(ordersProvider(''));
         final topOrder = active.first;
+        NotificationService().updateLiveOrderActivity(order: topOrder);
         try {
           final repo = OrderRepository(ref.read(dioProvider));
           final cleanId = (topOrder.readableId ?? topOrder.id).replaceAll('#', '').trim();
           final liveOrder = await repo.getOrder(cleanId);
           if (liveOrder == null) return;
           if (liveOrder.status == OrderStatus.cancelled || liveOrder.status == OrderStatus.delivered) {
+            await NotificationService().clearLiveOrderActivity(liveOrder.id, readableId: liveOrder.readableId);
             await repo.savePlacedOrderLocally(liveOrder);
             if (mounted) ref.invalidate(ordersProvider(''));
+          } else {
+            NotificationService().updateLiveOrderActivity(order: liveOrder);
           }
         } catch (e, _) { LoggerService.error('FloatingOrderTrackingBar: silent catch', e); }
       }
@@ -74,6 +79,11 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
               callback: (payload) {
                 if (mounted) {
                   ref.invalidate(ordersProvider(''));
+                  final current = ref.read(ordersProvider('')).valueOrNull ?? [];
+                  final activeList = current.where((o) => o.status != OrderStatus.cancelled && o.status != OrderStatus.delivered).toList();
+                  if (activeList.isNotEmpty) {
+                    NotificationService().updateLiveOrderActivity(order: activeList.first);
+                  }
                 }
               },
             )

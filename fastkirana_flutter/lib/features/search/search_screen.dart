@@ -37,6 +37,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
   final TextEditingController _controller = TextEditingController();
   String _query = '';
   Timer? _debounce;
+  bool _isDebouncing = false;
   List<String> _recentSearches = [];
   static const String _recentSearchesKey = 'user_recent_searches_list';
   int _searchPlaceholderIndex = 0;
@@ -391,8 +392,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                                     autofocus: widget.initialQuery == null || widget.initialQuery!.isEmpty,
                                     onChanged: (val) {
                                       _debounce?.cancel();
-                                      _debounce = Timer(const Duration(milliseconds: 160), () {
-                                        if (mounted) setState(() => _query = val.trim());
+                                      final trimmed = val.trim();
+                                      if (trimmed.isEmpty) {
+                                        setState(() {
+                                          _query = '';
+                                          _isDebouncing = false;
+                                        });
+                                        return;
+                                      }
+                                      if (!_isDebouncing && trimmed != _query) {
+                                        setState(() => _isDebouncing = true);
+                                      }
+                                      _debounce = Timer(const Duration(milliseconds: 180), () {
+                                        if (mounted) {
+                                          setState(() {
+                                            _query = trimmed;
+                                            _isDebouncing = false;
+                                          });
+                                        }
                                       });
                                     },
                                     onSubmitted: (val) {
@@ -860,6 +877,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
   }
 
   Widget _buildSearchResults() {
+    if (_isDebouncing) {
+      return _buildContentShimmerList();
+    }
     final serverSearchAsync = ref.watch(searchProductsProvider(_query));
     final productsAsync = ref.watch(productsProvider(null));
     final restaurantsAsync = ref.watch(homeRestaurantsProvider);
@@ -933,7 +953,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           }
 
           final cleanRName = rName.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ').trim();
-          if (queryClean.length >= 4 && (cleanRName == queryClean || cleanRName.startsWith('$queryClean ') || queryClean.contains(cleanRName))) {
+          if (queryClean.length >= 4 &&
+              cleanRName.length >= 4 &&
+              (cleanRName == queryClean ||
+                  cleanRName.startsWith('$queryClean ') ||
+                  (cleanRName.length >= 5 && queryClean.contains(cleanRName)))) {
             return true;
           }
 
@@ -1245,7 +1269,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
         // Authoritative live server search results from Backend (AI PgVector architecture)
         final serverProducts = serverSearchAsync.valueOrNull;
         if (serverSearchAsync.isLoading && (serverProducts == null || serverProducts.isEmpty)) {
-          return _buildShimmerGrid();
+          return _buildContentShimmerList();
         }
 
         List<Product> filtered;
@@ -1256,9 +1280,95 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           filtered = localFiltered;
         }
 
+        // ── 1. Strict Dish Exclusion Guard (e.g. "momos" MUST NOT show Spring Roll or Fries) ──
+        const dishKeywords = [
+          'momo', 'momos', 'burger', 'burgers', 'pizza', 'pizzas',
+          'sandwich', 'sandwiches', 'dosa', 'dosas', 'roll', 'rolls',
+          'chowmein', 'pavbhaji', 'pav bhaji'
+        ];
+        final searchedDish = effectiveQueryWords.firstWhere(
+          (w) => dishKeywords.any((dk) => w == dk || w.startsWith(dk)),
+          orElse: () => '',
+        );
+        if (searchedDish.isNotEmpty) {
+          final rootWord = searchedDish.length >= 4 ? searchedDish.substring(0, 4) : searchedDish;
+          filtered = filtered.where((p) {
+            final pName = p.name.toLowerCase();
+            final pTags = p.tags.map((t) => t.toLowerCase()).toList();
+            return pName.contains(rootWord) || pTags.any((t) => t.contains(rootWord));
+          }).toList();
+        }
+
+        // ── 2. Textual Precision Guard (e.g. "hal" must never show Paneer Dosa or Pavbhaji) ──
+        if (effectiveQueryWords.isNotEmpty && !isExplicitRestaurantQuery) {
+          filtered = filtered.where((p) {
+            final pName = p.name.toLowerCase();
+            final pTags = p.tags.map((t) => t.toLowerCase()).toList();
+            final pOutlet = getOutletName(p).toLowerCase();
+            final pCat = (p.category?.name ?? '').toLowerCase();
+            final pDesc = (p.description ?? '').toLowerCase();
+
+            return effectiveQueryWords.any((w) {
+              if (w.length <= 2) {
+                return pName.split(RegExp(r'\s+')).contains(w) || pTags.contains(w);
+              }
+              return pName.contains(w) ||
+                  pTags.any((t) => t.contains(w)) ||
+                  pOutlet.contains(w) ||
+                  pCat.contains(w) ||
+                  (w.length > 3 && pDesc.contains(w));
+            });
+          }).toList();
+        }
+
+        // ── 3. High-Precision Relevance Sorter ──
+        // Guarantees: Exact match #1, Multi-word title match #2, In-stock #1, Prepared dish above raw ingredients
+        filtered.sort((a, b) {
+          final aInStock = a.isInStock;
+          final bInStock = b.isInStock;
+          if (aInStock && !bInStock) return -1;
+          if (!aInStock && bInStock) return 1;
+
+          final aName = a.name.toLowerCase().trim();
+          final bName = b.name.toLowerCase().trim();
+
+          // Absolute Exact Full Title Match
+          if (aName == queryClean && bName != queryClean) return -1;
+          if (bName == queryClean && aName != queryClean) return 1;
+
+          // Multi-word containment (e.g. "chilli paneer" matches both words in "Chilli Paneer")
+          if (effectiveQueryWords.length > 1) {
+            final aHasAll = effectiveQueryWords.every((w) => aName.contains(w));
+            final bHasAll = effectiveQueryWords.every((w) => bName.contains(w));
+            if (aHasAll && !bHasAll) return -1;
+            if (bHasAll && !aHasAll) return 1;
+          }
+
+          // Starts with query
+          final aStarts = aName.startsWith(queryClean);
+          final bStarts = bName.startsWith(queryClean);
+          if (aStarts && !bStarts) return -1;
+          if (bStarts && !aStarts) return 1;
+
+          // Cooked meal intent: prioritize restaurant dishes above raw grocery packets
+          const cookedMealWords = {
+            'biryani', 'chicken', 'paneer', 'mutton', 'dal', 'curry', 'gravy',
+            'pasta', 'chole', 'rajma', 'sabzi', 'kadhai', 'handi', 'fish', 'egg'
+          };
+          final isMealQuery = effectiveQueryWords.any((w) => cookedMealWords.contains(w));
+          if (isMealQuery) {
+            final aIsFood = isRestaurantProduct(a);
+            final bIsFood = isRestaurantProduct(b);
+            if (aIsFood && !bIsFood) return -1;
+            if (!aIsFood && bIsFood) return 1;
+          }
+
+          return 0; // Maintain server / local scoring order for remaining items
+        });
+
         if (filtered.isEmpty && matchedRestaurants.isEmpty) {
           if (serverSearchAsync.isLoading) {
-            return _buildShimmerGrid();
+            return _buildContentShimmerList();
           }
           final currentHub = ref.watch(currentStoreHubProvider);
           final hubCity = currentHub.city.isNotEmpty ? currentHub.city : 'Town';
@@ -1609,7 +1719,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           ],
         );
       },
-      loading: () => _buildShimmerGrid(),
+      loading: () => _buildContentShimmerList(),
       error: (err, _) => Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
@@ -1638,90 +1748,146 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
             ],
           ),
         ),
-      )    );
-  }
-
-  Widget _buildShimmerGrid() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[200]!,
-      highlightColor: Colors.white,
-      child: GridView.builder(
-        padding: EdgeInsets.fromLTRB(Responsive.horizontalPadding(context), 16, Responsive.horizontalPadding(context), 100),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: Responsive.gridColumns(context, smallMobile: 2, mobile: 2, smallTablet: 3, tablet: 4, desktop: 5),
-          childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
-          crossAxisSpacing: Responsive.horizontalPadding(context) * 0.5,
-          mainAxisSpacing: 10,
-        ),
-        itemCount: 6,
-        itemBuilder: (_, __) => Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.grey[150] ?? const Color(0xFFF1F5F9)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Center(
-                  child: Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                height: 12,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(height: 5),
-              Container(
-                height: 10,
-                width: 70,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    height: 16,
-                    width: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  Container(
-                    height: 28,
-                    width: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
+
+  /// Content-shaped shimmer skeleton matching exact search product rows and heights
+  Widget _buildContentShimmerList() {
+    final hPad = Responsive.horizontalPadding(context);
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFFE2E8F0),
+      highlightColor: const Color(0xFFF8FAFC),
+      period: const Duration(milliseconds: 1300),
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 100),
+        children: [
+          // Header summary placeholder
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                Container(
+                  height: 14,
+                  width: 140,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Grouped card container matching actual search result cards
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppDesignSystem.slate200, width: 1.1),
+            ),
+            child: Column(
+              children: List.generate(6, (index) {
+                final isLast = index == 5;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: isLast
+                        ? null
+                        : const Border(
+                            bottom: BorderSide(color: AppDesignSystem.slate100, width: 1),
+                          ),
+                  ),
+                  child: Row(
+                    children: [
+                      // 1. Thumbnail Skeleton (58x58)
+                      Container(
+                        width: 58,
+                        height: 58,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // 2. Info Column Skeleton
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Title Line
+                            Container(
+                              height: 13,
+                              width: index % 2 == 0 ? 160 : 130,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+
+                            // Restaurant / Category Badge Chip
+                            Container(
+                              height: 14,
+                              width: index % 2 == 0 ? 95 : 75,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+
+                            // Price & Unit
+                            Row(
+                              children: [
+                                Container(
+                                  height: 14,
+                                  width: 45,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  height: 11,
+                                  width: 35,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // 3. ADD Button Skeleton (68x32)
+                      Container(
+                        width: 68,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white, width: 1.2),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
 
   Widget _buildProductRow(
     Product product,

@@ -25,6 +25,7 @@ import '../../core/theme/design_system.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
@@ -463,6 +464,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           _isLoading = false;
         });
 
+        NotificationService().updateLiveOrderActivity(
+          order: order,
+          customEtaText: _etaText.isNotEmpty ? _etaText : null,
+        );
+
         _triggerStatusHaptic(order.status, prevStatus);
 
         _setupCoordinatesFromOrder(order);
@@ -709,6 +715,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (mounted) {
         final prevStatus = _order?.status;
         setState(() => _order = order);
+
+        NotificationService().updateLiveOrderActivity(
+          order: order,
+          customEtaText: _etaText.isNotEmpty ? _etaText : null,
+        );
 
         _triggerStatusHaptic(order.status, prevStatus);
 
@@ -1045,9 +1056,18 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         final driveMinutes = ((distanceKm / 20.0) * 60).round();
         final estMinutes = math.max(2, driveMinutes + 1);
         _etaText = '$estMinutes mins';
+        if (_order != null) {
+          NotificationService().updateLiveOrderActivity(
+            order: _order!,
+            customEtaText: _etaText,
+          );
+        }
       } else if (_order?.status == OrderStatus.delivered) {
         _etaText = 'Delivered 🎉';
         _distanceText = '';
+        if (_order != null) {
+          NotificationService().clearLiveOrderActivity(_order!.id, readableId: _order!.readableId);
+        }
       } else {
         // Before Out for Delivery (adminPending, pending, confirmed, packed):
         // Neither ETA nor distance should be shown until order is Out for Delivery!

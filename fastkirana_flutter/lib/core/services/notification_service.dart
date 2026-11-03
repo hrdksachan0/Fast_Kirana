@@ -3,6 +3,7 @@ import 'package:logger/logger.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -11,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/secure_storage_service.dart';
 import '../routes/app_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../data/models/order.dart';
 
 final logger = Logger();
 
@@ -494,11 +496,22 @@ class NotificationService {
         showBadge: true,
       );
 
+      const AndroidNotificationChannel liveTrackingChannel = AndroidNotificationChannel(
+        'fastkirana_live_tracking_v1',
+        'Live Order Status & Dynamic Tracking',
+        description: 'Persistent lock-screen live activity with real-time rider ETA and delivery progress.',
+        importance: Importance.high,
+        playSound: false,
+        enableVibration: false,
+        showBadge: true,
+      );
+
       final androidPlugin = _localNotifications
           ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       await androidPlugin?.createNotificationChannel(channel);
       await androidPlugin?.createNotificationChannel(kitchenChannel);
       await androidPlugin?.createNotificationChannel(orderStatusChannel);
+      await androidPlugin?.createNotificationChannel(liveTrackingChannel);
 
       // 4. Initialize Local Notifications Plugin
       const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -860,6 +873,150 @@ class NotificationService {
       default:
         return true;
     }
+  }
+
+  /// ─── LIVE ACTIVITY & LOCK SCREEN WIDGET (Android Ongoing Notification & iOS Time-Sensitive) ───
+  /// Displays live lock screen status: "Rider 4 mins away • Reaching your gate"
+  /// Updates silently without playing a chime or vibrating continuously.
+  Future<void> updateLiveOrderActivity({
+    required Order order,
+    String? customEtaText,
+    String? customStatusText,
+    int? customProgress,
+  }) async {
+    if (kIsWeb) return;
+
+    final isTerminal = order.status == OrderStatus.delivered || order.status == OrderStatus.cancelled;
+    final int notifId = (order.readableId ?? order.id).hashCode.abs() % 100000 + 50000;
+
+    if (isTerminal) {
+      await clearLiveOrderActivity(order.id, readableId: order.readableId);
+      if (order.status == OrderStatus.delivered) {
+        // Show one-time celebration delivery notification
+        try {
+          const androidDelivered = AndroidNotificationDetails(
+            'fastkirana_order_status',
+            'Live Order Tracking & Delivery',
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: true,
+            sound: RawResourceAndroidNotificationSound('order_chime'),
+            icon: '@mipmap/ic_launcher',
+          );
+          const iosDelivered = DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          );
+          await _localNotifications?.show(
+            notifId,
+            '🎉 Order Delivered!',
+            'Your FastMinute order from ${order.shopName ?? 'Store'} was delivered. Enjoy your meal!',
+            const NotificationDetails(android: androidDelivered, iOS: iosDelivered),
+            payload: '/orders/${order.readableId ?? order.id}/track',
+          );
+        } catch (_) {}
+      }
+      return;
+    }
+
+    String title;
+    String body;
+    int progress;
+
+    final riderName = (order.deliveryBoyName != null && order.deliveryBoyName!.trim().isNotEmpty)
+        ? order.deliveryBoyName!.trim()
+        : 'Rider';
+
+    final eta = customEtaText ?? (order.estimatedDelivery != null
+        ? '${order.estimatedDelivery!.difference(DateTime.now()).inMinutes.clamp(1, 45)} mins'
+        : '4 mins');
+
+    switch (order.status) {
+      case OrderStatus.shipped:
+        title = '⚡ FastMinute • Rider on the way';
+        body = '🛵 $riderName is reaching your gate • ~$eta away';
+        progress = customProgress ?? 80;
+        break;
+      case OrderStatus.packed:
+        title = '⚡ FastMinute • Order Packed & Ready';
+        body = '🛍️ Packed at ${order.shopName ?? 'Store'} • Handing to rider';
+        progress = customProgress ?? 55;
+        break;
+      case OrderStatus.confirmed:
+        title = '⚡ FastMinute • Order Confirmed';
+        body = '👨‍🍳 Preparing your items • Rider arriving soon';
+        progress = customProgress ?? 30;
+        break;
+      case OrderStatus.adminPending:
+      case OrderStatus.pending:
+      default:
+        title = '⚡ FastMinute • Order Placed';
+        body = '⏳ Order received • Store confirming essentials';
+        progress = customProgress ?? 15;
+        break;
+    }
+
+    if (customStatusText != null && customStatusText.isNotEmpty) {
+      body = customStatusText;
+    }
+
+    final androidDetails = AndroidNotificationDetails(
+      'fastkirana_live_tracking_v1',
+      'Live Order Status & Dynamic Tracking',
+      channelDescription: 'Persistent lock-screen live activity with real-time rider ETA and delivery progress.',
+      importance: Importance.high,
+      priority: Priority.max,
+      ongoing: true, // Lock screen persistent widget
+      autoCancel: false,
+      onlyAlertOnce: true, // Updates silently without chime on every tick
+      showProgress: true,
+      maxProgress: 100,
+      progress: progress,
+      subText: '⚡ Live Tracking ($progress%)',
+      category: AndroidNotificationCategory.status,
+      visibility: NotificationVisibility.public,
+      color: const Color(0xFF00B140),
+      colorized: true,
+      icon: '@mipmap/ic_launcher',
+      actions: const [
+        AndroidNotificationAction(
+          'open_live_track',
+          '📍 Open Live Map',
+          showsUserInterface: true,
+        ),
+      ],
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: false,
+      interruptionLevel: InterruptionLevel.timeSensitive,
+      subtitle: 'Live Order Tracking',
+      categoryIdentifier: 'order_tracking',
+    );
+
+    try {
+      await _localNotifications?.show(
+        notifId,
+        title,
+        body,
+        NotificationDetails(android: androidDetails, iOS: iosDetails),
+        payload: '/orders/${order.readableId ?? order.id}/track',
+      );
+    } catch (e, st) {
+      LoggerService.error('NotificationService: updateLiveOrderActivity error', e, st);
+    }
+  }
+
+  /// Clears ongoing lock screen tracking widget once order is delivered or cancelled
+  Future<void> clearLiveOrderActivity(String orderId, {String? readableId}) async {
+    if (kIsWeb) return;
+    try {
+      final int notifId = (readableId ?? orderId).hashCode.abs() % 100000 + 50000;
+      await _localNotifications?.cancel(notifId);
+    } catch (_) {}
   }
 
   Future<void> requestPermissions() async {

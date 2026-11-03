@@ -235,21 +235,15 @@ class _ChilledFreezerAddonSectionState extends State<ChilledFreezerAddonSection>
                             ],
                           ),
                           const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  'Chilled drinks & frozen desserts',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 11),
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF475569),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            'Chilled drinks & desserts',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF475569),
+                            ),
+                            maxLines: 2,
+                            softWrap: true,
                           ),
                         ],
                       ),
@@ -258,7 +252,7 @@ class _ChilledFreezerAddonSectionState extends State<ChilledFreezerAddonSection>
 
                     // Items Counter Pill
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF0F9FF),
                         borderRadius: BorderRadius.circular(20),
@@ -270,24 +264,24 @@ class _ChilledFreezerAddonSectionState extends State<ChilledFreezerAddonSection>
                           Text(
                             '${inStockList.length}',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFF0284C7),
                             ),
                           ),
-                          const SizedBox(width: 3),
+                          const SizedBox(width: 2.5),
                           Text(
                             'items',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10),
+                              fontSize: Responsive.scaledFontSize(context, 9.5),
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF0284C7),
                             ),
                           ),
-                          const SizedBox(width: 3),
+                          const SizedBox(width: 2.5),
                           const Icon(
                             Icons.arrow_forward_ios_rounded,
-                            size: 8.5,
+                            size: 8,
                             color: Color(0xFF0284C7),
                           ),
                         ],
