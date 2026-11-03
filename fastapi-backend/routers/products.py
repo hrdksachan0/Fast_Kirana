@@ -650,6 +650,20 @@ async def get_products(
         filtered_words = [w for w in raw_words if w not in SEARCH_STOP_WORDS]
         search_words = filtered_words if filtered_words else raw_words
 
+        # 1.1 Gemini AI Conversational Intent & Mood Parser (Superpowers 1, 3, 4)
+        parsed_intent = None
+        try:
+            from utils.gemini_intent import should_parse_intent, parse_query_intent_with_gemini
+            if should_parse_intent(normalized_search):
+                parsed_intent = parse_query_intent_with_gemini(normalized_search)
+                if parsed_intent and parsed_intent.get('search_terms'):
+                    for term in parsed_intent['search_terms']:
+                        for tw in term.lower().split():
+                            if len(tw) >= 2 and tw not in SEARCH_STOP_WORDS and tw not in search_words:
+                                search_words.append(tw)
+        except Exception as e:
+            logger.warning(f"[IntentParser] Error: {e}")
+
         # Detect if query explicitly targets a restaurant name
         is_as_query = normalized_search in ['as', 'a.s', 'a.s.', 'as restaurant', 'a.s restaurant', 'as cafe'] or normalized_search.startswith('as ')
         matched_rest_ids = set()
@@ -793,6 +807,13 @@ async def get_products(
                             has_matching_variant = True
                         if v_name == normalized_search or v_name.startswith(normalized_search):
                             variant_exact = True
+
+            # Superpower 4: Strict Veg vs Non-Veg AI Filter
+            if parsed_intent:
+                dietary = parsed_intent.get('dietary')
+                is_nonveg_item = any(k in p_name_lower or any(k in t for t in p_tags) for k in ['chicken', 'mutton', 'egg', 'fish', 'meat', 'non-veg', 'nonveg'])
+                if dietary == 'veg' and is_nonveg_item:
+                    continue  # Strictly discard non-veg items on veg intent!
 
             # ── UNIVERSAL EXCLUSION GUARD (Applied to EVERY product in the store) ──
             # If user explicitly searched for a restaurant brand, discard products from other outlets/retail

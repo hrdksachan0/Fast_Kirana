@@ -4,6 +4,7 @@ import { SYNONYM_DICTIONARY, normalizeSearchQuery } from '@/lib/synonyms'
 import { getSemanticAiScore } from '@/lib/vector-search'
 import { sortProductsByStock } from '@/lib/utils'
 import { getGeminiQueryEmbedding } from '@/lib/gemini-embedding'
+import { shouldParseIntent, parseQueryIntentWithGemini, ParsedSearchIntent } from '@/lib/gemini-intent'
 
 export interface SearchOptions {
   query?: string | null
@@ -63,6 +64,25 @@ export class ProductSearchService {
       const rawTokens = normalizedQuery.split(/\s+/).filter(Boolean)
       const filteredTokens = rawTokens.filter(t => !STOP_WORDS.has(t))
       const searchTokens = filteredTokens.length > 0 ? filteredTokens : rawTokens
+
+      // 1.1 Gemini AI Conversational Intent & Mood Parser (Superpowers 1, 3, 4)
+      let parsedIntent: ParsedSearchIntent | null = null
+      if (shouldParseIntent(normalizedQuery)) {
+        try {
+          parsedIntent = await parseQueryIntentWithGemini(normalizedQuery)
+          if (parsedIntent && parsedIntent.search_terms && parsedIntent.search_terms.length > 0) {
+            for (const term of parsedIntent.search_terms) {
+              for (const tw of term.toLowerCase().split(/\s+/)) {
+                if (tw.length >= 2 && !STOP_WORDS.has(tw) && !searchTokens.includes(tw)) {
+                  searchTokens.push(tw)
+                }
+              }
+            }
+          }
+        } catch (intentErr) {
+          console.warn('[ProductSearchService] Intent parser fallback:', intentErr)
+        }
+      }
 
       // 2. Build PostgreSQL tsquery string with synonyms and prefix matching
       const tokenGroups = searchTokens.map(t => {
@@ -278,6 +298,14 @@ export class ProductSearchService {
           const matchingTitleWords = searchTokens.filter(w => w.length <= 3 ? pWords.has(w) : pNameLower.includes(w))
           const matchingTagWords = searchTokens.filter(w => pTags.some((t: string) => w.length <= 3 ? t === w : t.includes(w)))
           const matchingDesc = searchTokens.some(w => w.length > 3 && pDesc.includes(w))
+
+          // Superpower 4: Strict Veg vs Non-Veg AI Filter
+          if (parsedIntent) {
+            const isNonVeg = ['chicken', 'mutton', 'egg', 'fish', 'meat', 'non-veg', 'nonveg'].some(k => pNameLower.includes(k) || pTags.some(t => t.includes(k)))
+            if (parsedIntent.dietary === 'veg' && isNonVeg) {
+              return { product: p, score: 0 } // Strictly discard non-veg on veg intent!
+            }
+          }
 
           // ── UNIVERSAL EXCLUSION GUARD (Applied to EVERY product in the store) ──
           // If user specifically searched for a restaurant brand, discard products from other outlets/retail
