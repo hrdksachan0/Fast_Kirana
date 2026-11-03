@@ -650,14 +650,10 @@ async def get_products(
         filtered_words = [w for w in raw_words if w not in SEARCH_STOP_WORDS]
         search_words = filtered_words if filtered_words else raw_words
 
-        DISH_KEYWORDS = {
-            'biryani', 'pizza', 'burger', 'sandwich', 'roll', 'rolls', 'wrap', 'momo', 'momos',
-            'chowmein', 'noodles', 'maggi', 'fried rice', 'paneer', 'chicken', 'roti', 'naan',
-            'dal', 'curry', 'gravy', 'thali', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
-            'dosa', 'idli', 'samosa', 'patties', 'cake', 'pastry', 'ice cream', 'milk', 'doodh',
-            'atta', 'rice', 'chawal', 'oil', 'ghee', 'masala', 'biscuit', 'chips', 'namkeen'
-        }
-        has_dish_intent = any(w in DISH_KEYWORDS for w in search_words) or (normalized_search in DISH_KEYWORDS)
+        # Detect if query explicitly targets a restaurant name
+        is_explicit_restaurant_search = any(
+            rw in normalized_search for rw in ['restaurant', 'cafe', 'dhaba', 'kitchen', 'hotel', 'bhojnalaya', 'sweets', 'bakery']
+        )
 
         phrase_syns = SYNONYM_DICTIONARY.get(normalized_search, [])
         word_clauses = []
@@ -668,24 +664,21 @@ async def get_products(
                 or_conditions.append(Product.name.ilike(f"%{opt}%"))
                 or_conditions.append(Product.description.ilike(f"%{opt}%"))
                 or_conditions.append(func.array_to_string(Product.tags, ',').ilike(f"%{opt}%"))
-                if not has_dish_intent:
+                if is_explicit_restaurant_search:
                     or_conditions.append(Product.restaurant.has(Restaurant.name.ilike(f"%{opt}%")))
-                    or_conditions.append(Product.category.has(Category.name.ilike(f"%{opt}%")))
             word_clauses.append(or_(*or_conditions))
         else:
             for w in search_words:
                 syns = SYNONYM_DICTIONARY.get(w, [])
                 word_options = list(set([w] + syns))
 
-                # Substrings matching across name, description, tags, restaurant, and category
                 or_conditions = []
                 for opt in word_options:
                     or_conditions.append(Product.name.ilike(f"%{opt}%"))
                     or_conditions.append(Product.description.ilike(f"%{opt}%"))
                     or_conditions.append(func.array_to_string(Product.tags, ',').ilike(f"%{opt}%"))
-                    if not has_dish_intent:
+                    if is_explicit_restaurant_search:
                         or_conditions.append(Product.restaurant.has(Restaurant.name.ilike(f"%{opt}%")))
-                        or_conditions.append(Product.category.has(Category.name.ilike(f"%{opt}%")))
                 word_clauses.append(or_(*or_conditions))
 
         stmt = select(Product).options(
@@ -725,53 +718,76 @@ async def get_products(
             p_name_lower = p.name.lower().strip()
             p_tags = [t.lower() for t in (p.tags or [])]
             p_words = set(re.findall(r'\b\w+\b', p_name_lower))
+            p_desc = (p.description or "").lower().strip()
 
-            # Exclusion Guard: If searching for a dish and the product has NO query word in title, variants, or tags, SKIP!
             matching_title_words = [w for w in search_words if w in p_name_lower or w in p_words]
             matching_tag_words = [w for w in search_words if any(w in t for t in p_tags)]
-            if has_dish_intent and not matching_title_words and not matching_tag_words:
+            matching_desc = any(w in p_desc for w in search_words)
+
+            p_variants = p.variants or []
+            has_matching_variant = False
+            variant_exact = False
+            if isinstance(p_variants, list):
+                for v in p_variants:
+                    if isinstance(v, dict):
+                        v_name = str(v.get("name") or "").lower()
+                        if any(w in v_name for w in search_words):
+                            has_matching_variant = True
+                        if v_name == normalized_search or v_name.startswith(normalized_search):
+                            variant_exact = True
+
+            # ── UNIVERSAL EXCLUSION GUARD (Applied to EVERY product in the store) ──
+            # If the product does NOT match ANY search word in title, tags, variants, or description -> Discard!
+            if not matching_title_words and not matching_tag_words and not matching_desc and not has_matching_variant:
                 continue
 
             name_score = 0.0
 
             # ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) ──
+            # Guarantees the searched product is strictly #1 at the TOP for ANY product!
             if p_name_lower == normalized_search:
                 name_score = 10000.0
             elif p_name_lower.startswith(normalized_search + " ") or p_name_lower.startswith(normalized_search):
                 name_score = 8000.0
             elif normalized_search in p_name_lower:
                 name_score = 6000.0
+            elif variant_exact:
+                name_score = 5500.0
             elif len(search_words) > 1 and all(w in p_name_lower for w in search_words):
                 name_score = 4500.0
 
-            # ── TIER 2: HIGH SIMILARITY / PARTIAL DISH MATCH (1,000 - 3,000) ──
+            # ── TIER 2: HIGH RELEVANCE / PARTIAL MATCHES (1,000 - 3,500) ──
             if name_score < 4500.0:
                 if matching_title_words:
-                    for w in matching_title_words:
-                        if w in DISH_KEYWORDS:
-                            name_score += 2000.0
-                        else:
-                            name_score += 1200.0
+                    name_score += len(matching_title_words) * 1500.0
+                elif has_matching_variant:
+                    name_score += 800.0
+                elif matching_tag_words:
+                    name_score += 500.0
+                elif matching_desc:
+                    name_score += 150.0
                 else:
                     fuzzy_sim = get_fuzzy_score(normalized_search, p.name)
-                    if fuzzy_sim > 60:
-                        name_score = max(name_score, fuzzy_sim * 10)
+                    if fuzzy_sim > 65:
+                        name_score = fuzzy_sim * 10
 
-            # Check variants (e.g. Chicken Biryani Full Plate option)
-            p_variants = p.variants or []
-            if isinstance(p_variants, list):
-                for v in p_variants:
-                    if isinstance(v, dict):
-                        v_name = str(v.get("name") or "").lower()
-                        if v_name == normalized_search or v_name.startswith(normalized_search):
-                            name_score = max(name_score, 5500.0)
-
-            # ── TIER 3: SPICES & MASALA DEMOTION ──
+            # ── TIER 3: CONTEXT-AWARE DEMOTIONS ──
+            # 1. Prepared Meal vs Raw Spice Packets (e.g. searching "Chicken Biryani" shouldn't rank Everest Chicken Masala on top)
+            COOKED_MEAL_KEYWORDS = {
+                'biryani', 'chicken', 'paneer', 'mutton', 'dal', 'curry', 'gravy',
+                'pasta', 'chole', 'rajma', 'sabzi', 'kadhai', 'handi', 'fish', 'egg'
+            }
+            is_meal_search = any(w in COOKED_MEAL_KEYWORDS for w in search_words)
             cat_slug = (p.category.slug if p.category else "").lower()
             cat_name = (p.category.name if p.category else "").lower()
-            if has_dish_intent and ('spices' in cat_slug or 'masala' in cat_slug or 'masala' in cat_name or 'masala' in p_name_lower):
+            if is_meal_search and ('spices' in cat_slug or 'masala' in cat_slug or 'masala' in cat_name or 'masala' in p_name_lower):
                 if 'masala' not in normalized_search:
-                    name_score = min(name_score, 500.0) # Demote raw spices below cooked meals!
+                    name_score = min(name_score, 500.0) # Demote raw spice packets below prepared dishes!
+
+            # 2. Noodles vs Ketchup/Sauce (e.g. searching "Maggi" shouldn't rank Maggi Sauce above Maggi Noodles)
+            if any(w in ['maggi', 'maggie', 'noodle', 'noodles'] for w in search_words):
+                if 'sauce' in cat_slug or 'ketchup' in p_name_lower or 'sauce' in p_name_lower:
+                    name_score = min(name_score, 300.0)
 
             # Tag & description bonus
             tag_score = 0.0

@@ -938,20 +938,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
               rCuisines.contains(queryClean);
         }).toList();
 
-        // Food dish keywords that indicate product/dish intent, NOT restaurant intent:
-        const dishKeywords = {
-          'biryani', 'pizza', 'burger', 'sandwich', 'roll', 'rolls', 'wrap', 'momo', 'momos',
-          'chowmein', 'noodles', 'maggi', 'fried rice', 'paneer', 'chicken', 'roti', 'naan',
-          'dal', 'curry', 'gravy', 'thali', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
-          'dosa', 'idli', 'samosa', 'patties', 'cake', 'pastry', 'ice cream', 'milk', 'doodh',
-          'atta', 'rice', 'chawal', 'oil', 'ghee', 'masala', 'biscuit', 'chips', 'namkeen'
-        };
-
-        final hasDishIntent = effectiveQueryWords.any((w) => dishKeywords.contains(w)) ||
-            dishKeywords.contains(queryClean);
-
-        // Only treat as restaurant query if the search explicitly matches the restaurant's NAME,
-        // NOT merely a cuisine tag (e.g. searching "biryani" should NOT boost all Wedson dishes!)
+        // Detect if user explicitly searched for a restaurant brand or food outlet name
         final isExplicitRestaurantQuery = isAsQuery ||
             matchedRestaurants.any((r) =>
                 r.name.toLowerCase().contains(queryClean) ||
@@ -999,54 +986,68 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
             score += 250;
           }
 
-          // Check query words matching in product title
+          // Check query words matching in product fields
           final nameTokens = pName.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
           final matchingWordsInTitle = effectiveQueryWords.where((w) => nameTokens.contains(w) || pName.contains(w)).toList();
           final allWordsInTitle = effectiveQueryWords.isNotEmpty && matchingWordsInTitle.length == effectiveQueryWords.length;
           final anyWordInTitle = matchingWordsInTitle.isNotEmpty;
           final anyWordInVariants = variantNames.any((vn) => effectiveQueryWords.any((w) => vn.contains(w)));
           final anyWordInTags = tags.any((t) => effectiveQueryWords.any((w) => t.contains(w)));
+          final anyWordInDesc = effectiveQueryWords.any((w) => desc.contains(w));
+          final anyWordInCat = effectiveQueryWords.any((w) => catName.contains(w) || catSlug.contains(w));
 
-          // Strict Dish Exclusion Guard:
-          // If searching for a dish and the product name/variants/tags don't match ANY query word, SKIP IT!
-          if (hasDishIntent && !anyWordInTitle && !anyWordInVariants && !anyWordInTags) {
+          // ── UNIVERSAL EXCLUSION GUARD (Applied to EVERY product in the store) ──
+          // If product does not match ANY search token in title, variants, tags, description, or category -> SKIP!
+          if (!anyWordInTitle && !anyWordInVariants && !anyWordInTags && !anyWordInDesc && !anyWordInCat) {
             continue;
           }
 
           // ── TIER 1: EXACT & DIRECT TITLE MATCH (Score 10,000+) ──
+          // Guarantees the exact searched product is strictly #1 at the TOP for ANY product!
           if (pName == queryClean) {
             score += 10000; // Absolute #1 Exact Full Title Match
           } else if (pName.startsWith('$queryClean ') || pName.startsWith(queryClean)) {
-            score += 8000;  // Starts With (e.g. "Chicken Biryani Full Plate")
+            score += 8000;  // Starts With query (e.g. "Amul Butter 100g", "Maggi 2-Minute")
           } else if (pName.contains(queryClean)) {
-            score += 6000;  // Contains Full Phrase (e.g. "Special Chicken Biryani")
+            score += 6000;  // Contains Full Phrase (e.g. "Tata Salt Lite")
           } else if (variantNames.any((vn) => vn == queryClean || vn.startsWith(queryClean))) {
             score += 5500;  // Variant matches full query
           } else if (allWordsInTitle) {
-            score += 4500;  // Every search token is present in title (e.g. "Dum Biryani with Chicken")
+            score += 4500;  // Every search token is present in title
           }
 
-          // ── TIER 2: HIGH SIMILARITY / PARTIAL DISH MATCH (Score 1,000 - 3,000) ──
+          // ── TIER 2: HIGH RELEVANCE / PARTIAL MATCHES (Score 1,000 - 3,500) ──
           if (score < 4500) {
             if (anyWordInTitle) {
-              for (final w in matchingWordsInTitle) {
-                if (dishKeywords.contains(w)) {
-                  score += 2000;
-                } else {
-                  score += 1200;
-                }
-              }
+              score += matchingWordsInTitle.length * 1500;
             } else if (anyWordInVariants) {
               score += 800;
             } else if (anyWordInTags) {
               score += 500;
+            } else if (anyWordInCat) {
+              score += 300;
+            } else if (anyWordInDesc) {
+              score += 100;
             }
           }
 
-          // ── TIER 3: SPICES & MASALA DEMOTION ──
-          if (hasDishIntent && (catSlug.contains('spices') || catSlug.contains('masala') || pName.contains('masala powder') || pName.contains('chicken masala'))) {
+          // ── TIER 3: CONTEXT-AWARE DEMOTIONS ──
+          // 1. Prepared Meal vs Raw Spice Packets (e.g. searching "Chicken Biryani" shouldn't rank Everest Masala on top)
+          const cookedMealKeywords = {
+            'biryani', 'chicken', 'paneer', 'mutton', 'dal', 'curry', 'gravy',
+            'pasta', 'chole', 'rajma', 'sabzi', 'kadhai', 'handi', 'fish', 'egg'
+          };
+          final isMealSearch = effectiveQueryWords.any((w) => cookedMealKeywords.contains(w));
+          if (isMealSearch && (catSlug.contains('spices') || catSlug.contains('masala') || pName.contains('masala powder') || pName.contains('chicken masala'))) {
             if (!queryClean.contains('masala')) {
               score = (score * 0.25).round(); // Demote raw spices below cooked meals!
+            }
+          }
+
+          // 2. Noodles vs Ketchup/Sauce (e.g. searching "Maggi" shouldn't rank Maggi Sauce above Maggi Noodles)
+          if (queryClean.contains('maggi') || queryClean.contains('maggie') || queryClean.contains('noodle')) {
+            if (catSlug.contains('sauce') || pName.contains('ketchup')) {
+              score = (score * 0.25).round();
             }
           }
 
@@ -1243,14 +1244,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           } else {
             for (final w in effectiveQueryWords) {
               if (pName.contains(w)) {
-                s += dishKeywords.contains(w) ? 2000 : 1200;
+                s += 1500;
               }
             }
           }
 
           final catSlug = (p.category?.slug ?? p.categoryId ?? '').toLowerCase();
-          if (hasDishIntent && (catSlug.contains('spices') || catSlug.contains('masala') || pName.contains('masala powder') || pName.contains('chicken masala'))) {
+          const cookedMealKeywords = {
+            'biryani', 'chicken', 'paneer', 'mutton', 'dal', 'curry', 'gravy',
+            'pasta', 'chole', 'rajma', 'sabzi', 'kadhai', 'handi', 'fish', 'egg'
+          };
+          final isMealSearch = effectiveQueryWords.any((w) => cookedMealKeywords.contains(w));
+          if (isMealSearch && (catSlug.contains('spices') || catSlug.contains('masala') || pName.contains('masala powder') || pName.contains('chicken masala'))) {
             if (!queryClean.contains('masala')) {
+              s = (s * 0.25).round();
+            }
+          }
+
+          if (queryClean.contains('maggi') || queryClean.contains('maggie') || queryClean.contains('noodle')) {
+            if (catSlug.contains('sauce') || pName.contains('ketchup')) {
               s = (s * 0.25).round();
             }
           }
@@ -1261,18 +1273,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           return s;
         }
 
-        // Double-guard: Remove any product with zero relevant word matches when user is searching for a dish
-        if (hasDishIntent) {
-          filtered = filtered.where((p) {
-            final pName = p.name.toLowerCase().trim();
-            final pTags = p.tags.map((t) => t.toLowerCase().trim()).toList();
-            final vNames = (p.variants ?? []).map((v) => v.name.toLowerCase().trim()).toList();
-            final anyTitle = effectiveQueryWords.any((w) => pName.contains(w));
-            final anyVariant = vNames.any((vn) => effectiveQueryWords.any((w) => vn.contains(w)));
-            final anyTag = pTags.any((t) => effectiveQueryWords.any((w) => t.contains(w)));
-            return anyTitle || anyVariant || anyTag;
-          }).toList();
-        }
+        // Universal Double-guard: Remove any product with zero relevant word matches for EVERY search
+        filtered = filtered.where((p) {
+          final pName = p.name.toLowerCase().trim();
+          final pTags = p.tags.map((t) => t.toLowerCase().trim()).toList();
+          final vNames = (p.variants ?? []).map((v) => v.name.toLowerCase().trim()).toList();
+          final pDesc = (p.description ?? '').toLowerCase().trim();
+          final anyTitle = effectiveQueryWords.any((w) => pName.contains(w));
+          final anyVariant = vNames.any((vn) => effectiveQueryWords.any((w) => vn.contains(w)));
+          final anyTag = pTags.any((t) => effectiveQueryWords.any((w) => t.contains(w)));
+          final anyDesc = effectiveQueryWords.any((w) => pDesc.contains(w));
+          return anyTitle || anyVariant || anyTag || anyDesc;
+        }).toList();
 
         // Zepto/Blinkit architecture: prioritize in-stock products first, ranked by relevance score
         filtered.sort((a, b) {
