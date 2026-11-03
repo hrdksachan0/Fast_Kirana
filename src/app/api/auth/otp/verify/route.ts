@@ -99,6 +99,9 @@ export async function POST(request: NextRequest) {
       if (phoneDigits === '8565935405') {
         candidateEmails.add('picker@fastkirana.com')
       }
+      if (phoneDigits === '8924873692') {
+        candidateEmails.add('zayka@fastkirana.com')
+      }
 
       const canonicalUser = matchingUsers.find(u =>
         (phoneDigits === '9170942500' && u.email === 'superadmin@fastkirana.com') ||

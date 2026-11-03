@@ -909,7 +909,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
         final matchedRestaurants = uniqueRestaurants.where((r) {
           final rName = r.name.toLowerCase();
           final rSlug = r.slug.toLowerCase();
-          final rCuisines = r.cuisineTags.map((t) => t.toLowerCase()).join(' ');
 
           if (isAsQuery) {
             return r.id == 'REST-101' ||
@@ -919,32 +918,32 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                 rName.contains('a.s');
           }
 
-          if (distinctiveQueryWords.isNotEmpty) {
-            return distinctiveQueryWords.any((w) {
-              if (w == 'as' || w == 'a.s' || w == 'a.s.') {
-                return r.id == 'REST-101' || r.id == 'cms2p1lap0000n0id8alldboy' || rSlug.contains('as');
-              }
-              if (w.length >= 2 && (rName.contains(w) || rSlug.contains(w) || rCuisines.contains(w))) {
-                return true;
-              }
-              return w.length >= 3 && (FuzzyMatcher.bestTokenFuzzyDistance(w, rName, maxDistance: 2) != null ||
-                  FuzzyMatcher.bestTokenFuzzyDistance(w, rSlug, maxDistance: 2) != null);
-            });
+          // Distinctive brand matching only (never match generic cuisine words like "thali" or "pizza")
+          if (rSlug.contains('wedson') && (queryClean.contains('wedson') || distinctiveQueryWords.contains('wedson'))) {
+            return true;
+          }
+          if (rSlug.contains('bal-udyan') && (queryClean.contains('bal udyan') || (distinctiveQueryWords.contains('bal') && distinctiveQueryWords.contains('udyan')))) {
+            return true;
+          }
+          if (rSlug.contains('hot-pizza') && (queryClean.contains('hot pizza') || (distinctiveQueryWords.contains('hot') && distinctiveQueryWords.contains('pizza')))) {
+            return true;
+          }
+          if (rSlug.contains('zayka') && (queryClean.contains('zayka') || distinctiveQueryWords.contains('zayka'))) {
+            return true;
           }
 
-          // Fallback if query was only generic words like "restaurant" or "cafe"
-          return rName.contains(queryClean) ||
-              rSlug.contains(queryClean) ||
-              rCuisines.contains(queryClean);
+          final cleanRName = rName.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ').trim();
+          if (queryClean.length >= 4 && (cleanRName == queryClean || cleanRName.startsWith('$queryClean ') || queryClean.contains(cleanRName))) {
+            return true;
+          }
+
+          return false;
         }).toList();
 
         // Detect if user explicitly searched for a restaurant brand or food outlet name
         final isExplicitRestaurantQuery = isAsQuery ||
-            matchedRestaurants.any((r) =>
-                r.name.toLowerCase().contains(queryClean) ||
-                queryClean.contains(r.name.toLowerCase())) ||
-            uniqueRestaurants.any((r) => r.name.toLowerCase().contains(queryClean) || queryClean.contains(r.name.toLowerCase())) ||
-            ['cafe', 'restaurant', 'dhaba', 'kitchen', 'food court', 'bhojnalaya', 'sweets', 'bakery'].any((r) => queryClean.contains(r));
+            matchedRestaurants.isNotEmpty ||
+            genericRestaurantWords.any((rw) => queryClean == rw || queryClean.startsWith('$rw ') || queryClean.endsWith(' $rw'));
 
         // 2. Build expanded query terms using Hinglish synonyms
         final Set<String> expandedTerms = {queryClean, ...effectiveQueryWords};
@@ -994,18 +993,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
 
           // Check query words matching in product fields
           final nameTokens = pName.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
-          // Short tokens (<= 3 chars, e.g. "as", "tea", "dal") MUST be exact whole-word matches, not substring inside words like "Namaste", "Dark Fantasy", or "Masala"
+          // Short tokens (<= 2 chars, e.g. "as") MUST be exact whole-word matches to prevent polluting words like "Namaste" or "Masala".
+          // Tokens length >= 3 match exact word OR words starting with token (e.g. "hal" -> "Haldiram", "Haldi", "Haldwani")
           final matchingWordsInTitle = effectiveQueryWords.where((w) {
-            if (w.length <= 3) {
+            if (w.length <= 2) {
               return nameTokens.contains(w);
             }
-            return nameTokens.contains(w) || pName.contains(w);
+            return nameTokens.contains(w) || nameTokens.any((t) => t.startsWith(w));
           }).toList();
           final allWordsInTitle = effectiveQueryWords.isNotEmpty && matchingWordsInTitle.length == effectiveQueryWords.length;
           final anyWordInTitle = matchingWordsInTitle.isNotEmpty;
           final anyWordInVariants = variantNames.any((vn) => effectiveQueryWords.any((w) => vn.contains(w)));
-          final anyWordInTags = tags.any((t) => effectiveQueryWords.any((w) => t.contains(w)));
-          final anyWordInDesc = effectiveQueryWords.any((w) => desc.contains(w));
+          final anyWordInTags = tags.any((t) => effectiveQueryWords.any((w) {
+            if (w.length <= 2) return t == w;
+            return t == w || t.startsWith(w) || (w.length > 3 && t.contains(w));
+          }));
+          final anyWordInDesc = effectiveQueryWords.any((w) => w.length > 3 && desc.contains(w));
           final anyWordInCat = effectiveQueryWords.any((w) => catName.contains(w) || catSlug.contains(w));
 
           // ── UNIVERSAL EXCLUSION GUARD (Applied to EVERY product in the store) ──
@@ -1027,8 +1030,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
             score += 12000; // Multi-word match: ALL words in title (e.g. "Chilli Paneer" for "chilli paneer")
           } else if (pName.startsWith('$queryClean ') || pName.startsWith(queryClean)) {
             score += 8000;  // Starts With query (e.g. "Amul Butter 100g", "Maggi 2-Minute")
-          } else if (pName.contains(queryClean)) {
-            score += 6000;  // Contains Full Phrase (e.g. "Tata Salt Lite")
+          } else if (pName.contains(' $queryClean ') || pName.endsWith(' $queryClean') || nameTokens.any((t) => t.startsWith(queryClean))) {
+            score += 6000;  // Contains whole word or word starting with query (e.g. "Tata Salt Lite", "Haldiram's ...")
           } else if (variantNames.any((vn) => vn == queryClean || vn.startsWith(queryClean))) {
             score += 5500;  // Variant matches full query
           }
@@ -1100,7 +1103,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
 
             if (pName == term) {
               score += 120;
-            } else if (!isShort && pName.contains(term)) {
+            } else if (!isShort && (pName.contains(' $term') || nameWords.any((nw) => nw.startsWith(term)))) {
               score += 40;
             } else if (isShort) {
               if (nameWords.contains(term)) {

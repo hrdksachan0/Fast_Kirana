@@ -103,17 +103,18 @@ export class ProductSearchService {
       const isAsQuery = normalizedQuery === 'as' || normalizedQuery.startsWith('as ') || normalizedQuery.includes('as restaurant') || normalizedQuery.includes('a.s')
       const matchedRestIds = new Set<string>()
       if (isAsQuery) matchedRestIds.add('REST-101')
-      const RESTAURANTS = [
-        { id: 'REST-101', name: 'a.s. restaurant', slug: 'as-restaurant' },
-        { id: 'REST-102', name: 'wedson restaurant', slug: 'wedson-restaurant' },
-        { id: 'REST-103', name: 'bal udyan restaurant', slug: 'bal-udyan-restaurant' },
-        { id: 'REST-104', name: 'hot pizza lovers', slug: 'hot-pizza-lovers' },
-        { id: 'REST-105', name: 'zayka non veg hotel', slug: 'zayka-non-veg-hotel' },
-      ]
-      for (const r of RESTAURANTS) {
-        if (searchTokens.some(w => w.length >= 3 && (r.name.includes(w) || r.slug.includes(w)))) {
-          matchedRestIds.add(r.id)
-        }
+      // Only match distinctive restaurant brand names (never trigger on generic substrings like "hot", "hotel", "bal")
+      if (normalizedQuery.includes('wedson')) {
+        matchedRestIds.add('REST-102')
+      }
+      if (normalizedQuery.includes('bal udyan') || (searchTokens.includes('bal') && searchTokens.includes('udyan'))) {
+        matchedRestIds.add('REST-103')
+      }
+      if (normalizedQuery.includes('hot pizza') || (searchTokens.includes('pizza') && searchTokens.includes('lovers'))) {
+        matchedRestIds.add('REST-104')
+      }
+      if (normalizedQuery.includes('zayka')) {
+        matchedRestIds.add('REST-105')
       }
       const isRestaurantSearch = matchedRestIds.size > 0 || searchTokens.some(w => ['restaurant', 'cafe', 'dhaba', 'kitchen', 'hotel'].includes(w))
 
@@ -294,9 +295,16 @@ export class ProductSearchService {
           const pDesc = (p.description || '').toLowerCase().trim()
           const isFromTargetRestaurant = Boolean(p.restaurantId && matchedRestIds.has(p.restaurantId))
 
-          // Short tokens (<= 3 chars, e.g. "as", "tea", "dal") MUST be whole-word matches, not substring inside words like "Namaste", "Dark Fantasy", or "Masala"
-          const matchingTitleWords = searchTokens.filter(w => w.length <= 3 ? pWords.has(w) : pNameLower.includes(w))
-          const matchingTagWords = searchTokens.filter(w => pTags.some((t: string) => w.length <= 3 ? t === w : t.includes(w)))
+          // Short tokens (<= 2 chars, e.g. "as") MUST be whole-word matches to prevent polluting words like "Namaste" or "Masala".
+          // Tokens length >= 3 match exact word OR words starting with token (e.g. "hal" -> "Haldiram", "Haldi", "Haldwani")
+          const matchingTitleWords = searchTokens.filter(w => {
+            if (w.length <= 2) return pWords.has(w)
+            return pWords.has(w) || Array.from(pWords).some(pw => pw.startsWith(w))
+          })
+          const matchingTagWords = searchTokens.filter(w => {
+            if (w.length <= 2) return pTags.includes(w)
+            return pTags.some((t: string) => t === w || t.startsWith(w))
+          })
           const matchingDesc = searchTokens.some(w => w.length > 3 && pDesc.includes(w))
 
           // Superpower 4: Strict Veg vs Non-Veg AI Filter
@@ -338,7 +346,7 @@ export class ProductSearchService {
             tierScore = 12000 // Contains all multi-words in title (e.g. "Chilli Paneer" for "chilli paneer")
           } else if (pNameLower.startsWith(normalizedQuery + ' ') || pNameLower.startsWith(normalizedQuery)) {
             tierScore = 10000
-          } else if (pNameLower.includes(normalizedQuery)) {
+          } else if (pNameLower.includes(' ' + normalizedQuery + ' ') || pNameLower.endsWith(' ' + normalizedQuery) || Array.from(pWords).some(pw => pw.startsWith(normalizedQuery))) {
             tierScore = 8000
           } else if (isFromTargetRestaurant) {
             tierScore = 7000 // Restaurant menu boost when restaurant was explicitly queried

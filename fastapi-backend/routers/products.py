@@ -669,12 +669,19 @@ async def get_products(
         matched_rest_ids = set()
         if is_as_query:
             matched_rest_ids.add('REST-101')
-        for r_id, r_name, r_slug in [('REST-101', 'a.s. restaurant', 'as-restaurant'), ('REST-102', 'wedson restaurant', 'wedson-restaurant'), ('REST-103', 'bal udyan restaurant', 'bal-udyan-restaurant'), ('REST-104', 'hot pizza lovers', 'hot-pizza-lovers'), ('REST-105', 'zayka non veg hotel', 'zayka-non-veg-hotel')]:
-            if any(w in r_name or w in r_slug for w in search_words if len(w) >= 3):
-                matched_rest_ids.add(r_id)
+        
+        # Only match distinctive restaurant brand names (never trigger on generic substrings like "hot", "hotel", "bal")
+        if 'wedson' in normalized_search:
+            matched_rest_ids.add('REST-102')
+        if 'bal udyan' in normalized_search or ('bal' in search_words and 'udyan' in search_words):
+            matched_rest_ids.add('REST-103')
+        if 'hot pizza' in normalized_search or ('pizza' in search_words and 'lovers' in search_words):
+            matched_rest_ids.add('REST-104')
+        if 'zayka' in normalized_search:
+            matched_rest_ids.add('REST-105')
 
         is_explicit_restaurant_search = bool(matched_rest_ids) or any(
-            rw in normalized_search for rw in ['restaurant', 'cafe', 'dhaba', 'kitchen', 'hotel', 'bhojnalaya', 'sweets', 'bakery']
+            rw in normalized_search.split() for rw in ['restaurant', 'cafe', 'dhaba', 'kitchen', 'hotel', 'bhojnalaya']
         )
 
         phrase_syns = SYNONYM_DICTIONARY.get(normalized_search, [])
@@ -788,12 +795,16 @@ async def get_products(
 
             is_from_target_restaurant = bool(p.restaurantId and p.restaurantId in matched_rest_ids)
 
-            # Short tokens (<= 3 chars, e.g. "as", "tea", "dal") MUST be whole-word matches, not substring inside words like "Namaste", "Dark Fantasy", or "Masala"
+            # Short tokens (<= 2 chars, e.g. "as") MUST be whole-word matches to prevent polluting words like "Namaste" or "Masala".
+            # Tokens length >= 3 match exact word OR words starting with token (e.g. "hal" -> "Haldiram", "Haldi", "Haldwani")
             matching_title_words = [
                 w for w in search_words 
-                if (w in p_words if len(w) <= 3 else (w in p_name_lower or w in p_words))
+                if (w in p_words if len(w) <= 2 else (w in p_words or any(nw.startswith(w) for nw in p_words)))
             ]
-            matching_tag_words = [w for w in search_words if any((w == t if len(w) <= 3 else w in t) for t in p_tags)]
+            matching_tag_words = [
+                w for w in search_words 
+                if any((w == t if len(w) <= 2 else (w == t or t.startswith(w))) for t in p_tags)
+            ]
             matching_desc = any(w in p_desc for w in search_words if len(w) > 3)
 
             p_variants = p.variants or []
@@ -843,7 +854,7 @@ async def get_products(
                 name_score = 12000.0  # Contains all multi-words in title (e.g. "Chilli Paneer" for "chilli paneer")
             elif p_name_lower.startswith(normalized_search + " ") or p_name_lower.startswith(normalized_search):
                 name_score = 10000.0
-            elif normalized_search in p_name_lower:
+            elif f" {normalized_search} " in p_name_lower or p_name_lower.endswith(f" {normalized_search}") or any(nw.startswith(normalized_search) for nw in p_words):
                 name_score = 8000.0
             elif is_from_target_restaurant:
                 name_score = 7000.0  # Whole restaurant menu matches when restaurant explicitly queried
@@ -892,7 +903,7 @@ async def get_products(
             tag_score = 0.0
             if any(t == normalized_search or t in all_query_syns for t in p_tags):
                 tag_score = 300.0
-            elif any(w in t for w in search_words for t in p_tags):
+            elif any((w == t if len(w) <= 2 else (w in t or t.startswith(w))) for w in search_words for t in p_tags):
                 tag_score = 150.0
 
             desc_score = 50.0 if (p.description and normalized_search in p.description.lower()) else 0.0

@@ -18,6 +18,7 @@ import 'package:share_plus/share_plus.dart';
 import 'models/cafe_menu_section.dart';
 import 'widgets/cafe_reviews_tab.dart';
 import 'widgets/cafe_offers_strip.dart';
+import 'widgets/chilled_freezer_addon_section.dart';
 import '../../providers/coupon_provider.dart';
 
 class CafeMenuScreen extends ConsumerStatefulWidget {
@@ -1208,183 +1209,17 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     return ref.watch(restaurantAddonsProvider).when(
       data: (addons) {
         // STRICT: Only display products that are IN STOCK and AVAILABLE
-        final inStockAddons = addons.where((p) => p.isInStock && p.isAvailable && p.stock > 0).toList();
+        final inStockAddons = addons
+            .where((p) =>
+                p.isAvailable &&
+                p.isInStock &&
+                (p.parsedVariants.isNotEmpty
+                    ? p.parsedVariants.any((v) => v.stock > 0)
+                    : p.stock > 0))
+            .toList();
         if (inStockAddons.isEmpty) return const SizedBox.shrink();
 
-        return Container(
-          margin: const EdgeInsets.fromLTRB(12, 18, 12, 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFFFFEDD5),
-              width: 1.2,
-            ),
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFFFBEB), // Soft warm ambient top
-                Colors.white,
-              ],
-              stops: [0.0, 0.40],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFEA580C).withValues(alpha: 0.05),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Premium Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFFDE68A)),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text('🥤', style: TextStyle(fontSize: 18)),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Frequently Ordered',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: Responsive.scaledFontSize(context, 14),
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF0F172A),
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFEF2F2),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFFECDD3), width: 0.8),
-                                ),
-                                child: Text(
-                                  'ADD-ONS',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 8.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: const Color(0xFFE11D48),
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Chilled drinks & sweet desserts',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF64748B),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFFFEDD5)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${inStockAddons.length}',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
-                              fontWeight: FontWeight.w800,
-                              color: primaryOrange,
-                            ),
-                          ),
-                          const SizedBox(width: 2.5),
-                          Text(
-                            'items',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10),
-                              fontWeight: FontWeight.w600,
-                              color: primaryOrange,
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 8, color: primaryOrange),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Edge-to-edge Horizontal Shelf
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: SizedBox(
-                  height: Responsive.productShelfHeight(context),
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    itemCount: inStockAddons.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemBuilder: (context, idx) {
-                      final p = inStockAddons[idx];
-                      final cardWidth = Responsive.productCardShelfWidth(context);
-                      return SizedBox(
-                        width: cardWidth,
-                        child: ProductCard(
-                          product: p,
-                          width: cardWidth,
-                          isCompact: false,
-                          showOutlet: false,
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            Navigator.push(
-                              context,
-                              FadeSlideRoute(page: ProductDetailScreen(product: p)),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
+        return ChilledFreezerAddonSection(addons: inStockAddons);
       },
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),

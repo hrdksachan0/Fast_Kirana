@@ -198,7 +198,12 @@ class RestaurantRepository {
             final cat = (p.category?.slug ?? '').toLowerCase();
             final isMatch = cat == 'beverages' || cat == 'ice-cream' || cat.contains('drink') || cat.contains('dessert');
             // STRICT: Must be available and strictly in-stock (>0)
-            return isMatch && p.isInStock && p.isAvailable && p.stock > 0;
+            final inStock = p.isAvailable &&
+                p.isInStock &&
+                (p.parsedVariants.isNotEmpty
+                    ? p.parsedVariants.any((v) => v.stock > 0)
+                    : p.stock > 0);
+            return isMatch && inStock;
           })
           .toList();
     } catch (e, st) {

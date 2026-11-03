@@ -188,5 +188,12 @@ final restaurantAddonsProvider = FutureProvider<List<Product>>((ref) async {
   final hub = ref.watch(currentStoreHubProvider);
   final products = await repo.getDarkstoreAddonRecommendations(storeId: hub.id);
   // Guarantee only strictly in-stock products are shown
-  return products.where((p) => p.isInStock && p.isAvailable && p.stock > 0).toList();
+  return products
+      .where((p) =>
+          p.isAvailable &&
+          p.isInStock &&
+          (p.parsedVariants.isNotEmpty
+              ? p.parsedVariants.any((v) => v.stock > 0)
+              : p.stock > 0))
+      .toList();
 });
