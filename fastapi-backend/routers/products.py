@@ -650,6 +650,15 @@ async def get_products(
         filtered_words = [w for w in raw_words if w not in SEARCH_STOP_WORDS]
         search_words = filtered_words if filtered_words else raw_words
 
+        DISH_KEYWORDS = {
+            'biryani', 'pizza', 'burger', 'sandwich', 'roll', 'rolls', 'wrap', 'momo', 'momos',
+            'chowmein', 'noodles', 'maggi', 'fried rice', 'paneer', 'chicken', 'roti', 'naan',
+            'dal', 'curry', 'gravy', 'thali', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
+            'dosa', 'idli', 'samosa', 'patties', 'cake', 'pastry', 'ice cream', 'milk', 'doodh',
+            'atta', 'rice', 'chawal', 'oil', 'ghee', 'masala', 'biscuit', 'chips', 'namkeen'
+        }
+        has_dish_intent = any(w in DISH_KEYWORDS for w in search_words) or (normalized_search in DISH_KEYWORDS)
+
         phrase_syns = SYNONYM_DICTIONARY.get(normalized_search, [])
         word_clauses = []
         if phrase_syns:
@@ -659,8 +668,9 @@ async def get_products(
                 or_conditions.append(Product.name.ilike(f"%{opt}%"))
                 or_conditions.append(Product.description.ilike(f"%{opt}%"))
                 or_conditions.append(func.array_to_string(Product.tags, ',').ilike(f"%{opt}%"))
-                or_conditions.append(Product.restaurant.has(Restaurant.name.ilike(f"%{opt}%")))
-                or_conditions.append(Product.category.has(Category.name.ilike(f"%{opt}%")))
+                if not has_dish_intent:
+                    or_conditions.append(Product.restaurant.has(Restaurant.name.ilike(f"%{opt}%")))
+                    or_conditions.append(Product.category.has(Category.name.ilike(f"%{opt}%")))
             word_clauses.append(or_(*or_conditions))
         else:
             for w in search_words:
@@ -673,8 +683,9 @@ async def get_products(
                     or_conditions.append(Product.name.ilike(f"%{opt}%"))
                     or_conditions.append(Product.description.ilike(f"%{opt}%"))
                     or_conditions.append(func.array_to_string(Product.tags, ',').ilike(f"%{opt}%"))
-                    or_conditions.append(Product.restaurant.has(Restaurant.name.ilike(f"%{opt}%")))
-                    or_conditions.append(Product.category.has(Category.name.ilike(f"%{opt}%")))
+                    if not has_dish_intent:
+                        or_conditions.append(Product.restaurant.has(Restaurant.name.ilike(f"%{opt}%")))
+                        or_conditions.append(Product.category.has(Category.name.ilike(f"%{opt}%")))
                 word_clauses.append(or_(*or_conditions))
 
         stmt = select(Product).options(
@@ -712,74 +723,78 @@ async def get_products(
 
         for p in matched_products:
             p_name_lower = p.name.lower().strip()
-            name_score = get_fuzzy_score(normalized_search, p.name)
             p_tags = [t.lower() for t in (p.tags or [])]
             p_words = set(re.findall(r'\b\w+\b', p_name_lower))
 
-            # 1. Exact Name & Prefix Boost
+            # Exclusion Guard: If searching for a dish and the product has NO query word in title, variants, or tags, SKIP!
+            matching_title_words = [w for w in search_words if w in p_name_lower or w in p_words]
+            matching_tag_words = [w for w in search_words if any(w in t for t in p_tags)]
+            if has_dish_intent and not matching_title_words and not matching_tag_words:
+                continue
+
+            name_score = 0.0
+
+            # ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) ──
             if p_name_lower == normalized_search:
-                name_score = 150.0
+                name_score = 10000.0
             elif p_name_lower.startswith(normalized_search + " ") or p_name_lower.startswith(normalized_search):
-                name_score = max(name_score, 120.0)
-            elif normalized_search in p_words:
-                name_score = max(name_score, 110.0)
+                name_score = 8000.0
+            elif normalized_search in p_name_lower:
+                name_score = 6000.0
+            elif len(search_words) > 1 and all(w in p_name_lower for w in search_words):
+                name_score = 4500.0
 
-            # 2. Exact Synonym Match Boost
-            if p_name_lower in all_query_syns:
-                name_score = max(name_score, 140.0)
-            elif any(opt in p_words for opt in all_query_syns):
-                name_score = max(name_score, 115.0)
+            # ── TIER 2: HIGH SIMILARITY / PARTIAL DISH MATCH (1,000 - 3,000) ──
+            if name_score < 4500.0:
+                if matching_title_words:
+                    for w in matching_title_words:
+                        if w in DISH_KEYWORDS:
+                            name_score += 2000.0
+                        else:
+                            name_score += 1200.0
+                else:
+                    fuzzy_sim = get_fuzzy_score(normalized_search, p.name)
+                    if fuzzy_sim > 60:
+                        name_score = max(name_score, fuzzy_sim * 10)
 
-            # 3. Exact or synonym tag match bonus
-            tag_score = 90.0 if any(
-                t == normalized_search or t in all_query_syns
-                for t in p_tags
-            ) else (85.0 if any(get_fuzzy_score(normalized_search, t) > 60 for t in p_tags) else 0.0)
+            # Check variants (e.g. Chicken Biryani Full Plate option)
+            p_variants = p.variants or []
+            if isinstance(p_variants, list):
+                for v in p_variants:
+                    if isinstance(v, dict):
+                        v_name = str(v.get("name") or "").lower()
+                        if v_name == normalized_search or v_name.startswith(normalized_search):
+                            name_score = max(name_score, 5500.0)
 
-            desc_score = get_fuzzy_score(normalized_search, p.description or "") * 0.5
-
-            # 4. Synonym match bonus
-            syn_score = 0.0
-            for opt in (phrase_syns if phrase_syns else []):
-                if opt in p_words:
-                    syn_score = max(syn_score, 90.0)
-                elif len(opt) >= 4 and opt in p_name_lower:
-                    syn_score = max(syn_score, 80.0)
-                elif any(opt in t for t in p_tags):
-                    syn_score = max(syn_score, 85.0)
-
-            for w in search_words:
-                for syn in SYNONYM_DICTIONARY.get(w, []):
-                    if syn in p_words:
-                        syn_score = max(syn_score, 85.0)
-                    elif len(syn) >= 4 and syn in p_name_lower:
-                        syn_score = max(syn_score, 75.0)
-                    elif any(syn == t or (len(syn) >= 4 and syn in t) for t in p_tags):
-                        syn_score = max(syn_score, 80.0)
-
-            # 5. Category intent alignment (e.g. Noodles vs Tomato Ketchup)
+            # ── TIER 3: SPICES & MASALA DEMOTION ──
             cat_slug = (p.category.slug if p.category else "").lower()
             cat_name = (p.category.name if p.category else "").lower()
-            is_noodle_query = any(k in normalized_search for k in ['maggi', 'maggie', 'magi', 'megi', 'noodle', 'instant noodle'])
-            if is_noodle_query:
-                if 'sauce' in cat_slug or 'ketchup' in p_name_lower or 'sauces' in cat_name or 'masala' in p_name_lower or 'seasoning' in p_name_lower:
-                    name_score = min(name_score, 45.0)
-                    syn_score = min(syn_score, 45.0)
-                    tag_score = min(tag_score, 45.0)
-                elif 'breakfast' in cat_slug or p_name_lower == 'maggi' or 'noodle' in p_name_lower or 'noodles' in p_name_lower:
-                    name_score = max(name_score, 180.0)
+            if has_dish_intent and ('spices' in cat_slug or 'masala' in cat_slug or 'masala' in cat_name or 'masala' in p_name_lower):
+                if 'masala' not in normalized_search:
+                    name_score = min(name_score, 500.0) # Demote raw spices below cooked meals!
 
-            score = max(name_score, tag_score, desc_score, syn_score)
-            if score > 35:
-                scored_products.append((p, score))
+            # Tag & description bonus
+            tag_score = 0.0
+            if any(t == normalized_search or t in all_query_syns for t in p_tags):
+                tag_score = 300.0
+            elif any(w in t for w in search_words for t in p_tags):
+                tag_score = 150.0
 
-        # Filter > 35 and sort by score
+            desc_score = 50.0 if (p.description and normalized_search in p.description.lower()) else 0.0
+
+            total_score = name_score + tag_score + desc_score
+
+            if total_score > 35:
+                # Add small tie-breakers within the same tier
+                if p.stock > 0:
+                    total_score += 50.0
+                if p.isBestSeller:
+                    total_score += 20.0
+                scored_products.append((p, total_score))
+
+        # Sort by total_score descending!
         matches = scored_products
         matches.sort(key=lambda x: x[1], reverse=True)
-
-        # M3 FIX: Prioritize in-stock items before out-of-stock for customer searches
-        if not is_worker and not includeUnavailable:
-            matches.sort(key=lambda x: (x[0].stock > 0), reverse=True)
 
         if sort == "price-asc":
             matches.sort(key=lambda x: x[0].price)

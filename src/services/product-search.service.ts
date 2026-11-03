@@ -96,6 +96,25 @@ export class ProductSearchService {
             candidateIds.push(r.id)
             rankMap.set(r.id, Number(r.rank) || 0)
           })
+
+          // Also pull broader OR candidates for multi-word queries so similar dishes (e.g. other Biryanis) rank right below exact match
+          if (tokenGroups.length > 1) {
+            const orTsquery = tokenGroups.join(' | ')
+            const orRows: any[] = await prisma.$queryRaw`
+              SELECT p.id, ts_rank(p.search_vector, to_tsquery('english', ${orTsquery})) as rank
+              FROM products p
+              WHERE ${includeUnavailable ? Prisma.sql`TRUE` : Prisma.sql`p."isAvailable" = TRUE`}
+                AND p.search_vector @@ to_tsquery('english', ${orTsquery})
+              ORDER BY rank DESC
+              LIMIT 60;
+            `
+            orRows.forEach(r => {
+              if (!rankMap.has(r.id)) {
+                candidateIds.push(r.id)
+                rankMap.set(r.id, (Number(r.rank) || 0) * 0.5)
+              }
+            })
+          }
         } catch (err) {
           console.warn('[ProductSearchService] tsquery execution fallback:', err)
         }
@@ -172,33 +191,77 @@ export class ProductSearchService {
         })
 
         // 7. Calculate hybrid relevance scores combining ts_rank + semantic intent
+        const DISH_KEYWORDS = new Set([
+          'biryani', 'pizza', 'burger', 'sandwich', 'roll', 'rolls', 'wrap', 'momo', 'momos',
+          'chowmein', 'noodles', 'maggi', 'fried rice', 'paneer', 'chicken', 'roti', 'naan',
+          'dal', 'curry', 'gravy', 'thali', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
+          'dosa', 'idli', 'samosa', 'patties', 'cake', 'pastry', 'ice cream', 'milk', 'doodh',
+          'atta', 'rice', 'chawal', 'oil', 'ghee', 'masala', 'biscuit', 'chips', 'namkeen'
+        ])
+        const hasDishIntent = searchTokens.some(w => DISH_KEYWORDS.has(w)) || DISH_KEYWORDS.has(normalizedQuery)
+
         const scored = rawProducts.map(p => {
           const ftsRank = (rankMap.get(p.id) || 0) * 100
           const semanticScore = getSemanticAiScore(normalizedQuery, p)
-          const pNameLower = (p.name || '').toLowerCase()
-          
-          // Specific noodles boosting
-          let noodleBoost = 0
-          const isNoodleQuery = ['maggi', 'maggie', 'magi', 'megi', 'noodle'].some(k => normalizedQuery.includes(k))
-          if (isNoodleQuery) {
-            if (pNameLower.includes('ketchup') || pNameLower.includes('sauce')) {
-              noodleBoost = -40
-            } else if (pNameLower.includes('instant noodles') || pNameLower.includes('maggi') || pNameLower.includes('noodle')) {
-              noodleBoost = 50
+          const pNameLower = (p.name || '').toLowerCase().trim()
+          const pTags = (p.tags || []).map((t: string) => t.toLowerCase().trim())
+          const catSlug = (p.category?.slug || '').toLowerCase().trim()
+
+          // Check query words matching in product title
+          const matchingTitleWords = searchTokens.filter(w => pNameLower.includes(w))
+          const matchingTagWords = searchTokens.filter(w => pTags.some((t: string) => t.includes(w)))
+
+          // Strict Dish Exclusion Guard: If searching for a dish and the product has NO query word in title or tags, score = 0
+          if (hasDishIntent && matchingTitleWords.length === 0 && matchingTagWords.length === 0) {
+            return { product: p, score: 0 }
+          }
+
+          let tierScore = 0
+          // ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) ──
+          if (pNameLower === normalizedQuery) {
+            tierScore = 10000
+          } else if (pNameLower.startsWith(normalizedQuery + ' ') || pNameLower.startsWith(normalizedQuery)) {
+            tierScore = 8000
+          } else if (pNameLower.includes(normalizedQuery)) {
+            tierScore = 6000
+          } else if (searchTokens.length > 1 && searchTokens.every(w => pNameLower.includes(w))) {
+            tierScore = 4500
+          } else if (matchingTitleWords.length > 0) {
+            // TIER 2: PARTIAL MATCH
+            for (const w of matchingTitleWords) {
+              tierScore += DISH_KEYWORDS.has(w) ? 2000 : 1200
+            }
+          } else if (matchingTagWords.length > 0) {
+            tierScore = 500
+          }
+
+          // ── TIER 3: SPICES & MASALA DEMOTION ──
+          if (hasDishIntent && (catSlug.includes('spices') || catSlug.includes('masala') || pNameLower.includes('masala'))) {
+            if (!normalizedQuery.includes('masala')) {
+              tierScore = Math.min(tierScore, 500) // Demote raw spices below cooked meals!
             }
           }
 
-          const finalScore = Math.max(ftsRank, semanticScore) + noodleBoost
+          const finalScore = tierScore + Math.max(ftsRank, semanticScore)
           return { product: p, score: finalScore }
-        })
+        }).filter(item => item.score > 0)
 
-        // Sort by final score
+        // Sort by final score descending
         scored.sort((a, b) => b.score - a.score)
         products = scored.map(s => s.product)
       }
 
       // Fallback: If still 0 products, try standard Prisma contains on tokens
       if (products.length === 0) {
+        const DISH_KEYWORDS_SET = new Set([
+          'biryani', 'pizza', 'burger', 'sandwich', 'roll', 'rolls', 'wrap', 'momo', 'momos',
+          'chowmein', 'noodles', 'maggi', 'fried rice', 'paneer', 'chicken', 'roti', 'naan',
+          'dal', 'curry', 'gravy', 'thali', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
+          'dosa', 'idli', 'samosa', 'patties', 'cake', 'pastry', 'ice cream', 'milk', 'doodh',
+          'atta', 'rice', 'chawal', 'oil', 'ghee', 'masala', 'biscuit', 'chips', 'namkeen'
+        ])
+        const hasDishIntent = searchTokens.some(w => DISH_KEYWORDS_SET.has(w)) || DISH_KEYWORDS_SET.has(normalizedQuery)
+
         const fallbackWhere: Prisma.ProductWhereInput = {
           ...(!includeUnavailable && !isWorker ? { isAvailable: true } : {}),
           OR: searchTokens.map(w => ({
@@ -206,7 +269,7 @@ export class ProductSearchService {
               { name: { contains: w, mode: 'insensitive' } },
               { tags: { has: w } },
               { category: { name: { contains: w, mode: 'insensitive' } } },
-              { restaurant: { name: { contains: w, mode: 'insensitive' } } },
+              ...(hasDishIntent ? [] : [{ restaurant: { name: { contains: w, mode: 'insensitive' as const } } }]),
             ]
           }))
         }

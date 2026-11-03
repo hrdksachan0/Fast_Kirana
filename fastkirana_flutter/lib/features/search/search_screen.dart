@@ -938,8 +938,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
               rCuisines.contains(queryClean);
         }).toList();
 
-        final isRestaurantQuery = isAsQuery ||
-            matchedRestaurants.isNotEmpty ||
+        // Food dish keywords that indicate product/dish intent, NOT restaurant intent:
+        const dishKeywords = {
+          'biryani', 'pizza', 'burger', 'sandwich', 'roll', 'rolls', 'wrap', 'momo', 'momos',
+          'chowmein', 'noodles', 'maggi', 'fried rice', 'paneer', 'chicken', 'roti', 'naan',
+          'dal', 'curry', 'gravy', 'thali', 'shake', 'cold coffee', 'tea', 'chai', 'coffee',
+          'dosa', 'idli', 'samosa', 'patties', 'cake', 'pastry', 'ice cream', 'milk', 'doodh',
+          'atta', 'rice', 'chawal', 'oil', 'ghee', 'masala', 'biscuit', 'chips', 'namkeen'
+        };
+
+        final hasDishIntent = effectiveQueryWords.any((w) => dishKeywords.contains(w)) ||
+            dishKeywords.contains(queryClean);
+
+        // Only treat as restaurant query if the search explicitly matches the restaurant's NAME,
+        // NOT merely a cuisine tag (e.g. searching "biryani" should NOT boost all Wedson dishes!)
+        final isExplicitRestaurantQuery = isAsQuery ||
+            matchedRestaurants.any((r) =>
+                r.name.toLowerCase().contains(queryClean) ||
+                queryClean.contains(r.name.toLowerCase())) ||
             uniqueRestaurants.any((r) => r.name.toLowerCase().contains(queryClean) || queryClean.contains(r.name.toLowerCase())) ||
             ['cafe', 'restaurant', 'dhaba', 'kitchen', 'food court', 'bhojnalaya', 'sweets', 'bakery'].any((r) => queryClean.contains(r));
 
@@ -983,7 +999,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
             score += 250;
           }
 
-          if (isRestaurantQuery && matchedRestaurants.isNotEmpty) {
+          // Check query words matching in product title
+          final nameTokens = pName.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+          final matchingWordsInTitle = effectiveQueryWords.where((w) => nameTokens.contains(w) || pName.contains(w)).toList();
+          final allWordsInTitle = effectiveQueryWords.isNotEmpty && matchingWordsInTitle.length == effectiveQueryWords.length;
+          final anyWordInTitle = matchingWordsInTitle.isNotEmpty;
+          final anyWordInVariants = variantNames.any((vn) => effectiveQueryWords.any((w) => vn.contains(w)));
+          final anyWordInTags = tags.any((t) => effectiveQueryWords.any((w) => t.contains(w)));
+
+          // Strict Dish Exclusion Guard:
+          // If searching for a dish and the product name/variants/tags don't match ANY query word, SKIP IT!
+          if (hasDishIntent && !anyWordInTitle && !anyWordInVariants && !anyWordInTags) {
+            continue;
+          }
+
+          // ── TIER 1: EXACT & DIRECT TITLE MATCH (Score 10,000+) ──
+          if (pName == queryClean) {
+            score += 10000; // Absolute #1 Exact Full Title Match
+          } else if (pName.startsWith('$queryClean ') || pName.startsWith(queryClean)) {
+            score += 8000;  // Starts With (e.g. "Chicken Biryani Full Plate")
+          } else if (pName.contains(queryClean)) {
+            score += 6000;  // Contains Full Phrase (e.g. "Special Chicken Biryani")
+          } else if (variantNames.any((vn) => vn == queryClean || vn.startsWith(queryClean))) {
+            score += 5500;  // Variant matches full query
+          } else if (allWordsInTitle) {
+            score += 4500;  // Every search token is present in title (e.g. "Dum Biryani with Chicken")
+          }
+
+          // ── TIER 2: HIGH SIMILARITY / PARTIAL DISH MATCH (Score 1,000 - 3,000) ──
+          if (score < 4500) {
+            if (anyWordInTitle) {
+              for (final w in matchingWordsInTitle) {
+                if (dishKeywords.contains(w)) {
+                  score += 2000;
+                } else {
+                  score += 1200;
+                }
+              }
+            } else if (anyWordInVariants) {
+              score += 800;
+            } else if (anyWordInTags) {
+              score += 500;
+            }
+          }
+
+          // ── TIER 3: SPICES & MASALA DEMOTION ──
+          if (hasDishIntent && (catSlug.contains('spices') || catSlug.contains('masala') || pName.contains('masala powder') || pName.contains('chicken masala'))) {
+            if (!queryClean.contains('masala')) {
+              score = (score * 0.25).round(); // Demote raw spices below cooked meals!
+            }
+          }
+
+          // If searching for a specific restaurant outlet explicitly (e.g. "A.S Restaurant", "Wedson")
+          if (isExplicitRestaurantQuery && matchedRestaurants.isNotEmpty) {
             final matchesMatchedOutlet = matchedRestaurants.any((r) =>
                 p.restaurantId == r.id ||
                 (p.restaurant?.name.toLowerCase() ?? '').contains(r.name.toLowerCase()) ||
@@ -991,28 +1059,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                 tags.contains(r.slug.toLowerCase()));
             if (matchesMatchedOutlet) {
               score += 120;
-            } else if (isAsQuery && isRestaurantProduct(p)) {
-              // Ignore dishes from other restaurants when explicitly searching for A.S.
-              score = 0;
             }
           }
 
           if (outlet.isNotEmpty && queryClean.isNotEmpty && outlet.contains(queryClean)) {
             score += 80;
-          }
-
-          // Exact full name match
-          if (pName == queryClean) {
-            score += 150;
-          } else if (pName.startsWith(queryClean)) {
-            score += 100;
-          } else if (queryClean.length >= 3 && pName.contains(queryClean)) {
-            score += 60;
-          }
-
-          // Variant name match with query
-          if (variantNames.any((vn) => vn == queryClean || (queryClean.length >= 3 && vn.contains(queryClean)) || (vn.length >= 4 && queryClean.contains(vn)))) {
-            score += 45;
           }
 
           // Category name or slug match (e.g. searching "kitchen", "atta", "bakery", "fruits")
@@ -1171,11 +1222,66 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           filtered = [...serverProducts, ...remaining];
         }
 
-        // Zepto/Blinkit architecture: prioritize in-stock products first, out-of-stock sinks to end
+        final Map<String, int> productScoreMap = {
+          for (final entry in scoredProducts) entry.key.id: entry.value,
+        };
+
+        int getProductScore(Product p) {
+          final cached = productScoreMap[p.id];
+          if (cached != null) return cached;
+
+          final pName = p.name.toLowerCase().trim();
+          int s = 0;
+          if (pName == queryClean) {
+            s += 10000;
+          } else if (pName.startsWith('$queryClean ') || pName.startsWith(queryClean)) {
+            s += 8000;
+          } else if (pName.contains(queryClean)) {
+            s += 6000;
+          } else if (effectiveQueryWords.isNotEmpty && effectiveQueryWords.every((w) => pName.contains(w))) {
+            s += 4500;
+          } else {
+            for (final w in effectiveQueryWords) {
+              if (pName.contains(w)) {
+                s += dishKeywords.contains(w) ? 2000 : 1200;
+              }
+            }
+          }
+
+          final catSlug = (p.category?.slug ?? p.categoryId ?? '').toLowerCase();
+          if (hasDishIntent && (catSlug.contains('spices') || catSlug.contains('masala') || pName.contains('masala powder') || pName.contains('chicken masala'))) {
+            if (!queryClean.contains('masala')) {
+              s = (s * 0.25).round();
+            }
+          }
+
+          if (p.isInStock) s += 50;
+          if (p.isBestsellerProduct) s += 20;
+          if (p.isTrending) s += 10;
+          return s;
+        }
+
+        // Double-guard: Remove any product with zero relevant word matches when user is searching for a dish
+        if (hasDishIntent) {
+          filtered = filtered.where((p) {
+            final pName = p.name.toLowerCase().trim();
+            final pTags = p.tags.map((t) => t.toLowerCase().trim()).toList();
+            final vNames = (p.variants ?? []).map((v) => v.name.toLowerCase().trim()).toList();
+            final anyTitle = effectiveQueryWords.any((w) => pName.contains(w));
+            final anyVariant = vNames.any((vn) => effectiveQueryWords.any((w) => vn.contains(w)));
+            final anyTag = pTags.any((t) => effectiveQueryWords.any((w) => t.contains(w)));
+            return anyTitle || anyVariant || anyTag;
+          }).toList();
+        }
+
+        // Zepto/Blinkit architecture: prioritize in-stock products first, ranked by relevance score
         filtered.sort((a, b) {
           final aIn = a.isInStock ? 0 : 1;
           final bIn = b.isInStock ? 0 : 1;
-          return aIn.compareTo(bIn);
+          if (aIn != bIn) return aIn.compareTo(bIn);
+          final scoreA = getProductScore(a);
+          final scoreB = getProductScore(b);
+          return scoreB.compareTo(scoreA);
         });
 
         if (filtered.isEmpty && matchedRestaurants.isEmpty) {
