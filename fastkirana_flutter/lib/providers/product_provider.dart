@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/product.dart';
@@ -37,7 +38,8 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
-  return repo.getCategories(storeId: hub.id,
+  return repo.getCategories(
+      storeId: hub.id,
       forceRefresh: ref.read(catalogRecoveryEpochProvider) > 0);
 });
 
@@ -45,11 +47,14 @@ final trendingProductsProvider = FutureProvider<List<Product>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
-  return repo.getProducts(limit: 10, storeId: hub.id,
+  return repo.getProducts(
+      limit: 10,
+      storeId: hub.id,
       forceRefresh: ref.read(catalogRecoveryEpochProvider) > 0);
 });
 
-final productsProvider = FutureProvider.family<List<Product>, String?>((ref, categoryKey) async {
+final productsProvider =
+    FutureProvider.family<List<Product>, String?>((ref, categoryKey) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
@@ -58,11 +63,15 @@ final productsProvider = FutureProvider.family<List<Product>, String?>((ref, cat
     return repo.getCachedProducts(categoryKey: categoryKey, storeId: hub.id);
   }
   if (categoryKey == null || categoryKey.isEmpty) {
-    return repo.getProducts(limit: 500, storeId: hub.id, includeRestaurants: false,
+    return repo.getProducts(
+        limit: 500,
+        storeId: hub.id,
+        includeRestaurants: false,
         forceRefresh: forceRefresh);
   }
   final resolvedId = ProductRepository.resolveCategoryId(categoryKey);
-  final isId = resolvedId.toUpperCase().startsWith('CAT-') || resolvedId.toUpperCase().startsWith('SUB-');
+  final isId = resolvedId.toUpperCase().startsWith('CAT-') ||
+      resolvedId.toUpperCase().startsWith('SUB-');
   return repo.getProducts(
     categoryId: isId ? resolvedId : null,
     category: isId ? null : categoryKey,
@@ -73,7 +82,8 @@ final productsProvider = FutureProvider.family<List<Product>, String?>((ref, cat
   );
 });
 
-final searchProductsProvider = FutureProvider.family<List<Product>, String>((ref, query) async {
+final searchProductsProvider =
+    FutureProvider.family<List<Product>, String>((ref, query) async {
   final clean = query.trim();
   if (clean.isEmpty) return [];
   final repo = ref.watch(productRepositoryProvider);
@@ -87,11 +97,16 @@ final searchProductsProvider = FutureProvider.family<List<Product>, String>((ref
   );
 });
 
-final productsByRestaurantProvider = FutureProvider.family<List<Product>, String>((ref, restaurantId) async {
+final productsByRestaurantProvider =
+    FutureProvider.family<List<Product>, String>((ref, restaurantId) async {
   ref.keepAlive();
   final repo = ref.watch(productRepositoryProvider);
   final hub = ref.watch(currentStoreHubProvider);
-  return repo.getProducts(restaurantId: restaurantId, limit: 500, storeId: hub.id, includeRestaurants: true);
+  return repo.getProducts(
+      restaurantId: restaurantId,
+      limit: 500,
+      storeId: hub.id,
+      includeRestaurants: true);
 });
 
 // Single shared product catalog for home screen — fetches ALL products once,
@@ -112,7 +127,8 @@ final homeProductCatalogProvider = FutureProvider<List<Product>>((ref) async {
 
 // Dedicated admin products provider that fetches 100% of products (including 0 stock and unavailable)
 // for the given store hub directly from backend without customer cache filtering.
-final adminProductsProvider = FutureProvider.family<List<Product>, String>((ref, hubId) async {
+final adminProductsProvider =
+    FutureProvider.family<List<Product>, String>((ref, hubId) async {
   final repo = ref.watch(productRepositoryProvider);
   return repo.getProducts(
     limit: 1000,
@@ -124,7 +140,8 @@ final adminProductsProvider = FutureProvider.family<List<Product>, String>((ref,
   );
 });
 
-final cartUpsellProductsProvider = FutureProvider.family<List<Product>, String>((ref, productIdsKey) async {
+final cartUpsellProductsProvider =
+    FutureProvider.family<List<Product>, String>((ref, productIdsKey) async {
   final cleanIdsList = productIdsKey
       .split(',')
       .map((s) => s.trim())
@@ -137,14 +154,15 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, String>(
   final cartItems = cart?.items ?? [];
   final cleanIds = cleanIdsList.map((id) => id.split('_').first).toSet();
 
-  // 1. Detect active restaurant and food items in cart
+  // 1. Detect active restaurant and food items in cart or from anchor products
   String? activeOutlet;
   String? activeRestaurantId;
   bool hasFoodItem = false;
   for (final item in cartItems) {
     if (isRestaurantProduct(item.product)) {
       activeOutlet = getOutletName(item.product);
-      activeRestaurantId = item.product.restaurantId ?? item.product.restaurant?.id;
+      activeRestaurantId =
+          item.product.restaurantId ?? item.product.restaurant?.id;
     }
     final nameLower = item.product.name.toLowerCase();
     if (nameLower.contains('biryani') ||
@@ -162,22 +180,58 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, String>(
     }
   }
 
+  // If cart has no restaurant item yet, also check if anchor products being viewed are from a restaurant
+  if (activeRestaurantId == null) {
+    final allLoadedProds = ref.read(productsProvider(null)).valueOrNull ?? [];
+    for (final id in cleanIds) {
+      final found = allLoadedProds.firstWhereOrNull((p) => p.id == id);
+      if (found != null) {
+        if (isRestaurantProduct(found)) {
+          activeOutlet ??= getOutletName(found);
+          activeRestaurantId ??= found.restaurantId ?? found.restaurant?.id;
+          hasFoodItem = true;
+        }
+        final n = found.name.toLowerCase();
+        if (n.contains('biryani') ||
+            n.contains('burger') ||
+            n.contains('pizza') ||
+            n.contains('roll')) {
+          hasFoodItem = true;
+        }
+      }
+    }
+  }
+
   int foodUpsellScore(Product p) {
     final n = p.name.toLowerCase();
     final cat = (p.category?.slug ?? '').toLowerCase();
     final tags = p.tags.map((t) => t.toLowerCase()).toList();
 
     // Priority 0: Thums Up, Coke, Coca Cola, Pepsi, Sprite, Limca, Cold Drinks
-    if (n.contains('thums up') || n.contains('thumsup') || n.contains('coke') ||
-        n.contains('coca cola') || n.contains('pepsi') || n.contains('sprite') ||
-        n.contains('cold drink') || n.contains('limca') || n.contains('fanta') ||
-        n.contains('frooti') || tags.contains('cold-drink') || tags.contains('thums-up') || tags.contains('coke')) {
+    if (n.contains('thums up') ||
+        n.contains('thumsup') ||
+        n.contains('coke') ||
+        n.contains('coca cola') ||
+        n.contains('pepsi') ||
+        n.contains('sprite') ||
+        n.contains('cold drink') ||
+        n.contains('limca') ||
+        n.contains('fanta') ||
+        n.contains('frooti') ||
+        tags.contains('cold-drink') ||
+        tags.contains('thums-up') ||
+        tags.contains('coke')) {
       return 0;
     }
     // Priority 1: Ice Cream, Sundae, Kulfi, Shakes, Cold Coffee
-    if (cat.contains('ice-cream') || cat.contains('shake') ||
-        n.contains('ice cream') || n.contains('kulfi') || n.contains('cornetto') ||
-        n.contains('chocobar') || n.contains('cold coffee') || n.contains('shake') ||
+    if (cat.contains('ice-cream') ||
+        cat.contains('shake') ||
+        n.contains('ice cream') ||
+        n.contains('kulfi') ||
+        n.contains('cornetto') ||
+        n.contains('chocobar') ||
+        n.contains('cold coffee') ||
+        n.contains('shake') ||
         tags.contains('ice-cream')) {
       return 1;
     }
@@ -216,7 +270,8 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, String>(
   final filteredUpsells = upsells.where(isAllowed).toList();
   if (filteredUpsells.isNotEmpty) {
     if (hasFoodItem) {
-      filteredUpsells.sort((a, b) => foodUpsellScore(a).compareTo(foodUpsellScore(b)));
+      filteredUpsells
+          .sort((a, b) => foodUpsellScore(a).compareTo(foodUpsellScore(b)));
     }
     return filteredUpsells.take(8).toList();
   }
@@ -225,7 +280,8 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, String>(
   List<Product> all = [];
   try {
     if (activeRestaurantId != null || activeOutlet != null) {
-      final rId = activeRestaurantId ?? RestaurantRegistry.find(activeOutlet)?.id;
+      final rId =
+          activeRestaurantId ?? RestaurantRegistry.find(activeOutlet)?.id;
       // Fetch restaurant dishes + darkstore chilled drinks & ice-creams
       final results = await Future.wait([
         repo.getProducts(restaurantId: rId, limit: 30),
@@ -241,13 +297,15 @@ final cartUpsellProductsProvider = FutureProvider.family<List<Product>, String>(
     } else {
       all = await repo.getProducts(limit: 80);
     }
-  } catch (e, st) { LoggerService.error('ProductProvider: upsell fallback fetch failed', e, st);
+  } catch (e, st) {
+    LoggerService.error('ProductProvider: upsell fallback fetch failed', e, st);
     all = await repo.getProducts(limit: 80);
   }
 
   final candidateList = all.where(isAllowed).toList();
   if (hasFoodItem) {
-    candidateList.sort((a, b) => foodUpsellScore(a).compareTo(foodUpsellScore(b)));
+    candidateList
+        .sort((a, b) => foodUpsellScore(a).compareTo(foodUpsellScore(b)));
   }
   return candidateList.take(8).toList();
 });

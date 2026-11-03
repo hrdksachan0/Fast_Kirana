@@ -1274,41 +1274,64 @@ async def get_upsell_recommendations(
 
         recommended_products = []
 
-        # Fallback to association rules based on tags
+        cart_names = [(p.name or "").lower() for p in cart_products]
+        cart_cat_slugs = [(p.category.slug.lower() if p.category and p.category.slug else "") for p in cart_products]
+        is_pure_veg_cart = not any(any(k in n for k in ['chicken', 'mutton', 'egg', 'fish', 'meat']) for n in cart_names)
+
+        companion_keywords = []
         target_tags = set()
         if has_food_item:
             target_tags.update(['beverages', 'cold-drink', 'drinks', 'ice-cream', 'shakes', 'coolers', 'thums-up', 'coke', 'pepsi', 'sprite', 'cold-coffee'])
 
-        if is_as_cart or is_wedson_cart:
+        if is_as_cart or is_wedson_cart or is_cafe_category_cart:
+            if any(any(k in n for k in ['burger', 'pizza', 'sandwich', 'roll', 'noodle', 'pasta']) for n in cart_names):
+                companion_keywords.extend(['fries', 'garlic bread', 'french fries', 'coke', 'thums up', 'sprite', 'cold drink', 'ice cream'])
+            if any(any(k in n for k in ['biryani', 'curry', 'thali', 'paneer', 'dal', 'roti', 'rice']) for n in cart_names):
+                companion_keywords.extend(['raita', 'dahi', 'gulab jamun', 'thums up', 'coke', 'naan', 'roti', 'papad', 'ice cream'])
+            companion_keywords.extend(['thums up', 'coke', 'sprite', 'cold drink', 'ice cream', 'cold coffee'])
             target_tags.update(['north-indian', 'curry', 'roti', 'naan', 'south-indian', 'biryani-rice', 'chinese'])
-        elif is_cafe_category_cart:
-            if 'burgers' in cart_tags or 'burger' in cart_tags:
-                target_tags.update(['shakes', 'mocktails', 'coolers', 'cold-drink', 'beverages', 'drinks', 'fries'])
-            if 'sandwiches' in cart_tags or 'sandwich' in cart_tags:
-                target_tags.update(['shakes', 'mocktails', 'cold-coffee', 'beverages'])
-            if 'hot-beverage' in cart_tags or 'tea' in cart_tags or 'coffee' in cart_tags:
-                target_tags.update(['bakery', 'snacks', 'hot-bite'])
         else:
-            if 'staples' in cart_tags or 'cooking' in cart_tags:
-                target_tags.update(['dairy', 'breakfast', 'oil', 'spices'])
-            if 'breakfast' in cart_tags or 'dairy' in cart_tags:
-                target_tags.update(['bakery', 'bread', 'snacks', 'tea', 'coffee'])
-            if 'atta' in cart_tags or 'wheat' in cart_tags:
-                target_tags.update(['oil', 'salt', 'rice'])
+            if any(any(k in n for k in ['tea', 'chai', 'coffee', 'patti']) for n in cart_names) or any('tea' in s or 'coffee' in s for s in cart_cat_slugs):
+                companion_keywords.extend(['sugar', 'milk', 'rusk', 'biscuit', 'parle', 'cookies'])
+            if any(any(k in n for k in ['bread', 'pav', 'bun']) for n in cart_names) or any('bakery' in s for s in cart_cat_slugs):
+                companion_keywords.extend(['butter', 'jam', 'cheese', 'paneer'])
+                if not is_pure_veg_cart:
+                    companion_keywords.append('egg')
+            if any(any(k in n for k in ['dahi', 'curd', 'doodh', 'paneer', 'dairy']) for n in cart_names) or any('dairy' in s for s in cart_cat_slugs):
+                companion_keywords.extend(['sugar', 'boondi', 'poha', 'namkeen', 'bread', 'butter'])
+            if any(any(k in n for k in ['maggi', 'maggie', 'noodle', 'pasta', 'yippee']) for n in cart_names):
+                companion_keywords.extend(['ketchup', 'sauce', 'cheese', 'coke', 'thums up', 'frooti'])
+            if any(any(k in n for k in ['atta', 'rice', 'chawal', 'dal', 'oil', 'tel']) for n in cart_names) or any('staples' in s or 'oil' in s for s in cart_cat_slugs):
+                companion_keywords.extend(['ghee', 'mustard', 'oil', 'salt', 'masala', 'jeera', 'papad'])
+            if any(any(k in n for k in ['chips', 'lays', 'kurkure', 'namkeen', 'biscuit']) for n in cart_names):
+                companion_keywords.extend(['coke', 'thums up', 'sprite', 'frooti', 'cold drink', 'chocolate'])
+            if any(any(k in n for k in ['soap', 'shampoo', 'brush', 'colgate', 'paste']) for n in cart_names):
+                companion_keywords.extend(['colgate', 'brush', 'soap', 'dettol', 'detergent'])
 
         exclude_ids = list(set(cart_product_ids + [p.id for p in recommended_products]))
 
+        # Match companion titles & tags
+        match_conditions = []
+        if companion_keywords:
+            for kw in companion_keywords[:10]:
+                match_conditions.append(Product.name.ilike(f"%{kw}%"))
         if target_tags:
-            tag_match_conditions = [func.array_to_string(Product.tags, ',').ilike(f"%{t}%") for t in target_tags]
+            for t in target_tags:
+                match_conditions.append(func.array_to_string(Product.tags, ',').ilike(f"%{t}%"))
+
+        if match_conditions:
             stmt_tags = select(Product).options(selectinload(Product.category), selectinload(Product.restaurant)).where(
                 Product.id.not_in(exclude_ids),
                 Product.isAvailable == True,
                 Product.stock > 0,
-                or_(*tag_match_conditions),
+                or_(*match_conditions),
                 *type_filters
             ).limit(8)
             res_tags = await db.execute(stmt_tags)
-            recommended_products.extend(res_tags.scalars().all())
+            fetched = list(res_tags.scalars().all())
+            if is_pure_veg_cart:
+                fetched = [p for p in fetched if not any(k in (p.name or '').lower() for k in ['chicken', 'mutton', 'egg', 'fish']) and not any('non-veg' in t.lower() for t in (p.tags or []))]
+            recommended_products.extend(fetched)
 
         # Fallback: general cheap popular items
         if len(recommended_products) < 6:
