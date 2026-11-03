@@ -708,6 +708,39 @@ async def get_products(
             res_fallback = await db.execute(stmt_fallback)
             matched_products = res_fallback.scalars().all()
 
+        # ── 1.5 Supabase PgVector Semantic AI Search ──
+        vec_sim_map = {}
+        try:
+            from utils.gemini_embedding import get_query_embedding
+            q_emb = get_query_embedding(normalized_search)
+            if q_emb and len(q_emb) == 768:
+                emb_str = f"[{','.join(str(round(v, 6)) for v in q_emb)}]"
+                stmt_vec = text("""
+                    SELECT p.id, (1 - (p.embedding <=> :emb::vector)) AS sim
+                    FROM products p
+                    WHERE p."isAvailable" = TRUE 
+                      AND p.embedding IS NOT NULL
+                      AND (1 - (p.embedding <=> :emb::vector)) > 0.38
+                    ORDER BY sim DESC
+                    LIMIT 60;
+                """)
+                res_vec = await db.execute(stmt_vec, {"emb": emb_str})
+                vec_rows = res_vec.fetchall()
+                if vec_rows:
+                    for r in vec_rows:
+                        vec_sim_map[r[0]] = float(r[1])
+                    vec_ids = list(vec_sim_map.keys())
+                    stmt_v_prods = select(Product).options(
+                        selectinload(Product.category),
+                        selectinload(Product.restaurant)
+                    ).where(Product.id.in_(vec_ids))
+                    res_v_prods = await db.execute(stmt_v_prods)
+                    v_prods = list(res_v_prods.scalars().all())
+                    # Merge with matched_products to ensure rich catalog coverage
+                    matched_products = list({p.id: p for p in v_prods + matched_products}.values())
+        except Exception as e:
+            logger.warning(f"[PgVector] Execution error fallback: {e}")
+
         # Score matching
         scored_products = []
         all_query_syns = set(phrase_syns if phrase_syns else [])
@@ -719,6 +752,7 @@ async def get_products(
             p_tags = [t.lower() for t in (p.tags or [])]
             p_words = set(re.findall(r'\b\w+\b', p_name_lower))
             p_desc = (p.description or "").lower().strip()
+            vec_sim = vec_sim_map.get(p.id, 0.0)
 
             matching_title_words = [w for w in search_words if w in p_name_lower or w in p_words]
             matching_tag_words = [w for w in search_words if any(w in t for t in p_tags)]
@@ -737,8 +771,8 @@ async def get_products(
                             variant_exact = True
 
             # ── UNIVERSAL EXCLUSION GUARD (Applied to EVERY product in the store) ──
-            # If the product does NOT match ANY search word in title, tags, variants, or description -> Discard!
-            if not matching_title_words and not matching_tag_words and not matching_desc and not has_matching_variant:
+            # If candidate has vector similarity < 0.38 AND no token match in title/tags/desc -> Discard!
+            if vec_sim < 0.38 and not matching_title_words and not matching_tag_words and not matching_desc and not has_matching_variant:
                 continue
 
             name_score = 0.0
@@ -755,21 +789,23 @@ async def get_products(
                 name_score = 5500.0
             elif len(search_words) > 1 and all(w in p_name_lower for w in search_words):
                 name_score = 4500.0
-
-            # ── TIER 2: HIGH RELEVANCE / PARTIAL MATCHES (1,000 - 3,500) ──
-            if name_score < 4500.0:
-                if matching_title_words:
-                    name_score += len(matching_title_words) * 1500.0
-                elif has_matching_variant:
-                    name_score += 800.0
-                elif matching_tag_words:
-                    name_score += 500.0
-                elif matching_desc:
-                    name_score += 150.0
-                else:
-                    fuzzy_sim = get_fuzzy_score(normalized_search, p.name)
-                    if fuzzy_sim > 65:
-                        name_score = fuzzy_sim * 10
+            elif vec_sim >= 0.65:
+                # TIER 2: HIGH AI SEMANTIC MATCH
+                name_score = vec_sim * 4000.0
+            elif matching_title_words:
+                name_score = len(matching_title_words) * 1500.0
+            elif vec_sim >= 0.38:
+                name_score = vec_sim * 2000.0
+            elif has_matching_variant:
+                name_score = 800.0
+            elif matching_tag_words:
+                name_score = 500.0
+            elif matching_desc:
+                name_score = 150.0
+            else:
+                fuzzy_sim = get_fuzzy_score(normalized_search, p.name)
+                if fuzzy_sim > 65:
+                    name_score = fuzzy_sim * 10
 
             # ── TIER 3: CONTEXT-AWARE DEMOTIONS ──
             # 1. Prepared Meal vs Raw Spice Packets (e.g. searching "Chicken Biryani" shouldn't rank Everest Chicken Masala on top)

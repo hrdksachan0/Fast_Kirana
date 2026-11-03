@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { SYNONYM_DICTIONARY, normalizeSearchQuery } from '@/lib/synonyms'
 import { getSemanticAiScore } from '@/lib/vector-search'
 import { sortProductsByStock } from '@/lib/utils'
+import { getGeminiQueryEmbedding } from '@/lib/gemini-embedding'
 
 export interface SearchOptions {
   query?: string | null
@@ -78,9 +79,40 @@ export class ProductSearchService {
 
       const tsquery = tokenGroups.join(' & ')
 
-      // 3. Find candidate product IDs using PostgreSQL Full Text Search
+      // 2.5 Supabase PgVector Semantic AI Search (Option 1 + 3)
       let candidateIds: string[] = []
       let rankMap = new Map<string, number>()
+      let vectorMap = new Map<string, number>()
+
+      if (normalizedQuery.length >= 2) {
+        try {
+          const queryEmbedding = await getGeminiQueryEmbedding(normalizedQuery)
+          if (queryEmbedding && queryEmbedding.length === 768) {
+            const embStr = `[${queryEmbedding.map(v => v.toFixed(6)).join(',')}]`
+            const vectorRows: any[] = await prisma.$queryRawUnsafe(`
+              SELECT p.id, (1 - (p.embedding <=> $1::vector)) as sim
+              FROM products p
+              WHERE ${includeUnavailable ? 'TRUE' : 'p."isAvailable" = TRUE'}
+                AND p.embedding IS NOT NULL
+                AND (1 - (p.embedding <=> $1::vector)) > 0.38
+              ORDER BY sim DESC
+              LIMIT 60;
+            `, embStr)
+
+            if (vectorRows && vectorRows.length > 0) {
+              vectorRows.forEach(r => {
+                const sim = Number(r.sim) || 0
+                candidateIds.push(r.id)
+                vectorMap.set(r.id, sim)
+              })
+            }
+          }
+        } catch (vecErr) {
+          console.warn('[ProductSearchService] PgVector search fallback:', vecErr)
+        }
+      }
+
+      // 3. Find candidate product IDs using PostgreSQL Full Text Search (Fallback & Multi-word Token Search)
 
       if (tsquery) {
         try {
@@ -198,6 +230,7 @@ export class ProductSearchService {
         const isMealSearch = searchTokens.some(w => COOKED_MEAL_KEYWORDS.has(w))
 
         const scored = rawProducts.map(p => {
+          const vectorSim = vectorMap.get(p.id) || 0
           const ftsRank = (rankMap.get(p.id) || 0) * 100
           const semanticScore = getSemanticAiScore(normalizedQuery, p)
           const pNameLower = (p.name || '').toLowerCase().trim()
@@ -211,8 +244,8 @@ export class ProductSearchService {
           const matchingDesc = searchTokens.some(w => pDesc.includes(w))
 
           // ── UNIVERSAL EXCLUSION GUARD (Applied to EVERY product in the store) ──
-          // If product does not match ANY search token in title, tags, or description -> Discard!
-          if (matchingTitleWords.length === 0 && matchingTagWords.length === 0 && !matchingDesc) {
+          // If candidate has vector similarity < 0.38 AND no token match in title/tags/desc -> Discard!
+          if (vectorSim < 0.38 && matchingTitleWords.length === 0 && matchingTagWords.length === 0 && !matchingDesc) {
             return { product: p, score: 0 }
           }
 
@@ -227,9 +260,13 @@ export class ProductSearchService {
             tierScore = 6000
           } else if (searchTokens.length > 1 && searchTokens.every(w => pNameLower.includes(w))) {
             tierScore = 4500
+          } else if (vectorSim >= 0.65) {
+            // TIER 2: HIGH AI SEMANTIC MATCH
+            tierScore = Math.round(vectorSim * 4000)
           } else if (matchingTitleWords.length > 0) {
-            // TIER 2: HIGH RELEVANCE / PARTIAL MATCHES
             tierScore = matchingTitleWords.length * 1500
+          } else if (vectorSim >= 0.38) {
+            tierScore = Math.round(vectorSim * 2000)
           } else if (matchingTagWords.length > 0) {
             tierScore = 500
           } else if (matchingDesc) {
@@ -251,7 +288,7 @@ export class ProductSearchService {
             }
           }
 
-          const finalScore = tierScore + Math.max(ftsRank, semanticScore)
+          const finalScore = tierScore + Math.round(vectorSim * 1000) + Math.max(ftsRank, semanticScore) + (p.stock > 0 ? 50 : 0)
           return { product: p, score: finalScore }
         }).filter(item => item.score > 0)
 
