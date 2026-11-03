@@ -319,17 +319,29 @@ export class ProductSearchService {
           }
 
           let tierScore = 0
-          // ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) / RESTAURANT MENU MATCH (9,000) ──
-          if (isFromTargetRestaurant) {
-            tierScore = 9000 // Entire restaurant menu ranks at the TOP!
-          } else if (pNameLower === normalizedQuery) {
-            tierScore = 10000
+          const hasAllWordsInTitle = searchTokens.length > 1 && searchTokens.every(w => pWords.has(w) || pNameLower.includes(w))
+
+          // Strict Dish Exclusion Guard (e.g. "momos", "burger", "pizza", "roll", "sandwich")
+          const DISH_EXCLUSIVE_KEYWORDS = ['momo', 'momos', 'burger', 'burgers', 'pizza', 'pizzas', 'sandwich', 'sandwiches', 'roll', 'rolls', 'dosa']
+          const searchedDishKeyword = searchTokens.find(w => DISH_EXCLUSIVE_KEYWORDS.some(dk => w === dk || w.startsWith(dk)))
+          if (searchedDishKeyword) {
+            const rootWord = searchedDishKeyword.slice(0, 4)
+            if (!pNameLower.includes(rootWord)) {
+              return { product: p, score: 0 } // Completely discard items like Spring Roll / Fries when Momos is searched!
+            }
+          }
+
+          // ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) ──
+          if (pNameLower === normalizedQuery) {
+            tierScore = 15000 // Absolute #1 exact match
+          } else if (hasAllWordsInTitle) {
+            tierScore = 12000 // Contains all multi-words in title (e.g. "Chilli Paneer" for "chilli paneer")
           } else if (pNameLower.startsWith(normalizedQuery + ' ') || pNameLower.startsWith(normalizedQuery)) {
-            tierScore = 8000
+            tierScore = 10000
           } else if (pNameLower.includes(normalizedQuery)) {
-            tierScore = 6000
-          } else if (searchTokens.length > 1 && searchTokens.every(w => pNameLower.includes(w))) {
-            tierScore = 4500
+            tierScore = 8000
+          } else if (isFromTargetRestaurant) {
+            tierScore = 7000 // Restaurant menu boost when restaurant was explicitly queried
           } else if (vectorSim >= 0.65) {
             // TIER 2: HIGH AI SEMANTIC MATCH
             tierScore = Math.round(vectorSim * 4000)
@@ -338,16 +350,20 @@ export class ProductSearchService {
           } else if (vectorSim >= 0.38) {
             tierScore = Math.round(vectorSim * 2000)
           } else if (matchingTagWords.length > 0) {
-            tierScore = 500
+            tierScore = 300
           } else if (matchingDesc) {
             tierScore = 150
           }
 
-          // ── TIER 3: CONTEXT-AWARE DEMOTIONS ──
+          // ── TIER 3: CONTEXT-AWARE DEMOTIONS & COOKED DISH BOOST ──
           // 1. Prepared Meal vs Raw Spice Packets (e.g. searching "Chicken Biryani" shouldn't rank Everest Masala on top)
-          if (isMealSearch && (catSlug.includes('spices') || catSlug.includes('masala') || pNameLower.includes('masala'))) {
-            if (!normalizedQuery.includes('masala')) {
-              tierScore = Math.min(tierScore, 500) // Demote raw spices below cooked meals!
+          if (isMealSearch) {
+            if (catSlug.includes('spices') || catSlug.includes('masala') || pNameLower.includes('masala')) {
+              if (!normalizedQuery.includes('masala')) {
+                tierScore = Math.min(tierScore, 300) // Demote raw spices below cooked meals!
+              }
+            } else if (p.restaurantId) {
+              tierScore += 1500 // Prepared cooked dishes rank above raw groceries!
             }
           }
 

@@ -177,11 +177,12 @@ class RestaurantRepository {
   }
 
   /// Fetches darkstore cold drinks & ice cream for meal upsell recommendations
-  Future<List<Product>> getDarkstoreAddonRecommendations() async {
+  Future<List<Product>> getDarkstoreAddonRecommendations({String? storeId}) async {
     try {
       final response = await _dio.get('/api/products', queryParameters: {
         'category': 'beverages,ice-cream',
         'excludeRestaurant': 'true',
+        if (storeId != null && storeId.isNotEmpty) 'storeId': storeId,
         'limit': 50,
       });
       final data = response.data;
@@ -195,7 +196,9 @@ class RestaurantRepository {
           .map((json) => Product.fromJson(json as Map<String, dynamic>))
           .where((p) {
             final cat = (p.category?.slug ?? '').toLowerCase();
-            return cat == 'beverages' || cat == 'ice-cream';
+            final isMatch = cat == 'beverages' || cat == 'ice-cream' || cat.contains('drink') || cat.contains('dessert');
+            // STRICT: Must be available and strictly in-stock (>0)
+            return isMatch && p.isInStock && p.isAvailable && p.stock > 0;
           })
           .toList();
     } catch (e, st) {

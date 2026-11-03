@@ -972,7 +972,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           int score = 0;
 
           // If searching for a specific restaurant/outlet (e.g. "as ke pizza", "as", "as restaurant")
-          final isFromAsRestaurant = p.restaurantId == 'REST-101' ||
+          final isFromAsRestaurant = isAsQuery && (p.restaurantId == 'REST-101' ||
               p.restaurantId == 'cms2p1lap0000n0id8alldboy' ||
               (p.restaurant?.id == 'REST-101' || p.restaurant?.id == 'cms2p1lap0000n0id8alldboy') ||
               (p.restaurant?.slug ?? '').contains('as') ||
@@ -980,13 +980,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
               tags.contains('as-restaurant') ||
               tags.contains('as-cafe') ||
               outlet.contains('a.s') ||
-              outlet.contains('as restaurant');
+              outlet.contains('as restaurant'));
 
           final matchedRestIds = matchedRestaurants.map((r) => r.id.toLowerCase()).toSet();
           final pRestId = (p.restaurantId ?? p.restaurant?.id ?? '').toLowerCase();
           final pOutlet = outlet.toLowerCase();
           final isFromMatchedRestaurant = isFromAsRestaurant ||
-              (matchedRestIds.isNotEmpty && (matchedRestIds.contains(pRestId) || matchedRestaurants.any((r) => pOutlet.contains(r.name.toLowerCase()) || pOutlet.contains(r.slug.toLowerCase()))));
+              (isExplicitRestaurantQuery && matchedRestIds.isNotEmpty && (matchedRestIds.contains(pRestId) || matchedRestaurants.any((r) => pOutlet.contains(r.name.toLowerCase()) || pOutlet.contains(r.slug.toLowerCase()))));
 
           if (isFromMatchedRestaurant) {
             score += 9000; // Whole restaurant menu boost!
@@ -1022,30 +1022,32 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           // ── TIER 1: EXACT & DIRECT TITLE MATCH (Score 10,000+) ──
           // Guarantees the exact searched product is strictly #1 at the TOP for ANY product!
           if (pName == queryClean) {
-            score += 10000; // Absolute #1 Exact Full Title Match
+            score += 15000; // Absolute #1 Exact Full Title Match
+          } else if (allWordsInTitle && effectiveQueryWords.length > 1) {
+            score += 12000; // Multi-word match: ALL words in title (e.g. "Chilli Paneer" for "chilli paneer")
           } else if (pName.startsWith('$queryClean ') || pName.startsWith(queryClean)) {
             score += 8000;  // Starts With query (e.g. "Amul Butter 100g", "Maggi 2-Minute")
           } else if (pName.contains(queryClean)) {
             score += 6000;  // Contains Full Phrase (e.g. "Tata Salt Lite")
           } else if (variantNames.any((vn) => vn == queryClean || vn.startsWith(queryClean))) {
             score += 5500;  // Variant matches full query
-          } else if (allWordsInTitle) {
-            score += 4500;  // Every search token is present in title
           }
 
           // ── TIER 2: HIGH RELEVANCE / PARTIAL MATCHES (Score 1,000 - 3,500) ──
-          if (score < 4500) {
-            if (anyWordInTitle) {
-              score += matchingWordsInTitle.length * 1500;
-            } else if (anyWordInVariants) {
-              score += 800;
-            } else if (anyWordInTags) {
-              score += 500;
-            } else if (anyWordInCat) {
-              score += 300;
-            } else if (anyWordInDesc) {
-              score += 100;
-            }
+          if (anyWordInTitle) {
+            score += matchingWordsInTitle.length * 1500;
+          }
+          if (anyWordInVariants) {
+            score += 800;
+          }
+          if (anyWordInTags) {
+            score += 300;
+          }
+          if (anyWordInCat) {
+            score += 200;
+          }
+          if (anyWordInDesc) {
+            score += 100;
           }
 
           // ── TIER 3: CONTEXT-AWARE DEMOTIONS ──
@@ -1192,6 +1194,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           if (effectiveQueryWords.any((w) => w.startsWith('momo')) && !pName.contains('momo')) {
             score = 0;
           }
+          if (effectiveQueryWords.any((w) => w == 'dosa' || w == 'dosas') && !pName.contains('dosa')) {
+            score = 0;
+          }
+          if (effectiveQueryWords.any((w) => w == 'chowmein' || w == 'noodles' || w == 'noodle') && !pName.contains('noodle') && !pName.contains('chowmein') && !pName.contains('maggi')) {
+            score = 0;
+          }
 
           // Query tag intent boost
           if ((queryClean.contains('deal') || queryClean.contains('flash') || queryClean.contains('offer') || queryClean.contains('discount') || queryClean.contains('sale')) && p.isFlashDealProduct) {
@@ -1233,6 +1241,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
 
         // Authoritative live server search results from Backend (AI PgVector architecture)
         final serverProducts = serverSearchAsync.valueOrNull;
+        if (serverSearchAsync.isLoading && (serverProducts == null || serverProducts.isEmpty)) {
+          return _buildShimmerGrid();
+        }
+
         List<Product> filtered;
         if (serverProducts != null && serverProducts.isNotEmpty) {
           // Strictly preserve server's AI vector ranking (exact match #1, semantic similarity #2-#10)

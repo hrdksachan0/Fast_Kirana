@@ -73,7 +73,20 @@ class RestaurantRegistry {
         openTime: '09:00',
         closeTime: '23:59',
       ),
-    ];
+      Restaurant(
+        id: 'REST-105',
+        name: 'Zayka Non Veg Hotel',
+        slug: 'zayka-non-veg-hotel',
+        description: 'Authentic Non-Veg Biryani, Curries & Mughlai Specials in Ghatampur',
+        address: 'Main Market, Ghatampur, UP 209206',
+        phone: '+918924873692',
+        ownerPhone: '+918924873692',
+        lat: 26.151,
+        lng: 80.170,
+        isOpen: true,
+        openTime: '09:00',
+        closeTime: '23:00',
+      ),    ];
 
     for (final r in initialList) {
       register(r);
@@ -216,6 +229,11 @@ class RestaurantRegistry {
     if (q.contains('a.s.') || q.contains('as cafe') || q.contains('as restaurant')) {
       for (final r in _byKey.values) {
         if (r.name.toLowerCase().contains('a.s.')) return r;
+      }
+    }
+    if (q.contains('zayka')) {
+      for (final r in _byKey.values) {
+        if (r.name.toLowerCase().contains('zayka')) return r;
       }
     }
 

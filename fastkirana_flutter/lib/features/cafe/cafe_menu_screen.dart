@@ -1207,7 +1207,9 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   Widget _buildDarkstoreRecommendationsSection() {
     return ref.watch(restaurantAddonsProvider).when(
       data: (addons) {
-        if (addons.isEmpty) return const SizedBox.shrink();
+        // STRICT: Only display products that are IN STOCK and AVAILABLE
+        final inStockAddons = addons.where((p) => p.isInStock && p.isAvailable && p.stock > 0).toList();
+        if (inStockAddons.isEmpty) return const SizedBox.shrink();
 
         return Container(
           margin: const EdgeInsets.fromLTRB(12, 18, 12, 14),
@@ -1267,32 +1269,30 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         children: [
                           Row(
                             children: [
-                              Flexible(
-                                child: Text(
-                                  'Frequently Ordered Together',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 13.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.slate900,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                'Frequently Ordered',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: Responsive.scaledFontSize(context, 14),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                  letterSpacing: -0.2,
                                 ),
                               ),
                               const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFEF2F2),
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFFECACA), width: 0.8),
+                                  border: Border.all(color: const Color(0xFFFECDD3), width: 0.8),
                                 ),
                                 child: Text(
                                   'ADD-ONS',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 8.5),
                                     fontWeight: FontWeight.w900,
-                                    color: AppDesignSystem.primary,
+                                    color: const Color(0xFFE11D48),
+                                    letterSpacing: 0.3,
                                   ),
                                 ),
                               ),
@@ -1300,11 +1300,11 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Chilled drinks & sweet desserts from Darkstore',
+                            'Chilled drinks & sweet desserts',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: FontWeight.w500,
-                              color: AppDesignSystem.slate500,
+                              color: const Color(0xFF64748B),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1324,14 +1324,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '${addons.length}',
+                            '${inStockAddons.length}',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10),
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
                               fontWeight: FontWeight.w800,
                               color: primaryOrange,
                             ),
                           ),
-                          const SizedBox(width: 2),
+                          const SizedBox(width: 2.5),
                           Text(
                             'items',
                             style: GoogleFonts.inter(
@@ -1357,10 +1357,10 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 14),
-                    itemCount: addons.length,
+                    itemCount: inStockAddons.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 10),
                     itemBuilder: (context, idx) {
-                      final p = addons[idx];
+                      final p = inStockAddons[idx];
                       final cardWidth = Responsive.productCardShelfWidth(context);
                       return SizedBox(
                         width: cardWidth,

@@ -247,6 +247,8 @@ final cartUpsellProductsProvider =
   // - If Cart is Pure Grocery: ONLY allow Darkstore Groceries. Ban ALL restaurant dishes!
   bool isAllowed(Product p) {
     if (cleanIds.contains(p.id)) return false;
+    // CRITICAL: Strictly ensure out-of-stock or unavailable items never appear in upsell / recommendations
+    if (!p.isInStock || !p.isAvailable || p.stock <= 0) return false;
     final isRest = isRestaurantProduct(p);
 
     if (activeOutlet != null) {

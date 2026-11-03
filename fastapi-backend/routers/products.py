@@ -824,21 +824,31 @@ async def get_products(
             if not is_from_target_restaurant and vec_sim < 0.38 and not matching_title_words and not matching_tag_words and not matching_desc and not has_matching_variant:
                 continue
 
+            # Strict Dish Exclusion Guard (e.g. "momos", "burger", "pizza", "roll", "sandwich")
+            DISH_EXCLUSIVE_KEYWORDS = ['momo', 'momos', 'burger', 'burgers', 'pizza', 'pizzas', 'sandwich', 'sandwiches', 'roll', 'rolls', 'dosa']
+            searched_dish_kw = next((w for w in search_words if any(w == dk or w.startswith(dk) for dk in DISH_EXCLUSIVE_KEYWORDS)), None)
+            if searched_dish_kw:
+                root_word = searched_dish_kw[:4]
+                if root_word not in p_name_lower:
+                    continue  # Completely discard items like Spring Roll / Fries when Momos is searched!
+
+            has_all_words_in_title = len(search_words) > 1 and all(w in p_words or w in p_name_lower for w in search_words)
+
             name_score = 0.0
 
-            # ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) / RESTAURANT MENU MATCH (9,000) ──
-            if is_from_target_restaurant:
-                name_score = 9000.0  # Whole restaurant menu matches at TOP!
-            elif p_name_lower == normalized_search:
-                name_score = 10000.0
+            # ── TIER 1: EXACT & DIRECT TITLE MATCH (10,000+) ──
+            if p_name_lower == normalized_search:
+                name_score = 15000.0  # Absolute #1 exact match
+            elif has_all_words_in_title:
+                name_score = 12000.0  # Contains all multi-words in title (e.g. "Chilli Paneer" for "chilli paneer")
             elif p_name_lower.startswith(normalized_search + " ") or p_name_lower.startswith(normalized_search):
-                name_score = 8000.0
+                name_score = 10000.0
             elif normalized_search in p_name_lower:
-                name_score = 6000.0
+                name_score = 8000.0
+            elif is_from_target_restaurant:
+                name_score = 7000.0  # Whole restaurant menu matches when restaurant explicitly queried
             elif variant_exact:
                 name_score = 5500.0
-            elif len(search_words) > 1 and all(w in p_name_lower for w in search_words):
-                name_score = 4500.0
             elif vec_sim >= 0.65:
                 # TIER 2: HIGH AI SEMANTIC MATCH
                 name_score = vec_sim * 4000.0
@@ -849,7 +859,7 @@ async def get_products(
             elif has_matching_variant:
                 name_score = 800.0
             elif matching_tag_words:
-                name_score = 500.0
+                name_score = 300.0
             elif matching_desc:
                 name_score = 150.0
             else:
@@ -857,7 +867,7 @@ async def get_products(
                 if fuzzy_sim > 65:
                     name_score = fuzzy_sim * 10
 
-            # ── TIER 3: CONTEXT-AWARE DEMOTIONS ──
+            # ── TIER 3: CONTEXT-AWARE DEMOTIONS & COOKED DISH BOOST ──
             # 1. Prepared Meal vs Raw Spice Packets (e.g. searching "Chicken Biryani" shouldn't rank Everest Chicken Masala on top)
             COOKED_MEAL_KEYWORDS = {
                 'biryani', 'chicken', 'paneer', 'mutton', 'dal', 'curry', 'gravy',
@@ -866,9 +876,12 @@ async def get_products(
             is_meal_search = any(w in COOKED_MEAL_KEYWORDS for w in search_words)
             cat_slug = (p.category.slug if p.category else "").lower()
             cat_name = (p.category.name if p.category else "").lower()
-            if is_meal_search and ('spices' in cat_slug or 'masala' in cat_slug or 'masala' in cat_name or 'masala' in p_name_lower):
-                if 'masala' not in normalized_search:
-                    name_score = min(name_score, 500.0) # Demote raw spice packets below prepared dishes!
+            if is_meal_search:
+                if 'spices' in cat_slug or 'masala' in cat_slug or 'masala' in cat_name or 'masala' in p_name_lower:
+                    if 'masala' not in normalized_search:
+                        name_score = min(name_score, 300.0) # Demote raw spice packets below prepared dishes!
+                elif p.restaurantId:
+                    name_score += 1500.0 # Prepared cooked dishes rank above raw groceries!
 
             # 2. Noodles vs Ketchup/Sauce (e.g. searching "Maggi" shouldn't rank Maggi Sauce above Maggi Noodles)
             if any(w in ['maggi', 'maggie', 'noodle', 'noodles'] for w in search_words):

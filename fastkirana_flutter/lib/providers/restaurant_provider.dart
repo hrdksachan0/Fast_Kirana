@@ -185,5 +185,8 @@ final restaurantReviewsProvider = FutureProvider.family<Map<String, dynamic>, St
 final restaurantAddonsProvider = FutureProvider<List<Product>>((ref) async {
   ref.keepAlive();
   final repo = ref.watch(restaurantRepositoryProvider);
-  return repo.getDarkstoreAddonRecommendations();
+  final hub = ref.watch(currentStoreHubProvider);
+  final products = await repo.getDarkstoreAddonRecommendations(storeId: hub.id);
+  // Guarantee only strictly in-stock products are shown
+  return products.where((p) => p.isInStock && p.isAvailable && p.stock > 0).toList();
 });

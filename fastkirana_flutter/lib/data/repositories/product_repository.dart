@@ -443,6 +443,9 @@ class ProductRepository {
       final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, categoryId: resolvedId, storeId: effectiveStoreId, limit: limit);
       if (_inFlightFetches.containsKey(key) && !forceRefresh && !admin) {
         final products = await _inFlightFetches[key]!;
+        if (search != null && search.isNotEmpty) {
+          return products;
+        }
         return _filterProducts(products, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
       }
 
@@ -533,8 +536,8 @@ class ProductRepository {
         ? category
         : null;
 
-    final String etagKey = '${effectiveStoreId ?? ''}|${effectiveCatId ?? ''}|${effectiveCatSlug ?? ''}|${restaurantId ?? ''}|$limit|${admin ? 'admin' : ''}';
-    final String? cachedETag = admin ? null : _eTags[etagKey];
+    final String etagKey = '${effectiveStoreId ?? ''}|${effectiveCatId ?? ''}|${effectiveCatSlug ?? ''}|${restaurantId ?? ''}|$limit|${admin ? 'admin' : ''}|${search ?? ''}';
+    final String? cachedETag = (admin || (search != null && search.isNotEmpty)) ? null : _eTags[etagKey];
 
     final response = await dio.get(
       '/api/products',
@@ -558,17 +561,21 @@ class ProductRepository {
     );
 
     if (response.statusCode == 304) {
-      final targetHub = effectiveStoreId ?? (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
-      final existing = _hubCachedProducts[targetHub];
-      if (existing != null && existing.isNotEmpty) {
-        debugPrint('[ProductRepo] 304 Not Modified: Using in-memory cached catalog (${existing.length} items)');
-        return existing;
-      }
-      final diskCatalog = await _loadProductsFromDisk(targetHub);
-      if (diskCatalog != null && diskCatalog.isNotEmpty) {
-        _hubCachedProducts[targetHub] = diskCatalog;
-        debugPrint('[ProductRepo] 304 Not Modified: Restored ${diskCatalog.length} items from disk cache');
-        return diskCatalog;
+      if (search != null && search.isNotEmpty) {
+        _eTags.remove(etagKey);
+      } else {
+        final targetHub = effectiveStoreId ?? (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
+        final existing = _hubCachedProducts[targetHub];
+        if (existing != null && existing.isNotEmpty) {
+          debugPrint('[ProductRepo] 304 Not Modified: Using in-memory cached catalog (${existing.length} items)');
+          return existing;
+        }
+        final diskCatalog = await _loadProductsFromDisk(targetHub);
+        if (diskCatalog != null && diskCatalog.isNotEmpty) {
+          _hubCachedProducts[targetHub] = diskCatalog;
+          debugPrint('[ProductRepo] 304 Not Modified: Restored ${diskCatalog.length} items from disk cache');
+          return diskCatalog;
+        }
       }
       // If memory and disk caches are empty, invalidate cached ETag and fetch fresh
       _eTags.remove(etagKey);
@@ -601,7 +608,10 @@ class ProductRepository {
         .toList();
 
     // Stably place in-stock products first, then sortOrder desc, then createdAt desc (1:1 Web App parity)
-    liveProducts.sort((a, b) => compareProductsSystematic(a, b));
+    // CRITICAL: When searching, do NOT overwrite the server's AI relevance and exact-match ranking!
+    if (search == null || search.isEmpty) {
+      liveProducts.sort((a, b) => compareProductsSystematic(a, b));
+    }
 
     // Cache in memory and on disk ONLY when fetching the comprehensive grocery catalog without filters
     final isFullCatalog = (category == null || category.isEmpty) &&
@@ -688,7 +698,28 @@ class ProductRepository {
     }
 
     // Stably place in-stock products first, then sortOrder desc, then createdAt desc (1:1 Web App parity)
-    result.sort((a, b) => compareProductsSystematic(a, b));
+    if (search != null && search.isNotEmpty) {
+      final query = search.toLowerCase().trim();
+      result.sort((a, b) {
+        final aInStock = a.isAvailable && a.stock > 0;
+        final bInStock = b.isAvailable && b.stock > 0;
+        if (aInStock && !bInStock) return -1;
+        if (!aInStock && bInStock) return 1;
+
+        final aName = a.name.toLowerCase().trim();
+        final bName = b.name.toLowerCase().trim();
+        if (aName == query && bName != query) return -1;
+        if (bName == query && aName != query) return 1;
+        if (aName.startsWith(query) && !bName.startsWith(query)) return -1;
+        if (bName.startsWith(query) && !aName.startsWith(query)) return 1;
+        if (aName.contains(query) && !bName.contains(query)) return -1;
+        if (bName.contains(query) && !aName.contains(query)) return 1;
+
+        return compareProductsSystematic(a, b, inStockFirst: false);
+      });
+    } else {
+      result.sort((a, b) => compareProductsSystematic(a, b));
+    }
 
     return result;
   }
