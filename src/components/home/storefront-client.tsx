@@ -25,6 +25,7 @@ import { CuratedBrandOffersCarousel } from '@/components/home/curated-brand-offe
 import { useUIStore } from '@/stores/ui-store'
 import { NavratriSection } from '@/components/home/navratri/navratri-section'
 import { useCampaign } from '@/components/home/navratri/use-campaign'
+import type { CampaignConfig } from '@/lib/campaign-config'
 
 interface StorefrontClientProps {
   categories: Category[]
@@ -40,6 +41,7 @@ interface StorefrontClientProps {
   settingsMap: Record<string, string>
   restaurants?: any[]
   sortRules?: Record<string, string>
+  initialCampaign?: CampaignConfig | null
 }
 
 // ─── Cute High-Definition Premium SVGs for Grocery & Food ───
@@ -96,7 +98,8 @@ export function StorefrontClient({
   nightProducts,
   settingsMap,
   restaurants = [],
-  sortRules = {}
+  sortRules = {},
+  initialCampaign = null,
 }: StorefrontClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -105,7 +108,7 @@ export function StorefrontClient({
 
   // Live dark store hub isolation & coordinates
   const activeStoreId = useUIStore((s) => s.activeStoreId)
-  const campaign = useCampaign(activeStoreId)
+  const campaign = useCampaign(activeStoreId, true, initialCampaign)
   const isLocationServiceable = useUIStore((s) => s.isLocationServiceable)
   const activeCity = useUIStore((s) => s.activeCity)
 

@@ -4,6 +4,7 @@ import { sortProductsByStock } from '@/lib/utils'
 import { unstable_cache } from 'next/cache'
 import { Metadata } from 'next'
 import { StorefrontClient } from '@/components/home/storefront-client'
+import { parseCampaignConfig } from '@/lib/campaign-config'
 
 export const metadata: Metadata = {
   title: 'FastMinute (Fast Minute) - Grocery & Food Delivery in Ghatampur',
@@ -334,6 +335,23 @@ const getCachedCategorySortRules = unstable_cache(
 )
 
 
+const getCachedHomepageCampaign = unstable_cache(
+  async () => {
+    try {
+      const row = await prisma.storeSetting.findUnique({
+        where: { key: 'homepage_campaign' },
+        select: { value: true },
+      })
+      if (!row?.value) return null
+      return JSON.parse(row.value)
+    } catch {
+      return null
+    }
+  },
+  ['storefront-homepage-campaign-v3'],
+  { revalidate: 3600, tags: ['settings', 'campaign'] }
+)
+
 const getCachedManualTopPicks = unstable_cache(
   async () => {
     return prisma.product.findMany({
@@ -422,6 +440,7 @@ export default async function Home() {
   let sortRulesRaw: any[] = []
   let restaurantsRaw: any[] = []
   let allGroceryRaw: any[] = []
+  let campaignRaw: any = null
 
   // Fetch independent data pools in parallel using cached functions to avoid sequence waterfalls and DB load
   let manualTopPicks: any[] = []
@@ -444,6 +463,7 @@ export default async function Home() {
       sortRulesRes,
       restaurantsRes,
       allGroceryRes,
+      campaignRes,
     ] = await Promise.all([
       getCachedBanners(),
       getCachedCategories(),
@@ -460,6 +480,7 @@ export default async function Home() {
       getCachedCategorySortRules(),
       getCachedRestaurants(),
       getCachedAllGroceryProducts(),
+      getCachedHomepageCampaign(),
     ])
 
     promoBanners = bannersRes
@@ -477,6 +498,7 @@ export default async function Home() {
     sortRulesRaw = sortRulesRes
     restaurantsRaw = restaurantsRes
     allGroceryRaw = allGroceryRes
+    campaignRaw = campaignRes
   } catch (error) {
     console.error('Failed to execute parallel queries on home page:', error)
   }
@@ -607,6 +629,7 @@ export default async function Home() {
         settingsMap={settingsMap}
         sortRules={sortRulesMap}
         restaurants={restaurantsRaw}
+        initialCampaign={campaignRaw ? parseCampaignConfig(campaignRaw) : null}
       />
 
       {/* LocalBusiness JSON-LD Schema Markup */}

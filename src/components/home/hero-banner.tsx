@@ -3,60 +3,8 @@
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-
-interface BannerItem {
-  id: string | number
-  title?: string
-  subtitle?: string
-  description?: string
-  code?: string
-  gradient?: string
-  type?: string
-  imageUrl?: string | null
-  videoUrl?: string | null
-  linkUrl?: string | null
-  ctaUrl?: string | null
-  redirectUrl?: string | null
-  isActive?: boolean
-}
-
-/**
- * FastMinute Ultra-Premium Animated Hero Carousel (Next.js Web)
- * Matches Flutter Mobile architecture:
- * - 86% active width with partial peek of previous and next banners (Amazon side-peek)
- * - 1.8:1 aspect ratio
- * - 22px border radius with subtle ambient shadow & white inner glass rim
- * - 10-12px horizontal gaps
- * - 4.5s autoplay with smooth 550ms easeInOutCubic slide motion
- * - Active scale: 1.0, Inactive scale: 0.94, Inactive opacity: 0.85
- * - Elongated FastMinute red active pill indicator + grey dots + count badge
- * - Pause on touch/drag/hover
- */
-const DEFAULT_GROCERY_BANNERS = [
-  {
-    id: 'default-diwali-delights',
-    title: 'Diwali Delights, Delivered in 10-15 Mins',
-    imageUrl: 'https://images.unsplash.com/photo-1605371924599-2d0365da1ae0?auto=format&fit=crop&w=1080&q=80',
-    linkUrl: '/search?q=diwali',
-  },
-  {
-    id: 'default-express-groceries',
-    title: 'Fast Delivery in 10-15 Mins',
-    imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1080&q=80',
-    linkUrl: '/category/packaged-items',
-  },
-]
-
-const DEFAULT_FOOD_BANNERS = [
-  {
-    id: 'default-food-special',
-    title: 'Hot & Fresh Food in 20-25 Mins',
-    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1080&q=80',
-    linkUrl: '/food',
-  },
-]
 
 export function HeroBanner({
   initialBanners,
@@ -67,8 +15,12 @@ export function HeroBanner({
 }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const isUserInteractingRef = useRef(false)
+  const isDraggingMouseRef = useRef(false)
+  const mouseStartXRef = useRef(0)
+  const mouseScrollLeftRef = useRef(0)
 
   const displayBanners = useMemo(() => {
     const raw = initialBanners || []
@@ -89,35 +41,113 @@ export function HeroBanner({
 
   const total = displayBanners.length
 
-  // Reset index when category/mode switches
+  // Center target slide smoothly
+  const scrollToIndex = useCallback(
+    (index: number, smooth = true) => {
+      if (!scrollRef.current || total <= 0) return
+      const container = scrollRef.current
+      const cards = container.querySelectorAll<HTMLElement>('[data-banner-item]')
+      const targetCard = cards[index]
+      if (targetCard) {
+        const targetLeft = targetCard.offsetLeft - (container.offsetWidth - targetCard.offsetWidth) / 2
+        container.scrollTo({
+          left: targetLeft,
+          behavior: smooth ? 'smooth' : 'auto',
+        })
+      }
+    },
+    [total]
+  )
+
+  // Sync currentIndex in real-time as user swipes on mobile touch or drags
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current || total <= 0) return
+    const container = scrollRef.current
+    const scrollLeft = container.scrollLeft
+    const containerCenter = scrollLeft + container.offsetWidth / 2
+    const cards = container.querySelectorAll<HTMLElement>('[data-banner-item]')
+    if (!cards.length) return
+
+    let closestIndex = 0
+    let minDistance = Infinity
+    cards.forEach((card, i) => {
+      const cardCenter = card.offsetLeft + card.offsetWidth / 2
+      const distance = Math.abs(containerCenter - cardCenter)
+      if (distance < minDistance) {
+        minDistance = distance
+        closestIndex = i
+      }
+    })
+
+    if (closestIndex !== currentIndex) {
+      setCurrentIndex(closestIndex)
+    }
+  }, [total, currentIndex])
+
+  // Reset index & scroll on mode switch
   useEffect(() => {
     setCurrentIndex(0)
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ left: 0, behavior: 'auto' })
+    }
   }, [mode])
 
-  // Autoplay timer
+  // Next / Previous navigation
   const nextSlide = useCallback(() => {
     if (total <= 1) return
-    setCurrentIndex((prev) => (prev + 1) % total)
-  }, [total])
+    const nextIdx = (currentIndex + 1) % total
+    scrollToIndex(nextIdx, true)
+  }, [total, currentIndex, scrollToIndex])
 
   const prevSlide = useCallback(() => {
     if (total <= 1) return
-    setCurrentIndex((prev) => (prev - 1 + total) % total)
-  }, [total])
+    const prevIdx = (currentIndex - 1 + total) % total
+    scrollToIndex(prevIdx, true)
+  }, [total, currentIndex, scrollToIndex])
 
+  // Autoplay timer with pause guard
   useEffect(() => {
-    if (total <= 1 || isPaused || isDragging) {
+    if (total <= 1 || isPaused) {
       if (timerRef.current) clearInterval(timerRef.current)
       return
     }
 
-    timerRef.current = setInterval(nextSlide, 4500)
+    timerRef.current = setInterval(() => {
+      if (!isUserInteractingRef.current) {
+        nextSlide()
+      }
+    }, 4500)
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [total, isPaused, isDragging, nextSlide])
+  }, [total, isPaused, nextSlide])
 
-  if (total === 0) return null
+  // Mouse drag handlers for desktop smooth swipe
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return
+    isDraggingMouseRef.current = true
+    mouseStartXRef.current = e.pageX - scrollRef.current.offsetLeft
+    mouseScrollLeftRef.current = scrollRef.current.scrollLeft
+    setIsPaused(true)
+  }
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingMouseRef.current || !scrollRef.current) return
+    e.preventDefault()
+    const x = e.pageX - scrollRef.current.offsetLeft
+    const walk = (x - mouseStartXRef.current) * 1.4
+    scrollRef.current.scrollLeft = mouseScrollLeftRef.current - walk
+  }
+
+  const onMouseUpOrLeave = () => {
+    if (isDraggingMouseRef.current) {
+      isDraggingMouseRef.current = false
+      setIsPaused(false)
+      // Snap to closest card on mouse release
+      handleScroll()
+    }
+  }
 
   if (total === 0) return null
 
@@ -126,8 +156,6 @@ export function HeroBanner({
       className="w-full relative z-10 select-none py-1 group/banner"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      onTouchStart={() => setIsPaused(true)}
-      onTouchEnd={() => setIsPaused(false)}
     >
       {/* Desktop Left / Right Navigation Controls */}
       {total > 1 && (
@@ -157,106 +185,102 @@ export function HeroBanner({
         </>
       )}
 
-      {/* Viewport: 86% active card width with 7% left & right peek */}
-      <div className="relative w-full overflow-hidden flex justify-center items-center">
-        <motion.div
-          className="flex items-center w-full cursor-grab active:cursor-grabbing"
-          drag={total > 1 ? 'x' : false}
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.25}
-          onDragStart={() => setIsDragging(true)}
-          onDragEnd={(_, info) => {
-            setIsDragging(false)
-            if (info.offset.x < -40 || info.velocity.x < -300) {
-              nextSlide()
-            } else if (info.offset.x > 40 || info.velocity.x > 300) {
-              prevSlide()
-            }
-          }}
-          animate={{
-            // Center the active slide (86% width + 10px gap, leaving 7% peek on both sides)
-            x: `calc(7% - ${currentIndex * 86}% - ${currentIndex * 11}px)`,
-          }}
-          transition={{
-            type: 'spring',
-            stiffness: 260,
-            damping: 28,
-            mass: 0.8,
-          }}
-          style={{ width: `${total * 86}%` }}
-        >
-          {displayBanners.map((banner: any, idx: number) => {
-            const isActive = idx === currentIndex
-            const targetUrl =
-              banner.linkUrl ||
-              banner.ctaUrl ||
-              banner.redirectUrl ||
-              (banner.type === 'food' ? '/food' : '/category/fruits-vegetables')
-            const isVideo = Boolean(
-              banner.videoUrl ||
-                (banner.imageUrl &&
-                  (banner.imageUrl.toLowerCase().split('?')[0].endsWith('.mp4') ||
-                    banner.imageUrl.toLowerCase().split('?')[0].endsWith('.webm') ||
-                    banner.imageUrl.toLowerCase().split('?')[0].endsWith('.mov')))
-            )
+      {/* Viewport: 86% active card width with 7% left & right peek + 120Hz smooth touch snapping */}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        onTouchStart={() => {
+          isUserInteractingRef.current = true
+          setIsPaused(true)
+        }}
+        onTouchEnd={() => {
+          isUserInteractingRef.current = false
+          setIsPaused(false)
+        }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUpOrLeave}
+        className="w-full flex items-center gap-[11px] overflow-x-auto snap-x snap-mandatory scrollbar-none py-1.5 px-[7%] cursor-grab active:cursor-grabbing"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          scrollBehavior: 'smooth',
+        }}
+      >
+        {displayBanners.map((banner: any, idx: number) => {
+          const isActive = idx === currentIndex
+          const targetUrl =
+            banner.linkUrl ||
+            banner.ctaUrl ||
+            banner.redirectUrl ||
+            (banner.type === 'food' ? '/food' : '/category/fruits-vegetables')
+          const isVideo = Boolean(
+            banner.videoUrl ||
+              (banner.imageUrl &&
+                (banner.imageUrl.toLowerCase().split('?')[0].endsWith('.mp4') ||
+                  banner.imageUrl.toLowerCase().split('?')[0].endsWith('.webm') ||
+                  banner.imageUrl.toLowerCase().split('?')[0].endsWith('.mov')))
+          )
 
-            return (
-              <motion.div
-                key={banner.id || idx}
-                animate={{
-                  scale: isActive ? 1.0 : 0.94,
-                  opacity: isActive ? 1.0 : 0.85,
+          return (
+            <div
+              key={banner.id || idx}
+              data-banner-item
+              onClick={() => {
+                if (!isActive) scrollToIndex(idx, true)
+              }}
+              className={`shrink-0 aspect-[1.8/1] rounded-[22px] overflow-hidden bg-zinc-900 border border-black/10 dark:border-white/10 snap-center relative transition-all duration-300 ease-out ${
+                isActive
+                  ? 'scale-100 opacity-100 shadow-[0_12px_28px_rgba(0,0,0,0.18)]'
+                  : 'scale-[0.93] opacity-80 shadow-sm'
+              }`}
+              style={{
+                width: '86vw',
+                maxWidth: '440px',
+              }}
+            >
+              <Link
+                href={targetUrl}
+                prefetch={false}
+                onClick={(e) => {
+                  if (isDraggingMouseRef.current) e.preventDefault()
                 }}
-                transition={{ duration: 0.45, ease: [0.65, 0, 0.35, 1] }}
-                className="shrink-0 aspect-[1.8/1] rounded-[22px] overflow-hidden bg-zinc-900 border border-black/10 dark:border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.12)] relative"
-                style={{
-                  width: '86%',
-                  maxWidth: '440px',
-                  marginRight: '11px',
-                }}
+                className="relative block w-full h-full"
               >
-                <Link
-                  href={targetUrl}
-                  prefetch={false}
-                  onClick={(e) => {
-                    if (isDragging) e.preventDefault()
-                  }}
-                  className="relative block w-full h-full"
-                >
-                  {isVideo ? (
-                    <video
-                      src={banner.videoUrl || banner.imageUrl!}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover pointer-events-none"
+                {isVideo ? (
+                  <video
+                    src={banner.videoUrl || banner.imageUrl!}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover pointer-events-none"
+                  />
+                ) : (
+                  banner.imageUrl && (
+                    <Image
+                      src={banner.imageUrl}
+                      alt={banner.title || 'FastMinute Hero Banner'}
+                      fill
+                      sizes="(max-width: 768px) 86vw, 440px"
+                      className="object-cover select-none pointer-events-none"
+                      priority={idx === 0}
                     />
-                  ) : (
-                    banner.imageUrl && (
-                      <Image
-                        src={banner.imageUrl}
-                        alt={banner.title || 'FastMinute Hero Banner'}
-                        fill
-                        sizes="(max-width: 768px) 86vw, 440px"
-                        className="object-cover select-none"
-                        priority={idx === 0}
-                      />
-                    )
-                  )}
+                  )
+                )}
 
-                  {/* Hardware Double-Bezel Inner Glass Rim Overlay */}
-                  <div className="absolute inset-0 rounded-[22px] border border-white/20 pointer-events-none" />
-                </Link>
-              </motion.div>
-            )
-          })}
-        </motion.div>
+                {/* Hardware Double-Bezel Inner Glass Rim Overlay */}
+                <div className="absolute inset-0 rounded-[22px] border border-white/20 pointer-events-none" />
+              </Link>
+            </div>
+          )
+        })}
       </div>
 
       {/* Animated Pagination Bar (FastMinute Red Active Pill + Dots + Counter Badge) */}
       {total > 1 && (
-        <div className="flex items-center justify-center gap-1.5 mt-2.5">
+        <div className="flex items-center justify-center gap-1.5 mt-2">
           <div className="flex items-center gap-1.5">
             {displayBanners.map((_, idx) => {
               const isActive = idx === currentIndex
@@ -264,7 +288,7 @@ export function HeroBanner({
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => setCurrentIndex(idx)}
+                  onClick={() => scrollToIndex(idx, true)}
                   className="focus:outline-none py-1 cursor-pointer"
                   aria-label={`Go to slide ${idx + 1}`}
                 >
@@ -281,7 +305,7 @@ export function HeroBanner({
             })}
           </div>
 
-          {/* Counter Badge ("1/5") */}
+          {/* Counter Badge ("1/2") */}
           <div className="ml-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700/60 text-[10px] font-extrabold text-slate-600 dark:text-zinc-300">
             {currentIndex + 1}/{total}
           </div>
