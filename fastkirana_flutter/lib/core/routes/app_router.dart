@@ -5,6 +5,7 @@ import '../../features/auth/login_screen.dart';
 import '../../features/auth/otp_screen.dart';
 import '../../features/home/main_shell.dart';
 import '../../features/products/products_screen.dart';
+import '../../features/products/product_detail_loader_screen.dart';
 import '../../features/categories/categories_screen.dart';
 import '../../features/cart/cart_screen.dart';
 import '../../features/checkout/checkout_screen.dart';
@@ -101,7 +102,7 @@ class AppRouter {
     if (productMatch != null) {
       final slug = productMatch.group(1) ?? '';
       if (slug.isNotEmpty && slug != 'track') {
-        return FadeScaleRoute(page: SearchScreen(initialQuery: slug.replaceAll('-', ' ')));
+        return FadeScaleRoute(page: ProductDetailLoaderScreen(slugOrId: slug));
       }
     }
 

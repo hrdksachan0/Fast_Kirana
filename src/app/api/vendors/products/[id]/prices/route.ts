@@ -10,12 +10,20 @@ export async function PUT(
   const { id } = await params
   try {
     const body = await request.json()
-    const { costPrice, price, stock } = body
+    const { costPrice, price, mrp, stock, variants } = body
 
     const updateData: any = {}
     if (costPrice !== undefined) updateData.costPrice = Number(costPrice)
     if (price !== undefined) updateData.price = Number(price)
+    if (mrp !== undefined) updateData.mrp = Number(mrp)
     if (stock !== undefined) updateData.stock = Number(stock)
+    if (variants !== undefined) {
+      updateData.variants = Array.isArray(variants)
+        ? variants
+        : (typeof variants === 'string' && variants.trim().length > 0
+            ? JSON.parse(variants)
+            : variants)
+    }
 
     const updated = await prisma.product.update({
       where: { id },
@@ -26,4 +34,11 @@ export async function PUT(
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to update product price' }, { status: 500 })
   }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return PUT(request, context)
 }

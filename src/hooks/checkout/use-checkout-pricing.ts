@@ -290,20 +290,19 @@ export function useCheckoutPricing({
     }
   }
 
-  const isPremiumPackagingSelected =
-    (hasCafeItems || cafeCartItems.length > 0) && packagingOption === 'PREMIUM'
-  const packagingFee = isPremiumPackagingSelected ? 15 : 0
+  const isPremiumPackagingSelected = false
+  const packagingFee = 0
 
   const applicablePackagingFee = isCombinedOrder ? (combinedMiscFee || miscFee) : miscFee
   const activePackagingLabel = isCombinedOrder
-    ? (combinedMiscFeeLabel || 'Combined Packaging Charge')
-    : (miscFeeLabel || 'Packaging Charge')
+    ? (combinedMiscFeeLabel || 'Combined Handling Fee')
+    : (miscFeeLabel || 'Handling Fee')
 
   const groceryChargedMisc =
-    groceryCartItems.length > 0 && deliveryMethod !== 'PICKUP' && !isPremiumPackagingSelected
+    groceryCartItems.length > 0 && deliveryMethod !== 'PICKUP'
   const effectiveGroceryMiscFee = groceryChargedMisc ? applicablePackagingFee : 0
   const cafeChargedMisc =
-    cafeCartItems.length > 0 && !groceryChargedMisc && !isPremiumPackagingSelected
+    cafeCartItems.length > 0 && !groceryChargedMisc
   const effectiveCafeMiscFee = cafeChargedMisc ? applicablePackagingFee : 0
   const effectiveMiscFee = effectiveGroceryMiscFee + effectiveCafeMiscFee
 

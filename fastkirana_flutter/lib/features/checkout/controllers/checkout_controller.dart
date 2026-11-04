@@ -308,6 +308,25 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     _currentContext = context;
   }
 
+  void cancelPlacingOrder(BuildContext? context) {
+    state = state.copyWith(isPlacingOrder: false);
+    if (context != null && context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppDesignSystem.slate800,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text(
+            'Order placement cancelled. Items are safely saved in your cart.',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   void updateNotes(String notes) {
     _customDeliveryNotes = notes;
   }
@@ -767,7 +786,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final basePackagingFee = state.deliveryMethod == 'PICKUP'
         ? 0.0
         : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
-    final packagingFee = state.selectedPackaging == 'PREMIUM' ? 15.0 : basePackagingFee;
+    final packagingFee = basePackagingFee;
     final grandTotalBeforeWallet = (subtotal + deliveryFee + packagingFee + _tipAmount - _discountAmount).clamp(0.0, 999999.0);
 
     final walletState = ref.read(walletNotifierProvider);
@@ -1129,7 +1148,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
     final packagingFee = (draft != null && draft.hasFeeBreakdown)
         ? draft.packagingFee
-        : (effectivePackaging == 'PREMIUM' ? 15.0 : basePackagingFee);
+        : basePackagingFee;
     final grandTotalBeforeWallet = (draft != null && draft.grandTotal > 0)
         ? draft.grandTotal
         : (subtotal + deliveryFee + packagingFee + effectiveTip - effectiveDiscount).clamp(0.0, 999999.0);
@@ -1307,6 +1326,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       taxes: 0,
       miscFee: packagingFee + effectiveTip,
       total: grandTotal,
+      walletAmountUsed: walletAmountUsed,
       paymentMethod: effectivePayment == 'online'
           ? PaymentMethod.upi
           : (effectivePayment == 'wallet' ? PaymentMethod.wallet : PaymentMethod.cod),
@@ -1396,7 +1416,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         'receiverPhone': receiverPhone,
         'customerName': receiverName,
         'customerPhone': receiverPhone,
-        'phone': buyerPhone.isNotEmpty ? buyerPhone : receiverPhone,
+        'phone': buyerPhone.isNotEmpty ? buyerPhone : (receiverPhone.isNotEmpty ? receiverPhone : (selectedAddress?.phone ?? '')),
+        'addressPhone': selectedAddress?.phone ?? '',
         'storeId': (draft != null && draft.hubId != null && draft.hubId!.isNotEmpty) ? draft.hubId! : nearestHub.id,
         'addressId': selectedAddress?.id ?? 'addr_default',
         'paymentMethod': effectivePayment == 'online'
@@ -1571,8 +1592,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     List<Map<String, dynamic>>? orderedItems,
     BuildContext? context,
   }) async {
-    // Subtle pleasant confirmation chime and haptic sensation immediately
-    unawaited(CustomerSoundService.instance.playOrderSuccessSound());
+    // Subtle pleasant confirmation chime and adaptive haptic sensation immediately (Online vs COD)
+    final isOnlinePaymentMode = placedOrder.paymentMethod == PaymentMethod.wallet || placedOrder.paymentMethod == PaymentMethod.upi;
+    unawaited(CustomerSoundService.instance.playOrderSuccessSound(isOnline: isOnlinePaymentMode));
     HapticFeedback.heavyImpact();
 
     // Update state to unblock UI immediately

@@ -255,6 +255,7 @@ export async function GET(
         category: p.category?.name || 'General',
         imageUrl: p.imageUrl || '',
         isAvailable: p.isAvailable,
+        variants: p.variants,
       }
     })
 

@@ -527,9 +527,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     HapticFeedback.lightImpact();
     final isPaid = _order?.paymentStatus == 'PAID';
     final totalAmount = _order?.total ?? 0.0;
-    final displayNum = (_order?.displayId ?? _order?.readableId ?? widget.orderId).trim();
-    final cleanDisplayId = displayNum.isNotEmpty
-        ? '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}'
+    final rawReadable = _order?.readableId?.trim();
+    final displayNum = (rawReadable != null && rawReadable.isNotEmpty)
+        ? rawReadable
+        : (_order?.displayId ?? widget.orderId).trim();
+    final cleanRaw = displayNum.replaceAll('#', '').trim();
+    final cleanDisplayId = cleanRaw.isNotEmpty
+        ? (cleanRaw.startsWith('FK-') ? '#$cleanRaw' : '#FK-$cleanRaw')
         : '#ORDER';
 
     final shouldCancel = await AppConfirmationDialog.showDestructive(
@@ -1387,9 +1391,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final isCancelled = _order?.status == OrderStatus.cancelled || statusStep == -1;
     final isDelivered = _order?.status == OrderStatus.delivered || statusStep >= 4;
     final isPaid = _order?.paymentStatus == 'PAID';
-    final displayNum = (_order?.displayId ?? _order?.readableId ?? widget.orderId).trim();
-    final cleanDisplayId = displayNum.isNotEmpty
-        ? '#${displayNum.replaceAll('#', '').replaceAll('FK-', '').trim()}'
+    final rawReadable = _order?.readableId?.trim();
+    final displayNum = (rawReadable != null && rawReadable.isNotEmpty)
+        ? rawReadable
+        : (_order?.displayId ?? widget.orderId).trim();
+    final cleanRaw = displayNum.replaceAll('#', '').trim();
+    final cleanDisplayId = cleanRaw.isNotEmpty
+        ? (cleanRaw.startsWith('FK-') ? '#$cleanRaw' : '#FK-$cleanRaw')
         : '#ORDER';
     final canCancel = (_order?.status == OrderStatus.adminPending) &&
         !isCancelled &&

@@ -15,6 +15,7 @@ import '../../widgets/floating_cart_bar.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../products/product_detail_screen.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'models/cafe_menu_section.dart';
 import 'widgets/cafe_reviews_tab.dart';
 import 'widgets/cafe_offers_strip.dart';
@@ -538,6 +539,51 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     return 'Search in $outlet...';
   }
 
+  Widget _buildTopBarCircleButton({
+    required Widget icon,
+    required VoidCallback onTap,
+    required bool isScrolled,
+    String? tooltip,
+    Color? customBg,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+      child: Bounceable(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: Tooltip(
+          message: tooltip ?? '',
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isScrolled
+                  ? AppDesignSystem.slate100
+                  : (customBg ?? Colors.black.withValues(alpha: 0.48)),
+              border: Border.all(
+                color: isScrolled
+                    ? AppDesignSystem.slate200
+                    : Colors.white.withValues(alpha: 0.35),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isScrolled ? 0.05 : 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Center(child: icon),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final menuAsync = ref.watch(restaurantMenuProvider(widget.restaurantId));
@@ -588,72 +634,75 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                       : SystemUiOverlayStyle.light,
                   elevation: (_isSearchActive || innerBoxIsScrolled) ? 0.5 : 0,
                   leading: _isSearchActive
-                      ? IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_rounded,
-                            color: AppDesignSystem.slate900,
-                            size: 22,
-                          ),
-                          onPressed: _closeSearch,
-                        )
-                      : Container(
-                          margin: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.arrow_back_rounded,
-                              color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
-                              size: 20,
+                      ? Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Bounceable(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              _closeSearch();
+                            },
+                            child: const Center(
+                              child: Icon(
+                                Icons.arrow_back_rounded,
+                                color: AppDesignSystem.slate900,
+                                size: 22,
+                              ),
                             ),
-                            onPressed: () => Navigator.pop(context),
+                          ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: _buildTopBarCircleButton(
+                              isScrolled: innerBoxIsScrolled,
+                              tooltip: 'Back',
+                              onTap: () => Navigator.pop(context),
+                              icon: Icon(
+                                Icons.arrow_back_rounded,
+                                color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
+                                size: 20,
+                              ),
+                            ),
                           ),
                         ),
                   actions: _isSearchActive
                       ? null
                       : [
-                          // 1. Search Action
-                          Container(
-                            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: Icon(
-                                Icons.search_rounded,
-                                color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _isSearchActive = true;
-                                  _tabController.index = 0;
-                                });
-                              },
+                          // 1. Search Action Button
+                          _buildTopBarCircleButton(
+                            isScrolled: innerBoxIsScrolled,
+                            tooltip: 'Search dishes',
+                            onTap: () {
+                              setState(() {
+                                _isSearchActive = true;
+                                _tabController.index = 0;
+                              });
+                            },
+                            icon: Icon(
+                              Icons.search_rounded,
+                              color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
+                              size: 20,
                             ),
                           ),
                           // 2. Share Menu Action
-                          Container(
-                            margin: const EdgeInsets.only(top: 8, bottom: 8, right: 8, left: 4),
-                            decoration: BoxDecoration(
-                              color: innerBoxIsScrolled ? Colors.transparent : Colors.black.withValues(alpha: 0.35),
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: _buildTopBarCircleButton(
+                              isScrolled: innerBoxIsScrolled,
+                              tooltip: 'Share menu',
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                const shareUrl = 'https://www.fastminute.in/cafe';
+                                final shareText =
+                                    '🍔 Craving delicious food? Check out the fresh menu of $restaurantName on FastMinute!\nOrder online for fast express delivery: $shareUrl';
+                                Share.share(shareText, subject: '$restaurantName Menu - FastMinute');
+                              },
                               icon: Icon(
                                 Icons.share_rounded,
                                 color: innerBoxIsScrolled ? AppDesignSystem.slate900 : Colors.white,
                                 size: 19,
                               ),
-                              onPressed: () {
-                                HapticFeedback.lightImpact();
-                                const shareUrl = 'https://fastkirana.in/cafe';
-                                final shareText = '🍔 Craving delicious food? Check out the fresh menu of $restaurantName on FastKirana!\nOrder online for fast express delivery: $shareUrl';
-                                Share.share(shareText, subject: '$restaurantName Menu - FastKirana');
-                              },
                             ),
                           ),
                         ],
@@ -661,13 +710,23 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                   titleSpacing: 0,
                   title: _isSearchActive
                       ? Padding(
-                          padding: const EdgeInsets.only(right: 16),
+                          padding: const EdgeInsets.only(right: 14),
                           child: Container(
-                            height: 40,
+                            height: 42,
                             decoration: BoxDecoration(
                               color: AppDesignSystem.slate100,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppDesignSystem.slate200, width: 0.8),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: primaryOrange.withValues(alpha: 0.45),
+                                width: 1.2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: TextField(
                               controller: _searchController,
@@ -680,28 +739,36 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                                 hintStyle: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 12.5),
                                   color: AppDesignSystem.slate400,
-                                  fontWeight: FontWeight.w400,
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                prefixIcon: const Icon(Icons.search_rounded, color: AppDesignSystem.slate400, size: 18),
-                                prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                prefixIcon: const Icon(
+                                  Icons.search_rounded,
+                                  color: primaryOrange,
+                                  size: 19,
+                                ),
+                                prefixIconConstraints: const BoxConstraints(minWidth: 38, minHeight: 38),
                                 suffixIcon: _searchQuery.isNotEmpty
-                                    ? GestureDetector(
+                                    ? Bounceable(
                                         onTap: () {
+                                          HapticFeedback.lightImpact();
                                           _searchController.clear();
                                           setState(() => _searchQuery = '');
                                         },
-                                        child: const Icon(Icons.close_rounded, color: AppDesignSystem.slate500, size: 18),
+                                        child: const Padding(
+                                          padding: EdgeInsets.only(right: 6),
+                                          child: Icon(Icons.cancel_rounded, color: AppDesignSystem.slate400, size: 18),
+                                        ),
                                       )
                                     : null,
-                                suffixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                suffixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 34),
                                 border: InputBorder.none,
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
                               ),
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 13.5),
                                 color: AppDesignSystem.slate900,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),

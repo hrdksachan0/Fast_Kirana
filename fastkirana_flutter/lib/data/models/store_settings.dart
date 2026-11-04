@@ -8,7 +8,7 @@ class StoreSettings with _$StoreSettings {
 
   const factory StoreSettings({
     @Default(5.0) double miscFee,
-    @Default('Packaging charge') String miscFeeLabel,
+    @Default('Handling Fee') String miscFeeLabel,
     @Default(25.0) double deliveryFee,
     @Default(199.0) double groceryFreeDeliveryThreshold,
     @Default(199.0) double cafeFreeDeliveryThreshold,
@@ -50,7 +50,7 @@ class StoreSettings with _$StoreSettings {
       miscFee: parseDouble(json['misc_fee'], 5.0),
       miscFeeLabel: json['misc_fee_label']?.toString().isNotEmpty == true
           ? json['misc_fee_label'].toString()
-          : 'Packaging charge',
+          : 'Handling Fee',
       deliveryFee: parseDouble(json['delivery_fee'], 25.0),
       groceryFreeDeliveryThreshold: gThresh,
       cafeFreeDeliveryThreshold: cThresh,
@@ -115,7 +115,7 @@ class StoreSettings with _$StoreSettings {
     if (val != null && val.toString().trim().isNotEmpty) {
       return val.toString().trim();
     }
-    return 'Combined Packaging Charge';
+    return 'Combined Handling Fee';
   }
 
   static double _parseDoubleVal(dynamic val, double fallback) {

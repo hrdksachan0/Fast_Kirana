@@ -6,6 +6,8 @@ import '../../../core/services/location_service.dart';
 class CheckoutBillBreakdown extends StatelessWidget {
   final double subtotal;
   final double deliveryFee;
+  final double? handlingFee;
+  final String? handlingLabel;
   final double packagingFee;
   final String packagingLabel;
   final double discountAmount;
@@ -18,8 +20,10 @@ class CheckoutBillBreakdown extends StatelessWidget {
     super.key,
     required this.subtotal,
     required this.deliveryFee,
-    required this.packagingFee,
-    required this.packagingLabel,
+    this.handlingFee,
+    this.handlingLabel,
+    this.packagingFee = 0.0,
+    this.packagingLabel = 'Handling Fee',
     required this.discountAmount,
     this.walletAmountUsed = 0.0,
     required this.grandTotal,
@@ -78,9 +82,9 @@ class CheckoutBillBreakdown extends StatelessWidget {
           const SizedBox(height: 7),
           _buildRow(
             context,
-            packagingLabel,
-            packagingFee == 0.0 ? 'FREE (₹0)' : '+₹${packagingFee.toInt()}',
-            isFree: packagingFee == 0.0,
+            (handlingLabel != null && handlingLabel!.trim().isNotEmpty) ? handlingLabel! : packagingLabel,
+            (handlingFee ?? packagingFee) == 0.0 ? 'FREE' : '+₹${(handlingFee ?? packagingFee).toInt()}',
+            isFree: (handlingFee ?? packagingFee) == 0.0,
           ),
           if (tipAmount > 0) ...[
             const SizedBox(height: 7),
@@ -94,8 +98,6 @@ class CheckoutBillBreakdown extends StatelessWidget {
             const SizedBox(height: 7),
             _buildRow(context, '👛 Wallet Balance Applied', '-₹${walletAmountUsed.toInt()}', isDiscount: true),
           ],
-          const SizedBox(height: 7),
-          _buildRow(context, 'Handling & Taxes', '₹0', isFree: true),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
             child: Divider(height: 1, color: AppDesignSystem.slate200),

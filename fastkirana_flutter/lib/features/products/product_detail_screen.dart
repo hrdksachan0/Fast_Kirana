@@ -215,10 +215,20 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final variantLabel = (variantName != null && variantName.trim().isNotEmpty)
         ? ' ($variantName)'
         : '';
+    final slugOrId = p.slug.trim().isNotEmpty ? p.slug.trim() : p.id.trim();
+    final productUrl = 'https://www.fastminute.in/product/$slugOrId';
+
+    // Dynamic restaurant detection using restaurant_utils
+    final isRest = isRestaurantProduct(p);
+    final restName = isRest ? getOutletName(p) : '';
+
+    final outletSuffix = (isRest && restName.isNotEmpty) ? ' from $restName' : '';
+    final emoji = isRest ? '🍽️' : '🛒';
+    final deliveryText = isRest ? '⚡ Fresh & Hot Delivery in Ghatampur!' : '⚡ Fast Express Delivery in Ghatampur!';
+
     final shareText =
-        '''🛒 Check out ${p.name}$variantLabel ($priceStr) on FastMinute!\n\n⚡ Fast Express Delivery in Ghatampur!\n📲 Download FastMinute App on Play Store to Order:
-https://play.google.com/store/apps/details?id=com.fastkirana.app''';
-    Share.share(shareText, subject: 'Buy ${p.name} on FastMinute');
+        '''$emoji Check out ${p.name}$variantLabel ($priceStr)$outletSuffix on FastMinute!\n\n$deliveryText\n👉 View & Order here:\n$productUrl''';
+    Share.share(shareText, subject: 'Order ${p.name} on FastMinute');
   }
 
   @override

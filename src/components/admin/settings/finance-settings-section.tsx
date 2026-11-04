@@ -475,11 +475,11 @@ export function FinanceSettingsSection({
               </div>
 
               <div className="p-2 rounded-xl bg-muted/40 border border-border/50">
-                <p className="text-[9.5px] font-bold text-text-secondary">Packaging Fee</p>
+                <p className="text-[9.5px] font-bold text-text-secondary">Handling Fee</p>
                 <p className="text-sm font-black text-text-primary mt-0.5">
                   {formatPrice(simulatedRules.packFee)}
                 </p>
-                <span className="text-[9px] text-text-muted font-bold truncate block">{miscFeeLabel || 'Eco-Pack'}</span>
+                <span className="text-[9px] text-text-muted font-bold truncate block">{miscFeeLabel || 'Handling Fee'}</span>
               </div>
 
               <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
@@ -541,7 +541,7 @@ export function FinanceSettingsSection({
             <div className="p-3 bg-muted/20 border border-border/60 rounded-2xl space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-text-primary">
-                  Standard Packaging (Single Outlet)
+                  Handling Fee (Single Outlet)
                 </span>
                 <span className="text-[9px] text-text-muted font-bold">Only Grocery or Cafe</span>
               </div>
@@ -575,7 +575,7 @@ export function FinanceSettingsSection({
                     value={miscFeeLabel}
                     onChange={(e) => setMiscFeeLabel(e.target.value)}
                     className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs font-bold focus:outline-none focus:border-primary"
-                    placeholder="Packaging Charge"
+                    placeholder="Handling Fee"
                   />
                 </div>
               </div>
@@ -585,7 +585,7 @@ export function FinanceSettingsSection({
             <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                  Combined Order Packaging (Grocery + Food)
+                  Combined Order Handling Fee (Grocery + Food)
                 </span>
                 <span className="text-[9px] text-amber-600/80 dark:text-amber-400/80 font-bold">Mixed cart</span>
               </div>
@@ -619,7 +619,7 @@ export function FinanceSettingsSection({
                     value={combinedMiscFeeLabel}
                     onChange={(e) => setCombinedMiscFeeLabel(e.target.value)}
                     className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs font-bold focus:outline-none focus:border-primary"
-                    placeholder="Combined Packaging Charge"
+                    placeholder="Combined Handling Fee"
                   />
                 </div>
               </div>

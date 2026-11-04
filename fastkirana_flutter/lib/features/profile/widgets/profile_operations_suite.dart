@@ -242,27 +242,26 @@ class ProfileOperationsSuite extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 2,
                         children: [
-                          Flexible(
-                            child: Text(
-                              'Supplier Partner Hub',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13),
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: -0.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            'Supplier Partner Hub',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 13.5),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
                               color: const Color(0xFFEA580C),
                               borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 0.8),
                             ),
                             child: Text(
                               'SUPPLIER',
@@ -270,7 +269,7 @@ class ProfileOperationsSuite extends StatelessWidget {
                                 fontSize: Responsive.scaledFontSize(context, 8.5),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
-                                letterSpacing: 0.4,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
@@ -357,22 +356,20 @@ class ProfileOperationsSuite extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 2,
                         children: [
-                          Flexible(
-                            child: Text(
-                              'Delivery Partner Dashboard',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13),
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: -0.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            'Delivery Partner Hub',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 13.5),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
@@ -486,27 +483,26 @@ class ProfileOperationsSuite extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 2,
                         children: [
-                          Flexible(
-                            child: Text(
-                              'Restaurant Kitchen Console',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13),
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: -0.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            'Restaurant Kitchen',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 13.5),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 0.8),
                             ),
                             child: Text(
                               'KITCHEN',
@@ -514,7 +510,7 @@ class ProfileOperationsSuite extends StatelessWidget {
                                 fontSize: Responsive.scaledFontSize(context, 8.5),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
-                                letterSpacing: 0.4,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
@@ -595,27 +591,26 @@ class ProfileOperationsSuite extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 2,
                         children: [
-                          Flexible(
-                            child: Text(
-                              'Picker Hub Console',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13),
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: -0.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            'Picker Hub',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 13.5),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 0.8),
                             ),
                             child: Text(
                               'PICKER',
@@ -623,7 +618,7 @@ class ProfileOperationsSuite extends StatelessWidget {
                                 fontSize: Responsive.scaledFontSize(context, 8.5),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
-                                letterSpacing: 0.4,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),

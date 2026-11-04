@@ -69,9 +69,9 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         restaurantId: order.restaurantId,
       })
 
-      // 2. Web Push Notifications
+      // 2. Web Push Notifications (Admins only notified if ADMIN_PENDING)
       if (isRestaurant) {
-        const rolesToNotify = [Role.ADMIN, Role.DELIVERY].filter(r => !notifiedWebRoles.has(r))
+        const rolesToNotify = [Role.DELIVERY].filter(r => !notifiedWebRoles.has(r))
         if (rolesToNotify.length > 0) {
           rolesToNotify.forEach(r => notifiedWebRoles.add(r))
           sendPushNotificationToRoles(rolesToNotify, {
@@ -79,7 +79,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
             body: isOnlinePaid ? `Order #${displayId} of ₹${order.total} — PAID Online ✅` : `Order #${displayId} of ₹${order.total} has been placed.`,
             tag: `order-${order.id}`,
             data: { orderId: order.id }
-          }).catch((err: any) => console.error('Error sending push notification to admins:', err))
+          }).catch((err: any) => console.error('Error sending push notification to delivery:', err))
         }
 
         // Restaurant kitchen push (Only if order is valid and not cancelled)
@@ -92,7 +92,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
           }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
         }
       } else {
-        const rolesToNotify = [Role.ADMIN, Role.PICKER, Role.DELIVERY].filter(r => !notifiedWebRoles.has(r))
+        const rolesToNotify = [Role.PICKER, Role.DELIVERY].filter(r => !notifiedWebRoles.has(r))
         if (rolesToNotify.length > 0) {
           rolesToNotify.forEach(r => notifiedWebRoles.add(r))
           sendPushNotificationToRoles(rolesToNotify, {

@@ -87,6 +87,7 @@ class Order {
   final double taxes;
   final double miscFee;
   final double total;
+  final double walletAmountUsed;
   final double refundAmount;
   final PaymentMethod paymentMethod;
   final String paymentStatus;
@@ -130,6 +131,7 @@ class Order {
     required this.taxes,
     required this.miscFee,
     required this.total,
+    this.walletAmountUsed = 0.0,
     this.refundAmount = 0.0,
     required this.paymentMethod,
     required this.paymentStatus,
@@ -411,6 +413,29 @@ class Order {
       taxes: (json['taxes'] as num?)?.toDouble() ?? 0.0,
       miscFee: (json['miscFee'] as num?)?.toDouble() ?? 0.0,
       total: (json['total'] as num?)?.toDouble() ?? 0.0,
+      walletAmountUsed: () {
+        double parsed = (json['walletAmountUsed'] as num?)?.toDouble() ?? 0.0;
+        if (parsed <= 0 && json['notes'] != null) {
+          final notesStr = json['notes'].toString();
+          final m = RegExp(r'\[WALLET_USED:([\d.]+)\]').firstMatch(notesStr) ??
+              RegExp(r'Paid via Wallet:\s*₹?([\d.]+)').firstMatch(notesStr);
+          if (m != null) {
+            parsed = double.tryParse(m.group(1) ?? '') ?? 0.0;
+          }
+        }
+        if (parsed <= 0 && _parsePaymentMethod(json['paymentMethod']) == PaymentMethod.wallet) {
+          final gross = ((json['subtotal'] as num?)?.toDouble() ?? 0.0) +
+              ((json['deliveryFee'] as num?)?.toDouble() ?? 0.0) +
+              ((json['miscFee'] as num?)?.toDouble() ?? 0.0) +
+              ((json['taxes'] as num?)?.toDouble() ?? 0.0) -
+              ((json['discount'] as num?)?.toDouble() ?? 0.0);
+          final tot = (json['total'] as num?)?.toDouble() ?? 0.0;
+          if (gross > tot) {
+            parsed = (gross - tot).clamp(0.0, gross);
+          }
+        }
+        return parsed;
+      }(),
       refundAmount: (json['refundAmount'] as num?)?.toDouble() ?? 0.0,
       paymentMethod: _parsePaymentMethod(json['paymentMethod']),
       paymentStatus: json['paymentStatus']?.toString() ?? 'PENDING',
@@ -500,6 +525,7 @@ class Order {
     double? taxes,
     double? miscFee,
     double? total,
+    double? walletAmountUsed,
     double? refundAmount,
     PaymentMethod? paymentMethod,
     String? paymentStatus,
@@ -540,6 +566,7 @@ class Order {
       taxes: taxes ?? this.taxes,
       miscFee: miscFee ?? this.miscFee,
       total: total ?? this.total,
+      walletAmountUsed: walletAmountUsed ?? this.walletAmountUsed,
       refundAmount: refundAmount ?? this.refundAmount,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       paymentStatus: paymentStatus ?? this.paymentStatus,
@@ -582,6 +609,7 @@ class Order {
     'taxes': taxes,
     'miscFee': miscFee,
     'total': total,
+    'walletAmountUsed': walletAmountUsed,
     'refundAmount': refundAmount,
     'paymentMethod': paymentMethod.name.toUpperCase(),
     'paymentStatus': paymentStatus,

@@ -623,6 +623,12 @@ class OrderDetailScreen extends StatelessWidget {
                     isGreen: order.miscFee == 0 || isPickupOrder,
                   ),
                   _buildBillRow('Handling & Taxes', '₹0', isGreen: true),
+                  if (order.walletAmountUsed > 0 || (order.paymentMethod == PaymentMethod.wallet && (order.subtotal + order.deliveryFee + order.miscFee - order.discount) > order.total))
+                    Builder(builder: (context) {
+                      final gross = order.subtotal + order.deliveryFee + order.miscFee - order.discount;
+                      final wAmt = order.walletAmountUsed > 0 ? order.walletAmountUsed : (gross - order.total).clamp(0.0, gross);
+                      return _buildBillRow('FastMinute Wallet', '-₹${wAmt.toInt()}', isGreen: true);
+                    }),
                   if (order.refundAmount > 0)
                     _buildBillRow(
                       'Refund Credited',

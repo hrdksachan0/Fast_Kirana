@@ -55,20 +55,39 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
 
     // 2. Web Push Notification to Staff
     if (isAdminPending) {
-      // Manual approval mode: ONLY Super Admins receive alerts
-      const rolesToNotify = [Role.ADMIN].filter((r) => !notifiedWebRoles.has(r))
-      if (rolesToNotify.length > 0) {
-        rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
-        sendPushNotificationToRoles(rolesToNotify, {
-          title: '🚨 New Order Awaiting Admin Approval!',
-          body: `Order #${displayId} (${safeShopName || 'Store'}, ₹${order.total}) requires your approval. Tap to review.`,
-          tag: `order-approval-${order.id}`,
-          data: { orderId: order.id },
-        }).catch((err: any) => console.error('Error sending push to admin:', err))
+      // Manual approval mode: STRICT HUB ISOLATION
+      // Only Admins assigned to this specific order's storeId receive the approval request.
+      // (If no store-assigned admins exist, fallback to unassigned super admins).
+      try {
+        let targetAdmins = await prisma.user.findMany({
+          where: {
+            role: Role.ADMIN,
+            ...(order.storeId ? { assignedStoreId: order.storeId } : {}),
+          },
+          select: { id: true },
+        })
+
+        if (targetAdmins.length === 0) {
+          targetAdmins = await prisma.user.findMany({
+            where: { role: Role.ADMIN, assignedStoreId: null },
+            select: { id: true },
+          })
+        }
+
+        for (const adminUser of targetAdmins) {
+          sendPushNotification(adminUser.id, {
+            title: '🚨 New Order Awaiting Admin Approval!',
+            body: `Order #${displayId} (${safeShopName || 'Store'}, ₹${order.total}) requires your approval. Tap to review.`,
+            tag: `order-approval-${order.id}`,
+            data: { orderId: order.id, storeId: order.storeId || '' },
+          }).catch((err: any) => console.error('Error sending push to admin:', err))
+        }
+      } catch (adminPushErr) {
+        console.error('Error querying hub admins for web push:', adminPushErr)
       }
     } else if (isRestaurant && order.restaurantId) {
-      // Auto-approved Restaurant order: Admin, Delivery, and Restaurant Owner
-      const rolesToNotify = [Role.ADMIN, Role.DELIVERY].filter((r) => !notifiedWebRoles.has(r))
+      // Auto-approved Restaurant order: Notify Delivery and Restaurant Owner (Admin NOT notified)
+      const rolesToNotify = [Role.DELIVERY].filter((r) => !notifiedWebRoles.has(r))
       if (rolesToNotify.length > 0) {
         rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
         sendPushNotificationToRoles(rolesToNotify, {
@@ -77,8 +96,8 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
             ? `Order #${displayId} for ${safeShopName || 'Restaurant'} (₹${order.total}) — PAID Online ✅`
             : `Order #${displayId} for ${safeShopName || 'Restaurant'} (₹${order.total}) received.`,
           tag: `order-${order.id}`,
-          data: { orderId: order.id },
-        }).catch((err: any) => console.error('Error sending push to admin/delivery:', err))
+          data: { orderId: order.id, storeId: order.storeId || '' },
+        }).catch((err: any) => console.error('Error sending push to delivery:', err))
       }
 
       // Notify Restaurant Owner
@@ -91,8 +110,8 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
       }
     } else {
-      // Auto-approved Pure Grocery order: Admin, Picker, Delivery
-      const rolesToNotify = [Role.ADMIN, Role.PICKER, Role.DELIVERY].filter((r) => !notifiedWebRoles.has(r))
+      // Auto-approved Pure Grocery order: Notify Picker and Delivery (Admin NOT notified)
+      const rolesToNotify = [Role.PICKER, Role.DELIVERY].filter((r) => !notifiedWebRoles.has(r))
       if (rolesToNotify.length > 0) {
         rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
         sendPushNotificationToRoles(rolesToNotify, {
@@ -101,7 +120,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
             ? `Order #${displayId} of ₹${order.total} — PAID Online ✅`
             : `Order #${displayId} of ₹${order.total} has been placed.`,
           tag: `order-${order.id}`,
-          data: { orderId: order.id },
+          data: { orderId: order.id, storeId: order.storeId || '' },
         }).catch((err: any) => console.error('Error sending push notification to grocery staff:', err))
       }
     }
@@ -110,37 +129,49 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     try {
       const { fcmMessaging } = await import('@/lib/firebase-admin')
       if (fcmMessaging) {
-        const staffPayload = buildOrderFcmPayload(
-          isAdminPending
-            ? '🚨 New Order Awaiting Approval!'
-            : isOnlinePaid
-            ? '💳 New PAID Order Received!'
-            : '🛎️ New Order Received!',
-          isAdminPending
-            ? `Order #${displayId} of ₹${order.total} needs admin approval. Tap to review.`
-            : `New order #${displayId} of ₹${order.total} has been placed.`,
-          {
-            title: isAdminPending
-              ? '🚨 New Order Awaiting Approval!'
-              : isOnlinePaid
-              ? '💳 New PAID Order Received!'
-              : '🛎️ New Order Received!',
-            body: isAdminPending
-              ? `Order #${displayId} of ₹${order.total} needs admin approval. Tap to review.`
-              : `New order #${displayId} of ₹${order.total} has been placed.`,
-            orderId: order.id,
-            readableId: displayId,
-            status: order.status,
-            screen: 'admin-orders',
-            timestamp: Date.now().toString(),
+        // ADMIN NOTIFICATION RULE:
+        // Admin is notified ONLY when order is ADMIN_PENDING (awaiting admin approval).
+        // If order is auto-approved or already paid online, Admin is NOT notified at all.
+        if (isAdminPending) {
+          const staffPayload = buildOrderFcmPayload(
+            '🚨 New Order Awaiting Approval!',
+            `Order #${displayId} of ₹${order.total} needs admin approval. Tap to review.`,
+            {
+              title: '🚨 New Order Awaiting Approval!',
+              body: `Order #${displayId} of ₹${order.total} needs admin approval. Tap to review.`,
+              orderId: order.id,
+              readableId: displayId,
+              storeId: order.storeId || '',
+              status: order.status,
+              screen: 'admin-orders',
+              timestamp: Date.now().toString(),
+            }
+          )
+
+          // STRICT HUB ISOLATION FOR ADMIN FCM:
+          // Send to hub-scoped topic ONLY so other hubs' admins are never buzzed!
+          if (order.storeId) {
+            sendTopicWithRetry(fcmMessaging, { topic: `admin_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
+          } else {
+            sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
           }
-        )
 
-        // Broadcast to store-scoped admin topic (or canonical fallback)
-        const adminTopic = order.storeId ? `admin_orders_${order.storeId}` : 'admin_orders'
-        sendTopicWithRetry(fcmMessaging, { topic: adminTopic, ...staffPayload }).catch(() => {})
+          // Direct token FCM push strictly to Admins assigned to THIS hub
+          const hubAdminTokens = await prisma.fcmToken.findMany({
+            where: {
+              user: {
+                role: Role.ADMIN,
+                ...(order.storeId ? { assignedStoreId: order.storeId } : {}),
+              },
+            },
+            select: { token: true },
+          })
+          for (const aToken of hubAdminTokens) {
+            fcmMessaging.send({ token: aToken.token, ...staffPayload }).catch(() => {})
+          }
+        }
 
-        // Only notify Pickers/Riders and Kitchens if NOT awaiting admin approval
+        // Pickers/Riders and Kitchens are notified only if NOT awaiting admin approval
         if (!isAdminPending) {
           // Direct FCM push to Delivery & Picker staff for grocery orders
           if (!isRestaurant) {
@@ -323,11 +354,11 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     const { fcmMessaging } = await import('@/lib/firebase-admin')
     if (fcmMessaging) {
       const notifTitle = isOnlinePaid
-        ? (isCombined ? '💳 Combined Order Confirmed & Paid!' : '💳 Order Confirmed & Paid!')
-        : (isCombined ? '📦 Combined Order Placed Successfully!' : '📦 Order Placed Successfully!')
+        ? '🎉 Order Placed & Paid!'
+        : '🎉 Order Placed!'
       const notifBody = isCombined
-        ? `Your FastMinute combined order #${baseDisplayId} (₹${combinedTotal.toFixed(0)}) is confirmed and being prepared.`
-        : `Your FastMinute order #${primaryOrder.readableId || primaryOrder.id} (₹${Number(primaryOrder.total).toFixed(0)}) is confirmed and being prepared.`
+        ? `Order #${baseDisplayId} (₹${combinedTotal.toFixed(0)}) is confirmed & packing.`
+        : `Order #${primaryOrder.readableId || primaryOrder.id} is confirmed & packing.`
 
       const dataPayload: Record<string, string> = {
         title: notifTitle,

@@ -181,7 +181,7 @@ class TrackingReceiptCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Packaging Charge', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+                Text('Handling Fee', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
                 Text('₹${miscFee.toInt()}', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: slateDark)),
               ],
             ),
@@ -205,6 +205,43 @@ class TrackingReceiptCard extends StatelessWidget {
                 Text('-₹${discount.toInt()}', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w800, color: brandGreen)),
               ],
             ),
+          ],
+          if (((order?.walletAmountUsed ?? 0) > 0) || ((subtotal + deliveryFee + miscFee + taxes - discount) > total && (order?.paymentMethod == PaymentMethod.wallet || total == 0))) ...[
+            const SizedBox(height: 5),
+            Builder(builder: (context) {
+              final gross = subtotal + deliveryFee + miscFee + taxes - discount;
+              final wAmt = (order?.walletAmountUsed != null && order!.walletAmountUsed > 0)
+                  ? order!.walletAmountUsed
+                  : (gross - total).clamp(0.0, gross);
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.account_balance_wallet_rounded, size: 13, color: brandGreen),
+                      const SizedBox(width: 4),
+                      Text(
+                        'FastMinute Wallet',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: Responsive.scaledFontSize(context, 12),
+                          fontWeight: FontWeight.w700,
+                          color: brandGreen,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '-₹${wAmt.toInt()}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                      fontWeight: FontWeight.w800,
+                      color: brandGreen,
+                    ),
+                  ),
+                ],
+              );
+            }),
           ],
           if ((order?.refundAmount ?? 0) > 0) ...[
             const SizedBox(height: 5),
@@ -246,7 +283,9 @@ class TrackingReceiptCard extends StatelessWidget {
                   Text(
                     (order?.refundAmount ?? 0) > 0
                         ? 'Original: ₹${total.toInt()} • ${order?.paymentMethod.displayName ?? "COD"}'
-                        : (order?.paymentMethod.displayName ?? 'COD'),
+                        : (total == 0 && ((order?.walletAmountUsed ?? 0) > 0 || order?.paymentMethod == PaymentMethod.wallet)
+                            ? 'FastMinute Wallet (PAID)'
+                            : (order?.paymentMethod.displayName ?? 'COD')),
                     style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: slateMuted),
                   ),
                 ],

@@ -118,26 +118,38 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     }
 
     // 5. STRICT ADMIN ISOLATION:
-    // Admin only receives notification when a NEW ORDER arrives ("admin ko sirf jab order aaye uski notification aaye").
-    // All sub-console duplicate alerts (picker, delivery, kitchen) and order status updates are strictly suppressed!
+    // Admin ONLY receives notification when an order is in ADMIN_PENDING state (awaiting approval).
+    // All intermediate status updates (packed, picked, on the way, delivered) and non-pending orders are strictly suppressed!
     final isAdmin = userRole == 'ADMIN' || userRole == 'SUPER_ADMIN';
     if (isAdmin) {
       final msgType = (data['type'] ?? '').toString().toUpperCase();
       final msgScreen = (data['screen'] ?? '').toString();
       final msgRole = (data['role'] ?? '').toString().toUpperCase();
+      final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
-      // Suppress status updates for Admin (Admin only receives NEW order alerts)
+      // STRICT HUB ISOLATION: Akbarpur admin never receives Ghatampur alerts, and vice versa!
+      final assignedStoreId = prefs.getString('assigned_store_id') ?? await SecureStorage.read('assigned_store_id') ?? '';
+      final notifStoreId = (data['storeId'] ?? '').toString().trim();
+      if (assignedStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
+        if (assignedStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
+          debugPrint('NotificationService: Suppressed alert for different hub admin ($notifStoreId != $assignedStoreId) in background.');
+          return;
+        }
+      }
+
+      // Suppress all status updates and non-approval orders for Admin (Admin receives approval alert only!)
       if (msgType == 'ORDER_STATUS_UPDATE' ||
           msgType == 'STATUS_UPDATE' ||
           msgType == 'ORDER_STATUS' ||
-          data['status'] == 'CONFIRMED' ||
-          data['status'] == 'PREPARING' ||
-          data['status'] == 'COOKING' ||
-          data['status'] == 'PACKED' ||
-          data['status'] == 'SHIPPED' ||
-          data['status'] == 'OUT_FOR_DELIVERY' ||
-          data['status'] == 'DELIVERED') {
-        debugPrint('NotificationService: Suppressed status update for Admin in background.');
+          (orderStatus.isNotEmpty && orderStatus != 'ADMIN_PENDING') ||
+          orderStatus == 'CONFIRMED' ||
+          orderStatus == 'PREPARING' ||
+          orderStatus == 'COOKING' ||
+          orderStatus == 'PACKED' ||
+          orderStatus == 'SHIPPED' ||
+          orderStatus == 'OUT_FOR_DELIVERY' ||
+          orderStatus == 'DELIVERED') {
+        debugPrint('NotificationService: Suppressed status update ($orderStatus) for Admin in background.');
         return;
       }
 
@@ -237,7 +249,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       await localNotifications.initialize(initSettings);
 
       final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
-          ? (cleanOrderId.hashCode & 0x7FFFFFFF)
+          ? NotificationService.getOrderNotifId(cleanOrderId)
           : (message.messageId?.hashCode ?? message.hashCode);
       final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
 
@@ -252,6 +264,15 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
           : (isOrderStatusUpdate
               ? 'Real-time chime alerts for Dispatched, Out for Delivery, and Delivered orders.'
               : 'Notifications for order updates and tracking.');
+
+      String cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+      cleanTitle = cleanTitle
+          .replaceAll('Order Placed Successfully!', 'Order Placed!')
+          .replaceAll('Combined Order Placed Successfully!', 'Order Placed!')
+          .replaceAll('Combined Order Confirmed & Paid!', 'Order Confirmed & Paid!')
+          .replaceAll('Online Payment Order Confirmed!', 'Order Confirmed!')
+          .trim();
+      final cleanBody = body.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
 
       final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
         channelId,
@@ -271,12 +292,16 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
             : (isOrderStatusUpdate ? Int64List.fromList([0, 250, 200, 250]) : null),
         showWhen: true,
         when: DateTime.now().millisecondsSinceEpoch,
+        styleInformation: BigTextStyleInformation(
+          cleanBody,
+          contentTitle: cleanTitle,
+        ),
       );
 
       await localNotifications.show(
         notifId,
-        title.toString(),
-        body.toString(),
+        cleanTitle,
+        cleanBody,
         NotificationDetails(android: androidDetails),
         payload: (data['url'] ?? data['linkUrl'] ?? data['link'] ?? (cleanOrderId != null ? '/orders/track' : '')).toString(),
       );
@@ -290,6 +315,16 @@ class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
+
+  /// Stable single notification ID per order to prevent duplicate stacking/grouping
+  static int getOrderNotifId(String? orderId, {String? readableId}) {
+    final raw = (readableId != null && readableId.trim().isNotEmpty) ? readableId : (orderId ?? 'order');
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isNotEmpty && digits.length >= 4) {
+      return (int.tryParse(digits.substring(digits.length - 4)) ?? 1000) + 50000;
+    }
+    return (raw.hashCode.abs() % 100000) + 50000;
+  }
 
   /// Centralized route resolver for push notifications across Customer, Admin, Store Manager, Restaurant, and Rider
   static String? _resolveNotificationRoute(Map<String, dynamic> data) {
@@ -691,8 +726,8 @@ class NotificationService {
       }
 
       // 5. STRICT ADMIN ISOLATION:
-      // Admin only receives notification when a NEW ORDER arrives ("admin ko sirf jab order aaye uski notification aaye").
-      // All sub-console duplicate alerts (picker, delivery, kitchen) and order status updates are strictly suppressed!
+      // Admin ONLY receives notification when an order is in ADMIN_PENDING state (awaiting approval).
+      // All intermediate status updates (packed, picked, on the way, delivered) and non-pending orders are strictly suppressed!
       final isAdmin = userRole == 'ADMIN' || userRole == 'SUPER_ADMIN';
       if (isAdmin) {
         final msgType = (data['type'] ?? '').toString().toUpperCase();
@@ -700,10 +735,21 @@ class NotificationService {
         final msgRole = (data['role'] ?? '').toString().toUpperCase();
         final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
-        // Suppress status updates for Admin (Admin only receives NEW order alerts)
+        // STRICT HUB ISOLATION: Akbarpur admin never receives Ghatampur alerts, and vice versa!
+        final adminStoreId = prefs.getString('assigned_store_id') ?? await SecureStorage.read('assigned_store_id') ?? '';
+        final notifStoreId = (data['storeId'] ?? '').toString().trim();
+        if (adminStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
+          if (adminStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
+            debugPrint('NotificationService: Suppressed alert for different hub admin ($notifStoreId != $adminStoreId) in foreground.');
+            return;
+          }
+        }
+
+        // Suppress all status updates and non-approval orders for Admin (Admin receives approval alert only!)
         if (msgType == 'ORDER_STATUS_UPDATE' ||
             msgType == 'STATUS_UPDATE' ||
             msgType == 'ORDER_STATUS' ||
+            (orderStatus.isNotEmpty && orderStatus != 'ADMIN_PENDING') ||
             orderStatus == 'CONFIRMED' ||
             orderStatus == 'PREPARING' ||
             orderStatus == 'COOKING' ||
@@ -711,7 +757,7 @@ class NotificationService {
             orderStatus == 'SHIPPED' ||
             orderStatus == 'OUT_FOR_DELIVERY' ||
             orderStatus == 'DELIVERED') {
-          debugPrint('NotificationService: Suppressed status update for Admin in foreground.');
+          debugPrint('NotificationService: Suppressed status update ($orderStatus) for Admin in foreground.');
           return;
         }
 
@@ -807,7 +853,7 @@ class NotificationService {
         title.toString().toLowerCase().contains('new order')));
 
     final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
-        ? (cleanOrderId.hashCode & 0x7FFFFFFF)
+        ? NotificationService.getOrderNotifId(cleanOrderId)
         : (isCartAlert ? 8888 : ('${title}_$body'.hashCode & 0x7FFFFFFF));
     final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty)
         ? 'order_$cleanOrderId'
@@ -825,7 +871,13 @@ class NotificationService {
             ? 'Real-time chime alerts for Dispatched, Out for Delivery, and Delivered orders.'
             : 'Notifications for order updates and tracking.');
 
-    final cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+    String cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+    cleanTitle = cleanTitle
+        .replaceAll('Order Placed Successfully!', 'Order Placed!')
+        .replaceAll('Combined Order Placed Successfully!', 'Order Placed!')
+        .replaceAll('Combined Order Confirmed & Paid!', 'Order Confirmed & Paid!')
+        .replaceAll('Online Payment Order Confirmed!', 'Order Confirmed!')
+        .trim();
     final cleanBody = body.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
 
     _localNotifications?.show(
@@ -843,6 +895,10 @@ class NotificationService {
           tag: tag,
           showWhen: true,
           when: DateTime.now().millisecondsSinceEpoch,
+          styleInformation: BigTextStyleInformation(
+            cleanBody,
+            contentTitle: cleanTitle,
+          ),
           playSound: true,
           sound: (isOrderAlert || isOrderStatusUpdate) ? const RawResourceAndroidNotificationSound('order_chime') : null,
           audioAttributesUsage: isOrderAlert ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
@@ -887,7 +943,7 @@ class NotificationService {
     if (kIsWeb) return;
 
     final isTerminal = order.status == OrderStatus.delivered || order.status == OrderStatus.cancelled;
-    final int notifId = (order.readableId ?? order.id).hashCode.abs() % 100000 + 50000;
+    final int notifId = NotificationService.getOrderNotifId(order.id, readableId: order.readableId);
 
     if (isTerminal) {
       await clearLiveOrderActivity(order.id, readableId: order.readableId);
@@ -911,7 +967,7 @@ class NotificationService {
           await _localNotifications?.show(
             notifId,
             '🎉 Order Delivered!',
-            'Your FastMinute order from ${order.shopName ?? 'Store'} was delivered. Enjoy your meal!',
+            'Your FastMinute order was delivered. Enjoy!',
             const NotificationDetails(android: androidDelivered, iOS: iosDelivered),
             payload: '/orders/${order.readableId ?? order.id}/track',
           );
@@ -928,31 +984,27 @@ class NotificationService {
         ? order.deliveryBoyName!.trim()
         : 'Rider';
 
-    final eta = customEtaText ?? (order.estimatedDelivery != null
-        ? '${order.estimatedDelivery!.difference(DateTime.now()).inMinutes.clamp(1, 45)} mins'
-        : '4 mins');
-
     switch (order.status) {
       case OrderStatus.shipped:
-        title = '⚡ FastMinute • Rider on the way';
-        body = '🛵 $riderName is reaching your gate • ~$eta away';
+        title = 'Rider on the Way';
+        body = '🛵 $riderName is on the way';
         progress = customProgress ?? 80;
         break;
       case OrderStatus.packed:
-        title = '⚡ FastMinute • Order Packed & Ready';
-        body = '🛍️ Packed at ${order.shopName ?? 'Store'} • Handing to rider';
+        title = 'Order Packed';
+        body = '🛍️ Packed & ready for delivery partner';
         progress = customProgress ?? 55;
         break;
       case OrderStatus.confirmed:
-        title = '⚡ FastMinute • Order Confirmed';
-        body = '👨‍🍳 Preparing your items • Rider arriving soon';
+        title = 'Order Confirmed';
+        body = '👨‍🍳 Store is packing your order';
         progress = customProgress ?? 30;
         break;
       case OrderStatus.adminPending:
       case OrderStatus.pending:
       default:
-        title = '⚡ FastMinute • Order Placed';
-        body = '⏳ Order received • Store confirming essentials';
+        title = 'Order Placed';
+        body = '⏳ Order received • Preparing fresh';
         progress = customProgress ?? 15;
         break;
     }
@@ -964,7 +1016,7 @@ class NotificationService {
     final androidDetails = AndroidNotificationDetails(
       'fastkirana_live_tracking_v1',
       'Live Order Status & Dynamic Tracking',
-      channelDescription: 'Persistent lock-screen live activity with real-time rider ETA and delivery progress.',
+      channelDescription: 'Persistent lock-screen live activity with real-time delivery progress.',
       importance: Importance.high,
       priority: Priority.max,
       ongoing: true, // Lock screen persistent widget
@@ -973,7 +1025,12 @@ class NotificationService {
       showProgress: true,
       maxProgress: 100,
       progress: progress,
-      subText: '⚡ Live Tracking ($progress%)',
+      subText: 'Live Tracker ($progress%)',
+      styleInformation: BigTextStyleInformation(
+        body,
+        contentTitle: title,
+        summaryText: 'Live Tracker ($progress%)',
+      ),
       category: AndroidNotificationCategory.status,
       visibility: NotificationVisibility.public,
       color: const Color(0xFF00B140),
@@ -982,7 +1039,7 @@ class NotificationService {
       actions: const [
         AndroidNotificationAction(
           'open_live_track',
-          '📍 Open Live Map',
+          '📍 Track Order',
           showsUserInterface: true,
         ),
       ],
@@ -993,7 +1050,7 @@ class NotificationService {
       presentBadge: true,
       presentSound: false,
       interruptionLevel: InterruptionLevel.timeSensitive,
-      subtitle: 'Live Order Tracking',
+      subtitle: 'Live Order Tracker',
       categoryIdentifier: 'order_tracking',
     );
 
@@ -1014,7 +1071,7 @@ class NotificationService {
   Future<void> clearLiveOrderActivity(String orderId, {String? readableId}) async {
     if (kIsWeb) return;
     try {
-      final int notifId = (readableId ?? orderId).hashCode.abs() % 100000 + 50000;
+      final int notifId = NotificationService.getOrderNotifId(orderId, readableId: readableId);
       await _localNotifications?.cancel(notifId);
     } catch (_) {}
   }
@@ -1125,21 +1182,25 @@ class NotificationService {
       // Subscribe to role-based and user-specific topics
       try {
         if (isAdmin) {
-          final isHubManager = (storeId != null && storeId.isNotEmpty && resolvedRole != 'SUPER_ADMIN');
-          if (isHubManager) {
-            // Hub/Store Manager: Subscribe ONLY to this specific hub's orders (Strict Hub Isolation)
+          final hasAssignedStore = (storeId != null && storeId.isNotEmpty);
+          if (hasAssignedStore) {
+            // Hub Admin / Store Manager: Subscribe ONLY to this specific hub's orders (Strict Hub Isolation)
             await _fcm?.subscribeToTopic('admin_orders_$storeId');
             try { await _fcm?.unsubscribeFromTopic('admin_orders'); } catch (_) {}
           } else {
-            // Super Admin: Subscribes to global canonical admin_orders topic
+            // Super Admin without assigned store: Subscribes to global canonical admin_orders topic
             await _fcm?.subscribeToTopic('admin_orders');
           }
-          // Actively purge duplicate and sub-console topics
+          // Actively purge duplicate, sub-console, and other hub topics
           final duplicateTopicsToPurge = [
             'admin_orders_all',
             'staff_orders',
             'picker_orders',
             'delivery_orders',
+            'admin_orders_hub-209206',
+            'admin_orders_hub-209101',
+            'admin_orders_wedson_store',
+            'admin_orders_ghatampur',
             if (storeId != null && storeId.isNotEmpty) ...[
               'staff_orders_$storeId',
               'picker_orders_$storeId',
@@ -1147,6 +1208,7 @@ class NotificationService {
             ],
           ];
           for (final t in duplicateTopicsToPurge) {
+            if (hasAssignedStore && t == 'admin_orders_$storeId') continue;
             try { await _fcm?.unsubscribeFromTopic(t); } catch (_) {}
           }
         } else if (isRestaurant) {

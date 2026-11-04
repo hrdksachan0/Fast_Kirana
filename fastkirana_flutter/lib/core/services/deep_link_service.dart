@@ -126,7 +126,12 @@ class DeepLinkService {
 
             // Product listing / detail: /product/{slug} or /products
             if (firstSegment == 'product' || firstSegment == 'products') {
-              _navigateToProducts();
+              final slug = pathSegments.length >= 2 ? pathSegments[1].trim() : '';
+              if (slug.isNotEmpty) {
+                AppRouter.navigatorKey.currentState?.pushNamed('/product/$slug');
+              } else {
+                _navigateToProducts();
+              }
               return;
             }
 

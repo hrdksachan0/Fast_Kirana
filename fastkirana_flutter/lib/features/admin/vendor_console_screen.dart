@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'package:audioplayers/audioplayers.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/order_item_helper.dart';
+import '../../core/theme/responsive.dart';
 import '../../core/services/secure_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
@@ -230,9 +232,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
         setState(() {
           _vendors = list;
-          if (_selectedVendorId == null) {
-            _selectedVendorId = targetId;
-          }
+          _selectedVendorId ??= targetId;
         });
 
         if (_selectedVendorId != null) {
@@ -655,10 +655,50 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     final double initialMrp = (prod['mrp'] as num?)?.toDouble() ?? initialPrice;
     final int initialStock = (prod['stock'] as num?)?.toInt() ?? 0;
 
-    final costCtrl = TextEditingController(text: initialCost > 0 ? initialCost.toStringAsFixed(initialCost.truncateToDouble() == initialCost ? 0 : 2) : '');
-    final sellCtrl = TextEditingController(text: initialPrice > 0 ? initialPrice.toStringAsFixed(initialPrice.truncateToDouble() == initialPrice ? 0 : 2) : '');
-    final mrpCtrl = TextEditingController(text: initialMrp > 0 ? initialMrp.toStringAsFixed(initialMrp.truncateToDouble() == initialMrp ? 0 : 2) : '');
-    final stockCtrl = TextEditingController(text: initialStock.toString());
+    // Parse existing variants
+    List<Map<String, dynamic>> workingVariants = [];
+    final rawVariants = prod['variants'];
+    if (rawVariants is List) {
+      workingVariants = rawVariants
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+    } else if (rawVariants is String && rawVariants.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawVariants);
+        if (decoded is List) {
+          workingVariants = decoded
+              .whereType<Map>()
+              .map((m) => Map<String, dynamic>.from(m))
+              .toList();
+        }
+      } catch (_) {}
+    }
+
+    int selectedVariantIndex = 0;
+
+    final costCtrl = TextEditingController();
+    final sellCtrl = TextEditingController();
+    final mrpCtrl = TextEditingController();
+    final stockCtrl = TextEditingController();
+
+    if (workingVariants.isNotEmpty) {
+      final v0 = workingVariants[0];
+      final vCost = (v0['costPrice'] ?? v0['cost_price'] ?? v0['cp'] ?? v0['cost'] as num?)?.toDouble() ?? initialCost;
+      final vPrice = (v0['price'] as num?)?.toDouble() ?? initialPrice;
+      final vMrp = (v0['mrp'] as num?)?.toDouble() ?? (initialMrp > 0 ? initialMrp : vPrice);
+      final vStock = (v0['stock'] as num?)?.toInt() ?? initialStock;
+
+      costCtrl.text = vCost > 0 ? vCost.toStringAsFixed(vCost.truncateToDouble() == vCost ? 0 : 2) : '';
+      sellCtrl.text = vPrice > 0 ? vPrice.toStringAsFixed(vPrice.truncateToDouble() == vPrice ? 0 : 2) : '';
+      mrpCtrl.text = vMrp > 0 ? vMrp.toStringAsFixed(vMrp.truncateToDouble() == vMrp ? 0 : 2) : '';
+      stockCtrl.text = vStock.toString();
+    } else {
+      costCtrl.text = initialCost > 0 ? initialCost.toStringAsFixed(initialCost.truncateToDouble() == initialCost ? 0 : 2) : '';
+      sellCtrl.text = initialPrice > 0 ? initialPrice.toStringAsFixed(initialPrice.truncateToDouble() == initialPrice ? 0 : 2) : '';
+      mrpCtrl.text = initialMrp > 0 ? initialMrp.toStringAsFixed(initialMrp.truncateToDouble() == initialMrp ? 0 : 2) : '';
+      stockCtrl.text = initialStock.toString();
+    }
 
     bool isSaving = false;
 
@@ -668,6 +708,31 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
+          void syncInputsToCurrentVariant() {
+            if (workingVariants.isNotEmpty && selectedVariantIndex < workingVariants.length) {
+              final cur = workingVariants[selectedVariantIndex];
+              cur['costPrice'] = double.tryParse(costCtrl.text.trim()) ?? 0.0;
+              cur['price'] = double.tryParse(sellCtrl.text.trim()) ?? 0.0;
+              cur['mrp'] = double.tryParse(mrpCtrl.text.trim()) ?? cur['price'];
+              cur['stock'] = int.tryParse(stockCtrl.text.trim()) ?? 0;
+            }
+          }
+
+          void loadVariantInputs(int idx) {
+            if (workingVariants.isNotEmpty && idx < workingVariants.length) {
+              final v = workingVariants[idx];
+              final vCost = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble() ?? 0.0;
+              final vPrice = (v['price'] as num?)?.toDouble() ?? 0.0;
+              final vMrp = (v['mrp'] as num?)?.toDouble() ?? vPrice;
+              final vStock = (v['stock'] as num?)?.toInt() ?? 0;
+
+              costCtrl.text = vCost > 0 ? vCost.toStringAsFixed(vCost.truncateToDouble() == vCost ? 0 : 2) : '';
+              sellCtrl.text = vPrice > 0 ? vPrice.toStringAsFixed(vPrice.truncateToDouble() == vPrice ? 0 : 2) : '';
+              mrpCtrl.text = vMrp > 0 ? vMrp.toStringAsFixed(vMrp.truncateToDouble() == vMrp ? 0 : 2) : '';
+              stockCtrl.text = vStock.toString();
+            }
+          }
+
           final double costVal = double.tryParse(costCtrl.text.trim()) ?? 0.0;
           final double sellVal = double.tryParse(sellCtrl.text.trim()) ?? 0.0;
           final double mrpVal = double.tryParse(mrpCtrl.text.trim()) ?? sellVal;
@@ -683,6 +748,10 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
             marginColor = Colors.red;
             marginLabel = '-₹${(-profit).toStringAsFixed(1)} loss (Cost > Selling price!)';
           }
+
+          final currentVariantName = workingVariants.isNotEmpty && selectedVariantIndex < workingVariants.length
+              ? (workingVariants[selectedVariantIndex]['name'] ?? 'Variant')
+              : (unit.isNotEmpty ? unit : '');
 
           return Container(
             padding: EdgeInsets.only(
@@ -739,11 +808,229 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                           ],
                         ),
                       ),
-                      if (unit.isNotEmpty)
-                        OrderItemHelper.buildWeightBadge(context, unit),
+                      if (currentVariantName.isNotEmpty)
+                        OrderItemHelper.buildWeightBadge(context, currentVariantName),
                     ],
                   ),
-                  const SizedBox(height: 16),
+
+                  // ── Variant-Wise Selection Strip ──
+                  if (workingVariants.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.style_outlined, size: 14, color: Color(0xFF2563EB)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Edit by Variant (${workingVariants.length}):',
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: slateDark),
+                            ),
+                          ],
+                        ),
+                        InkWell(
+                          onTap: () async {
+                            final nameCtrl = TextEditingController();
+                            final newName = await showDialog<String>(
+                              context: context,
+                              builder: (dCtx) => AlertDialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                title: Text('Add New Variant', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 16)),
+                                content: TextField(
+                                  controller: nameCtrl,
+                                  autofocus: true,
+                                  decoration: const InputDecoration(
+                                    hintText: 'e.g. 500 gm, 1 kg, Pack of 2',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Cancel')),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(backgroundColor: primaryRed),
+                                    onPressed: () => Navigator.pop(dCtx, nameCtrl.text.trim()),
+                                    child: const Text('Add', style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (newName != null && newName.isNotEmpty) {
+                              setModalState(() {
+                                syncInputsToCurrentVariant();
+                                workingVariants.add({
+                                  'name': newName,
+                                  'costPrice': costVal > 0 ? costVal : initialCost,
+                                  'price': sellVal > 0 ? sellVal : initialPrice,
+                                  'mrp': mrpVal > 0 ? mrpVal : initialMrp,
+                                  'stock': 10,
+                                });
+                                selectedVariantIndex = workingVariants.length - 1;
+                                loadVariantInputs(selectedVariantIndex);
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.add_rounded, size: 14, color: Colors.blue),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '+ Add Variant',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.blue.shade700),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: List.generate(workingVariants.length, (idx) {
+                          final isSel = idx == selectedVariantIndex;
+                          final v = workingVariants[idx];
+                          final vName = (v['name'] ?? 'Variant ${idx + 1}').toString();
+                          final vCost = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble() ?? 0.0;
+                          final vSell = (v['price'] as num?)?.toDouble() ?? 0.0;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Bounceable(
+                              onTap: () {
+                                if (selectedVariantIndex == idx) return;
+                                HapticFeedback.selectionClick();
+                                setModalState(() {
+                                  syncInputsToCurrentVariant();
+                                  selectedVariantIndex = idx;
+                                  loadVariantInputs(idx);
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: isSel ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isSel ? const Color(0xFF0F172A) : const Color(0xFFCBD5E1),
+                                    width: isSel ? 1.5 : 1,
+                                  ),
+                                  boxShadow: isSel
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.1),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      vName,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: isSel ? Colors.white : slateDark,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: isSel ? Colors.white.withValues(alpha: 0.2) : Colors.white,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        '₹${vCost.toStringAsFixed(0)} / ₹${vSell.toStringAsFixed(0)}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: isSel ? const Color(0xFF93C5FD) : const Color(0xFF2563EB),
+                                        ),
+                                      ),
+                                    ),
+                                    if (workingVariants.length > 1 && isSel) ...[
+                                      const SizedBox(width: 6),
+                                      GestureDetector(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          setModalState(() {
+                                            workingVariants.removeAt(idx);
+                                            selectedVariantIndex = 0;
+                                            loadVariantInputs(0);
+                                          });
+                                        },
+                                        child: const Icon(Icons.close_rounded, size: 14, color: Color(0xFFFCA5A5)),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          setModalState(() {
+                            final defaultName = unit.isNotEmpty ? unit : 'Standard';
+                            workingVariants = [
+                              {
+                                'name': defaultName,
+                                'costPrice': costVal > 0 ? costVal : initialCost,
+                                'price': sellVal > 0 ? sellVal : initialPrice,
+                                'mrp': mrpVal > 0 ? mrpVal : initialMrp,
+                                'stock': int.tryParse(stockCtrl.text.trim()) ?? initialStock,
+                              }
+                            ];
+                            selectedVariantIndex = 0;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.add_rounded, size: 14, color: Colors.blue),
+                              const SizedBox(width: 2),
+                              Text(
+                                '+ Add Variants (e.g. 250g, 500g)',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.blue.shade700),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 14),
                   // Live Margin Card
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -767,7 +1054,9 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Real-Time Margin Calculation',
+                                workingVariants.isNotEmpty
+                                    ? 'Margin for $currentVariantName'
+                                    : 'Real-Time Margin Calculation',
                                 style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: slateMuted),
                               ),
                               Text(
@@ -916,16 +1205,36 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                       ),
                       onPressed: isSaving ? null : () async {
                         setModalState(() => isSaving = true);
+                        syncInputsToCurrentVariant();
                         try {
                           final dio = ref.read(dioProvider);
-                          final res = await dio.patch(
-                            '/api/vendors/products/$prodId/prices',
-                            data: {
+
+                          Map<String, dynamic> patchData;
+                          if (workingVariants.isNotEmpty) {
+                            final defaultVar = workingVariants[0];
+                            final totalStock = workingVariants.fold<int>(
+                              0,
+                              (sum, v) => sum + ((v['stock'] as num?)?.toInt() ?? 0),
+                            );
+                            patchData = {
+                              'costPrice': (defaultVar['costPrice'] as num?)?.toDouble() ?? costVal,
+                              'price': (defaultVar['price'] as num?)?.toDouble() ?? sellVal,
+                              'mrp': (defaultVar['mrp'] as num?)?.toDouble() ?? mrpVal,
+                              'stock': totalStock > 0 ? totalStock : (int.tryParse(stockCtrl.text.trim()) ?? initialStock),
+                              'variants': workingVariants,
+                            };
+                          } else {
+                            patchData = {
                               'costPrice': costVal,
                               'price': sellVal,
                               'mrp': mrpVal,
                               'stock': int.tryParse(stockCtrl.text.trim()) ?? initialStock,
-                            },
+                            };
+                          }
+
+                          final res = await dio.patch(
+                            '/api/vendors/products/$prodId/prices',
+                            data: patchData,
                           );
                           if (res.statusCode == 200) {
                             if (ctx.mounted) Navigator.pop(ctx);
@@ -1076,93 +1385,93 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
           ? const VendorConsoleSkeleton()
           : (!widget.isVendorSelf && _vendors.isEmpty)
               ? _buildEmptyVendorsView()
-              : Column(
-                  children: [
-                    // Vendor Selector Header Strip
-                    _buildVendorSelectorStrip(),
+              : NestedScrollView(
+                  headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                    // Vendor Selector Header Strip (Scrolls away)
+                    SliverToBoxAdapter(
+                      child: _buildVendorSelectorStrip(),
+                    ),
 
-                    // Financial Summary Banner
-                    _buildFinancialKPIBanner(),
+                    // Financial Summary Banner (Scrolls away)
+                    SliverToBoxAdapter(
+                      child: _buildFinancialKPIBanner(),
+                    ),
 
-                    // Navigation Tabs
-                    Container(
-                      color: Colors.white,
-                      child: TabBar(
-                        controller: _tabController,
-                        isScrollable: true,
-                        tabAlignment: TabAlignment.start,
-                        labelColor: primaryRed,
-                        unselectedLabelColor: slateMuted,
-                        indicatorColor: primaryRed,
-                        indicatorWeight: 3,
-                        indicatorSize: TabBarIndicatorSize.label,
-                        dividerColor: const Color(0xFFF1F5F9),
-                        labelStyle: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800),
-                        unselectedLabelStyle: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
-                        tabs: [
-                          Tab(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('🔔 Live Orders'),
-                                if (_liveOrders.where((o) => o['status'] != 'DELIVERED').isNotEmpty) ...[
-                                  const SizedBox(width: 5),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                    decoration: BoxDecoration(
-                                      color: primaryRed,
-                                      borderRadius: BorderRadius.circular(10),
+                    // Navigation Tabs (Pins cleanly below AppBar)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _VendorTabBarHeaderDelegate(
+                        tabBar: TabBar(
+                          controller: _tabController,
+                          isScrollable: true,
+                          tabAlignment: TabAlignment.start,
+                          labelColor: primaryRed,
+                          unselectedLabelColor: slateMuted,
+                          indicatorColor: primaryRed,
+                          indicatorWeight: 3,
+                          indicatorSize: TabBarIndicatorSize.label,
+                          dividerColor: const Color(0xFFF1F5F9),
+                          labelStyle: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800),
+                          unselectedLabelStyle: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
+                          tabs: [
+                            Tab(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('🔔 Live Orders'),
+                                  if (_liveOrders.where((o) => o['status'] != 'DELIVERED').isNotEmpty) ...[
+                                    const SizedBox(width: 5),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: primaryRed,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '${_liveOrders.where((o) => o['status'] != 'DELIVERED').length}',
+                                        style: const TextStyle(fontSize: 9.5, color: Colors.white, fontWeight: FontWeight.w900),
+                                      ),
                                     ),
-                                    child: Text(
-                                      '${_liveOrders.where((o) => o['status'] != 'DELIVERED').length}',
-                                      style: const TextStyle(fontSize: 9.5, color: Colors.white, fontWeight: FontWeight.w900),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const Tab(text: '📊 Sales (Bikri)'),
+                            Tab(text: '📦 Products (${_products.length})'),
+                            Tab(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('📱 Reorder'),
+                                  if (_lowStockItems.isNotEmpty) ...[
+                                    const SizedBox(width: 5),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                      decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
+                                      child: Text('${_lowStockItems.length}', style: const TextStyle(fontSize: 9.5, color: Colors.white, fontWeight: FontWeight.w900)),
                                     ),
-                                  ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                          const Tab(text: '📊 Sales (Bikri)'),
-                          Tab(text: '📦 Products (${_products.length})'),
-                          Tab(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('📱 Reorder'),
-                                if (_lowStockItems.isNotEmpty) ...[
-                                  const SizedBox(width: 5),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                    decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
-                                    child: Text('${_lowStockItems.length}', style: const TextStyle(fontSize: 9.5, color: Colors.white, fontWeight: FontWeight.w900)),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const Tab(text: '💵 Payouts'),
-                        ],
+                            const Tab(text: '💵 Payouts'),
+                          ],
+                        ),
                       ),
                     ),
-
-
-
-                    // Tab Content
-                    Expanded(
-                      child: _isLoadingDetails
-                          ? const AdminOrdersListSkeleton(itemCount: 3)
-                          : TabBarView(
-                              controller: _tabController,
-                              children: [
-                                _buildLiveOrdersTab(),
-                                _buildSalesTab(),
-                                _buildProductsTab(),
-                                _buildReorderTab(),
-                                _buildPayoutsTab(),
-                              ],
-                            ),
-                    ),
                   ],
+                  body: _isLoadingDetails
+                      ? const AdminOrdersListSkeleton(itemCount: 3)
+                      : TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildLiveOrdersTab(),
+                            _buildSalesTab(),
+                            _buildProductsTab(),
+                            _buildReorderTab(),
+                            _buildPayoutsTab(),
+                          ],
+                        ),
                 ),
       ),
     );
@@ -1243,41 +1552,46 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Flexible(
-                          child: Text(
-                            name,
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: -0.2,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (code.isNotEmpty) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0F172A),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: const Color(0xFF475569)),
-                            ),
-                            child: Text(
-                              code,
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 9.5,
-                                color: const Color(0xFFCBD5E1),
-                                fontWeight: FontWeight.w700,
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 6,
+                          runSpacing: 3,
+                          children: [
+                            Text(
+                              name,
+                              style: GoogleFonts.outfit(
+                                fontSize: Responsive.scaledFontSize(context, 16),
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.2,
                               ),
+                              maxLines: 2,
+                              softWrap: true,
                             ),
-                          ),
-                        ],
+                            if (code.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F172A),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(color: const Color(0xFF475569), width: 0.8),
+                                ),
+                                child: Text(
+                                  code,
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 9.5,
+                                    color: const Color(0xFF94A3B8),
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -1542,7 +1856,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     final productsCount = (_kpis['totalProducts'] as num?)?.toInt() ?? _products.length;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 8),
       child: Column(
         children: [
           Row(
@@ -1553,15 +1867,15 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                   value: '$productsCount items',
                   icon: Icons.layers_rounded,
                   bgColor: const Color(0xFFEFF6FF),
-                  borderColor: const Color(0xFFDBEAFE),
+                  borderColor: const Color(0xFFBFDBFE),
                   textColor: const Color(0xFF1D4ED8),
                   iconColor: const Color(0xFF2563EB),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: _buildKPITile(
-                  label: 'TOTAL UNITS SOLD',
+                  label: 'UNITS SOLD',
                   value: '$units units',
                   icon: Icons.shopping_bag_rounded,
                   bgColor: const Color(0xFFECFDF5),
@@ -1572,7 +1886,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
@@ -1586,7 +1900,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                   iconColor: slateDark,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: _buildKPITile(
                   label: 'BALANCE DUE',
@@ -1615,16 +1929,16 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     required Color iconColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: borderColor, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: iconColor.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            color: iconColor.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -1632,10 +1946,10 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(7),
+            padding: const EdgeInsets.all(7.5),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(9),
+              color: iconColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, size: 16, color: iconColor),
           ),
@@ -1645,27 +1959,31 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w700,
-                    color: textColor.withValues(alpha: 0.75),
-                    letterSpacing: 0.4,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 9.5),
+                      fontWeight: FontWeight.w800,
+                      color: textColor.withValues(alpha: 0.75),
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w900,
-                    color: textColor,
-                    letterSpacing: -0.2,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 15),
+                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                      letterSpacing: -0.3,
+                    ),
                   ),
                 ),
               ],
@@ -1953,31 +2271,36 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
   Widget _buildDateWiseSalesList(List<Map<String, dynamic>> dailyList) {
     if (dailyList.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
-              child: const Icon(Icons.event_busy_rounded, color: slateMuted, size: 32),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'No sales recorded in this period',
-              style: GoogleFonts.inter(color: slateDark, fontSize: 13.5, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Try selecting another period like "All Time" or "Last 7 Days"',
-              style: GoogleFonts.inter(color: slateMuted, fontSize: 11),
-            ),
-          ],
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                child: const Icon(Icons.event_busy_rounded, color: slateMuted, size: 32),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'No sales recorded in this period',
+                style: GoogleFonts.inter(color: slateDark, fontSize: 13.5, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Try selecting another period like "All Time" or "Last 7 Days"',
+                style: GoogleFonts.inter(color: slateMuted, fontSize: 11),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(14, 2, 14, 80),
       itemCount: dailyList.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -2202,12 +2525,19 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
   Widget _buildProductWiseSalesList(List<Map<String, dynamic>> filtered) {
     if (filtered.isEmpty) {
-      return Center(
-        child: Text('No product sales recorded in period', style: GoogleFonts.inter(color: slateMuted, fontSize: 13)),
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 80),
+          child: Center(
+            child: Text('No product sales recorded in period', style: GoogleFonts.inter(color: slateMuted, fontSize: 13)),
+          ),
+        ),
       );
     }
 
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 80),
       itemCount: filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -2383,11 +2713,18 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
         ),
         Expanded(
           child: filtered.isEmpty
-              ? Center(
-                  child: Text('No attached products found for this vendor', style: GoogleFonts.inter(color: slateMuted, fontSize: 13)),
+              ? SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 80),
+                    child: Center(
+                      child: Text('No attached products found for this vendor', style: GoogleFonts.inter(color: slateMuted, fontSize: 13)),
+                    ),
+                  ),
                 )
               : ListView.separated(
-      padding: const EdgeInsets.fromLTRB(14, 4, 14, 80),
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 80),
       itemCount: filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
@@ -2400,6 +2737,19 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
         final stock = (prod['stock'] as num?)?.toInt() ?? 0;
         final imgUrl = _resolveImgUrl(prod['imageUrl']);
         final weightVariant = OrderItemHelper.resolveWeightOrVariant(prod, name);
+
+        List<Map<String, dynamic>> cardVariants = [];
+        final rawV = prod['variants'];
+        if (rawV is List) {
+          cardVariants = rawV.whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList();
+        } else if (rawV is String && rawV.trim().isNotEmpty) {
+          try {
+            final dec = jsonDecode(rawV);
+            if (dec is List) {
+              cardVariants = dec.whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList();
+            }
+          } catch (_) {}
+        }
 
         final margin = (price > 0 && cost > 0) ? (((price - cost) / price) * 100).round() : null;
 
@@ -2455,6 +2805,34 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                             Text('Code: $barcode', style: GoogleFonts.jetBrainsMono(fontSize: 9.5, color: slateMuted)),
                         ],
                       ),
+                      if (cardVariants.length > 1) ...[
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 3,
+                          children: cardVariants.map((v) {
+                            final vName = (v['name'] ?? '').toString();
+                            final vCost = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble() ?? 0.0;
+                            final vSell = (v['price'] as num?)?.toDouble() ?? 0.0;
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                              ),
+                              child: Text(
+                                '$vName: ₹${vCost > 0 ? vCost.toStringAsFixed(0) : '-'}/₹${vSell.toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1D4ED8),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Wrap(
                         spacing: 8,
@@ -2549,16 +2927,21 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
   // ── Tab 3: Reorder / Low Stock (WhatsApp PO) ──
   Widget _buildReorderTab() {
     if (_lowStockItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.check_circle_outline_rounded, size: 48, color: brandGreen),
-            const SizedBox(height: 12),
-            Text('All Products Well Stocked!', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: slateDark)),
-            const SizedBox(height: 4),
-            Text('No low-stock replenishment alerts for this vendor.', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
-          ],
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 40),
+              const Icon(Icons.check_circle_outline_rounded, size: 48, color: brandGreen),
+              const SizedBox(height: 12),
+              Text('All Products Well Stocked!', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: slateDark)),
+              const SizedBox(height: 4),
+              Text('No low-stock replenishment alerts for this vendor.', style: GoogleFonts.inter(fontSize: 12, color: slateMuted)),
+            ],
+          ),
         ),
       );
     }
@@ -2615,6 +2998,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
         // Items list
         Expanded(
           child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 80),
             itemCount: _lowStockItems.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -2727,10 +3111,17 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
         Expanded(
           child: _payouts.isEmpty
-              ? Center(
-                  child: Text('No payouts recorded yet for this vendor', style: GoogleFonts.inter(color: slateMuted, fontSize: 13)),
+              ? SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 80),
+                    child: Center(
+                      child: Text('No payouts recorded yet for this vendor', style: GoogleFonts.inter(color: slateMuted, fontSize: 13)),
+                    ),
+                  ),
                 )
               : ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 80),
                   itemCount: _payouts.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -2888,11 +3279,15 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                'Live Store Dispatch Queue',
-                style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w800, color: slateDark),
+              Expanded(
+                child: Text(
+                  'Live Store Dispatch Queue',
+                  style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w800, color: slateDark),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                 decoration: BoxDecoration(
@@ -2931,12 +3326,14 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
           child: _isLoadingLiveOrders && _liveOrders.isEmpty
               ? const Center(child: CircularProgressIndicator(color: primaryRed))
               : activeOrders.isEmpty
-                  ? Center(
+                  ? SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            const SizedBox(height: 40),
                             Container(
                               padding: const EdgeInsets.all(20),
                               decoration: const BoxDecoration(
@@ -3274,5 +3671,30 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
         ),
       ],
     );
+  }
+}
+
+class _VendorTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar tabBar;
+
+  _VendorTabBarHeaderDelegate({required this.tabBar});
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Colors.white,
+      child: tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_VendorTabBarHeaderDelegate oldDelegate) {
+    return tabBar != oldDelegate.tabBar;
   }
 }

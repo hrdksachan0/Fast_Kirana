@@ -266,7 +266,17 @@ const [productRaw, relatedRaw] = await Promise.all([
       <nav className="flex items-center gap-1.5 text-[9px] font-black text-zinc-450 dark:text-zinc-500 uppercase tracking-widest select-none bg-zinc-50 dark:bg-zinc-900/30 px-3 py-1.5 rounded-full w-fit border border-zinc-150/40 dark:border-zinc-800/20 mb-3">
         <Link href="/" className="hover:text-primary transition-colors">Home</Link>
         <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
-        {product.category && (
+        {product.restaurant ? (
+          <>
+            <Link 
+              href={`/food/${product.restaurant.slug || product.restaurant.id}`} 
+              className="hover:text-primary transition-colors"
+            >
+              {product.restaurant.name}
+            </Link>
+            <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
+          </>
+        ) : product.category ? (
           <>
             <Link 
               href={product.category.slug === 'cafe' ? '/food/as-cafe' : `/category/${product.category.slug}`} 
@@ -276,7 +286,7 @@ const [productRaw, relatedRaw] = await Promise.all([
             </Link>
             <ChevronRight size={10} className="text-zinc-350 dark:text-zinc-700" />
           </>
-        )}
+        ) : null}
         <span className="text-[#FF2E55] font-extrabold line-clamp-1">{product.name}</span>
       </nav>
 
@@ -304,12 +314,19 @@ const [productRaw, relatedRaw] = await Promise.all([
         {/* Right Column: Information & Actions */}
         <div className="flex flex-col justify-between space-y-4 md:space-y-6">
           <div className="space-y-3 md:space-y-4">
-            {/* Category tag */}
-            {product.category && (
-              <span className="inline-block text-[10px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+            {/* Category / Restaurant tag */}
+            {product.restaurant ? (
+              <Link
+                href={`/food/${product.restaurant.slug || product.restaurant.id}`}
+                className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-200/50 hover:bg-amber-500/20 transition-colors w-fit"
+              >
+                <span>🍽️ {product.restaurant.name}</span>
+              </Link>
+            ) : product.category ? (
+              <span className="inline-block text-[10px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-2.5 py-1 rounded-full w-fit">
                 {product.category.name}
               </span>
-            )}
+            ) : null}
 
             {/* Name */}
             <h1 className="text-xl min-[375px]:text-2xl md:text-3xl font-bold md:font-extrabold text-text-primary tracking-tight leading-tight">
@@ -361,7 +378,9 @@ const [productRaw, relatedRaw] = await Promise.all([
                   Seller Information
                 </AccordionTrigger>
                 <AccordionContent className="text-xs text-text-secondary leading-relaxed">
-                  Sold and fulfilled directly by FastMinute local dark stores. All products are verified for freshness and authentic expiry dates.
+                  {product.restaurant
+                    ? `Prepared fresh and fulfilled directly by ${product.restaurant.name}. Made with authentic ingredients upon order confirmation.`
+                    : "Sold and fulfilled directly by FastMinute local dark stores. All products are verified for freshness and authentic expiry dates."}
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

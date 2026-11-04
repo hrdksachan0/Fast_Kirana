@@ -24,7 +24,6 @@ import {
 import { CheckoutAddressSection } from '@/components/checkout/address/checkout-address-section'
 import { OrderForSomeoneCard } from '@/components/checkout/order-for-someone-card'
 import { CheckoutCartReview } from '@/components/checkout/checkout-cart-review'
-import { FoodPackagingSelector } from '@/components/checkout/food-packaging-selector'
 import { CheckoutBillSummary } from '@/components/checkout/checkout-bill-summary'
 import { CheckoutMobileBar } from '@/components/checkout/checkout-mobile-bar'
 import { SlideToOrder } from '@/components/checkout/slide-to-order'
@@ -303,14 +302,6 @@ export default function CheckoutPage() {
               freeGiftDetails={pricing.appliedCoupon?.freeGiftDetails}
               offerName={pricing.appliedCoupon?.badgeText || pricing.appliedCoupon?.code}
             />
-
-            {/* Food Packaging Option (Cafe/Restaurant) */}
-            {(pricing.hasCafeItems || pricing.cafeCartItems.length > 0) && (
-              <FoodPackagingSelector
-                packagingOption={packagingOption}
-                setPackagingOption={setPackagingOption}
-              />
-            )}
 
             {/* Trust Banner */}
             <div className="flex items-center gap-2 border border-accent/20 bg-accent/5 p-3 rounded-xl text-xs font-semibold text-accent">

@@ -21,7 +21,6 @@ import 'controllers/checkout_controller.dart';
 import 'widgets/checkout_trust_badges.dart';
 import 'widgets/checkout_delivery_address_card.dart';
 import 'widgets/checkout_bill_breakdown.dart';
-import 'widgets/checkout_packaging_selector.dart';
 import 'widgets/checkout_savings_banner.dart';
 import 'widgets/checkout_receiver_card.dart';
 import 'widgets/checkout_complete_your_meal.dart';
@@ -130,16 +129,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final isCombined = hasGrocery && hasRestaurant;
 
     final deliveryFee = checkoutState.deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
-    final basePackagingFee = checkoutState.deliveryMethod == 'PICKUP'
+    final handlingFee = checkoutState.deliveryMethod == 'PICKUP'
         ? 0.0
         : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
-    final packagingFee = checkoutState.selectedPackaging == 'PREMIUM' ? 15.0 : basePackagingFee;
-    final packagingLabel = checkoutState.selectedPackaging == 'PREMIUM'
-        ? 'Premium Thermal Packaging'
-        : (isCombined
-            ? (storeSettings?.combinedMiscFeeLabel ?? 'Combined Packaging Charge')
-            : (storeSettings?.miscFeeLabel ?? 'Packaging Charge'));
-    final grandTotalBeforeWallet = (subtotal + deliveryFee + packagingFee + widget.tipAmount - widget.discountAmount).clamp(0.0, 999999.0);
+    final handlingLabel = isCombined
+        ? (storeSettings?.combinedMiscFeeLabel ?? 'Combined Handling Fee')
+        : (storeSettings?.miscFeeLabel ?? 'Handling Fee');
+    final grandTotalBeforeWallet = (subtotal + deliveryFee + handlingFee + widget.tipAmount - widget.discountAmount).clamp(0.0, 999999.0);
     final wallet = ref.watch(walletNotifierProvider);
     final double realCash = wallet.balance;
     final double promoCash = wallet.promoBalance;
@@ -183,8 +179,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     return PopScope(
       canPop: !checkoutState.isPlacingOrder,
-      child: Scaffold(
-        resizeToAvoidBottomInset: false,
+      child: Stack(
+        children: [
+          Scaffold(
+            resizeToAvoidBottomInset: false,
         backgroundColor: AppDesignSystem.slate50,
         appBar: AppBar(
           backgroundColor: Colors.white,
@@ -353,15 +351,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       CheckoutCompleteYourMeal(items: items),
                       const SizedBox(height: 14),
 
-                      // 6. Packaging Preference
-                      CheckoutPackagingSelector(
-                        selectedPackaging: checkoutState.selectedPackaging,
-                        standardFee: basePackagingFee,
-                        onPackagingChanged: (val) => controller.setPackaging(val),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // 6.5 FastMinute Wallet Split-Payment Toggle Card
+                      // 6. FastMinute Wallet Split-Payment Toggle Card
                       if (wallet.totalUsable > 0) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -477,8 +467,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       CheckoutBillBreakdown(
                         subtotal: subtotal,
                         deliveryFee: deliveryFee,
-                        packagingFee: packagingFee,
-                        packagingLabel: packagingLabel,
+                        handlingFee: handlingFee,
+                        handlingLabel: handlingLabel,
+                        packagingFee: handlingFee,
+                        packagingLabel: handlingLabel,
                         discountAmount: widget.discountAmount,
                         walletAmountUsed: walletDeduction,
                         grandTotal: grandTotal,
@@ -491,18 +483,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       const CheckoutTrustBadges(),
                       const SizedBox(height: 24),
                     ],
-                  ),
-                ),
-
-                // Processing Overlay — smooth fade in/out
-                Positioned.fill(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 260),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    child: checkoutState.isPlacingOrder
-                        ? const CheckoutPlacingOrderOverlay(key: ValueKey('placing_overlay'))
-                        : const SizedBox.shrink(key: ValueKey('idle_overlay')),
                   ),
                 ),
 
@@ -603,6 +583,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
         ),
       ),
-    );
+      // FULL-SCREEN IMMERSIVE OVERLAY (Zepto / Swiggy style: covers AppBar + Body + BottomBar!)
+      if (checkoutState.isPlacingOrder)
+        Positioned.fill(
+          child: CheckoutPlacingOrderOverlay(
+            key: const ValueKey('full_screen_placing_overlay'),
+            totalAmount: grandTotal,
+            isCod: checkoutState.selectedPayment == 'cod',
+            onCancel: () => controller.cancelPlacingOrder(context),
+          ),
+        ),
+    ],
+  ),
+);
   }
 }

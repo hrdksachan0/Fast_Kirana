@@ -40,22 +40,37 @@ class CustomerSoundService {
     }
   }
 
-  /// Plays the pleasant order confirmation chime and rhythmic haptic pulses
-  Future<void> playOrderSuccessSound() async {
+  /// Plays the pleasant order confirmation chime and rhythmic haptic pulses tailored for Online vs COD
+  Future<void> playOrderSuccessSound({bool isOnline = false}) async {
     try {
-      // 1. Double tactile haptic pulse (subtle coin drop sensation)
-      HapticFeedback.mediumImpact();
-      Future.delayed(const Duration(milliseconds: 140), () {
-        HapticFeedback.lightImpact();
-      });
+      // 1. Tactile haptic sensation
+      if (isOnline) {
+        // Triple celebratory ripple for digital payment confirmation
+        HapticFeedback.mediumImpact();
+        Future.delayed(const Duration(milliseconds: 100), () {
+          HapticFeedback.selectionClick();
+        });
+        Future.delayed(const Duration(milliseconds: 220), () {
+          HapticFeedback.lightImpact();
+        });
+      } else {
+        // Firm confirmation pulse for COD order creation
+        HapticFeedback.heavyImpact();
+        Future.delayed(const Duration(milliseconds: 150), () {
+          HapticFeedback.mediumImpact();
+        });
+      }
 
-      // 2. Audio Chime Playback
+      // 2. Audio Chime Playback with dedicated soundscapes (Online vs COD)
       await _initPlayer();
       if (_player != null) {
         await _player!.stop();
+        final soundAsset = isOnline
+            ? 'sounds/order_success_online.wav'
+            : 'sounds/order_success_cod.wav';
         await _player!.play(
-          AssetSource('sounds/order_chime.mp3'),
-          volume: 0.85,
+          AssetSource(soundAsset),
+          volume: isOnline ? 0.95 : 0.90,
           mode: PlayerMode.lowLatency,
         );
       } else {

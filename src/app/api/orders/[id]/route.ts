@@ -230,17 +230,37 @@ export async function GET(
         const activeOrders = combinedOrders.filter(o => o.status !== 'CANCELLED')
         const ordersToSum = activeOrders.length > 0 ? activeOrders : combinedOrders
 
+        const combinedSubtotal = ordersToSum.reduce((sum, o) => sum + (o.subtotal || 0), 0)
+        const combinedDiscount = ordersToSum.reduce((sum, o) => sum + (o.discount || 0), 0)
+        const combinedDelivery = ordersToSum.reduce((sum, o) => sum + (o.deliveryFee || 0), 0)
+        const combinedTaxes = ordersToSum.reduce((sum, o) => sum + (o.taxes || 0), 0)
+        const combinedMisc = ordersToSum.reduce((sum, o) => sum + (o.miscFee || 0), 0)
+        const combinedTotal = ordersToSum.reduce((sum, o) => sum + (o.total || 0), 0)
+
+        const allNotes = combinedOrders.map(o => o.notes || '').join(' ')
+        let combinedWalletUsed = 0
+        const cWalletMatch = allNotes.match(/\[WALLET_USED:([\d.]+)\]/) || allNotes.match(/Paid via Wallet:\s*₹?([\d.]+)/i)
+        if (cWalletMatch) {
+          combinedWalletUsed = parseFloat(cWalletMatch[1]) || 0
+        } else if (order.paymentMethod === 'WALLET' || combinedTotal === 0) {
+          const gross = combinedSubtotal + combinedDelivery + combinedMisc + combinedTaxes - combinedDiscount
+          if (gross > combinedTotal) {
+            combinedWalletUsed = Math.max(0, gross - combinedTotal)
+          }
+        }
+
         const mergedOrder = {
           ...order,
           readableId: baseReadableId,
           baseReadableId,
           status: combinedStatus,
-          subtotal: ordersToSum.reduce((sum, o) => sum + (o.subtotal || 0), 0),
-          discount: ordersToSum.reduce((sum, o) => sum + (o.discount || 0), 0),
-          deliveryFee: ordersToSum.reduce((sum, o) => sum + (o.deliveryFee || 0), 0),
-          taxes: ordersToSum.reduce((sum, o) => sum + (o.taxes || 0), 0),
-          miscFee: ordersToSum.reduce((sum, o) => sum + (o.miscFee || 0), 0),
-          total: ordersToSum.reduce((sum, o) => sum + (o.total || 0), 0),
+          subtotal: combinedSubtotal,
+          discount: combinedDiscount,
+          deliveryFee: combinedDelivery,
+          taxes: combinedTaxes,
+          miscFee: combinedMisc,
+          total: combinedTotal,
+          walletAmountUsed: combinedWalletUsed,
           items: allItems,
           address,
           deliveryUser,
@@ -269,7 +289,18 @@ export async function GET(
       })
     }
 
-    return NextResponse.json({ ...order, items, address, deliveryUser, restaurant })
+    let singleWalletUsed = 0
+    const sWalletMatch = (order.notes || '').match(/\[WALLET_USED:([\d.]+)\]/) || (order.notes || '').match(/Paid via Wallet:\s*₹?([\d.]+)/i)
+    if (sWalletMatch) {
+      singleWalletUsed = parseFloat(sWalletMatch[1]) || 0
+    } else if (order.paymentMethod === 'WALLET' || order.total === 0) {
+      const gross = (order.subtotal || 0) + (order.deliveryFee || 0) + (order.miscFee || 0) + (order.taxes || 0) - (order.discount || 0)
+      if (gross > (order.total || 0)) {
+        singleWalletUsed = Math.max(0, gross - (order.total || 0))
+      }
+    }
+
+    return NextResponse.json({ ...order, walletAmountUsed: singleWalletUsed, items, address, deliveryUser, restaurant })
   } catch (error: any) {
     console.error('Order detail API error:', error)
     return NextResponse.json({ error: 'Failed to fetch order details' }, { status: 500 })
@@ -1084,8 +1115,8 @@ export async function PATCH(
         data: { orderId: existingOrder.id }
       }).catch(err => console.error('Background sendPushNotification error:', err))
 
-      // Notify workers/staff of the update
-      sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
+      // Notify workers/staff of the update (Admin excluded — Admin only receives initial ADMIN_PENDING approval alerts)
+      sendPushNotificationToRoles([Role.CHEF, Role.DELIVERY, Role.PICKER], {
         title: `Order #${baseOrderNo} Updated 🔄`,
         body: `Order #${baseOrderNo} status changed to ${displayStatus}.`,
         icon: `${origin}/icons/icon-192.png`,
