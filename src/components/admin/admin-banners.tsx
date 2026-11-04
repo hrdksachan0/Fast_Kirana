@@ -2395,7 +2395,6 @@ export function AdminBanners({
                       <span className="text-[9px] font-bold text-zinc-400 font-mono ml-2 px-2 py-0.5 rounded-full bg-zinc-800">1/3</span>
                     </div>
                   </div>
-                  </div>
                 )}
               </div>
             )}
