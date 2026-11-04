@@ -282,10 +282,22 @@ export const SYNONYM_DICTIONARY: Record<string, string[]> = {
   'stayfree': ['pad', 'pads', 'sanitary pads', 'whisper'],
 
   // Pooja Needs
+  'pooja': ['puja', 'agarbatti', 'dhoop', 'kapoor', 'camphor', 'candle', 'diya'],
+  'puja': ['pooja', 'agarbatti', 'dhoop', 'kapoor', 'camphor', 'candle', 'diya'],
   'agarbatti': ['incense sticks', 'dhoop', 'cycle agarbatti', 'mangaldeep', 'pooja'],
   'dhoop': ['agarbatti', 'incense sticks', 'pooja'],
   'matchbox': ['machis', 'matches', 'homelites'],
   'machis': ['matchbox', 'matches', 'homelites'],
   'kapoor': ['camphor', 'pooja kapoor', 'arti'],
   'camphor': ['kapoor', 'pooja'],
+  'diya': ['diyas', 'candle', 'candles', 'deepak'],
+  'diyas': ['diya', 'candle', 'candles', 'deepak'],
+  'candle': ['candles', 'diya', 'flower candle'],
+  'candles': ['candle', 'diya', 'flower candle'],
+
+  // Sweets & Festival Gifting
+  'mithai': ['sweets', 'sweet', 'kaju katli', 'soan papdi', 'laddu', 'barfi', 'celebration'],
+  'sweets': ['mithai', 'sweet', 'kaju katli', 'soan papdi', 'laddu', 'barfi'],
+  'dryfruit': ['dry fruits', 'dryfruits', 'kaju', 'badam', 'cashew', 'almond'],
+  'dryfruits': ['dry fruits', 'dryfruit', 'kaju', 'badam', 'cashew', 'almond'],
 }

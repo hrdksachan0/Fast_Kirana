@@ -871,18 +871,37 @@ class _NavratriShoppingSectionState
                         width: width,
                         child: Column(
                           children: [
-                            SizedBox(
-                              height: headerHeight,
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                    28, 20, 28, 4),
-                                child: _switcher(SizedBox.expand(
-                                  key: ValueKey(
-                                      'header-${widget.data.headers[_header].id}'),
-                                  child: _headerSlide(
-                                      widget.data.headers[_header]),
-                                )),
-                              ),
+                            Stack(
+                              children: [
+                                SizedBox(
+                                  height: headerHeight,
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        28, 26, 28, 4),
+                                    child: _switcher(SizedBox.expand(
+                                      key: ValueKey(
+                                          'header-${widget.data.headers[_header].id}'),
+                                      child: _headerSlide(
+                                          widget.data.headers[_header]),
+                                    )),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: ExcludeSemantics(
+                                    child: IgnorePointer(
+                                      child: SizedBox(
+                                        height: 24,
+                                        child: NavratriIllustration(
+                                            image: widget.data.decorationImage ?? 'string-lights.svg',
+                                            fit: BoxFit.fill),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             Padding(
                               padding:

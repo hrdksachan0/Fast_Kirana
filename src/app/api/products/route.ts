@@ -26,11 +26,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const category = searchParams.get('category')
-    const search = searchParams.get('search')
+    let category = searchParams.get('category')
+    let search = searchParams.get('search')
     const sort = searchParams.get('sort')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '100') // default to larger limit for admin viewing
+
+    // Mobile App backward compatibility: If an older app sends a category path as search query
+    // e.g. "/category/dry-fruits-super-foods", extract the category slug so products show up
+    if (search && (search.trim().startsWith('/category/') || search.trim().startsWith('category/'))) {
+      category = search.trim().replace(/^\/?category\//, '').trim()
+      search = null
+    }
     // Cursor-based pagination: client passes the last row's createdAt:id as "cursor" instead of a page number.
     // Falls back to standard offset on page 1 for backwards compatibility.
     const cursor = searchParams.get('cursor') as string | null

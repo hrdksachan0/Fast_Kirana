@@ -42,8 +42,12 @@ function getSubcategories(
   const normSlug = (categorySlug || '').toLowerCase().trim()
 
   // 1. Check if Admin has created/edited custom DB subcategories under activeCategory
+  // If activeCategory is a subcategory itself, its sibling subcategories share the same parentId
+  const parentId = activeCategory?.parentId
   const dbChildCategories = activeCategory && allCategories.length > 0
-    ? allCategories.filter((c) => c.parentId && (c.parentId === activeCategory.id || c.parentId === activeCategory.slug))
+    ? (parentId
+        ? allCategories.filter((c) => c.parentId && c.parentId === parentId)
+        : allCategories.filter((c) => c.parentId && (c.parentId === activeCategory.id || c.parentId === activeCategory.slug)))
     : []
 
   if (dbChildCategories.length > 0) {
@@ -198,15 +202,26 @@ export function CategoryPageClient({
     setVisibleCount(24)
   }, [searchQuery, activeSubcategoryId, sort, vegFilter, maxPrice])
 
+
+  const subcategories = useMemo(() => {
+    return getSubcategories(activeCategory.slug, initialProducts, settings, categoryStatus, categories, activeCategory)
+  }, [activeCategory, initialProducts, settings, categoryStatus, categories])
+
   // Reset maxPrice & subcategory when switching categories
   useEffect(() => {
     setMaxPrice(maxPriceOfCategory)
     if (subcatParam) {
-      setActiveSubcategoryId(subcatParam)
+      const matched = subcategories.find(
+        (s) => s.id.toLowerCase() === subcatParam.toLowerCase() ||
+               (categories.find(c => c.id === s.id)?.slug.toLowerCase() === subcatParam.toLowerCase())
+      )
+      setActiveSubcategoryId(matched ? matched.id : subcatParam)
+    } else if (activeCategory.parentId) {
+      setActiveSubcategoryId(activeCategory.id)
     } else {
       setActiveSubcategoryId('all')
     }
-  }, [maxPriceOfCategory, activeCategory.slug, subcatParam])
+  }, [maxPriceOfCategory, activeCategory.slug, activeCategory.id, activeCategory.parentId, subcatParam, subcategories, categories])
 
   const desktopSentinelRef = useRef<HTMLDivElement>(null)
   const mobileSentinelRef = useRef<HTMLDivElement>(null)
@@ -259,9 +274,6 @@ export function CategoryPageClient({
     { label: 'Big Discounts', value: 'discount-desc' },
   ]
 
-  const subcategories = useMemo(() => {
-    return getSubcategories(activeCategory.slug, initialProducts, settings, categoryStatus, categories, activeCategory)
-  }, [activeCategory, initialProducts, settings, categoryStatus, categories])
 
   // Filter and sort products in memory
   const processedProducts = useMemo(() => {
@@ -482,7 +494,24 @@ export function CategoryPageClient({
                   return (
                     <button
                       key={subcat.id}
-                      onClick={() => setActiveSubcategoryId(subcat.id)}
+                      onClick={() => {
+                        if (activeCategory.parentId) {
+                          if (subcat.id === 'all') {
+                            const parentCat = categories.find(c => c.id === activeCategory.parentId)
+                            if (parentCat) {
+                              window.location.href = `/category/${parentCat.slug}`
+                              return
+                            }
+                          } else if (subcat.id !== activeCategory.id) {
+                            const targetCat = categories.find(c => c.id === subcat.id)
+                            if (targetCat) {
+                              window.location.href = `/category/${targetCat.slug}`
+                              return
+                            }
+                          }
+                        }
+                        setActiveSubcategoryId(subcat.id)
+                      }}
                       className={cn(
                         'flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full transition-all duration-300 border cursor-pointer select-none active:scale-95 outline-none',
                         isActive
@@ -662,7 +691,24 @@ export function CategoryPageClient({
                 return (
                   <button
                     key={subcat.id}
-                    onClick={() => setActiveSubcategoryId(subcat.id)}
+                    onClick={() => {
+                        if (activeCategory.parentId) {
+                          if (subcat.id === 'all') {
+                            const parentCat = categories.find(c => c.id === activeCategory.parentId)
+                            if (parentCat) {
+                              window.location.href = `/category/${parentCat.slug}`
+                              return
+                            }
+                          } else if (subcat.id !== activeCategory.id) {
+                            const targetCat = categories.find(c => c.id === subcat.id)
+                            if (targetCat) {
+                              window.location.href = `/category/${targetCat.slug}`
+                              return
+                            }
+                          }
+                        }
+                        setActiveSubcategoryId(subcat.id)
+                      }}
                     className={cn(
                       'w-full flex flex-col items-center text-center gap-1 py-3 px-1.5 relative transition-all cursor-pointer select-none z-10 outline-none border-0 bg-transparent',
                       isActive ? theme.primaryText : 'text-zinc-500 dark:text-zinc-400'

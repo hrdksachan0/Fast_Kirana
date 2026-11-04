@@ -216,11 +216,10 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   // Category alias dictionary to handle renames, subcategories, and alternate slugs seamlessly
   const CATEGORY_ALIASES: Record<string, string[]> = {
-    'dairy-products': ['dairy-sweets', 'milk-dairy', 'dairy', 'milk'],
-    'dairy': ['dairy-sweets', 'milk-dairy', 'dairy-products'],
-    'dairy-breakfast': ['dairy-sweets', 'milk-dairy', 'dairy-products'],
-    'milk-dairy': ['dairy-sweets', 'dairy-products', 'dairy'],
-    'dairy-sweets': ['dairy-products', 'milk-dairy', 'dairy'],
+    'dairy-products': ['dairy-sweets'],
+    'dairy': ['dairy-sweets'],
+    'dairy-breakfast': ['dairy-sweets'],
+    'dairy-sweets': ['dairy-products'],
     'fruits-veg': ['fruits-vegetables', 'fresh-vegetables', 'fresh-fruits'],
     'vegetables': ['fruits-vegetables', 'fresh-vegetables'],
     'fruits': ['fruits-vegetables', 'fresh-fruits'],
@@ -238,11 +237,20 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     'groceries': ['kitchen-ration'],
     'dry-fruits': ['dry-fruits-super-foods', 'dry-fruits-nuts-seeds'],
     'super-foods': ['dry-fruits-super-foods'],
-    'chocolates': ['cakes-chocolates', 'chocolates-sweets'],
-    'cakes': ['cakes-chocolates'],
     'home-care': ['household-essentials'],
     'cleaning': ['household-essentials'],
     'personal-care': ['personal-care-hygiene'],
+    // Direct subcategory aliases
+    'sweets': ['sweets-mithai'],
+    'mithai': ['sweets-mithai'],
+    'sweet': ['sweets-mithai'],
+    'chocolate': ['chocolates'],
+    'choco': ['chocolates'],
+    'doodh': ['milk-dairy'],
+    'milk': ['milk-dairy'],
+    'dahi': ['milk-dairy'],
+    'curd': ['milk-dairy'],
+    'paneer': ['milk-dairy'],
   }
 
   // 2. Fetch or construct active category with multi-strategy resolution
@@ -291,6 +299,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     } as any
   }
 
+  // Check if active category is a child subcategory
+  const isSubcategory = Boolean(activeCategory && activeCategory.parentId)
+
   // 3. Build comprehensive product query: products attached to this category, its children, or matching aliases
   const normSlug = slug.toLowerCase().trim()
   const slugVariants = [
@@ -304,59 +315,63 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const aliasList = CATEGORY_ALIASES[normSlug] || []
   aliasList.forEach(a => slugVariants.push(a))
 
-  // Recursively collect all descendant category IDs
+  // Recursively collect matching category IDs
   const matchingCatIds = new Set<string>()
   if (activeCategory && activeCategory.id && !activeCategory.id.startsWith('virtual-')) {
     matchingCatIds.add(activeCategory.id)
 
-    // If it's a parent category, add all children and grandchildren
-    const childCats = categoriesRaw.filter((c) => c.parentId === activeCategory.id)
-    childCats.forEach((ch) => {
-      matchingCatIds.add(ch.id)
-      const grandChildren = categoriesRaw.filter((gc) => gc.parentId === ch.id)
-      grandChildren.forEach((gc) => matchingCatIds.add(gc.id))
-    })
+    if (!isSubcategory) {
+      // If it's a top-level parent category, add all children and grandchildren
+      const childCats = categoriesRaw.filter((c) => c.parentId === activeCategory.id)
+      childCats.forEach((ch) => {
+        matchingCatIds.add(ch.id)
+        const grandChildren = categoriesRaw.filter((gc) => gc.parentId === ch.id)
+        grandChildren.forEach((gc) => matchingCatIds.add(gc.id))
+      })
 
-    // If it's a child subcategory, also add its parent and siblings so relevant products display
-    if (activeCategory.parentId) {
-      matchingCatIds.add(activeCategory.parentId)
-      const siblingCats = categoriesRaw.filter((c) => c.parentId === activeCategory.parentId)
-      siblingCats.forEach((sc) => matchingCatIds.add(sc.id))
+      // Also include any categories matching alias slugs for parent categories
+      aliasList.forEach(aliasSlug => {
+        const matched = categoriesRaw.filter(c => c.slug.toLowerCase() === aliasSlug.toLowerCase())
+        matched.forEach(m => {
+          matchingCatIds.add(m.id)
+          const children = categoriesRaw.filter(c => c.parentId === m.id)
+          children.forEach(ch => matchingCatIds.add(ch.id))
+        })
+      })
     }
   }
 
-  // Also include any categories matching alias slugs
-  aliasList.forEach(aliasSlug => {
-    const matched = categoriesRaw.filter(c => c.slug.toLowerCase() === aliasSlug.toLowerCase())
-    matched.forEach(m => {
-      matchingCatIds.add(m.id)
-      const children = categoriesRaw.filter(c => c.parentId === m.id)
-      children.forEach(ch => matchingCatIds.add(ch.id))
-    })
-  })
+  const conditions: any[] = []
 
-  const conditions: any[] = [
-    { category: { slug: { in: slugVariants } } },
-    { category: { parent: { slug: { in: slugVariants } } } },
-  ]
-
-  if (matchingCatIds.size > 0) {
-    const idList = Array.from(matchingCatIds)
-    conditions.push({ categoryId: { in: idList } })
-    conditions.push({ category: { id: { in: idList } } })
-    conditions.push({ category: { parentId: { in: idList } } })
+  if (isSubcategory) {
+    // For a subcategory (e.g. sweets-mithai or chocolates): Strictly match ONLY this subcategory!
+    // Never pull in sibling categories (e.g. doodh/dahi into sweets, cakes into chocolates)
+    conditions.push({ categoryId: activeCategory.id })
+    conditions.push({ category: { id: activeCategory.id } })
+    conditions.push({ category: { slug: { in: slugVariants } } })
   } else {
-    // If no direct category matched, perform keyword search on product tags & name so products never disappear
-    const searchKeywords = normSlug.split(/[-_ ]+/).filter(w => w.length > 2 && !['and', 'the', 'for', 'item', 'items', 'products'].includes(w))
-    if (searchKeywords.length > 0) {
-      conditions.push({
-        OR: searchKeywords.map(kw => ({
-          name: { contains: kw, mode: 'insensitive' }
-        }))
-      })
-      conditions.push({
-        tags: { hasSome: searchKeywords }
-      })
+    // For a parent category: Include parent and its child categories
+    conditions.push({ category: { slug: { in: slugVariants } } })
+    conditions.push({ category: { parent: { slug: { in: slugVariants } } } })
+
+    if (matchingCatIds.size > 0) {
+      const idList = Array.from(matchingCatIds)
+      conditions.push({ categoryId: { in: idList } })
+      conditions.push({ category: { id: { in: idList } } })
+      conditions.push({ category: { parentId: { in: idList } } })
+    } else {
+      // If no direct category matched, perform keyword search on product tags & name so products never disappear
+      const searchKeywords = normSlug.split(/[-_ ]+/).filter(w => w.length > 2 && !['and', 'the', 'for', 'item', 'items', 'products'].includes(w))
+      if (searchKeywords.length > 0) {
+        conditions.push({
+          OR: searchKeywords.map(kw => ({
+            name: { contains: kw, mode: 'insensitive' }
+          }))
+        })
+        conditions.push({
+          tags: { hasSome: searchKeywords }
+        })
+      }
     }
   }
 

@@ -1,1 +1,324 @@
-{"version":1,"layout":"classic","composition":"template","blocks":[],"demo":false,"enabled":true,"autoplay":true,"searchPrefix":"Search for","decorationImage":"string-lights.svg","labels":{"sectionLabel":"✨ Shubh Diwali Mahotsav","specialsHeading":"🪔 15-Min Diwali Deals","curvedTabLabel":"🔥 Top Diwali Picks","loadingText":"Khushiyon ki delivery load ho rahi hai…","emptyText":"Is collection me aur items add ho rahe hain. Dusre tab ya search dekhein.","demoLabel":"Special Festive Deal","resultsDemoLabel":"Festive collection · live prices"},"appearance":{"background":"#700B0B","card":"#FFFDF7","text":"#2E0A05","smallText":"#6E2014","headerText":"#FFFDF7","headerOutline":"#420404","underline":"#F5B041","tabSurface":"#FFF3D6"},"timings":{"headerMs":4500,"productMs":3200,"searchMs":3600,"crossfadeMs":450},"searchSuggestions":["Ferrero Rocher","Amul Chocolate","Celebrations","Flower Candles","Kaju Katli","Diyas","Badam"],"navigation":[],"headers":[{"id":"diwali-header-1","kind":"illustration","eyebrow":"15-MIN FESTIVE DELIVERY","title":"✨ Shubh Deepawali","subtitle":"Ferrero Rocher, Amul, Diyas & Sweets at your doorstep","image":"diwali-celebration.svg"},{"id":"diwali-header-2","kind":"title","eyebrow":"PREMIUM CHOCOLATES & GIFTING","title":"Mithas & Khushiyan","subtitle":"Ferrero Rocher Moments & Amul Dark Chocolate Gift Packs","image":null},{"id":"diwali-header-3","kind":"brand","eyebrow":"LIGHT UP EVERY HOME","title":"Celebrate with FastMinute","subtitle":"Scented candles, clay diyas & festive dry fruits","image":"diwali-celebration.svg"}],"products":[{"id":"diwali-ferrero","name":"Ferrero Rocher Moments (16 Pcs)","image":"https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792436635220-2rwbjp.webp","originalPrice":269,"price":269,"currency":"INR","categoryId":"diwali-ladoo-category","destinationId":"search-diwali-ladoo","productId":"eb78f7f4-e981-4a3f-804f-94b7b597a476"},{"id":"diwali-amul-dark","name":"Amul Dark Chocolate (150 g)","image":"https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmsep9wtz000204k48kbtzwww.webp","originalPrice":150,"price":150,"currency":"INR","categoryId":"diwali-ladoo-category","destinationId":"search-diwali-ladoo","productId":"8b172ca3-5924-4a9f-91a5-9dadbedb7ae9"},{"id":"diwali-flower-candle","name":"Beautiful Flower Candle","image":"https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1793770626161-lqemqr.webp","originalPrice":100,"price":100,"currency":"INR","categoryId":"diwali-diyas-category","destinationId":"search-diwali-diyas","productId":"a4a7693f-844d-4938-bbe7-2f6b3e4d677e"},{"id":"diwali-celebrations","name":"Cadbury Celebrations Gift Pack","image":"https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmsfs4xqd000104jroyxyp16n.webp","originalPrice":110,"price":110,"currency":"INR","categoryId":"diwali-ladoo-category","destinationId":"search-diwali-ladoo","productId":"cmsfs4xqd000104jroyxyp16n"},{"id":"diwali-kaju-katli","name":"Haldiram's Kaju Katli","image":"https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792441562435-2mu0kn.webp","originalPrice":699,"price":499,"currency":"INR","categoryId":"diwali-marigold-category","destinationId":"search-diwali-marigold","productId":"0a550a89-533b-49ad-96ce-630f31d30f58"},{"id":"diwali-amul-gift","name":"Amul Chocolate Gift Pack","image":"https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792434811195-nabxy0.webp","originalPrice":200,"price":200,"currency":"INR","categoryId":"diwali-ladoo-category","destinationId":"search-diwali-ladoo","productId":"2d3688da-6f29-4e7b-ba76-d1fc9bb05ead"}],"categories":[{"id":"diwali-diyas-category","label":"Diyas & Candles","image":"diwali-diyas.svg","destinationId":"search-diwali-diyas","keywords":["candle","diya","tealight","lamp","deepak"]},{"id":"diwali-ladoo-category","label":"Chocolates & Gifting","image":"diwali-celebration.svg","destinationId":"search-diwali-ladoo","keywords":["ferrero","amul","celebration","chocolate","silk","bournville","gift"]},{"id":"diwali-marigold-category","label":"Mithai & Dry Fruits","image":"ramadan-almonds.svg","destinationId":"search-diwali-marigold","keywords":["kaju","badam","almond","katli","cashew","mithai","ladoo"]},{"id":"diwali-rangoli-category","label":"Pooja & Decor","image":"diwali-rangoli.svg","destinationId":"search-diwali-rangoli","keywords":["rangoli","agarbatti","dhoop","kapoor","camphor","batti","ghee","puja"]}],"tabs":[{"id":"top-picks","label":"🔥 Bestsellers","image":"diwali-celebration.svg","keywords":["ferrero","amul","celebration","candle","kaju","badam","katli"],"productIds":["eb78f7f4-e981-4a3f-804f-94b7b597a476","8b172ca3-5924-4a9f-91a5-9dadbedb7ae9","2d3688da-6f29-4e7b-ba76-d1fc9bb05ead","cmsfs4xqd000104jroyxyp16n","a4a7693f-844d-4938-bbe7-2f6b3e4d677e","0a550a89-533b-49ad-96ce-630f31d30f58","cmttvytg6000109gmhje6qtp0","cmttvxovo000009gmy8x90srf"]},{"id":"diwali-chocolates","label":"🍫 Chocolates & Gifting","image":"diwali-celebration.svg","keywords":["ferrero","amul","celebration","chocolate","silk","bournville"],"productIds":["eb78f7f4-e981-4a3f-804f-94b7b597a476","8b172ca3-5924-4a9f-91a5-9dadbedb7ae9","2d3688da-6f29-4e7b-ba76-d1fc9bb05ead","f820ff4b-f7a2-4f40-b47a-0eef52e30058","cmsezpx58000104jwaew9hi8q","cmsfs4xqd000104jroyxyp16n","cmsfsbyng000504jpv21qhtcj","594a2327-655a-47f9-a54f-64bac9ce94a7","8299d449-c8c8-41b2-bfb4-632dfa4c8613","a261824d-d289-40bf-9e2c-c50714f4dcc3","74cadaa3-f402-456e-83e3-1e5edf748178"]},{"id":"diwali-lights","label":"🪔 Diyas & Candles","image":"diwali-diyas.svg","keywords":["candle","diya","tealight","lamp"],"productIds":["a4a7693f-844d-4938-bbe7-2f6b3e4d677e","551c8af8-fee4-4e4a-82de-9fe80bc9f1a2","8d62b6b7-9c2c-409a-935b-49f6ac76279e","a275a949-e72e-4cb0-b599-efa8a9297402","19aa12b3-0a34-4dc7-b9b9-c13b32623186","13ec62f5-458c-4023-8a12-c1900cc4f7fc"]},{"id":"diwali-mithai-dryfruits","label":"🥮 Mithai & Dry Fruits","image":"ramadan-almonds.svg","keywords":["kaju","badam","almond","katli","cashew","mithai"],"productIds":["0a550a89-533b-49ad-96ce-630f31d30f58","cmttvytg6000109gmhje6qtp0","cmttvxovo000009gmy8x90srf","cmrekwz3o000004l5b5q3473s","cmrekrbes000004l4kmf0wjl3","cmsg1g553000p04i3e3k3qlrz"]}],"destinations":[{"id":"search-diwali-diyas","kind":"search","query":"candle"},{"id":"search-diwali-ladoo","kind":"search","query":"chocolate"},{"id":"search-diwali-marigold","kind":"search","query":"/category/dry-fruits-super-foods"},{"id":"search-diwali-rangoli","kind":"search","query":"rangoli"}]}
+{
+  "version": 1,
+  "layout": "classic",
+  "composition": "template",
+  "blocks": [],
+  "demo": false,
+  "enabled": true,
+  "autoplay": true,
+  "searchPrefix": "Search for",
+  "decorationImage": "string-lights.svg",
+  "labels": {
+    "sectionLabel": "✨ Shubh Diwali Mahotsav",
+    "specialsHeading": "🪔 15-Min Diwali Deals",
+    "curvedTabLabel": "🔥 Top Diwali Picks",
+    "loadingText": "Khushiyon ki delivery load ho rahi hai…",
+    "emptyText": "Is collection me aur items add ho rahe hain. Dusre tab ya search dekhein.",
+    "demoLabel": "Special Festive Deal",
+    "resultsDemoLabel": "Festive collection · live prices"
+  },
+  "appearance": {
+    "background": "#700B0B",
+    "card": "#FFFDF7",
+    "text": "#2E0A05",
+    "smallText": "#6E2014",
+    "headerText": "#FFFDF7",
+    "headerOutline": "#420404",
+    "underline": "#F5B041",
+    "tabSurface": "#FFF3D6"
+  },
+  "timings": {
+    "headerMs": 4500,
+    "productMs": 3200,
+    "searchMs": 3600,
+    "crossfadeMs": 450
+  },
+  "searchSuggestions": [
+    "Ferrero Rocher",
+    "Amul Chocolate",
+    "Celebrations",
+    "Flower Candles",
+    "Kaju Katli",
+    "Diyas",
+    "Badam"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "diwali-header-1",
+      "kind": "illustration",
+      "eyebrow": "15-MIN FESTIVE DELIVERY",
+      "title": "✨ Shubh Deepawali",
+      "subtitle": "Ferrero Rocher, Amul, Diyas & Sweets at your doorstep",
+      "image": "diwali-celebration.svg"
+    },
+    {
+      "id": "diwali-header-2",
+      "kind": "title",
+      "eyebrow": "PREMIUM CHOCOLATES & GIFTING",
+      "title": "Mithas & Khushiyan",
+      "subtitle": "Ferrero Rocher Moments & Amul Dark Chocolate Gift Packs",
+      "image": null
+    },
+    {
+      "id": "diwali-header-3",
+      "kind": "brand",
+      "eyebrow": "LIGHT UP EVERY HOME",
+      "title": "Celebrate with FastMinute",
+      "subtitle": "Scented candles, clay diyas & festive dry fruits",
+      "image": "diwali-celebration.svg"
+    }
+  ],
+  "products": [
+    {
+      "id": "diwali-ferrero",
+      "name": "Ferrero Rocher Moments (16 Pcs)",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792436635220-2rwbjp.webp",
+      "originalPrice": 269,
+      "price": 269,
+      "currency": "INR",
+      "categoryId": "diwali-ladoo-category",
+      "destinationId": "search-diwali-ladoo",
+      "productId": "eb78f7f4-e981-4a3f-804f-94b7b597a476"
+    },
+    {
+      "id": "diwali-amul-dark",
+      "name": "Amul Dark Chocolate (150 g)",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmsep9wtz000204k48kbtzwww.webp",
+      "originalPrice": 150,
+      "price": 150,
+      "currency": "INR",
+      "categoryId": "diwali-ladoo-category",
+      "destinationId": "search-diwali-ladoo",
+      "productId": "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9"
+    },
+    {
+      "id": "diwali-flower-candle",
+      "name": "Beautiful Flower Candle",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1793770626161-lqemqr.webp",
+      "originalPrice": 100,
+      "price": 100,
+      "currency": "INR",
+      "categoryId": "diwali-diyas-category",
+      "destinationId": "search-diwali-diyas",
+      "productId": "a4a7693f-844d-4938-bbe7-2f6b3e4d677e"
+    },
+    {
+      "id": "diwali-celebrations",
+      "name": "Cadbury Celebrations Gift Pack",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmsfs4xqd000104jroyxyp16n.webp",
+      "originalPrice": 110,
+      "price": 110,
+      "currency": "INR",
+      "categoryId": "diwali-ladoo-category",
+      "destinationId": "search-diwali-ladoo",
+      "productId": "cmsfs4xqd000104jroyxyp16n"
+    },
+    {
+      "id": "diwali-kaju-katli",
+      "name": "Haldiram's Kaju Katli",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792441562435-2mu0kn.webp",
+      "originalPrice": 699,
+      "price": 499,
+      "currency": "INR",
+      "categoryId": "diwali-marigold-category",
+      "destinationId": "search-diwali-marigold",
+      "productId": "0a550a89-533b-49ad-96ce-630f31d30f58"
+    },
+    {
+      "id": "diwali-amul-gift",
+      "name": "Amul Chocolate Gift Pack",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792434811195-nabxy0.webp",
+      "originalPrice": 200,
+      "price": 200,
+      "currency": "INR",
+      "categoryId": "diwali-ladoo-category",
+      "destinationId": "search-diwali-ladoo",
+      "productId": "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead"
+    }
+  ],
+  "categories": [
+    {
+      "id": "diwali-diyas-category",
+      "label": "Diyas & Candles",
+      "image": "diwali-diyas.svg",
+      "destinationId": "search-diwali-diyas",
+      "keywords": [
+        "candle",
+        "diya",
+        "tealight",
+        "lamp",
+        "deepak"
+      ]
+    },
+    {
+      "id": "diwali-ladoo-category",
+      "label": "Mithai & Chocolates",
+      "image": "diwali-ladoo.svg",
+      "destinationId": "search-diwali-ladoo",
+      "keywords": [
+        "mithai",
+        "ladoo",
+        "gulab jamun",
+        "kaju katli",
+        "celebration",
+        "cadbury",
+        "silk",
+        "bournville",
+        "ferrero",
+        "soan papdi",
+        "rasgulla"
+      ]
+    },
+    {
+      "id": "diwali-marigold-category",
+      "label": "Dry Fruits & Gifting",
+      "image": "ramadan-almonds.svg",
+      "destinationId": "search-diwali-marigold",
+      "keywords": [
+        "kaju",
+        "badam",
+        "almond",
+        "cashew",
+        "pista",
+        "dry fruit",
+        "kishmish",
+        "anjeer",
+        "makhana",
+        "chia seeds",
+        "pumpkin seeds"
+      ]
+    },
+    {
+      "id": "diwali-rangoli-category",
+      "label": "Pooja & Decor",
+      "image": "diwali-rangoli.svg",
+      "destinationId": "search-diwali-rangoli",
+      "keywords": [
+        "rangoli",
+        "agarbatti",
+        "dhoop",
+        "kapoor",
+        "camphor",
+        "batti",
+        "ghee",
+        "puja",
+        "pooja"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "top-picks",
+      "label": "🔥 Bestsellers",
+      "image": "diwali-celebration.svg",
+      "keywords": [
+        "ferrero",
+        "amul",
+        "celebration",
+        "candle",
+        "kaju",
+        "badam",
+        "katli"
+      ],
+      "productIds": [
+        "eb78f7f4-e981-4a3f-804f-94b7b597a476",
+        "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9",
+        "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead",
+        "cmsfs4xqd000104jroyxyp16n",
+        "a4a7693f-844d-4938-bbe7-2f6b3e4d677e",
+        "0a550a89-533b-49ad-96ce-630f31d30f58",
+        "cmttvytg6000109gmhje6qtp0",
+        "cmttvxovo000009gmy8x90srf"
+      ]
+    },
+    {
+      "id": "diwali-chocolates",
+      "label": "🍫 Chocolates & Gifting",
+      "image": "diwali-celebration.svg",
+      "keywords": [
+        "ferrero",
+        "amul",
+        "celebration",
+        "chocolate",
+        "silk",
+        "bournville"
+      ],
+      "productIds": [
+        "eb78f7f4-e981-4a3f-804f-94b7b597a476",
+        "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9",
+        "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead",
+        "f820ff4b-f7a2-4f40-b47a-0eef52e30058",
+        "cmsezpx58000104jwaew9hi8q",
+        "cmsfs4xqd000104jroyxyp16n",
+        "cmsfsbyng000504jpv21qhtcj",
+        "594a2327-655a-47f9-a54f-64bac9ce94a7",
+        "8299d449-c8c8-41b2-bfb4-632dfa4c8613",
+        "a261824d-d289-40bf-9e2c-c50714f4dcc3",
+        "74cadaa3-f402-456e-83e3-1e5edf748178"
+      ]
+    },
+    {
+      "id": "diwali-lights",
+      "label": "🪔 Diyas & Candles",
+      "image": "diwali-diyas.svg",
+      "keywords": [
+        "candle",
+        "diya",
+        "tealight",
+        "lamp"
+      ],
+      "productIds": [
+        "a4a7693f-844d-4938-bbe7-2f6b3e4d677e",
+        "551c8af8-fee4-4e4a-82de-9fe80bc9f1a2",
+        "8d62b6b7-9c2c-409a-935b-49f6ac76279e",
+        "a275a949-e72e-4cb0-b599-efa8a9297402",
+        "19aa12b3-0a34-4dc7-b9b9-c13b32623186",
+        "13ec62f5-458c-4023-8a12-c1900cc4f7fc"
+      ]
+    },
+    {
+      "id": "diwali-mithai-dryfruits",
+      "label": "🥮 Mithai & Dry Fruits",
+      "image": "ramadan-almonds.svg",
+      "keywords": [
+        "kaju",
+        "badam",
+        "almond",
+        "katli",
+        "cashew",
+        "mithai"
+      ],
+      "productIds": [
+        "0a550a89-533b-49ad-96ce-630f31d30f58",
+        "cmttvytg6000109gmhje6qtp0",
+        "cmttvxovo000009gmy8x90srf",
+        "cmrekwz3o000004l5b5q3473s",
+        "cmrekrbes000004l4kmf0wjl3",
+        "cmsg1g553000p04i3e3k3qlrz"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "search-diwali-diyas",
+      "kind": "search",
+      "query": "candle"
+    },
+    {
+      "id": "search-diwali-ladoo",
+      "kind": "search",
+      "query": "mithai"
+    },
+    {
+      "id": "search-diwali-marigold",
+      "kind": "search",
+      "query": "dry fruits"
+    },
+    {
+      "id": "search-diwali-rangoli",
+      "kind": "search",
+      "query": "pooja"
+    }
+  ]
+}
