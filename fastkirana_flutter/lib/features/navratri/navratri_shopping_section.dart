@@ -871,37 +871,18 @@ class _NavratriShoppingSectionState
                         width: width,
                         child: Column(
                           children: [
-                            Stack(
-                              children: [
-                                SizedBox(
-                                  height: headerHeight,
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        28, 28, 28, 4),
-                                    child: _switcher(SizedBox.expand(
-                                      key: ValueKey(
-                                          'header-${widget.data.headers[_header].id}'),
-                                      child: _headerSlide(
-                                          widget.data.headers[_header]),
-                                    )),
-                                  ),
-                                ),
-                                const Positioned(
-                                  top: 0,
-                                  left: 0,
-                                  right: 0,
-                                  child: ExcludeSemantics(
-                                    child: IgnorePointer(
-                                      child: SizedBox(
-                                        height: 24,
-                                        child: NavratriIllustration(
-                                            image: 'string-lights.svg',
-                                            fit: BoxFit.fill),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            SizedBox(
+                              height: headerHeight,
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                    28, 20, 28, 4),
+                                child: _switcher(SizedBox.expand(
+                                  key: ValueKey(
+                                      'header-${widget.data.headers[_header].id}'),
+                                  child: _headerSlide(
+                                      widget.data.headers[_header]),
+                                )),
+                              ),
                             ),
                             Padding(
                               padding:
