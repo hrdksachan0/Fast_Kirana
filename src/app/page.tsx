@@ -629,7 +629,15 @@ export default async function Home() {
         settingsMap={settingsMap}
         sortRules={sortRulesMap}
         restaurants={restaurantsRaw}
-        initialCampaign={campaignRaw ? parseCampaignConfig(campaignRaw) : null}
+        initialCampaign={(() => {
+          if (!campaignRaw) return null
+          try {
+            return parseCampaignConfig(campaignRaw)
+          } catch (e) {
+            console.error('Failed to parse campaign config, rendering without banner:', e)
+            return null
+          }
+        })()}
       />
 
       {/* LocalBusiness JSON-LD Schema Markup */}
