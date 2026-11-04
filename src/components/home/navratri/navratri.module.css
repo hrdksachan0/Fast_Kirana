@@ -460,11 +460,16 @@
 }
 .resultsHeading {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+  gap: 12px;
+}
+.resultsTitleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .resultsHeading h3 {
   font-weight: 800;
@@ -472,14 +477,93 @@
   margin: 0;
   color: #714328;
 }
-.resultsHeading > span {
+.resultsHeading > span,
+.resultsTitleRow > span {
   font-size: 10px;
   color: #76543d;
 }
+.sliderControls {
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+@media (min-width: 640px) {
+  .sliderControls {
+    display: flex;
+  }
+}
+.sliderNavBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(113, 67, 40, 0.22);
+  background: #ffffff;
+  color: #714328;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+.sliderNavBtn:hover {
+  background: #fff8df;
+  border-color: #714328;
+  transform: scale(1.06);
+}
+.sliderNavBtn:active {
+  transform: scale(0.94);
+}
 .productGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
   gap: 10px;
+  padding: 4px 2px 14px 2px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.productGrid::-webkit-scrollbar {
+  display: none;
+}
+.productSliderItem {
+  flex: 0 0 138px;
+  width: 138px;
+  min-width: 138px;
+  max-width: 138px;
+  scroll-snap-align: start;
+}
+@media (min-width: 375px) {
+  .productSliderItem {
+    flex: 0 0 148px;
+    width: 148px;
+    min-width: 148px;
+    max-width: 148px;
+  }
+}
+@media (min-width: 640px) {
+  .productGrid {
+    gap: 14px;
+    padding: 6px 4px 16px 4px;
+  }
+  .productSliderItem {
+    flex: 0 0 170px;
+    width: 170px;
+    min-width: 170px;
+    max-width: 170px;
+  }
+}
+@media (min-width: 768px) {
+  .productSliderItem {
+    flex: 0 0 190px;
+    width: 190px;
+    min-width: 190px;
+    max-width: 190px;
+  }
 }
 .demoProduct {
   display: flex;
@@ -680,9 +764,6 @@
   .tabArt img {
     width: 68px;
     height: 68px;
-  }
-  .productGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .results {
     padding: 24px;

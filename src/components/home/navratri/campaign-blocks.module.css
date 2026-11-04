@@ -193,9 +193,55 @@
   overflow-wrap: anywhere;
 }
 .collection {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 10px;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.collection::-webkit-scrollbar {
+  display: none;
+}
+.collection > * {
+  flex: 0 0 138px;
+  width: 138px;
+  min-width: 138px;
+  max-width: 138px;
+  scroll-snap-align: start;
+}
+@media (min-width: 375px) {
+  .collection > * {
+    flex: 0 0 148px;
+    width: 148px;
+    min-width: 148px;
+    max-width: 148px;
+  }
+}
+@media (min-width: 640px) {
+  .collection {
+    gap: 14px;
+    padding-bottom: 12px;
+  }
+  .collection > * {
+    flex: 0 0 170px;
+    width: 170px;
+    min-width: 170px;
+    max-width: 170px;
+  }
+}
+@media (min-width: 768px) {
+  .collection > * {
+    flex: 0 0 190px;
+    width: 190px;
+    min-width: 190px;
+    max-width: 190px;
+  }
 }
 .block[data-presentation='row'] .collection {
   display: flex;
@@ -352,9 +398,6 @@
   }
   .category .art {
     height: 160px;
-  }
-  .collection {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .block[data-presentation='row'] .collection > * {
     flex-basis: 208px;

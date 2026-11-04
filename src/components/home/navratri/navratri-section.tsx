@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
-import { Pause, Play } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
 import type { Product } from '@/types'
 import { ProductCard } from '@/components/product/product-card'
 import {
@@ -155,6 +155,13 @@ export function NavratriSection({
   const [focused, setFocused] = useState(false)
   const [selected, setSelected] = useState(0)
   const id = useId()
+  const productSliderRef = useRef<HTMLDivElement>(null)
+
+  const scrollProductSlider = (direction: 'left' | 'right') => {
+    if (!productSliderRef.current) return
+    const offset = direction === 'left' ? -260 : 260
+    productSliderRef.current.scrollBy({ left: offset, behavior: 'smooth' })
+  }
   const currentTab = Math.min(selected, data.tabs.length - 1)
   const tab = data.tabs[currentTab]
   const promotionCatalogue = usePromotionProducts(
@@ -329,9 +336,31 @@ export function NavratriSection({
             className={styles.results}
           >
             <div className={styles.resultsHeading}>
-              <h3>{tab.label}</h3>
-              {products.length === 0 && !loading && data.demo && (
-                <span>{data.labels.resultsDemoLabel}</span>
+              <div className={styles.resultsTitleRow}>
+                <h3>{tab.label}</h3>
+                {products.length === 0 && !loading && data.demo && (
+                  <span>{data.labels.resultsDemoLabel}</span>
+                )}
+              </div>
+              {(filtered.length > 2 || demos.length > 2) && (
+                <div className={styles.sliderControls}>
+                  <button
+                    type="button"
+                    onClick={() => scrollProductSlider('left')}
+                    aria-label="Scroll left"
+                    className={styles.sliderNavBtn}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollProductSlider('right')}
+                    aria-label="Scroll right"
+                    className={styles.sliderNavBtn}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
               )}
             </div>
             {loading ? (
@@ -339,33 +368,36 @@ export function NavratriSection({
                 {data.labels.loadingText}
               </p>
             ) : filtered.length > 0 ? (
-              <div className={styles.productGrid}>
+              <div ref={productSliderRef} className={styles.productGrid}>
                 {filtered.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <div key={product.id} className={styles.productSliderItem}>
+                    <ProductCard product={product} />
+                  </div>
                 ))}
               </div>
             ) : demos.length > 0 ? (
-              <div className={styles.productGrid}>
+              <div ref={productSliderRef} className={styles.productGrid}>
                 {demos.map((product) => (
-                  <Link
-                    key={product.id}
-                    href={destinationHref(product.destinationId, data)}
-                    prefetch={false}
-                    className={styles.demoProduct}
-                  >
-                    <Image
-                      src={navratriAsset(product.image)}
-                      alt=""
-                      width={130}
-                      height={130}
-                      unoptimized
-                    />
-                    <span>{product.name}</span>
-                    <strong>
-                      {navratriPrice(product.price)} <small>Demo</small>
-                    </strong>
-                    <span className={styles.browse}>Search catalogue</span>
-                  </Link>
+                  <div key={product.id} className={styles.productSliderItem}>
+                    <Link
+                      href={destinationHref(product.destinationId, data)}
+                      prefetch={false}
+                      className={styles.demoProduct}
+                    >
+                      <Image
+                        src={navratriAsset(product.image)}
+                        alt=""
+                        width={130}
+                        height={130}
+                        unoptimized
+                      />
+                      <span>{product.name}</span>
+                      <strong>
+                        {navratriPrice(product.price)} <small>Demo</small>
+                      </strong>
+                      <span className={styles.browse}>Search catalogue</span>
+                    </Link>
+                  </div>
                 ))}
               </div>
             ) : (
