@@ -68,7 +68,11 @@ export function matchesNavratriKeywords(text: string, keywords: string[]): boole
 
 export function destinationHref(id: string | null, data = navratriData): string {
   const destination = data.destinations.find((item) => item.id === id)
-  return destination ? `/search?q=${encodeURIComponent(destination.query)}` : '/'
+  if (!destination) return '/'
+  const q = destination.query.trim()
+  if (q.startsWith('/')) return q
+  if (q.startsWith('category/')) return `/${q}`
+  return `/search?q=${encodeURIComponent(q)}`
 }
 
 export function filterNavratriProducts(

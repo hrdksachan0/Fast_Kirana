@@ -337,6 +337,7 @@ import '../navratri/navratri_linked_products.dart';
 
 
 import '../navratri/navratri_shopping_section.dart';
+import '../categories/category_products_screen.dart';
 
 
 
@@ -3253,13 +3254,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             FadeSlideRoute(
                                 page: ProductDetailScreen(product: product)),
                           ),
-                          onNavigate: (destination) => Navigator.push(
-                            context,
-                            FadeSlideRoute(
-                              page:
-                                  SearchScreen(initialQuery: destination.query),
-                            ),
-                          ),
+                          onNavigate: (destination) {
+                            final q = destination.query.trim();
+                            if (q.startsWith('/category/') || q.startsWith('category/')) {
+                              final slug = q.replaceFirst(RegExp(r'^/?category/'), '').trim();
+                              final categoriesAsync = ref.read(categoriesProvider);
+                              final cat = categoriesAsync.valueOrNull?.firstWhere(
+                                (c) => c.slug.toLowerCase() == slug.toLowerCase() || c.id == slug,
+                                orElse: () => Category(id: slug, name: slug.replaceAll('-', ' '), slug: slug),
+                              );
+                              if (cat != null) {
+                                Navigator.push(
+                                  context,
+                                  FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
+                                );
+                                return;
+                              }
+                            }
+                            final cleanQuery = q.startsWith('/search?q=')
+                                ? q.replaceFirst('/search?q=', '')
+                                : (q.startsWith('/category/')
+                                    ? q.replaceFirst('/category/', '').replaceAll('-', ' ')
+                                    : q);
+                            Navigator.push(
+                              context,
+                              FadeSlideRoute(
+                                page: SearchScreen(initialQuery: cleanQuery),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],
