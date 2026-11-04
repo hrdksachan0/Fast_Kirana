@@ -1002,6 +1002,17 @@ async def verify_cashfree_payment(
                     logger.error(f"[Cashfree Security] Preflight amount mismatch: Paid ₹{cf_amount:.2f} != Expected ₹{expected_p_amt:.2f}")
                     raise HTTPException(status_code=400, detail="Gateway payment amount does not match checkout session amount.")
 
+            if clean_id.startswith("WTOPUP_") or (req.cfOrderId and str(req.cfOrderId).startswith("WTOPUP_")):
+                return {
+                    "success": True,
+                    "orderId": clean_id,
+                    "readableId": None,
+                    "paymentStatus": "PAID",
+                    "isPaid": True,
+                    "cfPaymentId": str(successful_payment.get("cf_payment_id", "")) if successful_payment else f"CF_{sanitized_check_id}",
+                    "orderAmount": cf_amount,
+                }
+
             # Auto-recover and insert order into DB immediately so customer order is never missed
             recovered_order = None
             try:
@@ -1361,6 +1372,11 @@ async def auto_recover_unplaced_cashfree_order(
         import uuid
 
         clean_cf_id = re.sub(r"[^a-zA-Z0-9_-]", "_", str(cf_order_id).strip())[:45]
+
+        # Guard against wallet top-up transactions: NEVER recover as an e-commerce order!
+        if str(cf_order_id).startswith("WTOPUP_") or str(clean_cf_id).startswith("WTOPUP_") or str(clean_id).startswith("WTOPUP_"):
+            logger.info(f"[Cashfree Recovery] Order {cf_order_id} is a WALLET TOPUP. Never create an e-commerce delivery order!")
+            return None
 
         # 0. Check if order already recovered or created with this cfOrderId / clean_id
         # Authoritative lookup strictly uses explicit order fields — NEVER free-text notes
@@ -2396,6 +2412,24 @@ async def cashfree_webhook(
         return Response(status_code=200, content="OK")
 
     clean_id = re.sub(r"_r\d+$", "", str(cf_order_id).strip())
+
+    # ── 0. WALLET TOP-UP FLOW ─────────────────────────────────────────
+    # Guard against wallet top-up transactions: NEVER treat as e-commerce grocery orders!
+    if str(cf_order_id).startswith("WTOPUP_") or str(clean_id).startswith("WTOPUP_"):
+        logger.info(f"[Cashfree Webhook] Detected Wallet Top-up order: {cf_order_id}. Routing to wallet handler...")
+        try:
+            from routers.wallet import process_wallet_topup_payment
+            cf_payment_id = str(payment_data.get("cf_payment_id") or payment_data.get("payment_id") or "")
+            topup_res = await process_wallet_topup_payment(
+                cf_order_id=str(cf_order_id),
+                cf_payment_id=cf_payment_id,
+                payment_status=payment_status or ("SUCCESS" if event_type == "PAYMENT_SUCCESS_WEBHOOK" else "PENDING"),
+                db=db
+            )
+            return Response(status_code=200, content=f"Wallet top-up processed: {topup_res.get('status')}")
+        except Exception as w_err:
+            logger.error(f"[Cashfree Webhook] Error processing wallet topup: {w_err}")
+            return Response(status_code=500, content="Error processing wallet topup")
 
     # ── 1. PAYMENT SUCCESS FLOW ──────────────────────────────────────────
     if event_type == "PAYMENT_SUCCESS_WEBHOOK" or payment_status == "SUCCESS":

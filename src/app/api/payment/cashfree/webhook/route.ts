@@ -47,6 +47,10 @@ export async function POST(req: NextRequest) {
       const orderId = orderData?.order_id
       if (orderId) {
         const rawId = String(orderId).trim()
+        if (rawId.startsWith('WTOPUP_')) {
+          console.log(`[CashfreeWebhook] WTOPUP transaction ${rawId} received. Skipping store order processing.`)
+          return NextResponse.json({ received: true, status: 'wallet_topup_handled' })
+        }
         const cleanId = rawId.replace(/_r\d+$/, '')
         const lockKey = `lock:webhook:cf:${cleanId}`
         const acquired = await cache.acquireLock(lockKey, 30)
@@ -399,6 +403,10 @@ export async function POST(req: NextRequest) {
       const orderId = orderData?.order_id
       if (orderId) {
         const rawId = String(orderId).trim()
+        if (rawId.startsWith('WTOPUP_')) {
+          console.log(`[CashfreeWebhook] WTOPUP transaction ${rawId} received. Skipping store order processing.`)
+          return NextResponse.json({ received: true, status: 'wallet_topup_handled' })
+        }
         const cleanId = rawId.replace(/_r\d+$/, '')
         console.warn(`⚠️ Cashfree webhook: Payment failed/dropped for order ${cleanId}: ${paymentData?.payment_message || eventType}`)
         await prisma.$executeRaw`

@@ -224,6 +224,75 @@ async def initiate_wallet_topup(
     }
 
 
+async def process_wallet_topup_payment(
+    cf_order_id: str,
+    cf_payment_id: str,
+    payment_status: str,
+    db: AsyncSession
+) -> dict:
+    """
+    Idempotent processor for Cashfree Wallet Top-up payments.
+    Locks the transaction and customer wallet rows (FOR UPDATE), credits the balance,
+    marks transaction SUCCESS, and sends a push notification.
+    """
+    if not cf_order_id or not str(cf_order_id).startswith("WTOPUP_"):
+        return {"status": "ignored_non_wallet_order"}
+
+    # Lock transaction row to prevent double credit
+    stmt = (
+        select(WalletTransaction)
+        .where(WalletTransaction.cfOrderId == cf_order_id)
+        .with_for_update()
+    )
+    tx = (await db.execute(stmt)).scalar_one_or_none()
+
+    if not tx:
+        logger.warning(f"Wallet transaction not found for cfOrderId: {cf_order_id}")
+        return {"status": "tx_not_found"}
+
+    if tx.status in [WalletTxStatus.SUCCESS, WalletTxStatus.SUCCESS.value]:
+        return {"status": "already_processed"}
+
+    if str(payment_status).upper() == "SUCCESS":
+        # Lock wallet row and credit
+        wallet_stmt = (
+            select(CustomerWallet)
+            .where(CustomerWallet.id == tx.walletId)
+            .with_for_update()
+        )
+        wallet = (await db.execute(wallet_stmt)).scalar_one()
+
+        tx.status = WalletTxStatus.SUCCESS
+        tx.cfPaymentId = str(cf_payment_id or "")
+        tx.balanceBefore = wallet.balance
+        wallet.balance = Decimal(str(wallet.balance)) + Decimal(str(tx.amount))
+        tx.balanceAfter = wallet.balance
+
+        await db.commit()
+        logger.info(f"Successfully credited ₹{tx.amount} to wallet {wallet.id} via Cashfree (Order: {cf_order_id})")
+
+        # Push notification
+        try:
+            u_stmt = select(User).where(User.id == wallet.userId)
+            user = (await db.execute(u_stmt)).scalar_one_or_none()
+            if user:
+                await send_fcm_notification(
+                    user_id=user.id,
+                    title="Wallet Top-Up Successful! 💰",
+                    body=f"₹{float(tx.amount):.2f} added to your FastMinute wallet. Current balance: ₹{float(wallet.balance):.2f}",
+                    data={"type": "WALLET_TOPUP", "walletBalance": str(float(wallet.balance))}
+                )
+        except Exception as fcm_err:
+            logger.warning(f"FCM push failed for wallet topup: {fcm_err}")
+
+        return {"status": "credited"}
+    else:
+        tx.status = WalletTxStatus.FAILED
+        await db.commit()
+        logger.info(f"Wallet topup failed for order: {cf_order_id}")
+        return {"status": "failed"}
+
+
 @router.post("/cashfree/webhook")
 async def cashfree_wallet_webhook(
     request: Request,
@@ -261,63 +330,13 @@ async def cashfree_wallet_webhook(
     cf_order_id = order_data.get("order_id")
     payment_status = payment_data.get("payment_status")  # "SUCCESS", "FAILED"
 
-    # Only process WTOPUP_ prefixed orders
-    if not cf_order_id or not str(cf_order_id).startswith("WTOPUP_"):
-        return {"status": "ignored_non_wallet_order"}
-
-    # Lock transaction row to prevent double credit
-    stmt = (
-        select(WalletTransaction)
-        .where(WalletTransaction.cfOrderId == cf_order_id)
-        .with_for_update()
+    res = await process_wallet_topup_payment(
+        cf_order_id=cf_order_id,
+        cf_payment_id=str(payment_data.get("cf_payment_id", "")),
+        payment_status=payment_status,
+        db=db
     )
-    tx = (await db.execute(stmt)).scalar_one_or_none()
-
-    if not tx:
-        logger.warning(f"Wallet transaction not found for cfOrderId: {cf_order_id}")
-        return {"status": "tx_not_found"}
-
-    if tx.status in [WalletTxStatus.SUCCESS, WalletTxStatus.SUCCESS.value]:
-        return {"status": "already_processed"}
-
-    if payment_status == "SUCCESS":
-        # Lock wallet row and credit
-        wallet_stmt = (
-            select(CustomerWallet)
-            .where(CustomerWallet.id == tx.walletId)
-            .with_for_update()
-        )
-        wallet = (await db.execute(wallet_stmt)).scalar_one()
-
-        tx.status = WalletTxStatus.SUCCESS
-        tx.cfPaymentId = str(payment_data.get("cf_payment_id", ""))
-        tx.balanceBefore = wallet.balance
-        wallet.balance = Decimal(str(wallet.balance)) + Decimal(str(tx.amount))
-        tx.balanceAfter = wallet.balance
-
-        await db.commit()
-        logger.info(f"Successfully credited ₹{tx.amount} to wallet {wallet.id} via Cashfree (Order: {cf_order_id})")
-
-        # Push notification
-        try:
-            u_stmt = select(User).where(User.id == wallet.userId)
-            user = (await db.execute(u_stmt)).scalar_one_or_none()
-            if user:
-                await send_fcm_notification(
-                    user_id=user.id,
-                    title="Wallet Top-Up Successful! 💰",
-                    body=f"₹{float(tx.amount):.2f} added to your FastMinute wallet. Current balance: ₹{float(wallet.balance):.2f}",
-                    data={"type": "WALLET_TOPUP", "walletBalance": str(float(wallet.balance))}
-                )
-        except Exception as fcm_err:
-            logger.warning(f"FCM push failed for wallet topup: {fcm_err}")
-
-    else:
-        tx.status = WalletTxStatus.FAILED
-        await db.commit()
-        logger.info(f"Wallet topup failed for order: {cf_order_id}")
-
-    return {"status": "ok"}
+    return res
 
 
 @router.post("/topup/sync-status")
