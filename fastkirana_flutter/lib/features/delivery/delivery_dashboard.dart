@@ -1483,36 +1483,55 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   onTabChanged: (index) => setState(() => _activeTab = index),
                 ),
 
+                // Subtle Sync Indicator when refreshing in background
+                if (_isFetchingOrders && _orders.isNotEmpty)
+                  const SizedBox(
+                    height: 2.5,
+                    child: LinearProgressIndicator(
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppDesignSystem.emeraldBrand),
+                    ),
+                  ),
+
                 Expanded(
-                  child: _isLoading
-                      ? const RiderDashboardSkeleton(itemCount: 3)
-                      : IndexedStack(
-                          index: _activeTab,
-                          children: [
-                            DeliveryOrdersTab(
-                              activeDeliveries: activeDeliveries,
-                              pendingPickups: pendingPickups,
-                              updatingOrderId: _updatingOrderId,
-                              onOpenNavigation: _openGoogleMapsNavigation,
-                              onShowDoorstepQr: _showDoorstepUpiQrModal,
-                              onShowConfirmation: _showDeliveryConfirmationModal,
-                              onUpdateStatus: _updateOrderStatus,
-                            ),
-                            DeliveryWalletTab(
-                              walletInfo: _walletInfo,
-                              isOnline: _isOnline,
-                              onToggleOnline: (val) {
-                                setState(() => _isOnline = val);
-                                if (!val) {
-                                  _locationService.stopTracking();
-                                } else {
-                                  _manageGpsTrackingLifecycle(_orders);
-                                }
-                              },
-                            ),
-                            DeliveryHistoryTab(completed: completedToday),
-                          ],
-                        ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 320),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: _isLoading
+                        ? const RiderDashboardSkeleton(
+                            key: ValueKey('rider_dashboard_skeleton'),
+                            itemCount: 3,
+                          )
+                        : IndexedStack(
+                            key: const ValueKey('rider_dashboard_content'),
+                            index: _activeTab,
+                            children: [
+                              DeliveryOrdersTab(
+                                activeDeliveries: activeDeliveries,
+                                pendingPickups: pendingPickups,
+                                updatingOrderId: _updatingOrderId,
+                                onOpenNavigation: _openGoogleMapsNavigation,
+                                onShowDoorstepQr: _showDoorstepUpiQrModal,
+                                onShowConfirmation: _showDeliveryConfirmationModal,
+                                onUpdateStatus: _updateOrderStatus,
+                              ),
+                              DeliveryWalletTab(
+                                walletInfo: _walletInfo,
+                                isOnline: _isOnline,
+                                onToggleOnline: (val) {
+                                  setState(() => _isOnline = val);
+                                  if (!val) {
+                                    _locationService.stopTracking();
+                                  } else {
+                                    _manageGpsTrackingLifecycle(_orders);
+                                  }
+                                },
+                              ),
+                              DeliveryHistoryTab(completed: completedToday),
+                            ],
+                          ),
+                  ),
                 ),
               ],
             ),

@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -1979,12 +1980,26 @@ $formattedItems
               ),
             ),
 
+            // 2.5 Subtle Background Sync Indicator
+            if (_isFetchingAdmin && _allOrders.isNotEmpty)
+              const SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 2.5,
+                  child: LinearProgressIndicator(
+                    backgroundColor: Colors.transparent,
+                    valueColor: AlwaysStoppedAnimation<Color>(primaryRed),
+                  ),
+                ),
+              ),
+
             // 3. Orders List or Loading Skeleton or Empty / Error Views
             if (_isLoading)
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(14, 12, 14, 100),
-                  child: AdminOrdersListSkeleton(itemCount: 4),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
+                  child: const AdminOrdersListSkeleton(itemCount: 4)
+                      .animate()
+                      .fadeIn(duration: 250.ms, curve: Curves.easeOutCubic),
                 ),
               )
             else if (_error != null)
@@ -2050,7 +2065,19 @@ $formattedItems
                         onShowRecordRefund: _showRecordRefundModal,
                         onSendRemoteKOT: _sendRemoteKOT,
                         onSendWhatsAppKOT: _sendWhatsAppKOT,
-                      );
+                      )
+                          .animate()
+                          .fadeIn(
+                            duration: 320.ms,
+                            delay: (index * 40).clamp(0, 240).ms,
+                            curve: Curves.easeOutCubic,
+                          )
+                          .slideY(
+                            begin: 0.04,
+                            end: 0,
+                            duration: 280.ms,
+                            curve: Curves.easeOutCubic,
+                          );
                     },
                     childCount: displayOrders.length,
                   ),

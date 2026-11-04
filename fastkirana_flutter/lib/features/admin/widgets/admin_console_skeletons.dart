@@ -153,11 +153,13 @@ class AdminOrdersListSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: itemCount,
-      itemBuilder: (context, index) => const AdminOrderCardSkeleton(),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: List.generate(
+        itemCount,
+        (index) => const AdminOrderCardSkeleton(),
+      ),
     );
   }
 }
