@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" fill="none">
+  <defs>
+    <filter id="chocShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#2D1200" flood-opacity="0.3"/>
+    </filter>
+
+    <!-- Luxury Royal Crimson & Gold Box Gradients -->
+    <linearGradient id="boxCrimson" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#991B1B"/>
+      <stop offset="50%" stop-color="#7F1D1D"/>
+      <stop offset="100%" stop-color="#450A0A"/>
+    </linearGradient>
+
+    <!-- Silk Satin Gold Ribbon -->
+    <linearGradient id="satinGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="35%" stop-color="#F59E0B"/>
+      <stop offset="70%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+
+    <!-- Ferrero Gold Foil Sphere -->
+    <radialGradient id="ferreroGold" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="25%" stop-color="#FDE68A"/>
+      <stop offset="60%" stop-color="#D97706"/>
+      <stop offset="85%" stop-color="#92400E"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </radialGradient>
+
+    <!-- Dark Chocolate Bar Gradients -->
+    <linearGradient id="darkChoc" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#582914"/>
+      <stop offset="50%" stop-color="#3B1808"/>
+      <stop offset="100%" stop-color="#230E05"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Ambient Ground Shadow -->
+  <ellipse cx="160" cy="174" rx="95" ry="13" fill="#2B1000" opacity="0.25"/>
+
+  <!-- Luxury Gift Box (Behind) -->
+  <g filter="url(#chocShadow)">
+    <!-- Box Body -->
+    <rect x="75" y="60" width="170" height="105" rx="14" fill="url(#boxCrimson)"/>
+    <!-- Box Inner Bevel Border -->
+    <rect x="79" y="64" width="162" height="97" rx="10" stroke="#F59E0B" stroke-width="1.6" fill="none" opacity="0.8"/>
+
+    <!-- Festive Gold Floral Motif in Center of Box -->
+    <circle cx="160" cy="112" r="24" stroke="#F59E0B" stroke-width="1.2" stroke-dasharray="2 4" fill="none" opacity="0.6"/>
+
+    <!-- Vertical Gold Satin Ribbon -->
+    <rect x="148" y="60" width="24" height="105" fill="url(#satinGold)"/>
+    <!-- Horizontal Gold Satin Ribbon -->
+    <rect x="75" y="100" width="170" height="24" fill="url(#satinGold)"/>
+
+    <!-- Top Ribbon Bow (Lush Silk Knot) -->
+    <!-- Left Loop -->
+    <path d="M160 62C140 40 115 50 135 68C145 74 158 66 160 62Z" fill="url(#satinGold)"/>
+    <!-- Right Loop -->
+    <path d="M160 62C180 40 205 50 185 68C175 74 162 66 160 62Z" fill="url(#satinGold)"/>
+    <!-- Central Knot -->
+    <circle cx="160" cy="64" r="7.5" fill="#FDE68A"/>
+    <circle cx="160" cy="64" r="5" fill="#D97706"/>
+    <!-- Ribbon Tails -->
+    <path d="M156 68L140 92L146 94L158 72Z" fill="url(#satinGold)"/>
+    <path d="M164 68L180 92L174 94L162 72Z" fill="url(#satinGold)"/>
+  </g>
+
+  <!-- Premium Embossed Dark Chocolate Bar (Left-Front) -->
+  <g filter="url(#chocShadow)" transform="rotate(-12 100 135)">
+    <!-- Main Bar Body -->
+    <rect x="65" y="95" width="70" height="60" rx="6" fill="url(#darkChoc)"/>
+    <!-- 4 Embossed Chocolate Squares -->
+    <rect x="71" y="101" width="26" height="22" rx="3" fill="#6A321A" stroke="#230E05" stroke-width="1.2"/>
+    <rect x="103" y="101" width="26" height="22" rx="3" fill="#6A321A" stroke="#230E05" stroke-width="1.2"/>
+    <rect x="71" y="127" width="26" height="22" rx="3" fill="#6A321A" stroke="#230E05" stroke-width="1.2"/>
+    <rect x="103" y="127" width="26" height="22" rx="3" fill="#6A321A" stroke="#230E05" stroke-width="1.2"/>
+    <!-- Glossy Chocolate Specular Highlight -->
+    <path d="M72 102L95 102" stroke="#FFF" stroke-width="1" opacity="0.35"/>
+    <path d="M104 102L127 102" stroke="#FFF" stroke-width="1" opacity="0.35"/>
+  </g>
+
+  <!-- Golden Foil Wrapped Ferrero Rocher Spheres (Front-Right) -->
+  <g filter="url(#chocShadow)">
+    <!-- Sphere 1 (Right Front) -->
+    <!-- Brown Ruffled Paper Cup Underneath -->
+    <ellipse cx="225" cy="148" rx="20" ry="7" fill="#3B1808"/>
+    <path d="M208 147L214 156H236L242 147Z" fill="#2E1306"/>
+    <!-- Golden Sphere -->
+    <circle cx="225" cy="132" r="18" fill="url(#ferreroGold)"/>
+    <!-- Foil Crumple Texture Facets -->
+    <g fill="#FFFBEB" opacity="0.5">
+      <polygon points="218,124 224,120 228,125 222,129"/>
+      <polygon points="230,126 238,124 236,132 228,130"/>
+      <polygon points="216,134 222,132 220,140 214,138"/>
+      <polygon points="226,136 234,136 230,144 224,142"/>
+    </g>
+
+    <!-- Sphere 2 (Smaller Center Front) -->
+    <ellipse cx="180" cy="156" rx="17" ry="6" fill="#3B1808"/>
+    <circle cx="180" cy="142" r="15" fill="url(#ferreroGold)"/>
+    <!-- Specular Flare on Gold Foil -->
+    <ellipse cx="174" cy="136" rx="4" ry="2.5" fill="#FFFFFF" opacity="0.75" transform="rotate(-30 174 136)"/>
+  </g>
+
+  <!-- Sparkling Golden Starbursts & Confetti -->
+  <g fill="#FFFDF0">
+    <path d="M52 46L54 40L56 46L62 48L56 50L54 56L52 50L46 48Z"/>
+    <path d="M268 44L270 38L272 44L278 46L272 48L270 54L268 48L262 46Z"/>
+    <path d="M210 28L211.5 24L213 28L217 29.5L213 31L211.5 35L210 31L206 29.5Z"/>
+    <circle cx="270" cy="98" r="2" fill="#FDE047"/>
+    <circle cx="56" cy="110" r="1.8" fill="#FDE047"/>
+  </g>
+</svg>

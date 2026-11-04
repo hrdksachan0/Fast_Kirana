@@ -5,25 +5,25 @@
   "autoplay": true,
   "layout": "classic",
   "searchPrefix": "Search for",
-  "decorationImage": null,
+  "decorationImage": "string-lights.svg",
   "labels": {
-    "sectionLabel": "Bring home Diwali",
-    "specialsHeading": "Diwali Picks",
-    "curvedTabLabel": "Top Picks",
-    "loadingText": "Loading this store’s diwali collection…",
-    "emptyText": "No matching products in this collection yet. Try another tab or search the catalogue.",
-    "demoLabel": "Demo prices",
-    "resultsDemoLabel": "Demo collection · illustrative prices"
+    "sectionLabel": "✨ Shubh Diwali Mahotsav",
+    "specialsHeading": "🪔 15-Min Diwali Deals",
+    "curvedTabLabel": "🔥 Festive Bestsellers",
+    "loadingText": "Diwali collection load ho rahi hai…",
+    "emptyText": "Is collection me aur items add ho rahe hain. Dusre tab ya search dekhein.",
+    "demoLabel": "Special Offer",
+    "resultsDemoLabel": "Festive collection · illustrative prices"
   },
   "appearance": {
-    "background": "#A73D32",
-    "card": "#FFF4D8",
-    "text": "#743922",
-    "smallText": "#532C24",
-    "headerText": "#FFF4D8",
-    "headerOutline": "#542B25",
-    "underline": "#A73D32",
-    "tabSurface": "#FFF4D8"
+    "background": "#7A0C0C",
+    "card": "#FFF9ED",
+    "text": "#3E0F07",
+    "smallText": "#7A3122",
+    "headerText": "#FFF9ED",
+    "headerOutline": "#4D0A0A",
+    "underline": "#D4AF37",
+    "tabSurface": "#FFF3D6"
   },
   "timings": {
     "headerMs": 4500,
@@ -33,34 +33,37 @@
   },
   "searchSuggestions": [
     "Diyas",
-    "Ladoo",
-    "Marigold",
-    "Rangoli"
+    "Celebrations",
+    "Candles",
+    "Kaju Katli",
+    "Badam",
+    "Agarbatti",
+    "Ghee"
   ],
   "navigation": [],
   "headers": [
     {
       "id": "diwali-header-1",
       "kind": "illustration",
-      "eyebrow": "",
-      "title": "Lights, sweets, togetherness",
-      "subtitle": "A little glow for your home",
+      "eyebrow": "FESTIVE DHAMAKA",
+      "title": "✨ Shubh Deepawali",
+      "subtitle": "Diyas, Sweets & Gifts delivered in 10-15 mins",
       "image": "diwali-celebration.svg"
     },
     {
       "id": "diwali-header-2",
       "kind": "title",
-      "eyebrow": "",
-      "title": "Make room for celebration",
-      "subtitle": "Fill your festive basket",
+      "eyebrow": "10-15 MIN DELIVERY",
+      "title": "Har Ghar Roshan",
+      "subtitle": "Fill your festive basket with lights & mithai",
       "image": null
     },
     {
       "id": "diwali-header-3",
       "kind": "brand",
-      "eyebrow": "",
-      "title": "Celebrate with FastKirana",
-      "subtitle": "Build your own Diwali collection",
+      "eyebrow": "FASTEST FESTIVE DELIVERY",
+      "title": "Celebrate with FastMinute",
+      "subtitle": "Fresh sweets, dry fruits & pooja essentials",
       "image": "diwali-celebration.svg"
     }
   ],
@@ -69,7 +72,7 @@
       "id": "diwali-diyas",
       "name": "Clay Diya Set",
       "image": "diwali-diyas.svg",
-      "originalPrice": 80,
+      "originalPrice": 120,
       "price": 80,
       "currency": "INR",
       "categoryId": "diwali-diyas-category",
@@ -77,20 +80,20 @@
     },
     {
       "id": "diwali-ladoo",
-      "name": "Ladoo Box",
+      "name": "Celebrations Gift Box",
       "image": "diwali-ladoo.svg",
       "originalPrice": 180,
-      "price": 180,
+      "price": 150,
       "currency": "INR",
       "categoryId": "diwali-ladoo-category",
       "destinationId": "search-diwali-ladoo"
     },
     {
       "id": "diwali-marigold",
-      "name": "Marigold Garland",
-      "image": "diwali-marigold.svg",
-      "originalPrice": 60,
-      "price": 60,
+      "name": "Royal Kaju Badam Gift Box",
+      "image": "ramadan-almonds.svg",
+      "originalPrice": 399,
+      "price": 299,
       "currency": "INR",
       "categoryId": "diwali-marigold-category",
       "destinationId": "search-diwali-marigold"
@@ -99,8 +102,8 @@
       "id": "diwali-rangoli",
       "name": "Rangoli Colour Kit",
       "image": "diwali-rangoli.svg",
-      "originalPrice": 120,
-      "price": 120,
+      "originalPrice": 149,
+      "price": 99,
       "currency": "INR",
       "categoryId": "diwali-rangoli-category",
       "destinationId": "search-diwali-rangoli"
@@ -109,102 +112,163 @@
   "categories": [
     {
       "id": "diwali-diyas-category",
-      "label": "Lights & Lamps",
+      "label": "Diyas & Candles",
       "image": "diwali-diyas.svg",
       "destinationId": "search-diwali-diyas",
       "keywords": [
         "diya",
+        "candle",
+        "tealight",
         "lamp",
-        "light"
+        "deepak"
       ]
     },
     {
       "id": "diwali-ladoo-category",
-      "label": "Sweets & Sharing",
+      "label": "Mithai & Chocolates",
       "image": "diwali-ladoo.svg",
       "destinationId": "search-diwali-ladoo",
       "keywords": [
+        "mithai",
         "ladoo",
-        "sweet",
-        "mithai"
+        "gulab jamun",
+        "kaju katli",
+        "celebration",
+        "cadbury",
+        "soan papdi",
+        "rasgulla"
       ]
     },
     {
       "id": "diwali-marigold-category",
-      "label": "Flowers & Garlands",
-      "image": "diwali-marigold.svg",
+      "label": "Dry Fruits & Gifting",
+      "image": "ramadan-almonds.svg",
       "destinationId": "search-diwali-marigold",
       "keywords": [
-        "marigold",
-        "flower",
-        "garland"
+        "kaju",
+        "badam",
+        "almond",
+        "cashew",
+        "pista",
+        "dry fruit",
+        "kishmish"
       ]
     },
     {
       "id": "diwali-rangoli-category",
-      "label": "Decorate Your Home",
+      "label": "Pooja & Decor",
       "image": "diwali-rangoli.svg",
       "destinationId": "search-diwali-rangoli",
       "keywords": [
         "rangoli",
-        "decor",
-        "colour"
+        "agarbatti",
+        "dhoop",
+        "kapoor",
+        "camphor",
+        "batti",
+        "ghee",
+        "puja",
+        "garland"
       ]
     }
   ],
   "tabs": [
     {
       "id": "top-picks",
-      "label": "Top Picks",
+      "label": "🔥 Bestsellers",
       "image": "diwali-celebration.svg",
-      "keywords": []
+      "keywords": [
+        "celebration",
+        "candle",
+        "diya",
+        "kaju",
+        "badam",
+        "mithai",
+        "ladoo",
+        "cashew",
+        "almond"
+      ],
+      "productIds": []
+    },
+    {
+      "id": "diwali-chocolates",
+      "label": "🍫 Chocolates & Gifting",
+      "image": "diwali-chocolates.svg",
+      "keywords": [
+        "chocolate",
+        "chocolates",
+        "ferrero",
+        "celebration",
+        "celebrations",
+        "cadbury",
+        "dark chocolate",
+        "dairy milk"
+      ],
+      "productIds": []
     },
     {
       "id": "diwali-lights",
-      "label": "Lights & Lamps",
+      "label": "🪔 Diyas & Candles",
       "image": "diwali-diyas.svg",
       "keywords": [
         "diya",
+        "candle",
+        "tealight",
         "lamp",
-        "light"
-      ]
+        "deepak"
+      ],
+      "productIds": []
     },
     {
       "id": "diwali-sweets",
-      "label": "Sweets",
+      "label": "🥮 Mithai & Dry Fruits",
       "image": "diwali-ladoo.svg",
       "keywords": [
+        "mithai",
         "ladoo",
-        "sweet"
-      ]
+        "gulab jamun",
+        "kaju katli",
+        "soan papdi",
+        "kaju",
+        "badam",
+        "almond",
+        "cashew"
+      ],
+      "productIds": []
     },
     {
       "id": "diwali-decor",
-      "label": "Flowers & Decor",
-      "image": "diwali-marigold.svg",
+      "label": "🌺 Pooja & Decor",
+      "image": "diwali-rangoli.svg",
       "keywords": [
-        "marigold",
-        "flower",
         "rangoli",
-        "decor"
-      ]
+        "agarbatti",
+        "dhoop",
+        "kapoor",
+        "camphor",
+        "batti",
+        "ghee",
+        "puja",
+        "garland"
+      ],
+      "productIds": []
     }
   ],
   "destinations": [
     {
       "id": "search-diwali-diyas",
       "kind": "search",
-      "query": "diya"
+      "query": "candle"
     },
     {
       "id": "search-diwali-ladoo",
       "kind": "search",
-      "query": "ladoo"
+      "query": "celebration"
     },
     {
       "id": "search-diwali-marigold",
       "kind": "search",
-      "query": "marigold"
+      "query": "kaju"
     },
     {
       "id": "search-diwali-rangoli",

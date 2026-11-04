@@ -63,9 +63,7 @@ class NavratriIllustration extends StatelessWidget {
   Widget build(BuildContext context) {
     final source = navratriAsset(image);
     final network = source.startsWith('https://');
-    Widget error() => Center(
-        child: Icon(Icons.shopping_bag_outlined,
-            color: _CampaignStyle.of(context).text));
+    Widget error() => const SizedBox.shrink();
     final Widget content;
     if (navratriImageIsSvg(source)) {
       content = SvgPicture(
@@ -529,7 +527,7 @@ class _NavratriShoppingSectionState
           (banner && slide.image != null ? 76 : 0);
     });
     return math.max(
-        banner ? 174 : (compact ? 78 : 100), heights.reduce(math.max) + 21);
+        banner ? 180 : (compact ? 88 : 110), heights.reduce(math.max) + 36);
   }
 
   double _gridHeight(double width, double scale) {
@@ -879,7 +877,7 @@ class _NavratriShoppingSectionState
                                   height: headerHeight,
                                   child: Padding(
                                     padding: const EdgeInsets.fromLTRB(
-                                        28, 13, 28, 4),
+                                        28, 28, 28, 4),
                                     child: _switcher(SizedBox.expand(
                                       key: ValueKey(
                                           'header-${widget.data.headers[_header].id}'),
@@ -888,43 +886,21 @@ class _NavratriShoppingSectionState
                                     )),
                                   ),
                                 ),
-                                if (widget.data.decorationImage != null)
-                                  Positioned(
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    child: ExcludeSemantics(
-                                      child: IgnorePointer(
-                                        child: SizedBox(
-                                          height: 18,
-                                          child: NavratriIllustration(
-                                              image:
-                                                  widget.data.decorationImage!,
-                                              fit: BoxFit.fill),
-                                        ),
+                                const Positioned(
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: ExcludeSemantics(
+                                    child: IgnorePointer(
+                                      child: SizedBox(
+                                        height: 24,
+                                        child: NavratriIllustration(
+                                            image: 'string-lights.svg',
+                                            fit: BoxFit.fill),
                                       ),
                                     ),
                                   ),
-                                if (!reducedMotion && widget.data.autoplay)
-                                  Positioned(
-                                    right: 0,
-                                    top: 2,
-                                    child: IconButton(
-                                      key: const ValueKey('navratri-pause'),
-                                      tooltip: _paused
-                                          ? 'Resume campaign animations'
-                                          : 'Pause campaign animations',
-                                      iconSize: 18,
-                                      color: _headerSecondary,
-                                      onPressed: () {
-                                        setState(() => _paused = !_paused);
-                                        syncAutoplay();
-                                      },
-                                      icon: Icon(_paused
-                                          ? Icons.play_arrow
-                                          : Icons.pause),
-                                    ),
-                                  ),
+                                ),
                               ],
                             ),
                             Padding(

@@ -16,6 +16,9 @@ import '../../../providers/wallet_provider.dart';
 import '../../wallet/wallet_screen.dart';
 import '../../profile/notifications_screen.dart';
 import '../../search/search_screen.dart';
+import '../../navratri/navratri_data.dart';
+import '../../../widgets/festive_fairy_lights.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class HomeTopHeader extends ConsumerStatefulWidget {
   final bool showSearch;
@@ -71,8 +74,23 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
 
   @override
   Widget build(BuildContext context) {
+    final campaignAsync = ref.watch(navratriDataProvider);
+    final isCampaignActive = campaignAsync.valueOrNull?.enabled == true;
+
     return Container(
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: isCampaignActive ? const Color(0xFFFFF9ED) : Colors.white,
+        gradient: isCampaignActive
+            ? const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFFFF5DC), // Warm golden festive ivory
+                  Color(0xFFFFFDF8), // Soft warm ambient
+                ],
+              )
+            : null,
+      ),
       padding: EdgeInsets.fromLTRB(
         context.isCompact ? 10 : 16,
         8,
@@ -207,9 +225,11 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                       height: 34,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: isCampaignActive ? const Color(0xFFFFF8E7) : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        border: Border.all(
+                          color: isCampaignActive ? const Color(0xFFFFD54F) : const Color(0xFFE2E8F0),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -244,13 +264,17 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isCampaignActive ? const Color(0xFFFFFDF8) : Colors.white,
                     shape: BoxShape.circle,
-                    border:
-                        Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                    border: Border.all(
+                      color: isCampaignActive ? const Color(0xFFFFE082) : const Color(0xFFF1F5F9),
+                      width: 1.2,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                        color: isCampaignActive
+                            ? const Color(0xFFD97706).withValues(alpha: 0.08)
+                            : const Color(0xFF0F172A).withValues(alpha: 0.05),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -296,12 +320,14 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(26),
                   border: Border.all(
-                    color: const Color(0xFFE2E8F0),
-                    width: 1.1,
+                    color: isCampaignActive ? const Color(0xFFFFD54F) : const Color(0xFFE2E8F0),
+                    width: isCampaignActive ? 1.3 : 1.1,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                      color: isCampaignActive
+                          ? const Color(0xFFD97706).withValues(alpha: 0.08)
+                          : const Color(0xFF0F172A).withValues(alpha: 0.05),
                       blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),
@@ -315,15 +341,15 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
+                        color: isCampaignActive ? const Color(0xFFFEF3C7) : const Color(0xFFFEF2F2),
                         shape: BoxShape.circle,
                         border: Border.all(
-                            color: const Color(0xFFFEE2E2), width: 0.8),
+                            color: isCampaignActive ? const Color(0xFFFFE082) : const Color(0xFFFEE2E2), width: 0.8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.search_rounded,
                         size: 17,
-                        color: AppDesignSystem.primary,
+                        color: isCampaignActive ? const Color(0xFFD97706) : AppDesignSystem.primary,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -391,13 +417,13 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFEF2F2),
+                            color: isCampaignActive ? const Color(0xFFFEF3C7) : const Color(0xFFFEF2F2),
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: const Color(0xFFFECDD3), width: 0.8),
+                                color: isCampaignActive ? const Color(0xFFFFE082) : const Color(0xFFFECDD3), width: 0.8),
                           ),
-                          child: const Icon(Icons.mic_rounded,
-                              size: 16, color: AppDesignSystem.primary),
+                          child: Icon(Icons.mic_rounded,
+                              size: 16, color: isCampaignActive ? const Color(0xFFD97706) : AppDesignSystem.primary),
                         ),
                       ),
                     ),
@@ -406,6 +432,53 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
               ),
             ),
           ],
+          if (isCampaignActive)
+            Builder(
+              builder: (context) {
+                final rawDeco = (campaignAsync.valueOrNull?.decorationImage ?? 'crimson').toLowerCase();
+                final palette = rawDeco.contains('gold') && !rawDeco.contains('crimson')
+                    ? 'gold'
+                    : rawDeco.contains('multi')
+                        ? 'multi'
+                        : rawDeco.contains('amber')
+                            ? 'amber'
+                            : 'crimson';
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Left Ornate Diwali Brass Diya
+                      SizedBox(
+                        width: 26,
+                        height: 26,
+                        child: SvgPicture.asset(
+                          'assets/navratri/diwali-single-diya.svg',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: FestiveFairyLights(height: 22, palette: palette),
+                      ),
+                      const SizedBox(width: 4),
+                      // Right Ornate Diwali Brass Diya
+                      Transform.flip(
+                        flipX: true,
+                        child: SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: SvgPicture.asset(
+                            'assets/navratri/diwali-single-diya.svg',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

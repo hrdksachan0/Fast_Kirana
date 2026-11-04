@@ -10,7 +10,8 @@ import 'home_category_toggle.dart';
 
 /// Ambient Search Bar with animated rotating placeholders and voice search.
 class HomeStickySearchBar extends StatefulWidget {
-  const HomeStickySearchBar({super.key});
+  final bool isFestiveActive;
+  const HomeStickySearchBar({super.key, this.isFestiveActive = false});
 
   @override
   State<HomeStickySearchBar> createState() => _HomeStickySearchBarState();
@@ -67,12 +68,16 @@ class _HomeStickySearchBarState extends State<HomeStickySearchBar> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(26),
           border: Border.all(
-            color: const Color(0xFFE2E8F0),
-            width: 1.1,
+            color: widget.isFestiveActive
+                ? const Color(0xFFFFD54F)
+                : const Color(0xFFE2E8F0),
+            width: widget.isFestiveActive ? 1.3 : 1.1,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+              color: widget.isFestiveActive
+                  ? const Color(0xFFD97706).withValues(alpha: 0.08)
+                  : const Color(0xFF0F172A).withValues(alpha: 0.05),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -86,17 +91,23 @@ class _HomeStickySearchBarState extends State<HomeStickySearchBar> {
               width: 30,
               height: 30,
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
+                color: widget.isFestiveActive
+                    ? const Color(0xFFFEF3C7)
+                    : const Color(0xFFFEF2F2),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: const Color(0xFFFEE2E2),
+                  color: widget.isFestiveActive
+                      ? const Color(0xFFFFE082)
+                      : const Color(0xFFFEE2E2),
                   width: 0.8,
                 ),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.search_rounded,
                 size: 16,
-                color: AppDesignSystem.primary,
+                color: widget.isFestiveActive
+                    ? const Color(0xFFD97706)
+                    : AppDesignSystem.primary,
               ),
             ),
             const SizedBox(width: 10),
@@ -160,17 +171,23 @@ class _HomeStickySearchBarState extends State<HomeStickySearchBar> {
                   width: 30,
                   height: 30,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
+                    color: widget.isFestiveActive
+                        ? const Color(0xFFFEF3C7)
+                        : const Color(0xFFFEF2F2),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFFFECDD3),
+                      color: widget.isFestiveActive
+                          ? const Color(0xFFFFE082)
+                          : const Color(0xFFFECDD3),
                       width: 0.8,
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.mic_rounded,
                     size: 15,
-                    color: AppDesignSystem.primary,
+                    color: widget.isFestiveActive
+                        ? const Color(0xFFD97706)
+                        : AppDesignSystem.primary,
                   ),
                 ),
               ),
@@ -187,11 +204,13 @@ class _HomeStickySearchBarState extends State<HomeStickySearchBar> {
 class HomeStickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   final bool isGrocerySelected;
   final ValueChanged<bool> onModeChanged;
+  final bool isFestiveActive;
   final double height;
 
   const HomeStickyHeaderDelegate({
     required this.isGrocerySelected,
     required this.onModeChanged,
+    this.isFestiveActive = false,
     this.height = 124.0,
   });
 
@@ -210,19 +229,23 @@ class HomeStickyHeaderDelegate extends SliverPersistentHeaderDelegate {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isFestiveActive ? const Color(0xFFFFFDF8) : Colors.white,
         border: Border(
           bottom: BorderSide(
-            color: isPinned
-                ? const Color(0xFFCBD5E1)
-                : const Color(0xFFF1F5F9),
+            color: isFestiveActive
+                ? const Color(0xFFFFE082).withValues(alpha: 0.8)
+                : (isPinned
+                    ? const Color(0xFFCBD5E1)
+                    : const Color(0xFFF1F5F9)),
             width: 1.2,
           ),
         ),
         boxShadow: isPinned
             ? [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                  color: isFestiveActive
+                      ? const Color(0xFFD97706).withValues(alpha: 0.08)
+                      : const Color(0xFF0F172A).withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -244,7 +267,7 @@ class HomeStickyHeaderDelegate extends SliverPersistentHeaderDelegate {
               horizontalPadding,
               8,
             ),
-            child: const HomeStickySearchBar(),
+            child: HomeStickySearchBar(isFestiveActive: isFestiveActive),
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(
@@ -268,6 +291,7 @@ class HomeStickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant HomeStickyHeaderDelegate oldDelegate) {
     return oldDelegate.isGrocerySelected != isGrocerySelected ||
+        oldDelegate.isFestiveActive != isFestiveActive ||
         oldDelegate.height != height;
   }
 }

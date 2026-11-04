@@ -1,8 +1,155 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
-<title>Rangoli Colour Kit</title>
-<ellipse cx="120" cy="139" rx="92" ry="8" fill="#713D21" opacity=".12"/>
-<g stroke="#A36A38" stroke-width="2"><path d="M35 36h51l7 82H28Z" fill="#E9B745"/><path d="M97 24h50l8 94H89Z" fill="#CE5552"/><path d="M158 37h50l8 81h-66Z" fill="#648568"/></g>
-<g fill="#FFF8DF"><rect x="41" y="62" width="39" height="27" rx="6"/><rect x="103" y="56" width="38" height="28" rx="6"/><rect x="164" y="62" width="38" height="27" rx="6"/></g>
-<circle cx="61" cy="76" r="8" fill="#E9B745"/><circle cx="122" cy="70" r="8" fill="#CE5552"/><circle cx="183" cy="76" r="8" fill="#648568"/>
-<path d="m79 138 16-12 25 10 25-10 16 12" fill="#CE5552"/><path d="M120 136c-21-14-15-26 0-32 15 6 21 18 0 32Z" fill="#E9B745"/><circle cx="120" cy="135" r="5" fill="#648568"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" fill="none">
+  <defs>
+    <filter id="kalashShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#3A1700" flood-opacity="0.25"/>
+    </filter>
+    <filter id="poojaFlameGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feComposite in="SourceGraphic" in2="b" operator="over"/>
+    </filter>
+
+    <linearGradient id="kalashGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF3C4"/>
+      <stop offset="35%" stop-color="#F5B82A"/>
+      <stop offset="70%" stop-color="#C27300"/>
+      <stop offset="100%" stop-color="#733600"/>
+    </linearGradient>
+
+    <linearGradient id="mangoLeaf" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#86EFAC"/>
+      <stop offset="40%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#15803D"/>
+    </linearGradient>
+
+    <radialGradient id="coconutGrad" cx="45%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#B45309"/>
+      <stop offset="60%" stop-color="#78350F"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </radialGradient>
+
+    <radialGradient id="marigoldOrange" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="40%" stop-color="#F59E0B"/>
+      <stop offset="85%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Ambient Ground Shadow -->
+  <ellipse cx="160" cy="175" rx="85" ry="12" fill="#3A1700" opacity="0.22"/>
+
+  <!-- Background Mango Leaves (Aam ke Patte) Fan-Out from Kalash Neck -->
+  <g filter="url(#kalashShadow)">
+    <!-- Far Left Leaf -->
+    <path d="M120 90C90 70 82 45 88 30C108 42 122 68 132 88Z" fill="url(#mangoLeaf)"/>
+    <path d="M120 90C105 60 92 40 88 30" stroke="#BBF7D0" stroke-width="1.2" opacity="0.7"/>
+
+    <!-- Mid Left Leaf -->
+    <path d="M136 86C120 55 118 28 128 14C144 32 148 60 148 84Z" fill="url(#mangoLeaf)"/>
+    <path d="M136 86C128 55 125 30 128 14" stroke="#BBF7D0" stroke-width="1.2" opacity="0.7"/>
+
+    <!-- Central Top Leaf -->
+    <path d="M152 82C152 46 156 16 160 5C164 16 168 46 168 82Z" fill="url(#mangoLeaf)"/>
+    <path d="M160 82V5" stroke="#BBF7D0" stroke-width="1.2" opacity="0.7"/>
+
+    <!-- Mid Right Leaf -->
+    <path d="M184 86C200 55 202 28 192 14C176 32 172 60 172 84Z" fill="url(#mangoLeaf)"/>
+    <path d="M184 86C192 55 195 30 192 14" stroke="#BBF7D0" stroke-width="1.2" opacity="0.7"/>
+
+    <!-- Far Right Leaf -->
+    <path d="M200 90C230 70 238 45 232 30C212 42 198 68 188 88Z" fill="url(#mangoLeaf)"/>
+    <path d="M200 90C215 60 228 40 232 30" stroke="#BBF7D0" stroke-width="1.2" opacity="0.7"/>
+  </g>
+
+  <!-- Sacred Coconut (Nariyal) Sitting in Leaves -->
+  <g filter="url(#kalashShadow)">
+    <ellipse cx="160" cy="58" rx="28" ry="34" fill="url(#coconutGrad)"/>
+    
+    <!-- Coconut Fiber Texture Lines -->
+    <path d="M154 28C148 45 146 65 152 86" stroke="#92400E" stroke-width="1.2" stroke-dasharray="2 3"/>
+    <path d="M166 28C172 45 174 65 168 86" stroke="#92400E" stroke-width="1.2" stroke-dasharray="2 3"/>
+
+    <!-- Red Holy Kalawa / Mauli Thread Tied Around Coconut -->
+    <path d="M136 58C148 64 172 64 184 58" stroke="#DC2626" stroke-width="3" stroke-linecap="round"/>
+    <path d="M136 58C148 64 172 64 184 58" stroke="#FBBF24" stroke-width="1" stroke-dasharray="2 2"/>
+
+    <!-- Sacred Tilak / Chandan Tika on Coconut -->
+    <ellipse cx="160" cy="46" rx="4" ry="7" fill="#DC2626"/>
+    <circle cx="160" cy="46" r="2" fill="#FEF08A"/>
+  </g>
+
+  <!-- Auspicious Royal Brass Kalash Body -->
+  <g filter="url(#kalashShadow)">
+    <!-- Kalash Flared Neck Rim -->
+    <ellipse cx="160" cy="94" rx="42" ry="9" fill="url(#kalashGold)"/>
+    <ellipse cx="160" cy="92" rx="36" ry="6" fill="#8C4A00"/>
+
+    <!-- Kalash Pot Belly -->
+    <path d="M124 94C124 94 102 115 102 142C102 165 125 172 160 172C195 172 218 165 218 142C218 115 196 94 196 94Z" fill="url(#kalashGold)"/>
+
+    <!-- Kalash Base Ring -->
+    <ellipse cx="160" cy="170" rx="32" ry="5.5" fill="url(#kalashGold)"/>
+
+    <!-- Sacred Red Swastik Engraved on Kalash Belly -->
+    <g stroke="#DC2626" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Horizontal cross -->
+      <path d="M150 134H170"/>
+      <!-- Vertical cross -->
+      <path d="M160 124V144"/>
+      <!-- Arms -->
+      <path d="M150 134V127"/>
+      <path d="M170 134V141"/>
+      <path d="M160 124H167"/>
+      <path d="M160 144H153"/>
+      <!-- Auspicious 4 Dots -->
+      <circle cx="155" cy="129" r="1.2" fill="#DC2626" stroke="none"/>
+      <circle cx="165" cy="129" r="1.2" fill="#DC2626" stroke="none"/>
+      <circle cx="155" cy="139" r="1.2" fill="#DC2626" stroke="none"/>
+      <circle cx="165" cy="139" r="1.2" fill="#DC2626" stroke="none"/>
+    </g>
+
+    <!-- Golden Highlight Reflections -->
+    <path d="M116 118C110 132 112 148 120 158" stroke="#FFF7D6" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+  </g>
+
+  <!-- Auspicious Yellow & Orange Marigold Blossoms (Genda Phool) at Base -->
+  <g filter="url(#kalashShadow)">
+    <!-- Left Blossom -->
+    <circle cx="92" cy="162" r="16" fill="url(#marigoldOrange)"/>
+    <circle cx="92" cy="162" r="12" fill="#F59E0B" stroke="#FEF08A" stroke-width="1.8" stroke-dasharray="2 3"/>
+    <circle cx="92" cy="162" r="6" fill="#B45309"/>
+
+    <!-- Right Blossom -->
+    <circle cx="228" cy="162" r="16" fill="url(#marigoldOrange)"/>
+    <circle cx="228" cy="162" r="12" fill="#F59E0B" stroke="#FEF08A" stroke-width="1.8" stroke-dasharray="2 3"/>
+    <circle cx="228" cy="162" r="6" fill="#B45309"/>
+  </g>
+
+  <!-- Glowing Diya in Front Right -->
+  <g filter="url(#kalashShadow)">
+    <path d="M236 160C236 160 242 174 256 174C270 174 276 160 276 160Z" fill="url(#kalashGold)"/>
+    <ellipse cx="256" cy="160" rx="20" ry="4.5" fill="#8C4A00"/>
+    <ellipse cx="256" cy="159" rx="16" ry="3.5" fill="#FFC83B"/>
+  </g>
+
+  <!-- Diya Flame -->
+  <g filter="url(#poojaFlameGlow)">
+    <path d="M256 138C250 148 248 154 252 159C254 161 258 161 260 159C264 154 262 148 256 138Z" fill="#FF5722"/>
+    <path d="M256 145C253 151 252 155 254 158C255 159 257 159 258 158C260 155 259 151 256 145Z" fill="#FFFBE6"/>
+  </g>
+
+  <!-- Aromatic Incense (Agarbatti) on Left -->
+  <line x1="68" y1="172" x2="52" y2="120" stroke="#78350F" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Glowing Burning Amber Tip -->
+  <circle cx="52" cy="120" r="1.8" fill="#EF4444" filter="url(#poojaFlameGlow)"/>
+  <!-- Gentle Swirling Fragrant Smoke -->
+  <path d="M52 118C50 105 58 95 54 82C50 70 60 58 56 46" stroke="#E2E8F0" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.6"/>
+
+  <!-- Golden Festive Sparkles -->
+  <g fill="#FFFDF5">
+    <path d="M58 48L60 42L62 48L68 50L62 52L60 58L58 52L52 50Z"/>
+    <path d="M268 46L270 40L272 46L278 48L272 50L270 56L268 50L262 48Z"/>
+    <circle cx="86" cy="96" r="1.8" fill="#FDE047"/>
+    <circle cx="242" cy="92" r="1.8" fill="#FDE047"/>
+  </g>
 </svg>

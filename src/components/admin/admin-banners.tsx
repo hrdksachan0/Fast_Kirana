@@ -1601,9 +1601,14 @@ export function AdminBanners({
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-text-primary">
-                    Banner Media *
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold text-text-primary">
+                      Banner Media *
+                    </label>
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-full">
+                      📐 Recommended: 1.8:1 (1080 × 600 px)
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border border-border">
                     <button
                       type="button"
@@ -2166,41 +2171,79 @@ export function AdminBanners({
                     </div>
                   </div>
                 ) : (
-                  /* CuratedBrandOffersCarousel Mobile Shelf Mockup (Pure Media Card, No Text) */
-                  <div className="space-y-1.5 text-left">
+                  /* CuratedBrandOffersCarousel Mobile Shelf Mockup (1.8:1 Landscape with Side Peek) */
+                  <div className="space-y-2 text-left">
                     <div className="flex items-center justify-between px-1">
-                      <span className="text-[10px] font-black text-white tracking-tight">Curated Brand Offers</span>
-                      <span className="text-[8px] font-bold text-rose-400 font-mono">See All</span>
+                      <span className="text-[10px] font-black text-white tracking-tight">Hero Carousel Banner</span>
+                      <span className="text-[8px] font-bold text-rose-400 font-mono">1.8:1 Landscape</span>
                     </div>
 
-                    <div className="flex items-center gap-2 overflow-hidden py-1">
-                      {/* Active Primary Brand Card (260x380 proportion) */}
-                      <div className="relative w-[190px] h-[270px] rounded-[22px] overflow-hidden bg-neutral-900 border-2 border-white/15 shadow-2xl shrink-0 group">
-                        {previewMediaTab === 'video' && videoUrl ? (
-                          <AdminVideoPreview src={videoUrl} />
-                        ) : imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt="Pure Brand Visual"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-zinc-900/90 text-zinc-400">
-                            <ImageIcon className="h-8 w-8 text-zinc-600 mb-2" />
-                            <span className="text-[11px] font-extrabold text-zinc-200">Pure Media Card</span>
-                            <span className="text-[8px] text-zinc-400 mt-1">Upload Photo or Looping Video</span>
-                            <span className="text-[7.5px] text-primary/80 font-bold mt-1 uppercase tracking-wider">No Text Overlay</span>
-                          </div>
-                        )}
+                    {/* Viewport with Side Peeking (Amazon / Swiggy Instamart style) */}
+                    <div className="relative w-full overflow-hidden py-1">
+                      <div className="flex items-center gap-2 -ml-2">
+                        {/* Left Peeking Card */}
+                        <div className="w-[20px] h-[120px] rounded-[18px] bg-zinc-900/40 border border-white/5 opacity-50 shrink-0" />
 
-                        {/* Subtle Luxury Corner Glint */}
-                        <div className="absolute inset-0 rounded-[22px] border border-white/10 pointer-events-none" />
+                        {/* Active Primary Card (1.8:1 proportion) */}
+                        <div className="relative w-[224px] h-[124px] rounded-[18px] overflow-hidden bg-neutral-900 border border-white/20 shadow-2xl shrink-0 group">
+                          {previewMediaTab === 'video' && videoUrl ? (
+                            <AdminVideoPreview src={videoUrl} />
+                          ) : imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt="Brand Visual"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-zinc-900/90 text-zinc-400">
+                              <ImageIcon className="h-6 w-6 text-zinc-600 mb-1" />
+                              <span className="text-[10px] font-extrabold text-zinc-200">1.8:1 Media Banner</span>
+                              <span className="text-[8px] text-zinc-400 mt-0.5">Upload Photo or Looping Video</span>
+                              <span className="text-[7.5px] text-primary/90 font-bold mt-1 uppercase tracking-wider">1080 × 600 px Recommended</span>
+                            </div>
+                          )}
+
+                          {/* Hardware Double-Bezel Inner Glass Rim Overlay */}
+                          <div className="absolute inset-0 rounded-[18px] border border-white/20 pointer-events-none" />
+                        </div>
+
+                        {/* Right Peeking Card */}
+                        <div className="w-[20px] h-[120px] rounded-[18px] bg-zinc-900/40 border border-white/5 opacity-50 shrink-0 flex items-center justify-center">
+                          <Sparkles className="h-3 w-3 text-white/30" />
+                        </div>
                       </div>
+                    </div>
 
-                      {/* Adjacent Peeking Card (Simulating Horizontal Scroll) */}
-                      <div className="w-[65px] h-[270px] rounded-[22px] bg-zinc-900/40 border border-white/5 opacity-40 shrink-0 flex flex-col items-center justify-center">
-                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
-                          <Sparkles className="h-3 w-3 text-white/40" />
+                    {/* Animated Pagination Pill Indicator */}
+                    <div className="flex items-center justify-center gap-1 pt-0.5">
+                      <div className="w-4 h-1 bg-[#E11D48] rounded-full" />
+                      <div className="w-1 h-1 bg-zinc-600 rounded-full" />
+                      <div className="w-1 h-1 bg-zinc-600 rounded-full" />
+                      <span className="text-[8px] font-bold text-zinc-400 font-mono ml-1.5 px-1.5 py-0.2 rounded bg-zinc-800">1/3</span>
+                    </div>
+
+                    {/* Simulated Subsequent Section below fold */}
+                    <div className="pt-2 border-t border-white/5 space-y-1.5 opacity-80">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[9px] font-bold text-zinc-300">🎉 Festive Favorites</span>
+                        <span className="text-[7.5px] text-zinc-500">See All</span>
+                      </div>
+                      <div className="flex gap-1.5 px-1">
+                        <div className="w-14 h-16 rounded-xl bg-zinc-900/90 border border-white/10 flex flex-col items-center justify-center p-1">
+                          <div className="w-7 h-7 rounded-lg bg-amber-500/20 mb-1 flex items-center justify-center text-[10px]">🍬</div>
+                          <div className="w-8 h-1.5 bg-zinc-700 rounded-full" />
+                        </div>
+                        <div className="w-14 h-16 rounded-xl bg-zinc-900/90 border border-white/10 flex flex-col items-center justify-center p-1">
+                          <div className="w-7 h-7 rounded-lg bg-rose-500/20 mb-1 flex items-center justify-center text-[10px]">🍫</div>
+                          <div className="w-8 h-1.5 bg-zinc-700 rounded-full" />
+                        </div>
+                        <div className="w-14 h-16 rounded-xl bg-zinc-900/90 border border-white/10 flex flex-col items-center justify-center p-1">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/20 mb-1 flex items-center justify-center text-[10px]">🥜</div>
+                          <div className="w-8 h-1.5 bg-zinc-700 rounded-full" />
+                        </div>
+                        <div className="w-14 h-16 rounded-xl bg-zinc-900/90 border border-white/10 flex flex-col items-center justify-center p-1">
+                          <div className="w-7 h-7 rounded-lg bg-sky-500/20 mb-1 flex items-center justify-center text-[10px]">🪔</div>
+                          <div className="w-8 h-1.5 bg-zinc-700 rounded-full" />
                         </div>
                       </div>
                     </div>
@@ -2306,16 +2349,19 @@ export function AdminBanners({
                     </div>
                   </div>
                 ) : (
-                  /* Brand Card Web Carousel Mockup (Pure Media Card) */
-                  <div className="space-y-2 text-left">
+                  /* Brand Card Web Carousel Mockup (1.8:1 Landscape with Side Peek) */
+                  <div className="space-y-2.5 text-left">
                     <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-black text-white tracking-tight">Curated Brand Offers</span>
-                      <span className="text-[10px] font-bold text-rose-400 font-mono">See All →</span>
+                      <span className="text-xs font-black text-white tracking-tight">Hero Carousel Banner</span>
+                      <span className="text-[10px] font-bold text-rose-400 font-mono">1.8:1 Landscape Standard</span>
                     </div>
 
                     <div className="flex items-center gap-3 overflow-hidden py-1">
-                      {/* Active Pure Media Card (260x380 Proportion) */}
-                      <div className="relative w-[210px] h-[290px] rounded-[24px] overflow-hidden bg-neutral-900 border-2 border-white/15 shadow-2xl shrink-0">
+                      {/* Left Peeking Slide */}
+                      <div className="w-[30px] h-[160px] rounded-[20px] bg-zinc-900/40 border border-white/5 opacity-40 shrink-0" />
+
+                      {/* Active Pure Media Card (1.8:1 Landscape) */}
+                      <div className="relative w-[300px] h-[166px] rounded-[20px] overflow-hidden bg-neutral-900 border border-white/20 shadow-2xl shrink-0 group">
                         {previewMediaTab === 'video' && videoUrl ? (
                           <AdminVideoPreview src={videoUrl} />
                         ) : imageUrl ? (
@@ -2326,20 +2372,29 @@ export function AdminBanners({
                           />
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-zinc-900/90 text-zinc-400">
-                            <ImageIcon className="h-9 w-9 text-zinc-600 mb-2" />
-                            <span className="text-xs font-extrabold text-zinc-200">Pure Media Card</span>
-                            <span className="text-[9px] text-zinc-400 mt-1">Upload Photo or Looping Video</span>
-                            <span className="text-[8px] text-primary/80 font-bold mt-1 uppercase tracking-wider">No Text Overlay</span>
+                            <ImageIcon className="h-8 w-8 text-zinc-600 mb-2" />
+                            <span className="text-xs font-extrabold text-zinc-200">1.8:1 Landscape Banner</span>
+                            <span className="text-[10px] text-zinc-400 mt-1">Upload Photo or Looping Video</span>
+                            <span className="text-[9px] text-primary/90 font-bold mt-1 uppercase tracking-wider">1080 × 600 px Recommended</span>
                           </div>
                         )}
-                        <div className="absolute inset-0 rounded-[24px] border border-white/10 pointer-events-none" />
+                        <div className="absolute inset-0 rounded-[20px] border border-white/15 pointer-events-none" />
                       </div>
 
-                      {/* Adjacent Peeking Cards */}
-                      <div className="w-[120px] h-[290px] rounded-[24px] bg-zinc-900/40 border border-white/5 opacity-40 shrink-0 flex flex-col items-center justify-center">
+                      {/* Right Peeking Slide */}
+                      <div className="w-[80px] h-[160px] rounded-[20px] bg-zinc-900/40 border border-white/5 opacity-40 shrink-0 flex items-center justify-center">
                         <Sparkles className="h-5 w-5 text-white/30" />
                       </div>
                     </div>
+
+                    {/* Animated Pagination Pill Indicator */}
+                    <div className="flex items-center justify-center gap-1.5 pt-1">
+                      <div className="w-6 h-1.5 bg-[#E11D48] rounded-full" />
+                      <div className="w-1.5 h-1.5 bg-zinc-600 rounded-full" />
+                      <div className="w-1.5 h-1.5 bg-zinc-600 rounded-full" />
+                      <span className="text-[9px] font-bold text-zinc-400 font-mono ml-2 px-2 py-0.5 rounded-full bg-zinc-800">1/3</span>
+                    </div>
+                  </div>
                   </div>
                 )}
               </div>

@@ -1,10 +1,177 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="54" viewBox="0 0 720 54" fill="none">
-  <path d="M-10 2Q90 49 180 8Q270 49 360 8Q450 49 540 8Q630 49 730 2" stroke="#985F39" stroke-width="2"/>
-  <g fill="#FFF8DF">
-    <path d="M28 22v7m42 2v7m45-8v7m42-16v7m54-7v7m42 6v7m44-9v7m43-15v7m49-1v7m42 8v7m44-9v7m43-15v7m51-1v7m42 8v7m44-9v7m43-15v7" stroke="#985F39" stroke-width="2"/>
-    <ellipse cx="28" cy="33" rx="4" ry="6"/><ellipse cx="70" cy="42" rx="4" ry="6"/><ellipse cx="115" cy="41" rx="4" ry="6"/><ellipse cx="157" cy="32" rx="4" ry="6"/>
-    <ellipse cx="211" cy="32" rx="4" ry="6"/><ellipse cx="253" cy="45" rx="4" ry="6"/><ellipse cx="297" cy="40" rx="4" ry="6"/><ellipse cx="340" cy="29" rx="4" ry="6"/>
-    <ellipse cx="389" cy="28" rx="4" ry="6"/><ellipse cx="431" cy="43" rx="4" ry="6"/><ellipse cx="475" cy="38" rx="4" ry="6"/><ellipse cx="518" cy="27" rx="4" ry="6"/>
-    <ellipse cx="569" cy="27" rx="4" ry="6"/><ellipse cx="611" cy="42" rx="4" ry="6"/><ellipse cx="655" cy="37" rx="4" ry="6"/><ellipse cx="698" cy="26" rx="4" ry="6"/>
+  <!-- Festoon hanging wire with twin gold-accent twist -->
+  <path d="M-10 2 Q80 34 170 5 Q260 34 350 5 Q440 34 530 5 Q620 34 730 2" stroke="#1B4332" stroke-width="2.5" fill="none" opacity="0.9"/>
+  <path d="M-10 2 Q80 34 170 5 Q260 34 350 5 Q440 34 530 5 Q620 34 730 2" stroke="#F59E0B" stroke-width="0.75" stroke-dasharray="3,3" fill="none" opacity="0.8"/>
+
+  <defs>
+    <!-- Multi-color glowing radial gradients for realistic Diwali fairy lamps -->
+    <radialGradient id="glowGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFBEB" stop-opacity="1"/>
+      <stop offset="35%" stop-color="#FBBF24" stop-opacity="0.95"/>
+      <stop offset="70%" stop-color="#D97706" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#B45309" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowRed" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFF1F2" stop-opacity="1"/>
+      <stop offset="35%" stop-color="#F43F5E" stop-opacity="0.95"/>
+      <stop offset="70%" stop-color="#E11D48" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#9F1239" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowGreen" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F0FDF4" stop-opacity="1"/>
+      <stop offset="35%" stop-color="#22C55E" stop-opacity="0.95"/>
+      <stop offset="70%" stop-color="#16A34A" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#14532D" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ECFEFF" stop-opacity="1"/>
+      <stop offset="35%" stop-color="#06B6D4" stop-opacity="0.95"/>
+      <stop offset="70%" stop-color="#0891B2" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#164E63" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowViolet" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FAF5FF" stop-opacity="1"/>
+      <stop offset="35%" stop-color="#C084FC" stop-opacity="0.95"/>
+      <stop offset="70%" stop-color="#9333EA" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#581C87" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowAmber" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFF7ED" stop-opacity="1"/>
+      <stop offset="35%" stop-color="#FB923C" stop-opacity="0.95"/>
+      <stop offset="70%" stop-color="#EA580C" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#7C2D12" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Group 1: Wire stems & brass bulb holders -->
+  <g stroke="#1B4332" stroke-width="1.6">
+    <line x1="22" y1="11" x2="22" y2="17"/>
+    <line x1="56" y1="21" x2="56" y2="28"/>
+    <line x1="92" y1="29" x2="92" y2="36"/>
+    <line x1="128" y1="22" x2="128" y2="29"/>
+    <line x1="162" y1="10" x2="162" y2="16"/>
+    <line x1="202" y1="13" x2="202" y2="19"/>
+    <line x1="236" y1="23" x2="236" y2="30"/>
+    <line x1="272" y1="30" x2="272" y2="37"/>
+    <line x1="308" y1="23" x2="308" y2="30"/>
+    <line x1="342" y1="10" x2="342" y2="16"/>
+    <line x1="382" y1="13" x2="382" y2="19"/>
+    <line x1="416" y1="23" x2="416" y2="30"/>
+    <line x1="452" y1="30" x2="452" y2="37"/>
+    <line x1="488" y1="23" x2="488" y2="30"/>
+    <line x1="522" y1="10" x2="522" y2="16"/>
+    <line x1="562" y1="13" x2="562" y2="19"/>
+    <line x1="596" y1="23" x2="596" y2="30"/>
+    <line x1="632" y1="30" x2="632" y2="37"/>
+    <line x1="668" y1="23" x2="668" y2="30"/>
+    <line x1="702" y1="10" x2="702" y2="16"/>
+  </g>
+
+  <!-- Brass Sockets -->
+  <g fill="#D97706" stroke="#92400E" stroke-width="0.8">
+    <rect x="19.5" y="16" width="5" height="3" rx="1"/>
+    <rect x="53.5" y="27" width="5" height="3" rx="1"/>
+    <rect x="89.5" y="35" width="5" height="3" rx="1"/>
+    <rect x="125.5" y="28" width="5" height="3" rx="1"/>
+    <rect x="159.5" y="15" width="5" height="3" rx="1"/>
+    <rect x="199.5" y="18" width="5" height="3" rx="1"/>
+    <rect x="233.5" y="29" width="5" height="3" rx="1"/>
+    <rect x="269.5" y="36" width="5" height="3" rx="1"/>
+    <rect x="305.5" y="29" width="5" height="3" rx="1"/>
+    <rect x="339.5" y="15" width="5" height="3" rx="1"/>
+    <rect x="379.5" y="18" width="5" height="3" rx="1"/>
+    <rect x="413.5" y="29" width="5" height="3" rx="1"/>
+    <rect x="449.5" y="36" width="5" height="3" rx="1"/>
+    <rect x="485.5" y="29" width="5" height="3" rx="1"/>
+    <rect x="519.5" y="15" width="5" height="3" rx="1"/>
+    <rect x="559.5" y="18" width="5" height="3" rx="1"/>
+    <rect x="593.5" y="29" width="5" height="3" rx="1"/>
+    <rect x="629.5" y="36" width="5" height="3" rx="1"/>
+    <rect x="665.5" y="29" width="5" height="3" rx="1"/>
+    <rect x="699.5" y="15" width="5" height="3" rx="1"/>
+  </g>
+
+  <!-- Layer 1: Ambient Glowing Light Halos -->
+  <g>
+    <circle cx="22" cy="24" r="14" fill="url(#glowGold)"/>
+    <circle cx="56" cy="35" r="14" fill="url(#glowRed)"/>
+    <circle cx="92" cy="43" r="15" fill="url(#glowGreen)"/>
+    <circle cx="128" cy="36" r="14" fill="url(#glowAmber)"/>
+    <circle cx="162" cy="23" r="14" fill="url(#glowCyan)"/>
+    <circle cx="202" cy="26" r="14" fill="url(#glowViolet)"/>
+    <circle cx="236" cy="37" r="14" fill="url(#glowGold)"/>
+    <circle cx="272" cy="44" r="15" fill="url(#glowRed)"/>
+    <circle cx="308" cy="37" r="14" fill="url(#glowGreen)"/>
+    <circle cx="342" cy="23" r="14" fill="url(#glowAmber)"/>
+    <circle cx="382" cy="26" r="14" fill="url(#glowCyan)"/>
+    <circle cx="416" cy="37" r="14" fill="url(#glowViolet)"/>
+    <circle cx="452" cy="44" r="15" fill="url(#glowGold)"/>
+    <circle cx="488" cy="37" r="14" fill="url(#glowRed)"/>
+    <circle cx="522" cy="23" r="14" fill="url(#glowGreen)"/>
+    <circle cx="562" cy="26" r="14" fill="url(#glowAmber)"/>
+    <circle cx="596" cy="37" r="14" fill="url(#glowCyan)"/>
+    <circle cx="632" cy="44" r="15" fill="url(#glowViolet)"/>
+    <circle cx="668" cy="37" r="14" fill="url(#glowGold)"/>
+    <circle cx="702" cy="23" r="14" fill="url(#glowRed)"/>
+  </g>
+
+  <!-- Layer 2: Vivid Light Bulbs (Festive Rice Lights teardrops) -->
+  <g>
+    <path d="M22 19 C18 20 18 26 22 28 C26 26 26 20 22 19 Z" fill="#FBBF24"/>
+    <path d="M56 30 C52 31 52 37 56 39 C60 37 60 31 56 30 Z" fill="#F43F5E"/>
+    <path d="M92 38 C88 39 88 45 92 47 C96 45 96 39 92 38 Z" fill="#22C55E"/>
+    <path d="M128 31 C124 32 124 38 128 40 C132 38 132 32 128 31 Z" fill="#FB923C"/>
+    <path d="M162 18 C158 19 158 25 162 27 C166 25 166 19 162 18 Z" fill="#06B6D4"/>
+    <path d="M202 21 C198 22 198 28 202 30 C206 28 206 22 202 21 Z" fill="#C084FC"/>
+    <path d="M236 32 C232 33 232 39 236 41 C240 39 240 33 236 32 Z" fill="#FBBF24"/>
+    <path d="M272 39 C268 40 268 46 272 48 C276 46 276 40 272 39 Z" fill="#F43F5E"/>
+    <path d="M308 32 C304 33 304 39 308 41 C312 39 312 33 308 32 Z" fill="#22C55E"/>
+    <path d="M342 18 C338 19 338 25 342 27 C346 25 346 19 342 18 Z" fill="#FB923C"/>
+    <path d="M382 21 C378 22 378 28 382 30 C386 28 386 22 382 21 Z" fill="#06B6D4"/>
+    <path d="M416 32 C412 33 412 39 416 41 C420 39 420 33 416 32 Z" fill="#C084FC"/>
+    <path d="M452 39 C448 40 448 46 452 48 C456 46 456 40 452 39 Z" fill="#FBBF24"/>
+    <path d="M488 32 C484 33 484 39 488 41 C492 39 492 33 488 32 Z" fill="#F43F5E"/>
+    <path d="M522 18 C518 19 518 25 522 27 C526 25 526 19 522 18 Z" fill="#22C55E"/>
+    <path d="M562 21 C558 22 558 28 562 30 C566 28 566 22 562 21 Z" fill="#FB923C"/>
+    <path d="M596 32 C592 33 592 39 596 41 C600 39 600 33 596 32 Z" fill="#06B6D4"/>
+    <path d="M632 39 C628 40 628 46 632 48 C636 46 636 40 632 39 Z" fill="#C084FC"/>
+    <path d="M668 32 C664 33 664 39 668 41 C672 39 672 33 668 32 Z" fill="#FBBF24"/>
+    <path d="M702 18 C698 19 698 25 702 27 C706 25 706 19 702 18 Z" fill="#F43F5E"/>
+  </g>
+
+  <!-- Layer 3: Intense White Hotspot Core Highlights -->
+  <g fill="#FFFFFF" opacity="0.9">
+    <ellipse cx="21" cy="22" rx="1.5" ry="2.5"/>
+    <ellipse cx="55" cy="33" rx="1.5" ry="2.5"/>
+    <ellipse cx="91" cy="41" rx="1.5" ry="2.5"/>
+    <ellipse cx="127" cy="34" rx="1.5" ry="2.5"/>
+    <ellipse cx="161" cy="21" rx="1.5" ry="2.5"/>
+    <ellipse cx="201" cy="24" rx="1.5" ry="2.5"/>
+    <ellipse cx="235" cy="35" rx="1.5" ry="2.5"/>
+    <ellipse cx="271" cy="42" rx="1.5" ry="2.5"/>
+    <ellipse cx="307" cy="35" rx="1.5" ry="2.5"/>
+    <ellipse cx="341" cy="21" rx="1.5" ry="2.5"/>
+    <ellipse cx="381" cy="24" rx="1.5" ry="2.5"/>
+    <ellipse cx="415" cy="35" rx="1.5" ry="2.5"/>
+    <ellipse cx="451" cy="42" rx="1.5" ry="2.5"/>
+    <ellipse cx="487" cy="35" rx="1.5" ry="2.5"/>
+    <ellipse cx="521" cy="21" rx="1.5" ry="2.5"/>
+    <ellipse cx="561" cy="24" rx="1.5" ry="2.5"/>
+    <ellipse cx="595" cy="35" rx="1.5" ry="2.5"/>
+    <ellipse cx="631" cy="42" rx="1.5" ry="2.5"/>
+    <ellipse cx="667" cy="35" rx="1.5" ry="2.5"/>
+    <ellipse cx="701" cy="21" rx="1.5" ry="2.5"/>
+  </g>
+
+  <!-- Layer 4: Twinkling Star Glints on key focal bulbs -->
+  <g fill="#FFFBEB" opacity="0.95">
+    <path d="M22 17 L23 20 L26 21 L23 22 L22 25 L21 22 L18 21 L21 20 Z"/>
+    <path d="M92 36 L93 39 L96 40 L93 41 L92 44 L91 41 L88 40 L91 39 Z"/>
+    <path d="M202 19 L203 22 L206 23 L203 24 L202 27 L201 24 L198 23 L201 22 Z"/>
+    <path d="M272 37 L273 40 L276 41 L273 42 L272 45 L271 42 L268 41 L271 40 Z"/>
+    <path d="M382 19 L383 22 L386 23 L383 24 L382 27 L381 24 L378 23 L381 22 Z"/>
+    <path d="M452 37 L453 40 L456 41 L453 42 L452 45 L451 42 L448 41 L451 40 Z"/>
+    <path d="M562 19 L563 22 L566 23 L563 24 L562 27 L561 24 L558 23 L561 22 Z"/>
+    <path d="M632 37 L633 40 L636 41 L633 42 L632 45 L631 42 L628 41 L631 40 Z"/>
   </g>
 </svg>

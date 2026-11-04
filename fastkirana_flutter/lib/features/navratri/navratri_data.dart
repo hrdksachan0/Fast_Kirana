@@ -437,6 +437,22 @@ class NavratriData {
       if (product.restaurantId != null && product.restaurantId!.isNotEmpty) {
         return false;
       }
+      // Exclude plain dairy/milk items from Chocolates & Gifting tab
+      if (tab.id == 'diwali-chocolates' || tab.label.toLowerCase().contains('chocolate')) {
+        final catSlug = (product.category?.slug ?? '').toLowerCase();
+        final isDairy = catSlug.contains('milk') || catSlug.contains('dairy');
+        if (isDairy) {
+          final pName = product.name.toLowerCase();
+          final hasChoc = pName.contains('choc') ||
+              pName.contains('cocoa') ||
+              pName.contains('cadbury') ||
+              pName.contains('ferrero') ||
+              pName.contains('silk') ||
+              pName.contains('kitkat') ||
+              pName.contains('bournville');
+          if (!hasChoc) return false;
+        }
+      }
       final text = [
         product.name,
         product.slug,

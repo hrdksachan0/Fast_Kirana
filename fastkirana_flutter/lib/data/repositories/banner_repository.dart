@@ -74,7 +74,21 @@ class BannerRepository {
           'platform': 'mobile',
         },
       );
-      final data = response.data;
+      var data = response.data;
+      if (data is List && data.isEmpty && storeId != null && storeId.isNotEmpty) {
+        // Fallback to global storefront banners so hero carousel never vanishes on any hub
+        final fallbackRes = await dio.get(
+          '/api/banners',
+          queryParameters: {
+            if (type != null && type.isNotEmpty) 'type': type,
+            'platform': 'mobile',
+          },
+        );
+        if (fallbackRes.data is List && (fallbackRes.data as List).isNotEmpty) {
+          data = fallbackRes.data;
+        }
+      }
+
       if (data is List) {
         final banners = data.map((json) => Banner.fromJson(json as Map<String, dynamic>)).toList();
         _inMemoryBanners[key] = banners;

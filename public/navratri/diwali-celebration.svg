@@ -1,9 +1,117 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" fill="none">
-<title>Diwali lights and lamps</title>
-<path d="M24 19q136 44 272 0" stroke="#F3D386" stroke-width="3"/>
-<g fill="#E8AF38"><circle cx="48" cy="26" r="6"/><circle cx="77" cy="33" r="6"/><circle cx="107" cy="38" r="6"/><circle cx="137" cy="40" r="6"/><circle cx="168" cy="40" r="6"/><circle cx="199" cy="38" r="6"/><circle cx="230" cy="33" r="6"/><circle cx="261" cy="26" r="6"/></g>
-<path d="M72 132h176c-8 37-37 54-88 54s-80-17-88-54Z" fill="#E8AF38"/><ellipse cx="160" cy="132" rx="88" ry="16" fill="#7D351F"/><ellipse cx="160" cy="129" rx="69" ry="10" fill="#F5BE58"/>
-<path d="M160 47c-34 36-30 64 0 80 30-16 34-44 0-80Z" fill="#FFF4D8"/><path d="M160 79c-17 22-15 33 0 43 15-10 17-21 0-43Z" fill="#F3D386"/>
-<path d="M100 155q60 31 120 0" stroke="#FFF4D8" stroke-width="4" stroke-linecap="round"/>
-<g stroke="#FFF4D8" stroke-width="3" stroke-linecap="round"><path d="M47 71v16m-8-8h16m223-7v16m-8-8h16M36 138v12m-6-6h12m243 6v12m-6-6h12"/></g>
+  <defs>
+    <filter id="celGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feComposite in="SourceGraphic" in2="b" operator="over"/>
+    </filter>
+    <filter id="celShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#4A1E00" flood-opacity="0.25"/>
+    </filter>
+
+    <linearGradient id="goldPlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF3C4"/>
+      <stop offset="35%" stop-color="#F6BA29"/>
+      <stop offset="70%" stop-color="#C77800"/>
+      <stop offset="100%" stop-color="#7A3B00"/>
+    </linearGradient>
+
+    <linearGradient id="deepGold" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFEAA7"/>
+      <stop offset="50%" stop-color="#E29408"/>
+      <stop offset="100%" stop-color="#8B4500"/>
+    </linearGradient>
+
+    <radialGradient id="celFlame" cx="50%" cy="80%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="25%" stop-color="#FFF275"/>
+      <stop offset="60%" stop-color="#FF8A00"/>
+      <stop offset="90%" stop-color="#E52D00"/>
+      <stop offset="100%" stop-color="#B81400" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="centerBurst" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFCA28" stop-opacity="0.45"/>
+      <stop offset="70%" stop-color="#FF6F00" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FF3D00" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Central Warm Festive Radiance -->
+  <circle cx="160" cy="95" r="85" fill="url(#centerBurst)"/>
+
+  <!-- Upper Festive Toran / Garland with Glowing Golden Fairy Light Pearls -->
+  <path d="M25 24Q160 62 295 24" stroke="#46682B" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M25 24Q160 62 295 24" stroke="#F59E0B" stroke-width="0.8" stroke-dasharray="3 6"/>
+
+  <!-- Hanging Golden Lights & Mango Leaves on Garland -->
+  <g filter="url(#celGlow)">
+    <circle cx="50" cy="34" r="5" fill="#FFE082"/>
+    <circle cx="85" cy="42" r="5" fill="#FFCA28"/>
+    <circle cx="122" cy="46" r="5.5" fill="#FFB300"/>
+    <circle cx="160" cy="47" r="6" fill="#FFF59D"/>
+    <circle cx="198" cy="46" r="5.5" fill="#FFB300"/>
+    <circle cx="235" cy="42" r="5" fill="#FFCA28"/>
+    <circle cx="270" cy="34" r="5" fill="#FFE082"/>
+  </g>
+
+  <!-- Hanging Brass Bells / Golden Drops under Garland -->
+  <path d="M85 47V56M122 51V62M160 53V65M198 51V62M235 47V56" stroke="#D97706" stroke-width="1.4"/>
+  <circle cx="85" cy="57" r="2.5" fill="#F59E0B"/>
+  <circle cx="122" cy="63" r="3" fill="#F59E0B"/>
+  <circle cx="160" cy="66" r="3.5" fill="#FBBF24"/>
+  <circle cx="198" cy="63" r="3" fill="#F59E0B"/>
+  <circle cx="235" cy="57" r="2.5" fill="#F59E0B"/>
+
+  <!-- Grand Royal Central Diya Base Shadow -->
+  <ellipse cx="160" cy="176" rx="80" ry="12" fill="#3D1800" opacity="0.25"/>
+
+  <!-- Grand Diya Body -->
+  <g filter="url(#celShadow)">
+    <!-- Ornate Pedestal Foot -->
+    <path d="M128 168H192C192 172 184 177 160 177C136 177 128 172 128 168Z" fill="url(#deepGold)"/>
+    <ellipse cx="160" cy="168" rx="34" ry="4.5" fill="#8C4A00"/>
+
+    <!-- Main Scalloped Bowl -->
+    <path d="M78 122C78 122 96 168 160 168C224 168 242 122 242 122C242 122 212 134 160 134C108 134 78 122 78 122Z" fill="url(#goldPlate)"/>
+
+    <!-- Intricate Floral Petal Engravings -->
+    <path d="M102 128C114 146 136 158 160 158C184 158 206 146 218 128" stroke="#FFF3C4" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+    <path d="M118 138C129 150 144 155 160 155C176 155 191 150 202 138" stroke="#FFF3C4" stroke-width="1.3" stroke-linecap="round" opacity="0.75"/>
+
+    <!-- Scalloped Top Beaded Rim -->
+    <ellipse cx="160" cy="122" rx="82" ry="16" fill="url(#goldPlate)"/>
+    <ellipse cx="160" cy="121" rx="76" ry="12" fill="#E29408"/>
+    <!-- Liquid Pure Golden Ghee Pool -->
+    <ellipse cx="160" cy="120" rx="66" ry="9" fill="#FFC83B"/>
+    <ellipse cx="164" cy="119" rx="48" ry="6" fill="#FFEAA7" opacity="0.85"/>
+  </g>
+
+  <!-- Wick Tip -->
+  <path d="M160 119C159 112 160 102 160 94" stroke="#451500" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- Majestic Multi-Layered Divine Flame -->
+  <g filter="url(#celGlow)">
+    <path d="M160 28C136 65 130 90 144 107C151 115 169 115 176 107C190 90 184 65 160 28Z" fill="url(#celFlame)"/>
+    <path d="M160 52C148 74 145 88 152 98C155 102 165 102 168 98C175 88 172 74 160 52Z" fill="#FFFCE8"/>
+    <ellipse cx="160" cy="90" rx="5" ry="8" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Golden Celebration Firework Rays & Sparkles -->
+  <g fill="#FFFDF5">
+    <!-- Starburst 1 -->
+    <path d="M60 90L62.5 82L65 90L73 92.5L65 95L62.5 103L60 95L52 92.5Z"/>
+    <!-- Starburst 2 -->
+    <path d="M260 88L262.5 80L265 88L273 90.5L265 93L262.5 101L260 93L252 90.5Z"/>
+    <!-- Starburst 3 -->
+    <path d="M98 70L99.5 64L101 70L107 71.5L101 73L99.5 79L98 73L92 71.5Z"/>
+    <!-- Starburst 4 -->
+    <path d="M222 68L223.5 62L225 68L231 69.5L225 71L223.5 77L222 71L216 69.5Z"/>
+    
+    <!-- Golden Embers / Shimmering Dots -->
+    <circle cx="45" cy="118" r="2.2" fill="#FFD54F"/>
+    <circle cx="275" cy="115" r="2.2" fill="#FFD54F"/>
+    <circle cx="75" cy="148" r="1.6" fill="#FFE082"/>
+    <circle cx="245" cy="145" r="1.6" fill="#FFE082"/>
+    <circle cx="160" cy="16" r="2.5" fill="#FFFBE6"/>
+  </g>
 </svg>

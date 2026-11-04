@@ -1,11 +1,139 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" fill="none">
-<title>Clay Diya Set</title>
-<ellipse cx="120" cy="140" rx="90" ry="8" fill="#713D21" opacity=".12"/>
-<path d="M29 100h78c-4 28-19 38-39 38s-36-10-39-38Z" fill="#A84A29"/>
-<ellipse cx="68" cy="100" rx="39" ry="9" fill="#7D351F"/><ellipse cx="68" cy="98" rx="28" ry="5" fill="#F5BE58"/>
-<path d="M68 44c-17 22-16 38 0 49 16-11 17-27 0-49Z" fill="#E9912B"/><path d="M68 65c-7 10-7 17 0 24 7-7 7-14 0-24Z" fill="#FFF8DF"/>
-<path d="M132 91h80c-4 29-20 39-40 39s-36-10-40-39Z" fill="#C06033"/>
-<ellipse cx="172" cy="91" rx="40" ry="9" fill="#7D351F"/><ellipse cx="172" cy="89" rx="29" ry="5" fill="#F5BE58"/>
-<path d="M172 31c-18 24-17 41 0 52 17-11 18-28 0-52Z" fill="#E9912B"/><path d="M172 53c-8 12-7 19 0 25 7-6 8-13 0-25Z" fill="#FFF8DF"/>
-<path d="M44 115q24 17 48 0m55-8q25 17 50 0" stroke="#F5BE58" stroke-width="3" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" fill="none">
+  <defs>
+    <!-- Radiant Prakash Glow -->
+    <filter id="prakashGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#3E1A00" flood-opacity="0.25"/>
+    </filter>
+
+    <!-- Metallic Royal Brass Gold Gradients -->
+    <linearGradient id="brassGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEAA7"/>
+      <stop offset="30%" stop-color="#FFD043"/>
+      <stop offset="65%" stop-color="#E18F08"/>
+      <stop offset="100%" stop-color="#8C4A00"/>
+    </linearGradient>
+
+    <linearGradient id="brassGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF2BF"/>
+      <stop offset="40%" stop-color="#F5B324"/>
+      <stop offset="85%" stop-color="#B86E00"/>
+      <stop offset="100%" stop-color="#6B3300"/>
+    </linearGradient>
+
+    <radialGradient id="gheeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFF8D6"/>
+      <stop offset="55%" stop-color="#F9BE23"/>
+      <stop offset="100%" stop-color="#8B4500"/>
+    </radialGradient>
+
+    <!-- Divine Flame Radial Glow -->
+    <radialGradient id="divineFlame1" cx="50%" cy="80%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="25%" stop-color="#FFF4A3"/>
+      <stop offset="60%" stop-color="#FF9500"/>
+      <stop offset="90%" stop-color="#FF3B00"/>
+      <stop offset="100%" stop-color="#D91E00" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="ambientAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFAE00" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#FF7700" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#FF4800" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Ambient Golden Background Flare -->
+  <circle cx="120" cy="85" r="70" fill="url(#ambientAura)"/>
+  <circle cx="215" cy="98" r="55" fill="url(#ambientAura)"/>
+
+  <!-- Ground Shadows -->
+  <ellipse cx="125" cy="172" rx="72" ry="12" fill="#421900" opacity="0.22"/>
+  <ellipse cx="215" cy="174" rx="54" ry="9" fill="#421900" opacity="0.18"/>
+
+  <!-- Left Main Diya Base & Body -->
+  <g filter="url(#softShadow)">
+    <!-- Base Foot -->
+    <path d="M102 165H148C148 168 142 173 125 173C108 173 102 168 102 165Z" fill="url(#brassGrad2)"/>
+    <ellipse cx="125" cy="165" rx="23" ry="3.5" fill="#8C4A00"/>
+
+    <!-- Bowl Belly -->
+    <path d="M58 122C58 122 72 166 125 166C178 166 192 122 192 122C192 122 168 132 125 132C82 132 58 122 58 122Z" fill="url(#brassGrad1)"/>
+    
+    <!-- Intricate Floral Engraving Lines on Bowl -->
+    <path d="M78 129C88 145 106 156 125 156C144 156 162 145 172 129" stroke="#FFEAA7" stroke-width="1.8" stroke-linecap="round" opacity="0.85"/>
+    <path d="M92 138C101 148 113 153 125 153C137 153 149 148 158 138" stroke="#FFEAA7" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+
+    <!-- Scalloped Ornate Rim (Top Lip) -->
+    <ellipse cx="125" cy="122" rx="67" ry="14" fill="url(#brassGrad2)"/>
+    <ellipse cx="125" cy="121" rx="62" ry="11" fill="url(#gheeGlow)"/>
+
+    <!-- Oil Pool & Surface Ripples -->
+    <ellipse cx="125" cy="120" rx="52" ry="8" fill="#FFC83B"/>
+    <ellipse cx="128" cy="119" rx="38" ry="5.5" fill="#FFE57F" opacity="0.8"/>
+  </g>
+
+  <!-- Left Diya Cotton Wick & Spout Core -->
+  <path d="M125 119C124 113 125 103 125 96" stroke="#4A1800" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Left Diya Flame (Double Layered with Radiant Prakash) -->
+  <g filter="url(#prakashGlow)">
+    <!-- Outer Blazing Flame -->
+    <path d="M125 36C105 68 100 88 112 104C118 111 132 111 138 104C150 88 145 68 125 36Z" fill="url(#divineFlame1)"/>
+    <!-- Inner Radiant Core -->
+    <path d="M125 58C115 76 113 88 118 97C121 101 129 101 132 97C137 88 135 76 125 58Z" fill="#FFFBE6"/>
+    <!-- Hotspot Diamond -->
+    <ellipse cx="125" cy="91" rx="4.5" ry="7" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Right Smaller Layered Diya -->
+  <g filter="url(#softShadow)">
+    <!-- Base Foot -->
+    <path d="M198 168H232C232 170 228 174 215 174C202 174 198 170 198 168Z" fill="url(#brassGrad2)"/>
+    <!-- Bowl -->
+    <path d="M165 135C165 135 176 168 215 168C254 168 265 135 265 135C265 135 246 143 215 143C184 143 165 135 165 135Z" fill="url(#brassGrad1)"/>
+    <!-- Rim -->
+    <ellipse cx="215" cy="135" rx="50" ry="10" fill="url(#brassGrad2)"/>
+    <ellipse cx="215" cy="134" rx="44" ry="7.5" fill="url(#gheeGlow)"/>
+    <ellipse cx="215" cy="133" rx="35" ry="5.5" fill="#FFE57F" opacity="0.85"/>
+  </g>
+
+  <!-- Right Diya Flame -->
+  <g filter="url(#prakashGlow)">
+    <path d="M215 62C200 86 196 102 205 116C210 122 220 122 225 116C234 102 230 86 215 62Z" fill="url(#divineFlame1)"/>
+    <path d="M215 80C207 94 206 103 210 110C212 113 218 113 220 110C224 103 223 94 215 80Z" fill="#FFFBE6"/>
+    <ellipse cx="215" cy="105" rx="3" ry="5" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Traditional Fresh Saffron Marigold Petals (Genda Phool) around base -->
+  <g>
+    <!-- Petals on left -->
+    <path d="M48 168C42 163 46 156 54 158C62 160 56 172 48 168Z" fill="#FF8800"/>
+    <path d="M52 167C47 163 50 158 56 160C62 161 58 170 52 167Z" fill="#FFC400"/>
+
+    <path d="M68 174C61 170 66 162 74 165C82 168 76 178 68 174Z" fill="#FF9D00"/>
+    <path d="M71 173C66 170 70 164 76 166C82 168 78 176 71 173Z" fill="#FFD54F"/>
+
+    <!-- Petals on right -->
+    <path d="M272 170C265 166 270 158 278 161C286 164 280 174 272 170Z" fill="#FF9100"/>
+    <path d="M274 169C269 166 272 160 279 162C285 164 281 172 274 169Z" fill="#FFE082"/>
+
+    <path d="M255 175C248 172 251 164 260 166C268 168 263 179 255 175Z" fill="#FF7900"/>
+  </g>
+
+  <!-- Twinkling Golden Starbursts (Festive Sparkles) -->
+  <g fill="#FFFDF0" opacity="0.95">
+    <!-- Star 1 -->
+    <path d="M62 48L64 42L66 48L72 50L66 52L64 58L62 52L56 50Z"/>
+    <!-- Star 2 -->
+    <path d="M264 40L266 35L268 40L273 42L268 44L266 49L264 44L259 42Z"/>
+    <!-- Star 3 -->
+    <path d="M182 32L183.5 28L185 32L189 33.5L185 35L183.5 39L182 35L178 33.5Z"/>
+    <circle cx="48" cy="88" r="1.8"/>
+    <circle cx="282" cy="94" r="2"/>
+    <circle cx="168" cy="62" r="1.5"/>
+  </g>
 </svg>
