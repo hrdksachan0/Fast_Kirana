@@ -845,7 +845,7 @@ async def send_otp(
     history = [ts for ts in _otp_rate_limit.get(phone, []) if now_ts - ts < 600]
 
     # Bypass rate limits for designated internal test phones
-    is_test_phone = phone in ["7054470303", "9696503759", "9999999999"] or phone.startswith("99999")
+    is_test_phone = phone.startswith("99999") or phone == "0000000000"
     if not is_test_phone and history:
         last_req = history[-1]
         elapsed = now_ts - last_req
@@ -966,7 +966,7 @@ async def verify_otp(
         logger.info(f"[OTP-VERIFY] Review account OTP accepted for test phone={phone}")
 
     # Universal test bypass for 99999XXXXX and designated test phones
-    if (phone.startswith("99999") or phone in ["7054470303", "9696503759", "9999999999"]) and entered_otp in ["123456", "261300"]:
+    if (phone.startswith("99999") or phone == "0000000000") and entered_otp in ["123456", "261300"]:
         is_valid = True
         logger.info(f"[OTP-VERIFY] Test account OTP 123456 accepted for phone={phone}")
 

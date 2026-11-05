@@ -52,8 +52,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
       duration: const Duration(milliseconds: 1200),
     )..repeat();
     if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
-      _controller.text = widget.initialQuery!.trim();
-      _query = widget.initialQuery!.trim();
+      final sanitized = _sanitizeSearchQuery(widget.initialQuery!);
+      _controller.text = sanitized;
+      _query = sanitized;
     }
     _placeholderTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted && _query.isEmpty && _controller.text.isEmpty) {
@@ -141,8 +142,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
     'कुरकुरे': 'kurkure',
   };
 
+  static String _sanitizeSearchQuery(String raw) {
+    String q = raw.trim();
+    if (q.startsWith('/category/') || q.startsWith('category/')) {
+      q = q.replaceFirst(RegExp(r'^/?category/'), '');
+    } else if (q.startsWith('/product/') || q.startsWith('product/')) {
+      q = q.replaceFirst(RegExp(r'^/?product/'), '');
+    } else if (q.startsWith('/search?q=')) {
+      q = q.replaceFirst('/search?q=', '');
+    }
+    q = q.replaceAll('-', ' ');
+    if (q.toLowerCase().contains('dry fruits')) {
+      q = 'dry fruits';
+    }
+    return q.trim();
+  }
+
   static String normalizeQuery(String raw) {
-    String res = raw.trim().toLowerCase();
+    String res = _sanitizeSearchQuery(raw).toLowerCase();
     _hindiDevanagariMap.forEach((hindi, roman) {
       if (res.contains(hindi)) {
         res = res.replaceAll(hindi, ' $roman ');
@@ -213,6 +230,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
     'colgate': ['toothpaste', 'paste', 'brush'],
     'colgit': ['colgate', 'toothpaste', 'paste'],
     'kolget': ['colgate', 'toothpaste', 'paste'],
+
+    // 🥜 Dry Fruits, Nuts & Festive Gifting
+    'kaju': ['cashew', 'kaju', 'dry fruits', 'dry fruit', 'nuts', 'badam'],
+    'badam': ['almond', 'badam', 'dry fruits', 'dry fruit', 'nuts', 'kaju'],
+    'cashew': ['kaju', 'cashew', 'dry fruits', 'nuts'],
+    'almond': ['badam', 'almond', 'dry fruits', 'nuts'],
+    'pista': ['pistachio', 'pista', 'dry fruits', 'nuts'],
+    'pistachio': ['pista', 'pistachio', 'dry fruits'],
+    'kishmish': ['raisins', 'kishmish', 'dry fruits'],
+    'raisins': ['kishmish', 'raisins', 'dry fruits'],
+    'makhana': ['fox nuts', 'makhana', 'phool makhana', 'dry fruits'],
+    'dryfruit': ['dry fruits', 'kaju', 'badam', 'almond', 'cashew', 'pista', 'makhana'],
+    'dryfruits': ['dry fruits', 'kaju', 'badam', 'almond', 'cashew', 'pista', 'makhana'],
+    'dry': ['dry fruits', 'kaju', 'badam'],
 
     // 🪔 Pooja & Essentials
     'agarbatti': ['incense', 'dhoop', 'cycle agarbatti', 'mangaldeep', 'pooja'],

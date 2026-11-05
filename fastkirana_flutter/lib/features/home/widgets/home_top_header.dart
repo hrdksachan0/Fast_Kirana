@@ -435,14 +435,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
           if (isCampaignActive)
             Builder(
               builder: (context) {
-                final rawDeco = (campaignAsync.valueOrNull?.decorationImage ?? 'crimson').toLowerCase();
-                final palette = rawDeco.contains('gold') && !rawDeco.contains('crimson')
-                    ? 'gold'
-                    : rawDeco.contains('multi')
-                        ? 'multi'
-                        : rawDeco.contains('amber')
-                            ? 'amber'
-                            : 'crimson';
+                const palette = 'gold';
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(
