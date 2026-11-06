@@ -482,17 +482,20 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                         ),
                         SizedBox(height: s(2)),
 
-                        // 4. CLEAN TITLE (2 lines on 3-card shelf, 3 lines on grid)
-                        Text(
-                          product.name,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: s(11.5),
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF0F172A),
-                            height: 1.25,
+                        // 4. CLEAN TITLE (2 lines max, uniform height for perfect row alignment)
+                        SizedBox(
+                          height: s(31),
+                          child: Text(
+                            product.name,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: s(11.2),
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF0F172A),
+                              height: 1.25,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: cardWidth < 125 ? 2 : 3,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

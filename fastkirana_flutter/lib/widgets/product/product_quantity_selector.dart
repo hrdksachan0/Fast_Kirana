@@ -118,18 +118,25 @@ class AddToCartButton extends ConsumerWidget {
         );
       },
       child: Container(
-        height: s(30),
-        padding: EdgeInsets.symmetric(horizontal: s(5)),
+        height: s(26),
+        padding: EdgeInsets.symmetric(horizontal: s(5.5), vertical: s(2)),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(s(8)),
-          border: Border.all(color: const Color(0xFFCBD5E1).withValues(alpha: 0.8), width: s(0.85)),
+          color: Colors.white.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(s(7)),
+          border: Border.all(color: const Color(0xFFCBD5E1), width: s(0.85)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         alignment: Alignment.center,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.schedule_rounded, size: s(11), color: const Color(0xFF64748B)),
+            Icon(Icons.schedule_rounded, size: s(10.5), color: const Color(0xFF64748B)),
             SizedBox(width: s(2)),
             Text(
               'CLOSED',

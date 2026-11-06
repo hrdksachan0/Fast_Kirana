@@ -101,18 +101,19 @@ class Responsive {
     final width = MediaQuery.of(context).size.width;
     if (isCompact) {
       // Used in screens with side category rail (narrower column ~135-155px)
-      if (width < 360) return 0.64;
-      if (width < 400) return 0.67;
-      if (width < mobileBreakpoint) return 0.69;
-      if (width < tabletBreakpoint) return 0.73;
-      return 0.77;
+      // Provides ample vertical height (~245-258px) for packshot + unit + price/mrp + 2-line title
+      if (width < 360) return 0.54;
+      if (width < 400) return 0.565;
+      if (width < mobileBreakpoint) return 0.58;
+      if (width < tabletBreakpoint) return 0.64;
+      return 0.70;
     }
     // Full width 2-column grid (Medium, comfortable proportions for Restaurant & Home grids)
-    if (width < 360) return 0.64;
-    if (width < 400) return 0.67;
-    if (width < mobileBreakpoint) return 0.69;
-    if (width < tabletBreakpoint) return 0.73;
-    return 0.77;
+    if (width < 360) return 0.58;
+    if (width < 400) return 0.60;
+    if (width < mobileBreakpoint) return 0.62;
+    if (width < tabletBreakpoint) return 0.68;
+    return 0.74;
   }
 
   /// Unified Responsive Product Card Width for horizontal shelves
