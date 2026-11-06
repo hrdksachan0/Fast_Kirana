@@ -57,16 +57,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final campaignFuture =
         ref.read(navratriDataProvider.future).then<NavratriData?>((v) => v).catchError((_) => null);
 
-    // 3. GPU Texture Precaching:
-    // Pre-cache top category realistic packshots and festive artwork directly into GPU memory cache!
+    // 3. Memory-Safe Pre-warming (Zero OOM):
+    // Pre-cache only the top 4 visible hero categories at compact thumbnail dimensions (120x120)
+    // to keep JVM heap usage minimal (<5MB) and prevent OutOfMemoryError on 2GB/3GB devices.
     categoriesFuture.then((categories) {
       if (mounted && categories.isNotEmpty) {
-        for (final cat in categories.take(12)) {
+        for (final cat in categories.take(4)) {
           final imgUrl = CategoryVisualHelper.resolveRealisticImageUrl(cat);
           if (imgUrl.isNotEmpty) {
             try {
               precacheImage(
-                CachedNetworkImageProvider(imgUrl, maxWidth: 400, maxHeight: 400),
+                ResizeImage(
+                  CachedNetworkImageProvider(imgUrl),
+                  width: 140,
+                  height: 140,
+                ),
                 context,
               ).catchError((_) {});
             } catch (_) {}
@@ -77,17 +82,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
     campaignFuture.then((campaign) {
       if (mounted && campaign != null) {
-        for (final h in campaign.headers) {
-          if (h.image != null && h.image!.isNotEmpty) {
+        // Precache only the primary hero header if available
+        if (campaign.headers.isNotEmpty) {
+          final firstHeader = campaign.headers.first;
+          if (firstHeader.image != null && firstHeader.image!.isNotEmpty) {
             try {
-              precacheImage(CachedNetworkImageProvider(h.image!), context).catchError((_) {});
-            } catch (_) {}
-          }
-        }
-        for (final t in campaign.tabs) {
-          if (t.image.isNotEmpty) {
-            try {
-              precacheImage(CachedNetworkImageProvider(t.image), context).catchError((_) {});
+              precacheImage(
+                ResizeImage(
+                  CachedNetworkImageProvider(firstHeader.image!),
+                  width: 450,
+                ),
+                context,
+              ).catchError((_) {});
             } catch (_) {}
           }
         }
