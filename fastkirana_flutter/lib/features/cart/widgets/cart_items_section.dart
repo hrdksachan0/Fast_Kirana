@@ -239,7 +239,8 @@ class CartItemsSection extends StatelessWidget {
   static const List<String> _suggestions = [
     '🌶️ Less Spicy',
     '🥫 Extra Sauce',
-    '🧅 No Onion / Garlic',
+    '🧅 No Onion',
+    '🧄 No Garlic',
     '🍬 Less Sweet',
     '🍽️ Add Cutlery',
     '🔥 Extra Crispy',
@@ -659,14 +660,13 @@ class _CookingInstructionsCardState extends State<_CookingInstructionsCard> {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    'Restaurant chef will prepare food following these notes',
+                    'Chef will prepare food following these notes',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 9.5),
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF64748B),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
                 ),
               ],

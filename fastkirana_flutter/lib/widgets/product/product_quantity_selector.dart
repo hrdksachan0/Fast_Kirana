@@ -119,7 +119,7 @@ class AddToCartButton extends ConsumerWidget {
       },
       child: Container(
         height: s(30),
-        padding: EdgeInsets.symmetric(horizontal: s(7)),
+        padding: EdgeInsets.symmetric(horizontal: s(5)),
         decoration: BoxDecoration(
           color: const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(s(8)),
@@ -130,14 +130,14 @@ class AddToCartButton extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.schedule_rounded, size: s(11), color: const Color(0xFF64748B)),
-            SizedBox(width: s(2.5)),
+            SizedBox(width: s(2)),
             Text(
               'CLOSED',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: s(9.0),
+                fontSize: s(8.5),
                 fontWeight: FontWeight.w800,
                 color: const Color(0xFF64748B),
-                letterSpacing: 0.3,
+                letterSpacing: 0,
               ),
             ),
           ],
@@ -470,7 +470,12 @@ class VariantPill extends StatelessWidget {
         border: Border.all(color: const Color(0xFFF1F5F9), width: s(0.85)),
       ),
       child: Text(
-        product.unit.isNotEmpty && product.unit != '1 unit' ? product.unit : (isFood ? 'Serves 1' : '1 pc'),
+        () {
+          final u = product.unit.trim();
+          if (u.isEmpty || u == '1 unit') return isFood ? 'Serves 1' : '1 pc';
+          if (u.toLowerCase() == 'serving') return '1 Serving';
+          return u;
+        }(),
         style: GoogleFonts.plusJakartaSans(
           fontSize: s(9.2),
           fontWeight: FontWeight.w700,
