@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "web": "next dev",
-    "build": "npx prisma generate && next build",
+    "build": "npx prisma generate && next build --webpack",
     "start": "next start",
     "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js . --max-warnings=999999",
     "test:unit": "tsx --test src/lib/__tests__/**/*.test.ts",
