@@ -19,6 +19,7 @@ import '../../data/models/banner.dart';
 import '../../data/models/store_hub.dart';
 
 import '../home/utils/category_visual_helper.dart';
+import '../navratri/navratri_data.dart';
 import 'widgets/blinkit_animated_bag.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -45,7 +46,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // 1. Warm up GPS location & nearest store hub concurrently
     LocationService.bootstrapUserLocation(ref);
 
-    // 2. Warm up active store hubs, categories, catalog, and banners concurrently during splash
+    // 2. Warm up active store hubs, categories, catalog, banners, and festive campaign concurrently during splash
     final prefFuture = SharedPreferences.getInstance();
     ref.read(activeStoreHubsProvider.future).catchError((_) => <StoreHub>[]);
     final categoriesFuture =
@@ -53,9 +54,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     ref.read(homeProductCatalogProvider.future).catchError((_) => <Product>[]);
     final bannersFuture =
         ref.read(bannersProvider('grocery').future).catchError((_) => <Banner>[]);
+    final campaignFuture =
+        ref.read(navratriDataProvider.future).then<NavratriData?>((v) => v).catchError((_) => null);
 
     // 3. GPU Texture Precaching:
-    // Pre-cache top category realistic packshots directly into CachedNetworkImage memory cache!
+    // Pre-cache top category realistic packshots and festive artwork directly into GPU memory cache!
     categoriesFuture.then((categories) {
       if (mounted && categories.isNotEmpty) {
         for (final cat in categories.take(12)) {
@@ -72,14 +75,34 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       }
     }).catchError((_) {});
 
+    campaignFuture.then((campaign) {
+      if (mounted && campaign != null) {
+        for (final h in campaign.headers) {
+          if (h.image != null && h.image!.isNotEmpty) {
+            try {
+              precacheImage(CachedNetworkImageProvider(h.image!), context).catchError((_) {});
+            } catch (_) {}
+          }
+        }
+        for (final t in campaign.tabs) {
+          if (t.image.isNotEmpty) {
+            try {
+              precacheImage(CachedNetworkImageProvider(t.image), context).catchError((_) {});
+            } catch (_) {}
+          }
+        }
+      }
+    }).catchError((_) {});
+
     // 4. Blinkit-Style Animated Boot Timing:
-    // Wait for at least 1.3 seconds of smooth physics bounce animation AND essential metadata,
-    // so Home screen opens with all categories & banners pre-hydrated (zero blank boxes!)
+    // Wait for at least 1.4 seconds of smooth physics bounce animation AND essential metadata,
+    // so Home screen opens with all festive sections, categories & banners pre-hydrated (zero layout shift!)
     Future.wait([
-      Future.delayed(const Duration(milliseconds: 1300)),
+      Future.delayed(const Duration(milliseconds: 1400)),
       prefFuture,
       categoriesFuture,
       bannersFuture,
+      campaignFuture,
     ]).then((results) {
       final prefs = results[1] as SharedPreferences;
       _safeNavigate(prefs: prefs);

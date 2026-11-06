@@ -10,6 +10,8 @@ import '../../data/models/product.dart';
 import '../../providers/store_hub_provider.dart';
 import 'campaign_block.dart';
 
+NavratriData? _memoryCachedCampaign;
+
 /// The same versioned manifest is served by the web application.
 final navratriDataProvider = FutureProvider<NavratriData>((ref) async {
   final hub = ref.watch(currentStoreHubProvider);
@@ -19,14 +21,18 @@ final navratriDataProvider = FutureProvider<NavratriData>((ref) async {
         .get('/api/homepage-campaign', queryParameters: {'storeId': hub.id});
     final body = response.data;
     if (body is Map && body['campaign'] is Map) {
-      return NavratriData.fromJson(
+      _memoryCachedCampaign = NavratriData.fromJson(
           Map<String, dynamic>.from(body['campaign'] as Map));
+      return _memoryCachedCampaign!;
     }
   } catch (_) {
     // Published configuration is optional; a failed request never blocks home.
   }
+  if (_memoryCachedCampaign != null) return _memoryCachedCampaign!;
+
   final source = await rootBundle.loadString('assets/navratri/navratri.json');
-  return NavratriData.fromJson(jsonDecode(source) as Map<String, dynamic>);
+  _memoryCachedCampaign = NavratriData.fromJson(jsonDecode(source) as Map<String, dynamic>);
+  return _memoryCachedCampaign!;
 });
 
 class NavratriLabels {
