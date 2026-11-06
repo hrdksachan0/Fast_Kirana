@@ -17,6 +17,7 @@ import '../features/cafe/cafe_menu_screen.dart';
 import '../features/search/search_screen.dart';
 import 'card_media_widget.dart';
 import '../features/gifting/send_gift_screen.dart';
+import '../providers/gifting_store_provider.dart';
 
 /// Ultra-Premium Animated Hero Carousel (Amazon Side-Peek + Swiggy Instamart Depth)
 /// Specifications:
@@ -344,6 +345,7 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
   @override
   Widget build(BuildContext context) {
     final offersAsync = ref.watch(brandOfferCardsProvider(widget.type));
+    final giftingConfig = ref.watch(giftingStoreConfigProvider).valueOrNull;
 
     final rawCards = offersAsync.valueOrNull ?? [];
     final List<CategoryCardData> cards = List.of(rawCards);
@@ -354,15 +356,21 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
       cards.add(
         CategoryCardData(
           id: 'gift-for-someone-banner',
-          title: 'Send a Gift in 15 Mins 🎁',
-          subtitle: 'Chocolates, Cakes, Mithai & Custom Cards delivered at doorstep',
+          title: (giftingConfig != null && giftingConfig.bannerTitle.isNotEmpty)
+              ? '${giftingConfig.bannerTitle} 🎁'
+              : 'Send a Gift in 15 Mins 🎁',
+          subtitle: (giftingConfig != null && giftingConfig.bannerSubtitle.isNotEmpty)
+              ? giftingConfig.bannerSubtitle
+              : 'Chocolates, Cakes, Mithai & Custom Cards delivered at doorstep',
           eyebrowTag: 'SURPRISE SOMEONE',
           ctaText: 'SEND GIFT →',
           ctaUrl: '/gift',
           redirectUrl: '/gift',
           cardType: 'hero',
           type: 'grocery',
-          imageUrl: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=80',
+          imageUrl: (giftingConfig != null && giftingConfig.bannerImageUrl.trim().isNotEmpty)
+              ? giftingConfig.bannerImageUrl.trim()
+              : 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=80',
           gradientColorsHex: const ['#E11D48', '#BE123C', '#881337'],
           isActive: true,
           sortOrder: 1,
