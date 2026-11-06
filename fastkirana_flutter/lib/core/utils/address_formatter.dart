@@ -56,6 +56,10 @@ class AddressFormatter {
       if (lower.contains('+')) continue;
       // Skip "India"
       if (lower == 'india') continue;
+      // Skip internal darkstore warehouse tokens if accidentally captured
+      if (lower == 'hub' || lower == 'central hub' || lower == 'store hub' || lower == 'darkstore' || lower.contains('central hub')) {
+        continue;
+      }
       if (!seen.contains(lower)) {
         seen.add(lower);
         cleanTokens.add(titleCase(clean));

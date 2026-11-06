@@ -209,13 +209,41 @@ async def get_vendors(
     # Preload product counts & payout counts
     result = []
     for v in vendors_list:
-        # Count attached products
-        p_count_stmt = select(func.count(Product.id)).where(
-            or_(
-                Product.vendorId == v.id,
-                func.lower(Product.vendor) == v.name.lower().strip()
+        # Count attached products (both master-level and hub-level inventory)
+        v_store = storeId or getattr(v, "storeId", None)
+        if v_store and v_store != "all":
+            inv_pids = select(StoreInventory.productId).where(
+                StoreInventory.storeId == v_store,
+                StoreInventory.vendorId == v.id
             )
-        )
+            p_count_stmt = select(func.count(func.distinct(Product.id))).where(
+                or_(
+                    Product.id.in_(inv_pids),
+                    and_(
+                        or_(
+                            Product.vendorId == v.id,
+                            func.lower(Product.vendor) == v.name.lower().strip()
+                        ),
+                        not_(Product.id.in_(
+                            select(StoreInventory.productId).where(
+                                StoreInventory.storeId == v_store,
+                                StoreInventory.vendorId.is_not(None),
+                                StoreInventory.vendorId != v.id
+                            )
+                        ))
+                    )
+                )
+            )
+        else:
+            p_count_stmt = select(func.count(func.distinct(Product.id))).outerjoin(
+                StoreInventory, and_(StoreInventory.productId == Product.id, StoreInventory.vendorId == v.id)
+            ).where(
+                or_(
+                    Product.vendorId == v.id,
+                    StoreInventory.vendorId == v.id,
+                    func.lower(Product.vendor) == v.name.lower().strip()
+                )
+            )
         p_count_res = await db.execute(p_count_stmt)
         prod_count = p_count_res.scalar() or 0
 
@@ -285,18 +313,62 @@ async def get_vendor_details(
     start_dt = datetime.fromisoformat(f"{startDate}T00:00:00") if startDate else default_start
     end_dt = datetime.fromisoformat(f"{endDate}T23:59:59") if endDate else default_end
 
-    # 2. Fetch all attached products
-    p_filters = [
-        or_(
-            Product.vendorId == vendor.id,
-            func.lower(Product.vendor) == vendor.name.lower().strip()
-        )
-    ]
+    # 2. Fetch all attached products (supporting hub-level inventory mapping)
+    effective_store = storeId or getattr(vendor, "storeId", None)
+
+    if effective_store and effective_store != "all":
+        p_filters = [
+            or_(
+                Product.id.in_(
+                    select(StoreInventory.productId).where(
+                        StoreInventory.storeId == effective_store,
+                        StoreInventory.vendorId == vendor.id
+                    )
+                ),
+                and_(
+                    or_(
+                        Product.vendorId == vendor.id,
+                        func.lower(Product.vendor) == vendor.name.lower().strip()
+                    ),
+                    not_(Product.id.in_(
+                        select(StoreInventory.productId).where(
+                            StoreInventory.storeId == effective_store,
+                            StoreInventory.vendorId.is_not(None),
+                            StoreInventory.vendorId != vendor.id
+                        )
+                    ))
+                )
+            )
+        ]
+    else:
+        p_filters = [
+            or_(
+                Product.vendorId == vendor.id,
+                func.lower(Product.vendor) == vendor.name.lower().strip(),
+                Product.id.in_(
+                    select(StoreInventory.productId).where(
+                        StoreInventory.vendorId == vendor.id
+                    )
+                )
+            )
+        ]
+
     p_stmt = select(Product).options(selectinload(Product.category)).where(*p_filters).order_by(Product.name.asc())
     p_res = await db.execute(p_stmt)
     attached_products = p_res.scalars().all()
     product_ids = [p.id for p in attached_products]
     product_map = {p.id: p for p in attached_products}
+
+    # Preload hub-specific store inventory overrides
+    inv_map: Dict[str, StoreInventory] = {}
+    if product_ids and effective_store and effective_store != "all":
+        inv_stmt = select(StoreInventory).where(
+            StoreInventory.storeId == effective_store,
+            StoreInventory.productId.in_(product_ids)
+        )
+        inv_res = await db.execute(inv_stmt)
+        for inv in inv_res.scalars().all():
+            inv_map[inv.productId] = inv
 
     # 3. Fetch Delivered Orders in period
     order_filters = [
@@ -304,12 +376,13 @@ async def get_vendor_details(
         Order.createdAt >= start_dt,
         Order.createdAt <= end_dt,
     ]
-    effective_store = storeId or getattr(vendor, "storeId", None)
     if effective_store and effective_store != "all":
         order_filters.append(Order.storeId == effective_store)
 
     item_sales_summary: Dict[str, Dict[str, Any]] = {}
     for p in attached_products:
+        inv = inv_map.get(p.id)
+        hub_cost = float(inv.costPrice) if inv and inv.costPrice is not None and inv.costPrice > 0 else None
         item_sales_summary[p.id] = {
             "productId": p.id,
             "name": p.name,
@@ -317,11 +390,11 @@ async def get_vendor_details(
             "categoryName": p.category.name if p.category else "General",
             "barcode": p.barcode or "",
             "unitsSold": 0,
-            "unitCostPrice": resolve_variant_cost_price(p),
+            "unitCostPrice": hub_cost if hub_cost is not None else resolve_variant_cost_price(p),
             "variants": p.variants,
-            "sellingPrice": float(p.price),
+            "sellingPrice": float(inv.priceOverride if (inv and inv.priceOverride is not None) else p.price),
             "totalPayable": 0.0,
-            "currentStock": p.stock,
+            "currentStock": inv.stock if inv else p.stock,
             "imageUrl": p.imageUrl or "",
         }
 
@@ -351,7 +424,9 @@ async def get_vendor_details(
                 continue
 
             base_prod = product_map.get(oi.productId)
-            effective_cost = resolve_variant_cost_price(base_prod, selected_variant=getattr(oi, "selectedVariant", None), fallback_name=oi.name, current_cost=oi.costPrice)
+            inv = inv_map.get(oi.productId)
+            hub_cost = float(inv.costPrice) if inv and inv.costPrice is not None and inv.costPrice > 0 else None
+            effective_cost = hub_cost if hub_cost is not None else resolve_variant_cost_price(base_prod, selected_variant=getattr(oi, "selectedVariant", None), fallback_name=oi.name, current_cost=oi.costPrice)
             qty = int(oi.quantity or 0)
             item_payable = qty * effective_cost
 
@@ -847,6 +922,8 @@ class UpdateVendorProductPricesRequest(BaseModel):
     price: Optional[float] = None
     mrp: Optional[float] = None
     stock: Optional[int] = None
+    storeId: Optional[str] = None
+    vendorId: Optional[str] = None
 
 
 @vendors_router.patch("/products/{product_id}/prices")
@@ -889,23 +966,58 @@ async def update_vendor_product_prices(
             detail="Permission denied. Admin or Vendor role required."
         )
 
-    # Apply updates
-    if body.costPrice is not None:
-        product.costPrice = max(0.0, float(body.costPrice))
-    if body.price is not None:
-        product.price = max(0.0, float(body.price))
-    if body.mrp is not None:
-        product.mrp = max(0.0, float(body.mrp))
-    if body.stock is not None:
-        product.stock = max(0, int(body.stock))
+    # If storeId is provided, apply hub-specific override to StoreInventory
+    if body.storeId:
+        inv_stmt = select(StoreInventory).where(
+            StoreInventory.productId == product_id,
+            StoreInventory.storeId == body.storeId
+        )
+        inv_res = await db.execute(inv_stmt)
+        inv = inv_res.scalars().first()
+        if not inv:
+            inv = StoreInventory(
+                productId=product_id,
+                storeId=body.storeId,
+                costPrice=max(0.0, float(body.costPrice)) if body.costPrice is not None else None,
+                priceOverride=max(0.0, float(body.price)) if body.price is not None else None,
+                stock=max(0, int(body.stock)) if body.stock is not None else 0,
+                vendorId=body.vendorId if body.vendorId else None,
+                isAvailable=True
+            )
+            db.add(inv)
+        else:
+            if body.costPrice is not None:
+                inv.costPrice = max(0.0, float(body.costPrice))
+            if body.price is not None:
+                inv.priceOverride = max(0.0, float(body.price))
+            if body.stock is not None:
+                inv.stock = max(0, int(body.stock))
+            if body.vendorId is not None:
+                inv.vendorId = body.vendorId if body.vendorId != "" else None
+            inv.updatedAt = datetime.utcnow()
+        await db.commit()
+        await db.refresh(inv)
 
-    # Recalculate discount if MRP > price
-    if product.mrp > 0 and product.price <= product.mrp:
-        product.discount = round(((product.mrp - product.price) / product.mrp) * 100, 1)
+    # Apply global updates if not store-specific or as base defaults
+    if not body.storeId:
+        if body.costPrice is not None:
+            product.costPrice = max(0.0, float(body.costPrice))
+        if body.price is not None:
+            product.price = max(0.0, float(body.price))
+        if body.mrp is not None:
+            product.mrp = max(0.0, float(body.mrp))
+        if body.stock is not None:
+            product.stock = max(0, int(body.stock))
+        if body.vendorId is not None:
+            product.vendorId = body.vendorId if body.vendorId != "" else None
 
-    product.updatedAt = datetime.utcnow()
-    await db.commit()
-    await db.refresh(product)
+        # Recalculate discount if MRP > price
+        if product.mrp > 0 and product.price <= product.mrp:
+            product.discount = round(((product.mrp - product.price) / product.mrp) * 100, 1)
+
+        product.updatedAt = datetime.utcnow()
+        await db.commit()
+        await db.refresh(product)
 
     profit = product.price - product.costPrice
     margin_pct = round((profit / product.price) * 100, 1) if product.price > 0 else 0.0
@@ -985,4 +1097,127 @@ async def create_vendor_payout(
             "transactionId": payout.transactionId,
             "paidAt": payout.paidAt.isoformat() if payout.paidAt else None,
         }
+    }
+
+
+class MapVendorProductHubRequest(BaseModel):
+    productId: str
+    storeId: str
+    vendorId: Optional[str] = None
+    costPrice: Optional[float] = None
+    priceOverride: Optional[float] = None
+    stock: Optional[int] = None
+
+
+@vendors_router.post("/map-hub-product")
+async def map_vendor_product_hub(
+    body: MapVendorProductHubRequest,
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Map or unmap a master product to a hub-specific vendor & purchase cost price.
+    Automatically creates or updates the StoreInventory record.
+    """
+    role = current_user.get("role")
+    if role not in ["ADMIN", "SUPER_ADMIN", "RESTAURANT_OWNER"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    stmt = select(StoreInventory).where(
+        StoreInventory.productId == body.productId,
+        StoreInventory.storeId == body.storeId
+    )
+    res = await db.execute(stmt)
+    inv = res.scalars().first()
+
+    if not inv:
+        inv = StoreInventory(
+            productId=body.productId,
+            storeId=body.storeId,
+            stock=body.stock if body.stock is not None else 0,
+            priceOverride=body.priceOverride,
+            costPrice=body.costPrice,
+            vendorId=body.vendorId if body.vendorId != "" else None,
+            isAvailable=True
+        )
+        db.add(inv)
+    else:
+        if body.vendorId is not None:
+            inv.vendorId = body.vendorId if body.vendorId != "" else None
+        if body.costPrice is not None:
+            inv.costPrice = float(body.costPrice)
+        if body.priceOverride is not None:
+            inv.priceOverride = float(body.priceOverride)
+        if body.stock is not None:
+            inv.stock = int(body.stock)
+        inv.updatedAt = datetime.utcnow()
+
+    await db.commit()
+    await db.refresh(inv)
+
+    return {
+        "success": True,
+        "message": f"Successfully mapped product to hub {body.storeId}",
+        "inventory": {
+            "productId": inv.productId,
+            "storeId": inv.storeId,
+            "vendorId": inv.vendorId,
+            "costPrice": inv.costPrice,
+            "priceOverride": inv.priceOverride,
+            "stock": inv.stock
+        }
+    }
+
+
+class BulkMapVendorHubRequest(BaseModel):
+    productIds: List[str]
+    storeId: str
+    vendorId: Optional[str] = None
+    costPrice: Optional[float] = None
+
+
+@vendors_router.post("/bulk-map-hub-products")
+async def bulk_map_vendor_hub_products(
+    body: BulkMapVendorHubRequest,
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Bulk map multiple master products to a hub-specific vendor & purchase cost price.
+    """
+    role = current_user.get("role")
+    if role not in ["ADMIN", "SUPER_ADMIN", "RESTAURANT_OWNER"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    updated_count = 0
+    for pid in body.productIds:
+        stmt = select(StoreInventory).where(
+            StoreInventory.productId == pid,
+            StoreInventory.storeId == body.storeId
+        )
+        res = await db.execute(stmt)
+        inv = res.scalars().first()
+
+        if not inv:
+            inv = StoreInventory(
+                productId=pid,
+                storeId=body.storeId,
+                costPrice=body.costPrice,
+                vendorId=body.vendorId if body.vendorId != "" else None,
+                isAvailable=True
+            )
+            db.add(inv)
+        else:
+            if body.vendorId is not None:
+                inv.vendorId = body.vendorId if body.vendorId != "" else None
+            if body.costPrice is not None:
+                inv.costPrice = float(body.costPrice)
+            inv.updatedAt = datetime.utcnow()
+        updated_count += 1
+
+    await db.commit()
+    return {
+        "success": True,
+        "message": f"Successfully mapped {updated_count} products to vendor for hub {body.storeId}",
+        "updatedCount": updated_count
     }

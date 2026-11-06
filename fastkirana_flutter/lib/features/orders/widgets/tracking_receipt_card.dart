@@ -1,3 +1,4 @@
+import '../../../core/utils/address_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/responsive.dart';
@@ -23,11 +24,22 @@ class TrackingReceiptCard extends StatelessWidget {
     }
 
     final subtotal = calculatedItemTotal > 0 ? calculatedItemTotal : (order?.subtotal ?? 0.0);
-    final deliveryFee = order?.deliveryFee ?? 0.0;
+    final discount = order?.discount ?? 0.0;
     final miscFee = order?.miscFee ?? 0.0;
     final taxes = order?.taxes ?? 0.0;
-    final discount = order?.discount ?? 0.0;
     final total = order?.total ?? 0.0;
+    final isPickup = order?.deliveryMethod == 'PICKUP';
+
+    final netSubtotal = subtotal - discount;
+    final otherCharges = miscFee + taxes;
+    final paidDifference = total - (netSubtotal + otherCharges);
+    final deliveryFee = () {
+      if (isPickup) return 0.0;
+      if ((order?.deliveryFee ?? 0.0) > 0) return order!.deliveryFee;
+      if (paidDifference > 0.5) return paidDifference;
+      return 0.0;
+    }();
+    final isDistanceDelivery = deliveryFee > 25.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -137,7 +149,7 @@ class TrackingReceiptCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 14),
                   Text(
                     isItemRefunded ? '₹0' : '₹$itemTotal',
                     style: GoogleFonts.plusJakartaSans(
@@ -165,7 +177,7 @@ class TrackingReceiptCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Delivery Partner Fee', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+              Text(isDistanceDelivery ? 'Delivery Partner Fee (Distance-based)' : 'Delivery Partner Fee', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
               Text(
                 deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}',
                 style: GoogleFonts.plusJakartaSans(
@@ -340,6 +352,10 @@ class TrackingDestinationCard extends StatelessWidget {
       }
     }
 
+    // Sanitize any internal darkstore strings or plus codes from customer delivery address
+    if (fullAddress.isNotEmpty) {
+      fullAddress = AddressFormatter.formatCleanSingleLine(fullAddress);
+    }
     String labelText = 'Delivery Address';
     final rawLabel = addr?.label ?? '';
     if (rawLabel.isNotEmpty &&

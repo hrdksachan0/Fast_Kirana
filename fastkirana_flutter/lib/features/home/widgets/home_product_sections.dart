@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
@@ -45,6 +46,42 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
     return 'Top quality grocery essentials';
   }
 
+  String _formatSubcatTitle(String name) {
+    final lower = name.toLowerCase().trim();
+    if (lower.contains('noodle') || lower.contains('pasta') || lower.contains('instant')) return 'Noodles & Pasta';
+    if (lower.contains('namkeen') || lower.contains('mixture') || lower.contains('bhujia')) return 'Namkeen';
+    if (lower.contains('sauce') || lower.contains('ketchup') || lower.contains('spread') || lower.contains('jam')) return 'Sauces';
+    if (lower.contains('breakfast') || lower.contains('cereal') || lower.contains('oats')) return 'Breakfast';
+    if (lower.contains('tea') || lower.contains('chai') || lower.contains('coffee')) return 'Tea & Coffee';
+    if (lower.contains('oil') || lower.contains('ghee') || lower.contains('mustard')) return 'Oil & Ghee';
+    if (lower.contains('atta') || lower.contains('flour') || lower.contains('dal') || lower.contains('pulse')) return 'Atta & Dal';
+    if (lower.contains('masala') || lower.contains('spice')) return 'Spices';
+    if (lower.contains('choco') || lower.contains('gift')) return 'Chocolates';
+    if (lower.contains('diya') || lower.contains('pooja') || lower.contains('candle')) return 'Diyas & Pooja';
+    if (lower.contains('dry fruit') || lower.contains('nut')) return 'Dry Fruits';
+    return name;
+  }
+
+  String _getSubcatEmoji(String name) {
+    final l = name.toLowerCase();
+    if (l.contains('sweet') || l.contains('mithai') || l.contains('choco')) return '🍬';
+    if (l.contains('milk') || l.contains('dairy') || l.contains('dahi') || l.contains('curd')) return '🥛';
+    if (l.contains('paneer') || l.contains('cheese') || l.contains('butter')) return '🧀';
+    if (l.contains('fruit')) return '🍎';
+    if (l.contains('veg')) return '🥦';
+    if (l.contains('snack') || l.contains('namkeen') || l.contains('chip')) return '🍿';
+    if (l.contains('biscuit') || l.contains('cookie') || l.contains('rusk') || l.contains('bakery')) return '🍪';
+    if (l.contains('drink') || l.contains('beverage') || l.contains('juice') || l.contains('soda')) return '🧃';
+    if (l.contains('tea') || l.contains('coffee')) return '☕';
+    if (l.contains('ice') || l.contains('cream') || l.contains('kulfi')) return '🍦';
+    if (l.contains('atta') || l.contains('rice') || l.contains('dal') || l.contains('flour')) return '🌾';
+    if (l.contains('oil') || l.contains('ghee')) return '🫒';
+    if (l.contains('masala') || l.contains('spice')) return '🌶️';
+    if (l.contains('soap') || l.contains('shampoo') || l.contains('care')) return '🧴';
+    if (l.contains('clean') || l.contains('detergent')) return '🧼';
+    return '✨';
+  }
+
   Widget _buildProductSectionSkeleton(BuildContext context, String title) {
     final cardWidth = Responsive.productCardShelfWidth(context);
 
@@ -72,7 +109,7 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.only(right: Responsive.horizontalPadding(context)),
               itemCount: 4,
-              separatorBuilder: (_, __) => SizedBox(width: Responsive.isSmallMobile(context) ? 8 : 10),
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, __) => SizedBox(
                 width: cardWidth,
                 child: ProductCardSkeleton(width: cardWidth),
@@ -186,115 +223,140 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
               ],
             ),
           ),
-          // Dynamic Subcategory Chips Strip (only rendered when real subcategories exist in DB)
+          // Dynamic Soft Squircle Subcategory Visual Tiles (Diwali / Zepto Edition Reference)
           if (childSubcategories.isNotEmpty) ...[
             const SizedBox(height: 10),
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.only(right: 16),
-                itemCount: childSubcategories.length + 1,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final isAll = index == 0;
-                  final isSelected = isAll
-                      ? activeSubcatId == 'all'
-                      : activeSubcatId == childSubcategories[index - 1].id;
-                  final title = isAll ? 'All' : childSubcategories[index - 1].name;
-                  final imageUrl = isAll ? '' : (childSubcategories[index - 1].imageUrl ?? '');
+            Container(
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1.0),
+                ),
+              ),
+              child: SizedBox(
+                height: 102,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.only(right: 16, bottom: 6),
+                  itemCount: childSubcategories.length + 1,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final isAll = index == 0;
+                    final isSelected = isAll
+                        ? activeSubcatId == 'all'
+                        : activeSubcatId == childSubcategories[index - 1].id;
+                    final rawTitle = isAll ? 'All' : childSubcategories[index - 1].name;
+                    final title = isAll ? 'All' : _formatSubcatTitle(rawTitle);
+                    final imageUrl = isAll ? '' : (childSubcategories[index - 1].imageUrl ?? '');
+                    final emoji = isAll ? '' : _getSubcatEmoji(rawTitle);
 
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        _selectedCategorySubcat[cat.id] = isAll ? 'all' : childSubcategories[index - 1].id;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(3, 3, 14, 3),
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFE11D48) : Colors.white,
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFFE11D48) : const Color(0xFFE2E8F0),
-                          width: 1.0,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isSelected
-                                ? const Color(0xFFE11D48).withValues(alpha: 0.22)
-                                : const Color(0xFF0F172A).withValues(alpha: 0.04),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1.5),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isAll) ...[
+                    return Bounceable(
+                      scaleFactor: 0.94,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _selectedCategorySubcat[cat.id] = isAll ? 'all' : childSubcategories[index - 1].id;
+                        });
+                      },
+                      child: SizedBox(
+                        width: 72,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // 1. Soft Warm Pastel Squircle Card
                             Container(
-                              width: 32,
-                              height: 32,
+                              width: 60,
+                              height: 60,
                               decoration: BoxDecoration(
-                                color: isSelected ? Colors.white : const Color(0xFFFFF1F2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.auto_awesome_mosaic_rounded,
-                                size: 16,
-                                color: Color(0xFFE11D48),
-                              ),
-                            ),
-                            const SizedBox(width: 7),
-                          ] else if (imageUrl.isNotEmpty) ...[
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isSelected ? Colors.white : const Color(0xFFF8FAFC),
+                                color: isSelected
+                                    ? const Color(0xFFFFF1F2)
+                                    : const Color(0xFFFFF8EE),
+                                borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
                                   color: isSelected
-                                      ? Colors.white
-                                      : const Color(0xFFE2E8F0),
-                                  width: 0.8,
+                                      ? const Color(0xFFE20A22)
+                                      : const Color(0xFFFFE8D1),
+                                  width: isSelected ? 1.8 : 1.2,
                                 ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isSelected
+                                        ? const Color(0xFFE20A22).withValues(alpha: 0.16)
+                                        : const Color(0xFFF59E0B).withValues(alpha: 0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              clipBehavior: Clip.antiAlias,
-                              padding: const EdgeInsets.all(2),
-                              child: CachedNetworkImage(
-                                imageUrl: imageUrl,
-                                fit: BoxFit.contain,
-                                placeholder: (_, __) => Container(
-                                  color: Colors.grey.shade100,
+                              padding: const EdgeInsets.all(7),
+                              child: isAll
+                                  ? Center(
+                                      child: Icon(
+                                        Icons.dashboard_rounded,
+                                        size: 26,
+                                        color: isSelected
+                                            ? const Color(0xFFE20A22)
+                                            : const Color(0xFFB45309),
+                                      ),
+                                    )
+                                  : imageUrl.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: imageUrl,
+                                          fit: BoxFit.contain,
+                                          placeholder: (_, __) => Container(
+                                            color: Colors.transparent,
+                                          ),
+                                          errorWidget: (_, __, ___) => Center(
+                                            child: Text(
+                                              emoji,
+                                              style: const TextStyle(fontSize: 26),
+                                            ),
+                                          ),
+                                        )
+                                      : Center(
+                                          child: Text(
+                                            emoji,
+                                            style: const TextStyle(fontSize: 26),
+                                          ),
+                                        ),
+                            ),
+
+                            const SizedBox(height: 5),
+
+                            // 2. Title Label (Centered 2-line max)
+                            SizedBox(
+                              height: 26,
+                              child: Text(
+                                title,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                                  color: isSelected ? const Color(0xFFE20A22) : const Color(0xFF334155),
+                                  height: 1.15,
                                 ),
-                                errorWidget: (_, __, ___) => Icon(
-                                  Icons.eco_rounded,
-                                  size: 16,
-                                  color: isSelected ? const Color(0xFFE11D48) : AppDesignSystem.textSecondary,
-                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 7),
+
+                            // 3. Active Indicator Pill
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOutCubic,
+                              height: 2.5,
+                              width: isSelected ? 22 : 0,
+                              decoration: BoxDecoration(
+                                color: isSelected ? const Color(0xFFE20A22) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
                           ],
-                          Text(
-                            title,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: Responsive.scaledFontSize(context, 12),
-                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                              color: isSelected ? Colors.white : const Color(0xFF0F172A),
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           ],
@@ -329,7 +391,7 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
                   physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.only(right: Responsive.horizontalPadding(context)),
                   itemCount: shelfItemCount,
-                  separatorBuilder: (_, __) => SizedBox(width: Responsive.isSmallMobile(context) ? 8 : 10),
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     if (index < displayProducts.length) {
                       final product = displayProducts[index];
@@ -361,34 +423,34 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
                         );
                       },
                       child: Container(
-                        width: 110,
+                        width: 96,
                         margin: const EdgeInsets.symmetric(vertical: 4),
                         decoration: BoxDecoration(
                           color: AppDesignSystem.gray50,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppDesignSystem.border, width: 1.2),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppDesignSystem.border, width: 1.0),
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(10),
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: AppDesignSystem.statusCancelled,
                               ),
                               child: const Icon(
                                 Icons.arrow_forward_rounded,
-                                size: 22,
+                                size: 18,
                                 color: AppDesignSystem.red600,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 6),
                             Text(
                               'See all\n$totalCount items',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
                                 fontWeight: FontWeight.w800,
                                 color: AppDesignSystem.textPrimary,
                               ),

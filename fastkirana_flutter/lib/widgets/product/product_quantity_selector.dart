@@ -24,6 +24,7 @@ class AddToCartButton extends ConsumerWidget {
   final List<Color> gradientColors;
   final Color primaryColor;
   final double uiScale;
+  final bool isZeptoStyle;
 
   const AddToCartButton({
     super.key,
@@ -39,6 +40,7 @@ class AddToCartButton extends ConsumerWidget {
     required this.gradientColors,
     required this.primaryColor,
     required this.uiScale,
+    this.isZeptoStyle = false,
   });
 
   double s(double v) => v * uiScale;
@@ -52,6 +54,8 @@ class AddToCartButton extends ConsumerWidget {
       btn = _storeClosed();
     } else if (inCartQty > 0) {
       btn = _stepper(context, ref);
+    } else if (isZeptoStyle) {
+      btn = _zeptoAddButton(context, ref);
     } else {
       btn = _addButton(context, ref);
     }
@@ -314,6 +318,39 @@ class AddToCartButton extends ConsumerWidget {
             SizedBox(width: s(2.5)),
             Icon(Icons.add_rounded, size: s(15), color: primaryColor),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _zeptoAddButton(BuildContext context, WidgetRef ref) {
+    return Bounceable(
+      scaleFactor: 0.92,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        if (hasVariants) {
+          VariantSelectorSheet.show(context, product);
+        } else {
+          _handleAdd(context, ref);
+        }
+      },
+      child: Container(
+        width: s(36),
+        height: s(36),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(s(9)),
+          border: Border.all(color: const Color(0xFF16A34A), width: s(1.5)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF16A34A).withValues(alpha: 0.20),
+              blurRadius: s(6),
+              offset: Offset(0, s(2)),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Icon(Icons.add_rounded, size: s(22), color: const Color(0xFF16A34A)),
         ),
       ),
     );

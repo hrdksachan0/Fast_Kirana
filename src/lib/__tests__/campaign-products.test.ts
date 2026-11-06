@@ -10,9 +10,9 @@ const product = (id: string, extra: Partial<Product> = {}): Product => ({
 })
 
 test('linked IDs outside the home feed are resolved once while existing identities stay authoritative', () => {
-  const config = { ...navratriData, products: navratriData.products.map((slot, index) => ({ ...slot, productId: index === 0 ? 'listed' : 'outside-feed' })) }
+  const config = { ...navratriData, products: navratriData.products.map((slot, index) => ({ ...slot, productId: index === 0 ? 'listed' : 'outside-feed' })), tabs: [] }
   assert.deepEqual(missingCampaignProductIds(config, [product('listed', { stock: 0 })]), ['outside-feed'])
-  assert.deepEqual(missingCampaignProductIds(navratriData, []), [])
+  assert.deepEqual(missingCampaignProductIds(navratriData, navratriData.products.map(p => product(p.productId || p.id))), [])
 })
 
 test('missing promotions load current store data and reject unavailable, mismatched and failed identities', async () => {

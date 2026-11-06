@@ -3132,117 +3132,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
                         child: UnserviceableLocationBanner()),
-
-
-
-
-
-
-
-                    SliverToBoxAdapter(
-
-
-
-
-
-
-
-                      child: DynamicHeroBannerCarousel(
-
-
-
-
-
-
-
-                        key: ValueKey(
-
-
-
-
-
-
-
-                            'hero_carousel_${_isGrocerySelected ? "grocery" : "food"}'),
-
-
-
-
-
-
-
-                        type: _isGrocerySelected ? 'grocery' : 'food',
-
-
-
-
-
-
-
-                        onSwitchMode: (isGrocery) {
-
-
-
-
-
-
-
-                          HapticFeedback.selectionClick();
-
-
-
-
-
-
-
-                          setState(() {
-
-
-
-
-
-
-
-                            _isGrocerySelected = isGrocery;
-
-
-
-
-
-
-
-                          });
-
-
-
-
-
-
-
-                        },
-
-
-
-
-
-
-
-                      ),
-
-
-
-
-
-
-
-                    ),
-
-
-
-
-
-
-
+                    // 1. Diwali / Festive Campaign Section (Top Position)
                     if (navratri != null && _isGrocerySelected) ...[
                       SliverToBoxAdapter(
                         child: NavratriShoppingSection(
@@ -3287,6 +3177,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                       ),
                     ],
+
+                    // 2. Dynamic Hero Banner Carousel (Below Diwali Campaign)
+                    SliverToBoxAdapter(
+                      child: DynamicHeroBannerCarousel(
+                        key: ValueKey(
+                            'hero_carousel_${_isGrocerySelected ? "grocery" : "food"}'),
+                        type: _isGrocerySelected ? 'grocery' : 'food',
+                        onSwitchMode: (isGrocery) {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _isGrocerySelected = isGrocery;
+                          });
+                        },
+                      ),
+                    ),
                     if (_isGrocerySelected) ...[
 
 

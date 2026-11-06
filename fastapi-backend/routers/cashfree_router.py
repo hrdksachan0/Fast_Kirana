@@ -473,8 +473,19 @@ async def create_cashfree_order(
             delivery_fee = 0.0
             misc_fee = 0.0
         else:
-            # Authoritative server delivery fee
-            delivery_fee = 0.0 if authoritative_items_subtotal >= 149.0 else 25.0
+            # Client requested delivery fee (e.g. distance-based fee for >2km / long distance)
+            client_delivery_fee = req.deliveryFee if req.deliveryFee is not None else payload_dict.get("deliveryFee")
+            if client_delivery_fee is not None:
+                try:
+                    c_fee = float(client_delivery_fee)
+                    if math.isfinite(c_fee) and c_fee >= 0:
+                        delivery_fee = c_fee
+                    else:
+                        delivery_fee = 0.0 if authoritative_items_subtotal >= 149.0 else 25.0
+                except (ValueError, TypeError):
+                    delivery_fee = 0.0 if authoritative_items_subtotal >= 149.0 else 25.0
+            else:
+                delivery_fee = 0.0 if authoritative_items_subtotal >= 149.0 else 25.0
 
             # Authoritative packaging fee
             misc_fee = 15.0 if (req.packagingOption == "PREMIUM" or payload_dict.get("packagingOption") == "PREMIUM") else 5.0
@@ -1798,10 +1809,16 @@ async def auto_recover_unplaced_cashfree_order(
         calculated_subtotal = sum(it["price"] * it["quantity"] for it in items_to_create)
         if val_quote and val_quote.get("subtotal") is not None:
             calculated_subtotal = float(val_quote["subtotal"])
+        order_misc_fee = max(0.0, round(recovered_packaging_fee + recovered_tip, 2))
+
+        # Reconcile delivery fee if order_amount paid includes distance/tier delivery fee
+        base_component_sum = round(calculated_subtotal - recovered_discount + order_misc_fee, 2)
+        if order_amount > base_component_sum and recovered_delivery_fee == 0.0:
+            recovered_delivery_fee = round(order_amount - base_component_sum, 2)
+
         expected_total = max(0.0, round(calculated_subtotal - recovered_discount + recovered_delivery_fee + recovered_packaging_fee + recovered_tip, 2))
         if val_quote and val_quote.get("total") is not None:
             expected_total = float(val_quote["total"])
-        order_misc_fee = max(0.0, round(recovered_packaging_fee + recovered_tip, 2))
 
         # Check underpayment against the complete authoritative expected total (or calculated subtotal if no quote)
         threshold_total = expected_total if (val_quote or recovered_discount > 0 or recovered_delivery_fee > 0 or recovered_packaging_fee > 0) else calculated_subtotal

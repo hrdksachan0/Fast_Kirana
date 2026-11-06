@@ -11,6 +11,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dio/dio.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
@@ -25,6 +26,7 @@ import '../../widgets/app_confirmation_dialog.dart';
 import '../../core/utils/order_item_helper.dart';
 import 'widgets/edit_picker_product_modal.dart';
 import 'widgets/picker_catalog_browser_modal.dart';
+import '../../core/services/offline_sync_service.dart';
 import 'picker_scan_screen.dart';
 
 class PickerDashboard extends ConsumerStatefulWidget {
@@ -131,6 +133,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
   void initState() {
     super.initState();
     _loadDiskPickerOrders();
+    _flushOfflineQueue();
     _fetchPickerOrders();
     _initSupabaseRealtime();
     SharedPreferences.getInstance().then((prefs) {
@@ -238,15 +241,53 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
     }
   }
 
+  Future<void> _flushOfflineQueue() async {
+    try {
+      final pending = await OfflineSyncService.getPendingCount(OfflineSyncService.queuePicker);
+      if (pending == 0) return;
+      final dio = ref.read(dioProvider);
+      await OfflineSyncService.flushQueue(OfflineSyncService.queuePicker, (item) async {
+        final payload = item['payload'] is Map ? Map<String, dynamic>.from(item['payload'] as Map) : <String, dynamic>{};
+        final orderId = payload['orderId']?.toString();
+        if (orderId == null || orderId.isEmpty) return true;
+        try {
+          final res = await dio.patch('/api/orders/$orderId', data: {'status': 'PACKED'});
+          return res.statusCode == 200 || res.statusCode == 204;
+        } on DioException catch (dioErr) {
+          final code = dioErr.response?.statusCode;
+          if (code != null && code >= 400 && code < 500) {
+            return true;
+          }
+          return false;
+        } catch (_) {
+          return false;
+        }
+      });
+    } catch (e) {
+      debugPrint('[PickerDashboard] flushOfflineQueue error: $e');
+    }
+  }
+
   Future<void> _markOrderAsPacked(String orderId) async {
     OrderAlarmService.instance.stopAlarm();
     setState(() => _updatingOrderId = orderId);
     HapticFeedback.mediumImpact();
 
+    // Optimistic Local Update
+    setState(() {
+      for (final o in _orders) {
+        if (o['id'] == orderId || o['readableId'] == orderId) {
+          o['status'] = 'PACKED';
+          break;
+        }
+      }
+    });
+    _saveDiskPickerOrders(_orders);
+
     try {
       final dio = ref.read(dioProvider);
       final res = await dio.patch('/api/orders/$orderId', data: {'status': 'PACKED'});
-      if (res.statusCode == 200) {
+      if (res.statusCode == 200 || res.statusCode == 204) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -259,11 +300,17 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
         _fetchPickerOrders(silent: true);
       }
     } catch (e) {
+      // Offline darkstore resilience: queue in OfflineSyncService so it auto-syncs when signal recovers
+      await OfflineSyncService.enqueueAction(
+        queueName: OfflineSyncService.queuePicker,
+        action: 'MARK_PACKED',
+        payload: {'orderId': orderId},
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to mark order as packed', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-            backgroundColor: const Color(0xFFDC2626),
+            content: Text('📦 Order Packed (Offline) — will sync when signal returns.', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            backgroundColor: const Color(0xFFF59E0B),
             behavior: SnackBarBehavior.floating,
           ),
         );

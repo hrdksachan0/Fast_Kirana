@@ -383,6 +383,34 @@ class LocationService {
     }
   }
 
+  /// Validates whether address coordinates appear corrupt, zero, or wildly out of zone
+  static bool isCoordinateAnomalous(double? lat, double? lng, {String? pincode}) {
+    if (lat == null || lng == null) return true;
+    if (lat == 0.0 && lng == 0.0) return true;
+    if (lat.abs() < 0.1 || lng.abs() < 0.1) return true;
+    final cleanPin = (pincode ?? '').trim();
+    if (cleanPin == '209206' || cleanPin == '209208') {
+      final distMeters = Geolocator.distanceBetween(
+        AppConfig.darkstoreLat,
+        AppConfig.darkstoreLng,
+        lat,
+        lng,
+      );
+      if (distMeters > 20000) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Returns valid coordinates or heals corrupt coordinates by defaulting to the darkstore hub
+  static (double, double) getSanitizedCoordinates(double? lat, double? lng, {String? pincode}) {
+    if (isCoordinateAnomalous(lat, lng, pincode: pincode)) {
+      return (AppConfig.darkstoreLat, AppConfig.darkstoreLng);
+    }
+    return (lat!, lng!);
+  }
+
 
 
   static const double maxDeliveryRadiusKm = 5.0; // FastKirana delivery zone radius (Strict 5.0 km)

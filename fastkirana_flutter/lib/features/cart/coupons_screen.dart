@@ -163,37 +163,73 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     );
   }
 
-  /// 1. Top Manual Coupon Code Input Box
+  /// 1. Top Manual Coupon Code Input Box (Elevated & Unified)
   Widget _buildManualInputCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    final hasText = _inputController.text.trim().isNotEmpty;
+    final isFocused = _focusNode.hasFocus;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _inlineError != null ? primaryRed : slateBorder,
-          width: 1.2,
+          color: _inlineError != null
+              ? primaryRed
+              : (isFocused
+                  ? primaryRed
+                  : (hasText ? primaryRed.withValues(alpha: 0.5) : const Color(0xFFE2E8F0))),
+          width: isFocused || _inlineError != null ? 1.5 : 1.1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        boxShadow: (isFocused || _inlineError != null)
+            ? [
+                BoxShadow(
+                  color: primaryRed.withValues(alpha: 0.12),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              // Squircle Ticket Icon Badge
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFECDD3), width: 0.8),
+                ),
+                child: const Center(
+                  child: Icon(Icons.local_offer_rounded, color: primaryRed, size: 17),
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Expanded TextField
               Expanded(
                 child: TextField(
                   controller: _inputController,
                   focusNode: _focusNode,
                   textCapitalization: TextCapitalization.characters,
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 14),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: Responsive.scaledFontSize(context, 13.5),
                     fontWeight: FontWeight.w800,
                     color: slateDark,
                     letterSpacing: 1.0,
@@ -202,46 +238,86 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 8),
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
                     hintText: 'ENTER COUPON CODE',
-                    hintStyle: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                    hintStyle: GoogleFonts.plusJakartaSans(
+                      fontSize: Responsive.scaledFontSize(context, 11.5),
                       fontWeight: FontWeight.w600,
                       color: AppDesignSystem.slate400,
                       letterSpacing: 0.5,
                     ),
-                    icon: const Icon(Icons.local_offer_outlined, color: primaryRed, size: 20),
                   ),
                   onSubmitted: (val) => _applyCode(val),
                   onChanged: (_) {
                     if (_inlineError != null) {
                       setState(() => _inlineError = null);
+                    } else {
+                      setState(() {});
                     }
                   },
                 ),
               ),
-              const SizedBox(width: 8),
+
+              if (hasText)
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    _inputController.clear();
+                    setState(() {});
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF1F5F9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close_rounded, size: 13, color: Color(0xFF64748B)),
+                    ),
+                  ),
+                ),
+
+              const SizedBox(width: 6),
+
+              // Tactical Apply Button
               Bounceable(
                 onTap: () => _applyCode(_inputController.text),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
                   decoration: BoxDecoration(
-                    color: primaryRed,
-                    borderRadius: BorderRadius.circular(12),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: primaryRed.withValues(alpha: 0.25),
+                        color: primaryRed.withValues(alpha: 0.28),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Text(
-                    'APPLY',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 12),
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 0.8,
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'APPLY',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: Responsive.scaledFontSize(context, 11.5),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_forward_rounded, size: 12, color: Colors.white),
+                      ],
                     ),
                   ),
                 ),
@@ -251,14 +327,22 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
           if (_inlineError != null) ...[
             const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.only(left: 28),
-              child: Text(
-                _inlineError!,
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11),
-                  fontWeight: FontWeight.w600,
-                  color: primaryRed,
-                ),
+              padding: const EdgeInsets.only(left: 46),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded, size: 12, color: primaryRed),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _inlineError!,
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                        fontWeight: FontWeight.w600,
+                        color: primaryRed,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
+import '../splash/widgets/blinkit_animated_bag.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,6 +25,7 @@ import 'widgets/cart_coupon_card.dart';
 import 'widgets/cart_bottom_checkout_bar.dart';
 import 'widgets/cart_items_section.dart';
 import 'widgets/cart_upsell_carousel.dart';
+import 'widgets/swiggy_coupon_action_sheet.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -66,6 +69,23 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     super.dispose();
   }
 
+  void _showCouponErrorSheet(String message, {double? subtotal}) {
+    final cart = ref.read(cartProvider).value;
+    final currentSubtotal = subtotal ?? (cart?.subtotal ?? 0.0);
+    final restaurantItems = cart?.items.where((i) => isRestaurantProduct(i.product)).toList() ?? [];
+    final String? restId = restaurantItems.isNotEmpty ? restaurantItems.first.product.restaurantId : null;
+    final String restName = restaurantItems.isNotEmpty
+        ? (restaurantItems.first.product.restaurant?.name ?? getOutletName(restaurantItems.first.product))
+        : 'Cafe';
+
+    SwiggyCouponActionSheet.show(
+      context,
+      message: message,
+      subtotal: currentSubtotal,
+      restaurantId: restId,
+      restaurantName: restName,
+    );
+  }
   Future<void> _applyCoupon(String code, double subtotal, {bool silent = false}) async {
     if (!silent) HapticFeedback.mediumImpact();
     setState(() => _isApplyingCoupon = true);
@@ -142,14 +162,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         });
         if (!silent) {
           final errorMessage = e is ApiException ? e.message : 'Invalid or expired coupon code';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: primaryRed,
-              content: Text(errorMessage),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
+          _showCouponErrorSheet(errorMessage, subtotal: subtotal);
         }
       }
     }
@@ -328,55 +341,51 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   Widget _buildEmptyState(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 86,
-              height: 86,
-              decoration: const BoxDecoration(
-                color: AppDesignSystem.rose50,
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Icon(Icons.shopping_bag_outlined, size: 44, color: primaryRed),
-              ),
+            const BlinkitAnimatedBag(
+              title: 'Your bag is feeling hungry!',
+              subtitle: 'Add farm-fresh fruits, unpolished dals, dairy & snacks',
             ),
-            const SizedBox(height: 18),
-            Text(
-              'Your Cart is Empty',
-              style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 18),
-                fontWeight: FontWeight.w900,
-                color: slateDark,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Add farm fresh fruits, dairy, snacks & hot meals!',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 12.5),
-                color: slateMuted,
-              ),
-            ),
-            const SizedBox(height: 22),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryRed,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 13),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
-              child: Text(
-                'Explore Products',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w800,
-                  fontSize: Responsive.scaledFontSize(context, 13),
+            const SizedBox(height: 28),
+            Bounceable(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.pop(context);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 15),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFE11D48).withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.flash_on_rounded, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Start Shopping',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: Responsive.scaledFontSize(context, 14),
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -495,7 +504,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ),
 
                   // 0. Dynamic Distance-Tiered Delivery Progress Bar
-                  CartFreeDeliveryBar(subtotal: subtotal, tier: tier),
+                                    CartFreeDeliveryBar(subtotal: subtotal, tier: tier),
 
                   // 1. Grocery Items Section (if present)
                   if (groceryItems.isNotEmpty)

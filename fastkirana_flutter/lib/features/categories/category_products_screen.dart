@@ -258,8 +258,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 38,
-                              height: 38,
+                              width: 48,
+                              height: 48,
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? const Color(0xFFFEF2F2)
@@ -271,18 +271,18 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                     ? ClipOval(
                                         child: CachedNetworkImage(
                                           imageUrl: item.imageUrl!,
-                                          width: 38,
-                                          height: 38,
+                                          width: 48,
+                                          height: 48,
                                           fit: BoxFit.cover,
                                           errorWidget: (_, __, ___) => Text(
                                             item.emoji,
-                                            style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18)),
+                                            style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)),
                                           ),
                                         ),
                                       )
                                     : Text(
                                         item.emoji,
-                                        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 18)),
+                                        style: TextStyle(fontSize: Responsive.scaledFontSize(context, 22)),
                                       ),
                               ),
                             ),

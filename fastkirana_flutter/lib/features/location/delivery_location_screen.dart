@@ -19,6 +19,7 @@ import '../../widgets/hub_conflict_dialog.dart';
 import 'map_picker_screen.dart';
 import '../home/main_shell.dart';
 import '../../widgets/unserviceable_location_banner.dart';
+import '../../widgets/darkstore_switch_dialog.dart';
 import '../../providers/product_provider.dart';
 import '../../core/routes/app_router.dart';
 
@@ -151,6 +152,12 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
 
   Future<void> _onLocationSelected(Address address, {bool checkServiceable = false, double? distanceKm}) async {
     HapticFeedback.lightImpact();
+
+    // 0. Show branded 850ms Darkstore Switching HUD
+    await DarkstoreSwitchDialog.show(
+      context,
+      hubName: address.city.isNotEmpty ? address.city : address.area,
+    );
 
     // 1. selectedAddressProvider set
     ref.read(selectedAddressProvider.notifier).state = address;

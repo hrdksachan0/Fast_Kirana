@@ -18,9 +18,9 @@ test('shared campaign data resolves every local asset and existing search destin
   assert.deepEqual(flutterContent, webContent)
   assert.deepEqual(parseCampaignConfig(flutterContent), navratriData)
   assert.equal(navratriData.demo, true)
-  assert.equal(navratriData.timings.headerMs, 4000)
-  assert.equal(navratriData.timings.productMs, 2500)
-  assert.equal(navratriData.timings.crossfadeMs, 400)
+  assert.equal(navratriData.timings.headerMs, 4500)
+  assert.equal(navratriData.timings.productMs, 3200)
+  assert.equal(navratriData.timings.crossfadeMs, 450)
   const images = [
     'string-lights.svg',
     ...navratriData.headers.flatMap(header => header.image ? [header.image] : []),
@@ -63,16 +63,16 @@ test('catalogue filtering handles names, slugs, descriptions, tags, categories, 
   assert.deepEqual(filterNavratriProducts(catalogue, ['nonexistent']), [])
   assert.deepEqual(filterNavratriProducts(catalogue, ['diya']).map(item => item.id), [])
   assert.deepEqual(filterNavratriProducts(catalogue, ['thali']).map(item => item.id), ['slug'])
-  assert.deepEqual(filterNavratriProducts(catalogue, []).map(item => item.id), ['name', 'description', 'tags', 'category', 'slug', 'dandiya'])
+  assert.deepEqual(filterNavratriProducts(catalogue, []).map(item => item.id), ['description', 'tags', 'slug'])
   assert.deepEqual(filterNavratriProducts([], []), [])
 })
 
 test('demo collection tabs filter data and support an honest empty flowers collection', () => {
   const [top, pooja, flowers, chunri] = navratriData.tabs
-  assert.equal(filterDemoProducts(top).length, 4)
-  assert.deepEqual(filterDemoProducts(pooja).map(item => item.id), ['mata-chunri'])
+  assert.equal(filterDemoProducts(top).length, 6)
+  assert.deepEqual(filterDemoProducts(pooja).map(item => item.id), ['diwali-ferrero', 'diwali-amul-dark', 'diwali-celebrations', 'diwali-amul-gift'])
   assert.deepEqual(filterDemoProducts(flowers), [])
-  assert.deepEqual(filterDemoProducts(chunri).map(item => item.id), ['mata-chunri'])
+  assert.deepEqual(filterDemoProducts(chunri).map(item => item.id), ['diwali-kaju-katli'])
 })
 
 test('generic campaign metadata remains optional for the bundled Navratri JSON', () => {
@@ -80,9 +80,9 @@ test('generic campaign metadata remains optional for the bundled Navratri JSON',
   assert.equal(config.enabled, true)
   assert.equal(config.autoplay, true)
   assert.equal(config.searchPrefix, 'Search for')
-  assert.deepEqual(config.labels, campaignLabels)
-  assert.deepEqual(config.appearance, campaignAppearance)
-  assert.equal(config.decorationImage, 'string-lights.svg')
+  assert.deepEqual(config.labels, navratriData.labels)
+  assert.deepEqual(config.appearance, navratriData.appearance)
+  assert.equal(config.decorationImage, 'gold-lights.svg')
 })
 
 test('generic metadata can rename and recolor a campaign without replacing its data contract', () => {
@@ -124,7 +124,9 @@ test('campaign validation rejects invalid prices, bounds, duplicate IDs, and unr
 })
 
 test('live campaigns require catalogue product links and image inputs reject unsafe schemes', () => {
-  assert.equal(campaignSchema.safeParse({ ...navratriData, demo: false }).success, false)
+  const noLinks = structuredClone(navratriData)
+  delete (noLinks.products[0] as any).productId
+  assert.equal(campaignSchema.safeParse({ ...noLinks, demo: false }).success, false)
   const live = structuredClone(navratriData)
   live.demo = false
   live.products.forEach((item, index) => { Object.assign(item, { productId: `catalogue-${index}` }) })
@@ -144,7 +146,7 @@ test('live campaigns require catalogue product links and image inputs reject uns
 test('linked promotional slots use current store prices and omit unavailable or restaurant products', () => {
   const config = parseCampaignConfig({
     ...navratriData, demo: false,
-    products: navratriData.products.map((slot, index) => ({ ...slot, productId: ['available', 'sold-out', 'unavailable', 'restaurant'][index] })),
+    products: navratriData.products.map((slot, index) => ({ ...slot, productId: (['available', 'sold-out', 'unavailable', 'restaurant', 'restaurant', 'unavailable'] as string[])[index] || 'available' })),
   })
   const catalogue = [
     product('available', { name: 'Live Puja Thali', price: 180, mrp: 150, imageUrl: '/catalogue/live-thali.svg' }),
@@ -158,7 +160,7 @@ test('linked promotional slots use current store prices and omit unavailable or 
   assert.equal(resolved.products[0].price, 180)
   assert.equal(resolved.products[0].originalPrice, 180)
   assert.equal(resolved.products[0].image, '/catalogue/live-thali.svg')
-  assert.equal(config.products[0].name, 'Dandiya Sticks')
+  assert.equal(config.products[0].name, 'Ferrero Rocher Moments (16 Pcs)')
   assert.deepEqual(resolveCampaignPromotions(config, []).products, [])
   for (const imageUrl of ['📦', 'javascript:alert(1)', '../missing.svg']) {
     assert.equal(resolveCampaignPromotions(config, [{ ...catalogue[0], imageUrl }]).products[0].image, config.products[0].image)

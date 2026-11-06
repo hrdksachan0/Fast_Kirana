@@ -204,8 +204,12 @@ class Order {
   }
 
   ({String label, String formattedAddress, double? lat, double? lng})? get address {
-    final rawLat = (addressRaw?['lat'] as num?)?.toDouble() ?? (addressRaw?['latitude'] as num?)?.toDouble() ?? deliveryLat;
-    final rawLng = (addressRaw?['lng'] as num?)?.toDouble() ?? (addressRaw?['longitude'] as num?)?.toDouble() ?? deliveryLng;
+    final rawLat = (addressRaw?['lat'] as num?)?.toDouble() ??
+        (addressRaw?['latitude'] as num?)?.toDouble() ??
+        (addressRaw?['custLat'] as num?)?.toDouble();
+    final rawLng = (addressRaw?['lng'] as num?)?.toDouble() ??
+        (addressRaw?['longitude'] as num?)?.toDouble() ??
+        (addressRaw?['custLng'] as num?)?.toDouble();
     final rawAddr = customerAddress ?? (addressRaw?['formattedAddress'] as String?) ?? (addressRaw?['address'] as String?) ?? 'Ghatampur Zone';
     final rawLabel = (addressRaw?['label'] as String?) ?? 'Delivery Location';
     return (
@@ -447,9 +451,13 @@ class Order {
       deliveryBoyName: parseDeliveryBoyName(),
       deliveryBoyPhone: parseDeliveryBoyPhone(),
       deliveryLat: (json['deliveryLat'] as num?)?.toDouble() ??
-          (json['address'] is Map ? (json['address']['lat'] as num?)?.toDouble() : null),
+          (json['delivery_lat'] as num?)?.toDouble() ??
+          (json['riderLat'] as num?)?.toDouble() ??
+          (json['rider_lat'] as num?)?.toDouble(),
       deliveryLng: (json['deliveryLng'] as num?)?.toDouble() ??
-          (json['address'] is Map ? (json['address']['lng'] as num?)?.toDouble() : null),
+          (json['delivery_lng'] as num?)?.toDouble() ??
+          (json['riderLng'] as num?)?.toDouble() ??
+          (json['rider_lng'] as num?)?.toDouble(),
       addressRaw: json['address'] is Map ? Map<String, dynamic>.from(json['address']) : null,
       notes: json['notes']?.toString(),
       couponCode: json['couponCode']?.toString(),

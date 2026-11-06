@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../data/models/product.dart';
 import '../../widgets/product_card.dart';
+import '../../core/theme/responsive.dart';
 import 'navratri_animation.dart';
 import 'navratri_data.dart';
 import 'campaign_block_section.dart';
@@ -986,18 +987,22 @@ class _NavratriShoppingSectionState
           const SizedBox(height: 8),
           if (matches.isNotEmpty)
             SizedBox(
-              height: 270 + math.max(0, scale - 1) * 140,
+              height: Responsive.productShelfHeight(context),
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
                 itemCount: matches.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, index) => SizedBox(
-                  width: 165 + math.max(0, scale - 1) * 40,
-                  child: ProductCard(
-                    product: matches[index],
-                    width: 165 + math.max(0, scale - 1) * 40,
-                  ),
-                ),
+                itemBuilder: (ctx, index) {
+                  final cardWidth = Responsive.productCardShelfWidth(ctx);
+                  return SizedBox(
+                    width: cardWidth,
+                    child: ProductCard(
+                      product: matches[index],
+                      width: cardWidth,
+                    ),
+                  );
+                },
               ),
             )
           else ...[

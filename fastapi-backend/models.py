@@ -588,6 +588,8 @@ class StoreInventory(Base):
     stock: Mapped[int] = mapped_column(Integer, default=0)
     reservedStock: Mapped[int] = mapped_column(Integer, default=0)
     priceOverride: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    costPrice: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    vendorId: Mapped[Optional[str]] = mapped_column(String, ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True)
     aisleLocation: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     minStockAlert: Mapped[int] = mapped_column(Integer, default=5)
     isAvailable: Mapped[bool] = mapped_column(Boolean, default=True)

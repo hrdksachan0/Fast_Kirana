@@ -116,9 +116,14 @@ final dioProvider = Provider<Dio>((ref) {
               options.path.contains('/api/checkout') ||
               options.path.contains('/api/cashfree');
           if (isMutatingOrderRoute && !options.headers.containsKey('X-Idempotency-Key')) {
-            final customKey = options.extra['idempotency_key'];
-            final key = customKey ?? 'fk_${DateTime.now().millisecondsSinceEpoch}_${options.data.hashCode.abs()}';
-            options.headers['X-Idempotency-Key'] = key.toString();
+            final customKey = options.extra['idempotency_key'] ??
+                (options.data is Map ? (options.data['idempotencyKey'] ?? options.data['idempotency_key'] ?? options.data['cfOrderId']) : null);
+            final key = (customKey != null && customKey.toString().isNotEmpty)
+                ? customKey.toString()
+                : (options.data is Map && (options.data['id'] != null || options.data['readableId'] != null)
+                    ? 'fk_ord_${options.data['id'] ?? options.data['readableId']}'
+                    : 'fk_${options.data.hashCode.abs()}');
+            options.headers['X-Idempotency-Key'] = key;
           }
         }
 

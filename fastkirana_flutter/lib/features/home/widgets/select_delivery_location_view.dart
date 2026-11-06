@@ -10,6 +10,7 @@ import '../../../data/models/address.dart';
 import '../../../providers/address_provider.dart';
 import '../../../providers/product_provider.dart';
 import '../../location/delivery_location_screen.dart';
+import '../../../widgets/darkstore_switch_dialog.dart';
 
 class SelectDeliveryLocationView extends ConsumerStatefulWidget {
   const SelectDeliveryLocationView({super.key});
@@ -46,6 +47,9 @@ class _SelectDeliveryLocationViewState
 
         ref.read(selectedAddressProvider.notifier).state = address;
         ref.invalidate(homeProductCatalogProvider);
+        if (mounted) {
+          await DarkstoreSwitchDialog.show(context, cityName: details.city);
+        }
         setState(() => _isLocating = false);
         return;
       }

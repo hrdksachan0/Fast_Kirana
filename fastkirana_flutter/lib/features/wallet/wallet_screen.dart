@@ -122,6 +122,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
   void _showAddMoneySheet(BuildContext context, {int initialAmount = 500}) {
     _amountController.text = initialAmount.toString();
     bool isSubmitting = false;
+    bool hasAmountError = false;
 
     showModalBottomSheet(
       context: context,
@@ -223,59 +224,166 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Amount Display / Input Card
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  // Amount Display / Input Card (Style 1 Luxury Floating-Label Card)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AppDesignSystem.primary.withValues(alpha: 0.3), width: 1.5),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: hasAmountError
+                            ? const Color(0xFFEF4444)
+                            : const Color(0xFFE20A22),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: hasAmountError
+                              ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                              : const Color(0xFFE20A22).withValues(alpha: 0.08),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '₹',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(ctx, 32),
-                            fontWeight: FontWeight.w800,
-                            color: AppDesignSystem.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _amountController,
-                            keyboardType: TextInputType.number,
-                            enabled: !isSubmitting,
-                            onChanged: (_) => setSheetState(() {}),
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(ctx, 32),
-                              fontWeight: FontWeight.w800,
-                              color: AppDesignSystem.slate900,
-                              letterSpacing: -0.5,
+                        // Micro Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.account_balance_wallet_outlined,
+                                  size: 15,
+                                  color: Color(0xFFE20A22),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'ENTER TOP-UP AMOUNT',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(ctx, 10),
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.5,
+                                    color: hasAmountError ? const Color(0xFFEF4444) : const Color(0xFFE20A22),
+                                  ),
+                                ),
+                              ],
                             ),
-                            decoration: const InputDecoration(
-                              hintText: '0',
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFDF5),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Text(
+                                'Instant • 0% Fee',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(ctx, 9.5),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF059669),
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                        if (_amountController.text.isNotEmpty && !isSubmitting)
-                          IconButton(
-                            icon: const Icon(Icons.cancel_rounded, color: Colors.grey, size: 20),
-                            onPressed: () {
-                              setSheetState(() {
-                                _amountController.clear();
-                              });
-                            },
-                          ),
+                        const SizedBox(height: 10),
+                        // Input Row with Currency Badge
+                        Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF1F2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFECDD3), width: 1.2),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '₹',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(ctx, 22),
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFFE20A22),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: _amountController,
+                                keyboardType: TextInputType.number,
+                                enabled: !isSubmitting,
+                                autofocus: true,
+                                onChanged: (_) {
+                                  setSheetState(() {
+                                    if (hasAmountError) hasAmountError = false;
+                                  });
+                                },
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(ctx, 28),
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF0F172A),
+                                  letterSpacing: -0.5,
+                                ),
+                                decoration: const InputDecoration(
+                                  hintText: '0',
+                                  hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  disabledBorder: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                            if (_amountController.text.isNotEmpty && !isSubmitting)
+                              GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setSheetState(() {
+                                    _amountController.clear();
+                                    if (hasAmountError) hasAmountError = false;
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF1F5F9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 16),
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
+                  if (hasAmountError) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, size: 14, color: Color(0xFFEF4444)),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Minimum top-up amount is ₹10',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(ctx, 11.5),
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 16),
-
                   // Quick Amount Chips
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -374,16 +482,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                           : () async {
                               final val = double.tryParse(_amountController.text.trim()) ?? 0.0;
                               if (val < 10) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Minimum top-up amount is ₹10',
-                                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                                    ),
-                                    backgroundColor: AppDesignSystem.slate800,
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
+                                HapticFeedback.heavyImpact();
+                                setSheetState(() => hasAmountError = true);
                                 return;
                               }
 

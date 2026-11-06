@@ -326,36 +326,66 @@ class _CartCouponCardState extends ConsumerState<CartCouponCard> {
               ),
             )
           else ...[
-            // Tactile Modern Voucher Slot
+            // Tactile Modern Voucher Slot (Elevated & Unified)
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              height: 50,
               decoration: BoxDecoration(
-                color: isFocused ? Colors.white : const Color(0xFFF8FAFC),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isFocused
-                      ? AppDesignSystem.orange500
-                      : (hasText ? const Color(0xFFCBD5E1) : const Color(0xFFE2E8F0)),
-                  width: isFocused ? 1.6 : 1.2,
+                      ? const Color(0xFFE11D48)
+                      : (hasText ? const Color(0xFFE11D48).withValues(alpha: 0.5) : const Color(0xFFE2E8F0)),
+                  width: isFocused ? 1.5 : 1.1,
                 ),
                 boxShadow: isFocused
                     ? [
                         BoxShadow(
-                          color: AppDesignSystem.orange500.withValues(alpha: 0.12),
+                          color: const Color(0xFFE11D48).withValues(alpha: 0.14),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
                       ]
-                    : [],
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
               ),
+              padding: const EdgeInsets.fromLTRB(8, 5, 5, 5),
               child: Row(
                 children: [
-                  const SizedBox(width: 14),
-                  Icon(
-                    Icons.confirmation_number_outlined,
-                    size: 19,
-                    color: (hasText || isFocused) ? AppDesignSystem.orange600 : AppDesignSystem.slate400,
+                  // Squircle Voucher Badge
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      gradient: (isFocused || hasText)
+                          ? const LinearGradient(
+                              colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : const LinearGradient(
+                              colors: [Color(0xFFF1F5F9), Color(0xFFF8FAFC)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: (isFocused || hasText) ? const Color(0xFFFECDD3) : const Color(0xFFE2E8F0),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.confirmation_number_rounded,
+                        size: 16,
+                        color: (isFocused || hasText) ? const Color(0xFFE11D48) : const Color(0xFF94A3B8),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -363,23 +393,25 @@ class _CartCouponCardState extends ConsumerState<CartCouponCard> {
                       controller: widget.controller,
                       focusNode: _focusNode,
                       textCapitalization: TextCapitalization.characters,
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 13.5),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w800,
-                        color: AppDesignSystem.slate900,
-                        letterSpacing: 0.8,
+                        color: const Color(0xFF0F172A),
+                        letterSpacing: 0.9,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Enter coupon code',
-                        hintStyle: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13),
+                        hintText: 'Enter coupon code (e.g. FAST50)',
+                        hintStyle: GoogleFonts.plusJakartaSans(
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w500,
-                          color: AppDesignSystem.slate400,
+                          color: const Color(0xFF94A3B8),
                           letterSpacing: 0,
                         ),
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                         isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
                       ),
                       onSubmitted: (code) {
                         if (code.trim().isNotEmpty && !widget.isApplyingCoupon) {
@@ -390,82 +422,94 @@ class _CartCouponCardState extends ConsumerState<CartCouponCard> {
                     ),
                   ),
                   if (hasText)
-                    Bounceable(
+                    GestureDetector(
                       onTap: () {
+                        HapticFeedback.lightImpact();
                         widget.controller.clear();
                       },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(Icons.cancel_rounded, size: 18, color: AppDesignSystem.slate400),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF1F5F9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close_rounded, size: 13, color: Color(0xFF64748B)),
+                        ),
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.all(4.0),
-                    child: hasText
-                        ? Bounceable(
-                            onTap: () {
-                              if (!widget.isApplyingCoupon) {
-                                HapticFeedback.mediumImpact();
-                                widget.onApplyCoupon(widget.controller.text.trim());
-                              }
-                            },
-                            child: Container(
-                              height: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 22),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFFF5722), Color(0xFFFF8A00)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFFF5722).withValues(alpha: 0.35),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: widget.isApplyingCoupon
-                                    ? const SizedBox(
-                                        width: 14,
-                                        height: 14,
-                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                      )
-                                    : Text(
-                                        'APPLY',
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 12),
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                          letterSpacing: 0.8,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          )
-                        : Container(
-                            height: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 18),
+                  hasText
+                      ? Bounceable(
+                          onTap: () {
+                            if (!widget.isApplyingCoupon) {
+                              HapticFeedback.mediumImpact();
+                              widget.onApplyCoupon(widget.controller.text.trim());
+                            }
+                          },
+                          child: Container(
+                            height: 38,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
                               borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFE11D48).withValues(alpha: 0.32),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Center(
-                              child: Text(
-                                'APPLY',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 12),
-                                  fontWeight: FontWeight.w800,
-                                  color: AppDesignSystem.slate400,
-                                  letterSpacing: 0.8,
-                                ),
+                              child: widget.isApplyingCoupon
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'APPLY',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: Responsive.scaledFontSize(context, 11.5),
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                            letterSpacing: 0.8,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.arrow_forward_rounded, size: 12, color: Colors.white),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          height: 38,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'APPLY',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF94A3B8),
+                                letterSpacing: 0.8,
                               ),
                             ),
                           ),
-                  ),
+                        ),
                 ],
               ),
             ),

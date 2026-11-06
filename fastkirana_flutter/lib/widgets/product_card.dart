@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../core/widgets/app_cached_image.dart';
 
 import '../core/routes/page_transitions.dart';
 import '../core/utils/restaurant_utils.dart';
@@ -62,10 +63,16 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     }
   }
 
+  double get _effectiveWidth => widget.width ?? (widget.isCompact
+      ? (context.screenWidth - 74 - 24) / 2
+      : (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2);
+
   double get _uiScale {
-    final effectiveWidth = widget.width ?? (widget.isCompact
-        ? (context.screenWidth - 74 - 24) / 2
-        : (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2);
+    final effectiveWidth = _effectiveWidth;
+    if (effectiveWidth < 125) {
+      // 3-card compact horizontal shelf mode (Zepto/Blinkit 3-card view ~104-118px)
+      return (effectiveWidth / 125.0).clamp(0.82, 0.95);
+    }
     final baseWidth = widget.isCompact ? 144.0 : 160.0;
     return (effectiveWidth / baseWidth).clamp(0.90, 1.10);
   }
@@ -106,7 +113,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final product = widget.product;
     final isFood = isRestaurantProduct(product);
     final isVeg = _isVeg(product);
-    final cardWidth = widget.width ?? (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2;
+    final cardWidth = _effectiveWidth;
 
     final variants = product.parsedVariants;
     final addons = product.parsedAddons;
@@ -218,7 +225,12 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             duration: const Duration(milliseconds: 140),
             child: Container(
               width: cardWidth,
-              padding: EdgeInsets.fromLTRB(s(7), s(7), s(7), s(8)),
+              padding: EdgeInsets.fromLTRB(
+                cardWidth < 125 ? s(4.5) : s(7),
+                cardWidth < 125 ? s(4.5) : s(7),
+                cardWidth < 125 ? s(4.5) : s(7),
+                cardWidth < 125 ? s(6) : s(8),
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(s(14)),
@@ -235,91 +247,255 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 1. IMAGE SHOWCASE
-                  ImageShowcase(
-                    product: product,
-                    isFood: isFood,
-                    isBogoDish: isBogoDish,
-                    bogoBadgeText: bogoBadgeText,
-                    uiScale: _uiScale,
-                    imageHeight: imageHeight,
-                    resolvedDiscount: resolvedDiscount,
-                    hasBadges: hasBadges,
-                    timingStatus: timingStatus,
-                    isLowStock: isLowStock,
-                    isOutOfStock: isOutOfStock,
-                    showAddedCheck: false,
-                    showOutlet: widget.showOutlet,
-                    heroTag: widget.heroTag,
-                    imageBuilder: widget.imageBuilder,
-                  ),
-                  SizedBox(height: s(5)),
-
-                  // 2. VEG/NON-VEG + TITLE
-                  ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: s(30)),
-                    child: Row(
+              child: isFood
+                  ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (isFood) VegNonVegIndicator(isVeg: isVeg, s: _uiScale),
-                        Expanded(
-                          child: Text(
-                            product.name,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: s(12.0),
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0F172A),
-                              height: 1.24,
-                              letterSpacing: 0,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                        // 1. IMAGE SHOWCASE
+                        ImageShowcase(
+                          product: product,
+                          isFood: isFood,
+                          isBogoDish: isBogoDish,
+                          bogoBadgeText: bogoBadgeText,
+                          uiScale: _uiScale,
+                          imageHeight: imageHeight,
+                          resolvedDiscount: resolvedDiscount,
+                          hasBadges: hasBadges,
+                          timingStatus: timingStatus,
+                          isLowStock: isLowStock,
+                          isOutOfStock: isOutOfStock,
+                          showAddedCheck: false,
+                          showOutlet: widget.showOutlet,
+                          heroTag: widget.heroTag,
+                          imageBuilder: widget.imageBuilder,
+                        ),
+                        SizedBox(height: s(5)),
+
+                        // 2. VEG/NON-VEG + TITLE
+                        ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: s(38)),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (isFood) VegNonVegIndicator(isVeg: isVeg, s: _uiScale),
+                              Expanded(
+                                child: Text(
+                                  product.name,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: s(12.0),
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0F172A),
+                                    height: 1.22,
+                                    letterSpacing: 0,
+                                  ),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                        SizedBox(height: s(3)),
+
+                        // 3. VARIANT PILL / UNIT
+                        VariantPill(product: product, variants: variants, hasVariants: hasOptions, isOutOfStock: isOutOfStock, isFood: isFood, uiScale: _uiScale),
+                        SizedBox(height: s(4)),
+
+                        // 4. PRICE + ADD BUTTON
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: PriceRow(
+                                priceText: '₹${startingPrice.toInt()}',
+                                mrpText: startingMrp > startingPrice ? '₹${startingMrp.toInt()}' : null,
+                                s: _uiScale,
+                              ),
+                            ),
+                            SizedBox(width: s(4)),
+                            AddToCartButton(
+                              scaffoldContext: context,
+                              product: product,
+                              inCartQty: inCartQty,
+                              hasVariants: hasOptions,
+                              isOutOfStock: isOutOfStock,
+                              isTimingClosed: !timingStatus.isAvailableNow,
+                              nextSlot: timingStatus.nextAvailableTimeStr,
+                              isStoreOpen: isStoreOpen,
+                              isFood: isFood,
+                              gradientColors: gradientColors,
+                              primaryColor: primaryColor,
+                              uiScale: _uiScale,
+                            ),
+                          ],
+                        ),
                       ],
-                    ),
-                  ),
-                  SizedBox(height: s(3)),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 1. HERO PRODUCT IMAGE (Taller 0.95 aspect on compact shelves for maximum visibility)
+                        AspectRatio(
+                          aspectRatio: cardWidth < 125 ? 0.96 : 1.0,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Positioned.fill(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(s(10)),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: AppCachedImage(
+                                    imageUrl: product.imageUrl ?? '',
+                                    fit: BoxFit.contain,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ),
+                                ),
+                              ),
 
-                  // 3. VARIANT PILL / UNIT
-                  VariantPill(product: product, variants: variants, hasVariants: hasOptions, isOutOfStock: isOutOfStock, isFood: isFood, uiScale: _uiScale),
-                  SizedBox(height: s(4)),
+                              // Top-Left Badges (Discount % OFF / Bestseller)
+                              if (resolvedDiscount > 0)
+                                Positioned(
+                                  top: s(4),
+                                  left: s(4),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(horizontal: s(5), vertical: s(2)),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF16A34A),
+                                      borderRadius: BorderRadius.circular(s(4)),
+                                    ),
+                                    child: Text(
+                                      '$resolvedDiscount% OFF',
+                                      style: GoogleFonts.inter(
+                                        fontSize: s(8),
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else if (product.isBestsellerProduct)
+                                Positioned(
+                                  top: s(4),
+                                  left: s(4),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(horizontal: s(5), vertical: s(2)),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF2563EB),
+                                      borderRadius: BorderRadius.circular(s(4)),
+                                    ),
+                                    child: Text(
+                                      'BESTSELLER',
+                                      style: GoogleFonts.inter(
+                                        fontSize: s(7.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
 
-                  // 4. PRICE + ADD BUTTON
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: PriceRow(
+                              // Wishlist Button on Top-Right
+                              Positioned(
+                                top: s(4),
+                                right: s(4),
+                                child: WishlistButton(product: product, s: _uiScale),
+                              ),
+
+                              // Bottom-Left Veg Indicator Dot
+                              Positioned(
+                                bottom: s(5),
+                                left: s(5),
+                                child: Container(
+                                  width: s(12),
+                                  height: s(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    border: Border.all(
+                                      color: isVeg ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                      width: s(1.1),
+                                    ),
+                                    borderRadius: BorderRadius.circular(s(2.5)),
+                                  ),
+                                  child: Center(
+                                    child: Container(
+                                      width: s(5),
+                                      height: s(5),
+                                      decoration: BoxDecoration(
+                                        color: isVeg ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                        shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // Bottom-Right Floating Green '+' / Stepper Button (Zepto Style)
+                              Positioned(
+                                bottom: s(5),
+                                right: s(5),
+                                child: AddToCartButton(
+                                  scaffoldContext: context,
+                                  product: product,
+                                  inCartQty: inCartQty,
+                                  hasVariants: hasOptions,
+                                  isOutOfStock: isOutOfStock,
+                                  isTimingClosed: !timingStatus.isAvailableNow,
+                                  nextSlot: timingStatus.nextAvailableTimeStr,
+                                  isStoreOpen: isStoreOpen,
+                                  isFood: isFood,
+                                  gradientColors: gradientColors,
+                                  primaryColor: primaryColor,
+                                  uiScale: _uiScale,
+                                  isZeptoStyle: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: s(5)),
+
+                        // 2. UNIT / VARIANT PILL
+                        VariantPill(
+                          product: product,
+                          variants: variants,
+                          hasVariants: hasOptions,
+                          isOutOfStock: isOutOfStock,
+                          isFood: isFood,
+                          uiScale: _uiScale,
+                        ),
+                        SizedBox(height: s(3)),
+
+                        // 3. PRICE ROW (₹Price, strikethrough ₹MRP)
+                        PriceRow(
                           priceText: '₹${startingPrice.toInt()}',
                           mrpText: startingMrp > startingPrice ? '₹${startingMrp.toInt()}' : null,
                           s: _uiScale,
                         ),
-                      ),
-                      SizedBox(width: s(4)),
-                      AddToCartButton(
-                        scaffoldContext: context,
-                        product: product,
-                        inCartQty: inCartQty,
-                        hasVariants: hasOptions,
-                        isOutOfStock: isOutOfStock,
-                        isTimingClosed: !timingStatus.isAvailableNow,
-                        nextSlot: timingStatus.nextAvailableTimeStr,
-                        isStoreOpen: isStoreOpen,
-                        isFood: isFood,
-                        gradientColors: gradientColors,
-                        primaryColor: primaryColor,
-                        uiScale: _uiScale,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                        SizedBox(height: s(2)),
+
+                        // 4. CLEAN TITLE (2 lines on 3-card shelf, 3 lines on grid)
+                        Text(
+                          product.name,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: s(11.5),
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0F172A),
+                            height: 1.25,
+                          ),
+                          maxLines: cardWidth < 125 ? 2 : 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
             ),
           ),
         ),
@@ -339,8 +515,9 @@ class ProductCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardWidth = width ?? (context.screenWidth - Responsive.horizontalPadding(context) * 2 - 12) / 2;
-    final baseWidth = isCompact ? 144.0 : 160.0;
-    final uiScale = (cardWidth / baseWidth).clamp(0.90, 1.10);
+    final uiScale = cardWidth < 125
+        ? (cardWidth / 125.0).clamp(0.82, 0.95)
+        : (cardWidth / (isCompact ? 144.0 : 160.0)).clamp(0.90, 1.10);
     double s(double v) => v * uiScale;
 
     return RepaintBoundary(

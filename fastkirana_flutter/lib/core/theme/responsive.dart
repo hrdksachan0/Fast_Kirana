@@ -115,22 +115,25 @@ class Responsive {
     return 0.77;
   }
 
-  /// Unified Responsive Product Card Width for horizontal shelves (Medium, readable size)
+  /// Unified Responsive Product Card Width for horizontal shelves
+  /// Engineered for Blinkit/Zepto 3-card visible horizontal viewport
   static double productCardShelfWidth(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    if (width < 360) return 138.0;
-    if (width < mobileBreakpoint) return 152.0;
-    if (width < tabletBreakpoint) return 164.0;
-    return 172.0;
+    if (width < 360) return 104.0;
+    if (width < 400) return 110.0;
+    if (width < mobileBreakpoint) return 116.0;
+    if (width < tabletBreakpoint) return 126.0;
+    return 138.0;
   }
 
   /// Unified Responsive Product Shelf Height for horizontal tracks
   static double productShelfHeight(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    if (width < 360) return 224.0;
-    if (width < mobileBreakpoint) return 238.0;
-    if (width < tabletBreakpoint) return 250.0;
-    return 260.0;
+    if (width < 360) return 204.0;
+    if (width < 400) return 212.0;
+    if (width < mobileBreakpoint) return 218.0;
+    if (width < tabletBreakpoint) return 228.0;
+    return 236.0;
   }
 
   /// Responsive scaled font size with safety clamping

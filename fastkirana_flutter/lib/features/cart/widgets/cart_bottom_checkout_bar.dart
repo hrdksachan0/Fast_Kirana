@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -45,67 +45,12 @@ class CartBottomCheckoutBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final remainingForFree = (tier.freeDeliveryThreshold - subtotal).clamp(0.0, tier.freeDeliveryThreshold);
-    final isFreeUnlocked = remainingForFree <= 0;
-
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
       color: Colors.white,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Savings / Free Delivery Zone Callout Pill
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: !tier.isServiceable
-                  ? const Color(0xFFFEF2F2)
-                  : (isFreeUnlocked ? const Color(0xFFF0FDF4) : const Color(0xFFFFF7ED)),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: !tier.isServiceable
-                    ? const Color(0xFFFECACA)
-                    : (isFreeUnlocked ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA)),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  !tier.isServiceable
-                      ? '⚠️ '
-                      : (isFreeUnlocked ? '🎉 ' : '🛵 '),
-                  style: const TextStyle(fontSize: 12),
-                ),
-                Flexible(
-                  child: Text(
-                    !tier.isServiceable
-                        ? (tier.distanceKm > 0.0
-                            ? 'Outside Delivery Zone (${tier.distanceKm.toStringAsFixed(1)} km)'
-                            : 'Location Missing • Tap to Set on Map')
-                        : (isFreeUnlocked
-                            ? 'FREE Delivery Unlocked • You saved ₹${(totalSavings + tier.baseFee).toInt()}!'
-                            : 'Add ₹${remainingForFree.toInt()} more to get FREE Delivery'),
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 11),
-                      fontWeight: FontWeight.w700,
-                      color: !tier.isServiceable
-                          ? const Color(0xFFDC2626)
-                          : (isFreeUnlocked ? const Color(0xFF15803D) : const Color(0xFFC2410C)),
-                      letterSpacing: -0.1,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-
           // Total Bill & Checkout Action Button Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -300,3 +245,4 @@ class CartBottomCheckoutBar extends ConsumerWidget {
     );
   }
 }
+

@@ -39,6 +39,39 @@ export async function GET(
     `
 
     if (orders.length === 0) {
+      // 🛡️ RECOVERY: If id is a client temporary synthetic ID (e.g. FK-337743 generated offline/pending),
+      // look up the authenticated user's most recent order created within the last 30 minutes
+      const cleanId = id.replace(/^#/, '').trim()
+      const isSyntheticFk = /^FK-\d{5,7}$/.test(cleanId)
+      if (isSyntheticFk) {
+        const session = await auth()
+        const sessionUserId = session?.user?.id
+        if (sessionUserId) {
+          const recentOrders: any[] = await prisma.$queryRaw`
+            SELECT o.id, o."userId", o."addressId", o."readableId",
+                   o.status::text as status,
+                   o.subtotal, o.discount, o."deliveryFee", o.taxes, o."miscFee", o.total,
+                   o."paymentMethod"::text as "paymentMethod",
+                   o."paymentStatus"::text as "paymentStatus",
+                   o."estimatedDelivery", o."createdAt", o."updatedAt",
+                   o."deliveryMethod", o."isB2B", o."shopName", o."shopPhone",
+                   o."deliveryUserId",
+                   o."deliveryPhoto", o."deliveryLat", o."deliveryLng",
+                   o."combinedId", o."restaurantId", o."orderType"::text as "orderType",
+                   o.notes, o."couponCode",
+                   COALESCE(o."refundAmount", 0)::float as "refundAmount"
+            FROM orders o 
+            WHERE o."userId" = ${sessionUserId} AND o."createdAt" > NOW() - INTERVAL '30 minutes'
+            ORDER BY o."createdAt" DESC LIMIT 1
+          `
+          if (recentOrders.length > 0) {
+            orders.push(recentOrders[0])
+          }
+        }
+      }
+    }
+
+    if (orders.length === 0) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 

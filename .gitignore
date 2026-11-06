@@ -58,6 +58,7 @@ __pycache__/
 
 # dev scratch scripts
 scratch/
+Wedson_*
 scratch-db-test.ts
 restaurant-card.html
 audit-*.png

@@ -616,5 +616,367 @@ class OrderAlarmService {
       },
     );
   }
+
+  /// Start continuous loud alarm loop and high-visibility dispatch dialog specifically for Riders
+  Future<void> startRiderAlarm({
+    required Map<String, dynamic> orderMap,
+    BuildContext? context,
+    VoidCallback? onAccept,
+  }) async {
+    if (_isMuted) return;
+
+    final String orderId = (orderMap['id'] ?? orderMap['readableId'] ?? '').toString();
+    if (_isPlaying && _activeOrderId == orderId) return;
+
+    _activeOrderId = orderId;
+    _isPlaying = true;
+
+    // Play initial chime & heavy dual vibration
+    await _playChime();
+
+    // Loop alarm every 3.5 seconds until rider accepts or explicitly mutes
+    _alarmLoopTimer?.cancel();
+    _alarmLoopTimer = Timer.periodic(const Duration(milliseconds: 3500), (_) async {
+      if (!_isPlaying || _isMuted) {
+        _alarmLoopTimer?.cancel();
+        return;
+      }
+      await _playChime();
+    });
+
+    if (context != null && context.mounted) {
+      _showRiderOrderModal(
+        context: context,
+        orderMap: orderMap,
+        onAccept: onAccept,
+      );
+    }
+  }
+
+  void _showRiderOrderModal({
+    required BuildContext context,
+    required Map<String, dynamic> orderMap,
+    VoidCallback? onAccept,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final orderToken = (orderMap['readableId'] ?? orderMap['id'] ?? '').toString();
+        final displayToken = orderToken.length > 8 ? orderToken.substring(orderToken.length - 8).toUpperCase() : orderToken;
+        final rawItems = orderMap['items'];
+        final int itemsCount = (rawItems is List) ? rawItems.length : 0;
+        final num total = (orderMap['total'] is num)
+            ? (orderMap['total'] as num)
+            : (num.tryParse(orderMap['total']?.toString() ?? '0') ?? 0);
+
+        final rawAddr = orderMap['address'] ?? orderMap['addresses'] ?? orderMap['customerAddress'];
+        String destAddress = 'Customer Location';
+        if (rawAddr is Map) {
+          final street = rawAddr['street'] ?? rawAddr['address'] ?? '';
+          final city = rawAddr['city'] ?? rawAddr['area'] ?? '';
+          destAddress = [street, city].where((s) => s.toString().isNotEmpty).join(', ');
+        } else if (rawAddr is String && rawAddr.isNotEmpty) {
+          destAddress = rawAddr;
+        }
+
+        final customerName = orderMap['customerName'] ?? orderMap['userName'] ?? orderMap['receiverName'] ?? 'Customer';
+        final isCod = (orderMap['paymentMethod'] ?? '').toString().toUpperCase() == 'COD';
+
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF059669).withValues(alpha: 0.4),
+                    blurRadius: 32,
+                    spreadRadius: 6,
+                  ),
+                ],
+                border: Border.all(
+                  color: const Color(0xFF059669),
+                  width: 3.0,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // High-Alert Rider Banner Header
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF059669), Color(0xFF10B981)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 26),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '🛵 NAYA ORDER AAYA HAI!',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Loud chime ringing — please accept',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Order Details Card
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'ORDER ID',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.slate400,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '#$displayToken',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppDesignSystem.slate900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isCod ? const Color(0xFFFEF3C7) : const Color(0xFFD1FAE5),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: isCod ? const Color(0xFFFDE68A) : const Color(0xFFA7F3D0)),
+                              ),
+                              child: Text(
+                                '₹${total.toInt()}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: isCod ? const Color(0xFFB45309) : const Color(0xFF047857),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Payment Status Pill
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: isCod ? const Color(0xFFFFFBEB) : const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: isCod ? const Color(0xFFFDE68A) : const Color(0xFFA7F3D0)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isCod ? Icons.payments_outlined : Icons.check_circle_outline_rounded,
+                                size: 16,
+                                color: isCod ? const Color(0xFFD97706) : const Color(0xFF059669),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  isCod ? 'Cash On Delivery — Customer se cash collect karein' : 'Paid Online — Zero cash collection',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isCod ? const Color(0xFF92400E) : const Color(0xFF065F46),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Destination & Customer Info
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppDesignSystem.slate50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppDesignSystem.slate200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.person_rounded, size: 15, color: Color(0xFF059669)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    customerName.toString(),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppDesignSystem.slate800,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '$itemsCount Items',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppDesignSystem.slate500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.location_on_rounded, size: 15, color: Color(0xFFDC2626)),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      destAddress,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppDesignSystem.slate700,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Action Buttons: Mute/Dismiss & 1-Tap ACCEPT
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  stopAlarm();
+                                  Navigator.pop(ctx);
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  side: const BorderSide(color: AppDesignSystem.slate300),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Text(
+                                  'Mute',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppDesignSystem.slate600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 3,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  stopAlarm();
+                                  Navigator.pop(ctx);
+                                  onAccept?.call();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF059669),
+                                  foregroundColor: Colors.white,
+                                  elevation: 5,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.check_circle_rounded, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'ACCEPT (स्वीकारें)',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 

@@ -206,6 +206,18 @@ class OrderRepository {
         (cleanId.isNotEmpty && (o.id.endsWith(cleanId) || (o.readableId?.endsWith(cleanId) ?? false)))
     ).toList();
     if (match.isNotEmpty) return match.first;
+
+    // 🛡️ RECOVERY: If cleanId is a client-generated temporary synthetic ID (e.g. FK-337743)
+    // and was not found by exact string, reconcile to the user's most recent order created in the last 20 minutes!
+    final isClientSyntheticId = cleanId.startsWith('FK-') && RegExp(r'^FK-\d{5,7}$').hasMatch(cleanId);
+    if (isClientSyntheticId && orders.isNotEmpty) {
+      final recentOrder = orders.first;
+      final orderAge = DateTime.now().difference(recentOrder.createdAt).abs();
+      if (orderAge.inMinutes < 20) {
+        LoggerService.info('OrderRepository: Reconciled client temporary ID $cleanId to real server order #${recentOrder.readableId} (${recentOrder.id})');
+        return recentOrder;
+      }
+    }
     return null;
   }
 

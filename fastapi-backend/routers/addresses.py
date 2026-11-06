@@ -42,6 +42,8 @@ def resolve_fallback_coordinates(lat, lng, pincode, city, street="", area=""):
         return 26.1534185, 80.1714024
     if pin == "224122" or "akbarpur" in c or "akbarpur" in s:
         return 26.4289124, 82.5399322
+    if pin == "816101" or "barharwa" in c or "barharwa" in s or "barharwa" in a:
+        return 24.857140, 87.778952
     if pin == "816107" or "pakur" in c or "pakur" in s:
         return 24.857778, 87.774167
 

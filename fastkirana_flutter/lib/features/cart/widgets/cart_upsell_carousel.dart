@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart';
 
@@ -21,6 +21,7 @@ import '../../../providers/cart_provider.dart';
 import '../../../providers/product_provider.dart';
 
 import '../../../widgets/cart_conflict_dialog.dart';
+import '../../../widgets/product_card.dart';
 
 /// Frequently Bought Together Carousel for Cart & Product Details
 class CartUpsellCarousel extends ConsumerStatefulWidget {
@@ -219,13 +220,21 @@ class _CartUpsellCarouselState extends ConsumerState<CartUpsellCarousel> {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 192,
-          child: ListView.builder(
+          height: Responsive.productShelfHeight(context),
+          child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: products.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (context, idx) {
-              return CartUpsellCard(product: products[idx]);
+              final cardWidth = Responsive.productCardShelfWidth(context);
+              return SizedBox(
+                width: cardWidth,
+                child: ProductCard(
+                  product: products[idx],
+                  width: cardWidth,
+                ),
+              );
             },
           ),
         ),

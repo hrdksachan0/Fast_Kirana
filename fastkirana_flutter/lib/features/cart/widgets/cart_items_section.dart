@@ -362,182 +362,318 @@ class CartItemsSection extends StatelessWidget {
   }
 
   Widget _buildCookingInstructions(BuildContext context) {
-    return StatefulBuilder(
-      builder: (context, setState) {
-        final controller = cookingInstructionsController!;
-        return Container(
-          margin: const EdgeInsets.only(top: 4, bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return _CookingInstructionsCard(
+      controller: cookingInstructionsController!,
+      restaurantTitle: title,
+      suggestions: _suggestions,
+    );
+  }
+}
+
+/// Premium Interactive Cooking Instructions Card (Swiggy/Zomato Gourmet Style)
+class _CookingInstructionsCard extends StatefulWidget {
+  final TextEditingController controller;
+  final String restaurantTitle;
+  final List<String> suggestions;
+
+  const _CookingInstructionsCard({
+    required this.controller,
+    required this.restaurantTitle,
+    required this.suggestions,
+  });
+
+  @override
+  State<_CookingInstructionsCard> createState() => _CookingInstructionsCardState();
+}
+
+class _CookingInstructionsCardState extends State<_CookingInstructionsCard> {
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasText = widget.controller.text.trim().isNotEmpty;
+    final isFocused = _focusNode.hasFocus;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4, bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1F2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text('👨‍🍳', style: TextStyle(fontSize: 13)),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFECDD3), width: 0.8),
+                ),
+                child: const Center(
+                  child: Text('👨‍🍳', style: TextStyle(fontSize: 14)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Cooking Instructions',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: Responsive.scaledFontSize(context, 12),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    Text(
+                      'Special requests for ${widget.restaurantTitle}',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 10),
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (hasText)
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    widget.controller.clear();
+                    setState(() {});
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
+                        const Icon(Icons.close_rounded, size: 12, color: Color(0xFF64748B)),
+                        const SizedBox(width: 3),
                         Text(
-                          'Cooking Instructions',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12),
-                            fontWeight: FontWeight.w800,
-                            color: AppDesignSystem.slate900,
-                          ),
-                        ),
-                        Text(
-                          'Special requests for $title',
+                          'Clear',
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 10),
-                            fontWeight: FontWeight.w500,
-                            color: AppDesignSystem.slate500,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF64748B),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  if (controller.text.isNotEmpty)
-                    GestureDetector(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        setState(() {
-                          controller.clear();
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.close_rounded, size: 12, color: AppDesignSystem.slate500),
-                            const SizedBox(width: 3),
-                            Text(
-                              'Clear',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 10),
-                                fontWeight: FontWeight.w700,
-                                color: AppDesignSystem.slate500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 9),
-
-              // Suggestion Chips (Tap to Toggle/Add)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: _suggestions.map((chip) {
-                    final isPresent = controller.text.contains(chip);
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: GestureDetector(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() {
-                            String current = controller.text.trim();
-                            if (isPresent) {
-                              current = current.replaceAll(chip, '').replaceAll(', ,', ',').trim();
-                              if (current.startsWith(',')) current = current.substring(1).trim();
-                              if (current.endsWith(',')) current = current.substring(0, current.length - 1).trim();
-                              controller.text = current;
-                            } else {
-                              if (current.isEmpty) {
-                                controller.text = chip;
-                              } else {
-                                controller.text = '$current, $chip';
-                              }
-                            }
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                          decoration: BoxDecoration(
-                            color: isPresent ? const Color(0xFFFFF1F2) : Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isPresent ? AppDesignSystem.primary : const Color(0xFFE2E8F0),
-                              width: isPresent ? 1.3 : 1.0,
-                            ),
-                          ),
-                          child: Text(
-                            chip,
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
-                              fontWeight: isPresent ? FontWeight.w800 : FontWeight.w600,
-                              color: isPresent ? AppDesignSystem.primary : AppDesignSystem.slate700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
                 ),
-              ),
-              const SizedBox(height: 9),
-
-              // Interactive Styled Input Box
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                child: TextField(
-                  controller: controller,
-                  maxLines: 2,
-                  minLines: 1,
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 12),
-                    fontWeight: FontWeight.w600,
-                    color: AppDesignSystem.slate900,
-                  ),
-                  decoration: InputDecoration(
-                    icon: const Icon(Icons.edit_note_rounded, size: 20, color: AppDesignSystem.slate400),
-                    hintText: 'Type instructions (e.g. less spicy, no onion)...',
-                    hintStyle: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 11),
-                      color: AppDesignSystem.slate400,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                  onChanged: (_) {
-                    setState(() {});
-                  },
-                ),
-              ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 10),
+
+          // Suggestion Chips (Tap to Toggle/Add)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: widget.suggestions.map((chip) {
+                final isPresent = widget.controller.text.contains(chip);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        String current = widget.controller.text.trim();
+                        if (isPresent) {
+                          current = current.replaceAll(chip, '').replaceAll(', ,', ',').trim();
+                          if (current.startsWith(',')) current = current.substring(1).trim();
+                          if (current.endsWith(',')) current = current.substring(0, current.length - 1).trim();
+                          widget.controller.text = current;
+                        } else {
+                          if (current.isEmpty) {
+                            widget.controller.text = chip;
+                          } else {
+                            widget.controller.text = '$current, $chip';
+                          }
+                        }
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                      decoration: BoxDecoration(
+                        color: isPresent ? const Color(0xFFFFF1F2) : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isPresent ? AppDesignSystem.primary : const Color(0xFFE2E8F0),
+                          width: isPresent ? 1.3 : 1.0,
+                        ),
+                        boxShadow: isPresent
+                            ? [
+                                BoxShadow(
+                                  color: AppDesignSystem.primary.withValues(alpha: 0.12),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Text(
+                        chip,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: isPresent ? FontWeight.w800 : FontWeight.w600,
+                          color: isPresent ? AppDesignSystem.primary : const Color(0xFF334155),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Premium Input Box (Focused glow, unified clean row, clear button)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isFocused
+                    ? AppDesignSystem.primary
+                    : (hasText ? AppDesignSystem.primary.withValues(alpha: 0.5) : const Color(0xFFE2E8F0)),
+                width: isFocused ? 1.5 : 1.0,
+              ),
+              boxShadow: isFocused
+                  ? [
+                      BoxShadow(
+                        color: AppDesignSystem.primary.withValues(alpha: 0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+            ),
+            padding: const EdgeInsets.fromLTRB(10, 2, 8, 2),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.edit_note_rounded,
+                  size: 22,
+                  color: (isFocused || hasText) ? AppDesignSystem.primary : const Color(0xFF94A3B8),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: widget.controller,
+                    focusNode: _focusNode,
+                    maxLines: 2,
+                    minLines: 1,
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0F172A),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Type instructions (e.g. less spicy, no onion)...',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        color: const Color(0xFF94A3B8),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                    onChanged: (_) {
+                      setState(() {});
+                    },
+                  ),
+                ),
+                if (hasText)
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      widget.controller.clear();
+                      setState(() {});
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.all(4.0),
+                      child: Icon(
+                        Icons.cancel_rounded,
+                        size: 16,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 7),
+
+          // Footnote Micro Reassurance
+          Padding(
+            padding: const EdgeInsets.only(left: 2),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_outline_rounded, size: 11, color: Color(0xFF16A34A)),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'Restaurant chef will prepare food following these notes',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 9.5),
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF64748B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

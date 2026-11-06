@@ -109,6 +109,40 @@ class TrackingStatusStepper extends StatelessWidget {
       );
     }
 
+    final String badgeText;
+    final Color badgeBg;
+    final Color badgeFg;
+
+    if (isDelivered || statusStep >= 4) {
+      badgeText = 'COMPLETED';
+      badgeBg = const Color(0xFFDCFCE7);
+      badgeFg = const Color(0xFF15803D);
+    } else if (statusStep == -2) {
+      badgeText = 'VERIFYING';
+      badgeBg = const Color(0xFFFFF7ED);
+      badgeFg = const Color(0xFFC2410C);
+    } else if (statusStep == 0) {
+      badgeText = 'CONFIRMED';
+      badgeBg = const Color(0xFFEFF6FF);
+      badgeFg = const Color(0xFF1D4ED8);
+    } else if (statusStep == 1) {
+      badgeText = 'PREPARING';
+      badgeBg = const Color(0xFFFEF3C7);
+      badgeFg = const Color(0xFFB45309);
+    } else if (statusStep == 2) {
+      badgeText = 'READY FOR PICKUP';
+      badgeBg = const Color(0xFFF3E8FF);
+      badgeFg = const Color(0xFF6B21A8);
+    } else if (statusStep == 3) {
+      badgeText = 'IN TRANSIT';
+      badgeBg = const Color(0xFFEFF6FF);
+      badgeFg = const Color(0xFF1D4ED8);
+    } else {
+      badgeText = 'IN PROGRESS';
+      badgeBg = const Color(0xFFEFF6FF);
+      badgeFg = const Color(0xFF1D4ED8);
+    }
+
     final steps = [
       {'title': 'Order Confirmed', 'subtitle': 'Store has accepted your order', 'icon': Icons.check_circle_outline_rounded},
       {'title': 'Preparing Fresh', 'subtitle': 'Packing fresh items from warehouse', 'icon': Icons.inventory_2_outlined},
@@ -155,7 +189,7 @@ class TrackingStatusStepper extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 2),
                         child: Text(
                           [
-                            if (etaText.isNotEmpty) 'Estimated: $etaText',
+                            if (etaText.isNotEmpty) (etaText == 'Arriving now' ? etaText : 'Estimated: $etaText'),
                             if (distanceText.isNotEmpty) distanceText,
                           ].join(' • '),
                           style: GoogleFonts.inter(
@@ -174,21 +208,15 @@ class TrackingStatusStepper extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isDelivered
-                      ? const Color(0xFFDCFCE7)
-                      : (statusStep == -2 ? const Color(0xFFFFF7ED) : const Color(0xFFEFF6FF)),
+                  color: badgeBg,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  isDelivered
-                      ? 'COMPLETED'
-                      : (statusStep == -2 ? 'VERIFYING' : 'IN TRANSIT'),
+                  badgeText,
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w900,
-                    color: isDelivered
-                        ? const Color(0xFF15803D)
-                        : (statusStep == -2 ? const Color(0xFFC2410C) : const Color(0xFF1D4ED8)),
+                    color: badgeFg,
                     letterSpacing: 0.5,
                   ),
                 ),

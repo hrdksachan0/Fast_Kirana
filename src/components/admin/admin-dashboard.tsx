@@ -27,6 +27,7 @@ import { FlashDealsTab } from '@/components/admin/flash-deals-tab'
 import { RestaurantConsoleTab } from '@/components/admin/restaurant-console-tab'
 import { VendorConsoleTab } from '@/components/admin/vendor-console-tab'
 import { PriceHistoryTab } from '@/components/admin/price-history-tab'
+import { GiftingStoreTab } from '@/components/admin/gifting-store-tab'
 import { FinancialSummary } from '@/components/admin/dashboard/FinancialSummary'
 import { WhatsAppAlertModal } from '@/components/admin/dashboard/whatsapp-alert-modal'
 import { toast } from 'sonner'
@@ -48,6 +49,7 @@ import {
   Settings,
   TrendingUp,
   Zap,
+  Gift,
   Utensils,
   Bell,
   BrainCircuit,
@@ -118,6 +120,7 @@ export type TabType =
   | 'vendors'
   | 'csv-import'
   | 'price-history'
+  | 'gifting-store'
 
 interface AdminDashboardProps {
   initialStoreId?: string | null
@@ -867,6 +870,7 @@ export function AdminDashboard({
       { key: 'banners' as TabType, label: 'Promo Banners', icon: ImageIcon },
       { key: 'campaigns' as TabType, label: 'Campaign Manager', icon: ImageIcon },
       { key: 'flash-deals' as TabType, label: 'Store Highlights', icon: Zap },
+      { key: 'gifting-store' as TabType, label: 'Gifting Store', icon: Gift },
       { key: 'push-notifications' as TabType, label: 'Push Notifications', icon: Bell },
       { key: 'settings' as TabType, label: 'Store Settings', icon: Settings },
       { key: 'analytics' as TabType, label: 'Analytics', icon: TrendingUp },
@@ -1296,6 +1300,8 @@ export function AdminDashboard({
           {activeTab === 'push-notifications' && <PushNotificationsTab />}
 
           {activeTab === 'flash-deals' && <FlashDealsTab storeId={selectedHubId} />}
+
+          {activeTab === 'gifting-store' && <GiftingStoreTab />}
 
           {activeTab === 'finance' && <FinancialSummary storeId={selectedHubId} />}
 

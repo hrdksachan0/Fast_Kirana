@@ -62,7 +62,11 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
   late Animation<Offset> _contentSlideAnim;
 
   Order? _liveOrder;
+  bool _isCopied = false;
   Timer? _syncTimer;
+  Timer? _autoRedirectTimer;
+  Timer? _countdownTimer;
+  int _secondsRemaining = 5;
 
   @override
   void initState() {
@@ -162,6 +166,27 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
       // 5. Live polling backend every 3s to reflect fulfillment changes
       _fetchLiveOrderStatus();
       _syncTimer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchLiveOrderStatus());
+
+      // Smooth auto-redirect to live tracking after 5 seconds per user command
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        setState(() {
+          if (_secondsRemaining > 1) {
+            _secondsRemaining--;
+          } else {
+            timer.cancel();
+          }
+        });
+      });
+
+      _autoRedirectTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted) {
+          _navigateToTracking();
+        }
+      });
     }
   }
 
@@ -169,6 +194,8 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _syncTimer?.cancel();
+    _autoRedirectTimer?.cancel();
+    _countdownTimer?.cancel();
     _confettiController.dispose();
     _checkDrawController.dispose();
     _animController.dispose();
@@ -181,6 +208,8 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
 
   void _navigateToTracking() {
     if (!mounted) return;
+    _autoRedirectTimer?.cancel();
+    _countdownTimer?.cancel();
     final lifecycle = WidgetsBinding.instance.lifecycleState;
     if (lifecycle != null && lifecycle != AppLifecycleState.resumed) {
       return;
@@ -189,22 +218,25 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
     final effectiveOrder = _liveOrder ?? widget.order;
     final trackingId = effectiveOrder?.id ?? effectiveOrder?.readableId ?? widget.orderId ?? '';
     try {
+      // Ultra-smooth Material FadeThrough transition (550ms) per user request
       Navigator.pushReplacement(
         context,
-        FadeSlideRoute(
+        FadeThroughRoute(
           page: OrderTrackingScreen(
             orderId: trackingId,
             initialOrder: effectiveOrder,
           ),
+          transitionDurationOverride: const Duration(milliseconds: 550),
         ),
       );
     } catch (_) {
       AppRouter.navigatorKey.currentState?.pushReplacement(
-        FadeSlideRoute(
+        FadeThroughRoute(
           page: OrderTrackingScreen(
             orderId: trackingId,
             initialOrder: effectiveOrder,
           ),
+          transitionDurationOverride: const Duration(milliseconds: 550),
         ),
       );
     }
@@ -212,6 +244,8 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
 
   void _handleBackOrHome() {
     _syncTimer?.cancel();
+    _autoRedirectTimer?.cancel();
+    _countdownTimer?.cancel();
     HapticFeedback.lightImpact();
     try {
       Navigator.of(context).popUntil((route) => route.isFirst);
@@ -479,35 +513,38 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    Clipboard.setData(ClipboardData(text: displayId));
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Order ID copied!'),
-                                        duration: Duration(seconds: 1),
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-                                  },
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        displayId,
-                                        style: GoogleFonts.jetBrainsMono(
-                                          fontSize: Responsive.scaledFontSize(context, 12),
-                                          fontWeight: FontWeight.w800,
-                                          color: slateDark,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF94A3B8)),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
+                                 GestureDetector(
+                                   onTap: () async {
+                                     HapticFeedback.mediumImpact();
+                                     await Clipboard.setData(ClipboardData(text: displayId));
+                                     if (mounted) {
+                                       setState(() => _isCopied = true);
+                                       Future.delayed(const Duration(seconds: 2), () {
+                                         if (mounted) setState(() => _isCopied = false);
+                                       });
+                                     }
+                                   },
+                                   child: Row(
+                                     mainAxisSize: MainAxisSize.min,
+                                     children: [
+                                       Text(
+                                         _isCopied ? 'Copied!' : displayId,
+                                         style: GoogleFonts.jetBrainsMono(
+                                           fontSize: Responsive.scaledFontSize(context, 12),
+                                           fontWeight: FontWeight.w800,
+                                           color: _isCopied ? const Color(0xFF16A34A) : slateDark,
+                                         ),
+                                       ),
+                                       const SizedBox(width: 4),
+                                       Icon(
+                                         _isCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
+                                         size: 13,
+                                         color: _isCopied ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                                       ),
+                                     ],
+                                   ),
+                                 ),
+                                 const SizedBox(width: 8),
                                 Container(
                                   width: 4,
                                   height: 4,
@@ -589,7 +626,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                                         const Icon(Icons.location_searching_rounded, color: Colors.white, size: 19),
                                         const SizedBox(width: 8),
                                         Text(
-                                          'Track Live Order Status',
+                                          'Track Live Order Status • ${_secondsRemaining}s',
                                           style: GoogleFonts.inter(
                                             fontSize: Responsive.scaledFontSize(context, 14.5),
                                             fontWeight: FontWeight.w900,
@@ -601,7 +638,30 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF10B981),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Auto-redirecting to live tracking in ${_secondsRemaining}s...',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 11),
+                                        fontWeight: FontWeight.w600,
+                                        color: slateMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
                                 // Secondary Action: Continue Shopping
                                 GestureDetector(
                                   onTap: _handleBackOrHome,

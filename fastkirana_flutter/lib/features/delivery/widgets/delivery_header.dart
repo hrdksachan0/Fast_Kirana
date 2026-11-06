@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/design_system.dart';
 import '../../../../core/theme/responsive.dart';
 import '../../../../widgets/live_clock_badge.dart';
+import '../../../../core/services/order_alarm_service.dart';
 
 /// Top header for the delivery dashboard. Contains:
 /// - Back button
@@ -135,6 +136,47 @@ class DeliveryHeader extends StatelessWidget {
         const SizedBox(width: 6),
         const LiveDigitalClockBadge(),
         const Spacer(),
+        Bounceable(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            OrderAlarmService.instance.toggleMute();
+            (context as Element).markNeedsBuild();
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  OrderAlarmService.instance.isMuted
+                      ? '🔇 Order Sound Alert Muted'
+                      : '🔔 Order Sound Alert Active (Loud Chime)',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                ),
+                backgroundColor: OrderAlarmService.instance.isMuted
+                    ? const Color(0xFF64748B)
+                    : const Color(0xFF059669),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            ),
+            child: Icon(
+              OrderAlarmService.instance.isMuted
+                  ? Icons.volume_off_rounded
+                  : Icons.volume_up_rounded,
+              size: 14,
+              color: OrderAlarmService.instance.isMuted
+                  ? Colors.white60
+                  : const Color(0xFFFDE047),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
         Bounceable(
           onTap: () {
             HapticFeedback.mediumImpact();

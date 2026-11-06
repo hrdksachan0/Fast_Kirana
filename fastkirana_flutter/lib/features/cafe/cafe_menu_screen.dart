@@ -26,12 +26,16 @@ class CafeMenuScreen extends ConsumerStatefulWidget {
   final String restaurantId;
   final String restaurantName;
   final Restaurant? restaurant;
+  final String? initialCategoryTag;
+  final String? initialSearchQuery;
 
   const CafeMenuScreen({
     super.key,
     required this.restaurantId,
     required this.restaurantName,
     this.restaurant,
+    this.initialCategoryTag,
+    this.initialSearchQuery,
   });
 
   @override
@@ -46,6 +50,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   final TextEditingController _searchController = TextEditingController();
   late TabController _tabController;
   final Map<String, bool> _collapsedSections = {};
+  bool _hasScrolledToInitialTag = false;
 
   final GlobalKey _topMenuKey = GlobalKey();
   final ScrollController _horizontalCategoryController = ScrollController();
@@ -66,6 +71,14 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   @override
   void initState() {
     super.initState();
+    if (widget.initialCategoryTag != null && widget.initialCategoryTag!.isNotEmpty) {
+      _activeCategoryTag = widget.initialCategoryTag!;
+    }
+    if (widget.initialSearchQuery != null && widget.initialSearchQuery!.isNotEmpty) {
+      _isSearchActive = true;
+      _searchQuery = widget.initialSearchQuery!.trim().toLowerCase();
+      _searchController.text = widget.initialSearchQuery!;
+    }
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -1168,6 +1181,18 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
 
         for (final sec in sections) {
           _sectionKeys.putIfAbsent(sec.tag, () => GlobalKey());
+        }
+
+        if (!_hasScrolledToInitialTag &&
+            widget.initialCategoryTag != null &&
+            widget.initialCategoryTag!.isNotEmpty &&
+            widget.initialCategoryTag != 'all') {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_hasScrolledToInitialTag) {
+              _hasScrolledToInitialTag = true;
+              _scrollToSection(widget.initialCategoryTag!);
+            }
+          });
         }
 
         return NotificationListener<ScrollNotification>(

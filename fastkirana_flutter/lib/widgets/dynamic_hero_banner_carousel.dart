@@ -16,6 +16,7 @@ import '../features/categories/category_products_screen.dart';
 import '../features/cafe/cafe_menu_screen.dart';
 import '../features/search/search_screen.dart';
 import 'card_media_widget.dart';
+import '../features/gifting/send_gift_screen.dart';
 
 /// Ultra-Premium Animated Hero Carousel (Amazon Side-Peek + Swiggy Instamart Depth)
 /// Specifications:
@@ -158,6 +159,26 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
     }
 
     final lower = link.toLowerCase().trim();
+
+    // 0. Gifting Boutique Route (/gift, /gifting, gift-for-someone)
+    final isGifting = lower == '/gift' ||
+        lower == 'gift' ||
+        lower == '/gifting' ||
+        lower == 'gifting' ||
+        lower.contains('gift-for-someone') ||
+        lower.contains('send-gift') ||
+        card.title.toLowerCase().contains('gift for someone') ||
+        card.title.toLowerCase().contains('send a gift');
+
+    if (isGifting) {
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          FadeSlideRoute(page: const SendGiftScreen()),
+        );
+      }
+      return;
+    }
 
     // 0. Mode Switch: Food / Restaurants
     final isFoodSwitch = lower.contains('mode=food') ||
@@ -324,7 +345,31 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
   Widget build(BuildContext context) {
     final offersAsync = ref.watch(brandOfferCardsProvider(widget.type));
 
-    final cards = offersAsync.valueOrNull ?? [];
+    final rawCards = offersAsync.valueOrNull ?? [];
+    final List<CategoryCardData> cards = List.of(rawCards);
+
+    // If in grocery mode and no gifting card exists, append the premier gifting card
+    if ((widget.type == 'grocery' || widget.type == null) &&
+        !cards.any((c) => c.ctaUrl == '/gift' || c.redirectUrl == '/gift')) {
+      cards.add(
+        CategoryCardData(
+          id: 'gift-for-someone-banner',
+          title: 'Send a Gift in 15 Mins 🎁',
+          subtitle: 'Chocolates, Cakes, Mithai & Custom Cards delivered at doorstep',
+          eyebrowTag: 'SURPRISE SOMEONE',
+          ctaText: 'SEND GIFT →',
+          ctaUrl: '/gift',
+          redirectUrl: '/gift',
+          cardType: 'hero',
+          type: 'grocery',
+          imageUrl: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=80',
+          gradientColorsHex: const ['#E11D48', '#BE123C', '#881337'],
+          isActive: true,
+          sortOrder: 1,
+        ),
+      );
+    }
+
     if (cards.isEmpty) {
       return const SizedBox.shrink();
     }

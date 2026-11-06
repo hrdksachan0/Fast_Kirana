@@ -166,7 +166,7 @@ class HomeBuyAgainShelf extends ConsumerWidget {
               physics: const BouncingScrollPhysics(),
               padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPadding(context)),
               itemCount: buyAgainProducts.length,
-              separatorBuilder: (_, __) => SizedBox(width: Responsive.isSmallMobile(context) ? 8 : 10),
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final product = buyAgainProducts[index];
                 return SizedBox(

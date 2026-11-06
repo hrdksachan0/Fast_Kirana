@@ -33,7 +33,7 @@ def test_defaults_and_generic_empty_navigation(config):
     result = validate_campaign(config)
     assert result["enabled"] is True
     assert result["autoplay"] is True
-    assert result["decorationImage"] == "string-lights.svg"
+    assert result["decorationImage"] == "gold-lights.svg"
     assert result["labels"]["demoLabel"]
     assert len(result["categories"]) == 4
     assert result["composition"] == "template"
@@ -87,6 +87,7 @@ def test_live_blocks_require_catalogue_links_only_for_displayed_slots(config):
     config.update(demo=False, composition="blocks", blocks=[{"id": "image", "type": "image", "image": "chunri.svg"}])
     assert validate_campaign(config)["demo"] is False
     slot = config["products"][1]
+    slot.pop("productId", None)
     config["blocks"] = [{"id": "spotlight", "type": "spotlight", "itemIds": [slot["id"]]}]
     with pytest.raises(CampaignValidationError, match="productId"):
         validate_campaign(config)
@@ -146,7 +147,7 @@ def test_valid_local_and_https_images(image):
     lambda config: config["headers"].append(deepcopy(config["headers"][0])),
     lambda config: config.update(categories=config["categories"][:3]),
     lambda config: config.update(tabs=[]),
-    lambda config: config.update(demo=False),
+    lambda config: (config.update(demo=False), config["products"][0].pop("productId", None)),
     lambda config: config.update(appearance={"background": "red"}),
     lambda config: config.update(unexpected="ignored-but-unsafe"),
     lambda config: config["headers"][0].pop("image"),

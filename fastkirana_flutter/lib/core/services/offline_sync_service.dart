@@ -8,6 +8,9 @@ class OfflineSyncService {
   static const String queueAdmin = 'offline_admin_queue';
   static const String queueDelivery = 'offline_delivery_queue';
 
+  /// Active flush guards to prevent duplicate concurrent executions on rapid network flaps
+  static final Set<String> _activeFlushes = {};
+
   /// Enqueue an action when device is offline
   static Future<void> enqueueAction({
     required String queueName,
@@ -58,6 +61,11 @@ class OfflineSyncService {
     String queueName,
     Future<bool> Function(Map<String, dynamic> actionItem) executor,
   ) async {
+    if (_activeFlushes.contains(queueName)) {
+      LoggerService.info('[OfflineSync] Flush already in progress for $queueName, skipping concurrent flap trigger.');
+      return 0;
+    }
+    _activeFlushes.add(queueName);
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(queueName);
@@ -106,6 +114,8 @@ class OfflineSyncService {
     } catch (e) {
       LoggerService.error('[OfflineSync] Failed to flush queue $queueName: $e');
       return 0;
+    } finally {
+      _activeFlushes.remove(queueName);
     }
   }
 

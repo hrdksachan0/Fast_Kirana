@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,11 +24,14 @@ import 'widgets/checkout_delivery_address_card.dart';
 import 'widgets/checkout_bill_breakdown.dart';
 import 'widgets/checkout_savings_banner.dart';
 import 'widgets/checkout_receiver_card.dart';
-import 'widgets/checkout_complete_your_meal.dart';
 import 'widgets/checkout_placing_order_overlay.dart';
 import 'widgets/checkout_items_review_card.dart';
 import 'widgets/checkout_payment_selector_sheet.dart';
 import 'widgets/checkout_bottom_bar.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../widgets/address_selector_sheet.dart';
+import '../../data/models/address.dart';
+import 'widgets/proximity_delivery_guard_sheet.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   final double discountAmount;
@@ -50,6 +54,38 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final TextEditingController _deliveryNotesController = TextEditingController();
   bool _isCheckingConnection = false;
+  double? _userDistanceFromAddressMeters;
+  bool _hasCalculatedProximity = false;
+
+  void _calculateProximity(Address? address) async {
+    if (address == null || !mounted) return;
+    if (address.latitude == null || address.longitude == null) return;
+    if (LocationService.isCoordinateAnomalous(address.latitude, address.longitude, pincode: address.pincode)) {
+      if (mounted) {
+        setState(() {
+          _userDistanceFromAddressMeters = null;
+        });
+      }
+      return;
+    }
+
+    try {
+      final pos = await LocationService.getCurrentPosition();
+      if (pos != null && mounted) {
+        final dist = Geolocator.distanceBetween(
+          pos.latitude,
+          pos.longitude,
+          address.latitude!,
+          address.longitude!,
+        );
+        setState(() {
+          _userDistanceFromAddressMeters = dist;
+        });
+      }
+    } catch (_) {
+      // Graceful fallback
+    }
+  }
 
   static const Color slateDark = AppDesignSystem.slate900;
   static const Color slateMuted = AppDesignSystem.slate500;
@@ -74,6 +110,199 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     super.dispose();
   }
 
+  void _showWalletEligibilitySheet(int neededAmount) {
+    HapticFeedback.heavyImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).padding.bottom + 20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 60,
+              height: 60,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEF3C7),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Icon(Icons.account_balance_wallet_rounded, color: Color(0xFFD97706), size: 30),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Referral Bonus Unlock',
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 17),
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Minimum order of ₹99 is required to use your wallet discount. Add ₹$neededAmount more items to save instantly!',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 12.5),
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF64748B),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Bounceable(
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+              },
+              child: Container(
+                height: 48,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE20A22), Color(0xFFDC2626)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFE20A22).withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '+ Add More Items',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 14.5),
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOfflineSheet(VoidCallback onRetry) {
+    HapticFeedback.heavyImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).padding.bottom + 20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 60,
+              height: 60,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Icon(Icons.wifi_off_rounded, color: Color(0xFFE20A22), size: 30),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'No Internet Connection',
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 17),
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Please check your mobile data or Wi-Fi to proceed with your payment securely.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 12.5),
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF64748B),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Bounceable(
+              onTap: () {
+                Navigator.pop(ctx);
+                onRetry();
+              },
+              child: Container(
+                height: 48,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE20A22), Color(0xFFDC2626)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFE20A22).withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    'Retry Connection',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 14.5),
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final checkoutState = ref.watch(checkoutControllerProvider);
@@ -102,6 +331,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final addresses = ref.watch(addressesProvider).valueOrNull ?? [];
     final selectedAddress = ref.watch(selectedAddressProvider) ??
         (checkoutState.selectedAddressIndex < addresses.length ? addresses[checkoutState.selectedAddressIndex] : null);
+
+    if (!_hasCalculatedProximity && selectedAddress != null) {
+      _hasCalculatedProximity = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _calculateProximity(selectedAddress);
+      });
+    }
 
     RestaurantInfo? cartRestaurant;
     for (final item in items) {
@@ -321,8 +557,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       CheckoutDeliveryAddressCard(
                         selectedAddress: selectedAddress,
                         tier: tier,
+                        userDistanceMeters: _userDistanceFromAddressMeters,
                         onAddressChanged: (addr) {
                           ref.read(selectedAddressProvider.notifier).state = addr;
+                          _calculateProximity(addr);
                         },
                       ),
 
@@ -337,6 +575,48 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         customerName: customerName,
                         customerPhone: customerPhone,
                         isOrderingForSomeone: checkoutState.customReceiverName != null || checkoutState.customReceiverPhone != null,
+                        distanceMeters: _userDistanceFromAddressMeters,
+                        onProximitySheetRequested: () async {
+                          if (selectedAddress == null || _userDistanceFromAddressMeters == null) return;
+                          final action = await ProximityDeliveryGuardSheet.show(
+                            context: context,
+                            address: selectedAddress,
+                            distanceMeters: _userDistanceFromAddressMeters!,
+                          );
+                          if (!context.mounted) return;
+                          if (action == ProximityGuardAction.continueWithAddress) {
+                          } else if (action == ProximityGuardAction.switchToCurrentLocation) {
+                            await AddressSelectorSheet.show(
+                              context,
+                              activeAddress: selectedAddress,
+                              onAddressSelected: (addr) {
+                                ref.read(selectedAddressProvider.notifier).state = addr;
+                                _calculateProximity(addr);
+                              },
+                            );
+                          } else if (action == ProximityGuardAction.orderForSomeoneElse) {
+                            CheckoutReceiverCard.showEditReceiverModal(
+                              context: context,
+                              isOrderingForSomeone: checkoutState.customReceiverName != null || checkoutState.customReceiverPhone != null,
+                              customerName: customerName,
+                              customerPhone: customerPhone,
+                              onReceiverDetailsSaved: (name, phone) {
+                                controller.setReceiverDetails(name, phone);
+                              },
+                            );
+                          }
+                        },
+                        onAddressChangeRequested: () async {
+                          HapticFeedback.selectionClick();
+                          await AddressSelectorSheet.show(
+                            context,
+                            activeAddress: selectedAddress,
+                            onAddressSelected: (addr) {
+                              ref.read(selectedAddressProvider.notifier).state = addr;
+                              _calculateProximity(addr);
+                            },
+                          );
+                        },
                         onReceiverDetailsSaved: (name, phone) {
                           controller.setReceiverDetails(name, phone);
                         },
@@ -347,9 +627,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       CheckoutItemsReviewCard(items: items),
                       const SizedBox(height: 14),
 
-                      // 5. Complete Your Meal Cross-sell
-                      CheckoutCompleteYourMeal(items: items),
-                      const SizedBox(height: 14),
 
                       // 6. FastMinute Wallet Split-Payment Toggle Card
                       if (wallet.totalUsable > 0) ...[
@@ -445,16 +722,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                       }
                                     : (val) {
                                         HapticFeedback.heavyImpact();
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Minimum order of ₹99 required to use Referral Bonus. Add ₹${(minPromoOrderValue - subtotal).toInt()} more items!',
-                                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                                            ),
-                                            backgroundColor: AppDesignSystem.amber800,
-                                            behavior: SnackBarBehavior.floating,
-                                          ),
-                                        );
+                                          _showWalletEligibilitySheet((minPromoOrderValue - subtotal).toInt());
                                       },
                               ),
                             ],
@@ -538,6 +806,30 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       );
                     }
 
+                    Future<void> handleProceedToPay() async {
+                      // 1. Serviceability Check against store delivery radius limit
+                      if (selectedAddress != null && !tier.isServiceable) {
+                        HapticFeedback.heavyImpact();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              tier.distanceKm > 0.0
+                                  ? 'âš ï¸ Selected address is outside our 5.0 km delivery zone ( km). Delivery unavailable.'
+                                  : 'âš ï¸ Selected address is not serviceable. Please change delivery address.',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                            ),
+                            backgroundColor: AppDesignSystem.red600,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
+
+                      // Proximity reminder is permanently highlighted at the top via Zepto Speech Bubble.
+                      // Proceed to Pay proceeds directly to payment without any blocking popup sheets!
+                      openPaymentSheet();
+                    }
+
                     Future<void> retryConnectionAndProceed() async {
                       if (_isCheckingConnection) return;
                       setState(() => _isCheckingConnection = true);
@@ -547,20 +839,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         final transports = ref.read(connectivityProvider).results;
                         final hasActiveTransport = transports.any((r) => r != ConnectivityResult.none);
                         if (isOnline || hasActiveTransport) {
-                          openPaymentSheet();
+                          handleProceedToPay();
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please check your mobile data or Wi-Fi connection.'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                          _showOfflineSheet(handleProceedToPay);
                         }
                       } catch (_) {
                         if (context.mounted) {
                           final transports = ref.read(connectivityProvider).results;
                           if (transports.any((r) => r != ConnectivityResult.none)) {
-                            openPaymentSheet();
+                            handleProceedToPay();
                           }
                         }
                       } finally {
@@ -574,7 +861,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       isOffline: !ref.watch(connectivityProvider).isOnline,
                       isCheckingConnection: _isCheckingConnection,
                       onRetryConnection: retryConnectionAndProceed,
-                      onProceedToPay: openPaymentSheet,
+                      onProceedToPay: handleProceedToPay,
                     );
                   },
                 ),

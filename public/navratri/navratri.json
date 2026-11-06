@@ -3,7 +3,7 @@
   "layout": "classic",
   "composition": "template",
   "blocks": [],
-  "demo": false,
+  "demo": true,
   "enabled": true,
   "autoplay": true,
   "searchPrefix": "Search for",

@@ -1,7 +1,8 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../data/models/product.dart';
 import '../../widgets/product_card.dart';
+import '../../core/theme/responsive.dart';
 import 'campaign_block.dart';
 import 'navratri_animation.dart';
 import 'navratri_data.dart';
@@ -404,13 +405,16 @@ class _BlockViewState extends NavratriAutoplayState<_BlockView> {
     final row = block.presentation == 'row';
     final columns = width >= 600 ? 4 : 2;
     final itemWidth = row
-        ? 168.0 + math.max(0.0, scale - 1) * 40
+        ? Responsive.productCardShelfWidth(context)
         : (width - (columns - 1) * 10) / columns;
+    final itemHeight = row
+        ? Responsive.productShelfHeight(context)
+        : (270.0 + math.max(0.0, scale - 1) * 160.0).toDouble();
     final cards = matches.isNotEmpty
         ? matches
             .map((product) => SizedBox(
                 width: itemWidth,
-                height: 270 + math.max(0, scale - 1) * 160,
+                height: itemHeight,
                 child: ProductCard(
                     product: product,
                     width: itemWidth,

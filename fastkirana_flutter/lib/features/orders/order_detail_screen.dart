@@ -593,6 +593,7 @@ class OrderDetailScreen extends StatelessWidget {
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 14),
                             Text(
                               '₹${(item.price * item.quantity).toInt()}',
                               style: GoogleFonts.inter(
@@ -609,20 +610,40 @@ class OrderDetailScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   const Divider(color: AppDesignSystem.slate100),
                   const SizedBox(height: 8),
-                  _buildBillRow('Item Total', '₹${order.subtotal.toInt()}'),
-                  if (order.discount > 0)
-                    _buildBillRow('Discount Savings', '-₹${order.discount.toInt()}', isGreen: true),
-                  _buildBillRow(
-                    'Delivery Fee',
-                    isPickupOrder ? 'FREE (Store Pickup)' : (order.deliveryFee == 0 ? 'FREE' : '₹${order.deliveryFee.toInt()}'),
-                    isGreen: order.deliveryFee == 0 || isPickupOrder,
-                  ),
-                  _buildBillRow(
-                    'Packaging Charge',
-                    order.miscFee > 0 ? '₹${order.miscFee.toInt()}' : (isPickupOrder ? 'FREE' : '₹0'),
-                    isGreen: order.miscFee == 0 || isPickupOrder,
-                  ),
-                  _buildBillRow('Handling & Taxes', '₹0', isGreen: true),
+                  Builder(builder: (context) {
+                    final calcSubtotal = itemsList.fold<double>(0.0, (sum, it) => sum + (it.price * it.quantity));
+                    final effectiveSubtotal = calcSubtotal > 0 ? calcSubtotal : order.subtotal;
+                    final netSubtotal = effectiveSubtotal - order.discount;
+                    final otherFees = order.miscFee + order.taxes;
+                    final paidDiff = order.total - (netSubtotal + otherFees);
+                    final effectiveDeliveryFee = () {
+                      if (isPickupOrder) return 0.0;
+                      if (order.deliveryFee > 0) return order.deliveryFee;
+                      if (paidDiff > 0.5) return paidDiff;
+                      return 0.0;
+                    }();
+                    final isDistanceDelivery = effectiveDeliveryFee > 25.0;
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildBillRow('Item Total', '₹${effectiveSubtotal.toInt()}'),
+                        if (order.discount > 0)
+                          _buildBillRow('Discount Savings', '-₹${order.discount.toInt()}', isGreen: true),
+                        _buildBillRow(
+                          isDistanceDelivery ? 'Delivery Fee (Distance-based)' : 'Delivery Fee',
+                          isPickupOrder ? 'FREE (Store Pickup)' : (effectiveDeliveryFee <= 0 ? 'FREE' : '₹${effectiveDeliveryFee.toInt()}'),
+                          isGreen: effectiveDeliveryFee <= 0 || isPickupOrder,
+                        ),
+                        _buildBillRow(
+                          'Packaging Charge',
+                          order.miscFee > 0 ? '₹${order.miscFee.toInt()}' : (isPickupOrder ? 'FREE' : '₹0'),
+                          isGreen: order.miscFee == 0 || isPickupOrder,
+                        ),
+                        _buildBillRow('Handling & Taxes', '₹0', isGreen: true),
+                      ],
+                    );
+                  }),
                   if (order.walletAmountUsed > 0 || (order.paymentMethod == PaymentMethod.wallet && (order.subtotal + order.deliveryFee + order.miscFee - order.discount) > order.total))
                     Builder(builder: (context) {
                       final gross = order.subtotal + order.deliveryFee + order.miscFee - order.discount;

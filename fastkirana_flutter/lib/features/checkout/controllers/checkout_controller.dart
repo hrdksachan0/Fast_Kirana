@@ -1402,10 +1402,16 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return;
     }
 
+    final stableCheckoutIdempotencyKey = draft?.idempotencyKey ??
+        ((effectiveCfOrderId != null && effectiveCfOrderId.isNotEmpty)
+            ? 'idemp_cf_$effectiveCfOrderId'
+            : 'idemp_ord_${userId}_${newOrder.id}');
+
     Map<String, dynamic>? apiPayload;
     try {
       apiPayload = {
         ...newOrder.toJson(),
+        'idempotencyKey': stableCheckoutIdempotencyKey,
         'userId': userId,
         'userPhone': buyerPhone,
         'userName': buyerName,
@@ -1446,7 +1452,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         'items': itemsPayload,
       };
 
-      final acceptedDraftToSave = draft ?? CheckoutDraft(
+      final acceptedDraftToSave = (draft ?? CheckoutDraft(
         hubId: (draft != null && draft.hubId != null && draft.hubId!.isNotEmpty) ? draft.hubId! : nearestHub.id,
         deliveryMethod: effectiveDeliveryMethod,
         selectedAddress: selectedAddress,
@@ -1468,11 +1474,20 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         items: itemsPayload,
         grandTotal: grandTotal,
         cfOrderId: effectiveCfOrderId,
-      );
+        idempotencyKey: stableCheckoutIdempotencyKey,
+      )).copyWith(idempotencyKey: stableCheckoutIdempotencyKey);
       // Fast dispatch: persist draft asynchronously without blocking the immediate HTTP POST call
       unawaited(CheckoutDraft.saveAcceptedDraft(acceptedDraftToSave));
 
-      final res = await ref.read(dioProvider).post('/api/orders', data: apiPayload);
+      final res = await ref.read(dioProvider).post(
+        '/api/orders',
+        data: apiPayload,
+        options: Options(
+          extra: {
+            'idempotency_key': stableCheckoutIdempotencyKey,
+          },
+        ),
+      );
       if (res.data != null) {
         final data = res.data;
         String? serverReadableId = data['readableId']?.toString();
@@ -1716,10 +1731,23 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     required String selectedAddr,
     required String userId,
   }) async {
+    final retryIdempotencyKey = apiPayload['idempotencyKey']?.toString() ??
+        (apiPayload['cfOrderId']?.toString() != null && apiPayload['cfOrderId'].toString().isNotEmpty
+            ? 'idemp_cf_${apiPayload['cfOrderId']}'
+            : 'idemp_ord_${userId}_${localOrder.id}');
+
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
         await Future.delayed(Duration(seconds: attempt * 2));
-        final res = await ref.read(dioProvider).post('/api/orders', data: apiPayload);
+        final res = await ref.read(dioProvider).post(
+          '/api/orders',
+          data: apiPayload,
+          options: Options(
+            extra: {
+              'idempotency_key': retryIdempotencyKey,
+            },
+          ),
+        );
         if (res.statusCode == 200 || res.statusCode == 201) {
           debugPrint('✅ Background order sync succeeded on retry $attempt!');
           var confirmedOrder = localOrder;

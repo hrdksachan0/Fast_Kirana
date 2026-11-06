@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:dio/dio.dart';
@@ -360,13 +361,42 @@ class ProductRepository {
         final cachedCatProds = _categoryCachedProducts[catCacheKey];
         final lastCatTime = _categoryLastFetchTime[catCacheKey];
 
-        if (!forceRefresh &&
-            cachedCatProds != null &&
-            cachedCatProds.isNotEmpty &&
-            lastCatTime != null &&
-            now.difference(lastCatTime).inMinutes < _cacheTTLMinutes) {
-          debugPrint('[ProductRepo] category cache HIT for $catCacheKey: ${cachedCatProds.length} items');
-          return _filterProducts(cachedCatProds, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
+        // ── SWR (Stale-While-Revalidate) Instant Category Rendering ──
+        // Check if we have cached products for this category from memory or preloaded disk
+        final availableLocal = (cachedCatProds != null && cachedCatProds.isNotEmpty)
+            ? cachedCatProds
+            : peekCachedProducts(categoryKey: category ?? resolvedId, storeId: effectiveStoreId);
+
+        if (!forceRefresh && availableLocal != null && availableLocal.isNotEmpty) {
+          // If fresh in-memory category cache exists, return immediately without network
+          if (lastCatTime != null && now.difference(lastCatTime).inMinutes < _cacheTTLMinutes) {
+            debugPrint('[ProductRepo] category cache HIT for $catCacheKey: ${availableLocal.length} items');
+            return _filterProducts(availableLocal, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
+          }
+
+          // Stale cache hit: Return local items instantly in 0ms, revalidate in background!
+          debugPrint('[ProductRepo] category SWR HIT (serving ${availableLocal.length} cached items while revalidating in background)');
+          unawaited(() async {
+            try {
+              final freshProds = await _fetchLiveProducts(
+                limit: limit,
+                search: search,
+                restaurantId: restaurantId,
+                category: category,
+                categoryId: resolvedId,
+                storeId: effectiveStoreId,
+                includeRestaurants: includeRestaurants,
+              );
+              if (freshProds.isNotEmpty) {
+                _categoryCachedProducts[catCacheKey] = freshProds;
+                _categoryLastFetchTime[catCacheKey] = DateTime.now();
+              }
+            } catch (e) {
+              debugPrint('[ProductRepo] background category revalidation skipped/failed: $e');
+            }
+          }());
+
+          return _filterProducts(availableLocal, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
         }
 
         final key = _cacheKey(search: search, restaurantId: restaurantId, category: category, categoryId: resolvedId, storeId: effectiveStoreId, limit: limit);

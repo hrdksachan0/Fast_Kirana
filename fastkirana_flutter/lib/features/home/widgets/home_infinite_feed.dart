@@ -9,6 +9,7 @@ import '../../../data/models/category.dart';
 import '../../../providers/product_provider.dart';
 import '../../../providers/store_hub_provider.dart';
 import '../../../widgets/product_card.dart';
+import '../utils/category_visual_helper.dart';
 import 'home_end_of_aisle_search_card.dart';
 import 'home_aisle_spotlight_banner.dart';
 
@@ -84,30 +85,6 @@ class HomeInfiniteFeed {
     return result;
   }
 
-  static String _getSubcategoryEmoji(String slug, String name) {
-    final s = slug.toLowerCase();
-    final n = name.toLowerCase();
-    if (s.contains('atta') || s.contains('flour') || s.contains('rice') || s.contains('sugar')) return '🌾';
-    if (s.contains('dal') || s.contains('pulse') || n.contains('dal')) return '🍲';
-    if (s.contains('oil') || s.contains('ghee') || n.contains('oil') || n.contains('ghee')) return '🛢️';
-    if (s.contains('masala') || s.contains('spice') || n.contains('masala')) return '🌶️';
-    if (s.contains('tea') || s.contains('coffee') || s.contains('chai')) return '☕';
-    if (s.contains('cookie') || s.contains('biscuit') || n.contains('cookie')) return '🍪';
-    if (s.contains('namkeen') || s.contains('snack') || n.contains('namkeen')) return '🥨';
-    if (s.contains('sauce') || s.contains('spread') || s.contains('ketchup')) return '🍅';
-    if (s.contains('noodle') || s.contains('pasta') || s.contains('instant')) return '🍜';
-    if (s.contains('dry') || s.contains('nut') || s.contains('cashew') || s.contains('almond')) return '🥜';
-    if (s.contains('choco') || s.contains('sweet')) return '🍫';
-    if (s.contains('bakery') || s.contains('bread') || s.contains('rusk')) return '🍞';
-    if (s.contains('laund') || s.contains('detergent')) return '🧼';
-    if (s.contains('dish') || s.contains('scrub')) return '🧽';
-    if (s.contains('oral') || s.contains('dental') || s.contains('toothpaste')) return '🪥';
-    if (s.contains('hair') || s.contains('shampoo') || s.contains('oil')) return '🧴';
-    if (s.contains('fruit')) return '🍎';
-    if (s.contains('veg')) return '🥦';
-    return '🛍️';
-  }
-
   static String _getSubcategorySubtitle(String name) {
     final lower = name.toLowerCase();
     if (lower.contains('atta') || lower.contains('flour') || lower.contains('rice')) return 'Aashirvaad, Fortune atta, basmati & grains';
@@ -160,17 +137,23 @@ class HomeInfiniteFeed {
           ),
         ),
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           sliver: SliverGrid(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
-              childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: false),
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 12,
+              crossAxisCount: Responsive.isTablet(context) ? 4 : 3,
+              childAspectRatio: Responsive.isTablet(context)
+                  ? 0.74
+                  : (MediaQuery.of(context).size.width < 360 ? 0.58 : 0.605),
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 10,
             ),
             delegate: SliverChildBuilderDelegate(
-              (context, index) => const ProductCardSkeleton(),
-              childCount: 4,
+              (context, index) {
+                final columns = Responsive.isTablet(context) ? 4 : 3;
+                final cardWidth = (MediaQuery.of(context).size.width - 24 - (columns - 1) * 8) / columns;
+                return ProductCardSkeleton(isCompact: true, width: cardWidth);
+              },
+              childCount: 6,
             ),
           ),
         ),
@@ -236,23 +219,28 @@ class HomeInfiniteFeed {
               ),
             )
           else ...[
-            // 2-Column Virtualized SliverGrid (Ultra-smooth, native 60/120 FPS)
+            // 3-Column Virtualized SliverGrid (Blinkit / Zepto quick-commerce density)
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               sliver: SliverGrid(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
-                  childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: false),
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 12,
+                  crossAxisCount: Responsive.isTablet(context) ? 4 : 3,
+                  childAspectRatio: Responsive.isTablet(context)
+                      ? 0.74
+                      : (MediaQuery.of(context).size.width < 360 ? 0.58 : 0.605),
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 10,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     final product = visibleProducts[index];
+                    final columns = Responsive.isTablet(context) ? 4 : 3;
+                    final cardWidth = (MediaQuery.of(context).size.width - 24 - (columns - 1) * 8) / columns;
                     return ProductCard(
                       key: ValueKey('infinite_grid_${product.id}'),
                       product: product,
-                      isCompact: false,
+                      isCompact: true,
+                      width: cardWidth,
                     );
                   },
                   childCount: visibleProducts.length,
@@ -378,24 +366,19 @@ class HomeInfiniteFeed {
 
         const SizedBox(height: 12),
 
-        // 2. Horizontal SUBCATEGORY Filter Chips Bar (With [⚡ All] at first!)
+        // 2. Horizontal SUBCATEGORY Visual Rail (Packshot images + labels, Zepto/Blinkit style)
         SizedBox(
-          height: 38,
+          height: 114,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
             itemCount: 1 + subcategories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final isSelected = selectedFilterIndex == index;
-              final String label;
-              if (index == 0) {
-                label = '⚡ All';
-              } else {
-                final sub = subcategories[index - 1];
-                final emoji = _getSubcategoryEmoji(sub.slug, sub.name);
-                label = '$emoji ${sub.name}';
-              }
+              final isAll = index == 0;
+              final Category? sub = isAll ? null : subcategories[index - 1];
+              final String label = isAll ? 'All Items' : sub!.name;
 
               return Bounceable(
                 scaleFactor: 0.94,
@@ -403,41 +386,94 @@ class HomeInfiniteFeed {
                   HapticFeedback.selectionClick();
                   onFilterChanged(index);
                 },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
-                      width: 1,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.12),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      label,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: Responsive.scaledFontSize(context, 11),
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                        color: isSelected ? Colors.white : const Color(0xFF334155),
+                child: SizedBox(
+                  width: 76,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Square packshot / icon card (Bigger 68x68 for prominent visibility!)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: 68,
+                        height: 68,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? (isAll ? const Color(0xFF0F172A) : AppDesignSystem.primary.withValues(alpha: 0.10))
+                              : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: isSelected
+                                ? (isAll ? const Color(0xFF0F172A) : AppDesignSystem.primary)
+                                : const Color(0xFFE2E8F0),
+                            width: isSelected ? 2 : 1,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: (isAll ? Colors.black : AppDesignSystem.primary).withValues(alpha: 0.20),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ]
+                              : [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                        ),
+                        child: Center(
+                          child: isAll
+                              ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.flash_on_rounded,
+                                      size: 26,
+                                      color: isSelected ? const Color(0xFFFBBF24) : AppDesignSystem.primary,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'ALL',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.8,
+                                        color: isSelected ? Colors.white : AppDesignSystem.textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(3.0),
+                                    child: CategoryVisualHelper.buildAvatarImage(
+                                      context,
+                                      sub!,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 6),
+
+                      // Subcategory title (2 lines max, clean, centered)
+                      Text(
+                        label,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          height: 1.15,
+                          color: isSelected ? AppDesignSystem.primary : const Color(0xFF334155),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );

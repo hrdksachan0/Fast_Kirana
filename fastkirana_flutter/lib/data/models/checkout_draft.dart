@@ -25,6 +25,7 @@ class CheckoutDraft {
   final double grandTotal;
   final double walletAmountUsed;
   final String? cfOrderId;
+  final String? idempotencyKey;
   final bool hasFeeBreakdown;
 
   const CheckoutDraft({
@@ -50,6 +51,7 @@ class CheckoutDraft {
     this.grandTotal = 0.0,
     this.walletAmountUsed = 0.0,
     this.cfOrderId,
+    this.idempotencyKey,
     this.hasFeeBreakdown = true,
   });
 
@@ -81,6 +83,8 @@ class CheckoutDraft {
     double? walletAmountUsed,
     String? cfOrderId,
     bool clearCfOrderId = false,
+    String? idempotencyKey,
+    bool clearIdempotencyKey = false,
     bool? hasFeeBreakdown,
   }) {
     return CheckoutDraft(
@@ -106,6 +110,7 @@ class CheckoutDraft {
       grandTotal: grandTotal ?? this.grandTotal,
       walletAmountUsed: walletAmountUsed ?? this.walletAmountUsed,
       cfOrderId: clearCfOrderId ? null : (cfOrderId ?? this.cfOrderId),
+      idempotencyKey: clearIdempotencyKey ? null : (idempotencyKey ?? this.idempotencyKey),
       hasFeeBreakdown: hasFeeBreakdown ?? this.hasFeeBreakdown,
     );
   }
@@ -133,6 +138,7 @@ class CheckoutDraft {
     'grandTotal': grandTotal,
     'walletAmountUsed': walletAmountUsed,
     'cfOrderId': cfOrderId,
+    'idempotencyKey': idempotencyKey,
     'hasFeeBreakdown': hasFeeBreakdown,
   };
 
@@ -168,6 +174,7 @@ class CheckoutDraft {
       grandTotal: (json['grandTotal'] as num?)?.toDouble() ?? 0.0,
       walletAmountUsed: (json['walletAmountUsed'] as num?)?.toDouble() ?? 0.0,
       cfOrderId: json['cfOrderId'] as String?,
+      idempotencyKey: json['idempotencyKey'] as String?,
       hasFeeBreakdown: json['hasFeeBreakdown'] as bool? ?? (json.containsKey('deliveryFee') || json.containsKey('packagingFee')),
     );
   }

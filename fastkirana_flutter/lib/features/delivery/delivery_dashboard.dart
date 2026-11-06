@@ -19,6 +19,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import '../../core/services/supabase_service.dart';
 import '../../core/services/tracer_service.dart';
 import '../../core/services/offline_sync_service.dart';
+import '../../core/services/order_alarm_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../core/utils/order_item_helper.dart';
 import '../../data/models/restaurant.dart';
@@ -215,15 +216,19 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
           if (orderId == null || newStatus == null) return true;
 
+          final fullPayload = payload['fullPayload'] is Map
+              ? Map<String, dynamic>.from(payload['fullPayload'] as Map)
+              : <String, dynamic>{
+                  'status': newStatus,
+                  'deliveryUserId': userId,
+                  if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
+                  if (extra != null) ...extra,
+                };
+
           try {
             final response = await dio.patch(
               '/api/orders/$orderId',
-              data: {
-                'status': newStatus,
-                'deliveryUserId': userId,
-                if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
-                if (extra != null) ...extra,
-              },
+              data: fullPayload,
               options: Options(
                 headers: {
                   'x-user-id': userId,
@@ -309,7 +314,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     }
   }
 
-  Future<void> _enqueueOfflineAction(String orderId, String newStatus, Map<String, dynamic>? extra) async {
+  Future<void> _enqueueOfflineAction(
+    String orderId,
+    String newStatus,
+    Map<String, dynamic>? extra, {
+    Map<String, dynamic>? fullPayload,
+  }) async {
     try {
       await OfflineSyncService.enqueueAction(
         queueName: OfflineSyncService.queueDelivery,
@@ -318,6 +328,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           'orderId': orderId,
           'newStatus': newStatus,
           'extra': extra,
+          'fullPayload': fullPayload,
           'userId': _currentUserId,
           'timestamp': DateTime.now().toIso8601String(),
         },
@@ -365,7 +376,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       }
       return true;
     }).toList();
-    if (pending.isEmpty) return;
+    if (pending.isEmpty) {
+      if (OrderAlarmService.instance.isPlaying) {
+        OrderAlarmService.instance.stopAlarm();
+      }
+      return;
+    }
 
     final currentIds = pending.map((o) => o['id']?.toString() ?? '').where((id) => id.isNotEmpty).toSet();
 
@@ -373,55 +389,23 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       final newIds = currentIds.difference(_knownOrderIds);
       if (newIds.isNotEmpty) {
         final newOrder = pending.firstWhere((o) => newIds.contains(o['id']?.toString()), orElse: () => pending.first);
-        _playNewOrderSoundAndAlert(newOrder);
+        _triggerContinuousRiderAlarm(newOrder);
       }
     }
     _knownOrderIds.addAll(currentIds);
   }
 
-  Future<void> _playNewOrderSoundAndAlert(Map<String, dynamic> newOrder) async {
-    try {
-      HapticFeedback.heavyImpact();
-      await Future.delayed(const Duration(milliseconds: 150));
-      HapticFeedback.heavyImpact();
-
-      try {
-        await _audioPlayer.stop();
-        await _audioPlayer.play(
-          AssetSource('sounds/order_chime.mp3'),
-          volume: 1.0,
-        );
-      } catch (e) {
-        LoggerService.error('DeliveryDashboard: silent catch', e);
-        await SystemSound.play(SystemSoundType.alert);
-      }
-
-      if (mounted) {
-        final orderNum = newOrder['readableId'] ?? 'Order';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.success,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            content: Row(
-              children: [
-                const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '🛵 Naya Order Aaya! #$orderNum',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w900, color: Colors.white, fontSize: Responsive.scaledFontSize(context, 13)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('[DeliveryDashboard] Audio alert error: $e');
-    }
+  void _triggerContinuousRiderAlarm(Map<String, dynamic> newOrder) {
+    OrderAlarmService.instance.startRiderAlarm(
+      orderMap: newOrder,
+      context: mounted ? context : null,
+      onAccept: () async {
+        final orderId = (newOrder['id'] ?? newOrder['readableId'] ?? '').toString();
+        if (orderId.isNotEmpty) {
+          await _updateOrderStatus(orderId, 'SHIPPED');
+        }
+      },
+    );
   }
 
   void _toggleDarkMode() async {
@@ -434,6 +418,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
   @override
   void dispose() {
+    OrderAlarmService.instance.stopAlarm();
     _connectivitySubscription?.cancel();
     _autoRefreshTimer?.cancel();
     _confettiController.dispose();
@@ -933,32 +918,86 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final today = DateTime.now();
     final todayStart = DateTime(today.year, today.month, today.day);
 
-    final todayCodOrders = ordersList.where((o) {
-      final dId = o['deliveryUserId']?.toString();
-      if (dId != null && dId.isNotEmpty && !_isAssignedToMe(o)) return false;
-      final pm = (o['paymentMethod'] ?? '').toString().toUpperCase().trim();
-      final isOnlinePaid = pm == 'UPI' || pm == 'ONLINE' || pm == 'CASHFREE' || pm == 'RAZORPAY';
-      final isCod = (pm == 'COD' || pm.isEmpty) && !isOnlinePaid;
-      final isPaid = o['paymentStatus'] == 'PAID' || o['status'] == 'DELIVERED';
-      final createdStr = o['createdAt']?.toString();
-      final created = createdStr != null ? DateTime.tryParse(createdStr) : null;
-      final isToday = created != null && created.isAfter(todayStart);
-      return isCod && isPaid && isToday;
-    }).toList();
+    final todayDeliveredOrders = <Map<String, dynamic>>[];
+    final todayCodOrders = <Map<String, dynamic>>[];
+    final todayOnlineOrders = <Map<String, dynamic>>[];
 
-    final totalCash = todayCodOrders.fold<double>(0.0, (sum, o) {
+    for (final o in ordersList) {
+      final dId = o['deliveryUserId']?.toString();
+      if (dId != null && dId.isNotEmpty && !_isAssignedToMe(o)) continue;
+
+      final status = (o['status'] ?? '').toString().toUpperCase().trim();
+      final isDelivered = status == 'DELIVERED';
+      final isPaid = o['paymentStatus'] == 'PAID';
+
+      // Order should either be delivered or marked paid today
+      final deliveredStr = o['deliveredAt']?.toString() ?? o['updatedAt']?.toString();
+      final createdStr = o['createdAt']?.toString();
+      final deliveredTime = deliveredStr != null ? DateTime.tryParse(deliveredStr) : null;
+      final createdTime = createdStr != null ? DateTime.tryParse(createdStr) : null;
+
+      final isActionToday = (deliveredTime != null && deliveredTime.isAfter(todayStart)) ||
+          (createdTime != null && createdTime.isAfter(todayStart));
+
+      if (!isActionToday) continue;
+      if (!isDelivered && !isPaid) continue;
+
+      todayDeliveredOrders.add(o);
+
+      final pm = (o['paymentMethod'] ?? '').toString().toUpperCase().trim();
+      final isRiderCash = o['isRiderCash'] == true;
+      final isOnlinePaid = (pm == 'UPI' || pm == 'ONLINE' || pm == 'CASHFREE' || pm == 'RAZORPAY' || pm == 'CARD' || pm == 'WALLET') && !isRiderCash;
+
+      if (isOnlinePaid) {
+        todayOnlineOrders.add(o);
+      } else {
+        // Cash on delivery / Cash received by rider
+        todayCodOrders.add(o);
+      }
+    }
+
+    final totalOrderAmount = todayDeliveredOrders.fold<double>(0.0, (sum, o) {
       return sum + ((o['total'] as num?)?.toDouble() ?? 0.0);
     });
 
+    final totalOnlineAmount = todayOnlineOrders.fold<double>(0.0, (sum, o) {
+      return sum + ((o['total'] as num?)?.toDouble() ?? 0.0);
+    });
+
+    final totalCashAmount = todayCodOrders.fold<double>(0.0, (sum, o) {
+      return sum + ((o['total'] as num?)?.toDouble() ?? 0.0);
+    });
+
+    final existingWallet = _walletInfo?['wallet'] is Map ? Map<String, dynamic>.from(_walletInfo!['wallet']) : <String, dynamic>{};
+    final cashLimit = (existingWallet['cashLimit'] as num?)?.toDouble() ?? 10000.0;
+
     setState(() {
       _walletInfo = {
+        ...?_walletInfo,
         'wallet': {
-          'cashInHand': totalCash,
-          'cashLimit': 10000.0,
-          'isLocked': totalCash >= 10000.0,
-          'isWarning': totalCash >= 7500.0,
+          ...existingWallet,
+          'cashInHand': totalCashAmount,
+          'cashLimit': cashLimit,
+          'isLocked': totalCashAmount >= cashLimit,
+          'isWarning': totalCashAmount >= (cashLimit * 0.75),
+          'totalOrdersCount': todayDeliveredOrders.length,
+          'totalOrdersAmount': totalOrderAmount,
+          'onlineCount': todayOnlineOrders.length,
+          'onlineAmount': totalOnlineAmount,
+          'cashCount': todayCodOrders.length,
+          'cashAmount': totalCashAmount,
         },
+        'summary': {
+          'totalCount': todayDeliveredOrders.length,
+          'totalAmount': totalOrderAmount,
+          'onlineCount': todayOnlineOrders.length,
+          'onlineAmount': totalOnlineAmount,
+          'cashCount': todayCodOrders.length,
+          'cashAmount': totalCashAmount,
+        },
+        'todayOrders': todayDeliveredOrders,
         'todayCodOrders': todayCodOrders,
+        'todayOnlineOrders': todayOnlineOrders,
       };
     });
   }
@@ -1061,6 +1100,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   }
 
   Future<void> _updateOrderStatus(String orderId, String newStatus, {Map<String, dynamic>? extra}) async {
+    OrderAlarmService.instance.stopAlarm();
     setState(() => _updatingOrderId = orderId);
     HapticFeedback.mediumImpact();
 
@@ -1151,9 +1191,54 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       );
     }
 
+    // Pre-calculate full delivery payload for each order (handles single & combined COD/Online deliveries)
+    final Map<String, Map<String, dynamic>> orderPayloads = {};
+    for (int i = 0; i < idsToUpdate.length; i++) {
+      final currentId = idsToUpdate[i];
+      final isFirstSub = i == 0;
+
+      double subTotal = (safeOrder['total'] as num?)?.toDouble() ?? 0.0;
+      bool subIsCod = isCod;
+
+      if (isCombined && safeOrder['subOrders'] is List) {
+        for (final s in (safeOrder['subOrders'] as List)) {
+          if (s is Map && s['id']?.toString() == currentId) {
+            subTotal = (s['total'] as num?)?.toDouble() ?? 0.0;
+            subIsCod = s['paymentMethod'] == 'COD';
+            break;
+          }
+        }
+      }
+
+      final isOnlineExtra = extra?['paymentMethod'] == 'UPI' ||
+          extra?['paymentMethod'] == 'ONLINE' ||
+          extra?['paymentCollectedBy'] == 'ONLINE' ||
+          extra?['isRiderCash'] == false;
+      final effectivePayMethod = isOnlineExtra ? 'UPI' : (subIsCod ? 'COD' : 'ONLINE');
+
+      orderPayloads[currentId] = {
+        'status': newStatus,
+        if (_currentUserId != null) 'deliveryUserId': _currentUserId,
+        if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
+        if (newStatus == 'DELIVERED') 'paymentMethod': effectivePayMethod,
+        if (newStatus == 'DELIVERED' && subIsCod && !isOnlineExtra) ...{
+          'isRiderCash': true,
+          'paymentCollectedBy': 'RIDER',
+          'cashAmount': subTotal,
+        },
+        if (newStatus == 'DELIVERED' && isOnlineExtra) ...{
+          'isRiderCash': false,
+          'paymentCollectedBy': 'ONLINE',
+        },
+        if (isFirstSub && extra != null) ...extra,
+      };
+    }
+
     // 1. Instant offline handling (0ms lag in elevator/basement)
     if (_isDeviceOffline) {
-      await _enqueueOfflineAction(orderId, newStatus, extra);
+      for (final entry in orderPayloads.entries) {
+        await _enqueueOfflineAction(entry.key, newStatus, extra, fullPayload: entry.value);
+      }
       if (mounted) setState(() => _updatingOrderId = null);
       return;
     }
@@ -1193,50 +1278,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         } catch (_) {}
       }
 
-      for (int i = 0; i < idsToUpdate.length; i++) {
-        final currentId = idsToUpdate[i];
-
-        // For COD combined orders, only send cashAmount on the first sub-order to avoid double-counting in wallet
-        final isFirstSub = i == 0;
-
-        // Find the individual sub-order total for accurate wallet
-        double subTotal = (safeOrder['total'] as num?)?.toDouble() ?? 0.0;
-        bool subIsCod = isCod;
-
-        if (isCombined && safeOrder['subOrders'] is List) {
-          for (final s in (safeOrder['subOrders'] as List)) {
-            if (s is Map && s['id']?.toString() == currentId) {
-              subTotal = (s['total'] as num?)?.toDouble() ?? 0.0;
-              subIsCod = s['paymentMethod'] == 'COD';
-              break;
-            }
-          }
-        }
-
-        final isOnlineExtra = extra?['paymentMethod'] == 'UPI' || extra?['paymentMethod'] == 'ONLINE' || extra?['paymentCollectedBy'] == 'ONLINE' || extra?['isRiderCash'] == false;
-        final effectivePayMethod = isOnlineExtra ? 'UPI' : (subIsCod ? 'COD' : 'ONLINE');
+      for (final entry in orderPayloads.entries) {
+        final currentId = entry.key;
+        final payloadData = entry.value;
 
         try {
           final response = await dio.patch(
             '/api/orders/$currentId',
-            data: {
-              'status': newStatus,
-              if (_currentUserId != null) 'deliveryUserId': _currentUserId,
-              if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
-              if (newStatus == 'DELIVERED') 'paymentMethod': effectivePayMethod,
-              if (newStatus == 'DELIVERED' && subIsCod && !isOnlineExtra)
-                'isRiderCash': true,
-              if (newStatus == 'DELIVERED' && subIsCod && !isOnlineExtra)
-                'paymentCollectedBy': 'RIDER',
-              if (newStatus == 'DELIVERED' && subIsCod && !isOnlineExtra)
-                'cashAmount': subTotal,
-              if (newStatus == 'DELIVERED' && isOnlineExtra)
-                'isRiderCash': false,
-              if (newStatus == 'DELIVERED' && isOnlineExtra)
-                'paymentCollectedBy': 'ONLINE',
-              // Only spread extra on the first sub-order (avoid duplicate deliveryPhoto etc.)
-              if (isFirstSub) ...?extra,
-            },
+            data: payloadData,
             options: Options(
               headers: {
                 'x-user-id': _currentUserId ?? 'delivery_1',
@@ -1247,9 +1296,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
           if (response.statusCode == 200 || response.statusCode == 204) {
             anySuccess = true;
+          } else {
+            await _enqueueOfflineAction(currentId, newStatus, extra, fullPayload: payloadData);
           }
         } catch (subErr) {
           debugPrint('[DeliveryDashboard] Sub-order $currentId update error: $subErr');
+          await _enqueueOfflineAction(currentId, newStatus, extra, fullPayload: payloadData);
         }
       }
 
@@ -1258,14 +1310,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         await _fetchOrders(silent: true);
         // Fetch authoritative wallet from server (RiderWallet table) — this is the source of truth
         await _fetchWallet();
-      } else {
-        // Enqueue offline action if network call failed
-        await _enqueueOfflineAction(orderId, newStatus, extra);
       }
     } catch (e) {
       debugPrint('[DeliveryDashboard] Status update error: $e');
-      // Save offline on network failure
-      await _enqueueOfflineAction(orderId, newStatus, extra);
+      for (final entry in orderPayloads.entries) {
+        await _enqueueOfflineAction(entry.key, newStatus, extra, fullPayload: entry.value);
+      }
     } finally {
       if (mounted) setState(() => _updatingOrderId = null);
     }

@@ -37,6 +37,8 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
   final _customLabelController = TextEditingController();
   final _receiverNameController = TextEditingController();
   final _receiverPhoneController = TextEditingController();
+  final _houseNoFocusNode = FocusNode();
+  bool _hasHouseNoError = false;
 
   bool _useAccountDetails = true;
   String _selectedCategory = 'House'; // 'House' | 'Office' | 'Other'
@@ -52,6 +54,12 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
   void initState() {
     super.initState();
     _customLabelController.text = 'Home';
+    _houseNoController.addListener(() {
+      if (_hasHouseNoError && _houseNoController.text.trim().isNotEmpty) {
+        setState(() => _hasHouseNoError = false);
+      }
+    });
+    _houseNoFocusNode.addListener(() { if (mounted) setState(() {}); });
 
     final user = ref.read(authProvider).value;
     if (user != null) {
@@ -79,6 +87,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     _customLabelController.dispose();
     _receiverNameController.dispose();
     _receiverPhoneController.dispose();
+    _houseNoFocusNode.dispose();
     super.dispose();
   }
 
@@ -96,17 +105,107 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     });
   }
 
+  void _showHouseNumberRequiredSheet() {
+    HapticFeedback.heavyImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).padding.bottom + 20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 58,
+              height: 58,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Icon(Icons.home_work_rounded, color: Color(0xFFE20A22), size: 28),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Where should we deliver?',
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 17),
+                fontWeight: FontWeight.w800,
+                color: slateDark,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Please enter your House or Flat number so our delivery hero reaches your exact doorstep.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: Responsive.scaledFontSize(context, 12.5),
+                fontWeight: FontWeight.w500,
+                color: slateMuted,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Bounceable(
+              onTap: () {
+                Navigator.pop(ctx);
+                setState(() => _hasHouseNoError = true);
+                _houseNoFocusNode.requestFocus();
+              },
+              child: Container(
+                height: 48,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE20A22), Color(0xFFDC2626)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFE20A22).withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    'Enter House Number',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 14.5),
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Future<void> _handleSaveAddress() async {
     final houseNo = _houseNoController.text.trim();
     if (houseNo.isEmpty) {
-      HapticFeedback.heavyImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppDesignSystem.red600,
-          content: Text('Please enter complete address (House no., Street, Landmark)', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showHouseNumberRequiredSheet();
       return;
     }
 
@@ -640,46 +739,136 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
 
                       const SizedBox(height: 16),
 
-                      // 2. TEXT BOX: Real, tactile, sleek text box with "Enter Address"
-                      Container(
+                      // 2. MODERN FLOATING-LABEL LUXURY CARD (Blinkit / Zepto Pro Style)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFCBD5E1), width: 1.4),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _hasHouseNoError
+                                ? const Color(0xFFEF4444)
+                                : (_houseNoFocusNode.hasFocus
+                                    ? const Color(0xFFE20A22)
+                                    : const Color(0xFFE2E8F0)),
+                            width: _hasHouseNoError || _houseNoFocusNode.hasFocus ? 1.6 : 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _hasHouseNoError
+                                  ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                                  : (_houseNoFocusNode.hasFocus
+                                      ? const Color(0xFFE20A22).withValues(alpha: 0.10)
+                                      : Colors.black.withValues(alpha: 0.03)),
+                              blurRadius: 12,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.home_rounded, size: 20, color: Color(0xFF64748B)),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: TextField(
-                                controller: _houseNoController,
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 14),
-                                  fontWeight: FontWeight.w700,
-                                  color: slateDark,
+                            // Micro Header Row
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.home_outlined,
+                                      size: 15,
+                                      color: _hasHouseNoError
+                                          ? const Color(0xFFEF4444)
+                                          : (_houseNoFocusNode.hasFocus
+                                              ? const Color(0xFFE20A22)
+                                              : const Color(0xFF64748B)),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Enter Your Address',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 10),
+                                        fontWeight: FontWeight.w800,
+                                        color: _hasHouseNoError
+                                            ? const Color(0xFFEF4444)
+                                            : (_houseNoFocusNode.hasFocus
+                                                ? const Color(0xFFE20A22)
+                                                : const Color(0xFF64748B)),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                decoration: InputDecoration(
-                                  hintText: 'Enter Address',
-                                  hintStyle: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 13.5),
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF94A3B8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _hasHouseNoError
+                                        ? const Color(0xFFFEE2E2)
+                                        : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(5),
                                   ),
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                                  child: Text(
+                                    'Required',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 9.5),
+                                      fontWeight: FontWeight.w800,
+                                      color: _hasHouseNoError
+                                          ? const Color(0xFFDC2626)
+                                          : const Color(0xFF64748B),
+                                    ),
+                                  ),
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            // Clean High-Contrast Input with Zero Nested Border Glitch
+                            TextField(
+                              controller: _houseNoController,
+                              focusNode: _houseNoFocusNode,
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 15),
+                                fontWeight: FontWeight.w700,
+                                color: slateDark,
+                              ),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: 'e.g. Flat 402, House 12, 2nd Floor',
+                                hintStyle: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                disabledBorder: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
                               ),
                             ),
                           ],
                         ),
                       ),
-
+                      if (_hasHouseNoError) ...[
+                        const SizedBox(height: 6),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline_rounded, size: 14, color: Color(0xFFEF4444)),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Please enter your Flat / House number or Landmark',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11.5),
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFEF4444),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 12),
-
                       // 3. Area / Locality details card with [Change]
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -831,7 +1020,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
       ),
 
       // STICKY BOTTOM SAVE & DELIVER HERE BUTTON
-      bottomSheet: Container(
+      bottomNavigationBar: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -852,14 +1041,14 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
               height: 52,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppDesignSystem.orange600, AppDesignSystem.orange500],
+                  colors: [Color(0xFFE20A22), Color(0xFFDC2626)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: primaryOrange.withValues(alpha: 0.38),
+                    color: const Color(0xFFE20A22).withValues(alpha: 0.38),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),

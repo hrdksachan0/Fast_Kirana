@@ -740,15 +740,33 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         if (order.status == OrderStatus.shipped || order.status == OrderStatus.packed) {
           try {
             final dio = ref.read(dioProvider);
-            final locRes = await dio.get('/api/delivery/location', queryParameters: {'orderId': cleanId});
-            if (locRes.data is Map<String, dynamic>) {
-              final locData = locRes.data as Map<String, dynamic>;
-              final rLat = (locData['deliveryLat'] as num?)?.toDouble() ?? (locData['lat'] as num?)?.toDouble();
-              final rLng = (locData['deliveryLng'] as num?)?.toDouble() ?? (locData['lng'] as num?)?.toDouble();
-              final heading = (locData['heading'] as num?)?.toDouble() ?? 0.0;
-              if (rLat != null && rLng != null && rLat != 0.0 && rLng != 0.0) {
-                _updateRiderLocation(LatLng(rLat, rLng), heading);
-              }
+            final candidateIds = <String>{
+              cleanId,
+              order.id,
+              if (order.readableId != null && order.readableId!.isNotEmpty)
+                order.readableId!.replaceAll('#', '').trim(),
+              if (cleanId.startsWith('FK-')) cleanId.substring(3),
+              if (RegExp(r'^\d+$').hasMatch(cleanId)) 'FK-$cleanId',
+            };
+
+            for (final qId in candidateIds) {
+              try {
+                final locRes = await dio.get('/api/delivery/location', queryParameters: {'orderId': qId});
+                if (locRes.data is Map<String, dynamic>) {
+                  final locData = locRes.data as Map<String, dynamic>;
+                  final rLat = (locData['deliveryLat'] as num?)?.toDouble() ??
+                      (locData['lat'] as num?)?.toDouble() ??
+                      (locData['latitude'] as num?)?.toDouble();
+                  final rLng = (locData['deliveryLng'] as num?)?.toDouble() ??
+                      (locData['lng'] as num?)?.toDouble() ??
+                      (locData['longitude'] as num?)?.toDouble();
+                  final heading = ((locData['heading'] ?? locData['bearing']) as num?)?.toDouble() ?? 0.0;
+                  if (rLat != null && rLng != null && rLat != 0.0 && rLng != 0.0) {
+                    _updateRiderLocation(LatLng(rLat, rLng), heading);
+                    break;
+                  }
+                }
+              } catch (_) {}
             }
           } catch (_) {}
         }
@@ -805,9 +823,28 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     // 4. Rider Position
     if (order.status == OrderStatus.shipped || order.status == OrderStatus.packed) {
+      bool hasValidRiderCoords = false;
       if (order.deliveryLat != null && order.deliveryLng != null && order.deliveryLat != 0.0 && order.deliveryLng != 0.0) {
+        // Sanity check: Ensure deliveryLat/Lng isn't an accidental copy of customer position
+        if (_customerPosition != null) {
+          final distToCust = Geolocator.distanceBetween(
+            order.deliveryLat!,
+            order.deliveryLng!,
+            _customerPosition!.latitude,
+            _customerPosition!.longitude,
+          );
+          if (distToCust > 35.0 || order.status == OrderStatus.delivered) {
+            hasValidRiderCoords = true;
+          }
+        } else {
+          hasValidRiderCoords = true;
+        }
+      }
+
+      if (hasValidRiderCoords) {
         _updateRiderLocation(LatLng(order.deliveryLat!, order.deliveryLng!), 0.0);
-      } else if (_riderPosition == null) {
+      } else if (_riderPosition == null && _storePosition != null) {
+        // Rider starts at the store/kitchen
         _updateRiderLocation(_storePosition!, 0.0);
       }
     }
@@ -1046,8 +1083,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     setState(() {
       if (_order?.status == OrderStatus.shipped) {
-        // 🛵 Out for Delivery: Show live distance and estimated arrival time
-        _distanceText = '${distanceKm.toStringAsFixed(1)} km away';
+        // 🛵 Out for Delivery: Show clean, professional distance metric
+        if (distanceKm < 0.08) {
+          _distanceText = 'At your doorstep';
+        } else if (distanceKm < 1.0) {
+          _distanceText = '${(distanceKm * 1000).round()}m away';
+        } else {
+          _distanceText = '${distanceKm.toStringAsFixed(1)} km away';
+        }
 
         // Check proximity: when rider is within 120m of customer gate, trigger Arrival chime
         if (distanceKm <= 0.12 && !_hasPlayedArrivalChime) {
@@ -1056,10 +1099,25 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           HapticFeedback.heavyImpact();
         }
 
-        // Distance-wise calculation: ~20 km/h average speed (3 mins per km) + exactly 1 min extra buffer
-        final driveMinutes = ((distanceKm / 20.0) * 60).round();
-        final estMinutes = math.max(2, driveMinutes + 1);
-        _etaText = '$estMinutes mins';
+        // Realistic ETA calculation with speed history or distance-aware fallback
+        if (distanceKm < 0.08) {
+          _etaText = 'Arriving now';
+        } else {
+          int estMinutes;
+          if (_riderPosition != null && distanceKm > 0.05) {
+            estMinutes = GeoMathUtils.estimateEtaWeightedAverage(
+              _riderPosition!,
+              _customerPosition!,
+              distanceKm,
+            );
+          } else {
+            // Speed model: ~22 km/h city average + 2 mins buffer for signals/turns
+            final driveMinutes = ((distanceKm / 22.0) * 60).round();
+            estMinutes = math.max(3, driveMinutes + 2);
+          }
+          _etaText = '$estMinutes mins';
+        }
+
         if (_order != null) {
           NotificationService().updateLiveOrderActivity(
             order: _order!,
@@ -1246,9 +1304,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     // 4. Trigger Turn-by-Turn Road-Wise Polyline Route (Zero-load: fetched once or on major deviation)
     final startPoint = _riderPosition ?? _storePosition;
     if (startPoint != null && _customerPosition != null) {
-      if (_roadPolylinePoints.isEmpty) {
-        _fetchRoadRoute(startPoint, _customerPosition!);
-      }
+      _fetchRoadRoute(startPoint, _customerPosition!);
       if (_roadPolylinePoints.length >= 2) {
         polylineCoords.addAll(_roadPolylinePoints);
       } else {
@@ -1587,11 +1643,18 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                   statusBadgeText = 'ON THE WAY';
 
                                   if (_etaText.isNotEmpty && _etaText != 'Delivered 🎉') {
-                                    heroTitle = 'Arriving in $_etaText';
+                                    heroTitle = _etaText == 'Arriving now' ? 'Arriving Now!' : 'Arriving in $_etaText';
+                                    final isAtDoorstep = _distanceText.toLowerCase().contains('doorstep');
                                     heroSubtitle = riderName.isNotEmpty
-                                        ? '$riderName is on the way • ${_distanceText.isNotEmpty ? '$_distanceText • ' : ''}Live GPS'
+                                        ? (isAtDoorstep
+                                            ? '$riderName has arrived at your doorstep • Live GPS'
+                                            : '$riderName is on the way • ${_distanceText.isNotEmpty ? '$_distanceText • ' : ''}Live GPS')
                                         : (_distanceText.isNotEmpty
-                                            ? (_distanceText.toLowerCase().contains('away') ? '$_distanceText • Live GPS Tracking' : '$_distanceText away • Live GPS Tracking')
+                                            ? (isAtDoorstep
+                                                ? 'Rider has arrived at your doorstep • Live GPS'
+                                                : (_distanceText.toLowerCase().contains('away')
+                                                    ? '$_distanceText • Live GPS Tracking'
+                                                    : '$_distanceText away • Live GPS Tracking'))
                                             : 'Rider is on the way to your doorstep');
                                   } else if (_order?.estimatedDelivery != null && _order!.estimatedDelivery!.isAfter(DateTime.now())) {
                                     final est = _order!.estimatedDelivery!;
@@ -1602,10 +1665,17 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                         : 'Rider is heading to your doorstep';
                                   } else {
                                     heroTitle = 'Out for Delivery';
+                                    final isAtDoorstep = _distanceText.toLowerCase().contains('doorstep');
                                     heroSubtitle = riderName.isNotEmpty
-                                        ? '$riderName is on the way • ${_distanceText.isNotEmpty ? _distanceText : 'Live GPS'}'
+                                        ? (isAtDoorstep
+                                            ? '$riderName has arrived at your doorstep • Live GPS'
+                                            : '$riderName is on the way • ${_distanceText.isNotEmpty ? _distanceText : 'Live GPS'}')
                                         : (_distanceText.isNotEmpty
-                                            ? (_distanceText.toLowerCase().contains('away') ? '$_distanceText • On the way' : '$_distanceText away • On the way')
+                                            ? (isAtDoorstep
+                                                ? 'Rider has arrived at your doorstep • Live GPS'
+                                                : (_distanceText.toLowerCase().contains('away')
+                                                    ? '$_distanceText • On the way'
+                                                    : '$_distanceText away • On the way'))
                                             : 'Rider is heading to your doorstep');
                                   }
                                 } else if (statusStep == 2) {
