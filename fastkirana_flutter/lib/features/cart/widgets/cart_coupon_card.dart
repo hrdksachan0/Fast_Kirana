@@ -132,7 +132,7 @@ class _CartCouponCardState extends ConsumerState<CartCouponCard> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,8 +359,8 @@ class _CartCouponCardState extends ConsumerState<CartCouponCard> {
                 children: [
                   // Squircle Voucher Badge
                   Container(
-                    width: 34,
-                    height: 34,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       gradient: (isFocused || hasText)
                           ? const LinearGradient(
@@ -394,15 +394,15 @@ class _CartCouponCardState extends ConsumerState<CartCouponCard> {
                       focusNode: _focusNode,
                       textCapitalization: TextCapitalization.characters,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: Responsive.scaledFontSize(context, 13),
+                        fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF0F172A),
-                        letterSpacing: 0.9,
+                        letterSpacing: 0.5,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Enter coupon code (e.g. FAST50)',
+                        hintText: 'Enter coupon code',
                         hintStyle: GoogleFonts.plusJakartaSans(
-                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                          fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF94A3B8),
                           letterSpacing: 0,
@@ -449,7 +449,7 @@ class _CartCouponCardState extends ConsumerState<CartCouponCard> {
                           },
                           child: Container(
                             height: 38,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
@@ -493,7 +493,7 @@ class _CartCouponCardState extends ConsumerState<CartCouponCard> {
                         )
                       : Container(
                           height: 38,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          padding: const EdgeInsets.symmetric(horizontal: 11),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(10),
