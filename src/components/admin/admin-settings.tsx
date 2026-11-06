@@ -139,6 +139,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
   const [miscFeeLabel, setMiscFeeLabel] = useState('Packaging Charge')
   const [combinedMiscFee, setCombinedMiscFee] = useState('5')
   const [combinedMiscFeeLabel, setCombinedMiscFeeLabel] = useState('Combined Packaging Charge')
+  const [jhallarPalette, setJhallarPalette] = useState('multi')
   const [contactPhone, setContactPhone] = useState(STORE_PHONE)
   const [contactEmail, setContactEmail] = useState('help@fastminute.in')
   const [contactTimings, setContactTimings] = useState('6 AM - 12 AM')
@@ -255,6 +256,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
         if (data.tax_rate !== undefined) setTaxRate(data.tax_rate)
         if (data.misc_fee !== undefined) setMiscFee(data.misc_fee)
         if (data.misc_fee_label !== undefined) setMiscFeeLabel(data.misc_fee_label)
+        if (data.jhallar_palette) setJhallarPalette(data.jhallar_palette)
         if (data.combined_misc_fee !== undefined) setCombinedMiscFee(data.combined_misc_fee)
         if (data.combined_misc_fee_label !== undefined) setCombinedMiscFeeLabel(data.combined_misc_fee_label)
         if (data.contact_phone) setContactPhone(data.contact_phone)
@@ -434,6 +436,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
           misc_fee_label: miscFeeLabel.trim() || 'Packaging Charge',
           combined_misc_fee: combinedMiscFee.trim() || '5',
           combined_misc_fee_label: combinedMiscFeeLabel.trim() || 'Combined Packaging Charge',
+          jhallar_palette: jhallarPalette.trim() || 'multi',
           grocery_free_delivery_threshold: cleanGroceryFreeDeliveryThreshold,
           combined_free_delivery_threshold: cleanCombinedFreeDeliveryThreshold,
           delivery_fee: cleanDeliveryFee,
@@ -678,6 +681,42 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
                           className="w-full bg-muted/40 border border-border px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-primary font-bold"
                         />
                       </div>
+
+                  {/* Festive Fairy Lights / Jhallar Cloud Palette */}
+                  <div className="md:col-span-3 space-y-2 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                        <span>✨ Festive Fairy Lights (Jhalaar) Theme</span>
+                        <span className="text-[10px] bg-amber-500/20 text-amber-900 px-2 py-0.5 rounded-full font-bold">Cloud Real-time</span>
+                      </label>
+                      <span className="text-[11px] font-bold text-amber-800">Mobile Header Jhalaar</span>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Select the color theme for the animated festive fairy lights (jhallar) in the mobile app header. Updates on user devices instantly from the cloud without APK rebuild.
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 pt-1">
+                      {[
+                        { id: 'multi', label: '🌈 Multi-Color (Blinkit)', desc: 'Hot Pink, Cyan, Gold, Green, Red, Violet' },
+                        { id: 'gold', label: '💛 Pure Gold (Diwali)', desc: 'Peeli Diwali Roshni (Classic Yellow)' },
+                        { id: 'crimson', label: '❤️ Ruby & Gold', desc: 'Royal Ruby Crimson & Shining Gold' },
+                        { id: 'amber', label: '✨ Warm White & Amber', desc: 'Soft Warm White & Amber Pearl' },
+                      ].map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setJhallarPalette(p.id)}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            jhallarPalette === p.id
+                              ? 'border-amber-500 bg-amber-500/20 shadow-xs ring-2 ring-amber-500/50'
+                              : 'border-border/70 bg-card hover:border-amber-500/40 hover:bg-muted/30'
+                          }`}
+                        >
+                          <div className="text-xs font-extrabold text-text-primary">{p.label}</div>
+                          <div className="text-[10px] text-text-muted mt-0.5 leading-snug">{p.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
                       {/* Fresh Stock Loaded */}
                       <div className="space-y-1.5">

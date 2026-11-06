@@ -410,34 +410,6 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                                 child: WishlistButton(product: product, s: _uiScale),
                               ),
 
-                              // Bottom-Left Veg Indicator Dot
-                              Positioned(
-                                bottom: s(5),
-                                left: s(5),
-                                child: Container(
-                                  width: s(12),
-                                  height: s(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    border: Border.all(
-                                      color: isVeg ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                                      width: s(1.1),
-                                    ),
-                                    borderRadius: BorderRadius.circular(s(2.5)),
-                                  ),
-                                  child: Center(
-                                    child: Container(
-                                      width: s(5),
-                                      height: s(5),
-                                      decoration: BoxDecoration(
-                                        color: isVeg ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                                        shape: isVeg ? BoxShape.circle : BoxShape.rectangle,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
                               // Bottom-Right Floating Green '+' / Stepper Button (Zepto Style)
                               Positioned(
                                 bottom: s(5),

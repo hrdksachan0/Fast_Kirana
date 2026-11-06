@@ -18,6 +18,7 @@ import '../../profile/notifications_screen.dart';
 import '../../search/search_screen.dart';
 import '../../navratri/navratri_data.dart';
 import '../../../widgets/festive_fairy_lights.dart';
+import '../../../providers/store_settings_provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class HomeTopHeader extends ConsumerStatefulWidget {
@@ -435,7 +436,21 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
           if (isCampaignActive)
             Builder(
               builder: (context) {
-                const palette = 'gold';
+                final storeSettings = ref.watch(storeSettingsProvider).valueOrNull;
+                final campaign = campaignAsync.valueOrNull;
+
+                // Priority:
+                // 1. Cloud Store Settings (jhallar_palette / fairy_lights_palette)
+                // 2. Cloud Campaign Data (jhallarPalette)
+                // 3. Fallback default: 'multi' (Blinkit Multi-Color 🌈)
+                final rawCloudPalette = storeSettings?.raw['jhallar_palette']?.toString() ??
+                    storeSettings?.raw['fairy_lights_palette']?.toString() ??
+                    campaign?.jhallarPalette;
+
+                final palette = (rawCloudPalette != null && rawCloudPalette.trim().isNotEmpty)
+                    ? rawCloudPalette.trim().toLowerCase()
+                    : 'multi';
+
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(

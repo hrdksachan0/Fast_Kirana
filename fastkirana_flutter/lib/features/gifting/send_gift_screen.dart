@@ -963,31 +963,6 @@ class _ZeptoGiftCard extends StatelessWidget {
                     ),
                   ),
 
-                  // Bottom-Left Veg Icon
-                  Positioned(
-                    bottom: 5,
-                    left: 5,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: const Color(0xFF16A34A), width: 1.1),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 5,
-                          height: 5,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF16A34A),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
                   // Bottom-Right Floating Green '+' Add Button
                   Positioned(
                     bottom: 4,

@@ -262,6 +262,7 @@ class NavratriData {
   final NavratriLabels labels;
   final NavratriAppearance appearance;
   final String? decorationImage;
+  final String jhallarPalette;
 
   const NavratriData({
     required this.version,
@@ -283,6 +284,7 @@ class NavratriData {
     this.labels = const NavratriLabels(),
     this.appearance = const NavratriAppearance(),
     this.decorationImage = 'string-lights.svg',
+    this.jhallarPalette = 'multi',
   });
 
   factory NavratriData.fromJson(Map<String, dynamic> json) {
@@ -342,6 +344,10 @@ class NavratriData {
       decorationImage: json.containsKey('decorationImage')
           ? json['decorationImage'] as String?
           : 'string-lights.svg',
+      jhallarPalette: json['jhallarPalette'] as String? ??
+          json['jhallar_palette'] as String? ??
+          json['fairyLightsPalette'] as String? ??
+          'multi',
     );
     if (data.blocks.map((block) => block.id).toSet().length !=
         data.blocks.length) {

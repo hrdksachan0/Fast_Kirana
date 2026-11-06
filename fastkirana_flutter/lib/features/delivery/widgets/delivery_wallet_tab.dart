@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/design_system.dart';
-import '../../../core/theme/responsive.dart';
 import 'donut_capacity_painter.dart';
 
 /// Cash Wallet & Duty Status Tab for Rider Dashboard
@@ -271,15 +270,18 @@ class DeliveryWalletTab extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        'Online (Cashfree / UPI)',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1E40AF),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Online (Cashfree / UPI)',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF1E40AF),
+                          ),
+                          maxLines: 1,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Row(
@@ -287,15 +289,18 @@ class DeliveryWalletTab extends StatelessWidget {
                           const Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFF2563EB)),
                           const SizedBox(width: 4),
                           Expanded(
-                            child: Text(
-                              'Direct in Store Bank',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 9.5),
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF64748B),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Direct in Store Bank',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 9.5),
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF64748B),
+                                ),
+                                maxLines: 1,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -364,15 +369,18 @@ class DeliveryWalletTab extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        'Cash Received (COD)',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF92400E),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Cash Received (COD)',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF92400E),
+                          ),
+                          maxLines: 1,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Row(
@@ -380,15 +388,18 @@ class DeliveryWalletTab extends StatelessWidget {
                           const Icon(Icons.account_balance_wallet_rounded, size: 11, color: Color(0xFFD97706)),
                           const SizedBox(width: 4),
                           Expanded(
-                            child: Text(
-                              'Cash in Hand (जमा करें)',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 9.5),
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFFB45309),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Cash in Hand (जमा करें)',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 9.5),
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFB45309),
+                                ),
+                                maxLines: 1,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

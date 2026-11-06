@@ -31,6 +31,25 @@ function getAudioContext(): AudioContext | null {
   return sharedAudioContext
 }
 
+function showDesktopNotification(title: string, body: string, onClick?: () => void) {
+  if (typeof window === 'undefined' || !('Notification' in window)) return
+  if (Notification.permission === 'granted') {
+    try {
+      const notif = new Notification(title, {
+        body,
+        icon: '/icons/icon-192x192.png',
+        tag: 'fastminute-new-order',
+      })
+      if (onClick) {
+        notif.onclick = () => {
+          window.focus()
+          onClick()
+        }
+      }
+    } catch {}
+  }
+}
+
 export function useAdminRealtime({
   selectedHubId,
   initialOrders,
@@ -162,25 +181,97 @@ export function useAdminRealtime({
   }, [selectedHubId, playNewOrderChime])
 
   const isFirstMountRef = useRef(true)
+  const lastKnownLatestOrderId = useRef<string | null>(null)
+  const isPollingPulseRef = useRef(false)
 
-  // Active polling every 15 seconds for live order synchronization + visibility refocus refetch
+  // Lightweight 80-byte pulse check for zero-load instant order detection (<3ms query)
+  const checkOrderPulse = useCallback(async () => {
+    if (isPollingPulseRef.current) return
+    isPollingPulseRef.current = true
+    try {
+      const storeQuery =
+        selectedHubId && selectedHubId !== 'all'
+          ? `?storeId=${encodeURIComponent(selectedHubId)}`
+          : ''
+      const res = await fetch(`${apiUrl()}/api/admin/orders/pulse${storeQuery}&t=${Date.now()}`)
+      if (res.ok) {
+        const data = await res.json()
+        const latest = data?.latestOrder
+        if (latest && latest.id) {
+          if (lastKnownLatestOrderId.current && lastKnownLatestOrderId.current !== latest.id) {
+            const readableId = (latest.readableId || latest.id).slice(0, 8)
+            const amt = latest.total ? `₹${Math.round(latest.total)}` : ''
+            const isPaid = latest.paymentStatus === 'PAID'
+            const msg = isPaid
+              ? `💳 Online Paid Order #${readableId} ${amt ? `(${amt})` : ''}`
+              : `🛎️ New Order #${readableId} ${amt ? `(${amt})` : ''}`
+
+            toast.success(msg, { duration: 9000 })
+            playNewOrderChime()
+            showDesktopNotification('FastMinute New Order!', msg)
+
+            fetchLiveOrdersList()
+            setOrderRefreshKey((prev) => prev + 1)
+          }
+          lastKnownLatestOrderId.current = latest.id
+        } else if (!latest) {
+          lastKnownLatestOrderId.current = null
+        }
+      }
+    } catch {
+      // Graceful silence on network glitches
+    } finally {
+      isPollingPulseRef.current = false
+    }
+  }, [selectedHubId, playNewOrderChime, fetchLiveOrdersList])
+
+  // Request browser desktop notification permission on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {})
+    }
+  }, [])
+
+  // Active zero-load order pulse: 3.5s when active, 5.0s in background (never stops!)
   useEffect(() => {
     if (isFirstMountRef.current) {
       isFirstMountRef.current = false
       if (initialOrders && initialOrders.length > 0) {
         knownLiveOrderIds.current = new Set(initialOrders.map((o: any) => o.id))
+        const first = initialOrders[0]
+        if (first && (first.status === 'PENDING' || first.status === 'ADMIN_PENDING')) {
+          lastKnownLatestOrderId.current = first.id
+        }
       } else {
         fetchLiveOrdersList()
       }
+      checkOrderPulse()
     }
 
-    const livePollInterval = setInterval(() => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
-      fetchLiveOrdersList()
-    }, 15000)
+    let pulseTimer: NodeJS.Timeout | null = null
+
+    const schedulePulse = () => {
+      if (pulseTimer) clearInterval(pulseTimer)
+      const isVisible = typeof document !== 'undefined' && document.visibilityState === 'visible'
+      const intervalMs = isVisible ? 3500 : 5000
+      pulseTimer = setInterval(() => {
+        checkOrderPulse()
+      }, intervalMs)
+    }
+
+    schedulePulse()
+
+    // Background full list sync every 25 seconds
+    const fullSyncInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchLiveOrdersList()
+      }
+    }, 25000)
 
     const handleVisibility = () => {
+      schedulePulse()
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        checkOrderPulse()
         fetchLiveOrdersList()
         setOrderRefreshKey((prev) => prev + 1)
       }
@@ -191,12 +282,13 @@ export function useAdminRealtime({
     }
 
     return () => {
-      clearInterval(livePollInterval)
+      if (pulseTimer) clearInterval(pulseTimer)
+      clearInterval(fullSyncInterval)
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibility)
       }
     }
-  }, [fetchLiveOrdersList, initialOrders])
+  }, [checkOrderPulse, fetchLiveOrdersList, initialOrders])
 
   // Tri-channel listener: Supabase, SSE, Railway WebSocket
   useEffect(() => {

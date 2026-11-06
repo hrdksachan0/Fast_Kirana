@@ -39,6 +39,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   tax_rate: '5',
   misc_fee: '5',
   misc_fee_label: 'Handling Fee',
+  jhallar_palette: 'multi',
   combined_misc_fee: '5',
   combined_misc_fee_label: 'Combined Handling Fee',
   grocery_free_delivery_threshold: '149',
