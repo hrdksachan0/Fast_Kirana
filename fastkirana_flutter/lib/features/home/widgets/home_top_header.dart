@@ -76,7 +76,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
   @override
   Widget build(BuildContext context) {
     final campaignAsync = ref.watch(navratriDataProvider);
-    final isCampaignActive = campaignAsync.valueOrNull?.enabled == true;
+    final activeData = campaignAsync.valueOrNull ?? memoryCachedCampaign;
+    final isCampaignActive = activeData?.enabled == true;
 
     return Container(
       decoration: BoxDecoration(

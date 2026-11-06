@@ -43,8 +43,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     super.initState();
     _requestAppPermissions();
 
-    // 1. Warm up GPS location & nearest store hub concurrently
-    LocationService.bootstrapUserLocation(ref);
+    // 0. Pre-load local festive campaign instantly so Frame 1 is never empty
+    initCampaignCache();
+
+    // 1. Warm up GPS location & nearest store hub concurrently with fast timeout
+    final locationFuture = LocationService.bootstrapUserLocation(ref)
+        .timeout(const Duration(milliseconds: 900), onTimeout: () {});
 
     // 2. Warm up active store hubs, categories, catalog, banners, and festive campaign concurrently during splash
     final prefFuture = SharedPreferences.getInstance();
@@ -57,21 +61,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final campaignFuture =
         ref.read(navratriDataProvider.future).then<NavratriData?>((v) => v).catchError((_) => null);
 
-    // 3. Memory-Safe Pre-warming (Zero OOM):
-    // Pre-cache only the top 4 visible hero categories at compact thumbnail dimensions (120x120)
-    // to keep JVM heap usage minimal (<5MB) and prevent OutOfMemoryError on 2GB/3GB devices.
+    // 3. Texture Precaching:
+    // Pre-cache top 8 category packshots so "Explore by Category" opens with ZERO shimmer!
     categoriesFuture.then((categories) {
       if (mounted && categories.isNotEmpty) {
-        for (final cat in categories.take(4)) {
+        for (final cat in categories.take(8)) {
           final imgUrl = CategoryVisualHelper.resolveRealisticImageUrl(cat);
           if (imgUrl.isNotEmpty) {
             try {
               precacheImage(
-                ResizeImage(
-                  CachedNetworkImageProvider(imgUrl),
-                  width: 140,
-                  height: 140,
-                ),
+                CachedNetworkImageProvider(imgUrl, maxWidth: 400, maxHeight: 400),
                 context,
               ).catchError((_) {});
             } catch (_) {}
@@ -80,18 +79,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       }
     }).catchError((_) {});
 
+    bannersFuture.then((banners) {
+      if (mounted && banners.isNotEmpty) {
+        final firstImg = banners.first.imageUrl;
+        if (firstImg.isNotEmpty) {
+          try {
+            precacheImage(CachedNetworkImageProvider(firstImg), context).catchError((_) {});
+          } catch (_) {}
+        }
+      }
+    }).catchError((_) {});
+
     campaignFuture.then((campaign) {
       if (mounted && campaign != null) {
-        // Precache only the primary hero header if available
         if (campaign.headers.isNotEmpty) {
           final firstHeader = campaign.headers.first;
           if (firstHeader.image != null && firstHeader.image!.isNotEmpty) {
             try {
               precacheImage(
-                ResizeImage(
-                  CachedNetworkImageProvider(firstHeader.image!),
-                  width: 450,
-                ),
+                CachedNetworkImageProvider(firstHeader.image!),
                 context,
               ).catchError((_) {});
             } catch (_) {}
@@ -101,11 +107,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     }).catchError((_) {});
 
     // 4. Blinkit-Style Animated Boot Timing:
-    // Wait for at least 1.4 seconds of smooth physics bounce animation AND essential metadata,
+    // Wait for smooth physics bounce animation AND essential metadata,
     // so Home screen opens with all festive sections, categories & banners pre-hydrated (zero layout shift!)
     Future.wait([
       Future.delayed(const Duration(milliseconds: 1400)),
       prefFuture,
+      locationFuture,
       categoriesFuture,
       bannersFuture,
       campaignFuture,

@@ -12,13 +12,41 @@ import 'campaign_block.dart';
 
 NavratriData? _memoryCachedCampaign;
 
+NavratriData? get memoryCachedCampaign => _memoryCachedCampaign;
+
+/// Immediately loads the bundled local campaign JSON so campaign is never null on cold start.
+Future<NavratriData> initCampaignCache() async {
+  if (_memoryCachedCampaign != null) return _memoryCachedCampaign!;
+  try {
+    final source = await rootBundle.loadString('assets/navratri/navratri.json');
+    _memoryCachedCampaign = NavratriData.fromJson(jsonDecode(source) as Map<String, dynamic>);
+    return _memoryCachedCampaign!;
+  } catch (_) {
+    return const NavratriData();
+  }
+}
+
 /// The same versioned manifest is served by the web application.
 final navratriDataProvider = FutureProvider<NavratriData>((ref) async {
+  ref.keepAlive();
   final hub = ref.watch(currentStoreHubProvider);
   final dio = ref.watch(dioProvider);
+
+  // 1. Ensure local campaign is loaded in memory instantly (takes ~5ms)
+  if (_memoryCachedCampaign == null) {
+    await initCampaignCache();
+  }
+
+  // 2. Fetch cloud campaign update with a fast 1200ms timeout
   try {
-    final response = await dio
-        .get('/api/homepage-campaign', queryParameters: {'storeId': hub.id});
+    final response = await dio.get(
+      '/api/homepage-campaign',
+      queryParameters: {'storeId': hub.id},
+      options: Options(
+        connectTimeout: const Duration(milliseconds: 1200),
+        receiveTimeout: const Duration(milliseconds: 1200),
+      ),
+    );
     final body = response.data;
     if (body is Map && body['campaign'] is Map) {
       _memoryCachedCampaign = NavratriData.fromJson(
@@ -26,13 +54,10 @@ final navratriDataProvider = FutureProvider<NavratriData>((ref) async {
       return _memoryCachedCampaign!;
     }
   } catch (_) {
-    // Published configuration is optional; a failed request never blocks home.
+    // Cloud fetch optional; silent fallback
   }
-  if (_memoryCachedCampaign != null) return _memoryCachedCampaign!;
 
-  final source = await rootBundle.loadString('assets/navratri/navratri.json');
-  _memoryCachedCampaign = NavratriData.fromJson(jsonDecode(source) as Map<String, dynamic>);
-  return _memoryCachedCampaign!;
+  return _memoryCachedCampaign ?? await initCampaignCache();
 });
 
 class NavratriLabels {

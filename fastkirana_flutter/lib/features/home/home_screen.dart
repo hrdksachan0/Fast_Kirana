@@ -1731,37 +1731,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
     final campaignState = showNavratri ? ref.watch(navratriDataProvider) : null;
-
-
-
-
-
-
-
     final configuredCampaign =
-
-
-
-
-
-
-
-        campaignState?.valueOrNull;
-
-
-
-
-
-
-
+        campaignState?.valueOrNull ?? memoryCachedCampaign;
     final navratri =
-
-
-
-
-
-
-
         configuredCampaign?.enabled == true ? configuredCampaign : null;
 
 
