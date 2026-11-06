@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
@@ -22,7 +23,8 @@ Future<NavratriData> initCampaignCache() async {
     _memoryCachedCampaign = NavratriData.fromJson(jsonDecode(source) as Map<String, dynamic>);
     return _memoryCachedCampaign!;
   } catch (_) {
-    return const NavratriData();
+    _memoryCachedCampaign = NavratriData.fromJson(const {'version': 1});
+    return _memoryCachedCampaign!;
   }
 }
 

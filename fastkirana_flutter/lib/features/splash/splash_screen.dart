@@ -82,7 +82,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     bannersFuture.then((banners) {
       if (mounted && banners.isNotEmpty) {
         final firstImg = banners.first.imageUrl;
-        if (firstImg.isNotEmpty) {
+        if (firstImg != null && firstImg.isNotEmpty) {
           try {
             precacheImage(CachedNetworkImageProvider(firstImg), context).catchError((_) {});
           } catch (_) {}
