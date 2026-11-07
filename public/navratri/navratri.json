@@ -8,6 +8,7 @@
   "autoplay": true,
   "searchPrefix": "Search for",
   "decorationImage": "gold-lights.svg",
+  "jhallarPalette": "multi",
   "labels": {
     "sectionLabel": "✨ Shubh Diwali Mahotsav",
     "specialsHeading": "🪔 15-Min Diwali Deals",
@@ -34,9 +35,9 @@
     "crossfadeMs": 450
   },
   "searchSuggestions": [
-    "Ferrero Rocher",
-    "Amul Chocolate",
-    "Celebrations",
+    "Cadbury Celebrations",
+    "Silk Chocolate",
+    "Amul Gift Pack",
     "Flower Candles",
     "Kaju Katli",
     "Diyas",
@@ -49,7 +50,7 @@
       "kind": "illustration",
       "eyebrow": "15-MIN FESTIVE DELIVERY",
       "title": "✨ Shubh Deepawali",
-      "subtitle": "Ferrero Rocher, Amul, Diyas & Sweets at your doorstep",
+      "subtitle": "Cadbury Celebrations, Silk, Amul & Festive Sweets at your doorstep",
       "image": "diwali-celebration.svg"
     },
     {
@@ -57,7 +58,7 @@
       "kind": "title",
       "eyebrow": "PREMIUM CHOCOLATES & GIFTING",
       "title": "Mithas & Khushiyan",
-      "subtitle": "Ferrero Rocher Moments & Amul Dark Chocolate Gift Packs",
+      "subtitle": "Cadbury Silk Celebrations & Amul Festive Gift Packs",
       "image": null
     },
     {
@@ -71,15 +72,26 @@
   ],
   "products": [
     {
-      "id": "diwali-ferrero",
-      "name": "Ferrero Rocher Moments (16 Pcs)",
-      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792436635220-2rwbjp.webp",
-      "originalPrice": 269,
-      "price": 269,
+      "id": "diwali-celebrations",
+      "name": "Cadbury Silk Celebrations Gift Pack",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmsfs4xqd000104jroyxyp16n.webp",
+      "originalPrice": 160,
+      "price": 149,
       "currency": "INR",
       "categoryId": "diwali-ladoo-category",
       "destinationId": "search-diwali-ladoo",
-      "productId": "eb78f7f4-e981-4a3f-804f-94b7b597a476"
+      "productId": "cmsfs4xqd000104jroyxyp16n"
+    },
+    {
+      "id": "diwali-amul-gift",
+      "name": "Amul Festive Chocolate Gift Pack",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792434811195-nabxy0.webp",
+      "originalPrice": 200,
+      "price": 200,
+      "currency": "INR",
+      "categoryId": "diwali-ladoo-category",
+      "destinationId": "search-diwali-ladoo",
+      "productId": "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead"
     },
     {
       "id": "diwali-amul-dark",
@@ -104,17 +116,6 @@
       "productId": "a4a7693f-844d-4938-bbe7-2f6b3e4d677e"
     },
     {
-      "id": "diwali-celebrations",
-      "name": "Cadbury Celebrations Gift Pack",
-      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmsfs4xqd000104jroyxyp16n.webp",
-      "originalPrice": 110,
-      "price": 110,
-      "currency": "INR",
-      "categoryId": "diwali-ladoo-category",
-      "destinationId": "search-diwali-ladoo",
-      "productId": "cmsfs4xqd000104jroyxyp16n"
-    },
-    {
       "id": "diwali-kaju-katli",
       "name": "Haldiram's Kaju Katli",
       "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792441562435-2mu0kn.webp",
@@ -126,15 +127,15 @@
       "productId": "0a550a89-533b-49ad-96ce-630f31d30f58"
     },
     {
-      "id": "diwali-amul-gift",
-      "name": "Amul Chocolate Gift Pack",
-      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792434811195-nabxy0.webp",
-      "originalPrice": 200,
-      "price": 200,
+      "id": "diwali-diyas",
+      "name": "Clay Diya Set (Pack of 4)",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1793770626161-lqemqr.webp",
+      "originalPrice": 80,
+      "price": 49,
       "currency": "INR",
-      "categoryId": "diwali-ladoo-category",
-      "destinationId": "search-diwali-ladoo",
-      "productId": "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead"
+      "categoryId": "diwali-diyas-category",
+      "destinationId": "search-diwali-diyas",
+      "productId": "a4a7693f-844d-4938-bbe7-2f6b3e4d677e"
     }
   ],
   "categories": [
@@ -164,8 +165,8 @@
         "celebration",
         "cadbury",
         "silk",
+        "amul",
         "bournville",
-        "ferrero",
         "soan papdi",
         "rasgulla"
       ]
@@ -213,19 +214,18 @@
       "label": "🔥 Bestsellers",
       "image": "diwali-celebration.svg",
       "keywords": [
-        "ferrero",
-        "amul",
         "celebration",
+        "silk",
+        "amul",
         "candle",
         "kaju",
         "badam",
         "katli"
       ],
       "productIds": [
-        "eb78f7f4-e981-4a3f-804f-94b7b597a476",
-        "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9",
-        "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead",
         "cmsfs4xqd000104jroyxyp16n",
+        "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead",
+        "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9",
         "a4a7693f-844d-4938-bbe7-2f6b3e4d677e",
         "0a550a89-533b-49ad-96ce-630f31d30f58",
         "cmttvytg6000109gmhje6qtp0",
@@ -237,20 +237,19 @@
       "label": "🍫 Chocolates & Gifting",
       "image": "diwali-celebration.svg",
       "keywords": [
-        "ferrero",
-        "amul",
         "celebration",
-        "chocolate",
         "silk",
+        "amul",
+        "chocolate",
+        "cadbury",
         "bournville"
       ],
       "productIds": [
-        "eb78f7f4-e981-4a3f-804f-94b7b597a476",
-        "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9",
+        "cmsfs4xqd000104jroyxyp16n",
         "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead",
+        "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9",
         "f820ff4b-f7a2-4f40-b47a-0eef52e30058",
         "cmsezpx58000104jwaew9hi8q",
-        "cmsfs4xqd000104jroyxyp16n",
         "cmsfsbyng000504jpv21qhtcj",
         "594a2327-655a-47f9-a54f-64bac9ce94a7",
         "8299d449-c8c8-41b2-bfb4-632dfa4c8613",
