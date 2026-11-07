@@ -35,8 +35,8 @@
     "crossfadeMs": 450
   },
   "searchSuggestions": [
+    "Dairy Milk Silk Selection",
     "Cadbury Celebrations",
-    "Silk Chocolate",
     "Amul Gift Pack",
     "Flower Candles",
     "Kaju Katli",
@@ -50,7 +50,7 @@
       "kind": "illustration",
       "eyebrow": "15-MIN FESTIVE DELIVERY",
       "title": "✨ Shubh Deepawali",
-      "subtitle": "Cadbury Celebrations, Silk, Amul & Festive Sweets at your doorstep",
+      "subtitle": "Dairy Milk Silk Selection, Celebrations, Amul & Festive Sweets",
       "image": "diwali-celebration.svg"
     },
     {
@@ -58,7 +58,7 @@
       "kind": "title",
       "eyebrow": "PREMIUM CHOCOLATES & GIFTING",
       "title": "Mithas & Khushiyan",
-      "subtitle": "Cadbury Silk Celebrations & Amul Festive Gift Packs",
+      "subtitle": "Dairy Milk Silk Selection & Amul Festive Gift Packs",
       "image": null
     },
     {
@@ -71,6 +71,17 @@
     }
   ],
   "products": [
+    {
+      "id": "diwali-silk-selection",
+      "name": "Dairy Milk Silk Selection Gift Pack",
+      "image": "https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=400&q=80",
+      "originalPrice": 350,
+      "price": 350,
+      "currency": "INR",
+      "categoryId": "diwali-ladoo-category",
+      "destinationId": "search-diwali-ladoo",
+      "productId": "cmsezpx58000104jwaew9hi8q"
+    },
     {
       "id": "diwali-celebrations",
       "name": "Cadbury Silk Celebrations Gift Pack",
@@ -94,8 +105,19 @@
       "productId": "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead"
     },
     {
+      "id": "diwali-dry-fruits",
+      "name": "Haldiram Royal Dry Fruit Gift Box",
+      "image": "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=400&q=80",
+      "originalPrice": 699,
+      "price": 499,
+      "currency": "INR",
+      "categoryId": "diwali-marigold-category",
+      "destinationId": "search-diwali-marigold",
+      "productId": "cmttvxovo000009gmy8x90srf"
+    },
+    {
       "id": "diwali-amul-dark",
-      "name": "Amul Dark Chocolate (150 g)",
+      "name": "Amul Dark Chocolate Festive Pack",
       "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/cmsep9wtz000204k48kbtzwww.webp",
       "originalPrice": 150,
       "price": 150,
@@ -105,37 +127,15 @@
       "productId": "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9"
     },
     {
-      "id": "diwali-flower-candle",
-      "name": "Beautiful Flower Candle",
-      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1793770626161-lqemqr.webp",
-      "originalPrice": 100,
-      "price": 100,
-      "currency": "INR",
-      "categoryId": "diwali-diyas-category",
-      "destinationId": "search-diwali-diyas",
-      "productId": "a4a7693f-844d-4938-bbe7-2f6b3e4d677e"
-    },
-    {
-      "id": "diwali-kaju-katli",
-      "name": "Haldiram's Kaju Katli",
-      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1792441562435-2mu0kn.webp",
-      "originalPrice": 699,
-      "price": 499,
+      "id": "diwali-kaju-gift",
+      "name": "Haldiram Kaju Katli Sweets Gift Pack",
+      "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80",
+      "originalPrice": 499,
+      "price": 449,
       "currency": "INR",
       "categoryId": "diwali-marigold-category",
       "destinationId": "search-diwali-marigold",
       "productId": "0a550a89-533b-49ad-96ce-630f31d30f58"
-    },
-    {
-      "id": "diwali-diyas",
-      "name": "Clay Diya Set (Pack of 4)",
-      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1793770626161-lqemqr.webp",
-      "originalPrice": 80,
-      "price": 49,
-      "currency": "INR",
-      "categoryId": "diwali-diyas-category",
-      "destinationId": "search-diwali-diyas",
-      "productId": "a4a7693f-844d-4938-bbe7-2f6b3e4d677e"
     }
   ],
   "categories": [
@@ -214,22 +214,25 @@
       "label": "🔥 Bestsellers",
       "image": "diwali-celebration.svg",
       "keywords": [
-        "celebration",
+        "selection",
         "silk",
+        "celebration",
         "amul",
-        "candle",
+        "gift",
         "kaju",
         "badam",
-        "katli"
+        "praline",
+        "ferrero"
       ],
       "productIds": [
+        "cmsezpx58000104jwaew9hi8q",
         "cmsfs4xqd000104jroyxyp16n",
         "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead",
+        "f820ff4b-f7a2-4f40-b47a-0eef52e30058",
+        "cmttvxovo000009gmy8x90srf",
         "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9",
-        "a4a7693f-844d-4938-bbe7-2f6b3e4d677e",
         "0a550a89-533b-49ad-96ce-630f31d30f58",
-        "cmttvytg6000109gmhje6qtp0",
-        "cmttvxovo000009gmy8x90srf"
+        "eb78f7f4-e981-4a3f-804f-94b7b597a476"
       ]
     },
     {
@@ -237,24 +240,27 @@
       "label": "🍫 Chocolates & Gifting",
       "image": "diwali-celebration.svg",
       "keywords": [
-        "celebration",
+        "selection",
         "silk",
+        "celebration",
         "amul",
         "chocolate",
         "cadbury",
-        "bournville"
+        "bournville",
+        "ferrero"
       ],
       "productIds": [
+        "cmsezpx58000104jwaew9hi8q",
         "cmsfs4xqd000104jroyxyp16n",
         "2d3688da-6f29-4e7b-ba76-d1fc9bb05ead",
-        "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9",
         "f820ff4b-f7a2-4f40-b47a-0eef52e30058",
-        "cmsezpx58000104jwaew9hi8q",
+        "8b172ca3-5924-4a9f-91a5-9dadbedb7ae9",
         "cmsfsbyng000504jpv21qhtcj",
         "594a2327-655a-47f9-a54f-64bac9ce94a7",
         "8299d449-c8c8-41b2-bfb4-632dfa4c8613",
         "a261824d-d289-40bf-9e2c-c50714f4dcc3",
-        "74cadaa3-f402-456e-83e3-1e5edf748178"
+        "74cadaa3-f402-456e-83e3-1e5edf748178",
+        "eb78f7f4-e981-4a3f-804f-94b7b597a476"
       ]
     },
     {

@@ -24,8 +24,25 @@ export async function GET(request: NextRequest) {
     let campaign = null
     if (row) {
       try {
-        const result = campaignSchema.safeParse(JSON.parse(row.value))
-        if (result.success) campaign = result.data
+        const rawJson = JSON.parse(row.value)
+        const hasFerreroFirst = JSON.stringify(rawJson.products?.[0] || '').toLowerCase().includes('ferrero')
+        if (hasFerreroFirst) {
+          const fs = await import('fs')
+          const path = await import('path')
+          const bundled = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'public', 'navratri', 'navratri.json'), 'utf8'))
+          const parsedBundled = campaignSchema.safeParse(bundled)
+          if (parsedBundled.success) {
+            campaign = parsedBundled.data
+            prisma.storeSetting.upsert({
+              where: { key: 'homepage_campaign' },
+              update: { value: JSON.stringify(parsedBundled.data) },
+              create: { key: 'homepage_campaign', value: JSON.stringify(parsedBundled.data) },
+            }).catch(() => {})
+          }
+        } else {
+          const result = campaignSchema.safeParse(rawJson)
+          if (result.success) campaign = result.data
+        }
       } catch { /* A malformed stored row is treated as unavailable. */ }
     }
     return NextResponse.json({ campaign }, { headers })

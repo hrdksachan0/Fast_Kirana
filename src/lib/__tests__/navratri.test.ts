@@ -70,9 +70,9 @@ test('catalogue filtering handles names, slugs, descriptions, tags, categories, 
 test('demo collection tabs filter data and support an honest empty flowers collection', () => {
   const [top, pooja, flowers, chunri] = navratriData.tabs
   assert.equal(filterDemoProducts(top).length, 6)
-  assert.deepEqual(filterDemoProducts(pooja).map(item => item.id), ['diwali-celebrations', 'diwali-amul-gift', 'diwali-amul-dark'])
+  assert.deepEqual(filterDemoProducts(pooja).map(item => item.id), ['diwali-silk-selection', 'diwali-celebrations', 'diwali-amul-gift', 'diwali-amul-dark'])
   assert.deepEqual(filterDemoProducts(flowers), [])
-  assert.deepEqual(filterDemoProducts(chunri).map(item => item.id), ['diwali-kaju-katli'])
+  assert.deepEqual(filterDemoProducts(chunri).map(item => item.id), ['diwali-dry-fruits', 'diwali-kaju-gift'])
 })
 
 test('generic campaign metadata remains optional for the bundled Navratri JSON', () => {
@@ -160,7 +160,7 @@ test('linked promotional slots use current store prices and omit unavailable or 
   assert.equal(resolved.products[0].price, 180)
   assert.equal(resolved.products[0].originalPrice, 180)
   assert.equal(resolved.products[0].image, '/catalogue/live-thali.svg')
-  assert.equal(config.products[0].name, 'Cadbury Silk Celebrations Gift Pack')
+  assert.equal(config.products[0].name, 'Dairy Milk Silk Selection Gift Pack')
   assert.deepEqual(resolveCampaignPromotions(config, []).products, [])
   for (const imageUrl of ['📦', 'javascript:alert(1)', '../missing.svg']) {
     assert.equal(resolveCampaignPromotions(config, [{ ...catalogue[0], imageUrl }]).products[0].image, config.products[0].image)
