@@ -319,7 +319,7 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
   }
 
   static String _resolveUrl(String raw) {
-    final trimmed = raw.trim();
+    final trimmed = AppConfig.toCdnImageUrl(raw.trim());
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }

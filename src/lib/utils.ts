@@ -56,7 +56,10 @@ export function isCafeProduct(p: any): boolean {
 
 export function getOptimizedImageUrl(url: string | null | undefined, width = 300): string | null {
   if (!url) return null
-  // Supabase Storage images are already WebP-optimized at upload time
+  // Route Supabase Storage through high-speed Cloudflare Edge CDN
+  if (url.includes('bberzasmxwioxjynbuaf.supabase.co')) {
+    return url.replace('bberzasmxwioxjynbuaf.supabase.co', 'images.fastminute.in')
+  }
   if (url.includes('supabase.co/storage/')) {
     return url
   }

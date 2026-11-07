@@ -31,6 +31,27 @@ class AppConfig {
     defaultValue: 'https://www.fastminute.in',
   );
 
+  /// High-speed Cloudflare Edge Image CDN URL
+  static const String imageCdnDomain = String.fromEnvironment(
+    'IMAGE_CDN_DOMAIN',
+    defaultValue: 'images.fastminute.in',
+  );
+
+  /// Toggle Cloudflare CDN for images
+  static const bool useImageCdn = bool.fromEnvironment(
+    'USE_IMAGE_CDN',
+    defaultValue: true,
+  );
+
+  /// Converts direct Supabase storage URLs to high-speed Cloudflare CDN edge URLs
+  static String toCdnImageUrl(String url) {
+    if (!useImageCdn || url.isEmpty) return url;
+    if (url.contains('bberzasmxwioxjynbuaf.supabase.co')) {
+      return url.replaceFirst('bberzasmxwioxjynbuaf.supabase.co', imageCdnDomain);
+    }
+    return url;
+  }
+
   // ─── Supabase Realtime ──────────────────────────────────────────
   static const String supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
