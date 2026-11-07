@@ -154,7 +154,7 @@
     {
       "id": "diwali-ladoo-category",
       "label": "Mithai & Chocolates",
-      "image": "diwali-ladoo.svg",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1793852838690-b0yf9a.webp",
       "destinationId": "search-diwali-ladoo",
       "keywords": [
         "mithai",
@@ -173,7 +173,7 @@
     {
       "id": "diwali-marigold-category",
       "label": "Dry Fruits & Gifting",
-      "image": "ramadan-almonds.svg",
+      "image": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/products/1793852959099-wy4bvd.webp",
       "destinationId": "search-diwali-marigold",
       "keywords": [
         "kaju",
