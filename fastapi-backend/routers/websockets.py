@@ -55,7 +55,8 @@ class ConnectionManager:
                 encoding="utf-8",
                 decode_responses=True,
                 socket_timeout=3.0,
-                socket_connect_timeout=3.0
+                socket_connect_timeout=3.0,
+                ssl_cert_reqs=None
             )
             await self.redis_client.ping()
             self.pubsub = self.redis_client.pubsub()

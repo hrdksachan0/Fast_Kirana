@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
         try:
             from redis import asyncio as aioredis
             from fastapi_cache.backends.redis import RedisBackend
-            redis = aioredis.from_url(settings.REDIS_URL)
+            redis = aioredis.from_url(settings.REDIS_URL, ssl_cert_reqs=None)
             FastAPICache.init(RedisBackend(redis), prefix="fastkirana-cache")
             logger.info("[Lifespan] Redis cache initialized.")
         except Exception:

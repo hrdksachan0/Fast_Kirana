@@ -47,7 +47,8 @@ async def get_redis_connection():
                 encoding="utf-8",
                 decode_responses=True,
                 socket_timeout=2.0,
-                socket_connect_timeout=2.0
+                socket_connect_timeout=2.0,
+                ssl_cert_reqs=None
             )
             # Test ping
             await _redis_client.ping()
