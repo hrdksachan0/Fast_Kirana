@@ -57,14 +57,20 @@ else:
         "statement_cache_size": 0,
         "prepared_statement_cache_size": 0,
         "prepared_statement_name_func": _get_unique_prep_stmt_name,
-        "server_settings": {"application_name": "fastkirana_api"}
+        "command_timeout": 10,
+        "timeout": 10,
+        "server_settings": {
+            "application_name": "fastkirana_api",
+            "statement_timeout": "8000",
+            "idle_in_transaction_session_timeout": "5000"
+        }
     }
     if use_ssl:
         connect_args["ssl"] = "require"
 
-    pool_size = int(os.getenv("DB_POOL_SIZE", "10"))
-    max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))
-    pool_timeout = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+    pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
+    max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "5"))
+    pool_timeout = int(os.getenv("DB_POOL_TIMEOUT", "15"))
 
     engine = create_async_engine(
         async_db_url,

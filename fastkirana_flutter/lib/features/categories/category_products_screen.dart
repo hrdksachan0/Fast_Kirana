@@ -17,6 +17,7 @@ import '../../widgets/product_card.dart';
 import '../../widgets/floating_cart_bar.dart';
 import '../../widgets/voice_search_sheet.dart';
 import '../products/product_detail_screen.dart';
+import '../bakery/bakery_store_screen.dart';
 
 class _SubcatItem {
   final String id;
@@ -107,6 +108,11 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Dedicated Artisanal Bakery Storefront
+    if (widget.category.slug.toLowerCase().contains('bakery') ||
+        widget.category.name.toLowerCase().contains('bakery')) {
+      return const BakeryStoreScreen();
+    }
     // Watch category products using ID first (exact DB partition match), or slug as fallback
     final catKey = (widget.category.id.isNotEmpty && (widget.category.id.toUpperCase().startsWith('CAT-') || widget.category.id.toUpperCase().startsWith('SUB-')))
         ? widget.category.id

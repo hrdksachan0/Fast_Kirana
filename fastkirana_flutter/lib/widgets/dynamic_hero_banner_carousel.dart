@@ -17,6 +17,7 @@ import '../features/cafe/cafe_menu_screen.dart';
 import '../features/search/search_screen.dart';
 import 'card_media_widget.dart';
 import '../features/gifting/send_gift_screen.dart';
+import '../features/bakery/bakery_store_screen.dart';
 import '../providers/gifting_store_provider.dart';
 
 /// Ultra-Premium Animated Hero Carousel (Amazon Side-Peek + Swiggy Instamart Depth)

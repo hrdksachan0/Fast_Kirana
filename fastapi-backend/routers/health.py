@@ -122,7 +122,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     is_db_connected = False
     latency_ms = None
     try:
-        await db.execute(select(1))
+        await asyncio.wait_for(db.execute(select(1)), timeout=2.0)
         latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
         is_db_connected = True
     except Exception:

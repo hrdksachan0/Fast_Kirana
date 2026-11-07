@@ -39,8 +39,8 @@ function getPrisma(): PrismaClient {
     connectionString,
     ssl: { rejectUnauthorized: false },
     max: isServerless ? 3 : 10,
-    idleTimeoutMillis: isServerless ? 60000 : 60000,
-    connectionTimeoutMillis: 15000,
+    idleTimeoutMillis: isServerless ? 10000 : 30000,
+    connectionTimeoutMillis: 10000,
   })
 
   pool.on('error', (err) => {
