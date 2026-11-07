@@ -123,9 +123,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       _ordersRealtimeChannel = SupabaseService.subscribeToAllOrdersRealtime(
         onOrderChange: (record) {
           if (!mounted) return;
-          final orderId = record['id']?.toString() ?? '';
-          final newStatus = record['status']?.toString() ?? '';
+          final orderId = (record['orderId'] ?? record['id'])?.toString() ?? '';
+          final readableId = record['readableId']?.toString() ?? '';
+          final newStatus = (record['status']?.toString() ?? '').toUpperCase();
+          final deliveryUserId = (record['deliveryUserId'] ?? record['delivery_user_id'])?.toString();
           final traceId = record['traceId']?.toString() ?? record['trace_id']?.toString();
+
           if (traceId != null && traceId.isNotEmpty) {
             TracerService.recordSpan(
               'rider_device_receipt',
@@ -137,7 +140,38 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               },
             );
           }
-          debugPrint('[DeliveryDashboard] Realtime order change detected: order=$orderId status=$newStatus trace=$traceId');
+          debugPrint('[DeliveryDashboard] Realtime order change detected: order=$orderId status=$newStatus rider=$deliveryUserId');
+
+          // Instant peer rider drop: If another rider picked up or order was completed, remove immediately from available list
+          if (orderId.isNotEmpty || readableId.isNotEmpty) {
+            final myId = _currentUserId;
+            final isAssignedToOther = deliveryUserId != null && deliveryUserId.isNotEmpty && myId != null && deliveryUserId != myId;
+            final isCompleted = newStatus == 'DELIVERED' || newStatus == 'CANCELLED';
+            final isPickedByOther = (newStatus == 'SHIPPED' || newStatus == 'PACKED') && isAssignedToOther;
+
+            if (isAssignedToOther || isCompleted || isPickedByOther) {
+              setState(() {
+                _orders.removeWhere((o) {
+                  final oid = o['id']?.toString();
+                  final rid = o['readableId']?.toString();
+                  return (orderId.isNotEmpty && oid == orderId) || (readableId.isNotEmpty && rid == readableId);
+                });
+              });
+            } else if (newStatus.isNotEmpty) {
+              // Update status in local memory immediately
+              setState(() {
+                for (var o in _orders) {
+                  final oid = o['id']?.toString();
+                  final rid = o['readableId']?.toString();
+                  if ((orderId.isNotEmpty && oid == orderId) || (readableId.isNotEmpty && rid == readableId)) {
+                    o['status'] = newStatus;
+                    if (deliveryUserId != null) o['deliveryUserId'] = deliveryUserId;
+                  }
+                }
+              });
+            }
+          }
+
           _fetchOrders(silent: true);
         },
       );

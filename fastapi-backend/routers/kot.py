@@ -435,6 +435,20 @@ async def broadcast_kot(
 
     asyncio.create_task(send_supabase_realtime_broadcast(topics_to_send, "reprint-kot", payload))
 
+    # Instant zero-load broadcast to Admin Consoles so all admin devices show the green KOT tick immediately
+    try:
+        from utils.supabase_broadcast import broadcast_supabase_realtime
+        kot_admin_payload = {
+            "event": "kot_printed",
+            "orderId": clean_id,
+            "readableId": final_readable,
+            "kotPrinted": True,
+            "printedAt": datetime.now(timezone.utc).isoformat()
+        }
+        asyncio.create_task(broadcast_supabase_realtime(["admin-global-orders-websocket"], "kot_printed", kot_admin_payload))
+    except Exception as kot_bcast_err:
+        logger.warning(f"[KOT Broadcast] Admin Realtime broadcast note: {kot_bcast_err}")
+
     # 3. Broadcast via internal FastAPI WebSockets
     try:
         kot_evt = {

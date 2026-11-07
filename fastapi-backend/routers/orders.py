@@ -4031,6 +4031,38 @@ async def update_order(
         await manager.broadcast_to_channel(f"restaurant_{order.restaurantId}", rest_ws_payload)
         await manager.broadcast_to_channel(f"kitchen_{order.restaurantId}", rest_ws_payload)
 
+    # Zero-load instant broadcast to Supabase Realtime for Admin consoles, Riders, and Customer devices
+    try:
+        from utils.supabase_broadcast import broadcast_supabase_realtime
+        sb_topics = [
+            "admin-global-orders-websocket",
+            f"order-live-tracking-{order.id}",
+        ]
+        if order.readableId:
+            clean_r = str(order.readableId).strip().lstrip("#")
+            sb_topics.append(f"order-live-tracking-{clean_r}")
+        if order.userId:
+            sb_topics.append(f"customer-orders-{order.userId}")
+        if order.restaurantId:
+            sb_topics.append(f"restaurant-orders-{order.restaurantId}")
+
+        sb_payload = {
+            "id": order.id,
+            "orderId": order.id,
+            "readableId": order.readableId,
+            "status": order.status.value,
+            "deliveryUserId": order.deliveryUserId,
+            "restaurantId": order.restaurantId,
+            "storeId": order.storeId,
+            "paymentStatus": getattr(order.paymentStatus, "value", str(order.paymentStatus or "")),
+            "updatedAt": order.updatedAt.isoformat() if order.updatedAt else datetime.utcnow().isoformat()
+        }
+        asyncio.create_task(broadcast_supabase_realtime(sb_topics, "status_update", sb_payload))
+        if order.status.value == "SHIPPED" and order.deliveryUserId:
+            asyncio.create_task(broadcast_supabase_realtime(["admin-global-orders-websocket"], "order_claimed", sb_payload))
+    except Exception as sb_err:
+        logger.warning(f"[SupabaseBroadcast] Order status dispatch note: {sb_err}")
+
     # Trigger Rich PWA & Mobile Push Notification for customer and staff roles
     base_order_no = re.sub(r'-[GR\d]+$', '', order.readableId or "")
     st_val = order.status.value.upper()

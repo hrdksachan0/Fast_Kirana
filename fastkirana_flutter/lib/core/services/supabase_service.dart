@@ -73,6 +73,19 @@ class SupabaseService {
         },
       );
 
+      // Listen for direct broadcast order status updates (sub-50ms instant sync)
+      channel.onBroadcast(
+        event: 'status_update',
+        callback: (payload) {
+          if (payload.isNotEmpty) {
+            final statusStr = payload['status']?.toString();
+            if (statusStr != null && onStatusUpdate != null) {
+              onStatusUpdate(statusStr);
+            }
+          }
+        },
+      );
+
       // Listen for delivery_locations INSERT/UPDATE for this order
       channel.onPostgresChanges(
         event: PostgresChangeEvent.all,
@@ -168,6 +181,33 @@ class SupabaseService {
       // Listen for direct broadcast events
       channel.onBroadcast(
         event: 'new_order',
+        callback: (payload) {
+          if (payload.isNotEmpty) {
+            onOrderChange(payload);
+          }
+        },
+      );
+
+      channel.onBroadcast(
+        event: 'status_update',
+        callback: (payload) {
+          if (payload.isNotEmpty) {
+            onOrderChange(payload);
+          }
+        },
+      );
+
+      channel.onBroadcast(
+        event: 'kot_printed',
+        callback: (payload) {
+          if (payload.isNotEmpty) {
+            onOrderChange(payload);
+          }
+        },
+      );
+
+      channel.onBroadcast(
+        event: 'order_claimed',
         callback: (payload) {
           if (payload.isNotEmpty) {
             onOrderChange(payload);

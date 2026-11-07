@@ -1,83 +1,39 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:collection/collection.dart';
 
 import '../../core/theme/design_system.dart';
 import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
+import '../../data/models/bakery_store_config.dart';
+import '../../providers/bakery_store_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/store_hub_provider.dart';
-import '../../widgets/floating_cart_bar.dart';
+import '../cart/cart_screen.dart';
 import '../products/product_detail_screen.dart';
 
-/// Warm Artisanal Bakery Palette
-abstract final class BakeryStyle {
-  static const cream = Color(0xFFFAF7ED);
-  static const shelf = Color(0xFFF2EFE5);
-  static const border = Color(0xFFE5DFC9);
-  static const espresso = Color(0xFF2C241E);
-  static const amber = Color(0xFFB45309);
-  static const green = Color(0xFF15803D);
-  static const gold = Color(0xFFD97706);
-  static const cardBg = Color(0xFFFCFAF4);
+/// Ultra-Modern Blinkit Glassmorphic Color Palette
+abstract final class BlinkitGlassTheme {
+  static const creamBg = Color(0xFFFAF8F3);
+  static const darkTeal = Color(0xFF134E5E);
+  static const slateDark = Color(0xFF0F172A);
+  static const yellowPrice = Color(0xFFFFD854);
+  static const blueDiscount = Color(0xFF2472F3);
+  static const greenAdd = Color(0xFF2D830C);
+  static const tagBg = Color(0xFFF0E9C9);
+  static const tagText = Color(0xFF695B1D);
+  static const frostedBorder = Color(0x66FFFFFF);
 }
 
-class _BakeryCategoryTab {
-  final String id;
-  final String title;
-  final String emoji;
-  final List<String> matchKeywords;
-
-  const _BakeryCategoryTab({
-    required this.id,
-    required this.title,
-    required this.emoji,
-    required this.matchKeywords,
-  });
-}
-
-const _kBakeryTabs = [
-  _BakeryCategoryTab(
-    id: 'breads',
-    title: 'Breads\n& Loaves',
-    emoji: '🍞',
-    matchKeywords: ['bread', 'loaf', 'multigrain', 'white bread', 'brown bread', 'garlic bread', 'whole wheat'],
-  ),
-  _BakeryCategoryTab(
-    id: 'pav_buns',
-    title: 'Pav, Buns\n& Bases',
-    emoji: '🍔',
-    matchKeywords: ['pav', 'bun', 'burger bun', 'pizza base', 'kulcha', 'ladi pav'],
-  ),
-  _BakeryCategoryTab(
-    id: 'puffs',
-    title: 'Puffs &\nPatties',
-    emoji: '🥐',
-    matchKeywords: ['puff', 'patty', 'patties', 'croissant', 'samosa', 'roll', 'starter'],
-  ),
-  _BakeryCategoryTab(
-    id: 'rusk_cookies',
-    title: 'Cookies\n& Rusks',
-    emoji: '🍪',
-    matchKeywords: ['rusk', 'toast', 'biscuit', 'cookie', 'cookies', 'elaichi', 'digestive', 'bourbon', 'crunch'],
-  ),
-  _BakeryCategoryTab(
-    id: 'tea_cakes',
-    title: 'Tea Cakes\n& Muffins',
-    emoji: '🧁',
-    matchKeywords: ['muffin', 'brownie', 'tea cake', 'cupcake', 'slice cake', 'fruit cake'],
-  ),
-];
-
-/// Dedicated Artisanal Bakery Store Screen (Excluding Birthday Cakes)
-/// Features European boulangerie shelf aesthetics, arch-style category tabs,
-/// real-time cart integration, and zero-drop quick commerce ordering.
+/// Dedicated Artisanal Bakery Store Screen (Strictly Excluding Birthday/Celebration Cakes)
+/// Features Blinkit-grade Connected Arch Category Tabs, Liquid Frosted Emerald Floating Cart,
+/// Server-Driven UI configuration from Web Admin, and real-time CartProvider synchronization.
 class BakeryStoreScreen extends ConsumerStatefulWidget {
   const BakeryStoreScreen({super.key});
 
@@ -85,18 +41,40 @@ class BakeryStoreScreen extends ConsumerStatefulWidget {
   ConsumerState<BakeryStoreScreen> createState() => _BakeryStoreScreenState();
 }
 
-class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen> {
+class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen>
+    with SingleTickerProviderStateMixin {
   int _selectedTabIndex = 0;
   final TextEditingController _searchCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final Set<String> _favourites = {};
   String _searchQuery = '';
 
+  late AnimationController _tabAnimCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabAnimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+    _tabAnimCtrl.forward();
+  }
+
   @override
   void dispose() {
+    _tabAnimCtrl.dispose();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onTabSelected(int index) {
+    if (_selectedTabIndex == index) return;
+    HapticFeedback.lightImpact();
+    setState(() => _selectedTabIndex = index);
+    _tabAnimCtrl.reset();
+    _tabAnimCtrl.forward();
   }
 
   @override
@@ -105,1053 +83,1192 @@ class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen> {
     final currentHub = ref.watch(currentStoreHubProvider);
     final storeName = currentHub.city.isNotEmpty ? currentHub.city : currentHub.name;
 
+    // Server-Driven Dynamic Bakery Configuration from Web Admin
+    final configAsync = ref.watch(bakeryStoreConfigProvider);
+    final config = configAsync.valueOrNull ??
+        const BakeryStoreConfigModel(tabs: BakeryStoreConfigModel.defaultTabs);
+
+    final activeTabs = config.tabs.where((t) => t.isActive).toList();
+    if (_selectedTabIndex >= activeTabs.length) {
+      _selectedTabIndex = 0;
+    }
+    final currentTab = activeTabs.isNotEmpty ? activeTabs[_selectedTabIndex] : null;
+
+    // Real Supabase Products
     final allProductsAsync = ref.watch(productsProvider(null));
     final allProducts = allProductsAsync.valueOrNull ?? [];
 
     final cartState = ref.watch(cartProvider);
     final cart = cartState.valueOrNull;
     final cartItems = cart?.items ?? [];
+    final totalCartQty = cartItems.fold<int>(0, (sum, i) => sum + i.quantity);
+    final cartTotalAmount = cart?.totalPrice ?? 0.0;
 
-    // Filter products for active category tab
-    final currentTab = _kBakeryTabs[_selectedTabIndex];
+    // Filter products strictly excluding celebration/birthday cakes
     final tabProducts = _resolveTabProducts(allProducts, currentTab, _searchQuery);
 
     return Scaffold(
-      backgroundColor: BakeryStyle.cream,
+      backgroundColor: config.backgroundColor,
       body: Stack(
         children: [
+          // 1. Ambient Luminous Mesh Glowing Orbs for Glass Refraction
+          Positioned(
+            top: -60,
+            left: -60,
+            child: Container(
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFFDE68A).withValues(alpha: 0.35),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 220,
+            right: -80,
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFA7F3D0).withValues(alpha: 0.28),
+              ),
+            ),
+          ),
+
+          // 2. Main Scroll View
           CustomScrollView(
             controller: _scrollCtrl,
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // 1. Header with Search & Location
+              // Sticky Frosted Header
               SliverToBoxAdapter(
                 child: SafeArea(
                   bottom: false,
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: BakeryStyle.cream,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0x0C000000),
-                          blurRadius: 6,
-                          offset: Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-                    child: Column(
-                      children: [
-                        // Top Nav Bar
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Bounceable(
-                              onTap: () => Navigator.pop(context),
-                              child: Container(
-                                width: 34,
-                                height: 34,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: BakeryStyle.border),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.04),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  size: 16,
-                                  color: BakeryStyle.espresso,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: BakeryStyle.border),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('📍', style: TextStyle(fontSize: 12)),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    selectedAddress != null
-                                        ? selectedAddress.fullAddress
-                                        : '$storeName Hub',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: BakeryStyle.espresso,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFFDE68A)),
-                              ),
-                              child: Text(
-                                '🥐 BAKERY',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF92400E),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Search Field
-                        TextField(
-                          controller: _searchCtrl,
-                          onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: BakeryStyle.espresso,
-                          ),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                            hintText: 'Search for breads, pav, rusks, cookies...',
-                            hintStyle: GoogleFonts.inter(
-                              fontSize: 12.5,
-                              color: AppDesignSystem.slate400,
-                            ),
-                            prefixIcon: const Icon(Icons.search, size: 20, color: BakeryStyle.amber),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
-                                    onPressed: () {
-                                      _searchCtrl.clear();
-                                      setState(() => _searchQuery = '');
-                                    },
-                                  )
-                                : null,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: BakeryStyle.border),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: BakeryStyle.border),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: BakeryStyle.amber, width: 1.5),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  child: _buildFrostedHeader(context, selectedAddress, storeName),
                 ),
               ),
 
-              // 2. Editorial Artisanal Bakery Hero Banner
+              // Lifestyle Hero Glass Card Banner
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-                  child: Container(
-                    height: 105,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFF451A03), // Deep Roasted Oak
-                          Color(0xFF78350F), // Toasted Amber
-                          Color(0xFF92400E), // Golden Crust
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF78350F).withValues(alpha: 0.20),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Stack(
-                      children: [
-                        // Decorative Bakery Motif on Right
-                        Positioned(
-                          right: -10,
-                          bottom: -8,
-                          child: Opacity(
-                            opacity: 0.18,
-                            child: Text(
-                              '🥖🥐',
-                              style: TextStyle(fontSize: 88, height: 1),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFDE68A),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'FRESH BATCH',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w900,
-                                        color: const Color(0xFF78350F),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '• 100% Whole Wheat Options',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color(0xFFFEF3C7),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                'Baked Fresh Every Morning',
-                                style: GoogleFonts.playfairDisplay(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Warm crusts, soft pav & tea-time rusks delivered fast',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFFFDE68A),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+                  child: _buildHeroGlassBanner(config),
                 ),
               ),
 
-              // 3. Arch-Style Animated Category Tabs (Physical Shelf Illusion)
+              // Connected Arch Category Selector
+              if (activeTabs.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _buildArchTabBar(activeTabs),
+                ),
+
+              // Connected Shelf Section with Products
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: SizedBox(
-                    height: 98,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      itemCount: _kBakeryTabs.length,
-                      itemBuilder: (context, i) {
-                        final tab = _kBakeryTabs[i];
-                        final isSelected = _selectedTabIndex == i;
-
-                        return GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() => _selectedTabIndex = i);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOutCubic,
-                            width: 86,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: isSelected ? BakeryStyle.shelf : const Color(0xFFEFE9DB),
-                              border: Border.all(
-                                color: isSelected ? BakeryStyle.amber : Colors.transparent,
-                                width: isSelected ? 1.5 : 1.0,
-                              ),
-                              borderRadius: BorderRadius.vertical(
-                                top: const Radius.circular(16),
-                                bottom: Radius.circular(isSelected ? 0 : 16),
-                              ),
-                              boxShadow: [
-                                if (isSelected)
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.05),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, -2),
-                                  ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  tab.emoji,
-                                  style: const TextStyle(fontSize: 28),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  tab.title,
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                    color: isSelected ? BakeryStyle.espresso : const Color(0xFF786B59),
-                                    height: 1.15,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
+                child: _buildShelfHeader(currentTab),
               ),
 
-              // 4. Horizontal Product Shelf (The physical shelf shelf-illusion)
+              // Product Cards Shelf (Horizontal Scroll or Grid)
               SliverToBoxAdapter(
-                child: Container(
-                  color: BakeryStyle.shelf,
-                  padding: const EdgeInsets.only(top: 14, bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '⭐ Best in ${currentTab.title.replaceAll("\n", " ")}',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                                color: BakeryStyle.espresso,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: BakeryStyle.border),
-                              ),
-                              child: Text(
-                                '${tabProducts.length} Items',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: BakeryStyle.amber,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      if (tabProducts.isEmpty)
-                        const SizedBox(
-                          height: 180,
-                          child: Center(
-                            child: Text(
-                              'No bakery items found in this shelf.\nTry another tab!',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.black45, fontSize: 12),
-                            ),
-                          ),
-                        )
-                      else
-                        SizedBox(
-                          height: 250,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            scrollDirection: Axis.horizontal,
-                            itemCount: tabProducts.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 12),
-                            itemBuilder: (context, idx) {
-                              final p = tabProducts[idx];
-                              final inCartCount = cartItems
-                                  .where((i) => i.product.id == p.id)
-                                  .fold(0, (sum, i) => sum + i.quantity);
-
-                              return _BakeryProductCard(
-                                product: p,
-                                inCartCount: inCartCount,
-                                isFavourite: _favourites.contains(p.id),
-                                onToggleFav: () {
-                                  setState(() {
-                                    if (!_favourites.add(p.id)) _favourites.remove(p.id);
-                                  });
-                                },
-                                onAdd: () {
-                                  HapticFeedback.lightImpact();
-                                  ref.read(cartProvider.notifier).addProduct(p);
-                                },
-                                onIncrement: () {
-                                  HapticFeedback.lightImpact();
-                                  ref.read(cartProvider.notifier).increment(p);
-                                },
-                                onDecrement: () {
-                                  HapticFeedback.lightImpact();
-                                  ref.read(cartProvider.notifier).decrement(p.id);
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                child: _buildProductShelf(tabProducts, cartItems),
               ),
 
-              // 5. Section Divider: Full Category Exploration
+              // Morning Chai Pairing Combo Glass Banner
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 16, 14, 8),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.grid_view_rounded, size: 16, color: BakeryStyle.amber),
-                      const SizedBox(width: 6),
-                      Text(
-                        'All ${currentTab.title.replaceAll("\n", " ")}',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: BakeryStyle.espresso,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        'In Stock • $storeName',
-                        style: GoogleFonts.inter(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppDesignSystem.slate500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: _buildChaiComboBanner(),
               ),
 
-              // 6. Two-Column Vertical Grid for complete inventory
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 110),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.68,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 12,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final p = tabProducts[index];
-                      final inCartCount = cartItems
-                          .where((i) => i.product.id == p.id)
-                          .fold(0, (sum, i) => sum + i.quantity);
-
-                      return _BakeryProductCard(
-                        product: p,
-                        inCartCount: inCartCount,
-                        isFavourite: _favourites.contains(p.id),
-                        onToggleFav: () {
-                          setState(() {
-                            if (!_favourites.add(p.id)) _favourites.remove(p.id);
-                          });
-                        },
-                        onAdd: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(cartProvider.notifier).addProduct(p);
-                        },
-                        onIncrement: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(cartProvider.notifier).increment(p);
-                        },
-                        onDecrement: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(cartProvider.notifier).decrement(p.id);
-                        },
-                      );
-                    },
-                    childCount: tabProducts.length,
-                  ),
-                ),
+              // Bottom Padding for Floating Cart
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 120),
               ),
             ],
           ),
 
-          // 7. Floating Luxury Cart Bar
-          const FloatingCartBar(bottomOffset: 16),
+          // 3. Liquid Frosted Emerald Floating Cart Bar
+          if (totalCartQty > 0)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 24,
+              child: _buildLiquidEmeraldCartBar(context, cartItems, totalCartQty, cartTotalAmount),
+            ),
         ],
       ),
     );
   }
 
-  List<Product> _resolveTabProducts(
-    List<Product> allProducts,
-    _BakeryCategoryTab tab,
-    String query,
-  ) {
-    // 1. Search Query Filter
-    if (query.isNotEmpty) {
-      final q = query.toLowerCase();
-      return allProducts.where((p) {
-        final name = p.name.toLowerCase();
-        final cat = (p.category?.name ?? '').toLowerCase();
-        final tags = p.tags.map((t) => t.toLowerCase()).toList();
-        return name.contains(q) || cat.contains(q) || tags.any((t) => t.contains(q));
-      }).toList();
-    }
-
-    // 2. Tab Filter
-    final matched = allProducts.where((p) {
-      final name = p.name.toLowerCase();
-      final cat = (p.category?.name ?? '').toLowerCase();
-      final tags = p.tags.map((t) => t.toLowerCase()).toList();
-
-      // Exclude big birthday/celebration cakes
-      final isCake = name.contains('birthday cake') ||
-          (name.contains('cake') && !name.contains('tea cake') && !name.contains('rusk') && !name.contains('biscuit') && !name.contains('muffin') && !name.contains('brownie'));
-      if (isCake) return false;
-
-      return tab.matchKeywords.any((kw) => name.contains(kw) || cat.contains(kw) || tags.contains(kw));
-    }).toList();
-
-    if (matched.isNotEmpty) {
-      return matched;
-    }
-
-    // Fallback curated items for the tab if specific darkstore inventory is still indexing
-    return _getFallbackBakeryItems(tab.id);
-  }
-
-  List<Product> _getFallbackBakeryItems(String tabId) {
-    switch (tabId) {
-      case 'breads':
-        return [
-          Product(
-            id: 'bake-bread-wheat',
-            name: '100% Whole Wheat Brown Bread',
-            slug: 'brown-bread-400g',
-            price: 45,
-            mrp: 50,
-            discount: 5,
-            unit: '400 g',
-            stock: 25,
-            isAvailable: true,
-            tags: ['100% Atta', 'Zero Maida', 'Fresh Today'],
-            minStock: 5,
-            imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-          Product(
-            id: 'bake-bread-white',
-            name: 'Harvest Fresh White Sandwich Bread',
-            slug: 'white-bread-400g',
-            price: 35,
-            mrp: 40,
-            discount: 5,
-            unit: '400 g',
-            stock: 30,
-            isAvailable: true,
-            tags: ['Super Soft', 'Daily Fresh'],
-            minStock: 5,
-            imageUrl: 'https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-          Product(
-            id: 'bake-bread-garlic',
-            name: 'Artisan Cheesy Garlic Loaf',
-            slug: 'garlic-bread-loaf',
-            price: 85,
-            mrp: 99,
-            discount: 14,
-            unit: '250 g',
-            stock: 15,
-            isAvailable: true,
-            tags: ['Herb Infused', 'Bakery Special'],
-            minStock: 2,
-            imageUrl: 'https://images.unsplash.com/photo-1619895092538-128341789043?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-        ];
-
-      case 'pav_buns':
-        return [
-          Product(
-            id: 'bake-pav-ladi',
-            name: 'Bombay Ladi Pav (Pack of 6)',
-            slug: 'ladi-pav-pack-6',
-            price: 25,
-            mrp: 30,
-            discount: 5,
-            unit: '6 pcs',
-            stock: 40,
-            isAvailable: true,
-            tags: ['Ultra Soft', 'Pav Bhaji Special'],
-            minStock: 5,
-            imageUrl: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-          Product(
-            id: 'bake-bun-burger',
-            name: 'Sesame Seed Burger Buns (Pack of 2)',
-            slug: 'burger-buns-pack-2',
-            price: 35,
-            mrp: 40,
-            discount: 5,
-            unit: '2 pcs',
-            stock: 25,
-            isAvailable: true,
-            tags: ['Toasted Sesame', 'Fresh Bakes'],
-            minStock: 5,
-            imageUrl: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-          Product(
-            id: 'bake-pizza-base',
-            name: 'Stone Oven Pizza Base (Pack of 2)',
-            slug: 'pizza-base-pack-2',
-            price: 45,
-            mrp: 50,
-            discount: 5,
-            unit: '2 pcs',
-            stock: 20,
-            isAvailable: true,
-            tags: ['Thick Crust', 'Easy Bake'],
-            minStock: 5,
-            imageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-        ];
-
-      case 'puffs':
-        return [
-          Product(
-            id: 'bake-puff-paneer',
-            name: 'Crispy Masala Paneer Puff',
-            slug: 'paneer-puff',
-            price: 35,
-            mrp: 40,
-            discount: 5,
-            unit: '1 pc',
-            stock: 20,
-            isAvailable: true,
-            tags: ['Flaky Pastry', 'Spicy Paneer'],
-            minStock: 3,
-            imageUrl: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-          Product(
-            id: 'bake-puff-aloo',
-            name: 'Golden Veg Aloo Patty',
-            slug: 'veg-aloo-patty',
-            price: 25,
-            mrp: 30,
-            discount: 5,
-            unit: '1 pc',
-            stock: 35,
-            isAvailable: true,
-            tags: ['Tea Snack', 'Classic Masala'],
-            minStock: 5,
-            imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-        ];
-
-      case 'rusk_cookies':
-        return [
-          Product(
-            id: 'bake-rusk-suji',
-            name: 'Kishna Elaichi Suji Toast (Crispy Rusk)',
-            slug: 'kishna-elaichi-rusk',
-            price: 40,
-            mrp: 40,
-            discount: 0,
-            unit: '250 g',
-            stock: 50,
-            isAvailable: true,
-            tags: ['Chai Companion', 'Elaichi Infused'],
-            minStock: 5,
-            imageUrl: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-          Product(
-            id: 'bake-cookie-butter',
-            name: 'Dukes Premium Choco Bourbon Biscuits',
-            slug: 'dukes-bourbon-125g',
-            price: 36,
-            mrp: 36,
-            discount: 0,
-            unit: '125 g',
-            stock: 45,
-            isAvailable: true,
-            tags: ['Choco Cream', 'Tea Time'],
-            minStock: 5,
-            imageUrl: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-        ];
-
-      case 'tea_cakes':
-      default:
-        return [
-          Product(
-            id: 'bake-muffin-choco',
-            name: 'Rich Choco Lava Muffin',
-            slug: 'choco-lava-muffin',
-            price: 49,
-            mrp: 60,
-            discount: 11,
-            unit: '1 pc',
-            stock: 20,
-            isAvailable: true,
-            tags: ['Melted Core', '100% Eggless'],
-            minStock: 3,
-            imageUrl: 'https://images.unsplash.com/photo-1586985289688-ca3cf47d3e6e?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-          Product(
-            id: 'bake-brownie-walnut',
-            name: 'Classic Fudgy Walnut Brownie',
-            slug: 'fudgy-walnut-brownie',
-            price: 69,
-            mrp: 85,
-            discount: 16,
-            unit: '1 pc',
-            stock: 15,
-            isAvailable: true,
-            tags: ['Dark Chocolate', 'Real Walnuts'],
-            minStock: 3,
-            imageUrl: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400&q=80',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-        ];
-    }
-  }
-}
-
-/// Artisanal Bakery Product Card with Spec Badges & ADD Stepper
-class _BakeryProductCard extends StatelessWidget {
-  final Product product;
-  final int inCartCount;
-  final bool isFavourite;
-  final VoidCallback onToggleFav;
-  final VoidCallback onAdd;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
-
-  const _BakeryProductCard({
-    required this.product,
-    required this.inCartCount,
-    required this.isFavourite,
-    required this.onToggleFav,
-    required this.onAdd,
-    required this.onIncrement,
-    required this.onDecrement,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final discountPercent = product.mrp > product.price
-        ? (((product.mrp - product.price) / product.mrp) * 100).round()
-        : 0;
-
-    return Bounceable(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        Navigator.push(
-          context,
-          FadeSlideRoute(page: ProductDetailScreen(product: product)),
-        );
-      },
-      child: Container(
-        width: 140,
-        decoration: BoxDecoration(
-          color: BakeryStyle.cardBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: BakeryStyle.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+  // --- HEADER & SEARCH ---
+  Widget _buildFrostedHeader(BuildContext context, dynamic selectedAddress, String storeName) {
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.72),
+            border: const Border(
+              bottom: BorderSide(color: Color(0x33000000), width: 0.5),
             ),
-          ],
-        ),
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Square Image Container with Fav Heart & Unit
-            AspectRatio(
-              aspectRatio: 1.05,
-              child: Stack(
+          ),
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+          child: Column(
+            children: [
+              // Top Bar: Back, Location, FastMinute Hub
+              Row(
                 children: [
-                  Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFF1EDE2)),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: product.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => const Center(
-                              child: Text('🥐', style: TextStyle(fontSize: 36)),
-                            ),
-                          )
-                        : const Center(
-                            child: Text('🥐', style: TextStyle(fontSize: 36)),
+                  Bounceable(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
-                  ),
-
-                  // Heart Favourite Button
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: Bounceable(
-                      onTap: onToggleFav,
-                      child: Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isFavourite ? Icons.favorite : Icons.favorite_border,
-                          size: 16,
-                          color: isFavourite ? const Color(0xFFE11D48) : AppDesignSystem.slate400,
-                        ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 16,
+                        color: BlinkitGlassTheme.slateDark,
                       ),
                     ),
                   ),
-
-                  // Discount Badge
-                  if (discountPercent > 0)
-                    Positioned(
-                      top: 4,
-                      left: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDC2626),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          '$discountPercent% OFF',
-                          style: GoogleFonts.inter(
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-
-            // 2. Unit and Spec Tag
-            Row(
-              children: [
-                Text(
-                  product.unit.isNotEmpty ? product.unit : '1 pc',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: BakeryStyle.amber,
-                  ),
-                ),
-                if (product.tags.isNotEmpty) ...[
-                  const SizedBox(width: 4),
-                  Container(
-                    width: 3,
-                    height: 3,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFD4D4D8),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      product.tags.first,
-                      style: GoogleFonts.inter(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF65A30D),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      child: Row(
+                        children: [
+                          const Text('📍', style: TextStyle(fontSize: 12)),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              selectedAddress != null
+                                  ? selectedAddress.fullAddress
+                                  : '$storeName Dark Store',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: BlinkitGlassTheme.slateDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Text(
+                      '⚡ 10 MIN',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF92400E),
+                      ),
                     ),
                   ),
                 ],
-              ],
-            ),
-            const SizedBox(height: 2),
-
-            // 3. Product Title
-            Text(
-              product.name,
-              style: GoogleFonts.inter(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: BakeryStyle.espresso,
-                height: 1.2,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const Spacer(),
+              const SizedBox(height: 10),
 
-            // 4. Price & Stepper Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '₹${product.price.round()}',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: BakeryStyle.espresso,
-                      ),
+              // Search Input (Blinkit Frosted Style)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
-                    if (product.mrp > product.price)
-                      Text(
-                        '₹${product.mrp.round()}',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: AppDesignSystem.slate400,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
                   ],
                 ),
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: BlinkitGlassTheme.slateDark,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: false,
+                    hintText: 'Search for bread, pav, rusk, cookies...',
+                    hintStyle: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      color: Colors.black38,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      size: 20,
+                      color: Colors.black45,
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
 
-                // Stepper or ADD Button
-                inCartCount == 0
-                    ? Bounceable(
-                        onTap: onAdd,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: BakeryStyle.green, width: 1.2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: BakeryStyle.green.withValues(alpha: 0.10),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            'ADD',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                              color: BakeryStyle.green,
-                            ),
-                          ),
-                        ),
-                      )
-                    : Container(
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: BakeryStyle.green,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Bounceable(
-                              onTap: onDecrement,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 6),
-                                child: Icon(Icons.remove, size: 14, color: Colors.white),
-                              ),
-                            ),
-                            Text(
-                              '$inCartCount',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Bounceable(
-                              onTap: onIncrement,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 6),
-                                child: Icon(Icons.add, size: 14, color: Colors.white),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-              ],
-            ),
-          ],
+              const SizedBox(height: 8),
+
+              // Blinkit Department Strip
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildDeptItem('💊', 'Pharmacy', false),
+                  _buildDeptItem('🎁', 'Gifting', false),
+                  _buildDeptItem('🥐', 'Bakery', true),
+                  _buildDeptItem('👶', 'Kids', false),
+                  _buildDeptItem('🛒', 'Imported', false),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _buildDeptItem(String emoji, String title, bool isActive) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(emoji, style: TextStyle(fontSize: isActive ? 18 : 16)),
+        const SizedBox(height: 2),
+        Text(
+          title,
+          style: GoogleFonts.inter(
+            fontSize: 9.5,
+            fontWeight: isActive ? FontWeight.w900 : FontWeight.w600,
+            color: isActive ? BlinkitGlassTheme.slateDark : Colors.black45,
+          ),
+        ),
+        if (isActive)
+          Container(
+            margin: const EdgeInsets.top: 2,
+            width: 20,
+            height: 2,
+            decoration: BoxDecoration(
+              color: BlinkitGlassTheme.slateDark,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          )
+        else
+          const SizedBox(height: 4),
+      ],
+    );
+  }
+
+  // --- HERO GLASS BANNER ---
+  Widget _buildHeroGlassBanner(BakeryStoreConfigModel config) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF134E5E).withValues(alpha: 0.06),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF059669).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.2)),
+                      ),
+                      child: Text(
+                        config.bannerBadge,
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF065F46),
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      config.bannerTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: BlinkitGlassTheme.darkTeal,
+                        height: 1.1,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      config.bannerSubtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: BlinkitGlassTheme.darkTeal.withValues(alpha: 0.75),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: SizedBox(
+                  width: 110,
+                  height: 85,
+                  child: CachedNetworkImage(
+                    imageUrl: config.bannerImageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(color: Colors.black12),
+                    errorWidget: (_, __, ___) => Container(
+                      color: const Color(0xFFFEF3C7),
+                      child: const Center(child: Text('🥐', style: TextStyle(fontSize: 32))),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- CONNECTED ARCH TAB BAR ---
+  Widget _buildArchTabBar(List<BakeryTabModel> tabs) {
+    return Container(
+      padding: const EdgeInsets.only(top: 8, left: 12, right: 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: tabs.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final tab = entry.value;
+            final isSelected = idx == _selectedTabIndex;
+
+            return Bounceable(
+              onTap: () => _onTabSelected(idx),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                width: isSelected ? 96 : 84,
+                margin: const EdgeInsets.only(right: 6),
+                padding: EdgeInsets.fromLTRB(6, 8, 6, isSelected ? 10 : 8),
+                decoration: isSelected
+                    ? const BoxDecoration(
+                        color: BlinkitGlassTheme.creamBg,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                        border: Border(
+                          top: BorderSide(color: BlinkitGlassTheme.slateDark, width: 2.2),
+                          left: BorderSide(color: BlinkitGlassTheme.slateDark, width: 2.2),
+                          right: BorderSide(color: BlinkitGlassTheme.slateDark, width: 2.2),
+                          bottom: BorderSide(color: Colors.transparent, width: 0),
+                        ),
+                      )
+                    : BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+                      ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Icon Circle
+                    Container(
+                      width: isSelected ? 48 : 42,
+                      height: isSelected ? 48 : 42,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSelected
+                            ? const Color(0xFFFEF3C7)
+                            : Colors.white.withValues(alpha: 0.8),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFFF59E0B)
+                              : Colors.white,
+                          width: isSelected ? 1.5 : 1.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          tab.emoji,
+                          style: TextStyle(fontSize: isSelected ? 24 : 20),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      tab.label,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: isSelected ? 10.5 : 9.5,
+                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                        color: isSelected ? BlinkitGlassTheme.slateDark : Colors.black54,
+                        height: 1.15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // --- SHELF HEADER WITH CONNECTED STROKE ---
+  Widget _buildShelfHeader(BakeryTabModel? currentTab) {
+    if (currentTab == null) return const SizedBox.shrink();
+
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: BlinkitGlassTheme.slateDark, width: 2.2),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  currentTab.title.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.3,
+                    color: BlinkitGlassTheme.slateDark,
+                  ),
+                ),
+                if (currentTab.subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    currentTab.subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black45,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Text(
+            'See all >',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: BlinkitGlassTheme.blueDiscount,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- PRODUCT SHELF (EXACT BLINKIT CARD ANATOMY) ---
+  Widget _buildProductShelf(List<Product> products, List<dynamic> cartItems) {
+    if (products.isEmpty) {
+      return Container(
+        height: 160,
+        margin: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🥖', style: TextStyle(fontSize: 32)),
+              const SizedBox(height: 8),
+              Text(
+                'Fresh batch arriving soon for this section!',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black45,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 270,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: products.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, idx) {
+          final product = products[idx];
+          return _buildBlinkitProductCard(product, cartItems);
+        },
+      ),
+    );
+  }
+
+  Widget _buildBlinkitProductCard(Product product, List<dynamic> cartItems) {
+    final cartItem = cartItems.firstWhereOrNull((i) => i.productId == product.id);
+    final inCartQty = cartItem?.quantity ?? 0;
+    final isFav = _favourites.contains(product.id);
+
+    final price = product.price.toDouble();
+    final mrp = (product.mrp ?? price * 1.25).toDouble();
+    final discountAmount = (mrp - price).clamp(0, 9999).toInt();
+
+    return SizedBox(
+      width: 130,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Upper Tile: White Frosted Image Box with Heart & ADD button
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E2E6)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(6),
+                child: Column(
+                  children: [
+                    // 1:1 Aspect Image with Wishlist
+                    Bounceable(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SlideOverRoute(page: ProductDetailScreen(productId: product.id)),
+                        );
+                      },
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: AspectRatio(
+                              aspectRatio: 1.0,
+                              child: CachedNetworkImage(
+                                imageUrl: product.imageUrl ?? '',
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => Container(color: Colors.black12),
+                                errorWidget: (_, __, ___) => Container(
+                                  color: const Color(0xFFFFFBEB),
+                                  child: const Center(
+                                    child: Text('🍞', style: TextStyle(fontSize: 28)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Heart Button
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                setState(() {
+                                  if (isFav) {
+                                    _favourites.remove(product.id);
+                                  } else {
+                                    _favourites.add(product.id);
+                                  }
+                                });
+                              },
+                              child: Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                ),
+                                child: Icon(
+                                  isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                  size: 13,
+                                  color: isFav ? Colors.redAccent : Colors.black38,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Dots Indicator
+                          Positioned(
+                            bottom: 4,
+                            left: 0,
+                            right: 0,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 4,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: BlinkitGlassTheme.slateDark,
+                                  ),
+                                ),
+                                const SizedBox(width: 2),
+                                Container(
+                                  width: 4,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black.withValues(alpha: 0.25),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Unit & ADD button (inside tile)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          product.unit ?? '1 pc',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        // ADD / Stepper Button
+                        inCartQty > 0
+                            ? Container(
+                                height: 26,
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                decoration: BoxDecoration(
+                                  color: BlinkitGlassTheme.greenAdd,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        HapticFeedback.lightImpact();
+                                        ref.read(cartProvider.notifier).updateQuantity(
+                                              product.id,
+                                              inCartQty - 1,
+                                            );
+                                      },
+                                      child: const Icon(Icons.remove, size: 14, color: Colors.white),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                                      child: Text(
+                                        '$inCartQty',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () {
+                                        HapticFeedback.lightImpact();
+                                        ref.read(cartProvider.notifier).updateQuantity(
+                                              product.id,
+                                              inCartQty + 1,
+                                            );
+                                      },
+                                      child: const Icon(Icons.add, size: 14, color: Colors.white),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : Bounceable(
+                                onTap: () {
+                                  HapticFeedback.mediumImpact();
+                                  ref.read(cartProvider.notifier).addItem(product.id, 1);
+                                },
+                                child: Container(
+                                  height: 26,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: BlinkitGlassTheme.greenAdd,
+                                      width: 1.2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: BlinkitGlassTheme.greenAdd.withValues(alpha: 0.08),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'ADD',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: BlinkitGlassTheme.greenAdd,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          // Lower Section (Outside White Tile)
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: BlinkitGlassTheme.yellowPrice,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Text(
+                  '₹${price.toInt()}',
+                  style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                    color: BlinkitGlassTheme.slateDark,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 5),
+              if (mrp > price)
+                Text(
+                  '₹${mrp.toInt()}',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: Colors.black38,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+            ],
+          ),
+
+          if (discountAmount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                '₹$discountAmount OFF',
+                style: GoogleFonts.inter(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w900,
+                  color: BlinkitGlassTheme.blueDiscount,
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 2),
+          Text(
+            product.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: BlinkitGlassTheme.slateDark,
+              height: 1.15,
+            ),
+          ),
+
+          const SizedBox(height: 3),
+          // Spec Chip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+            decoration: BoxDecoration(
+              color: BlinkitGlassTheme.tagBg,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              _resolveProductBadge(product.name),
+              style: GoogleFonts.inter(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w800,
+                color: BlinkitGlassTheme.tagText,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- CHAI-RUSK COMBO PROMO ---
+  Widget _buildChaiComboBanner() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB).withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.amber.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFCD34D)),
+                  ),
+                  child: const Center(
+                    child: Text('☕', style: TextStyle(fontSize: 20)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Chai-Rusk Combo Deal',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF78350F),
+                        ),
+                      ),
+                      Text(
+                        'Add Elaichi Rusk & save ₹15 on tea leaves',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: const Color(0xFF92400E),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    'EXPLORE',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- LIQUID FROSTED EMERALD FLOATING CART BAR ---
+  Widget _buildLiquidEmeraldCartBar(
+    BuildContext context,
+    List<dynamic> cartItems,
+    int totalQty,
+    double totalAmount,
+  ) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(30),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Bounceable(
+          onTap: () {
+            Navigator.push(
+              context,
+              SlideOverRoute(page: const CartScreen()),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF228413).withValues(alpha: 0.92),
+                  const Color(0xFF14600C).withValues(alpha: 0.96),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF166534).withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Dual Circular Product Previews with Frosted Ring
+                SizedBox(
+                  width: 52,
+                  height: 32,
+                  child: Stack(
+                    children: [
+                      if (cartItems.length > 1)
+                        Positioned(
+                          left: 18,
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              border: Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            child: const Center(
+                              child: Text('🥐', style: TextStyle(fontSize: 14)),
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        left: 0,
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          child: const Center(
+                            child: Text('🍞', style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'View cart',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text('•', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$totalQty ${totalQty == 1 ? 'item' : 'items'}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFD1FAE5),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Total ₹${totalAmount.toInt()} (Free delivery unlocked)',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFFA7F3D0),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.2),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 13,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- FILTER PRODUCTS STRICTLY EXCLUDING CAKES ---
+  List<Product> _resolveTabProducts(
+    List<Product> allProducts,
+    BakeryTabModel? tab,
+    String query,
+  ) {
+    if (tab == null) return [];
+
+    return allProducts.where((p) {
+      final name = p.name.toLowerCase();
+      final desc = (p.description ?? '').toLowerCase();
+
+      // STRICT EXCLUSION: Exclude birthday, celebration, and anniversary cakes
+      final isCake = (name.contains('cake') && !name.contains('tea cake') && !name.contains('cupcake')) ||
+          name.contains('birthday') ||
+          name.contains('anniversary') ||
+          name.contains('pastry');
+      if (isCake) return false;
+
+      // Search Query filter
+      if (query.isNotEmpty) {
+        return name.contains(query) || desc.contains(query);
+      }
+
+      // Match Tab filter tags
+      for (final tag in tab.filterTags) {
+        if (name.contains(tag) || desc.contains(tag)) {
+          return true;
+        }
+      }
+
+      // Fallback matching if in bakery category
+      final category = (p.categoryId ?? '').toLowerCase();
+      if (category.contains('bakery') || category.contains('bread')) {
+        return true;
+      }
+
+      return false;
+    }).toList();
+  }
+
+  String _resolveProductBadge(String productName) {
+    final lower = productName.toLowerCase();
+    if (lower.contains('pav')) return 'Pav Bhaji Special';
+    if (lower.contains('atta') || lower.contains('wheat')) return 'Zero Maida';
+    if (lower.contains('rusk')) return '100% Suji';
+    if (lower.contains('multigrain')) return 'High Fibre';
+    if (lower.contains('puff') || lower.contains('patty')) return 'Flaky & Hot';
+    if (lower.contains('butter')) return 'Pure Butter';
+    return 'Dark Store Fresh';
   }
 }

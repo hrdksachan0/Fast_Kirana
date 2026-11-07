@@ -858,6 +858,29 @@ async def accept_batch_orders(
             except Exception:
                 pass
 
+        # Zero-load Supabase Realtime broadcast so all other riders drop this order instantly
+        try:
+            from utils.supabase_broadcast import broadcast_supabase_realtime
+            for o in orders:
+                sb_payload = {
+                    "id": o.id,
+                    "orderId": o.id,
+                    "readableId": o.readableId,
+                    "status": "SHIPPED",
+                    "deliveryUserId": user_id,
+                    "updatedAt": now.isoformat()
+                }
+                cust_topics = [f"order-live-tracking-{o.id}"]
+                if o.readableId:
+                    clean_r = str(o.readableId).strip().lstrip("#")
+                    cust_topics.append(f"order-live-tracking-{clean_r}")
+                if o.userId:
+                    cust_topics.append(f"customer-orders-{o.userId}")
+                asyncio.create_task(broadcast_supabase_realtime(["admin-global-orders-websocket"], "order_claimed", sb_payload))
+                asyncio.create_task(broadcast_supabase_realtime(cust_topics, "status_update", sb_payload))
+        except Exception:
+            pass
+
         return {
             "success": True,
             "message": f"Successfully accepted {len(orders)} orders for batch delivery!",

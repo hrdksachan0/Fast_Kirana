@@ -87,6 +87,24 @@ class KotPrintService {
       debugPrint('[KotPrintService] Server KOT broadcast note/err: $e');
     }
 
+    // Instant Peer Admin Sync: Broadcast KOT printed tick to all admin consoles in <30ms
+    try {
+      final sb = SupabaseService.client;
+      if (sb != null) {
+        final adminChan = sb.channel('admin-global-orders-websocket');
+        adminChan.sendBroadcastMessage(
+          event: 'kot_printed',
+          payload: {
+            'event': 'kot_printed',
+            'orderId': cleanId,
+            'readableId': cleanReadable.isNotEmpty ? cleanReadable : cleanId,
+            'kotPrinted': true,
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+        );
+      }
+    } catch (_) {}
+
     // Path 2: Direct Supabase Realtime Channel (Fallback ONLY if server API failed)
     // Also updates the order record as kot_sent in DB
     try {

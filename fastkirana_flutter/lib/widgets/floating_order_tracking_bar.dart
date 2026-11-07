@@ -66,29 +66,24 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
       }
     });
 
-    // 2. Supabase Realtime Postgres Changes
+    // 2. Supabase Realtime Broadcast + Postgres Changes (0ms instant sync)
     try {
-      final sb = SupabaseService.client;
-      if (sb != null) {
-        _ordersSubscription = sb
-            .channel('floating_order_bar_sync')
-            .onPostgresChanges(
-              event: PostgresChangeEvent.all,
-              schema: 'public',
-              table: 'orders',
-              callback: (payload) {
-                if (mounted) {
-                  ref.invalidate(ordersProvider(''));
-                  final current = ref.read(ordersProvider('')).valueOrNull ?? [];
-                  final activeList = current.where((o) => o.status != OrderStatus.cancelled && o.status != OrderStatus.delivered).toList();
-                  if (activeList.isNotEmpty) {
-                    NotificationService().updateLiveOrderActivity(order: activeList.first);
-                  }
-                }
-              },
-            )
-            .subscribe();
-      }
+      _ordersSubscription = SupabaseService.subscribeToAllOrdersRealtime(
+        onOrderChange: (record) {
+          if (!mounted) return;
+          final oid = (record['orderId'] ?? record['id'])?.toString();
+          final rid = record['readableId']?.toString();
+          final current = ref.read(ordersProvider('')).valueOrNull ?? [];
+          final match = current.any((o) => o.id == oid || (rid != null && o.readableId == rid));
+          if (match || current.isNotEmpty) {
+            ref.invalidate(ordersProvider(''));
+            final activeList = current.where((o) => o.status != OrderStatus.cancelled && o.status != OrderStatus.delivered).toList();
+            if (activeList.isNotEmpty) {
+              NotificationService().updateLiveOrderActivity(order: activeList.first);
+            }
+          }
+        },
+      );
     } catch (e, _) { LoggerService.error('FloatingOrderTrackingBar: silent catch', e); }
   }
 

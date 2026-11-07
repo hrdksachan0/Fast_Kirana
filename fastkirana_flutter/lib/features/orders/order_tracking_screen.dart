@@ -418,6 +418,18 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         onStatusUpdate: (newStatusStr) {
           if (!mounted) return;
           debugPrint('[OrderTracking] Realtime status change via key=$key: $newStatusStr');
+          final parsed = Order.parseStatus(newStatusStr);
+          if (_order != null && _order!.status != parsed) {
+            final prevStatus = _order!.status;
+            setState(() {
+              _order = _order!.copyWith(status: parsed);
+            });
+            _triggerStatusHaptic(parsed, prevStatus);
+            NotificationService().updateLiveOrderActivity(
+              order: _order!,
+              customEtaText: _etaText.isNotEmpty ? _etaText : null,
+            );
+          }
           _fetchLiveOrder();
         },
       );

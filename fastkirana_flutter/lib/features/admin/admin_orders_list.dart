@@ -373,6 +373,16 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     _realtimeOrdersChannel = SupabaseService.subscribeToAllOrdersRealtime(
       onOrderChange: (record) {
         if (!_isDeviceOffline) {
+          final isKot = record['event'] == 'kot_printed' || record['kotPrinted'] == true;
+          if (isKot) {
+            final oid = (record['orderId'] ?? record['id'])?.toString();
+            final rid = record['readableId']?.toString();
+            if (oid != null && oid.isNotEmpty) _printedKOTOrders.add(oid);
+            if (rid != null && rid.isNotEmpty) _printedKOTOrders.add(rid);
+            if (mounted) setState(() {});
+            return;
+          }
+
           final orderStoreId = record['storeId']?.toString();
           if (_assignedStoreId != null && _assignedStoreId!.isNotEmpty &&
               orderStoreId != null && orderStoreId.isNotEmpty &&
@@ -380,6 +390,27 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
             return; // Ignore order updates from other dark store hubs
           }
           debugPrint('[Admin WebSocket] Live order update event: ${record['id']}');
+          final orderId = (record['orderId'] ?? record['id'])?.toString();
+          final readableId = record['readableId']?.toString();
+          final rawStatus = (record['status'] ?? '').toString();
+          if (orderId != null && rawStatus.isNotEmpty) {
+            final parsedStatus = Order.parseStatus(rawStatus);
+            for (var i = 0; i < _allOrders.length; i++) {
+              if (_allOrders[i].id == orderId || (readableId != null && _allOrders[i].readableId == readableId)) {
+                _allOrders[i] = _allOrders[i].copyWith(
+                  status: parsedStatus,
+                  deliveredAt: parsedStatus == OrderStatus.delivered ? DateTime.now() : _allOrders[i].deliveredAt,
+                  confirmedAt: parsedStatus == OrderStatus.confirmed ? DateTime.now() : _allOrders[i].confirmedAt,
+                );
+                break;
+              }
+            }
+            if (parsedStatus == OrderStatus.confirmed || parsedStatus == OrderStatus.delivered) {
+              _stopPendingAlarm();
+            }
+            if (mounted) setState(() {});
+          }
+
           _silentFetchAdminOrders();
           final status = (record['status'] ?? '').toString().toUpperCase();
           final paymentStatus = (record['paymentStatus'] ?? '').toString().toUpperCase();
@@ -1132,6 +1163,37 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
               'updatedAt': DateTime.now().toIso8601String(),
             }).eq('combinedId', order.combinedId!.trim()).catchError((_) {}));
           }
+        }
+
+        // Direct sub-30ms Realtime broadcast to fellow admin and tracking screens
+        if (sb != null) {
+          try {
+            final adminChan = sb.channel('admin-global-orders-websocket');
+            final broadcastPayload = {
+              'id': order.id,
+              'orderId': order.id,
+              'readableId': order.readableId ?? order.id,
+              'status': statusUpper,
+              'paymentStatus': newStatus == OrderStatus.delivered ? 'PAID' : (order.paymentStatus.toUpperCase() == 'PAID' ? 'PAID' : 'PENDING'),
+              'timestamp': DateTime.now().toIso8601String(),
+            };
+            adminChan.sendBroadcastMessage(
+              event: 'status_update',
+              payload: broadcastPayload,
+            );
+            final custChan = sb.channel('order-live-tracking-${order.id}');
+            custChan.sendBroadcastMessage(
+              event: 'status_update',
+              payload: broadcastPayload,
+            );
+            if (order.readableId != null && order.readableId!.isNotEmpty) {
+              final custChanRid = sb.channel('order-live-tracking-${order.readableId}');
+              custChanRid.sendBroadcastMessage(
+                event: 'status_update',
+                payload: broadcastPayload,
+              );
+            }
+          } catch (_) {}
         }
 
         for (final id in idsToUpdate) {
