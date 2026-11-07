@@ -108,6 +108,7 @@ export const campaignSchema = z
     autoplay: z.boolean().default(true),
     searchPrefix: copy.min(1).default('Search for'),
     decorationImage: campaignImageSchema.nullable().default('string-lights.svg'),
+    jhallarPalette: z.string().nullable().optional(),
     labels: z
       .object({
         sectionLabel: copy.min(1),

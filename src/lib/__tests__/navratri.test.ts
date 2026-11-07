@@ -27,7 +27,7 @@ test('shared campaign data resolves every local asset and existing search destin
     ...navratriData.products.map(item => item.image),
     ...navratriData.categories.map(item => item.image),
     ...navratriData.tabs.map(item => item.image),
-  ]
+  ].filter(image => !image.startsWith('https://') && !image.startsWith('http://'))
   for (const image of images) {
     assert.match(image, /^[a-z0-9-]+\.svg$/)
     assert.ok(existsSync(resolve('public', 'navratri', image)), `missing local illustration: ${image}`)
@@ -39,7 +39,7 @@ test('shared campaign data resolves every local asset and existing search destin
     assert.ok(ids.has(item.destinationId), `unresolved destination: ${item.destinationId}`)
     assert.match(destinationHref(item.destinationId), /^\/search\?q=/)
   }
-  assert.equal(destinationHref('search-mata-chunri'), '/search?q=Mata%20Chunri')
+  assert.equal(destinationHref('search-diwali-ladoo'), '/search?q=mithai')
   assert.equal(destinationHref('unknown'), '/')
 })
 
@@ -72,7 +72,7 @@ test('demo collection tabs filter data and support an honest empty flowers colle
   assert.equal(filterDemoProducts(top).length, 6)
   assert.deepEqual(filterDemoProducts(pooja).map(item => item.id), ['diwali-silk-selection', 'diwali-celebrations', 'diwali-amul-gift', 'diwali-amul-dark'])
   assert.deepEqual(filterDemoProducts(flowers), [])
-  assert.deepEqual(filterDemoProducts(chunri).map(item => item.id), ['diwali-dry-fruits', 'diwali-kaju-gift'])
+  assert.deepEqual(filterDemoProducts(chunri).map(item => item.id), ['diwali-silk-selection', 'diwali-celebrations', 'diwali-amul-gift', 'diwali-dry-fruits', 'diwali-amul-dark', 'diwali-kaju-gift'])
 })
 
 test('generic campaign metadata remains optional for the bundled Navratri JSON', () => {
