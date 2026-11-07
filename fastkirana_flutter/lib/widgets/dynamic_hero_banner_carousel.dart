@@ -370,7 +370,7 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
           type: 'grocery',
           imageUrl: (giftingConfig != null && giftingConfig.bannerImageUrl.trim().isNotEmpty)
               ? giftingConfig.bannerImageUrl.trim()
-              : 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=80',
+              : 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/banners/perfect-gifting-banner.webp',
           gradientColorsHex: const ['#E11D48', '#BE123C', '#881337'],
           isActive: true,
           sortOrder: 1,
