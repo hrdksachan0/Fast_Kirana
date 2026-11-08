@@ -5,9 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:collection/collection.dart';
 
-import '../../core/theme/design_system.dart';
-import '../../core/routes/page_transitions.dart';
 import '../../data/models/product.dart';
 import '../../data/models/bakery_store_config.dart';
 import '../../providers/bakery_store_provider.dart';
@@ -102,7 +101,7 @@ class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen>
     final cart = cartState.valueOrNull;
     final cartItems = cart?.items ?? [];
     final totalCartQty = cartItems.fold<int>(0, (sum, i) => sum + i.quantity);
-    final cartTotalAmount = cart?.totalPrice ?? 0.0;
+    final cartTotalAmount = cart?.subtotal ?? 0.0;
 
     // Filter products strictly excluding celebration/birthday cakes
     final tabProducts = _resolveTabProducts(allProducts, currentTab, _searchQuery);
@@ -379,7 +378,7 @@ class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen>
         ),
         if (isActive)
           Container(
-            margin: const EdgeInsets.top: 2,
+            margin: const EdgeInsets.only(top: 2),
             width: 20,
             height: 2,
             decoration: BoxDecoration(
@@ -684,8 +683,8 @@ class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen>
     final inCartQty = cartItem?.quantity ?? 0;
     final isFav = _favourites.contains(product.id);
 
-    final price = product.price.toDouble();
-    final mrp = (product.mrp ?? price * 1.25).toDouble();
+    final price = product.price;
+    final mrp = product.mrp > price ? product.mrp : price * 1.25;
     final discountAmount = (mrp - price).clamp(0, 9999).toInt();
 
     return SizedBox(
@@ -719,7 +718,7 @@ class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen>
                       onTap: () {
                         Navigator.push(
                           context,
-                          SlideOverRoute(page: ProductDetailScreen(productId: product.id)),
+                          MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)),
                         );
                       },
                       child: Stack(
@@ -809,7 +808,7 @@ class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          product.unit ?? '1 pc',
+                          product.unit.isNotEmpty ? product.unit : '1 pc',
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -1090,7 +1089,7 @@ class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen>
           onTap: () {
             Navigator.push(
               context,
-              SlideOverRoute(page: const CartScreen()),
+              MaterialPageRoute(builder: (_) => const CartScreen()),
             );
           },
           child: Container(

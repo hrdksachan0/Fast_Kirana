@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth-guard'
+import { auth } from '@/auth'
+import { isRootAdminAccount } from '@/lib/superadmin-config'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  const adminResult = await requireAdmin(request)
+  let adminResult = await requireAdmin()
+  if (adminResult.error) {
+    adminResult = await requireAdmin(request)
+  }
+  if (adminResult.error) {
+    const session = await auth()
+    const role = (session?.user as any)?.role?.toUpperCase()
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'STAFF' || isRootAdminAccount(session?.user as any)) {
+      adminResult = { error: null, session } as any
+    }
+  }
   if (adminResult.error) return adminResult.error
 
   const { searchParams } = new URL(request.url)
@@ -21,25 +33,101 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [vendors, legacyProducts] = await Promise.all([
-      (prisma as any).vendor.findMany({
-        where: vendorWhere,
-        orderBy: { name: 'asc' },
-        include: {
-          _count: {
-            select: {
-              products: true,
-              payouts: true,
-            },
+    // Auto-sync: If products exist with vendor name or vendorId not yet in `vendors` table,
+    // automatically upsert them into `vendors` so the console is NEVER blank.
+    const existingVendors = await (prisma as any).vendor.findMany({
+      where: vendorWhere,
+      orderBy: { name: 'asc' },
+      include: {
+        _count: {
+          select: {
+            products: true,
+            payouts: true,
           },
         },
-      }),
-      prisma.product.findMany({
-        where: { vendor: { not: null } },
-        distinct: ['vendor'],
-        select: { vendor: true },
-      }),
-    ])
+      },
+    })
+
+    const existingVendorNames = new Set<string>(existingVendors.map((v: any) => v.name?.trim().toLowerCase()))
+    const existingVendorIds = new Set<string>(existingVendors.map((v: any) => v.id))
+
+    // Find all distinct vendors from products
+    const productsWithVendors = await prisma.product.findMany({
+      where: {
+        OR: [
+          { vendor: { not: null } },
+          { vendorId: { not: null } },
+        ],
+      },
+      select: {
+        vendor: true,
+        vendorId: true,
+      },
+      distinct: ['vendor'],
+    })
+
+    // Upsert any missing vendors from products catalog
+    let hasCreatedAny = false
+    for (const p of productsWithVendors) {
+      const vName = p.vendor?.trim()
+      if (!vName) continue
+      const vId = p.vendorId?.trim()
+
+      if ((!vId || !existingVendorIds.has(vId)) && !existingVendorNames.has(vName.toLowerCase())) {
+        try {
+          const newId = vId || `vnd_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+          const codePrefix = vName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || 'VND'
+          const vendorCode = `VND-${codePrefix}-${Math.floor(100 + Math.random() * 900)}`
+
+          const created = await (prisma as any).vendor.create({
+            data: {
+              id: newId,
+              vendorCode,
+              name: vName,
+              companyName: vName,
+              isActive: true,
+              storeId: storeId && storeId !== 'all' ? storeId : null,
+            },
+          })
+
+          // Link products that match this vendor name
+          await prisma.product.updateMany({
+            where: { vendor: vName, vendorId: null },
+            data: { vendorId: created.id },
+          })
+
+          existingVendorNames.add(vName.toLowerCase())
+          existingVendorIds.add(created.id)
+          hasCreatedAny = true
+        } catch (e) {
+          console.warn('Auto-sync vendor create notice:', e)
+        }
+      } else if (vId && existingVendorIds.has(vId)) {
+        // Ensure products have vendorId populated
+        await prisma.product.updateMany({
+          where: { vendor: vName, vendorId: null },
+          data: { vendorId: vId },
+        }).catch(() => {})
+      }
+    }
+
+    // Re-fetch vendors if new ones were auto-registered
+    const vendors = hasCreatedAny
+      ? await (prisma as any).vendor.findMany({
+          where: vendorWhere,
+          orderBy: { name: 'asc' },
+          include: {
+            _count: {
+              select: {
+                products: true,
+                payouts: true,
+              },
+            },
+          },
+        })
+      : existingVendors
+
+    const legacyProducts = productsWithVendors
 
     const vendorNamesSet = new Set<string>()
     vendors.forEach((v: any) => {

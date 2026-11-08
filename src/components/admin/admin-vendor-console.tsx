@@ -314,7 +314,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     setLoadingVendors(true)
     try {
       const storeParam = storeId && storeId !== 'all' ? `?storeId=${encodeURIComponent(storeId)}` : ''
-      const res = await fetch(`${apiUrl()}/api/admin/vendors${storeParam}`, { headers: authHeaders })
+      const res = await fetch(`${apiUrl()}/api/admin/vendors${storeParam}`, { headers: authHeaders, credentials: 'include' })
       if (res.ok) {
         const data = await res.json()
         const list = Array.isArray(data.vendors) ? data.vendors : []
@@ -342,7 +342,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
     try {
       const storeParam = storeId && storeId !== 'all' ? `&storeId=${encodeURIComponent(storeId)}` : ''
       const res = await fetch(`${apiUrl()}/api/admin/vendors/${selectedVendorId}?startDate=${startDate}&endDate=${endDate}${storeParam}`,
-        { headers: authHeaders }
+        { headers: authHeaders, credentials: 'include' }
       )
       if (res.ok) {
         const data = await res.json()

@@ -38,9 +38,9 @@ function getPrisma(): PrismaClient {
   const pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
-    max: isServerless ? 3 : 10,
-    idleTimeoutMillis: isServerless ? 10000 : 30000,
-    connectionTimeoutMillis: 10000,
+    max: isServerless ? 2 : 4,
+    idleTimeoutMillis: 3000,
+    connectionTimeoutMillis: 5000,
   })
 
   pool.on('error', (err) => {

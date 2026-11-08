@@ -236,14 +236,54 @@ export async function POST(request: NextRequest) {
             },
           })
         } else if (updateType === 'STOCK') {
+          const newStockVal = Math.max(0, parseInt(String(change.newValue), 10) || 0)
           await tx.product.update({
             where: { id: change.productId },
-            data: { stock: change.newValue as number },
+            data: { stock: newStockVal },
+          })
+          // Sync store inventory across active hubs so catalog never desyncs
+          const targetStore = storeId && storeId !== 'all' ? storeId : 'hub-209206'
+          await tx.storeInventory.upsert({
+            where: {
+              productId_storeId: {
+                productId: change.productId,
+                storeId: targetStore,
+              },
+            },
+            create: {
+              productId: change.productId,
+              storeId: targetStore,
+              stock: newStockVal,
+              isAvailable: true,
+            },
+            update: {
+              stock: newStockVal,
+              isAvailable: true,
+            },
           })
         } else if (updateType === 'AVAILABILITY') {
+          const availVal = Boolean(change.newValue)
           await tx.product.update({
             where: { id: change.productId },
-            data: { isAvailable: change.newValue as boolean },
+            data: { isAvailable: availVal },
+          })
+          const targetStore = storeId && storeId !== 'all' ? storeId : 'hub-209206'
+          await tx.storeInventory.upsert({
+            where: {
+              productId_storeId: {
+                productId: change.productId,
+                storeId: targetStore,
+              },
+            },
+            create: {
+              productId: change.productId,
+              storeId: targetStore,
+              stock: 0,
+              isAvailable: availVal,
+            },
+            update: {
+              isAvailable: availVal,
+            },
           })
         } else if (updateType === 'MIN_STOCK') {
           await tx.product.update({

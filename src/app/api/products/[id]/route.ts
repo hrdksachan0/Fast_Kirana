@@ -28,6 +28,7 @@ export async function GET(
         category: true,
         restaurant: true,
         images: true,
+        vendorRel: true,
         reviews: {
           include: {
             user: {
@@ -326,28 +327,33 @@ export async function PATCH(
       }
     }
 
-    // If storeId is provided, update localized stock in store_inventories
-    if (targetStoreId && targetStoreId !== 'all' && stock !== undefined) {
+    // Always keep store_inventories in lockstep with product stock updates
+    if (stock !== undefined) {
       const parsedLocalStock = parseInt(stock)
       const val = isNaN(parsedLocalStock) ? 0 : parsedLocalStock
       localStockVal = val
+      const syncStores = targetStoreId && targetStoreId !== 'all' ? [targetStoreId] : ['hub-209206']
       try {
-        await prisma.storeInventory.upsert({
-          where: {
-            productId_storeId: {
+        for (const sId of syncStores) {
+          await prisma.storeInventory.upsert({
+            where: {
+              productId_storeId: {
+                productId: product.id,
+                storeId: sId,
+              }
+            },
+            create: {
               productId: product.id,
-              storeId: targetStoreId,
+              storeId: sId,
+              stock: val,
+              isAvailable: updatedProduct.isAvailable,
+            },
+            update: {
+              stock: val,
+              isAvailable: updatedProduct.isAvailable,
             }
-          },
-          create: {
-            productId: product.id,
-            storeId: targetStoreId,
-            stock: val,
-          },
-          update: {
-            stock: val,
-          }
-        })
+          })
+        }
       } catch (invErr) {
         console.warn('Failed to upsert store_inventories in product PATCH:', invErr)
       }

@@ -270,7 +270,7 @@ export function ProductsTab({
   const [isCustomNewVendor, setIsCustomNewVendor] = useState(false)
 
   useEffect(() => {
-    fetch(`${apiUrl()}/api/admin/vendors`)
+    fetch(`${apiUrl()}/api/admin/vendors`, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data.vendors)) {

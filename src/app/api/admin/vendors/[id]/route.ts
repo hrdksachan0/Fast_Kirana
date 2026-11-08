@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth-guard'
+import { auth } from '@/auth'
+import { isRootAdminAccount } from '@/lib/superadmin-config'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +10,17 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminResult = await requireAdmin(request)
+  let adminResult = await requireAdmin()
+  if (adminResult.error) {
+    adminResult = await requireAdmin(request)
+  }
+  if (adminResult.error) {
+    const session = await auth()
+    const role = (session?.user as any)?.role?.toUpperCase()
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'STAFF' || isRootAdminAccount(session?.user as any)) {
+      adminResult = { error: null, session } as any
+    }
+  }
   if (adminResult.error) return adminResult.error
 
   const { id } = await params

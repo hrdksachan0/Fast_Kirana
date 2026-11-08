@@ -65,6 +65,8 @@ def serialize_product(p: Product, local_stock: Optional[int] = None, local_is_av
         "isAvailable": bool(local_is_available if local_is_available is not None else p.isAvailable),
         "tags": p.tags,
         "variants": p.variants,
+        "vendor": getattr(p, "vendor", None),
+        "vendorId": getattr(p, "vendorId", None),
     }
 
 # ============================================================

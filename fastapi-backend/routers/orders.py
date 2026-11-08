@@ -2403,14 +2403,31 @@ async def create_order(
                     qty = int(item["quantity"])
 
                     # 1. Fast in-memory pre-deduction via Redis Lua script (Swiggy/Blinkit high-throughput pattern)
-                    from utils.cache import atomic_reserve_inventory, release_reserved_inventory
+                    from utils.cache import atomic_reserve_inventory, release_reserved_inventory, get_redis_connection
                     stock_cache_key = f"stock:{store_id or 'default'}:{prod.id}:{var_name or 'base'}"
-                    lua_res = await atomic_reserve_inventory(stock_cache_key, qty, initial_seed_stock=prod.stock)
+                    hub_inv = store_inv_map.get(prod.id) if "store_inv_map" in locals() and store_inv_map else None
+                    effective_seed_stock = hub_inv.stock if (hub_inv and hub_inv.stock is not None) else (prod.stock or 0)
+                    if var_name and prod.variants and isinstance(prod.variants, list):
+                        v_match = next((v for v in prod.variants if isinstance(v, dict) and v.get("name") == var_name), None)
+                        if v_match and "stock" in v_match:
+                            effective_seed_stock = int(v_match.get("stock") or 0)
+
+                    lua_res = await atomic_reserve_inventory(stock_cache_key, qty, initial_seed_stock=effective_seed_stock)
                     if lua_res == -1:
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"Insufficient inventory for \"{prod.name}\". Requested {qty} units."
-                        )
+                        # Auto-heal stale Redis cache if Postgres DB has sufficient verified stock
+                        if effective_seed_stock >= qty:
+                            try:
+                                redis_c = await get_redis_connection()
+                                if redis_c:
+                                    await redis_c.set(stock_cache_key, effective_seed_stock - qty, ex=86400)
+                                lua_res = effective_seed_stock - qty
+                            except Exception:
+                                lua_res = 0  # Fallback to DB row lock below
+                        else:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Insufficient inventory for \"{prod.name}\". Requested {qty} units."
+                            )
                     if "reserved_redis_items" in locals() and lua_res >= 0:
                         reserved_redis_items.append((stock_cache_key, qty))
 
