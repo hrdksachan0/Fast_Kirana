@@ -55,9 +55,9 @@ export function useCheckoutSettings(explicitStoreId?: string | null): CheckoutSe
   const [combinedMiscFee, setCombinedMiscFee] = useState(5.0)
   const [combinedMiscFeeLabel, setCombinedMiscFeeLabel] = useState('Combined Packaging Charge')
   const [contactPhone, setContactPhone] = useState(DEFAULT_CONTACT_PHONE)
-  const [groceryMartOpen, setGroceryMartOpen] = useState(true)
-  const [cafeOpen, setCafeOpen] = useState(true)
-  const [restaurantOpen, setRestaurantOpen] = useState(true)
+  const [groceryMartOpen, setGroceryMartOpen] = useState(() => useUIStore.getState().groceryMartOpen ?? true)
+  const [cafeOpen, setCafeOpen] = useState(() => useUIStore.getState().cafeOpen ?? true)
+  const [restaurantOpen, setRestaurantOpen] = useState(() => useUIStore.getState().restaurantOpen ?? true)
   const [groceryThreshold, setGroceryThreshold] = useState(GROCERY_FREE_DELIVERY_THRESHOLD)
   const [cafeThreshold, setCafeThreshold] = useState(CAFE_FREE_DELIVERY_THRESHOLD)
   const [combinedThreshold, setCombinedThreshold] = useState(COMBINED_FREE_DELIVERY_THRESHOLD)
@@ -67,22 +67,23 @@ export function useCheckoutSettings(explicitStoreId?: string | null): CheckoutSe
 
   useEffect(() => {
     setIsSettingsLoading(true)
-    const url = targetStoreId && targetStoreId !== 'all'
+    const baseUrl = targetStoreId && targetStoreId !== 'all'
       ? `/api/settings?storeId=${encodeURIComponent(targetStoreId)}`
       : '/api/settings'
+    const url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}t=${Date.now()}`
     fetch(url, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data && typeof data === 'object') {
           setStoreSettingsMap(data)
           if (data.grocery_mart_open !== undefined) {
-            setGroceryMartOpen(data.grocery_mart_open === 'true')
+            setGroceryMartOpen(data.grocery_mart_open === 'true' || data.grocery_mart_open === true)
           }
           if (data.cafe_open !== undefined) {
-            setCafeOpen(data.cafe_open === 'true')
+            setCafeOpen(data.cafe_open === 'true' || data.cafe_open === true)
           }
           if (data.restaurant_open !== undefined) {
-            setRestaurantOpen(data.restaurant_open === 'true')
+            setRestaurantOpen(data.restaurant_open === 'true' || data.restaurant_open === true)
           }
           if (data.delivery_radius) {
             setDeliveryRadius(parseFloat(data.delivery_radius))

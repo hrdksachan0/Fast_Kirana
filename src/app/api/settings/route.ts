@@ -192,6 +192,9 @@ export async function buildSettingsMap(storeId?: string | null): Promise<Record<
         } else if (!settingsMap['delivery_radius']) {
           settingsMap['delivery_radius'] = String(hub.deliveryRadiusKm || 5.0)
         }
+        if (hub.groceryOpen !== undefined && hub.groceryOpen !== null) {
+          settingsMap['grocery_mart_open'] = hub.groceryOpen ? 'true' : 'false'
+        }
 
         // City & Pincode inference for clean non-leaking store defaults
         const inferredCity = hub.name.replace(/\s+(Hub|Market|Central|Dark\s*Store|Branch).*$/i, '').trim()
@@ -238,6 +241,20 @@ export async function buildSettingsMap(storeId?: string | null): Promise<Record<
     } catch (hubErr) {
       console.warn('Failed to load specific hub in settings:', hubErr)
     }
+  } else {
+    try {
+      const centralHub = await prisma.darkStore.findUnique({
+        where: { id: 'hub-209206' },
+        select: {
+          id: true,
+          name: true,
+          groceryOpen: true,
+        }
+      })
+      if (centralHub && centralHub.groceryOpen !== undefined && centralHub.groceryOpen !== null) {
+        settingsMap['grocery_mart_open'] = centralHub.groceryOpen ? 'true' : 'false'
+      }
+    } catch (_) {}
   }
 
   const hubRestaurants = (storeId && storeId !== 'all')
@@ -280,12 +297,7 @@ export async function buildSettingsMap(storeId?: string | null): Promise<Record<
   // Grocery store status calculation:
   // If auto timing is enabled, both general and hub-level follow the automated schedule.
   // If auto timing is disabled, specific hub follows hub.groceryOpen (if queried) or general grocery_mart_open.
-  const autoTiming = settingsMap['grocery_auto_timing'] === 'true'
-  if (autoTiming) {
-    settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
-  } else if (!storeId || storeId === 'all') {
-    settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
-  }
+  settingsMap['grocery_mart_open'] = checkIsStoreOpen(settingsMap, 'grocery') ? 'true' : 'false'
 
   try {
     const surge = await evaluateSurgeStatus(settingsMap, storeId)

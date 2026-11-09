@@ -590,9 +590,7 @@ const nextConfig: NextConfig = {
       {
         source: "/api/settings",
         headers: [
-          { key: "Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
-          { key: "CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
-          { key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=600, stale-while-revalidate=86400" },
+          { key: "Cache-Control", value: "public, s-maxage=5, stale-while-revalidate=15" },
         ]
       },
       {
