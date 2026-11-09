@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
     const {
       categoryId,
       restaurantId,
+      storeId,
       productIds,
       updateType,
       mode,
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
     } = body as {
       categoryId?: string
       restaurantId?: string
+      storeId?: string
       productIds?: string[]
       updateType: 'PRICE' | 'STOCK' | 'AVAILABILITY' | 'MIN_STOCK'
       mode: 'FLAT_INCREASE' | 'FLAT_DECREASE' | 'PERCENT_INCREASE' | 'PERCENT_DECREASE' | 'SET_VALUE'
