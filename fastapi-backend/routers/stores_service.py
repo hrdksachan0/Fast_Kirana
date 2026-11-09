@@ -280,16 +280,19 @@ def check_restaurant_is_open(restaurant: Any) -> bool:
                 if not is_within:
                     return False
 
-    # 2. Check if manually paused today
+    # 2. Manual open/close toggle
     if not getattr(restaurant, "isOpen", True):
-        up_at = getattr(restaurant, "updatedAt", None)
-        if up_at:
-            ist_now = get_ist_now()
-            ist_up = up_at + timedelta(hours=5, minutes=30)
-            # If paused on a previous day, auto-reopen today on schedule!
-            if ist_up.date() < ist_now.date():
-                return True
         return False
+
+    # 3. Kitchen busy pause check
+    pause_until = getattr(restaurant, "pauseUntil", None)
+    if pause_until:
+        try:
+            if isinstance(pause_until, datetime):
+                if pause_until > datetime.utcnow():
+                    return False
+        except Exception:
+            pass
 
     return True
 

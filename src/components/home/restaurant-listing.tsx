@@ -1,5 +1,5 @@
 'use client';
-import { apiUrl } from '@/lib/api-url';
+import { apiUrl, catalogApiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { RestaurantCard } from '@/components/home/restaurant-card'
@@ -10,6 +10,7 @@ import { SlidersHorizontal, ChevronDown, Leaf, Tag, Star, Search, X, Loader2 } f
 import { triggerHaptic } from '@/lib/haptic'
 import { useUIStore } from '@/stores/ui-store'
 import { HubComingSoon } from '@/components/home/hub-coming-soon'
+import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 
 // Cuisine category pills with icons
 const CUISINE_CATEGORIES = [
@@ -58,7 +59,8 @@ export function RestaurantListing({ initialRestaurants }: RestaurantListingProps
     if (!initialRestaurants && restaurants.length === 0) {
       setIsLoading(true)
     }
-    fetch(`${apiUrl()}/api/restaurants?city=${encodeURIComponent(activeCity)}&_t=${Date.now()}`)
+    const restEndpoint = catalogApiUrl() || apiUrl('/api/restaurants') || ''
+    fetch(`${restEndpoint}/api/restaurants?city=${encodeURIComponent(activeCity)}&_t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (isCancelled) return
@@ -156,7 +158,9 @@ export function RestaurantListing({ initialRestaurants }: RestaurantListingProps
       default:
         // Relevance — open first, then by sortOrder
         filtered.sort((a, b) => {
-          if (a.isOpen !== b.isOpen) return a.isOpen ? -1 : 1
+          const aOpen = checkStoreOperatingStatus(a).isOpen
+          const bOpen = checkStoreOperatingStatus(b).isOpen
+          if (aOpen !== bOpen) return aOpen ? -1 : 1
           return (b.sortOrder || 0) - (a.sortOrder || 0)
         })
     }

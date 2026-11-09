@@ -421,8 +421,8 @@ const getCachedRestaurants = unstable_cache(
       }
     })
   },
-  ['storefront-restaurants-v5'],
-  { revalidate: 86400, tags: ['restaurants'] }
+  ['storefront-restaurants-v6'],
+  { revalidate: 60, tags: ['restaurants'] }
 )
 
 export default async function Home() {

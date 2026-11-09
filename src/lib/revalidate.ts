@@ -30,7 +30,9 @@ export function revalidateStorefront(
     // Category-specific pages are invalidated only when categorySlug is provided above
     revalidateTag('products', 'max')
     revalidateTag('banners', 'max')
+    revalidateTag('restaurants', 'max')
     revalidatePath('/', 'page')
+    revalidatePath('/food', 'page')
   } catch (err) {
     console.error('Failed to trigger targeted revalidation:', err)
   }

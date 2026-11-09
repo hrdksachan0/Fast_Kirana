@@ -60,60 +60,7 @@ export function isManuallyPausedToday(restaurant: {
   updatedAt?: Date | string | null
 }): boolean {
   const isClosed = restaurant.isOpen === false || restaurant.isOpen === 'false' || restaurant.isOpen === 0
-  if (!isClosed) {
-    return false
-  }
-  if (!restaurant.updatedAt) {
-    return true
-  }
-
-  try {
-    const updatedDate = new Date(restaurant.updatedAt)
-    if (isNaN(updatedDate.getTime())) return true
-
-    const now = new Date()
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: false,
-    })
-
-    const parts = formatter.formatToParts(now)
-    const year = parseInt(parts.find(p => p.type === 'year')?.value || '0', 10)
-    const month = parseInt(parts.find(p => p.type === 'month')?.value || '1', 10) - 1
-    const day = parseInt(parts.find(p => p.type === 'day')?.value || '1', 10)
-
-    const updatedParts = formatter.formatToParts(updatedDate)
-    const uYear = parseInt(updatedParts.find(p => p.type === 'year')?.value || '0', 10)
-    const uMonth = parseInt(updatedParts.find(p => p.type === 'month')?.value || '1', 10) - 1
-    const uDay = parseInt(updatedParts.find(p => p.type === 'day')?.value || '1', 10)
-
-    const isSameDay = year === uYear && month === uMonth && day === uDay
-    if (!isSameDay) {
-      return false
-    }
-
-    const openTimeStr = restaurant.openTime?.trim()
-    if (openTimeStr) {
-      const openMin = parseTimeStringToMinutes(openTimeStr)
-      if (openMin !== null) {
-        const uHour = parseInt(updatedParts.find(p => p.type === 'hour')?.value || '0', 10)
-        const uMinute = parseInt(updatedParts.find(p => p.type === 'minute')?.value || '0', 10)
-        const uTotalMin = uHour * 60 + uMinute
-        if (uTotalMin < openMin) {
-          return false
-        }
-      }
-    }
-
-    return true
-  } catch {
-    return true
-  }
+  return isClosed
 }
 
 export function checkStoreOperatingStatus(restaurant?: {
@@ -121,6 +68,8 @@ export function checkStoreOperatingStatus(restaurant?: {
   openTime?: string | null
   closeTime?: string | null
   updatedAt?: Date | string | null
+  pauseUntil?: Date | string | null
+  closeReason?: string | null
 }): OperatingStatus {
   if (!restaurant) {
     return {
@@ -128,6 +77,30 @@ export function checkStoreOperatingStatus(restaurant?: {
       isClosedBySchedule: false,
       isClosedByOwner: false,
       formattedScheduleStr: 'Open for Orders',
+    }
+  }
+
+  // 1. Check if owner/admin manually turned off accepting orders
+  const isOwnerClosed = restaurant.isOpen === false || restaurant.isOpen === 'false' || restaurant.isOpen === 0
+  if (isOwnerClosed) {
+    return {
+      isOpen: false,
+      isClosedBySchedule: false,
+      isClosedByOwner: true,
+      formattedScheduleStr: restaurant.closeReason || 'Closed (Not accepting orders)',
+    }
+  }
+
+  // 2. Check if kitchen busy pause is active
+  if (restaurant.pauseUntil) {
+    const pauseTime = new Date(restaurant.pauseUntil).getTime()
+    if (!isNaN(pauseTime) && pauseTime > Date.now()) {
+      return {
+        isOpen: false,
+        isClosedBySchedule: false,
+        isClosedByOwner: true,
+        formattedScheduleStr: restaurant.closeReason || 'Temporarily Paused (High Rush)',
+      }
     }
   }
 
@@ -139,7 +112,7 @@ export function checkStoreOperatingStatus(restaurant?: {
     ? `${formatTime12h(openTimeStr)} - ${formatTime12h(closeTimeStr)}`
     : 'Open for Orders'
 
-  // 1. If operating hours are configured, evaluate if currently within operating hours (IST)
+  // 3. If operating hours are configured, evaluate if currently within operating hours (IST)
   if (hasSchedule) {
     const openMin = parseTimeStringToMinutes(openTimeStr)
     const closeMin = parseTimeStringToMinutes(closeTimeStr)
@@ -172,20 +145,7 @@ export function checkStoreOperatingStatus(restaurant?: {
     }
   }
 
-  // 2. Check if owner manually paused the store today during active hours
-  const isOwnerPaused = restaurant.isOpen === false || restaurant.isOpen === 'false' || restaurant.isOpen === 0
-  if (isOwnerPaused) {
-    if (!restaurant.updatedAt || isManuallyPausedToday(restaurant)) {
-      return {
-        isOpen: false,
-        isClosedBySchedule: false,
-        isClosedByOwner: true,
-        formattedScheduleStr: 'Temporarily Paused by Store Owner',
-      }
-    }
-  }
-
-  // 3. Within operating hours, automatically open on schedule
+  // 4. Within operating hours, automatically open on schedule
   return {
     isOpen: true,
     isClosedBySchedule: false,

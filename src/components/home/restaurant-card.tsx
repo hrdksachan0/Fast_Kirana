@@ -109,16 +109,18 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
 
             {/* Closed Overlay */}
             {!operatingStatus.isOpen && (
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-center z-20">
+              <div className="absolute inset-0 bg-black/75 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-center z-20 pointer-events-none">
                 <span className="bg-rose-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">
                   Closed Now
                 </span>
-                <span className="text-[11px] text-zinc-200 mt-1 font-semibold">
-                  {operatingStatus.formattedScheduleStr?.startsWith('Opens')
-                    ? operatingStatus.formattedScheduleStr
-                    : operatingStatus.formattedScheduleStr
-                      ? `Opens ${operatingStatus.formattedScheduleStr}`
-                      : 'Opens Tomorrow'}
+                <span className="text-[11px] text-zinc-200 mt-1.5 font-semibold">
+                  {operatingStatus.isClosedByOwner
+                    ? (restaurant.closeReason || 'Not accepting orders right now')
+                    : operatingStatus.formattedScheduleStr?.startsWith('Opens')
+                      ? operatingStatus.formattedScheduleStr
+                      : operatingStatus.formattedScheduleStr
+                        ? `Opens ${operatingStatus.formattedScheduleStr}`
+                        : 'Opens Tomorrow'}
                 </span>
               </div>
             )}
@@ -164,8 +166,13 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
                 </span>
               </div>
 
-              <span className="font-bold text-red-600 dark:text-red-400 group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 shrink-0 pl-2">
-                Menu →
+              <span className={cn(
+                "font-bold transition-transform flex items-center gap-0.5 shrink-0 pl-2 text-[11px] sm:text-xs",
+                operatingStatus.isOpen 
+                  ? "text-red-600 dark:text-red-400 group-hover:translate-x-0.5" 
+                  : "text-zinc-400 dark:text-zinc-500 font-semibold"
+              )}>
+                {operatingStatus.isOpen ? "Menu →" : "Closed"}
               </span>
             </div>
           </div>
