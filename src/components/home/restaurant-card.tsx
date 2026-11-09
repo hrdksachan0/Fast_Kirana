@@ -115,7 +115,7 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
                 </span>
                 <span className="text-[11px] text-zinc-200 mt-1.5 font-semibold">
                   {operatingStatus.isClosedByOwner
-                    ? (restaurant.closeReason || 'Not accepting orders right now')
+                    ? ((restaurant as any).closeReason || 'Not accepting orders right now')
                     : operatingStatus.formattedScheduleStr?.startsWith('Opens')
                       ? operatingStatus.formattedScheduleStr
                       : operatingStatus.formattedScheduleStr

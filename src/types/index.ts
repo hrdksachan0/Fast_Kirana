@@ -15,6 +15,8 @@ export interface Restaurant {
   isVeg: boolean
   isPureVeg: boolean
   isOpen: boolean
+  pauseUntil?: string | Date | null
+  closeReason?: string | null
   openTime: string | null
   closeTime: string | null
   sortOrder: number
