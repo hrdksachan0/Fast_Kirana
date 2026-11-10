@@ -62,12 +62,28 @@ async function optimizeImageToWebP(inputBuffer: Buffer): Promise<{ buffer: Buffe
 export async function POST(req: Request) {
   try {
     const session = await auth().catch(() => null)
-    // Fallback: check headers if session cookie not passed (e.g. mobile or reverse proxy)
-    const headerUserId = req.headers.get('x-user-id')
-    const headerRole = req.headers.get('x-user-role')
-    const isStaffOrAdmin = headerRole === 'ADMIN' || headerRole === 'RESTAURANT_STAFF' || headerRole === 'DELIVERY'
+    let isStaffOrAdmin = false
 
-    if (!session?.user && !(headerUserId && isStaffOrAdmin)) {
+    if (session?.user) {
+      const role = (session.user as any).role?.toUpperCase()
+      isStaffOrAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'STORE_MANAGER' || role === 'RESTAURANT_STAFF' || role === 'DELIVERY' || role === 'CHEF'
+    } else {
+      const authHeader = req.headers.get('authorization') || req.headers.get('Authorization')
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const { verifyFastKiranaJWT } = await import('@/lib/jwt')
+        const { resolveDbUserFromJwt } = await import('@/lib/auth-guard')
+        const payload = await verifyFastKiranaJWT(authHeader)
+        if (payload) {
+          const dbUser = await resolveDbUserFromJwt(payload)
+          if (dbUser && !dbUser.isBlocked && !dbUser.deletedAt) {
+            const role = dbUser.role?.toUpperCase()
+            isStaffOrAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'STORE_MANAGER' || role === 'RESTAURANT_STAFF' || role === 'DELIVERY' || role === 'CHEF'
+          }
+        }
+      }
+    }
+
+    if (!isStaffOrAdmin) {
       return NextResponse.json({ error: 'Unauthorized: Staff or admin login required' }, { status: 401 })
     }
 

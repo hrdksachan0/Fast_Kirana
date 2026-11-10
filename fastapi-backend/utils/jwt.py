@@ -135,6 +135,102 @@ def decode_nextauth_jwt(token: str, verify_exp: bool = True) -> Optional[Dict[st
             return None
         return jwe_payload
 
+    # 3. Dual-Token Bridge: Try Supabase JWT
+    supabase_payload = decode_supabase_jwt(token, verify_exp=verify_exp)
+    if supabase_payload:
+        return supabase_payload
+
+    return None
+
+
+_supabase_jwk_client: Optional[Any] = None
+
+
+def _get_supabase_url() -> str:
+    url = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or os.getenv("SUPABASE_URL") or "https://bberzasmxwioxjynbuaf.supabase.co"
+    return url.strip().rstrip("/")
+
+
+def _get_supabase_jwk_client() -> Any:
+    global _supabase_jwk_client
+    if _supabase_jwk_client is None and hasattr(jwt, "PyJWKClient"):
+        jwks_url = f"{_get_supabase_url()}/auth/v1/.well-known/jwks.json"
+        _supabase_jwk_client = jwt.PyJWKClient(jwks_url, cache_keys=True)
+    return _supabase_jwk_client
+
+
+def _extract_supabase_claims(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not payload or not payload.get("sub") or payload.get("is_anonymous") is True:
+        return None
+    user_meta = payload.get("user_metadata") or {}
+    app_meta = payload.get("app_metadata") or {}
+    # Security: NEVER read role or authorization claims from user_metadata (user-editable).
+    # Only trust app_metadata for role/store/restaurant/vendor privileges.
+    app_role = app_meta.get("role")
+    role = str(app_role).strip() if isinstance(app_role, str) and app_role.strip() else "USER"
+    return {
+        "id": payload.get("sub"),
+        "sub": payload.get("sub"),
+        "email": payload.get("email") or user_meta.get("email"),
+        "name": user_meta.get("name"),
+        "phone": payload.get("phone") or user_meta.get("phone"),
+        "role": role,
+        "assignedStoreId": app_meta.get("assignedStoreId"),
+        "assignedRestaurantId": app_meta.get("assignedRestaurantId"),
+        "vendorId": app_meta.get("vendorId"),
+        "exp": payload.get("exp"),
+    }
+
+
+def decode_supabase_jwt(token: str, verify_exp: bool = True) -> Optional[Dict[str, Any]]:
+    """Decode Supabase Auth JWT token (Dual-Token Bridge: HS256 & ECC P-256 ES256 JWKS)."""
+    expected_issuer = f"{_get_supabase_url()}/auth/v1"
+    options = {
+        "verify_signature": True,
+        "verify_exp": verify_exp,
+        "verify_aud": True,
+        "verify_iss": True,
+    }
+    if verify_exp:
+        options["require"] = ["exp"]
+
+    # 1. Try HS256 legacy Supabase JWT Secret
+    supabase_secret = get_clean_secret("SUPABASE_JWT_SECRET")
+    if supabase_secret:
+        try:
+            payload = jwt.decode(
+                token,
+                supabase_secret,
+                algorithms=["HS256"],
+                audience="authenticated",
+                issuer=expected_issuer,
+                options=options,
+            )
+            extracted = _extract_supabase_claims(payload)
+            if extracted:
+                return extracted
+        except Exception:
+            pass
+
+    # 2. Try ES256 (ECC P-256) via Supabase JWKS
+    jwk_client = _get_supabase_jwk_client()
+    if jwk_client is not None:
+        try:
+            signing_key = jwk_client.get_signing_key_from_jwt(token)
+            payload = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["ES256"],
+                audience="authenticated",
+                issuer=expected_issuer,
+                options=options,
+            )
+            extracted = _extract_supabase_claims(payload)
+            if extracted:
+                return extracted
+        except Exception:
+            pass
+
     return None
 
 

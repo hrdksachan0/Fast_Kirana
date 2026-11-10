@@ -7,7 +7,42 @@ import { NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { auth, verifiedAuth } from '@/auth'
 import { isRootAdminAccount } from '@/lib/superadmin-config'
+import { getLast10Digits } from '@/lib/phone'
 import { logger } from '@/lib/logger'
+
+/**
+ * Resolves a verified JWT payload (Legacy CUID or Supabase Auth UUID) to the
+ * canonical public.users row, falling back to verified 10-digit phone lookup
+ * so existing accounts retain their ID, orders, wallet, and staff roles.
+ */
+export async function resolveDbUserFromJwt(jwtPayload: { userId: string; phone?: string | null }) {
+  const { prisma } = await import('@/lib/prisma')
+  const select = {
+    id: true,
+    role: true,
+    email: true,
+    phone: true,
+    isBlocked: true,
+    deletedAt: true,
+    assignedStoreId: true,
+    assignedRestaurantId: true,
+  }
+  const byId = await prisma.user.findUnique({ where: { id: jwtPayload.userId }, select })
+  if (byId) return byId
+
+  const digits = jwtPayload.phone ? getLast10Digits(jwtPayload.phone) : ''
+  if (digits && digits.length === 10) {
+    return prisma.user.findFirst({
+      where: {
+        deletedAt: null,
+        OR: [{ phone: digits }, { phone: `+91${digits}` }, { phone: `91${digits}` }],
+      },
+      orderBy: { createdAt: 'asc' },
+      select,
+    })
+  }
+  return null
+}
 
 export interface VerifiedGuardUser {
   id: string
@@ -78,21 +113,36 @@ export function createVerifiedRoleGuard(dependencies: VerifiedRoleDependencies) 
   }
 }
 
-/** Campaign tokens require the configured signing key, HS256, and expiry. */
+/** Campaign tokens require a configured signing key/JWKS, valid signature, and expiry. */
 export async function verifyCampaignBearer(authorization: string): Promise<{ userId: string } | null> {
-  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
   const token = authorization.match(/^Bearer (\S+)$/)?.[1]
-  if (!secret?.trim() || !token) return null
-  try {
-    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), {
-      algorithms: ['HS256'],
-      requiredClaims: ['exp'],
-    })
-    if (payload.scope === 'ws_ticket' || payload.type === 'ws_ticket') {
-      return null
+  if (!token) return null
+
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+  if (secret?.trim()) {
+    try {
+      const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), {
+        algorithms: ['HS256'],
+        requiredClaims: ['exp'],
+      })
+      if (payload.scope === 'ws_ticket' || payload.type === 'ws_ticket') {
+        return null
+      }
+      const userId = payload.id || payload.sub
+      if (typeof userId === 'string' && userId.trim()) {
+        return { userId }
+      }
+    } catch {
+      // Fall through to Supabase Dual-Token verification
     }
-    const userId = payload.id || payload.sub
-    return typeof userId === 'string' && userId.trim() ? { userId } : null
+  }
+
+  try {
+    const { verifyFastKiranaJWT } = await import('@/lib/jwt')
+    const jwtPayload = await verifyFastKiranaJWT(authorization)
+    if (!jwtPayload?.userId) return null
+    const dbUser = await resolveDbUserFromJwt(jwtPayload)
+    return { userId: dbUser?.id || jwtPayload.userId }
   } catch {
     return null
   }
@@ -150,11 +200,7 @@ export async function requireRole(allowedRoles: string[], request?: Request) {
     if (jwtPayload) {
       let dbUser: any = null
       try {
-        const { prisma } = await import('@/lib/prisma')
-        dbUser = await prisma.user.findUnique({
-          where: { id: jwtPayload.userId },
-          select: { id: true, role: true, email: true, phone: true, isBlocked: true, deletedAt: true, assignedStoreId: true, assignedRestaurantId: true }
-        })
+        dbUser = await resolveDbUserFromJwt(jwtPayload)
       } catch (err) {
         console.error('requireRole Bearer DB lookup error:', err)
         return { error: NextResponse.json({ error: 'Service Unavailable: Authentication service degraded' }, { status: 503 }), session: null }
@@ -268,11 +314,7 @@ export async function requireOrderAccess(orderUserId: string, extraRoles: string
     const { verifyFastKiranaJWT } = await import('@/lib/jwt')
     const jwtPayload = await verifyFastKiranaJWT(authHeader)
     if (jwtPayload) {
-      const { prisma } = await import('@/lib/prisma')
-      const dbUser = await prisma.user.findUnique({
-        where: { id: jwtPayload.userId },
-        select: { id: true, role: true, phone: true, email: true, isBlocked: true, deletedAt: true, assignedStoreId: true, assignedRestaurantId: true }
-      })
+      const dbUser = await resolveDbUserFromJwt(jwtPayload)
       if (dbUser && !dbUser.isBlocked && !dbUser.deletedAt) {
         const staffRoles = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER', ...extraRoles]
         const isOwner = orderUserId === dbUser.id

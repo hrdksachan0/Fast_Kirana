@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { isRootAdminAccount } from '@/lib/superadmin-config'
+import { verifyFastKiranaJWT } from '@/lib/jwt'
 
 const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
 
@@ -10,6 +11,27 @@ export async function proxy(req: NextRequest) {
   let token = await getToken({ req, secret: secret || undefined, secureCookie: isSecure })
   if (!token && isSecure) {
     token = await getToken({ req, secret: secret || undefined, secureCookie: false })
+  }
+
+  // Dual-Token Bridge fallback: verify Supabase Auth JWT or FastMinute Bearer/cookie JWT
+  if (!token) {
+    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization')
+    const cookieToken = req.cookies.get('fastkirana_token')?.value
+    const candidate = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader : cookieToken
+    if (candidate) {
+      const verified = await verifyFastKiranaJWT(candidate)
+      if (verified) {
+        token = {
+          id: verified.userId,
+          sub: verified.userId,
+          role: verified.role,
+          phone: verified.phone,
+          email: verified.email,
+          assignedStoreId: verified.assignedStoreId,
+          assignedRestaurantId: verified.assignedRestaurantId,
+        } as any
+      }
+    }
   }
 
   const isLoggedIn = !!token

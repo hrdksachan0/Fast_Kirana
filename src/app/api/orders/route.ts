@@ -42,14 +42,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
   const session = await auth()
-  const isStaffSession = Boolean(session?.user?.role && session.user.role !== Role.USER)
+  let bearerUser: any = null
+  if (!session?.user) {
+    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const { verifyFastKiranaJWT } = await import('@/lib/jwt')
+      const { resolveDbUserFromJwt } = await import('@/lib/auth-guard')
+      const jwtPayload = await verifyFastKiranaJWT(authHeader)
+      if (jwtPayload) {
+        const dbUser = await resolveDbUserFromJwt(jwtPayload)
+        if (dbUser) {
+          if (dbUser.isBlocked || dbUser.deletedAt) {
+            return NextResponse.json({ error: 'Account is blocked or unavailable' }, { status: 403 })
+          }
+          bearerUser = dbUser
+        }
+      }
+    }
+  }
+  const activeAuthUser = session?.user || bearerUser
+  const isStaffSession = Boolean(activeAuthUser?.role && activeAuthUser.role !== Role.USER)
 
   // ─── 1. Identify Order Owner (Buyer / Logged-in Account Holder) ──────────────────────────
   // The person placing/paying for the order is ALWAYS the owner (userId).
-  // Priority: 1. NextAuth Web Session -> 2. Mobile Request Header (x-user-id) -> 3. Request Payload (body.userId)
+  // Priority: 1. Verified Session / Bearer -> 2. Mobile Request Header (x-user-id) -> 3. Request Payload (body.userId)
   const headerUserId = request.headers.get('x-user-id')?.trim()
-  const candidateUserId = (!isStaffSession && session?.user?.id)
-    ? session.user.id
+  const candidateUserId = (!isStaffSession && activeAuthUser?.id)
+    ? activeAuthUser.id
     : (headerUserId && headerUserId !== 'null' && headerUserId !== 'undefined'
         ? headerUserId
         : (body.userId && body.userId !== 'null' && body.userId !== 'undefined' ? body.userId : null))
@@ -448,6 +467,11 @@ export async function POST(request: NextRequest) {
       if (resolvedLat && resolvedLng) {
         const distanceKm = getDistanceKm(storeLat, storeLng, resolvedLat, resolvedLng)
         deliveryRules = getDeliveryRules(distanceKm, { maxRadiusKm, surgeFee, settings: settingsMap, storeName: storeDisplayName })
+        if (!deliveryRules.isServiceable) {
+          return NextResponse.json({
+            error: `Your delivery address is ${distanceKm.toFixed(1)} km away. Delivery is strictly limited to ${maxRadiusKm.toFixed(1)} km from ${storeDisplayName}.`
+          }, { status: 400 })
+        }
       }
     }
 
@@ -482,12 +506,17 @@ export async function POST(request: NextRequest) {
       return rawId.includes('_') ? rawId.split('_')[0] : rawId
     }).filter(Boolean)
     const productSlugs = normalizedItems.map((i: any) => i.product.slug).filter(Boolean)
+    const productNames = normalizedItems.map((i: any) => {
+      const name = i.product?.name || ''
+      return name.replace(/\s*\([^)]*\)\s*$/, '').trim()
+    }).filter(Boolean)
 
     let dbProducts = await prisma.product.findMany({
       where: {
         OR: [
           { id: { in: productIds } },
-          { slug: { in: productSlugs } }
+          { slug: { in: productSlugs } },
+          { name: { in: productNames, mode: 'insensitive' } }
         ]
       },
       include: {
@@ -616,26 +645,9 @@ export async function POST(request: NextRequest) {
         })
       }
       if (!dbProduct) {
-        let defaultCat = await prisma.category.findFirst()
-        if (!defaultCat) {
-          defaultCat = await prisma.category.create({
-            data: { name: 'General', slug: 'general' }
-          })
-        }
-        dbProduct = await prisma.product.create({
-          data: {
-            name: item.product.name,
-            slug: (item.product.slug || item.product.name.toLowerCase().replace(/[^a-z0-9]/g, '-')) + '-' + Date.now().toString().slice(-4),
-            mrp: Number(item.product.price || 50),
-            price: Number(item.product.price || 50),
-            unit: '1 unit',
-            stock: 9999,
-            isAvailable: true,
-            categoryId: defaultCat.id,
-            imageUrl: item.product.imageUrl || '/images/placeholder.png',
-          },
-          include: { category: true, restaurant: true }
-        })
+        return NextResponse.json({
+          error: `Item "${item.product?.name || productId}" is not available in our catalog. Please update your cart.`
+        }, { status: 400 })
       }
 
       const localInv = invMap.get(productId)
@@ -2070,32 +2082,45 @@ export async function GET(request: NextRequest) {
   const queryUserId = searchParams.get('userId')
   const queryPhone = searchParams.get('phone') || searchParams.get('customerPhone')
 
-  let userId = session?.user?.id || request.headers.get('x-user-id') || queryUserId
-  const headerPhone = request.headers.get('x-user-phone') || queryPhone
-  let sessionPhone = session?.user?.phone ? getLast10Digits(session.user.phone) : (headerPhone ? getLast10Digits(headerPhone) : '')
-
-  if (!userId && sessionPhone) {
-    const dbUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { phone: sessionPhone },
-          { phone: `+91${sessionPhone}` },
-          { phone: { contains: sessionPhone } }
-        ]
+  // 1. Authenticate caller (via Cookie Session or Bearer Token)
+  let caller: any = session?.user || null
+  if (!caller) {
+    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const { verifyFastKiranaJWT } = await import('@/lib/jwt')
+      const { resolveDbUserFromJwt } = await import('@/lib/auth-guard')
+      const jwtPayload = await verifyFastKiranaJWT(authHeader)
+      if (jwtPayload) {
+        const dbUser = await resolveDbUserFromJwt(jwtPayload)
+        if (!dbUser || dbUser.isBlocked || dbUser.deletedAt) {
+          return NextResponse.json({ error: 'Unauthorized: Account is unavailable or blocked' }, { status: 401 })
+        }
+        caller = {
+          id: dbUser.id,
+          role: dbUser.role,
+          phone: dbUser.phone || jwtPayload.phone,
+          email: dbUser.email || jwtPayload.email,
+          assignedStoreId: dbUser.assignedStoreId,
+          assignedRestaurantId: dbUser.assignedRestaurantId,
+        }
       }
-    })
-    if (dbUser) userId = dbUser.id
+    }
   }
 
-  if (!userId && !sessionPhone) {
-    return NextResponse.json([])
+  if (!caller?.id) {
+    return NextResponse.json({ error: 'Unauthorized: Authentication required to view orders' }, { status: 401 })
   }
+
+  const callerRole = (caller.role || '').toUpperCase()
+  const isStaff = ['ADMIN', 'SUPER_ADMIN', 'STORE_MANAGER', 'CHEF', 'PICKER', 'DELIVERY'].includes(callerRole)
+
+  // Non-staff customers can strictly view ONLY their own orders
+  const userId = isStaff ? (queryUserId || caller.id) : caller.id
+  const sessionPhone = isStaff ? (queryPhone ? getLast10Digits(queryPhone) : '') : (caller.phone ? getLast10Digits(caller.phone) : '')
 
   try {
-    const { searchParams } = new URL(request.url)
     const all = searchParams.get('all') === 'true'
-    const effectiveStoreId = getEffectiveStoreId(session, searchParams.get('storeId'))
-    const isStaff = session?.user?.role === 'ADMIN' || session?.user?.role === 'CHEF' || session?.user?.role === 'PICKER' || session?.user?.role === 'DELIVERY'
+    const effectiveStoreId = getEffectiveStoreId(session || { user: caller }, searchParams.get('storeId'))
 
     let orders: any[] = []
 

@@ -174,4 +174,75 @@ test('R1: getEffectiveStoreId rejects non-admin users with superadmin phone', as
   assert.equal(effectiveStore, null, 'Non-admin user cannot obtain requested store ID')
 })
 
+test('Supabase JWT ignores user_metadata role escalation and rejects anonymous tokens', async () => {
+  const origSbSecret = process.env.SUPABASE_JWT_SECRET
+  const origSbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const sbSecret = 'supabase-test-jwt-secret-key-at-least-32-chars'
+  process.env.SUPABASE_JWT_SECRET = sbSecret
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://bberzasmxwioxjynbuaf.supabase.co'
+
+  try {
+    const key = new TextEncoder().encode(sbSecret)
+    const issuer = 'https://bberzasmxwioxjynbuaf.supabase.co/auth/v1'
+
+    // 1. User attempts privilege escalation via editable user_metadata
+    const userToken = await new SignJWT({
+      sub: '550e8400-e29b-41d4-a716-446655440000',
+      phone: '+917054470303',
+      role: 'authenticated',
+      user_metadata: { role: 'ADMIN', assignedStoreId: 'hub-spoof' },
+      app_metadata: {},
+    })
+      .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+      .setIssuer(issuer)
+      .setAudience('authenticated')
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(key)
+
+    const verifiedUser = await verifyFastKiranaJWT(userToken)
+    assert.ok(verifiedUser)
+    assert.equal(verifiedUser?.role, 'USER')
+    assert.equal(verifiedUser?.assignedStoreId, null)
+
+    // 2. Anonymous token must be rejected
+    const anonToken = await new SignJWT({
+      sub: '550e8400-e29b-41d4-a716-446655440001',
+      role: 'authenticated',
+      is_anonymous: true,
+    })
+      .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+      .setIssuer(issuer)
+      .setAudience('authenticated')
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(key)
+
+    assert.equal(await verifyFastKiranaJWT(anonToken), null)
+
+    // 3. Trusted app_metadata claims are preserved
+    const staffToken = await new SignJWT({
+      sub: '550e8400-e29b-41d4-a716-446655440002',
+      phone: '+917054470303',
+      role: 'authenticated',
+      app_metadata: { role: 'ADMIN', assignedStoreId: 'hub-209206' },
+    })
+      .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+      .setIssuer(issuer)
+      .setAudience('authenticated')
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(key)
+
+    const verifiedStaff = await verifyFastKiranaJWT(staffToken)
+    assert.ok(verifiedStaff)
+    assert.equal(verifiedStaff?.role, 'ADMIN')
+    assert.equal(verifiedStaff?.assignedStoreId, 'hub-209206')
+  } finally {
+    if (origSbSecret === undefined) delete process.env.SUPABASE_JWT_SECRET
+    else process.env.SUPABASE_JWT_SECRET = origSbSecret
+    if (origSbUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = origSbUrl
+  }
+})
 

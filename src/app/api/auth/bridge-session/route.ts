@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { createClient } from '@supabase/supabase-js'
+import { getLast10Digits } from '@/lib/phone'
 
 export async function POST(request: Request) {
   try {
@@ -34,59 +35,54 @@ export async function POST(request: Request) {
       }
     })
 
-    let supabaseUser = null
+    const digits = phone ? getLast10Digits(String(phone)) : ''
+    const e164Phone = digits && digits.length === 10 ? `+91${digits}` : undefined
+    const emailToUse = email || `${digits || session.user.id}@fastkirana.com`
 
-    // 1. Create or get user in Supabase Auth
-    try {
-      const emailToUse = email || `${phone}@fastkirana.com` // Fallback email if only phone is available
-      
-      const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email: emailToUse,
-        phone: phone || undefined,
-        email_confirm: true,
-        phone_confirm: true
-      })
-
-      if (error) {
-        // If user already exists, retrieve them by email
-        if (
-          error.message.includes('already exists') || 
-          error.code === 'email_exists' || 
-          error.code === 'phone_exists'
-        ) {
-          const { data: userList, error: getErr } = await supabaseAdmin.auth.admin.listUsers()
-          if (getErr) throw getErr
-          const matched = userList.users.find(u => u.email === emailToUse)
-          if (!matched) {
-            throw new Error('User not found by email in fallback')
-          }
-          supabaseUser = matched
-        } else {
-          throw error
-        }
-      } else {
-        supabaseUser = data.user
-      }
-    } catch (createErr: any) {
-      console.error('Error finding/creating user in Supabase Auth:', createErr)
-      return NextResponse.json(
-        { error: 'Failed to sync user to authentication system: ' + createErr.message },
-        { status: 500 }
-      )
-    }
-
-    if (!supabaseUser || !supabaseUser.email) {
-      return NextResponse.json({ error: 'User sync failed' }, { status: 500 })
-    }
-
-    // 2. Generate magic link login token hash using the confirmed email
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    // 1. Try generating magic link directly for already-synced users (O(1), avoids listUsers pagination limits)
+    let { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
-      email: supabaseUser.email,
+      email: emailToUse,
     })
 
+    // 2. If user does not exist in auth.users yet, create with secure app_metadata and generate link
     if (linkError) {
-      throw linkError
+      const { error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: emailToUse,
+        phone: e164Phone,
+        email_confirm: true,
+        phone_confirm: Boolean(e164Phone),
+        app_metadata: {
+          publicUserId: session.user.id,
+          role: session.user.role || 'USER',
+          assignedStoreId: (session.user as any).assignedStoreId || null,
+          assignedRestaurantId: (session.user as any).assignedRestaurantId || null,
+        },
+      })
+
+      if (
+        createError &&
+        !createError.message.includes('already exists') &&
+        createError.code !== 'email_exists' &&
+        createError.code !== 'phone_exists'
+      ) {
+        console.error('Error creating user in Supabase Auth:', createError)
+        return NextResponse.json(
+          { error: 'Failed to sync user to authentication system: ' + createError.message },
+          { status: 500 }
+        )
+      }
+
+      const retry = await supabaseAdmin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: emailToUse,
+      })
+      linkData = retry.data
+      linkError = retry.error
+    }
+
+    if (linkError || !linkData?.properties?.action_link) {
+      throw linkError || new Error('Failed to generate magic link')
     }
 
     const url = new URL(linkData.properties.action_link)
