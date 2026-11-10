@@ -80,6 +80,45 @@ async def get_current_user(
             db_user = res.scalars().first()
 
             if not db_user:
+                # Dual-Token Bridge: Resolve existing public.users record via verified 10-digit phone
+                raw_phone = str(user.get("phone") or "")
+                digits10 = re.sub(r"\D", "", raw_phone)[-10:] if raw_phone else ""
+                if len(digits10) == 10:
+                    p_stmt = (
+                        select(User)
+                        .where(
+                            User.deletedAt.is_(None),
+                            or_(
+                                User.phone == digits10,
+                                User.phone == f"+91{digits10}",
+                                User.phone == f"91{digits10}",
+                            ),
+                        )
+                        .order_by(User.createdAt.asc())
+                    )
+                    db_user = (await db.execute(p_stmt)).scalars().first()
+
+                    # Auto-provision brand-new Supabase Auth user if DB sync trigger hasn't fired yet
+                    if not db_user:
+                        try:
+                            new_user = User(
+                                id=str(user_id),
+                                phone=f"+91{digits10}",
+                                email=user.get("email"),
+                                name=user.get("name"),
+                                role=Role.USER,
+                                isBlocked=False,
+                            )
+                            db.add(new_user)
+                            await db.commit()
+                            await db.refresh(new_user)
+                            db_user = new_user
+                        except Exception as prov_err:
+                            await db.rollback()
+                            logger.warning(f"Auto-provision fallback lookup after conflict: {prov_err}")
+                            db_user = (await db.execute(p_stmt)).scalars().first()
+
+            if not db_user:
                 # Check if this token belongs directly to an active Vendor
                 from models import Vendor
                 v_stmt = select(Vendor).where(Vendor.id == user_id, Vendor.isActive.is_(True))
@@ -103,6 +142,14 @@ async def get_current_user(
                 return None
 
             role_str = db_user.role.value if hasattr(db_user.role, "value") else str(db_user.role or "USER")
+            user["id"] = db_user.id
+            user["sub"] = db_user.id
+            if db_user.name:
+                user["name"] = db_user.name
+            if db_user.email:
+                user["email"] = db_user.email
+            if db_user.phone:
+                user["phone"] = db_user.phone
             user["role"] = role_str
             user["assignedStoreId"] = db_user.assignedStoreId
             user["assignedRestaurantId"] = db_user.assignedRestaurantId
@@ -704,6 +751,15 @@ async def get_me(
         raise HTTPException(status_code=404, detail="User profile not found")
 
     role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+    fresh_token = create_access_token({
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": role_val,
+        "phone": user.phone,
+        "assignedStoreId": user.assignedStoreId,
+        "assignedRestaurantId": user.assignedRestaurantId,
+    })
     return SessionResponse(
         id=user.id,
         email=user.email,
@@ -712,6 +768,7 @@ async def get_me(
         phone=user.phone,
         assignedStoreId=user.assignedStoreId,
         assignedRestaurantId=user.assignedRestaurantId,
+        token=fresh_token,
         needsProfileSetup=not user.name or not user.phone,
         user={
             "id": user.id,
@@ -1039,9 +1096,7 @@ async def verify_otp(
     stmt_u = select(User).where(
         or_(
             User.phone.in_(phone_patterns),
-            User.phone.like(f"%{phone}%"),
-            User.email.in_(email_patterns),
-            User.email.like(f"%{phone}%")
+            User.email.in_(email_patterns)
         )
     )
     result = await db.execute(stmt_u)
