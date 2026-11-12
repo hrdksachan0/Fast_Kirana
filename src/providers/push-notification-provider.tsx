@@ -94,13 +94,31 @@ export function PushNotificationProvider({ children }: { children: React.ReactNo
     }
   }, [])
 
-  // Auto-sync existing subscription whenever user logs in or switches account
+  // Auto-sync existing subscription whenever user logs in, switches account, or logs out
+  const prevAuthUserIdRef = useRef<string | null>(null)
   useEffect(() => {
-    if (sessionStatus === 'authenticated' && isSupported && 'Notification' in window && Notification.permission === 'granted') {
+    if (!isSupported || !('Notification' in window) || Notification.permission !== 'granted') return
+
+    if (sessionStatus === 'authenticated' && session?.user?.id) {
+      prevAuthUserIdRef.current = session.user.id
       navigator.serviceWorker.ready.then((registration) => {
         registration.pushManager.getSubscription().then((subscription) => {
           if (subscription) {
             syncSubscriptionToServer(subscription)
+          }
+        }).catch(() => {})
+      }).catch(() => {})
+    } else if (sessionStatus === 'unauthenticated' && prevAuthUserIdRef.current) {
+      // User just signed out on web: immediately unlink browser endpoint from previous user
+      prevAuthUserIdRef.current = null
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.pushManager.getSubscription().then((subscription) => {
+          if (subscription) {
+            fetch('/api/push/subscribe', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ endpoint: subscription.endpoint }),
+            }).catch(() => {})
           }
         }).catch(() => {})
       }).catch(() => {})

@@ -348,6 +348,53 @@ export async function checkCashfreeOrderPaid(orderId: string): Promise<{
   return { isPaid: false }
 }
 
+export interface CreateCashfreeRefundParams {
+  orderId: string
+  amount: number
+  refundId?: string
+  refundNote?: string
+}
+
+export interface CashfreeRefundResponse {
+  cf_refund_id: string | number
+  refund_id: string
+  order_id: string
+  refund_amount: number
+  refund_currency: string
+  refund_status: 'SUCCESS' | 'PENDING' | 'CANCELLED' | 'FAILED'
+  refund_note?: string
+}
+
+/**
+ * Initiates an automatic refund through Cashfree Payment Gateway
+ */
+export async function createCashfreeRefund(params: CreateCashfreeRefundParams): Promise<CashfreeRefundResponse> {
+  const sanitizedOrderId = params.orderId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 45)
+  const refundId = params.refundId || `ref_${sanitizedOrderId}_${Date.now()}`
+
+  const payload = {
+    refund_amount: Number(params.amount.toFixed(2)),
+    refund_id: refundId,
+    refund_note: (params.refundNote || 'Customer refund').slice(0, 100),
+    refund_speed: 'STANDARD',
+  }
+
+  const response = await fetch(`${BASE_URL}/orders/${sanitizedOrderId}/refunds`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const errorMsg = data?.message || data?.error || JSON.stringify(data)
+    throw new Error(`Cashfree refund failed (${response.status}): ${errorMsg}`)
+  }
+
+  return data as CashfreeRefundResponse
+}
+
 /**
  * Verifies Cashfree Webhook signature
  */

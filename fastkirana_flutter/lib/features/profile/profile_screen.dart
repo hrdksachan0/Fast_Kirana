@@ -44,12 +44,12 @@ class ProfileScreen extends ConsumerWidget {
 
     if (confirmed == true) {
       HapticFeedback.heavyImpact();
+      await ref.read(authProvider.notifier).clear();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Logged out successfully')),
         );
       }
-      unawaited(ref.read(authProvider.notifier).clear());
     }
   }
 

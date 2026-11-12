@@ -96,6 +96,35 @@
 .bannerCopy {
   min-width: 0;
 }
+.slide[data-photo='true'] {
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  border-radius: 16px;
+  isolation: isolate;
+  background: #283027;
+}
+.slide[data-photo='true'] > .artFrame {
+  position: absolute;
+  inset: -6px;
+  z-index: -2;
+}
+.slide[data-photo='true'] .art { object-fit: cover; max-height: none; }
+.slide[data-photo='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(0deg, #100e12ed, #100e1240 65%, transparent);
+}
+.slide[data-photo='true'] .bannerCopy { padding: 18px; }
+.slide[data-photo='true'] .bannerCopy :is(h2,p) { color: white; -webkit-text-stroke: 0; }
+.block[data-presentation='grid'] .collection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(145px, 100%), 1fr));
+  overflow: visible;
+}
+.block[data-presentation='grid'] .collection > * { width: 100%; min-width: 0; max-width: none; }
 .bannerCopy h2 {
   color: var(--festival-header);
   -webkit-text-stroke: 2px var(--festival-outline);

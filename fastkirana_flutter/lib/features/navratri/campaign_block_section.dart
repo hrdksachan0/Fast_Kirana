@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../data/models/product.dart';
 import '../../widgets/product_card.dart';
@@ -242,6 +242,48 @@ class _BlockViewState extends NavratriAutoplayState<_BlockView> {
 
     final current = slides[_index % slides.length];
     final title = block.title.isEmpty ? current.title : block.title;
+    final image = block.image ?? current.image;
+    if (image != null &&
+        RegExp(r'\.(webp|png|jpe?g|avif)(?:[?#]|$)', caseSensitive: false)
+            .hasMatch(image)) {
+      final subtitle = block.body.isEmpty ? current.subtitle : block.body;
+      return switcher(ClipRRect(
+        key: ValueKey('block-header-${current.id}'),
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(children: [
+          Positioned.fill(
+              child: ColoredBox(
+                  color: const Color(0xff283027),
+                  child: FittedBox(
+                      fit: BoxFit.cover,
+                      clipBehavior: Clip.hardEdge,
+                      child: SizedBox(
+                          width: 320, height: 210, child: art(image))))),
+          const Positioned.fill(
+              child: DecoratedBox(
+                  decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Color(0xeb100e12)])))),
+          Container(
+              alignment: Alignment.bottomLeft,
+              constraints: const BoxConstraints(minHeight: 168),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (current.eyebrow.isNotEmpty)
+                      text(current.eyebrow, 12, color: Colors.white),
+                    text(title, 26,
+                        color: Colors.white, weight: FontWeight.w800),
+                    if (subtitle.isNotEmpty)
+                      text(subtitle, 13, color: Colors.white),
+                  ])),
+        ]),
+      ));
+    }
     final titleStyle = TextStyle(
         fontSize: 26,
         height: 1.3,

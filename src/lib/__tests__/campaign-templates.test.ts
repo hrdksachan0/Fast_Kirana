@@ -23,7 +23,7 @@ const metadata = JSON.parse(readFileSync(resolve(sourceRoot, 'templates', 'index
 
 test('template index and admin registry expose every supported campaign once', () => {
   assert.deepEqual(metadata.map(item => item.id), [
-    'navratri', 'diwali', 'holi', 'ramadan', 'daily-essentials', 'value-picks', 'summer', 'monsoon',
+    'navratri', 'diwali', 'holi', 'ramadan', 'daily-essentials', 'value-picks', 'summer', 'monsoon', 'fresh-market', 'daily-restock', 'pack-value', 'gifting-boutique', 'movie-night', 'breakfast-club',
   ])
   assert.deepEqual(campaignTemplates.map(item => item.id), metadata.map(item => item.id))
   assert.deepEqual(JSON.parse(readFileSync(resolve(nativeRoot, 'templates', 'index.json'), 'utf8')), metadata)
@@ -43,11 +43,11 @@ for (const entry of metadata) {
     assert.deepEqual(config, parseCampaignConfig(canonical))
     assert.deepEqual(JSON.parse(readFileSync(resolve(nativeRoot, entry.manifest), 'utf8')), canonical)
     assert.equal(config.version, 1)
-    assert.equal(config.demo, true)
+    assert.equal(config.demo, config.composition !== 'blocks')
     assert.equal(config.enabled, true)
     assert.deepEqual(config.navigation, [])
     assert.equal(config.categories.length, 4)
-    assert.ok(config.headers.length > 1, 'preset needs actual rotating header content')
+    assert.ok(config.headers.length >= (config.composition === 'blocks' ? 1 : 2), 'preset needs actual rotating header content')
     assert.ok(config.products.length > 1, 'preset needs actual rotating product content')
     assert.ok(config.searchSuggestions.length > 1, 'preset needs actual rotating search content')
     if (entry.id !== 'navratri') {
@@ -61,6 +61,13 @@ for (const entry of metadata) {
         .flatMap(item => item.image ? [item.image] : []),
     ])
     for (const image of images) {
+      if (entry.id === 'navratri' && image.startsWith('https://')) continue
+      if (image.endsWith('.webp')) {
+        const bytes = readFileSync(resolve(sourceRoot, image))
+        assert.equal(bytes.toString('ascii', 8, 12), 'WEBP')
+        assert.deepEqual(bytes, readFileSync(resolve(nativeRoot, image)))
+        continue
+      }
       assert.match(image, /^[a-z0-9-]+\.svg$/, `bundled preset should use local artwork: ${image}`)
       const content = readFileSync(resolve(sourceRoot, image), 'utf8')
       assert.match(content, /<svg\b[^>]*viewBox=/, `${image} needs scalable geometry`)

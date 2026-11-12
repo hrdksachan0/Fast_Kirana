@@ -1560,8 +1560,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                       confirmLabel: 'Log Out',
                     );
                     if (confirm == true && context.mounted) {
+                      await ref.read(authProvider.notifier).logout();
+                      if (!context.mounted) return;
                       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-                      unawaited(ref.read(authProvider.notifier).logout());
                     }
                   },
                   onTabChanged: (index) => setState(() => _activeTab = index),

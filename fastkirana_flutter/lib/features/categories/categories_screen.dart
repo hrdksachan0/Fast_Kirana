@@ -153,19 +153,19 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               ),
             ),
 
-            // 2. Search Input Bar (Pill style matching modern aesthetic)
+            // 2. Search Input Bar (Ultra-Clean Unified Pill)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                 child: Container(
-                  height: 46,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: _searchQuery.isNotEmpty ? AppDesignSystem.primary : const Color(0xFFE2E8F0),
-                      width: _searchQuery.isNotEmpty ? 1.4 : 1.1,
+                      width: _searchQuery.isNotEmpty ? 1.4 : 1.0,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -183,33 +183,21 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   ),
                   child: Row(
                     children: [
-                      // Circular lens badge
-                      Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: _searchQuery.isNotEmpty
-                              ? const Color(0xFFFEF2F2)
-                              : const Color(0xFFF1F5F9),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.search_rounded,
-                          size: 16,
-                          color: _searchQuery.isNotEmpty
-                              ? AppDesignSystem.primary
-                              : const Color(0xFF64748B),
-                        ),
+                      // Clean unboxed Search Icon
+                      Icon(
+                        Icons.search_rounded,
+                        size: 20,
+                        color: _searchQuery.isNotEmpty ? AppDesignSystem.primary : const Color(0xFF64748B),
                       ),
                       const SizedBox(width: 10),
 
-                      // Search text input
+                      // Seamless Search text input (No inner border box)
                       Expanded(
                         child: TextField(
                           controller: _searchController,
                           onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 13),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: Responsive.scaledFontSize(context, 13.5),
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF0F172A),
                           ),
@@ -217,13 +205,17 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           decoration: InputDecoration(
                             isDense: true,
                             hintText: 'Search categories or products...',
-                            hintStyle: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 12.5),
+                            hintStyle: GoogleFonts.plusJakartaSans(
+                              fontSize: Responsive.scaledFontSize(context, 13),
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF94A3B8),
                             ),
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            errorBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
                       ),
@@ -237,59 +229,48 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                             setState(() => _searchQuery = '');
                           },
                           child: Container(
-                            width: 24,
-                            height: 24,
+                            width: 26,
+                            height: 26,
                             decoration: const BoxDecoration(
-                              color: Color(0xFFE2E8F0),
+                              color: Color(0xFFF1F5F9),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
                               Icons.close_rounded,
-                              size: 14,
+                              size: 15,
                               color: Color(0xFF475569),
                             ),
                           ),
                         )
                       else
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              height: 16,
-                              width: 1,
-                              color: const Color(0xFFE2E8F0),
-                              margin: const EdgeInsets.symmetric(horizontal: 6),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                VoiceSearchSheet.show(
-                                  context,
-                                  onResult: (voiceText) {
-                                    if (voiceText.trim().isNotEmpty) {
-                                      setState(() {
-                                        _searchController.text = voiceText.trim();
-                                        _searchQuery = voiceText.trim().toLowerCase();
-                                      });
-                                    }
-                                  },
-                                );
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            VoiceSearchSheet.show(
+                              context,
+                              onResult: (voiceText) {
+                                if (voiceText.trim().isNotEmpty) {
+                                  setState(() {
+                                    _searchController.text = voiceText.trim();
+                                    _searchQuery = voiceText.trim().toLowerCase();
+                                  });
+                                }
                               },
-                              child: Container(
-                                width: 28,
-                                height: 28,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFFEF2F2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.mic_rounded,
-                                  size: 15,
-                                  color: AppDesignSystem.primary,
-                                ),
-                              ),
+                            );
+                          },
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFEF2F2),
+                              shape: BoxShape.circle,
                             ),
-                          ],
+                            child: const Icon(
+                              Icons.mic_rounded,
+                              size: 16,
+                              color: AppDesignSystem.primary,
+                            ),
+                          ),
                         ),
                     ],
                   ),

@@ -3236,19 +3236,38 @@ async def admin_refund_order(
     if refund_value <= 0:
         raise HTTPException(status_code=400, detail="Valid refund amount greater than 0 is required")
 
+    current_refund = float(order.refundAmount or 0.0)
+    remaining_balance = max(0.0, float(order.total or 0.0) - current_refund)
+    if refund_value > (remaining_balance + 0.01):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Refund amount (₹{refund_value:.2f}) exceeds remaining order balance of ₹{remaining_balance:.2f}"
+        )
+
     refunded_item_name = ""
     if item_id and order.items:
         target_item = next((i for i in order.items if i.id == item_id), None)
         if target_item:
+            item_line_total = float(target_item.price or 0.0) * float(target_item.quantity or 1)
+            item_already_refunded = float(target_item.refundAmount or 0.0)
+            if item_already_refunded >= item_line_total:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Item '{target_item.name}' is already fully refunded."
+                )
+            target_item.refundAmount = item_already_refunded + refund_value
+            target_item.isRefunded = target_item.refundAmount >= (item_line_total - 0.01)
             refunded_item_name = target_item.name
             target_item.notes = f"{target_item.notes} | ₹{refund_value:.2f} Refunded" if target_item.notes else f"₹{refund_value:.2f} Refunded"
 
-    is_full_refund = refund_value >= float(order.total or 0.0)
+    new_refund_total = current_refund + refund_value
+    order.refundAmount = new_refund_total
+    is_full_refund = new_refund_total >= float(order.total or 0.0)
 
     refund_note = f"₹{refund_value:.2f} Refunded"
     if refunded_item_name:
         refund_note += f" ({refunded_item_name})"
-    if reason:
+    if reason and reason.lower() not in [f"refund for {refunded_item_name}".lower(), refunded_item_name.lower()]:
         refund_note += f" - {reason}"
 
     order.notes = f"{order.notes}\n{refund_note}" if order.notes else refund_note

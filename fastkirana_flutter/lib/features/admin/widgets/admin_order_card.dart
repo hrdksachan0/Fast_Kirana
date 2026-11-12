@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -894,13 +894,43 @@ class AdminOrderCard extends ConsumerWidget {
           if (order.notes?.isNotEmpty == true)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Text(
-                'Note: ${order.notes}',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11),
-                  fontWeight: FontWeight.w600,
-                  color: AppDesignSystem.orange600,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: (order.notes ?? '').split('\n').where((s) => s.trim().isNotEmpty).map((line) {
+                  final trimmed = line.trim();
+                  final isRefund = trimmed.contains('Refund');
+                  final isCashfree = trimmed.contains('Cashfree');
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          isRefund
+                              ? Icons.replay_rounded
+                              : (isCashfree ? Icons.payment_rounded : Icons.sticky_note_2_outlined),
+                          size: 13,
+                          color: isRefund
+                              ? const Color(0xFFE11D48)
+                              : (isCashfree ? const Color(0xFF0284C7) : AppDesignSystem.orange600),
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            trimmed,
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontWeight: FontWeight.w600,
+                              color: isRefund
+                                  ? const Color(0xFFE11D48)
+                                  : (isCashfree ? const Color(0xFF0369A1) : AppDesignSystem.orange600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
               ),
             ),
 

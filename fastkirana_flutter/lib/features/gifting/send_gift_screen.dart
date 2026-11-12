@@ -19,6 +19,10 @@ import '../../providers/store_hub_provider.dart';
 import '../checkout/controllers/checkout_controller.dart';
 import '../../widgets/floating_cart_bar.dart';
 import '../products/product_detail_screen.dart';
+import 'widgets/gifting_sparkle_canvas.dart';
+import 'widgets/luxury_gift_envelope_card.dart';
+import 'widgets/curated_gift_combos_shelf.dart';
+import 'widgets/gifting_trust_strip.dart';
 
 /// Luxury Gifting Store with 3D Banner, 6 Occasions Cards & 3-Column Zepto Grid
 /// Driven by real-time productsProvider and cartProvider.
@@ -34,6 +38,7 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
   final TextEditingController _receiverPhoneCtrl = TextEditingController();
   final TextEditingController _giftNoteCtrl = TextEditingController();
   late final ConfettiController _confettiController;
+  bool _isSecretGift = true;
 
   String _selectedOccasion = 'Birthday';
 
@@ -186,8 +191,11 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
                       n.isNotEmpty ? n : null,
                       p.isNotEmpty ? p : null,
                     );
-                    if (note.isNotEmpty) {
-                      ref.read(checkoutControllerProvider.notifier).updateNotes('🎁 Gift Card Note: ' + note);
+                    final secretPrefix = _isSecretGift ? '🎁 [SECRET GIFT: HIDE PRICE & INVOICE]\n' : '';
+                    if (note.isNotEmpty || _isSecretGift) {
+                      ref.read(checkoutControllerProvider.notifier).updateNotes(
+                        '$secretPrefix${note.isNotEmpty ? '💌 Gift Note: $note' : ''}',
+                      );
                     }
                     setState(() {});
                     _confettiController.play();
@@ -229,9 +237,6 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
     final allProductsAsync = ref.watch(productsProvider(null));
     final products = allProductsAsync.valueOrNull ?? [];
     final giftProducts = _filterGiftingProducts(products, _selectedOccasion, occasions);
-
-    final hasReceiverInfo = _receiverNameCtrl.text.trim().isNotEmpty ||
-        _receiverPhoneCtrl.text.trim().isNotEmpty;
 
     if (!config.enabled) {
       return Scaffold(
@@ -286,358 +291,358 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: const Color(0xFFFAF6F7),
       body: Stack(
         children: [
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // 1. Top Gifting Store Banner (Dynamic Gradient & Admin Uploaded Art)
-              SliverToBoxAdapter(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        config.gradientStart,
-                        config.gradientStart.withValues(alpha: 0.95),
-                        config.gradientEnd,
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                  child: SafeArea(
-                    bottom: false,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Top Nav
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Bounceable(
-                                onTap: () => Navigator.pop(context),
-                                child: Container(
-                                  width: 34,
-                                  height: 34,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.25),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.arrow_back_ios_new_rounded,
-                                    size: 16,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.20),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Text('📍', style: TextStyle(fontSize: 11)),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          selectedAddress != null
-                                              ? selectedAddress.fullAddress
-                                              : 'Ghatampur Hub',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Interactive Confetti Party Popper Button
-                                  Bounceable(
-                                    onTap: () {
-                                      HapticFeedback.lightImpact();
-                                      _confettiController.play();
-                                    },
-                                    child: Container(
-                                      width: 34,
-                                      height: 34,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.25),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Center(
-                                        child: Text('🎉', style: TextStyle(fontSize: 16)),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Full-Bleed 16:9 Luxury Gifting Artwork Banner Card
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
-                          child: AspectRatio(
-                            aspectRatio: 16 / 9,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.20),
-                                    blurRadius: 18,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                  BoxShadow(
-                                    color: const Color(0xFFBE123C).withValues(alpha: 0.15),
-                                    blurRadius: 24,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  if (config.bannerImageUrl.trim().isNotEmpty)
-                                    CachedNetworkImage(
-                                      imageUrl: config.bannerImageUrl,
-                                      fit: BoxFit.cover,
-                                      errorWidget: (_, __, ___) => _buildFallbackBanner(),
-                                    )
-                                  else
-                                    _buildFallbackBanner(),
-                                  // Subtle inner rim glow
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.25),
-                                        width: 1.2,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // 2. Horizontal Scrolling Occasion Pills / Cards
-              SliverToBoxAdapter(
-                child: Container(
-                  color: config.gradientEnd,
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: SizedBox(
-                    height: 48,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      itemCount: occasions.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, index) {
-                        final occ = occasions[index];
-                        final isSelected = occ.label == _selectedOccasion;
-                        return Bounceable(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() {
-                              _selectedOccasion = occ.label;
-                            });
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOutCubic,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.85),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isSelected ? const Color(0xFFBE123C) : Colors.transparent,
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: isSelected ? 0.12 : 0.04),
-                                  blurRadius: isSelected ? 10 : 4,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (occ.imageUrl.trim().isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 6),
-                                    child: CachedNetworkImage(
-                                      imageUrl: occ.imageUrl,
-                                      width: 22,
-                                      height: 22,
-                                      fit: BoxFit.contain,
-                                      errorWidget: (_, __, ___) => Text(occ.emoji, style: const TextStyle(fontSize: 16)),
-                                    ),
-                                  )
-                                else
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 6),
-                                    child: Text(occ.emoji, style: const TextStyle(fontSize: 16)),
-                                  ),
-                                Text(
-                                  occ.title,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11.5,
-                                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                                    color: isSelected ? const Color(0xFFBE123C) : const Color(0xFF334155),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-
-              // 3. Compact Receiver Details Pill (Unobtrusive)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-                  child: Bounceable(
-                    onTap: _showReceiverDetailsSheet,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: hasReceiverInfo ? const Color(0xFFEFF6FF) : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: hasReceiverInfo ? const Color(0xFFBFDBFE) : AppDesignSystem.slate200,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.02),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
+          GiftingSparkleCanvas(
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // 1. Top Gifting Store Banner (Royal Velvet & Gold Gradient)
+                SliverToBoxAdapter(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFF3D0C18), // Deep velvet wine
+                          Color(0xFF5A1224), // Rich bordeaux
+                          Color(0xFF7A1B32), // Vibrant rose wine
                         ],
-                      ),
-                      child: Row(
-                        children: [
-                          Text(hasReceiverInfo ? '🎁' : '👤', style: const TextStyle(fontSize: 13)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              hasReceiverInfo
-                                  ? 'Gifting to: ${_receiverNameCtrl.text.trim()} (${_receiverPhoneCtrl.text.trim()})'
-                                  : 'Sending as a gift? Add receiver details',
-                              style: GoogleFonts.inter(
-                                fontSize: 10.5,
-                                fontWeight: hasReceiverInfo ? FontWeight.w700 : FontWeight.w600,
-                                color: hasReceiverInfo ? const Color(0xFF1D4ED8) : AppDesignSystem.slate700,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Text(
-                            hasReceiverInfo ? 'EDIT' : '+ ADD',
-                            style: GoogleFonts.inter(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF2563EB),
-                            ),
-                          ),
-                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                       ),
                     ),
-                  ),
-                ),
-              ),
-
-              // 4. Products Section Title
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
+                    child: SafeArea(
+                      bottom: false,
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Popular in $_selectedOccasion',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: AppDesignSystem.slate900,
-                              letterSpacing: -0.2,
+                          // Top Nav Bar: Glassmorphism back button + Crown title + Location + Confetti
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Bounceable(
+                                  onTap: () => Navigator.pop(context),
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFFFFDF73).withValues(alpha: 0.35),
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.arrow_back_ios_new_rounded,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.25),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: const Color(0xFFFFDF73).withValues(alpha: 0.4),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Text('📍', style: TextStyle(fontSize: 11)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            selectedAddress != null
+                                                ? selectedAddress.fullAddress
+                                                : 'Ghatampur Hub',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFFFFE082),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // Interactive Confetti Party Popper Button
+                                    Bounceable(
+                                      onTap: () {
+                                        HapticFeedback.lightImpact();
+                                        _confettiController.play();
+                                      },
+                                      child: Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFD4AF37).withValues(alpha: 0.25),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: const Color(0xFFFFDF73),
+                                            width: 1.0,
+                                          ),
+                                        ),
+                                        child: const Center(
+                                          child: Text('🎉', style: TextStyle(fontSize: 16)),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                          Text(
-                            'Real-time inventory from $storeCity Store',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                              color: AppDesignSystem.slate500,
+
+                          // Full-Bleed 16:9 Luxury Gifting Artwork Banner Card with Gold Rim
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
+                            child: AspectRatio(
+                              aspectRatio: 16 / 9,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(22),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFDF73).withValues(alpha: 0.45),
+                                    width: 1.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.28),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                    BoxShadow(
+                                      color: const Color(0xFF6B1728).withValues(alpha: 0.30),
+                                      blurRadius: 24,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    if (config.bannerImageUrl.trim().isNotEmpty)
+                                      CachedNetworkImage(
+                                        imageUrl: config.bannerImageUrl,
+                                        fit: BoxFit.cover,
+                                        errorWidget: (_, __, ___) => _buildFallbackBanner(),
+                                      )
+                                    else
+                                      _buildFallbackBanner(),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0FDF4),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFFBBF7D0)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 5,
-                              height: 5,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF16A34A),
-                                shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+
+                // 2. Luxury Gifting Trust & Speed Strip
+                const SliverToBoxAdapter(
+                  child: GiftingTrustStrip(),
+                ),
+
+                // 3. Interactive Wax-Sealed Gift Card & Secret Mode Envelope
+                SliverToBoxAdapter(
+                  child: LuxuryGiftEnvelopeCard(
+                    recipientName: _receiverNameCtrl.text.trim(),
+                    recipientPhone: _receiverPhoneCtrl.text.trim(),
+                    giftNote: _giftNoteCtrl.text.trim(),
+                    isSecretGift: _isSecretGift,
+                    onSecretGiftToggle: (val) {
+                      setState(() => _isSecretGift = val);
+                      final note = _giftNoteCtrl.text.trim();
+                      final secretPrefix = val ? '🎁 [SECRET GIFT: HIDE PRICE & INVOICE]\n' : '';
+                      ref.read(checkoutControllerProvider.notifier).updateNotes(
+                        '$secretPrefix${note.isNotEmpty ? '💌 Gift Note: $note' : ''}',
+                      );
+                    },
+                    onTapEdit: _showReceiverDetailsSheet,
+                  ),
+                ),
+
+                // 4. Curated 1-Tap Gift Combos & Hampers
+                SliverToBoxAdapter(
+                  child: CuratedGiftCombosShelf(
+                    catalog: products,
+                    onHamperAdded: () {
+                      _confettiController.play();
+                      setState(() {});
+                    },
+                  ),
+                ),
+
+                // 5. Horizontal Scrolling Occasion Pills / Cards (Royal Velvet & Gold)
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 14, bottom: 8),
+                    child: SizedBox(
+                      height: 48,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        itemCount: occasions.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          final occ = occasions[index];
+                          final isSelected = occ.label == _selectedOccasion;
+                          return Bounceable(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                _selectedOccasion = occ.label;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOutCubic,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected ? const Color(0xFF4A0E1C) : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? const Color(0xFFFFDF73)
+                                      : const Color(0xFFEBC1CC),
+                                  width: isSelected ? 1.5 : 1.0,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isSelected
+                                        ? const Color(0xFF6B1728).withValues(alpha: 0.25)
+                                        : Colors.black.withValues(alpha: 0.03),
+                                    blurRadius: isSelected ? 8 : 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (occ.imageUrl.trim().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 6),
+                                      child: CachedNetworkImage(
+                                        imageUrl: occ.imageUrl,
+                                        width: 22,
+                                        height: 22,
+                                        fit: BoxFit.contain,
+                                        errorWidget: (_, __, ___) =>
+                                            Text(occ.emoji, style: const TextStyle(fontSize: 16)),
+                                      ),
+                                    )
+                                  else
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 6),
+                                      child: Text(occ.emoji, style: const TextStyle(fontSize: 16)),
+                                    ),
+                                  Text(
+                                    occ.title,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11.5,
+                                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                                      color: isSelected ? const Color(0xFFFFE082) : const Color(0xFF4A0E1C),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 4),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 6. Products Section Title
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text('✨', style: TextStyle(fontSize: 13)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Curated for $_selectedOccasion',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF3D0C18),
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 1),
                             Text(
-                              'LIVE',
+                              'Fresh stock delivered from $storeCity Dark Store',
                               style: GoogleFonts.inter(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFF15803D),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF7A4A57),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFBBF7D0)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 5,
+                                height: 5,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF16A34A),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'LIVE STOCK',
+                                style: GoogleFonts.inter(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF15803D),
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // 5. 3-Column Zepto Style Product Cards Grid (Real-time backend attached!)
+                // 5. 3-Column Zepto Style Product Cards Grid (Real-time backend attached!)
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(10, 4, 10, 110),
                 sliver: SliverGrid(
@@ -680,6 +685,7 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
               ),
             ],
           ),
+          ),
 
           // 6. Floating Cart Bar (Exact same as home screen / "bahr")
           // Celebratory Confetti Emitter at Top Center
@@ -711,29 +717,84 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
   }
 
   Widget _buildFallbackBanner() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF881337), Color(0xFFBE123C)],
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('🎁', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 8),
-            Text(
-              'Perfect Gifting for Every Occasion',
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset(
+          'assets/navratri/gifting-boutique-hero-hd.jpg',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF3D0C18), Color(0xFF6B1728)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
-          ],
+            child: const Center(
+              child: Text('🎁', style: TextStyle(fontSize: 48)),
+            ),
+          ),
         ),
-      ),
+        // Subtle gold vignette gradient
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.15),
+                Colors.transparent,
+                Colors.black.withValues(alpha: 0.40),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          left: 14,
+          bottom: 14,
+          right: 14,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6B1728),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFFDF73), width: 0.8),
+                ),
+                child: Text(
+                  '👑 ROYAL BOUTIQUE',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: const Color(0xFFFFDF73),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Thoughtful Gifts, Delivered in 10 Mins',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1054,22 +1115,22 @@ class _ZeptoGiftCard extends StatelessWidget {
                         ? Bounceable(
                             onTap: onAdd,
                             child: Container(
-                              width: 32,
-                              height: 32,
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFF16A34A), width: 1.4),
+                                borderRadius: BorderRadius.circular(9),
+                                border: Border.all(color: const Color(0xFF16A34A), width: 1.5),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF16A34A).withValues(alpha: 0.18),
+                                    color: const Color(0xFF16A34A).withValues(alpha: 0.20),
                                     blurRadius: 5,
                                     offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
                               child: const Center(
-                                child: Icon(Icons.add_rounded, size: 20, color: Color(0xFF16A34A)),
+                                child: Icon(Icons.add, size: 25, color: Color(0xFF16A34A)),
                               ),
                             ),
                           )
@@ -1096,7 +1157,7 @@ class _ZeptoGiftCard extends StatelessWidget {
                                     height: 30,
                                     alignment: Alignment.center,
                                     color: Colors.transparent,
-                                    child: const Icon(Icons.remove_rounded, size: 14, color: Colors.white),
+                                    child: const Icon(Icons.remove_rounded, size: 16, color: Colors.white),
                                   ),
                                 ),
                                 Padding(
@@ -1117,7 +1178,7 @@ class _ZeptoGiftCard extends StatelessWidget {
                                     height: 30,
                                     alignment: Alignment.center,
                                     color: Colors.transparent,
-                                    child: const Icon(Icons.add_rounded, size: 14, color: Colors.white),
+                                    child: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
                                   ),
                                 ),
                               ],

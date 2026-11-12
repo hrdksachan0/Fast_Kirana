@@ -5,6 +5,7 @@ import { unstable_cache } from 'next/cache'
 import { Metadata } from 'next'
 import { StorefrontClient } from '@/components/home/storefront-client'
 import { parseCampaignConfig } from '@/lib/campaign-config'
+import { defaultCampaignBentoConfig, parseCampaignBentoConfig } from '@/lib/campaign-bento-config'
 
 export const metadata: Metadata = {
   title: 'FastMinute (Fast Minute) - Grocery & Food Delivery in Ghatampur',
@@ -338,17 +339,28 @@ const getCachedCategorySortRules = unstable_cache(
 const getCachedHomepageCampaign = unstable_cache(
   async () => {
     try {
-      const row = await prisma.storeSetting.findUnique({
-        where: { key: 'homepage_campaign' },
-        select: { value: true },
+      const rows = await prisma.storeSetting.findMany({
+        where: { key: { in: ['homepage_campaign', 'campaign_bento'] } },
+        select: { key: true, value: true },
       })
-      if (!row?.value) return null
-      return JSON.parse(row.value)
+      const parseJson = (key: string) => {
+        const raw = rows.find((r) => r.key === key)?.value
+        if (!raw) return null
+        try {
+          return JSON.parse(raw)
+        } catch {
+          return null
+        }
+      }
+      return {
+        homepageCampaign: parseJson('homepage_campaign'),
+        bentoCampaign: parseJson('campaign_bento'),
+      }
     } catch {
-      return null
+      return { homepageCampaign: null, bentoCampaign: null }
     }
   },
-  ['storefront-homepage-campaign-v3'],
+  ['storefront-homepage-campaign-v4'],
   { revalidate: 3600, tags: ['settings', 'campaign'] }
 )
 
@@ -422,7 +434,7 @@ const getCachedRestaurants = unstable_cache(
     })
   },
   ['storefront-restaurants-v6'],
-  { revalidate: 60, tags: ['restaurants'] }
+  { revalidate: 86400, tags: ['restaurants'] }
 )
 
 export default async function Home() {
@@ -441,6 +453,7 @@ export default async function Home() {
   let restaurantsRaw: any[] = []
   let allGroceryRaw: any[] = []
   let campaignRaw: any = null
+  let bentoCampaignRaw: any = null
 
   // Fetch independent data pools in parallel using cached functions to avoid sequence waterfalls and DB load
   let manualTopPicks: any[] = []
@@ -498,7 +511,8 @@ export default async function Home() {
     sortRulesRaw = sortRulesRes
     restaurantsRaw = restaurantsRes
     allGroceryRaw = allGroceryRes
-    campaignRaw = campaignRes
+    campaignRaw = campaignRes?.homepageCampaign ?? null
+    bentoCampaignRaw = campaignRes?.bentoCampaign ?? null
   } catch (error) {
     console.error('Failed to execute parallel queries on home page:', error)
   }
@@ -636,6 +650,14 @@ export default async function Home() {
           } catch (e) {
             console.error('Failed to parse campaign config, rendering without banner:', e)
             return null
+          }
+        })()}
+        initialBentoCampaign={(() => {
+          if (!bentoCampaignRaw) return null
+          try {
+            return parseCampaignBentoConfig(bentoCampaignRaw)
+          } catch {
+            return defaultCampaignBentoConfig
           }
         })()}
       />

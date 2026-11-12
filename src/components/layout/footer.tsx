@@ -206,6 +206,17 @@ export function Footer() {
             <Link href="/about" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">About Us</Link>
             <Link href="/privacy-policy" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Terms of Service</Link>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('open-cookie-settings'))
+                }
+              }}
+              className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+            >
+              Cookie Choices
+            </button>
             <Link href="/refund-policy" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Refund Policy</Link>
             <Link href="/shipping-policy" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Shipping Policy</Link>
             <Link href="/contact" className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors">Contact Us</Link>

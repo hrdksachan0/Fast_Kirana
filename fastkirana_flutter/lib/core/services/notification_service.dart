@@ -69,9 +69,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         title.toString().toLowerCase().contains('kitchen') ||
         title.toString().toLowerCase().contains('new order');
 
-    // ONLY suppress if the user is explicitly identified as a normal CUSTOMER / USER and NOT staff
-    if (!isStaff && (userRole == 'CUSTOMER' || userRole == 'USER') && isStaffOrAdminMessage) {
-      debugPrint('NotificationService: Suppressing staff/admin alert for customer user in background.');
+    // ONLY suppress if the user is NOT staff (covers both confirmed CUSTOMER/USER and logged-out/empty role)
+    if (!isStaff && isStaffOrAdminMessage) {
+      debugPrint('NotificationService: Suppressing staff/admin alert for non-staff user ($userRole) in background.');
       return;
     }
 
@@ -175,6 +175,23 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       orderStatus == 'FAILED' || orderStatus == 'REFUNDED' ||
       title.toString().toLowerCase().contains('cancel') ||
       (body ?? '').toString().toLowerCase().contains('cancel');
+
+  // If order was cancelled/rejected/failed/delivered, immediately dismiss any ongoing lock-screen live tracker
+  // BEFORE checking `notification != null`, because Android OS displays `message.notification` directly.
+  if (orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' || orderStatus == 'FAILED' || orderStatus == 'DELIVERED') {
+    try {
+      final rawOid = (data['orderId'] ?? data['id'] ?? '').toString().trim();
+      final rawRid = (data['readableId'] ?? '').toString().trim();
+      if (rawOid.isNotEmpty || rawRid.isNotEmpty) {
+        final plugin = FlutterLocalNotificationsPlugin();
+        await NotificationService.clearOrderNotificationsById(
+          rawOid,
+          readableId: rawRid.isNotEmpty ? rawRid : null,
+          plugin: plugin,
+        );
+      }
+    } catch (_) {}
+  }
 
   final isOrderStatusUpdate = !isCancelledOrTerminal && (
       orderStatus == 'OUT_FOR_DELIVERY' ||
@@ -326,6 +343,38 @@ class NotificationService {
     return (raw.hashCode.abs() % 100000) + 50000;
   }
 
+  /// Collect all candidate notification IDs that may have been used for an order's live tracker
+  static Set<int> getCandidateOrderNotifIds(String? orderId, {String? readableId}) {
+    final ids = <int>{};
+    final oid = orderId?.replaceAll('#', '').trim() ?? '';
+    final rid = readableId?.replaceAll('#', '').trim() ?? '';
+    if (oid.isNotEmpty) {
+      ids.add(getOrderNotifId(oid));
+      final baseOid = oid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+      if (baseOid.isNotEmpty) ids.add(getOrderNotifId(baseOid));
+    }
+    if (rid.isNotEmpty) {
+      ids.add(getOrderNotifId(oid, readableId: rid));
+      final baseRid = rid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+      if (baseRid.isNotEmpty) ids.add(getOrderNotifId(oid, readableId: baseRid));
+    }
+    return ids;
+  }
+
+  /// Cancel all candidate live-tracker notifications for an order (works in both main & background isolates)
+  static Future<void> clearOrderNotificationsById(
+    String? orderId, {
+    String? readableId,
+    FlutterLocalNotificationsPlugin? plugin,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      final targetPlugin = plugin ?? FlutterLocalNotificationsPlugin();
+      final ids = getCandidateOrderNotifIds(orderId, readableId: readableId);
+      await Future.wait(ids.map((id) => targetPlugin.cancel(id).catchError((_) {})));
+    } catch (_) {}
+  }
+
   /// Centralized route resolver for push notifications across Customer, Admin, Store Manager, Restaurant, and Rider
   static String? _resolveNotificationRoute(Map<String, dynamic> data) {
     final rawUrl = data['url'] ?? data['linkUrl'] ?? data['link'];
@@ -456,6 +505,17 @@ class NotificationService {
   }
 
   bool _initialized = false;
+  Dio? _lastDio;
+  static const String _subscribedTopicsPrefKey = 'subscribed_fcm_topics';
+  static const String _pendingCleanupPrefKey = 'pending_fcm_cleanup';
+  static const String _pendingUnregisterTokenKey = 'pending_fcm_unregister_token';
+  static const List<String> _knownHubIds = [
+    'hub-209206',
+    'hub-224122',
+    'hub-816101',
+    'hub-816107',
+    'hub-209101',
+  ];
 
   // In-memory preference cache (loaded from SharedPreferences on init)
   final Map<String, bool> _prefs = {
@@ -601,25 +661,37 @@ class NotificationService {
         debugPrint('[NotificationService] getInitialMessage error: $e');
       }
 
-      // 7. Auto-save refreshed tokens for re-registration
+      // 7. Auto-save refreshed tokens and re-register cleanly when authenticated
       FirebaseMessaging.instance.onTokenRefresh.listen((String newToken) async {
         logger.i("FCM token refreshed: ${newToken.substring(0, 20)}...");
         await prefs.setString('pending_fcm_token', newToken);
+        final savedUserId = (await SecureStorage.read('user_id')) ?? prefs.getString('user_id');
+        if (_lastDio != null && savedUserId != null && savedUserId.isNotEmpty) {
+          unawaited(registerDeviceToken(_lastDio!));
+        }
       });
 
-      // 8. Auto-subscribe to broadcast topics
+      // 8. If a previous logout happened offline, finish purging stale staff/admin topics now
+      if (prefs.getBool(_pendingCleanupPrefKey) == true) {
+        await _purgeTopics(_knownStaffTopics(), keep: const {});
+        final savedUserId = (await SecureStorage.read('user_id')) ?? prefs.getString('user_id');
+        if (savedUserId == null || savedUserId.isEmpty) {
+          await prefs.remove(_pendingCleanupPrefKey);
+        }
+      }
+
+      // 9. Auto-subscribe to broadcast topics
       try {
-        await _fcm?.subscribeToTopic('all_users');
-        await _fcm?.subscribeToTopic('ghatampur_alerts');
+        await subscribeToTopic('all_users');
+        await subscribeToTopic('ghatampur_alerts');
         final savedUserId = prefs.getString('user_id');
         if (savedUserId != null && savedUserId.isNotEmpty) {
-          await _fcm?.subscribeToTopic('user_$savedUserId');
+          await subscribeToTopic('user_$savedUserId');
         }
-        // Purge legacy phone topic to prevent duplicate pushes
         final savedPhone = prefs.getString('user_phone') ?? '';
         final clean = savedPhone.replaceAll('+91', '').replaceAll(' ', '').trim();
         if (clean.length == 10) {
-          try { await _fcm?.subscribeToTopic('phone_$clean'); } catch (_) {}
+          await subscribeToTopic('phone_$clean');
         }
       } catch (e) {
         logger.e("Topic subscription error: $e");
@@ -679,8 +751,8 @@ class NotificationService {
           title.toString().toLowerCase().contains('kitchen') ||
           title.toString().toLowerCase().contains('new order');
 
-      if (!isStaff && (userRole == 'CUSTOMER' || userRole == 'USER') && isStaffOrAdminMessage) {
-        debugPrint('NotificationService: Suppressed staff/admin alert for customer user in foreground.');
+      if (!isStaff && isStaffOrAdminMessage) {
+        debugPrint('NotificationService: Suppressed staff/admin alert for non-staff user ($userRole) in foreground.');
         return;
       }
 
@@ -812,6 +884,13 @@ class NotificationService {
         orderStatus == 'FAILED' || orderStatus == 'REFUNDED' ||
         title.toString().toLowerCase().contains('cancel') ||
         body.toString().toLowerCase().contains('cancel');
+
+    if (orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' || orderStatus == 'FAILED' || orderStatus == 'DELIVERED') {
+      await clearLiveOrderActivity(
+        (data['orderId'] ?? data['id'] ?? '').toString(),
+        readableId: data['readableId']?.toString(),
+      );
+    }
 
     final isOrderStatusUpdate = !isCancelledOrTerminal && (
         orderStatus == 'OUT_FOR_DELIVERY' ||
@@ -1070,10 +1149,11 @@ class NotificationService {
   /// Clears ongoing lock screen tracking widget once order is delivered or cancelled
   Future<void> clearLiveOrderActivity(String orderId, {String? readableId}) async {
     if (kIsWeb) return;
-    try {
-      final int notifId = NotificationService.getOrderNotifId(orderId, readableId: readableId);
-      await _localNotifications?.cancel(notifId);
-    } catch (_) {}
+    await clearOrderNotificationsById(
+      orderId,
+      readableId: readableId,
+      plugin: _localNotifications,
+    );
   }
 
   Future<void> requestPermissions() async {
@@ -1136,6 +1216,79 @@ class NotificationService {
     }
   }
 
+  Future<void> _trackSubscribedTopic(String topic) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = List<String>.from(prefs.getStringList(_subscribedTopicsPrefKey) ?? const []);
+      if (!list.contains(topic)) {
+        list.add(topic);
+        await prefs.setStringList(_subscribedTopicsPrefKey, list);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _untrackSubscribedTopic(String topic) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = List<String>.from(prefs.getStringList(_subscribedTopicsPrefKey) ?? const []);
+      if (list.remove(topic)) {
+        await prefs.setStringList(_subscribedTopicsPrefKey, list);
+      }
+    } catch (_) {}
+  }
+
+  Set<String> _knownStaffTopics({String? storeId, String? restaurantId}) {
+    final topics = <String>{
+      'admin_orders',
+      'admin_orders_all',
+      'staff_orders',
+      'picker_orders',
+      'delivery_orders',
+      'admin_orders_wedson_store',
+      'admin_orders_ghatampur',
+      'staff_orders_wedson_store',
+      'staff_orders_ghatampur',
+    };
+    for (final hub in _knownHubIds) {
+      topics.add('admin_orders_$hub');
+      topics.add('staff_orders_$hub');
+      topics.add('picker_orders_$hub');
+      topics.add('delivery_orders_$hub');
+    }
+    if (storeId != null && storeId.isNotEmpty) {
+      topics.add('admin_orders_$storeId');
+      topics.add('staff_orders_$storeId');
+      topics.add('picker_orders_$storeId');
+      topics.add('delivery_orders_$storeId');
+    }
+    if (restaurantId != null && restaurantId.isNotEmpty) {
+      topics.add('restaurant_$restaurantId');
+      topics.add('kitchen_$restaurantId');
+      topics.add('restaurant_orders_$restaurantId');
+    }
+    return topics;
+  }
+
+  Future<void> _purgeTopics(Iterable<String> candidateTopics, {Set<String> keep = const {}}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final tracked = prefs.getStringList(_subscribedTopicsPrefKey) ?? const <String>[];
+      final toUnsub = <String>{...candidateTopics, ...tracked}.difference(keep).toList();
+      if (toUnsub.isEmpty) return;
+
+      await Future.wait(
+        toUnsub.map((t) async {
+          try {
+            await _fcm?.unsubscribeFromTopic(t);
+          } catch (_) {}
+        }),
+      );
+
+      final remaining = tracked.where((t) => keep.contains(t)).toList();
+      await prefs.setStringList(_subscribedTopicsPrefKey, remaining);
+    } catch (_) {}
+  }
+
   Future<void> registerDeviceToken(
     Dio dio, {
     String? role,
@@ -1143,11 +1296,26 @@ class NotificationService {
     String? assignedStoreId,
   }) async {
     if (kIsWeb) return;
+    _lastDio = dio;
     try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Finish any pending offline logout unregister before registering the new user
+      if (prefs.getBool(_pendingCleanupPrefKey) == true) {
+        final pendingToken = prefs.getString(_pendingUnregisterTokenKey);
+        if (pendingToken != null && pendingToken.isNotEmpty) {
+          try {
+            await dio.post('/api/fcm/unregister', data: {'token': pendingToken});
+            await prefs.remove(_pendingUnregisterTokenKey);
+          } catch (_) {}
+        }
+        await _purgeTopics(_knownStaffTopics(), keep: const {});
+        await prefs.remove(_pendingCleanupPrefKey);
+      }
+
       String? token = await getFcmToken();
       if (token == null) return;
 
-      final prefs = await SharedPreferences.getInstance();
       String deviceType = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : (Platform.isIOS ? 'ios' : 'web'));
       final userId = (await SecureStorage.read('user_id')) ?? prefs.getString('user_id');
       final phone = (await SecureStorage.read('user_phone')) ?? prefs.getString('user_phone') ?? '';
@@ -1179,96 +1347,50 @@ class NotificationService {
           effectiveRole == 'DELIVERY_PARTNER' ||
           effectiveRole == 'DRIVER');
 
-      // Subscribe to role-based and user-specific topics
+      // Subscribe to role-based and user-specific topics, and strictly purge all other role/hub/outlet topics
       try {
+        final keepTopics = <String>{
+          'all_users',
+          'ghatampur_alerts',
+          if (userId != null && userId.isNotEmpty) 'user_$userId',
+        };
+        final cleanPhone = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
+        if (cleanPhone.length == 10) {
+          keepTopics.add('phone_$cleanPhone');
+        }
+
         if (isAdmin) {
           final hasAssignedStore = (storeId != null && storeId.isNotEmpty);
-          if (hasAssignedStore) {
-            // Hub Admin / Store Manager: Subscribe ONLY to this specific hub's orders (Strict Hub Isolation)
-            await _fcm?.subscribeToTopic('admin_orders_$storeId');
-            try { await _fcm?.unsubscribeFromTopic('admin_orders'); } catch (_) {}
-          } else {
-            // Super Admin without assigned store: Subscribes to global canonical admin_orders topic
-            await _fcm?.subscribeToTopic('admin_orders');
-          }
-          // Actively purge duplicate, sub-console, and other hub topics
-          final duplicateTopicsToPurge = [
-            'admin_orders_all',
-            'staff_orders',
-            'picker_orders',
-            'delivery_orders',
-            'admin_orders_hub-209206',
-            'admin_orders_hub-209101',
-            'admin_orders_wedson_store',
-            'admin_orders_ghatampur',
-            if (storeId != null && storeId.isNotEmpty) ...[
-              'staff_orders_$storeId',
-              'picker_orders_$storeId',
-              'delivery_orders_$storeId',
-            ],
-          ];
-          for (final t in duplicateTopicsToPurge) {
-            if (hasAssignedStore && t == 'admin_orders_$storeId') continue;
-            try { await _fcm?.unsubscribeFromTopic(t); } catch (_) {}
-          }
+          final adminTopic = hasAssignedStore ? 'admin_orders_$storeId' : 'admin_orders';
+          keepTopics.add(adminTopic);
+          await subscribeToTopic(adminTopic);
+          await _purgeTopics(_knownStaffTopics(storeId: storeId, restaurantId: rId), keep: keepTopics);
         } else if (isRestaurant) {
           if (rId != null && rId.isNotEmpty) {
-            // Subscribe to single canonical restaurant topic
-            await _fcm?.subscribeToTopic('restaurant_$rId');
-            // Purge duplicate legacy topics
-            try { await _fcm?.unsubscribeFromTopic('kitchen_$rId'); } catch (_) {}
-            try { await _fcm?.unsubscribeFromTopic('restaurant_orders_$rId'); } catch (_) {}
+            final restTopic = 'restaurant_$rId';
+            keepTopics.add(restTopic);
+            await subscribeToTopic(restTopic);
           }
+          // Strictly purge ALL admin, staff, picker, delivery, and other restaurant topics
+          await _purgeTopics(_knownStaffTopics(storeId: storeId, restaurantId: rId), keep: keepTopics);
         } else if (isDeliveryOrPicker) {
           final isPicker = effectiveRole == 'PICKER';
-          if (isPicker) {
-            final topic = (storeId != null && storeId.isNotEmpty) ? 'picker_orders_$storeId' : 'picker_orders';
-            await _fcm?.subscribeToTopic(topic);
-            try { await _fcm?.unsubscribeFromTopic('staff_orders'); } catch (_) {}
-            try { await _fcm?.unsubscribeFromTopic('delivery_orders'); } catch (_) {}
-            if (storeId != null && storeId.isNotEmpty) {
-              try { await _fcm?.unsubscribeFromTopic('staff_orders_$storeId'); } catch (_) {}
-              try { await _fcm?.unsubscribeFromTopic('delivery_orders_$storeId'); } catch (_) {}
-            }
-          } else {
-            // Delivery / Rider - Strict Hub Subscription
-            if (storeId != null && storeId.isNotEmpty) {
-              await _fcm?.subscribeToTopic('delivery_orders_$storeId');
-              try { await _fcm?.unsubscribeFromTopic('delivery_orders'); } catch (_) {}
-            } else {
-              await _fcm?.subscribeToTopic('delivery_orders');
-            }
-            try { await _fcm?.unsubscribeFromTopic('staff_orders'); } catch (_) {}
-            try { await _fcm?.unsubscribeFromTopic('picker_orders'); } catch (_) {}
-            if (storeId != null && storeId.isNotEmpty) {
-              try { await _fcm?.unsubscribeFromTopic('staff_orders_$storeId'); } catch (_) {}
-              try { await _fcm?.unsubscribeFromTopic('picker_orders_$storeId'); } catch (_) {}
-            }
-          }
-        } else if (effectiveRole == 'CUSTOMER' || effectiveRole == 'USER') {
-          // Normal CUSTOMER / USER: Actively purge ANY leftover admin/staff/kitchen subscriptions on this device!
-          final staffTopicsToPurge = [
-            'admin_orders',
-            'admin_orders_all',
-            'staff_orders',
-            'admin_orders_wedson_store',
-            'admin_orders_ghatampur',
-            'staff_orders_wedson_store',
-            'staff_orders_ghatampur',
-          ];
-          for (final t in staffTopicsToPurge) {
-            try { await _fcm?.unsubscribeFromTopic(t); } catch (_) {}
-          }
+          final topic = isPicker
+              ? ((storeId != null && storeId.isNotEmpty) ? 'picker_orders_$storeId' : 'picker_orders')
+              : ((storeId != null && storeId.isNotEmpty) ? 'delivery_orders_$storeId' : 'delivery_orders');
+          keepTopics.add(topic);
+          await subscribeToTopic(topic);
+          await _purgeTopics(_knownStaffTopics(storeId: storeId, restaurantId: rId), keep: keepTopics);
+        } else {
+          // Normal CUSTOMER / USER (or guest): Actively purge EVERY tracked + known admin/staff/hub/kitchen topic!
+          await _purgeTopics(_knownStaffTopics(storeId: storeId, restaurantId: rId), keep: keepTopics);
         }
 
         if (userId != null && userId.isNotEmpty) {
-          await _fcm?.subscribeToTopic('user_$userId');
+          await subscribeToTopic('user_$userId');
         }
-        if (phone.isNotEmpty) {
-          final cleanPhone = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
-          if (cleanPhone.length == 10) {
-            try { await _fcm?.subscribeToTopic('phone_$cleanPhone'); } catch (_) {}
-          }
+        if (cleanPhone.length == 10) {
+          await subscribeToTopic('phone_$cleanPhone');
         }
       } catch (e) {
         logger.e("Error subscribing to topics: $e");
@@ -1300,6 +1422,7 @@ class NotificationService {
     if (kIsWeb) return;
     try {
       await _fcm?.subscribeToTopic(topic);
+      await _trackSubscribedTopic(topic);
     } catch (e, _) { LoggerService.error('NotificationService: error', e); }
   }
 
@@ -1307,44 +1430,30 @@ class NotificationService {
     if (kIsWeb) return;
     try {
       await _fcm?.unsubscribeFromTopic(topic);
+      await _untrackSubscribedTopic(topic);
     } catch (e, _) { LoggerService.error('NotificationService: error', e); }
   }
 
   /// Unsubscribe from ALL FCM topics on logout so no notifications arrive when logged out
   Future<void> unsubscribeAllTopics([Dio? dio]) async {
     if (kIsWeb) return;
+    final prefs = await SharedPreferences.getInstance();
+    String? token;
     try {
-      final prefs = await SharedPreferences.getInstance();
       final userId = (await SecureStorage.read('user_id')) ?? prefs.getString('user_id');
       final phone = (await SecureStorage.read('user_phone')) ?? prefs.getString('user_phone') ?? '';
       final restaurantId = (await SecureStorage.read('assigned_restaurant_id')) ?? prefs.getString('assigned_restaurant_id');
       final storeId = (await SecureStorage.read('assigned_store_id')) ?? prefs.getString('assigned_store_id');
-      final token = await getFcmToken();
+      token = await getFcmToken();
 
-      // 1. Tell backend to unbind and delete this token from admin/user records immediately
-      if (dio != null && token != null && token.isNotEmpty) {
-        try {
-          await dio.post('/api/fcm/unregister', data: {'token': token});
-        } catch (_) {}
-      }
-
-      // 2. Unsubscribe from all possible topics this device may have subscribed to
-      final topics = <String>[
+      // 1. Collect EVERY subscribed & known staff/admin/hub/user topic
+      final tracked = prefs.getStringList(_subscribedTopicsPrefKey) ?? const <String>[];
+      final topics = <String>{
+        ...tracked,
+        ..._knownStaffTopics(storeId: storeId, restaurantId: restaurantId),
         'all_users',
         'ghatampur_alerts',
-        'admin_orders',
-        'admin_orders_all',
-        'staff_orders',
-        'admin_orders_wedson_store',
-        'admin_orders_ghatampur',
-        'staff_orders_wedson_store',
-        'staff_orders_ghatampur',
-      ];
-
-      if (storeId != null && storeId.isNotEmpty) {
-        topics.add('admin_orders_$storeId');
-        topics.add('staff_orders_$storeId');
-      }
+      };
 
       if (userId != null && userId.isNotEmpty) {
         topics.add('user_$userId');
@@ -1355,25 +1464,44 @@ class NotificationService {
           topics.add('phone_$cleanPhone');
         }
       }
-      if (restaurantId != null && restaurantId.isNotEmpty) {
-        topics.add('restaurant_$restaurantId');
-        topics.add('kitchen_$restaurantId');
-        topics.add('restaurant_orders_$restaurantId');
-      }
 
-      for (final topic in topics) {
-        try {
-          await _fcm?.unsubscribeFromTopic(topic);
-        } catch (_) {}
-      }
+      // 2. Unsubscribe all topics in parallel + notify backend unregister simultaneously
+      var backendUnregistered = false;
+      await Future.wait([
+        ...topics.map((topic) async {
+          try {
+            await _fcm?.unsubscribeFromTopic(topic);
+          } catch (_) {}
+        }),
+        if (dio != null && token != null && token.isNotEmpty)
+          dio.post('/api/fcm/unregister', data: {
+            'token': token,
+            if (userId != null && userId.isNotEmpty) 'userId': userId,
+          }).then((res) {
+            if (res.statusCode == 200) backendUnregistered = true;
+          }).catchError((_) {}),
+      ]);
 
       // 3. Delete the FCM token on device so a clean new token is minted for subsequent logins
       try {
         await _fcm?.deleteToken();
       } catch (_) {}
 
-      debugPrint('NotificationService: Unsubscribed from ${topics.length} topics on logout');
+      await prefs.remove(_subscribedTopicsPrefKey);
+      if (!backendUnregistered && token != null && token.isNotEmpty) {
+        await prefs.setBool(_pendingCleanupPrefKey, true);
+        await prefs.setString(_pendingUnregisterTokenKey, token);
+      } else {
+        await prefs.remove(_pendingCleanupPrefKey);
+        await prefs.remove(_pendingUnregisterTokenKey);
+      }
+
+      debugPrint('NotificationService: Unsubscribed from ${topics.length} topics on logout (backendUnregistered=$backendUnregistered)');
     } catch (e, _) {
+      await prefs.setBool(_pendingCleanupPrefKey, true);
+      if (token != null && token.isNotEmpty) {
+        await prefs.setString(_pendingUnregisterTokenKey, token);
+      }
       LoggerService.error('NotificationService: unsubscribeAllTopics error', e);
     }
   }

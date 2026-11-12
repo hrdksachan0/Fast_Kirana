@@ -2189,11 +2189,10 @@ export function AdminBanners({
                           {previewMediaTab === 'video' && videoUrl ? (
                             <AdminVideoPreview src={videoUrl} />
                           ) : imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt="Brand Visual"
-                              className="w-full h-full object-cover"
-                            />
+                            <div className="relative w-full h-full overflow-hidden flex items-center justify-center bg-black">
+                              <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-125 pointer-events-none" />
+                              <img src={imageUrl} alt="Brand Visual" className="relative z-10 w-full h-full object-contain p-1 drop-shadow-md" />
+                            </div>
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-zinc-900/90 text-zinc-400">
                               <ImageIcon className="h-6 w-6 text-zinc-600 mb-1" />

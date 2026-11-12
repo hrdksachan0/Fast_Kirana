@@ -541,11 +541,6 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       final dio = ref.read(dioProvider);
       final prefs = await SharedPreferences.getInstance();
       final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
-      await notif.subscribeToTopic('admin_orders');
-      try { await notif.unsubscribeFromTopic('admin_orders_all'); } catch (_) {}
-      if (storeId != null && storeId.isNotEmpty) {
-        await notif.subscribeToTopic('admin_orders_$storeId');
-      }
       await notif.registerDeviceToken(dio, role: 'ADMIN', assignedStoreId: storeId);
     } catch (e) {
       debugPrint('[Admin] Notification init error: $e');

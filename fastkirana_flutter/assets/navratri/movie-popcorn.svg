@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <radialGradient id="kernelGrad" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#FEF08A"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </radialGradient>
+    <filter id="popGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Popcorn Overflow (Clouds of buttery kernels) -->
+  <g filter="url(#popGlow)">
+    <circle cx="38" cy="38" r="14" fill="url(#kernelGrad)"/>
+    <circle cx="58" cy="30" r="16" fill="url(#kernelGrad)"/>
+    <circle cx="78" cy="36" r="14" fill="url(#kernelGrad)"/>
+    <circle cx="48" cy="22" r="13" fill="url(#kernelGrad)"/>
+    <circle cx="68" cy="20" r="14" fill="url(#kernelGrad)"/>
+    <circle cx="28" cy="46" r="11" fill="url(#kernelGrad)"/>
+    <circle cx="90" cy="44" r="12" fill="url(#kernelGrad)"/>
+    <circle cx="60" cy="42" r="15" fill="url(#kernelGrad)"/>
+    <!-- Popped folds details -->
+    <path d="M48 24 C50 20 54 22 52 26" stroke="#D97706" stroke-width="2" stroke-linecap="round"/>
+    <path d="M66 22 C68 18 72 20 70 24" stroke="#D97706" stroke-width="2" stroke-linecap="round"/>
+    <path d="M58 34 C60 30 64 32 62 36" stroke="#D97706" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- Red & White Striped Popcorn Bucket (Trapezoid) -->
+  <g filter="url(#popGlow)">
+    <path d="M30 48 L40 106 L80 106 L90 48 Z" fill="#FFFFFF"/>
+    <!-- Red Stripes -->
+    <path d="M30 48 L34 48 L42 106 L38 106 Z" fill="#E11D48"/>
+    <path d="M46 48 L54 48 L53 106 L47 106 Z" fill="#E11D48"/>
+    <path d="M66 48 L74 48 L73 106 L67 106 Z" fill="#E11D48"/>
+    <path d="M86 48 L90 48 L82 106 L78 106 Z" fill="#E11D48"/>
+    <!-- Bucket Rim -->
+    <ellipse cx="60" cy="48" rx="30" ry="5" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+  </g>
+</svg>

@@ -1,0 +1,264 @@
+{
+  "version": 1,
+  "demo": false,
+  "enabled": true,
+  "autoplay": true,
+  "layout": "split",
+  "searchPrefix": "Search for",
+  "decorationImage": null,
+  "labels": {
+    "sectionLabel": "Breakfast Club",
+    "specialsHeading": "Build your breakfast",
+    "curvedTabLabel": "Breakfast Club",
+    "loadingText": "Loading products…",
+    "emptyText": "No products in this collection for this store yet.",
+    "demoLabel": "Demo prices",
+    "resultsDemoLabel": "Demo collection · illustrative prices"
+  },
+  "appearance": {
+    "background": "#FFF0DE",
+    "card": "#FFFCF8",
+    "text": "#302B29",
+    "smallText": "#302B29",
+    "headerText": "#653925",
+    "headerOutline": "#FFF0DE",
+    "underline": "#754834",
+    "tabSurface": "#FFFCF8"
+  },
+  "timings": {
+    "headerMs": 4400,
+    "productMs": 3400,
+    "searchMs": 3200,
+    "crossfadeMs": 320
+  },
+  "searchSuggestions": [
+    "Bread",
+    "Dairy",
+    "Tea",
+    "Fruit"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "cover",
+      "kind": "illustration",
+      "eyebrow": "",
+      "title": "Breakfast Club",
+      "subtitle": "Build your breakfast",
+      "image": "breakfast-club-hero.webp"
+    }
+  ],
+  "products": [
+    {
+      "id": "example-category-0",
+      "name": "Bread",
+      "image": "daily-bread.svg",
+      "originalPrice": 0,
+      "price": 0,
+      "currency": "INR",
+      "categoryId": "category-0",
+      "destinationId": "browse-0"
+    },
+    {
+      "id": "example-category-1",
+      "name": "Dairy",
+      "image": "daily-milk.svg",
+      "originalPrice": 0,
+      "price": 0,
+      "currency": "INR",
+      "categoryId": "category-1",
+      "destinationId": "browse-1"
+    },
+    {
+      "id": "example-category-2",
+      "name": "Tea",
+      "image": "monsoon-tea.svg",
+      "originalPrice": 0,
+      "price": 0,
+      "currency": "INR",
+      "categoryId": "category-2",
+      "destinationId": "browse-2"
+    },
+    {
+      "id": "example-category-3",
+      "name": "Fruit",
+      "image": "summer-mango.svg",
+      "originalPrice": 0,
+      "price": 0,
+      "currency": "INR",
+      "categoryId": "category-3",
+      "destinationId": "browse-3"
+    }
+  ],
+  "categories": [
+    {
+      "id": "category-0",
+      "label": "Bread",
+      "image": "daily-bread.svg",
+      "destinationId": "browse-0",
+      "keywords": [
+        "bread",
+        "toast"
+      ]
+    },
+    {
+      "id": "category-1",
+      "label": "Dairy",
+      "image": "daily-milk.svg",
+      "destinationId": "browse-1",
+      "keywords": [
+        "milk",
+        "butter"
+      ]
+    },
+    {
+      "id": "category-2",
+      "label": "Tea",
+      "image": "monsoon-tea.svg",
+      "destinationId": "browse-2",
+      "keywords": [
+        "tea",
+        "chai"
+      ]
+    },
+    {
+      "id": "category-3",
+      "label": "Fruit",
+      "image": "summer-mango.svg",
+      "destinationId": "browse-3",
+      "keywords": [
+        "mango",
+        "banana",
+        "fruit"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "selection",
+      "label": "Build your breakfast",
+      "image": "breakfast-club-hero.webp",
+      "keywords": [
+        "bread",
+        "toast",
+        "milk",
+        "butter",
+        "tea",
+        "chai",
+        "mango",
+        "banana",
+        "fruit"
+      ]
+    },
+    {
+      "id": "category-0",
+      "label": "Bread",
+      "image": "daily-bread.svg",
+      "keywords": [
+        "bread",
+        "toast"
+      ]
+    },
+    {
+      "id": "category-1",
+      "label": "Dairy",
+      "image": "daily-milk.svg",
+      "keywords": [
+        "milk",
+        "butter"
+      ]
+    },
+    {
+      "id": "category-2",
+      "label": "Tea",
+      "image": "monsoon-tea.svg",
+      "keywords": [
+        "tea",
+        "chai"
+      ]
+    },
+    {
+      "id": "category-3",
+      "label": "Fruit",
+      "image": "summer-mango.svg",
+      "keywords": [
+        "mango",
+        "banana",
+        "fruit"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "browse-0",
+      "kind": "search",
+      "query": "bread"
+    },
+    {
+      "id": "browse-1",
+      "kind": "search",
+      "query": "milk"
+    },
+    {
+      "id": "browse-2",
+      "kind": "search",
+      "query": "tea"
+    },
+    {
+      "id": "browse-3",
+      "kind": "search",
+      "query": "mango"
+    }
+  ],
+  "composition": "blocks",
+  "blocks": [
+    {
+      "id": "breakfast-club-banner",
+      "type": "banner",
+      "enabled": true,
+      "title": "",
+      "body": "",
+      "image": null,
+      "destinationId": null,
+      "itemIds": [],
+      "tabId": null,
+      "presentation": "wide",
+      "motion": {
+        "preset": "float",
+        "speed": "slow"
+      }
+    },
+    {
+      "id": "breakfast-club-collection",
+      "type": "collection",
+      "enabled": true,
+      "title": "",
+      "body": "",
+      "image": null,
+      "destinationId": null,
+      "itemIds": [],
+      "tabId": "selection",
+      "presentation": "grid",
+      "motion": {
+        "preset": "none",
+        "speed": "slow"
+      }
+    },
+    {
+      "id": "breakfast-club-categories",
+      "type": "categories",
+      "enabled": true,
+      "title": "",
+      "body": "",
+      "image": null,
+      "destinationId": null,
+      "itemIds": [],
+      "tabId": null,
+      "presentation": "grid",
+      "motion": {
+        "preset": "none",
+        "speed": "slow"
+      }
+    }
+  ]
+}

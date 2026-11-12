@@ -180,14 +180,14 @@ export async function POST(req: NextRequest) {
               const customerPhone = order.userPhone || 'N/A'
 
               if (isRestaurantOrder) {
-                sendPushNotificationToRoles([Role.ADMIN], {
-                  title: '💳 Online Payment Order Received!',
-                  body: `Order #${displayId} of ₹${notifyTotal} — PAID via Cashfree (Awaiting Admin Confirmation)`,
-                  tag: `order-${order.id}`,
-                  data: { orderId: order.id }
-                }).catch((err: any) => console.error('Push admin error:', err))
-
-                if (order.status !== 'ADMIN_PENDING') {
+                if (order.status === 'ADMIN_PENDING') {
+                  sendPushNotificationToRoles([Role.ADMIN], {
+                    title: '💳 Online Payment Order Received!',
+                    body: `Order #${displayId} of ₹${notifyTotal} — PAID via Cashfree (Awaiting Admin Confirmation)`,
+                    tag: `order-${order.id}`,
+                    data: { orderId: order.id }
+                  }).catch((err: any) => console.error('Push admin error:', err))
+                } else {
                   sendPushNotificationToRestaurant(order.restaurantId, {
                     title: `👨‍🍳 New Food Order #${displayId}!`,
                     body: `Order #${displayId} for ${outletName} is confirmed and paid. Start preparing dishes!`,
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
                     data: { orderId: order.id, restaurantId: order.restaurantId }
                   }).catch((err: any) => console.error('Push restaurant error:', err))
                 }
-              } else {
+              } else if (order.status === 'ADMIN_PENDING') {
                 sendPushNotificationToRoles([Role.ADMIN], {
                   title: '💳 Online Payment Order Received!',
                   body: `Order #${displayId} of ₹${notifyTotal} — PAID via Cashfree (Awaiting Admin Confirmation)`,

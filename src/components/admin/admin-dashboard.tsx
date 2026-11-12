@@ -46,6 +46,7 @@ import {
   FileText,
   Building2,
   Image as ImageIcon,
+  LayoutGrid,
   Settings,
   TrendingUp,
   Zap,
@@ -77,6 +78,7 @@ const CreateOrderModal = dynamic(
 )
 const ProductEditModal = dynamic(() => import('./product-edit-modal'), { ssr: false })
 const CampaignManager = dynamic(() => import('./campaign-manager').then(mod => mod.CampaignManager), { ssr:false })
+const CampaignBentoEditor = dynamic(() => import('./campaign-bento-editor').then(mod => mod.CampaignBentoEditor), { ssr: false })
 const FeaturedCategoriesManager = dynamic(() => import('./featured-categories-manager').then(mod => mod.FeaturedCategoriesManager), { ssr: false })
 const CategoryEditModal = dynamic(
   () => import('./category-edit-modal').then((m) => m.CategoryEditModal),
@@ -110,6 +112,7 @@ export type TabType =
   | 'inward'
   | 'banners'
   | 'campaigns'
+  | 'bento-cards'
   | 'settings'
   | 'liveops'
   | 'push-notifications'
@@ -869,6 +872,7 @@ export function AdminDashboard({
       { key: 'coupons' as TabType, label: 'Offers', icon: Ticket, count: reviewCouponHook.coupons.length },
       { key: 'banners' as TabType, label: 'Promo Banners', icon: ImageIcon },
       { key: 'campaigns' as TabType, label: 'Campaign Manager', icon: ImageIcon },
+      { key: 'bento-cards' as TabType, label: '6-Card Bento', icon: LayoutGrid },
       { key: 'flash-deals' as TabType, label: 'Store Highlights', icon: Zap },
       { key: 'gifting-store' as TabType, label: 'Gifting Store', icon: Gift },
       { key: 'push-notifications' as TabType, label: 'Push Notifications', icon: Bell },
@@ -1333,6 +1337,12 @@ export function AdminDashboard({
           )}
 
           {activeTab === 'campaigns' && <CampaignManager
+            storeId={selectedHubId}
+            onUpload={handleCloudinaryUpload}
+            authHeaders={sessionUserId ? { 'x-user-id':sessionUserId, 'x-user-role':sessionUserRole } : {}}
+          />}
+
+          {activeTab === 'bento-cards' && <CampaignBentoEditor
             storeId={selectedHubId}
             onUpload={handleCloudinaryUpload}
             authHeaders={sessionUserId ? { 'x-user-id':sessionUserId, 'x-user-role':sessionUserRole } : {}}

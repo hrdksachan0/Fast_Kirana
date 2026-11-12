@@ -17,8 +17,6 @@ import '../features/cafe/cafe_menu_screen.dart';
 import '../features/search/search_screen.dart';
 import 'card_media_widget.dart';
 import '../features/gifting/send_gift_screen.dart';
-import '../features/bakery/bakery_store_screen.dart';
-import '../providers/gifting_store_provider.dart';
 
 /// Ultra-Premium Animated Hero Carousel (Amazon Side-Peek + Swiggy Instamart Depth)
 /// Specifications:
@@ -346,38 +344,9 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
   @override
   Widget build(BuildContext context) {
     final offersAsync = ref.watch(brandOfferCardsProvider(widget.type));
-    final giftingConfig = ref.watch(giftingStoreConfigProvider).valueOrNull;
 
     final rawCards = offersAsync.valueOrNull ?? [];
     final List<CategoryCardData> cards = List.of(rawCards);
-
-    // If in grocery mode and no gifting card exists, append the premier gifting card
-    if ((widget.type == 'grocery' || widget.type == null) &&
-        !cards.any((c) => c.ctaUrl == '/gift' || c.redirectUrl == '/gift')) {
-      cards.add(
-        CategoryCardData(
-          id: 'gift-for-someone-banner',
-          title: (giftingConfig != null && giftingConfig.bannerTitle.isNotEmpty)
-              ? '${giftingConfig.bannerTitle} 🎁'
-              : 'Send a Gift in 15 Mins 🎁',
-          subtitle: (giftingConfig != null && giftingConfig.bannerSubtitle.isNotEmpty)
-              ? giftingConfig.bannerSubtitle
-              : 'Chocolates, Cakes, Mithai & Custom Cards delivered at doorstep',
-          eyebrowTag: 'SURPRISE SOMEONE',
-          ctaText: 'SEND GIFT →',
-          ctaUrl: '/gift',
-          redirectUrl: '/gift',
-          cardType: 'hero',
-          type: 'grocery',
-          imageUrl: (giftingConfig != null && giftingConfig.bannerImageUrl.trim().isNotEmpty)
-              ? giftingConfig.bannerImageUrl.trim()
-              : 'https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/banners/perfect-gifting-banner.webp',
-          gradientColorsHex: const ['#E11D48', '#BE123C', '#881337'],
-          isActive: true,
-          sortOrder: 1,
-        ),
-      );
-    }
 
     if (cards.isEmpty) {
       return const SizedBox.shrink();

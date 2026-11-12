@@ -502,25 +502,8 @@ async def dispatch_isolated_order_fcm_notifications(
         except Exception as r_err:
             logger.warning(f"Direct rider tokens multicast warning: {r_err}")
 
-        # ── 3. BROADCAST TO HUB MANAGER & MASTER ADMIN ──
-        admin_title = f"💳 Online Paid Order #{readable_id}!" if is_paid else f"🛎️ New Order Received #{readable_id}"
-        admin_body = f"Order #{readable_id} of ₹{total:.2f} is PAID online. Tap to review." if is_paid else f"New order #{readable_id} of ₹{total:.2f} has been placed. Tap to review."
-        admin_data = {
-            "orderId": order_id,
-            "readableId": str(readable_id),
-            "storeId": str(store_id or ""),
-            "restaurantId": str(restaurant_id or ""),
-            "status": status_val,
-            "paymentStatus": "PAID" if is_paid else "PENDING",
-            "isPaid": "true" if is_paid else "false",
-            "screen": "admin-orders",
-            "type": "NEW_ORDER",
-            "role": "ADMIN",
-            "timestamp": now_ts,
-        }
-        if store_id:
-            await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_title, admin_body, admin_data)
-        await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
+        # Note: Admin is notified ONLY when status_val == "ADMIN_PENDING" (Case 1 above).
+        # Auto-approved / confirmed orders bypass Admin buzzer and route directly to Rider + Restaurant/Picker.
     except Exception as e:
         logger.error(f"Failed to dispatch isolated FCM push notification: {str(e)}")
 
@@ -572,19 +555,22 @@ async def dispatch_isolated_status_update_notifications(
             await send_fcm_topic_notification(rider_topic, rider_title, rider_body, rider_data)
 
         if restaurant_id:
-            # RESTAURANT / KITCHEN ISOLATED STATUS UPDATE
-            rest_title = f"👨‍🍳 Order #{base_order_no} Status: {status_val}"
-            rest_body = f"Order #{base_order_no} for {safe_shop_name or 'Kitchen'} updated to {status_val}."
-            rest_data = {
-                "orderId": order_id,
-                "readableId": str(readable_id),
-                "restaurantId": str(restaurant_id),
-                "status": status_val,
-                "screen": "restaurant-console",
-                "type": "ORDER_STATUS_UPDATE",
-                "timestamp": now_ts,
-            }
-            await send_fcm_topic_notification(f"restaurant_{restaurant_id}", rest_title, rest_body, rest_data)
+            # RESTAURANT / KITCHEN ISOLATED STATUS UPDATE:
+            # Only notify restaurant quietly when an order is CANCELLED.
+            # Intermediate status transitions (CONFIRMED/PACKED/SHIPPED/DELIVERED) update live UI via Realtime/WS without chime spam.
+            if str(status_val or "").upper() == "CANCELLED":
+                rest_title = f"❌ Order #{base_order_no} Cancelled"
+                rest_body = f"Order #{base_order_no} for {safe_shop_name or 'Kitchen'} has been cancelled."
+                rest_data = {
+                    "orderId": order_id,
+                    "readableId": str(readable_id),
+                    "restaurantId": str(restaurant_id),
+                    "status": "CANCELLED",
+                    "screen": "restaurant-console",
+                    "type": "ORDER_STATUS_UPDATE",
+                    "timestamp": now_ts,
+                }
+                await send_fcm_topic_notification(f"restaurant_{restaurant_id}", rest_title, rest_body, rest_data)
 
         else:
             # GROCERY DARK STORE ISOLATED STATUS UPDATE
@@ -1198,17 +1184,34 @@ async def create_order(
 
     # Load products and validate quantities
     product_ids = []
+    product_names = []
     for i in items:
-        pid = i.get("product", {}).get("id") or i.get("productId")
+        prod_payload = i.get("product") or {}
+        pid = prod_payload.get("id") or i.get("productId")
         if pid:
             pid_str = str(pid)
             product_ids.append(pid_str)
             if "_" in pid_str:
                 product_ids.append(pid_str.split("_")[0])
+        pname = prod_payload.get("name") or i.get("name")
+        if pname:
+            pname_str = str(pname).strip()
+            product_names.append(pname_str)
+            clean_pname = re.sub(r'\s*\([^)]*\)\s*$', '', pname_str).strip()
+            if clean_pname and clean_pname != pname_str:
+                product_names.append(clean_pname)
     product_slugs = [i["product"]["slug"] for i in items if i.get("product", {}).get("slug")]
 
+    search_filters = []
+    if product_ids:
+        search_filters.append(Product.id.in_(product_ids))
+    if product_slugs:
+        search_filters.append(Product.slug.in_(product_slugs))
+    if product_names:
+        search_filters.append(func.lower(Product.name).in_([n.lower() for n in product_names]))
+
     p_stmt = select(Product).options(selectinload(Product.category)).where(
-        or_(Product.id.in_(product_ids), Product.slug.in_(product_slugs))
+        or_(*search_filters)
     ).with_for_update()
     p_res = await db.execute(p_stmt)
     db_products = list(p_res.scalars().all())
@@ -1331,6 +1334,21 @@ async def create_order(
         db_prod = next((p for p in db_products if p.id == product_id), None)
         if not db_prod and prod_payload.get("slug"):
             db_prod = next((p for p in db_products if p.slug == prod_payload["slug"]), None)
+        if not db_prod:
+            item_name = prod_payload.get("name") or item.get("name") or ""
+            clean_name = re.sub(r'\s*\([^)]*\)\s*$', '', str(item_name)).strip().lower()
+            if clean_name:
+                db_prod = next((p for p in db_products if p.name.strip().lower() == clean_name), None)
+                if not db_prod:
+                    db_prod = next((p for p in db_products if clean_name in p.name.strip().lower()), None)
+            if db_prod:
+                product_id = db_prod.id
+
+        if not variant_name and "(" in str(prod_payload.get("name", "")):
+            v_match = re.search(r'\(([^)]+)\)', str(prod_payload.get("name", "")))
+            if v_match:
+                variant_name = v_match.group(1).strip()
+                is_variant = True
 
         if not db_prod or not db_prod.isAvailable:
             raise HTTPException(status_code=400, detail=f"Product \"{prod_payload.get('name')}\" is no longer available")
@@ -2951,7 +2969,19 @@ async def list_orders(
                     "userName": user.name if user else None,
                     "userEmail": user.email if user else None,
                     "userPhone": order.shopPhone or (order.address.phone if order.address else (user.phone if user else None)),
-                    "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": safe_float(i.price), "imageUrl": i.imageUrl} for i in order.items],
+                    "items": [{
+                        "id": i.id,
+                        "productId": i.productId,
+                        "name": i.name,
+                        "quantity": i.quantity,
+                        "price": safe_float(i.price),
+                        "imageUrl": i.imageUrl,
+                        "selectedVariant": i.selectedVariant,
+                        "notes": i.notes,
+                        "restaurantId": order.restaurantId,
+                        "isRestaurantItem": bool(order.restaurantId),
+                        "type": "RESTAURANT" if order.restaurantId else "GROCERY",
+                    } for i in order.items],
                     "address": {
                         "id": order.address.id,
                         "label": order.address.label,
@@ -3062,7 +3092,19 @@ async def list_orders(
                     "createdAt": to_iso_utc(o.createdAt),
                     "shopName": (o.shopName.replace("FastKirana", "FastMinute") if o.shopName else ("FastMinute Dark Store" if not o.restaurantId else "Restaurant")),
                     "restaurantId": o.restaurantId,
-                    "items": [{"id": i.id, "name": i.name, "quantity": i.quantity, "price": safe_float(i.price), "imageUrl": i.imageUrl} for i in o.items],
+                    "items": [{
+                        "id": i.id,
+                        "productId": i.productId,
+                        "name": i.name,
+                        "quantity": i.quantity,
+                        "price": safe_float(i.price),
+                        "imageUrl": i.imageUrl,
+                        "selectedVariant": i.selectedVariant,
+                        "notes": i.notes,
+                        "restaurantId": o.restaurantId,
+                        "isRestaurantItem": bool(o.restaurantId),
+                        "type": "RESTAURANT" if o.restaurantId else "GROCERY",
+                    } for i in o.items],
                     "address": {
                         "id": o.address.id,
                         "label": o.address.label,
@@ -3086,7 +3128,19 @@ async def list_orders(
                     for i in r.items:
                         if i.id not in seen_item_ids:
                             seen_item_ids.add(i.id)
-                            all_items.append({"id": i.id, "name": i.name, "quantity": i.quantity, "price": safe_float(i.price), "imageUrl": i.imageUrl})
+                            all_items.append({
+                                "id": i.id,
+                                "productId": i.productId,
+                                "name": i.name,
+                                "quantity": i.quantity,
+                                "price": safe_float(i.price),
+                                "imageUrl": i.imageUrl,
+                                "selectedVariant": i.selectedVariant,
+                                "notes": i.notes,
+                                "restaurantId": r.restaurantId,
+                                "isRestaurantItem": bool(r.restaurantId),
+                                "type": "RESTAURANT" if r.restaurantId else "GROCERY",
+                            })
 
                 base_readable_id = re.sub(r'-[GR\d]+$', '', main_order.readableId or "")
 
@@ -3698,34 +3752,15 @@ async def update_order(
 
     # Cloudinary upload on deliver pings
     final_delivery_photo = delivery_photo
-    if target_status == OrderStatus.DELIVERED and delivery_photo and isinstance(delivery_photo, str):
-        is_base64 = delivery_photo.startswith("data:image/") or (not delivery_photo.startswith("http") and len(delivery_photo) > 100)
-        if is_base64:
-            try:
-                # Fetch settings for Cloudinary config
-                settings_stmt = select(StoreSetting).where(StoreSetting.key.in_(["cloudinary_cloud_name", "cloudinary_upload_preset"]))
-                settings_res = await db.execute(settings_stmt)
-                settings_map = {s.key: s.value for s in settings_res.scalars().all()}
-                
-                cloud_name = settings_map.get("cloudinary_cloud_name")
-                upload_preset = settings_map.get("cloudinary_upload_preset")
-
-                if cloud_name and upload_preset:
-                    cloudinary_url = await upload_to_cloudinary(delivery_photo, cloud_name, upload_preset)
-                    final_delivery_photo = cloudinary_url
-            except Exception as e:
-                logger.error(f"Cloudinary upload fallback: {str(e)}")
+    # Delivery photos are completely disabled (privacy & fast zero-friction delivery)
+    final_delivery_photo = None
 
     # Update database values
     order.status = target_status
     order.updatedAt = datetime.utcnow()
 
     if target_status == OrderStatus.DELIVERED:
-        # Prevent database length overflow for delivery photo
-        safe_photo = final_delivery_photo
-        if safe_photo and safe_photo.startswith("data:") and len(safe_photo) > 200000:
-            safe_photo = None
-
+        safe_photo = None
         cash_amount_custom = payload.get("cashAmount")
 
         # Admin / Staff delivery handling:
@@ -4463,17 +4498,21 @@ async def edit_order(
     effective_role = (current_user.get("role") or "").upper() if current_user else ""
     assigned_restaurant_id = current_user.get("assignedRestaurantId") if current_user else None
 
-    # Fallback: check x-user-id header
+    # Fallback: check x-user-id header ONLY for verified internal service callers
     if not effective_role or effective_role == "USER":
-        header_user_id = request.headers.get("x-user-id") if request else None
-        if header_user_id and not header_user_id.startswith("mock-id-"):
-            u_stmt = select(User).where(User.id == header_user_id)
-            u_res = await db.execute(u_stmt)
-            db_user = u_res.scalars().first()
-            if db_user and not getattr(db_user, "isBlocked", False):
-                effective_user_id = db_user.id
-                effective_role = db_user.role.value if hasattr(db_user.role, "value") else str(db_user.role)
-                assigned_restaurant_id = db_user.assignedRestaurantId
+        x_internal_secret = request.headers.get("x-internal-secret") if request else None
+        internal_secret = os.getenv("INTERNAL_API_SECRET", "").strip()
+        is_internal_service = bool(internal_secret and x_internal_secret == internal_secret)
+        if is_internal_service:
+            header_user_id = request.headers.get("x-user-id") if request else None
+            if header_user_id and not header_user_id.startswith("mock-id-"):
+                u_stmt = select(User).where(User.id == header_user_id)
+                u_res = await db.execute(u_stmt)
+                db_user = u_res.scalars().first()
+                if db_user and not getattr(db_user, "isBlocked", False):
+                    effective_user_id = db_user.id
+                    effective_role = db_user.role.value if hasattr(db_user.role, "value") else str(db_user.role)
+                    assigned_restaurant_id = db_user.assignedRestaurantId
 
     allowed_roles = ["ADMIN", "CHEF", "PICKER", "RESTAURANT_OWNER", "SUPER_ADMIN", "MANAGER"]
     if effective_role not in allowed_roles:

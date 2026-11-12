@@ -2413,7 +2413,20 @@ class LocationService {
         timeLimit: Duration(seconds: silent ? 4 : 8),
       );
 
-
+      // Immediately unlock nearest hub & home catalog using coordinates before slow reverse-geocoding finishes
+      if (ref.read(selectedAddressProvider) == null) {
+        ref.read(selectedAddressProvider.notifier).state = Address(
+          id: 'gps_resolving_${DateTime.now().millisecondsSinceEpoch}',
+          label: 'Current Location',
+          street: 'Locating street...',
+          area: _cachedAddress?.area ?? 'Detecting area...',
+          city: _cachedAddress?.city ?? '',
+          pincode: _cachedAddress?.pincode ?? '',
+          latitude: position.latitude,
+          longitude: position.longitude,
+          isDefault: true,
+        );
+      }
 
       final details = await getAddressFromCoordinates(position.latitude, position.longitude);
 
@@ -2460,41 +2473,24 @@ class LocationService {
 
 
   static Future<void> bootstrapUserLocation(WidgetRef ref) async {
+    if (_cachedAddress == null) {
+      await loadCachedAddress();
+    }
 
-
+    if (ref.read(selectedAddressProvider) == null && _cachedAddress != null) {
+      ref.read(selectedAddressProvider.notifier).state = _cachedAddress;
+    }
 
     final currentAddress = ref.read(selectedAddressProvider);
 
-
-
     if (currentAddress != null &&
-
-
-
         currentAddress.id != 'hub_active_default' &&
-
-
-
         !currentAddress.id.startsWith('addr_bootstrap_gps_') &&
-
-
-
         !currentAddress.id.startsWith('gps_')) {
-
-
-
       return;
-
-
-
     }
 
-
-
     await detectAndApplyGpsLocation(ref: ref, silent: true);
-
-
-
   }
 
 

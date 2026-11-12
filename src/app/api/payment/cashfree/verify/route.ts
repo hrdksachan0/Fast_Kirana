@@ -326,46 +326,46 @@ export async function POST(req: NextRequest) {
       const customerName = order.userName || 'Customer'
       const customerPhone = order.userPhone || 'N/A'
 
-      // Mobile FCM push to Admin with high priority buzzer alarm
-      try {
-        const { fcmMessaging } = await import('@/lib/firebase-admin')
-        if (fcmMessaging) {
-          const staffPayload = buildOrderFcmPayload(
-            `💳 Online Paid Order #${displayId}!`,
-            `Order #${displayId} (${outletName}, ₹${notifyTotal}) is PAID online. Tap to review & process.`,
-            {
-              title: `💳 Online Paid Order #${displayId}!`,
-              body: `Order #${displayId} (${outletName}, ₹${notifyTotal}) is PAID online. Tap to review & process.`,
-              orderId: updatedOrder.id,
-              readableId: displayId,
-              status: updatedOrder.status,
-              paymentStatus: 'PAID',
-              isPaid: 'true',
-              screen: 'admin-orders',
-              type: 'NEW_ORDER',
-              role: 'ADMIN',
-              timestamp: Date.now().toString(),
-            }
-          )
-          const adminTopic = order.storeId ? `admin_orders_${order.storeId}` : 'admin_orders'
-          sendTopicWithRetry(fcmMessaging, { topic: adminTopic, ...staffPayload }).catch(() => {})
-          if (adminTopic !== 'admin_orders') {
-            sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
+      // Mobile FCM push strictly hub-scoped and ONLY when awaiting admin approval
+      if (updatedOrder.status === 'ADMIN_PENDING') {
+        try {
+          const { fcmMessaging } = await import('@/lib/firebase-admin')
+          if (fcmMessaging) {
+            const staffPayload = buildOrderFcmPayload(
+              `💳 Online Paid Order #${displayId}!`,
+              `Order #${displayId} (${outletName}, ₹${notifyTotal}) is PAID online. Tap to review & process.`,
+              {
+                title: `💳 Online Paid Order #${displayId}!`,
+                body: `Order #${displayId} (${outletName}, ₹${notifyTotal}) is PAID online. Tap to review & process.`,
+                orderId: updatedOrder.id,
+                readableId: displayId,
+                storeId: order.storeId || '',
+                status: updatedOrder.status,
+                paymentStatus: 'PAID',
+                isPaid: 'true',
+                screen: 'admin-orders',
+                type: 'NEW_ORDER',
+                role: 'ADMIN',
+                timestamp: Date.now().toString(),
+              }
+            )
+            const adminTopic = order.storeId ? `admin_orders_${order.storeId}` : 'admin_orders'
+            sendTopicWithRetry(fcmMessaging, { topic: adminTopic, ...staffPayload }).catch(() => {})
           }
+        } catch (fcmErr) {
+          console.error('FCM admin notification error on verify:', fcmErr)
         }
-      } catch (fcmErr) {
-        console.error('FCM admin notification error on verify:', fcmErr)
       }
 
       if (isRestaurantOrder) {
-        sendPushNotificationToRoles([Role.ADMIN], {
-          title: '💳 Online Payment Order Received!',
-          body: `Order #${displayId} of ₹${notifyTotal} — PAID via Cashfree (Awaiting Admin Confirmation)`,
-          tag: `order-${updatedOrder.id}`,
-          data: { orderId: updatedOrder.id }
-        }).catch((err: any) => console.error('Push admin error:', err))
-
-        if (updatedOrder.status !== 'ADMIN_PENDING') {
+        if (updatedOrder.status === 'ADMIN_PENDING') {
+          sendPushNotificationToRoles([Role.ADMIN], {
+            title: '💳 Online Payment Order Received!',
+            body: `Order #${displayId} of ₹${notifyTotal} — PAID via Cashfree (Awaiting Admin Confirmation)`,
+            tag: `order-${updatedOrder.id}`,
+            data: { orderId: updatedOrder.id }
+          }).catch((err: any) => console.error('Push admin error:', err))
+        } else {
           sendPushNotificationToRestaurant(order.restaurantId, {
             title: `👨‍🍳 New Food Order #${displayId}!`,
             body: `Order #${displayId} for ${outletName} is confirmed and paid. Start preparing dishes!`,
@@ -373,7 +373,7 @@ export async function POST(req: NextRequest) {
             data: { orderId: updatedOrder.id, restaurantId: order.restaurantId }
           }).catch((err: any) => console.error('Push restaurant error:', err))
         }
-      } else {
+      } else if (updatedOrder.status === 'ADMIN_PENDING') {
         sendPushNotificationToRoles([Role.ADMIN], {
           title: '💳 Online Payment Order Received!',
           body: `Order #${displayId} of ₹${notifyTotal} — PAID via Cashfree (Awaiting Admin Confirmation)`,

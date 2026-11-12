@@ -130,6 +130,7 @@ function Banner({
           className={styles.slide}
           data-active={i === index}
           data-has-art={Boolean(block.image || header.image)}
+          data-photo={/\.(webp|png|jpe?g|avif)(?:[?#]|$)/i.test(block.image || header.image || '')}
           inert={i !== index}
           aria-hidden={i !== index}
         >
@@ -277,10 +278,19 @@ export function CampaignBlockCanvas({
   onPause: () => void
 }) {
   const [focused, setFocused] = useState(false)
-  const stop = paused || focused || !data.autoplay
+  const canvas = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (!canvas.current) return
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting))
+    observer.observe(canvas.current)
+    return () => observer.disconnect()
+  }, [])
+  const stop = paused || focused || !visible || !data.autoplay
   return (
     <div
       className={styles.canvas}
+      ref={canvas}
       data-testid="campaign-block-canvas"
       onFocusCapture={(event) => setFocused(!event.target.closest('[data-playback-controls]'))}
       onBlurCapture={(event) => {

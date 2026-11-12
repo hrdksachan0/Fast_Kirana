@@ -259,14 +259,30 @@ export function HeroBanner({
                   />
                 ) : (
                   banner.imageUrl && (
-                    <Image
-                      src={banner.imageUrl}
-                      alt={banner.title || 'FastMinute Hero Banner'}
-                      fill
-                      sizes="(max-width: 768px) 86vw, 440px"
-                      className="object-cover select-none pointer-events-none"
-                      priority={idx === 0}
-                    />
+                    <div className="relative w-full h-full overflow-hidden flex items-center justify-center">
+                      {/* Ambient color-matched background so slide has zero black bars or harsh cuts */}
+                      <Image
+                        src={banner.imageUrl}
+                        alt=""
+                        fill
+                        unoptimized
+                        className="object-cover blur-2xl opacity-40 scale-125 select-none pointer-events-none"
+                        aria-hidden="true"
+                      />
+                      <div className="absolute inset-0 bg-black/15 pointer-events-none" />
+
+                      {/* Razor-sharp foreground image: object-contain with gentle breathing padding so 100% of image is preserved */}
+                      <div className="relative w-full h-full flex items-center justify-center p-1 sm:p-2 z-10">
+                        <Image
+                          src={banner.imageUrl}
+                          alt={banner.title || 'FastMinute Hero Banner'}
+                          fill
+                          sizes="(max-width: 768px) 86vw, 440px"
+                          className="object-contain select-none pointer-events-none drop-shadow-md transition-transform duration-500 ease-out group-hover:scale-[1.02]"
+                          priority={idx === 0}
+                        />
+                      </div>
+                    </div>
                   )
                 )}
 

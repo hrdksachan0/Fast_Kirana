@@ -236,23 +236,23 @@ async def send_test_push_notification(
 @router.post("/unregister", status_code=status.HTTP_200_OK)
 async def unregister_fcm_token(
     payload: Dict[str, Any] = Body(...),
+    current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Unregister an FCM token on logout or permission revoke.
+    Deletes by token (and falls back gracefully if token was already rotated/cleared).
     """
     token = payload.get("token")
-    if not token or not isinstance(token, str):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="FCM token is required"
-        )
+    if not token or not isinstance(token, str) or not token.strip():
+        return {"success": True, "message": "No token provided; nothing to unregister"}
 
+    clean_token = token.strip()
     try:
         # Delete from fcm_tokens
-        await db.execute(delete(FcmToken).where(FcmToken.token == token))
+        await db.execute(delete(FcmToken).where(FcmToken.token == clean_token))
         # Also delete from push_subscriptions if matching endpoint
-        await db.execute(delete(PushSubscription).where(PushSubscription.endpoint == token))
+        await db.execute(delete(PushSubscription).where(PushSubscription.endpoint == clean_token))
         await db.commit()
         return {"success": True, "message": "FCM token unregistered successfully"}
     except Exception as e:

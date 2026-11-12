@@ -118,6 +118,9 @@ def is_order_status_update(title: str, body: str, data: Optional[Dict[str, Any]]
     status_val = str(d.get("status", "")).upper()
     msg_type = str(d.get("type", "")).upper()
     t_lower = str(title).lower()
+    b_lower = str(body).lower()
+    if status_val in ["CANCELLED", "REJECTED", "FAILED", "REFUNDED"] or "cancel" in t_lower or "cancel" in b_lower:
+        return False
     return (
         status_val in ["OUT_FOR_DELIVERY", "DISPATCHED", "DELIVERED", "CONFIRMED", "PREPARING", "COOKING", "PACKED", "SHIPPED"] or
         msg_type == "ORDER_STATUS_UPDATE" or

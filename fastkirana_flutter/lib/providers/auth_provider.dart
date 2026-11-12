@@ -61,20 +61,21 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       // Role and assignedStoreId are provided securely by the authenticated server session/token.
       if (mounted) state = AsyncValue.data(user);
 
-    // Invalidate and reload addresses immediately for the logged-in user!
-    try {
-      _ref.invalidate(addressesProvider);
-      _ref.read(addressesProvider.notifier).loadAddresses();
-    } catch (_) {}
+      // Invalidate and reload addresses immediately for the logged-in user!
+      try {
+        _ref.invalidate(addressesProvider);
+        _ref.read(addressesProvider.notifier).loadAddresses();
+      } catch (_) {}
 
-      // Register device FCM push token on startup with user role and restaurant ID
+      // Register device FCM push token on startup with user role, restaurant ID, and store ID
       try {
         final dio = _ref.read(dioProvider);
-        NotificationService().registerDeviceToken(
+        unawaited(NotificationService().registerDeviceToken(
           dio,
           role: user.role,
           assignedRestaurantId: user.assignedRestaurantId,
-        );
+          assignedStoreId: user.assignedStoreId,
+        ));
       } catch (e) {
         LoggerService.error("Failed to register FCM token on startup: $e");
       }
@@ -113,6 +114,9 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     if (user.assignedRestaurantId != null && user.assignedRestaurantId!.isNotEmpty) {
       await SecureStorage.write('assigned_restaurant_id', user.assignedRestaurantId!);
       await prefs.setString('assigned_restaurant_id', user.assignedRestaurantId!);
+    } else {
+      await SecureStorage.delete('assigned_restaurant_id');
+      await prefs.remove('assigned_restaurant_id');
     }
     if (user.assignedStoreId != null && user.assignedStoreId!.isNotEmpty) {
       await SecureStorage.write('assigned_store_id', user.assignedStoreId!);
@@ -131,13 +135,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       _ref.invalidate(walletTransactionsProvider);
     } catch (_) {}
 
-    // Register device FCM push token on login with explicit role and restaurant ID
+    // Register device FCM push token on login with explicit role, restaurant ID, and store ID
     try {
       final dio = _ref.read(dioProvider);
-      NotificationService().registerDeviceToken(
+      await NotificationService().registerDeviceToken(
         dio,
         role: user.role,
         assignedRestaurantId: user.assignedRestaurantId,
+        assignedStoreId: user.assignedStoreId,
       );
     } catch (e) {
       LoggerService.error("Failed to register FCM token on login: $e");
@@ -149,20 +154,20 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> clear() async {
-    // Immediately set state to null and invalidate memory cache so UI switches instantaneously (0ms freeze)
-    state = const AsyncValue.data(null);
-    SecureStorage.invalidateCache();
-
-    // 1. Unsubscribe from FCM topics, unregister token from backend, and clear tray
+    // 1. Unsubscribe from ALL FCM topics and unregister DB token while auth headers are still intact
     try {
       final dio = _ref.read(dioProvider);
-      await NotificationService().unsubscribeAllTopics(dio).timeout(const Duration(seconds: 3), onTimeout: () {});
-      await NotificationService().clearAllNotifications().timeout(const Duration(seconds: 1), onTimeout: () {});
+      await NotificationService().unsubscribeAllTopics(dio).timeout(const Duration(seconds: 6), onTimeout: () {});
+      await NotificationService().clearAllNotifications().timeout(const Duration(seconds: 2), onTimeout: () {});
     } catch (e) {
       LoggerService.error('AuthProvider: background notification cleanup error', e);
     }
 
-    // 2. Clear all cached addresses and orders from disk
+    // 2. Clear in-memory auth state and cache
+    state = const AsyncValue.data(null);
+    SecureStorage.invalidateCache();
+
+    // 3. Clear all cached addresses and orders from disk
     try {
       await Future.wait([
         AddressRepository.clearCache(),
@@ -172,7 +177,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
     final prefs = await SharedPreferences.getInstance();
 
-    // 4. Wipe all user-scoped and session keys from SharedPreferences
+    // 4. Wipe all user-scoped, role-scoped, hub-scoped, and session keys from SharedPreferences
     final allKeys = prefs.getKeys().toList();
     for (final key in allKeys) {
       if (key.startsWith('user_') ||
@@ -181,6 +186,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
           key.startsWith('wallet_') ||
           key.startsWith('local_restaurant_') ||
           key.startsWith('cached_admin_') ||
+          key.startsWith('admin_last_') ||
+          key == 'assigned_store_id' ||
+          key == 'assigned_restaurant_id' ||
+          key == 'rider_store_id' ||
+          key == 'pending_fcm_token' ||
+          key == 'admin_auto_approve_orders' ||
+          key == 'admin_stats_saved_date' ||
+          key == 'staff_customer_mode' ||
           key == 'has_chosen_location' ||
           key == 'selected_address' ||
           key == 'pending_cart_sync' ||

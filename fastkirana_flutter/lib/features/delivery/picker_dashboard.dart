@@ -355,8 +355,9 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
       confirmLabel: 'Log Out',
     );
     if (confirm == true && mounted) {
+      await ref.read(authProvider.notifier).logout();
+      if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-      unawaited(ref.read(authProvider.notifier).logout());
     }
   }
 

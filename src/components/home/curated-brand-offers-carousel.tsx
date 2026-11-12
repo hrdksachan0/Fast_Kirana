@@ -175,16 +175,30 @@ function BrandCardMedia({
 
   if (imageUrl) {
     return (
-      <div className="absolute inset-0 w-full h-full overflow-hidden bg-zinc-950">
+      <div className="relative w-full h-full overflow-hidden bg-neutral-950 flex items-center justify-center">
+        {/* Ambient blurred backdrop so card is filled with seamless matching colors */}
         <Image
           src={imageUrl}
-          alt={alt}
+          alt=""
           fill
           unoptimized
-          sizes="(max-width: 640px) 220px, 260px"
-          className="object-cover transition-transform duration-500 group-hover:scale-105 pointer-events-none"
-          priority
+          className="object-cover blur-2xl opacity-45 scale-125 pointer-events-none select-none"
+          aria-hidden="true"
         />
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+
+        {/* Razor-sharp uncropped foreground graphic */}
+        <div className="relative w-full h-full flex items-center justify-center p-2 z-10 pointer-events-none">
+          <Image
+            src={imageUrl}
+            alt={alt}
+            fill
+            unoptimized
+            sizes="(max-width: 640px) 220px, 260px"
+            className="object-contain transition-transform duration-500 group-hover:scale-105 pointer-events-none drop-shadow-md"
+            priority
+          />
+        </div>
       </div>
     )
   }

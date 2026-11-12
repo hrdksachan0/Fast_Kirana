@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:video_player/video_player.dart';
 import '../core/config/app_config.dart';
 import '../core/widgets/app_cached_image.dart';
@@ -34,6 +33,18 @@ class CardMediaWidget extends StatefulWidget {
     this.fallback,
   });
 
+  static String resolveUrl(String raw) {
+    final trimmed = AppConfig.toCdnImageUrl(raw.trim());
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    final base = AppConfig.apiBaseUrl.endsWith('/')
+        ? AppConfig.apiBaseUrl.substring(0, AppConfig.apiBaseUrl.length - 1)
+        : AppConfig.apiBaseUrl;
+    final path = trimmed.startsWith('/') ? trimmed : '/$trimmed';
+    return '$base$path';
+  }
+
   @override
   State<CardMediaWidget> createState() => _CardMediaWidgetState();
 }
@@ -46,13 +57,13 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
 
   String? get _resolvedVideoUrl {
     if (widget.videoUrl != null && widget.videoUrl!.trim().isNotEmpty) {
-      return _resolveUrl(widget.videoUrl!);
+      return CardMediaWidget.resolveUrl(widget.videoUrl!);
     }
     // Auto-detect if imageUrl is actually a video file
     if (widget.imageUrl != null) {
       final lower = widget.imageUrl!.toLowerCase().split('?').first;
       if (lower.endsWith('.mp4') || lower.endsWith('.webm') || lower.endsWith('.mov')) {
-        return _resolveUrl(widget.imageUrl!);
+        return CardMediaWidget.resolveUrl(widget.imageUrl!);
       }
     }
     return null;
@@ -318,23 +329,11 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
     );
   }
 
-  static String _resolveUrl(String raw) {
-    final trimmed = AppConfig.toCdnImageUrl(raw.trim());
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
-    }
-    final base = AppConfig.apiBaseUrl.endsWith('/')
-        ? AppConfig.apiBaseUrl.substring(0, AppConfig.apiBaseUrl.length - 1)
-        : AppConfig.apiBaseUrl;
-    final path = trimmed.startsWith('/') ? trimmed : '/$trimmed';
-    return '$base$path';
-  }
-
   Widget _buildPosterLayer() {
     if (widget.imageUrl != null &&
         widget.imageUrl!.trim().isNotEmpty &&
         !_isDirectVideoFile(widget.imageUrl!)) {
-      final resolvedUrl = _resolveUrl(widget.imageUrl!);
+      final resolvedUrl = CardMediaWidget.resolveUrl(widget.imageUrl!);
       return CachedNetworkImage(
         imageUrl: resolvedUrl,
         cacheManager: FastKiranaImageCacheManager.instance,
@@ -343,17 +342,13 @@ class _CardMediaWidgetState extends State<CardMediaWidget> {
         memCacheHeight: 1440,
         maxWidthDiskCache: 1200,
         maxHeightDiskCache: 1600,
-        fadeInDuration: const Duration(milliseconds: 180),
+        fadeInDuration: Duration.zero,
+        fadeOutDuration: Duration.zero,
         alignment: Alignment.center,
-        placeholder: (_, __) => Shimmer.fromColors(
-          baseColor: const Color(0xFFF1F5F9),
-          highlightColor: const Color(0xFFFAFAFA),
-          period: const Duration(milliseconds: 1400),
-          child: Container(
-            color: const Color(0xFFF1F5F9),
-            width: double.infinity,
-            height: double.infinity,
-          ),
+        placeholder: (_, __) => Container(
+          color: const Color(0xFFF8FAFC),
+          width: double.infinity,
+          height: double.infinity,
         ),
         errorWidget: (_, __, ___) => _buildFallbackVisual(),
       );

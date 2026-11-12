@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentStatus, PaymentMethod, Role, OrderType } from '@prisma/client'
 import { requireAdmin } from '@/lib/auth-guard'
 import { sseEmitter } from '@/lib/sse-emitter'
-import { sendPushNotificationToRoles } from '@/lib/push-notification'
+import { sendPushNotificationToRoles, sendPushNotificationToRestaurant } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { revalidateStorefront } from '@/lib/revalidate'
 import { getLast10Digits } from '@/lib/phone'
@@ -272,12 +272,28 @@ export async function POST(request: Request) {
         createdAt: newOrder.createdAt
       })
 
-      sendPushNotificationToRoles([Role.ADMIN, Role.CHEF, Role.DELIVERY, Role.PICKER], {
-        title: `New Admin Order #${newOrder.readableId} 🛍️`,
-        body: `Order for ${customer.name || 'Customer'} of ₹${newOrder.total} placed successfully.`,
-        tag: `order-${newOrder.id}`,
-        data: { orderId: newOrder.id }
-      }).catch(() => {})
+      if (newOrder.restaurantId) {
+        sendPushNotificationToRestaurant(newOrder.restaurantId, {
+          title: `👨‍🍳 New Food Order #${newOrder.readableId}!`,
+          body: `Order for ${customer.name || 'Customer'} of ₹${newOrder.total} placed.`,
+          tag: `restaurant-order-${newOrder.id}`,
+          data: { orderId: newOrder.id, restaurantId: newOrder.restaurantId }
+        }).catch(() => {})
+
+        sendPushNotificationToRoles([Role.DELIVERY], {
+          title: `New Food Order #${newOrder.readableId} 🛵`,
+          body: `Order for ${finalShopName} of ₹${newOrder.total} placed.`,
+          tag: `order-${newOrder.id}`,
+          data: { orderId: newOrder.id, storeId: newOrder.storeId || '' }
+        }).catch(() => {})
+      } else {
+        sendPushNotificationToRoles([Role.DELIVERY, Role.PICKER], {
+          title: `New Store Order #${newOrder.readableId} 🛍️`,
+          body: `Order for ${customer.name || 'Customer'} of ₹${newOrder.total} placed successfully.`,
+          tag: `order-${newOrder.id}`,
+          data: { orderId: newOrder.id, storeId: newOrder.storeId || '' }
+        }).catch(() => {})
+      }
 
       // Send WhatsApp alert to admin phones
       const adminPhone = '7054470303'

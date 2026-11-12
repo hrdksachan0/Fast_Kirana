@@ -49,7 +49,6 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
       if (active.isNotEmpty) {
         ref.invalidate(ordersProvider(''));
         final topOrder = active.first;
-        NotificationService().updateLiveOrderActivity(order: topOrder);
         try {
           final repo = OrderRepository(ref.read(dioProvider));
           final cleanId = (topOrder.readableId ?? topOrder.id).replaceAll('#', '').trim();
@@ -73,14 +72,22 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
           if (!mounted) return;
           final oid = (record['orderId'] ?? record['id'])?.toString();
           final rid = record['readableId']?.toString();
+          final statusStr = (record['status'] ?? '').toString().toUpperCase().trim();
           final current = ref.read(ordersProvider('')).valueOrNull ?? [];
-          final match = current.any((o) => o.id == oid || (rid != null && o.readableId == rid));
-          if (match || current.isNotEmpty) {
-            ref.invalidate(ordersProvider(''));
-            final activeList = current.where((o) => o.status != OrderStatus.cancelled && o.status != OrderStatus.delivered).toList();
-            if (activeList.isNotEmpty) {
-              NotificationService().updateLiveOrderActivity(order: activeList.first);
+          final matchedOrders = current.where((o) =>
+            (oid != null && o.id == oid) ||
+            (rid != null && rid.isNotEmpty && o.readableId == rid),
+          ).toList();
+          if (matchedOrders.isNotEmpty || current.isNotEmpty) {
+            if (statusStr == 'CANCELLED' || statusStr == 'DELIVERED') {
+              for (final m in matchedOrders) {
+                NotificationService().clearLiveOrderActivity(m.id, readableId: m.readableId);
+              }
+              if (oid != null || rid != null) {
+                NotificationService().clearLiveOrderActivity(oid ?? '', readableId: rid);
+              }
             }
+            ref.invalidate(ordersProvider(''));
           }
         },
       );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/design_system.dart';
 import 'privacy_policy_screen.dart';
 
@@ -85,7 +86,7 @@ class SettingsScreen extends StatelessWidget {
                   _divider(),
                   _navTile(context, Icons.lock_rounded, 'Change Password', '', () {}),
                   _divider(),
-                  _navTile(context, Icons.delete_outline_rounded, 'Delete Account', '', () {}, isDanger: true),
+                  _navTile(context, Icons.delete_outline_rounded, 'Delete Account', '', () => _showDeleteAccountDialog(context), isDanger: true),
                 ],
               ),
             ),
@@ -163,5 +164,49 @@ class SettingsScreen extends StatelessWidget {
 
   Widget _divider() {
     return const Divider(height: 1, indent: 56, endIndent: 16, color: AppDesignSystem.divider);
+  }
+
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: AppDesignSystem.danger),
+            const SizedBox(width: 8),
+            Text(
+              'Delete Account?',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Text(
+          'Under the DPDP Act 2023, deleting your account permanently purges and anonymizes your saved addresses, mobile number, and login credentials.\n\nYou can manage instant account deletion on our web portal at fastminute.in.',
+          style: GoogleFonts.inter(fontSize: 13, color: AppDesignSystem.textSecondary, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppDesignSystem.danger,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final uri = Uri.parse('https://www.fastminute.in/account?tab=profile');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Text('Open Deletion Portal', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 }

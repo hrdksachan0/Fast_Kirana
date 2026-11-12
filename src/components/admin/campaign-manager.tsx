@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, Loader2, Plus, Save, Trash2, Upload } from 'lucide-react'
+import { ArrowDown, ArrowUp, LayoutGrid, Loader2, Plus, Save, Sparkles, Trash2, Upload } from 'lucide-react'
 import { apiUrl } from '@/lib/api-url'
 import { campaignImageSchema, campaignSchema, type CampaignConfig } from '@/lib/campaign-config'
 import {
@@ -15,6 +15,7 @@ import { NavratriSection } from '@/components/home/navratri/navratri-section'
 import { NavratriSearch } from '@/components/home/navratri/navratri-search'
 import type { Product } from '@/types'
 import { CampaignBlockEditor } from './campaign-block-editor'
+import { CampaignBentoEditor } from './campaign-bento-editor'
 import { defaultCampaignBlocks } from '@/lib/campaign-blocks'
 
 type Collection = 'headers' | 'products' | 'categories' | 'tabs' | 'destinations'
@@ -286,6 +287,7 @@ export function CampaignManager({
   const [catalogueLoading, setCatalogueLoading] = useState(true)
   const [catalogueError, setCatalogueError] = useState(false)
   const [catalogueReload, setCatalogueReload] = useState(0)
+  const [editorSection, setEditorSection] = useState<'hero' | 'bento'>('hero')
   const saveVersion = useRef(0)
   const valid = useMemo(() => campaignSchema.safeParse(draft), [draft])
   const scope = storeId && storeId !== 'all' ? storeId : undefined
@@ -446,7 +448,44 @@ export function CampaignManager({
   const preview = valid.success ? valid.data : navratriData
   return (
     <div className="space-y-5" data-testid="campaign-manager">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* Sub-mode switcher: Hero Festival Campaign vs 6-Card Interactive Bento Hub */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/90 p-1.5">
+        <button
+          type="button"
+          onClick={() => setEditorSection('hero')}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+            editorSection === 'hero'
+              ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+          Hero &amp; Festival Campaign
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditorSection('bento')}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+            editorSection === 'bento'
+              ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <LayoutGrid className="h-3.5 w-3.5 text-emerald-600" />
+          6-Card Bento Hub (01–06 + Preview)
+        </button>
+      </div>
+
+      {editorSection === 'bento' ? (
+        <CampaignBentoEditor
+          storeId={storeId}
+          onUpload={onUpload}
+          authHeaders={authHeaders}
+          catalogueProducts={products}
+        />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-text-primary text-xl font-bold">Campaign Manager</h2>
           <p className="text-text-secondary mt-1 text-sm">
@@ -1220,6 +1259,8 @@ export function CampaignManager({
           </p>
         </aside>
       </div>
+        </>
+      )}
     </div>
   )
 }

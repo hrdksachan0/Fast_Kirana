@@ -201,9 +201,9 @@ void main() async {
   // Fast warm-up for auth cache & local product/category disk cache (<100ms timeout so it never blocks UI)
   try {
     await Future.wait([
-      LocationService.loadCachedAddress().timeout(const Duration(milliseconds: 100)),
-      SecureStorage.loadCache().timeout(const Duration(milliseconds: 100)),
-      ProductRepository.preloadDiskCache().timeout(const Duration(milliseconds: 80)),
+      LocationService.loadCachedAddress().timeout(const Duration(milliseconds: 350)),
+      SecureStorage.loadCache().timeout(const Duration(milliseconds: 150)),
+      ProductRepository.preloadDiskCache().timeout(const Duration(milliseconds: 120)),
     ]);
   } catch (_) {}
 

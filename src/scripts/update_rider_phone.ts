@@ -12,13 +12,19 @@ const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
 async function main() {
+  const newPhone = process.env.RIDER_NEW_PHONE || process.argv[2]
+  if (!newPhone) {
+    console.error('Usage: tsx src/scripts/update_rider_phone.ts <new-phone> or set RIDER_NEW_PHONE')
+    process.exit(1)
+  }
+
   const updatedRider = await prisma.user.update({
     where: {
-      email: 'delivery@fastkirana.com',
+      email: process.env.RIDER_EMAIL || process.argv[3] || 'delivery@fastkirana.com',
     },
     data: {
       name: 'FastKirana Delivery Executive',
-      phone: '+919696503759',
+      phone: newPhone,
     },
   })
 

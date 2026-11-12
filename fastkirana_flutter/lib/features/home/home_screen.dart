@@ -338,6 +338,7 @@ import '../navratri/navratri_linked_products.dart';
 
 
 import '../navratri/navratri_shopping_section.dart';
+import '../campaign_bento/campaign_bento_zone.dart';
 import '../categories/category_products_screen.dart';
 
 
@@ -467,6 +468,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
   int _selectedFilterIndex = 0;
+  bool _isResolvingInitialLocation = true;
 
 
 
@@ -891,118 +893,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
           if (isAllowed && serviceEnabled) {
-
-
-
-
-
-
-
-            // Agar Pehle se Allowed hai:
-
-
-
-
-
-
-
-            // App khulte hi bina kuch puche background me current location auto-set ho jati hai.
-
-
-
-
-
-
-
-            if (currentAddress == null ||
-
-
-
-
-
-
-
-                currentAddress.id.startsWith('gps_') ||
-
-
-
-
-
-
-
-                currentAddress.id.startsWith('addr_bootstrap_gps_')) {
-
-
-
-
-
-
-
-              LocationService.bootstrapUserLocation(ref);
-
-
-
-
-
-
-
-            } else {
-
-
-
-
-
-
-
-              Future.delayed(const Duration(milliseconds: 1500), () {
-
-
-
-
-
-
-
-                if (mounted) {
-
-
-
-
-
-
-
-                  LocationService.checkLocationDriftAndPrompt(context, ref);
-
-
-
-
-
-
-
-                }
-
-
-
-
-
-
-
-              });
-
-
-
-
-
-
-
+            try {
+              // Agar Pehle se Allowed hai:
+              // App khulte hi bina kuch puche background me current location auto-set ho jati hai.
+              if (currentAddress == null ||
+                  currentAddress.id.startsWith('gps_') ||
+                  currentAddress.id.startsWith('addr_bootstrap_gps_')) {
+                await LocationService.bootstrapUserLocation(ref)
+                    .timeout(const Duration(seconds: 3), onTimeout: () {});
+              } else {
+                Future.delayed(const Duration(milliseconds: 1500), () {
+                  if (mounted) {
+                    LocationService.checkLocationDriftAndPrompt(context, ref);
+                  }
+                });
+              }
+            } finally {
+              if (mounted && _isResolvingInitialLocation) {
+                setState(() => _isResolvingInitialLocation = false);
+              }
             }
-
-
-
-
-
-
-
           } else {
+            if (mounted && _isResolvingInitialLocation) {
+              setState(() => _isResolvingInitialLocation = false);
+            }
 
 
 
@@ -2872,38 +2786,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
                   if (hubStatus.isNoLocation) ...[
-
-
-
-
-
-
-
-                    const SliverToBoxAdapter(
-
-
-
-
-
-
-
-                      child: SelectDeliveryLocationView(),
-
-
-
-
-
-
-
-                    ),
-
-
-
-
-
-
-
-                    const SliverToBoxAdapter(child: HomeFooter()),
+                    if (_isResolvingInitialLocation)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 64),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.8,
+                                  color: Color(0xFFE11D48),
+                                ),
+                              ),
+                              SizedBox(height: 14),
+                              Text(
+                                'Detecting your delivery area...',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else ...[
+                      const SliverToBoxAdapter(
+                        child: SelectDeliveryLocationView(),
+                      ),
+                      const SliverToBoxAdapter(child: HomeFooter()),
+                    ],
 
 
 
@@ -3893,14 +3809,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
                         const SliverToBoxAdapter(
-
-
-
-
-
-
-
                             child: HomeTopCategoriesGrid()),
+                        const SliverToBoxAdapter(
+                            child: CampaignBentoZone(showLiveEditButton: false)),
 
 
 

@@ -9,7 +9,7 @@ import { formatPrice, formatAddress } from '@/lib/utils'
 import { useCart } from '@/hooks/use-cart'
 import { useCartStore } from '@/stores/cart-store'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/lib/constants'
-import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, Search, ShoppingBag, Heart, RotateCcw, Sparkles, CheckCircle2, Zap, Plus } from 'lucide-react'
+import { LogOut, MapPin, User, Package, ArrowRight, Pencil, X, Loader2, Trash2, Search, ShoppingBag, Heart, RotateCcw, Sparkles, CheckCircle2, Zap, Plus, Download, Shield } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useState, useEffect, Suspense } from 'react'
@@ -216,9 +216,34 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   const [isSendingPhoneOtp, setIsSendingPhoneOtp] = useState(false)
   const [isUpdatingPhone, setIsUpdatingPhone] = useState(false)
 
-  // Account Deletion State
+  // Account Deletion & Data Privacy State
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isExportingData, setIsExportingData] = useState(false)
+
+  const handleExportData = async () => {
+    setIsExportingData(true)
+    try {
+      const res = await fetch('/api/profile/export-data')
+      if (!res.ok) {
+        throw new Error('Failed to export data')
+      }
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `fastminute-my-data.json`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success('Your data copy has been downloaded successfully.')
+    } catch {
+      toast.error('Could not download data copy. Please try again.')
+    } finally {
+      setIsExportingData(false)
+    }
+  }
 
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true)
@@ -368,6 +393,19 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
   }
 
   const handleSignOut = async () => {
+    try {
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready
+        const sub = await reg.pushManager.getSubscription()
+        if (sub) {
+          await fetch('/api/push/subscribe', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          }).catch(() => {})
+        }
+      }
+    } catch (_) {}
     await signOut({ redirect: false })
     toast.success('Signed out successfully!')
     window.location.href = '/'
@@ -1528,6 +1566,55 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Data Privacy & Portability (DPDP Act) */}
+              <div className="mt-8 pt-6 border-t border-border/60">
+                <div className="bg-surface/50 border border-border rounded-xl p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-text-primary flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-emerald-500" /> Your Data Privacy &amp; Rights
+                      </h4>
+                      <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+                        Under India&apos;s DPDP Act, you have full control over your personal data. You can download an offline copy of your profile, orders, and addresses at any time.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={isExportingData}
+                      onClick={handleExportData}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-hover hover:bg-muted text-text-primary text-xs font-bold border border-border transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {isExportingData ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Preparing export...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-3.5 w-3.5 text-primary" />
+                          Download My Data (JSON)
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          window.dispatchEvent(new CustomEvent('open-cookie-settings'))
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-hover hover:bg-muted text-text-secondary text-xs font-bold border border-border transition-all cursor-pointer"
+                    >
+                      Manage Cookie Choices
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Danger Zone: Account Deletion */}

@@ -671,6 +671,23 @@ function LoginForm() {
           </form>
         )}
 
+        {/* Plain-Language Legal & Age Notice */}
+        <div className="pt-3 text-center">
+          <p className="text-[11px] text-text-muted leading-relaxed">
+            By continuing, you agree to our{' '}
+            <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary font-semibold hover:underline">
+              Terms of Service
+            </a>{' '}
+            and acknowledge our{' '}
+            <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary font-semibold hover:underline">
+              Privacy Policy
+            </a>.
+          </p>
+          <p className="text-[10px] text-text-muted/70 mt-0.5">
+            For users aged 18 and above (or with guardian consent under India&apos;s DPDP Act 2023).
+          </p>
+        </div>
+
         {/* STEP 2a: WORKER PASSWORD LOGIN */}
         {step === 'PASSWORD' && (
           <form

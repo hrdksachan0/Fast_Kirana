@@ -14,6 +14,7 @@ import { Toaster } from 'sonner'
 import { cn } from "@/lib/utils";
 import { PWARegistration } from '@/components/shared/pwa-registration'
 import { PushNotificationConsent } from '@/components/shared/push-notification-consent'
+import { CookieConsentBanner } from '@/components/shared/cookie-consent-banner'
 import { LiveStockProvider } from '@/components/providers/live-stock-provider'
 import { CartSyncProvider } from '@/components/providers/cart-sync-provider'
 import { PushNotificationProvider } from '@/providers/push-notification-provider'
@@ -180,6 +181,7 @@ export default function RootLayout({
                 <Toaster position="top-center" richColors closeButton visibleToasts={1} duration={2000} />
 
                 <PushNotificationConsent />
+                <CookieConsentBanner />
                 <SoftPromptDialog />
                 <CartConflictDialog />
                 <SwipeToBack />

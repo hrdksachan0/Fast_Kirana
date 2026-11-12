@@ -1,9 +1,15 @@
+import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/network/api_client.dart';
+import '../../core/services/secure_storage_service.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/routes/page_transitions.dart';
+import '../../data/models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/brand_button.dart';
 import '../cafe/restaurant_dashboard.dart';
@@ -18,10 +24,93 @@ class RestaurantLoginScreen extends ConsumerStatefulWidget {
 class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  String? _errorMessage;
 
   void _navigateBackToStore() {
     HapticFeedback.lightImpact();
     Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+  }
+
+  Future<void> _handleLogin() async {
+    final input = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (input.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Please enter kitchen email/phone and password');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final dio = ref.read(dioProvider);
+      final response = await dio.post('/api/auth/login', data: {
+        'email': input,
+        'password': password,
+      });
+
+      final data = response.data;
+      final userData = data['user'] is Map<String, dynamic>
+          ? data['user'] as Map<String, dynamic>
+          : (data is Map<String, dynamic> ? data : <String, dynamic>{});
+      final role = (userData['role'] ?? data['role'] ?? '').toString().toUpperCase().trim();
+
+      const allowedRoles = {'RESTAURANT_OWNER', 'CHEF', 'RESTAURANT', 'ADMIN', 'SUPER_ADMIN'};
+      if (!allowedRoles.contains(role)) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Access denied: Restaurant kitchen account required.';
+        });
+        return;
+      }
+
+      final kitchenUser = User.fromJson(userData);
+      final token = data['token']?.toString() ?? '';
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_data', jsonEncode(kitchenUser.toJson()));
+      await prefs.setString('user_role', role);
+
+      await SecureStorage.write('user_data', jsonEncode(kitchenUser.toJson()));
+      if (token.isNotEmpty) {
+        await SecureStorage.write('auth_token', token);
+      }
+      await SecureStorage.write('user_role', role);
+
+      await ref.read(authProvider.notifier).setUser(kitchenUser);
+      await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(false);
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      Navigator.of(context).pushAndRemoveUntil(
+        FadeSlideRoute(
+          page: RestaurantDashboard(
+            initialRestaurantId: kitchenUser.assignedRestaurantId,
+          ),
+        ),
+        (route) => false,
+      );
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final msg = (e.response?.data is Map && e.response?.data['detail'] != null)
+          ? e.response!.data['detail'].toString()
+          : 'Invalid kitchen credentials or network unavailable.';
+      setState(() {
+        _isLoading = false;
+        _errorMessage = msg;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Login failed. Please try again.';
+      });
+    }
   }
 
   @override
@@ -72,7 +161,27 @@ class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
                 Text('Restaurant Kitchen Login', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 22), fontWeight: FontWeight.w900, color: AppDesignSystem.textPrimary), textAlign: TextAlign.center),
                 const SizedBox(height: 6),
                 Text('Manage live kitchen orders, cooking timer & stock', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), color: AppDesignSystem.textSecondary), textAlign: TextAlign.center),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
+                if (_errorMessage != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppDesignSystem.statusCancelled,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppDesignSystem.red200),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppDesignSystem.statusCancelledText,
+                      ),
+                    ),
+                  ),
+                ],
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -86,7 +195,7 @@ class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
                       TextField(
                         controller: _emailController,
                         decoration: const InputDecoration(
-                          labelText: 'Email',
+                          labelText: 'Email or Phone',
                           prefixIcon: Icon(Icons.email_outlined, color: AppDesignSystem.primary),
                           border: InputBorder.none,
                         ),
@@ -103,15 +212,8 @@ class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       BrandButton(
-                        text: 'Login',
-                        onPressed: () async {
-                          await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(false);
-                          if (!context.mounted) return;
-                          Navigator.of(context).pushAndRemoveUntil(
-                            FadeSlideRoute(page: const RestaurantDashboard()),
-                            (route) => false,
-                          );
-                        },
+                        text: _isLoading ? 'Signing in...' : 'Login',
+                        onPressed: _isLoading ? () {} : _handleLogin,
                       ),
                     ],
                   ),

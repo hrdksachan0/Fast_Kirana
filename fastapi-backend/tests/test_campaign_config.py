@@ -125,6 +125,27 @@ def test_bundled_templates_are_accepted_by_publish_contract(template):
     assert result["demo"] is True
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("template", [
+    "fresh-market", "daily-restock", "pack-value", "gifting-boutique",
+    "movie-night", "breakfast-club",
+])
+async def test_live_campaign_reaches_mobile_storefront(template, endpoint_app):
+    app, _, state = endpoint_app
+    state["user"]["assignedStoreId"] = "hub-209206"
+    directory = Path(__file__).resolve().parents[2] / "public/navratri/templates"
+    campaign = json.loads((directory / f"{template}.json").read_text(encoding="utf-8"))
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        published = await client.put("/api/admin/campaign", json={
+            "action": "publish", "storeId": "hub-209206", "campaign": campaign,
+        })
+        assert published.status_code == 200, published.text
+        result = (await client.get("/api/homepage-campaign?storeId=hub-209206")).json()["campaign"]
+        assert result["demo"] is False
+        assert result["blocks"] == campaign["blocks"]
+        assert result["headers"] == campaign["headers"]
+
+
 @pytest.mark.parametrize("image", ["javascript:alert(1)", "data:image/svg+xml;base64,abc", "http://example.com/a.png", "//example.com/a.png", "../a.svg", "/assets/../a.svg", "/assets/%2e%2e/a.svg", "https://user:password@example.com/a.png", "https://example.com/\na.svg"])
 def test_unsafe_image_sources_rejected(image):
     with pytest.raises(CampaignValidationError):

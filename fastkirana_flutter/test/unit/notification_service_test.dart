@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:fastminute_flutter/core/services/secure_storage_service.dart';
+import 'package:fastminute_flutter/core/services/notification_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +63,16 @@ void main() {
       await prefs.remove('pending_fcm_token');
 
       expect(prefs.containsKey('pending_fcm_token'), isFalse);
+    });
+
+    test('getCandidateOrderNotifIds covers both orderId and combined -G/-R readableIds', () {
+      final ids = NotificationService.getCandidateOrderNotifIds(
+        'ord_abc1234',
+        readableId: 'FK-9876-G',
+      );
+      expect(ids, contains(NotificationService.getOrderNotifId('ord_abc1234')));
+      expect(ids, contains(NotificationService.getOrderNotifId('ord_abc1234', readableId: 'FK-9876-G')));
+      expect(ids, contains(NotificationService.getOrderNotifId('ord_abc1234', readableId: 'FK-9876')));
     });
   });
 }

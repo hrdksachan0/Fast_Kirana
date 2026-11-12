@@ -6,6 +6,7 @@ import '../models/order.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/services/admin_authorization.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/services/secure_storage_service.dart';
 
 class OrderRepository {
@@ -383,6 +384,12 @@ class OrderRepository {
         }
       } catch (e, st) { LoggerService.error('OrderRepository: cancel cache update', e, st); }
     }
+
+    // Immediately dismiss any persistent live tracker notification for the cancelled order
+    await NotificationService().clearLiveOrderActivity(
+      cancelledOrder?.id ?? cleanId,
+      readableId: cancelledOrder?.readableId ?? cleanId,
+    );
 
     // ── Restore stock for cancelled items ──
     if (cancelledOrder != null) {

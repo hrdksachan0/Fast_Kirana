@@ -24,8 +24,10 @@ import { HubComingSoon } from '@/components/home/hub-coming-soon'
 import { CuratedBrandOffersCarousel } from '@/components/home/curated-brand-offers-carousel'
 import { useUIStore } from '@/stores/ui-store'
 import { NavratriSection } from '@/components/home/navratri/navratri-section'
+import { InteractiveCampaignBento } from '@/components/home/interactive-campaign-bento'
 import { useCampaign } from '@/components/home/navratri/use-campaign'
 import type { CampaignConfig } from '@/lib/campaign-config'
+import type { CampaignBentoConfig } from '@/lib/campaign-bento-config'
 
 interface StorefrontClientProps {
   categories: Category[]
@@ -42,6 +44,7 @@ interface StorefrontClientProps {
   restaurants?: any[]
   sortRules?: Record<string, string>
   initialCampaign?: CampaignConfig | null
+  initialBentoCampaign?: CampaignBentoConfig | null
 }
 
 // ─── Cute High-Definition Premium SVGs for Grocery & Food ───
@@ -100,6 +103,7 @@ export function StorefrontClient({
   restaurants = [],
   sortRules = {},
   initialCampaign = null,
+  initialBentoCampaign = null,
 }: StorefrontClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -438,6 +442,15 @@ export function StorefrontClient({
                     deliveredCount={settingsMap.delivered_today}
                     freshStock={settingsMap.fresh_stock_loaded}
                     happyFamilies={settingsMap.happy_families}
+                  />
+                </div>
+
+                {/* 3.5 Dynamic Bento Campaign Deals Hub */}
+                <div className="section-lazy-render">
+                  <InteractiveCampaignBento
+                    initialConfig={initialBentoCampaign}
+                    products={!isLoadingStoreData ? currentGroceryProducts : []}
+                    storeId={activeStoreId}
                   />
                 </div>
 

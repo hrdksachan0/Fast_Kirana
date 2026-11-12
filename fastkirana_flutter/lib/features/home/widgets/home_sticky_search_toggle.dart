@@ -274,7 +274,7 @@ class HomeStickyHeaderDelegate extends SliverPersistentHeaderDelegate {
               horizontalPadding,
               0,
               horizontalPadding,
-              12,
+              10,
             ),
             child: HomeCategoryToggle(
               isGrocerySelected: isGrocerySelected,

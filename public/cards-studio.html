@@ -1,0 +1,1338 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FastMinute • 6 Campaign Cards Studio Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --brand-green: #15803D;
+      --brand-green-hover: #166534;
+      --brand-green-light: #DCFCE7;
+      --slate-900: #0F172A;
+      --slate-800: #1E293B;
+      --slate-600: #475569;
+      --slate-500: #64748B;
+      --slate-400: #94A3B8;
+      --slate-200: #E2E8F0;
+      --slate-100: #F1F5F9;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background: #0B0F19;
+      color: #F8FAFC;
+      min-height: 100vh;
+      padding: 24px 20px 80px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Studio Bar */
+    .studio-header {
+      max-width: 1320px;
+      margin: 0 auto 28px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 16px 24px;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-logo-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #15803D;
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      letter-spacing: -0.2px;
+    }
+    .brand-title h1 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: #FFFFFF;
+    }
+    .brand-title span {
+      font-size: 13px;
+      color: var(--slate-400);
+      margin-left: 6px;
+    }
+
+    /* Mode Toggles */
+    .view-modes {
+      display: flex;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 9999px;
+      padding: 4px;
+      gap: 4px;
+    }
+    .mode-btn {
+      background: transparent;
+      border: none;
+      color: var(--slate-400);
+      padding: 7px 16px;
+      border-radius: 9999px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .mode-btn:hover {
+      color: #FFFFFF;
+    }
+    .mode-btn.active {
+      background: #15803D;
+      color: #FFFFFF;
+      box-shadow: 0 2px 10px rgba(21, 128, 61, 0.4);
+    }
+
+    .time-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 9999px;
+      padding: 4px;
+    }
+    .time-btn {
+      background: transparent;
+      border: none;
+      color: var(--slate-400);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .time-btn.active {
+      background: rgba(255, 255, 255, 0.15);
+      color: #FFFFFF;
+    }
+
+    /* Outer Container */
+    .cards-viewport {
+      max-width: 1320px;
+      margin: 0 auto;
+      transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    /* Desktop 3x2 Grid */
+    .grid-view {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    /* Mobile Frame View */
+    .mobile-wrapper {
+      display: none;
+      justify-content: center;
+      margin: 0 auto;
+    }
+    .mobile-phone {
+      width: 410px;
+      background: #FFFFFF;
+      border-radius: 46px;
+      padding: 16px 14px 28px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 10px #1E293B, 0 0 0 12px #334155;
+      overflow: hidden;
+      color: var(--slate-900);
+    }
+    .phone-notch-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 18px 12px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .phone-pill {
+      width: 100px;
+      height: 24px;
+      background: #000;
+      border-radius: 20px;
+      margin: 0 auto;
+    }
+    .mobile-scroll-feed {
+      height: 720px;
+      overflow-y: auto;
+      padding-right: 2px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .mobile-scroll-feed::-webkit-scrollbar {
+      width: 4px;
+    }
+    .mobile-scroll-feed::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+
+    /* CARD ANATOMY */
+    .campaign-card {
+      border-radius: 24px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+      transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
+      min-height: 480px;
+    }
+    .campaign-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.16);
+    }
+
+    .card-brand-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 8px;
+    }
+    .card-brand-badge svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+      position: relative;
+      z-index: 2;
+    }
+    .card-title-group h2 {
+      font-size: 23px;
+      font-weight: 800;
+      letter-spacing: -0.6px;
+      line-height: 1.15;
+    }
+    .card-title-group p {
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+
+    .card-hero-thumb {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 140px;
+      height: 100px;
+      object-fit: cover;
+      pointer-events: none;
+      filter: drop-shadow(0 8px 16px rgba(0,0,0,0.12));
+    }
+
+    /* Common Buttons */
+    .btn-green-add {
+      background: var(--brand-green);
+      color: #FFFFFF;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 9px 18px;
+      border-radius: 9999px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.16s ease;
+      width: 100%;
+    }
+    .btn-green-add:hover {
+      background: var(--brand-green-hover);
+      transform: scale(0.99);
+    }
+    .btn-green-add:active {
+      transform: scale(0.96);
+    }
+
+    /* CARD 1: FRESH MARKET */
+    .card-fresh-market {
+      background: #EAF6ED;
+      border: 1px solid #D1EBD7;
+      color: #064E3B;
+    }
+    .card-fresh-market .card-brand-badge {
+      color: #15803D;
+    }
+    .card-fresh-market .card-title-group h2 {
+      color: #064E3B;
+    }
+    .card-fresh-market .card-title-group p {
+      color: #047857;
+    }
+    .market-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      z-index: 2;
+    }
+    .market-tab {
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(6, 78, 59, 0.1);
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #064E3B;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.18s;
+    }
+    .market-tab.active {
+      background: #15803D;
+      color: #FFFFFF;
+      border-color: #15803D;
+      box-shadow: 0 2px 8px rgba(21, 128, 61, 0.25);
+    }
+    .market-products-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: auto;
+    }
+    .product-box {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 12px 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .product-box-img {
+      width: 100%;
+      height: 110px;
+      object-fit: contain;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.06));
+    }
+    .product-box-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .product-box-meta {
+      font-size: 12px;
+      color: var(--slate-500);
+      margin-bottom: 8px;
+    }
+    .product-box-footer {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+    }
+    .product-price {
+      font-size: 16px;
+      font-weight: 900;
+      color: #0F172A;
+    }
+
+    /* CARD 2: DAILY RESTOCK */
+    .card-daily-restock {
+      background: #F0F8FF;
+      border: 1px solid #D6E8FA;
+      color: #0F172A;
+    }
+    .card-daily-restock .card-brand-badge {
+      color: #0284C7;
+    }
+    .restock-basket-icon {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 52px;
+      height: 52px;
+      background: #E0F2FE;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+    }
+    .restock-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .restock-row {
+      background: #FFFFFF;
+      border-radius: 16px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.03);
+      border: 1px solid rgba(0, 0, 0, 0.04);
+    }
+    .restock-row-img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+    }
+    .restock-info {
+      flex: 1;
+    }
+    .restock-name {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .restock-weight {
+      font-size: 11px;
+      color: var(--slate-500);
+    }
+    .restock-price {
+      font-size: 15px;
+      font-weight: 900;
+      color: #0F172A;
+      margin-right: 8px;
+    }
+    .stepper {
+      display: flex;
+      align-items: center;
+      background: #F8FAFC;
+      border: 1px solid #CBD5E1;
+      border-radius: 9999px;
+      padding: 2px 4px;
+      gap: 8px;
+    }
+    .step-btn {
+      background: transparent;
+      border: none;
+      font-size: 15px;
+      font-weight: 800;
+      color: #0284C7;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-count {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0F172A;
+      min-width: 14px;
+      text-align: center;
+    }
+
+    /* CARD 3: VALUE PICKS */
+    .card-value-picks {
+      background: #FFFBEB;
+      border: 1px solid #FEF3C7;
+      color: #78350F;
+    }
+    .card-value-picks .card-brand-badge {
+      color: #D97706;
+    }
+    .value-picks-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: auto;
+    }
+    .value-card {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 12px 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      border: 1px solid rgba(217, 119, 6, 0.12);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .value-badge {
+      position: absolute;
+      top: -8px;
+      right: 8px;
+      background: #15803D;
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      box-shadow: 0 2px 6px rgba(21, 128, 61, 0.3);
+    }
+    .value-img {
+      width: 100%;
+      height: 110px;
+      object-fit: contain;
+      margin-bottom: 6px;
+    }
+    .value-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .value-weight {
+      font-size: 11px;
+      color: var(--slate-500);
+      margin-bottom: 4px;
+    }
+    .value-pricing {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .value-price {
+      font-size: 16px;
+      font-weight: 900;
+      color: #0F172A;
+    }
+    .value-unit {
+      font-size: 11px;
+      font-weight: 700;
+      color: #15803D;
+    }
+
+    /* CARD 4: GIFTING BOUTIQUE */
+    .card-gifting {
+      background: #FFF1F2;
+      border: 1px solid #FFE4E6;
+      color: #881337;
+    }
+    .card-gifting .card-brand-badge {
+      color: #E11D48;
+    }
+    .gifting-layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+      flex: 1;
+    }
+    .gifting-left-card {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 12px rgba(225, 29, 72, 0.05);
+      border: 1px solid rgba(225, 29, 72, 0.1);
+    }
+    .gifting-right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .gifting-rose-img {
+      width: 100%;
+      height: 130px;
+      object-fit: contain;
+      margin-bottom: 6px;
+    }
+    .occasion-tags {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .occasion-pill {
+      background: #FFE4E6;
+      color: #BE123C;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 9999px;
+    }
+    .gifting-cake-card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      padding: 10px;
+      box-shadow: 0 4px 12px rgba(225, 29, 72, 0.05);
+      border: 1px solid rgba(225, 29, 72, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .cake-img {
+      width: 75px;
+      height: 75px;
+      object-fit: contain;
+      margin-bottom: 4px;
+    }
+
+    /* CARD 5: MOVIE NIGHT (CINEMA PURPLE) */
+    .card-movie-night {
+      background: #250B3B;
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      color: #FFFFFF;
+      box-shadow: 0 16px 36px -10px rgba(37, 11, 59, 0.5);
+    }
+    .card-movie-night .card-brand-badge {
+      color: #C084FC;
+    }
+    .card-movie-night .card-title-group h2 {
+      color: #FFFFFF;
+    }
+    .card-movie-night .card-title-group p {
+      color: #D8B4FE;
+    }
+    .movie-hero-tray {
+      width: 100%;
+      height: 180px;
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 10px 0 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      position: relative;
+    }
+    .movie-hero-tray img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .movie-bottom-chips {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(10px);
+      padding: 8px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .movie-snack-chip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 6px 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+    }
+    .snack-chip-name {
+      font-size: 11px;
+      font-weight: 800;
+      color: #FFFFFF;
+    }
+    .snack-chip-weight {
+      font-size: 9px;
+      color: #D8B4FE;
+      margin-bottom: 4px;
+    }
+    .snack-chip-action {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .snack-chip-price {
+      font-size: 12px;
+      font-weight: 900;
+      color: #38BDF8;
+    }
+    .snack-plus-btn {
+      width: 20px;
+      height: 20px;
+      border-radius: 9999px;
+      background: #15803D;
+      color: #FFFFFF;
+      border: none;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* CARD 6: BREAKFAST CLUB */
+    .card-breakfast {
+      background: #FFF8F0;
+      border: 1px solid #FFE4D6;
+      color: #7C2D12;
+    }
+    .card-breakfast .card-brand-badge {
+      color: #15803D;
+    }
+    .breakfast-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+      flex: 1;
+    }
+    .breakfast-plate-box {
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(124, 45, 18, 0.08);
+      border: 1px solid rgba(124, 45, 18, 0.1);
+    }
+    .breakfast-plate-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .breakfast-checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: center;
+    }
+    .check-row {
+      background: #FFFFFF;
+      border-radius: 14px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+    .check-row.checked {
+      background: #F0FDF4;
+      border-color: #86EFAC;
+    }
+    .custom-check {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 2px solid #CBD5E1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #FFFFFF;
+      transition: all 0.15s ease;
+    }
+    .check-row.checked .custom-check {
+      background: #15803D;
+      border-color: #15803D;
+    }
+    .check-row-img {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+    }
+    .check-info {
+      flex: 1;
+    }
+    .check-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .check-meta {
+      font-size: 10px;
+      color: var(--slate-500);
+    }
+    .check-price {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .breakfast-bundle-cta {
+      margin-top: 14px;
+      background: #15803D;
+      color: #FFFFFF;
+      border: none;
+      padding: 12px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.15s ease;
+    }
+    .breakfast-bundle-cta:hover {
+      background: #166534;
+      transform: scale(0.99);
+    }
+
+    /* Editable Mode Hint Pill */
+    .edit-pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(245, 158, 11, 0.2);
+      color: #F59E0B;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-left: 8px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0F172A;
+      color: #FFFFFF;
+      border: 1px solid #334155;
+      padding: 12px 20px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Studio Control Bar -->
+  <header class="studio-header">
+    <div class="brand-title">
+      <div class="brand-logo-pill">⚡ FastMinute</div>
+      <h1>6-Campaign Cards System</h1>
+      <span>Blinkit/Zepto-Grade Interactive Showcase</span>
+    </div>
+
+    <!-- Mode Switcher -->
+    <div class="view-modes">
+      <button class="mode-btn active" id="btnModeDesktop" onclick="switchView('desktop')">
+        🖥️ Desktop (3×2 Grid)
+      </button>
+      <button class="mode-btn" id="btnModeMobile" onclick="switchView('mobile')">
+        📱 Mobile Phone Frame
+      </button>
+    </div>
+
+    <!-- Time of Day Simulation -->
+    <div class="time-selector">
+      <span style="font-size: 11px; font-weight: 700; color: #94A3B8; margin-left: 6px;">Smart Time:</span>
+      <button class="time-btn active" onclick="setTime('morning')">☀️ Morning</button>
+      <button class="time-btn" onclick="setTime('afternoon')">🌤️ Afternoon</button>
+      <button class="time-btn" onclick="setTime('night')">🌙 Night</button>
+    </div>
+  </header>
+
+  <!-- Main Cards Viewport -->
+  <main class="cards-viewport">
+
+    <!-- DESKTOP 3x2 VIEW -->
+    <div class="grid-view" id="desktopView">
+
+      <!-- CARD 1: FRESH MARKET -->
+      <div class="campaign-card card-fresh-market" id="cardFreshMarket">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <h2 contenteditable="true" spellcheck="false">Fresh Market</h2>
+            <p contenteditable="true" spellcheck="false">Farm-fresh essentials, ready to add</p>
+          </div>
+          <img src="fresh-market-hero.webp" class="card-hero-thumb" alt="Fresh Tomatoes and Cucumbers in Basket" />
+        </div>
+
+        <div class="market-tabs">
+          <div class="market-tab active" onclick="selectMarketTab(this, 'sabzi')">🍅 Sabzi</div>
+          <div class="market-tab" onclick="selectMarketTab(this, 'fruits')">🥭 Fruits</div>
+          <div class="market-tab" onclick="selectMarketTab(this, 'herbs')">🌿 Herbs</div>
+        </div>
+
+        <div class="market-products-grid">
+          <div class="product-box">
+            <img src="ref-fresh-tomato.png" class="product-box-img" alt="Fresh Tomato" />
+            <div class="product-box-title" contenteditable="true">Tomato</div>
+            <div class="product-box-meta">500 g</div>
+            <div class="product-box-footer">
+              <span class="product-price">₹25</span>
+              <button class="btn-green-add" style="width: 76px; padding: 6px 0;" onclick="addToCart('Tomato (500g)', 25)">ADD</button>
+            </div>
+          </div>
+          <div class="product-box">
+            <img src="ref-fresh-cucumber.png" class="product-box-img" alt="Fresh Cucumber" />
+            <div class="product-box-title" contenteditable="true">Cucumber</div>
+            <div class="product-box-meta">500 g</div>
+            <div class="product-box-footer">
+              <span class="product-price">₹30</span>
+              <button class="btn-green-add" style="width: 76px; padding: 6px 0;" onclick="addToCart('Cucumber (500g)', 30)">ADD</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: DAILY RESTOCK -->
+      <div class="campaign-card card-daily-restock" id="cardDailyRestock">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <h2 contenteditable="true" spellcheck="false">Daily Restock</h2>
+            <p contenteditable="true" spellcheck="false">Everyday groceries at your fingertips</p>
+          </div>
+          <div class="restock-basket-icon">🧺</div>
+        </div>
+
+        <div class="restock-list">
+          <div class="restock-row">
+            <img src="ref-breakfast-toast.png" class="restock-row-img" alt="Milk" />
+            <div class="restock-info">
+              <div class="restock-name" contenteditable="true">Milk</div>
+              <div class="restock-weight">500 ml</div>
+            </div>
+            <span class="restock-price">₹30</span>
+            <div class="stepper">
+              <button class="step-btn" onclick="stepItem('milk', -1)">−</button>
+              <span class="step-count" id="count-milk">1</span>
+              <button class="step-btn" onclick="stepItem('milk', 1)">+</button>
+            </div>
+          </div>
+
+          <div class="restock-row">
+            <img src="ref-breakfast-toast.png" class="restock-row-img" alt="Bread" />
+            <div class="restock-info">
+              <div class="restock-name" contenteditable="true">Bread</div>
+              <div class="restock-weight">400 g</div>
+            </div>
+            <span class="restock-price">₹45</span>
+            <div class="stepper">
+              <button class="step-btn" onclick="stepItem('bread', -1)">−</button>
+              <span class="step-count" id="count-bread">1</span>
+              <button class="step-btn" onclick="stepItem('bread', 1)">+</button>
+            </div>
+          </div>
+
+          <div class="restock-row">
+            <img src="ref-atta-1kg.png" class="restock-row-img" alt="Atta" />
+            <div class="restock-info">
+              <div class="restock-name" contenteditable="true">Atta</div>
+              <div class="restock-weight">1 kg</div>
+            </div>
+            <span class="restock-price">₹55</span>
+            <div class="stepper">
+              <button class="step-btn" onclick="stepItem('atta', -1)">−</button>
+              <span class="step-count" id="count-atta">1</span>
+              <button class="step-btn" onclick="stepItem('atta', 1)">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: VALUE PICKS -->
+      <div class="campaign-card card-value-picks" id="cardValuePicks">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <h2 contenteditable="true" spellcheck="false">Value Picks</h2>
+            <p contenteditable="true" spellcheck="false">Save more on your daily essentials</p>
+          </div>
+        </div>
+
+        <div class="value-picks-grid">
+          <div class="value-card">
+            <img src="ref-atta-1kg.png" class="value-img" alt="Atta 1kg" />
+            <div class="value-title" contenteditable="true">Atta</div>
+            <div class="value-weight">1 kg</div>
+            <div class="value-pricing">
+              <span class="value-price">₹60</span>
+              <span class="value-unit">₹60/kg</span>
+            </div>
+            <button class="btn-green-add" onclick="addToCart('Atta 1kg', 60)">ADD</button>
+          </div>
+
+          <div class="value-card">
+            <div class="value-badge">Better value</div>
+            <img src="ref-atta-5kg.png" class="value-img" alt="Atta 5kg" />
+            <div class="value-title" contenteditable="true">Atta</div>
+            <div class="value-weight">5 kg</div>
+            <div class="value-pricing">
+              <span class="value-price">₹250</span>
+              <span class="value-unit">₹50/kg</span>
+            </div>
+            <button class="btn-green-add" onclick="addToCart('Atta 5kg (Better Value)', 250)">ADD</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 4: GIFTING BOUTIQUE -->
+      <div class="campaign-card card-gifting" id="cardGifting">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <h2 contenteditable="true" spellcheck="false">Gifting Boutique</h2>
+            <p contenteditable="true" spellcheck="false">Thoughtful gifts for special occasions</p>
+          </div>
+        </div>
+
+        <div class="gifting-layout">
+          <div class="gifting-left-card">
+            <img src="ref-rose-bouquet.png" class="gifting-rose-img" alt="Rose Bouquet" />
+            <div style="font-size: 15px; font-weight: 800; color: #0F172A;" contenteditable="true">Rose bouquet</div>
+            <div style="font-size: 11px; color: var(--slate-500); margin-bottom: 6px;">8 stems</div>
+            <div class="occasion-tags">
+              <span class="occasion-pill">🎂 Birthday</span>
+              <span class="occasion-pill">❤️ Anniversary</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto;">
+              <span style="font-size: 17px; font-weight: 900; color: #0F172A;">₹399</span>
+              <button class="btn-green-add" style="width: 74px; padding: 6px 0;" onclick="addToCart('Rose Bouquet (8 Stems)', 399)">ADD</button>
+            </div>
+          </div>
+
+          <div class="gifting-right-col">
+            <div class="gifting-cake-card">
+              <img src="ref-chocolate-cake.png" class="cake-img" alt="Chocolate Cake" />
+              <div style="font-size: 13px; font-weight: 800; color: #0F172A;" contenteditable="true">Chocolate cake</div>
+              <div style="font-size: 10px; color: var(--slate-500); margin-bottom: 6px;">500 g</div>
+              <div style="width: 100%; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                <span style="font-size: 15px; font-weight: 900; color: #0F172A;">₹499</span>
+                <button class="btn-green-add" style="width: 64px; padding: 5px 0; font-size: 11px;" onclick="addToCart('Chocolate Cake (500g)', 499)">ADD</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 5: MOVIE NIGHT -->
+      <div class="campaign-card card-movie-night" id="cardMovieNight">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <h2 contenteditable="true" spellcheck="false">Movie Night</h2>
+            <p contenteditable="true" spellcheck="false">Snacks for the perfect watch time</p>
+          </div>
+        </div>
+
+        <div class="movie-hero-tray">
+          <img src="ref-movie-cinema-scene.png" alt="Movie Night Popcorn, Chips, and Chilled Cola" />
+        </div>
+
+        <div class="movie-bottom-chips">
+          <div class="movie-snack-chip">
+            <div class="snack-chip-name" contenteditable="true">Popcorn</div>
+            <div class="snack-chip-weight">60 g</div>
+            <div class="snack-chip-action">
+              <span class="snack-chip-price">₹40</span>
+              <button class="snack-plus-btn" onclick="addToCart('Popcorn (60g)', 40)">+</button>
+            </div>
+          </div>
+
+          <div class="movie-snack-chip">
+            <div class="snack-chip-name" contenteditable="true">Chips</div>
+            <div class="snack-chip-weight">52 g</div>
+            <div class="snack-chip-action">
+              <span class="snack-chip-price">₹20</span>
+              <button class="snack-plus-btn" onclick="addToCart('Chips (52g)', 20)">+</button>
+            </div>
+          </div>
+
+          <div class="movie-snack-chip">
+            <div class="snack-chip-name" contenteditable="true">Cola</div>
+            <div class="snack-chip-weight">750 ml</div>
+            <div class="snack-chip-action">
+              <span class="snack-chip-price">₹35</span>
+              <button class="snack-plus-btn" onclick="addToCart('Chilled Cola (750ml)', 35)">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 6: BREAKFAST CLUB -->
+      <div class="campaign-card card-breakfast" id="cardBreakfast">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <h2 contenteditable="true" spellcheck="false">Breakfast Club</h2>
+            <p contenteditable="true" spellcheck="false">Your quick breakfast list</p>
+          </div>
+        </div>
+
+        <div class="breakfast-grid">
+          <div class="breakfast-plate-box">
+            <img src="ref-breakfast-toast.png" alt="Toasted Butter Bread and Milk" />
+          </div>
+
+          <div class="breakfast-checklist">
+            <div class="check-row checked" onclick="toggleCheck(this, 45)">
+              <div class="custom-check">✓</div>
+              <img src="ref-breakfast-toast.png" class="check-row-img" alt="Bread" />
+              <div class="check-info">
+                <div class="check-title">Bread</div>
+                <div class="check-meta">400 g</div>
+              </div>
+              <div class="check-price">₹45</div>
+            </div>
+
+            <div class="check-row" onclick="toggleCheck(this, 60)">
+              <div class="custom-check"></div>
+              <img src="ref-breakfast-toast.png" class="check-row-img" alt="Butter" />
+              <div class="check-info">
+                <div class="check-title">Butter</div>
+                <div class="check-meta">100 g</div>
+              </div>
+              <div class="check-price">₹60</div>
+            </div>
+
+            <div class="check-row checked" onclick="toggleCheck(this, 30)">
+              <div class="custom-check">✓</div>
+              <img src="ref-breakfast-toast.png" class="check-row-img" alt="Milk" />
+              <div class="check-info">
+                <div class="check-title">Milk</div>
+                <div class="check-meta">500 ml</div>
+              </div>
+              <div class="check-price">₹30</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="breakfast-bundle-cta" id="btnBreakfastCta" onclick="addBreakfastBundle()">
+          Add 2 items • ₹75
+        </button>
+      </div>
+
+    </div>
+
+    <!-- MOBILE PHONE FRAME VIEW (Rendered dynamically) -->
+    <div class="mobile-wrapper" id="mobileView">
+      <div class="mobile-phone">
+        <div class="phone-notch-bar">
+          <span>9:41</span>
+          <div class="phone-pill"></div>
+          <span>5G 􀛨 100%</span>
+        </div>
+        <div style="padding: 0 4px 10px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-size: 15px; font-weight: 800; color: #15803D;">⚡ FastMinute</div>
+          <div style="font-size: 12px; font-weight: 700; color: #64748B;">Ghatampur • 10 Mins</div>
+        </div>
+
+        <div class="mobile-scroll-feed" id="mobileFeedContainer">
+          <!-- Cloned cards will live here -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <div class="toast" id="toastPill">⚡ Added to Cart</div>
+
+  <script>
+    // View Switcher
+    function switchView(mode) {
+      const desktop = document.getElementById('desktopView');
+      const mobile = document.getElementById('mobileView');
+      const btnDesk = document.getElementById('btnModeDesktop');
+      const btnMob = document.getElementById('btnModeMobile');
+
+      if (mode === 'mobile') {
+        btnMob.classList.add('active');
+        btnDesk.classList.remove('active');
+        desktop.style.display = 'none';
+        mobile.style.display = 'flex';
+        renderMobileCards();
+      } else {
+        btnDesk.classList.add('active');
+        btnMob.classList.remove('active');
+        mobile.style.display = 'none';
+        desktop.style.display = 'grid';
+      }
+    }
+
+    function renderMobileCards() {
+      const container = document.getElementById('mobileFeedContainer');
+      const desktop = document.getElementById('desktopView');
+      container.innerHTML = '';
+      Array.from(desktop.children).forEach(card => {
+        const clone = card.cloneNode(true);
+        clone.style.minHeight = 'auto';
+        clone.style.marginBottom = '12px';
+        container.appendChild(clone);
+      });
+    }
+
+    // Time-of-day dynamic highlight
+    function setTime(timeOfDay) {
+      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const cards = {
+        cardBreakfast: document.getElementById('cardBreakfast'),
+        cardDailyRestock: document.getElementById('cardDailyRestock'),
+        cardFreshMarket: document.getElementById('cardFreshMarket'),
+        cardValuePicks: document.getElementById('cardValuePicks'),
+        cardMovieNight: document.getElementById('cardMovieNight'),
+        cardGifting: document.getElementById('cardGifting'),
+      };
+
+      // Reset
+      Object.values(cards).forEach(c => {
+        c.style.opacity = '0.55';
+        c.style.transform = 'scale(0.98)';
+      });
+
+      if (timeOfDay === 'morning') {
+        cards.cardBreakfast.style.opacity = '1';
+        cards.cardBreakfast.style.transform = 'scale(1.02)';
+        cards.cardDailyRestock.style.opacity = '1';
+        cards.cardDailyRestock.style.transform = 'scale(1.02)';
+        showToast('☀️ Morning Active: Highlighting Breakfast & Milk Restock');
+      } else if (timeOfDay === 'afternoon') {
+        cards.cardFreshMarket.style.opacity = '1';
+        cards.cardFreshMarket.style.transform = 'scale(1.02)';
+        cards.cardValuePicks.style.opacity = '1';
+        cards.cardValuePicks.style.transform = 'scale(1.02)';
+        showToast('🌤️ Afternoon Active: Highlighting Fresh Sabzi & Value Atta');
+      } else if (timeOfDay === 'night') {
+        cards.cardMovieNight.style.opacity = '1';
+        cards.cardMovieNight.style.transform = 'scale(1.02)';
+        cards.cardGifting.style.opacity = '1';
+        cards.cardGifting.style.transform = 'scale(1.02)';
+        showToast('🌙 Night Active: Highlighting Movie Night Munchies & Cake');
+      }
+    }
+
+    // Tab switcher in Fresh Market
+    // Tab switcher in Fresh Market
+    const marketData = {
+      sabzi: [
+        { name: 'Tomato', weight: '500 g', price: 25, img: 'ref-fresh-tomato.png' },
+        { name: 'Cucumber', weight: '500 g', price: 30, img: 'ref-fresh-cucumber.png' }
+      ],
+      fruits: [
+        { name: 'Sweet Mango', weight: '500 g', price: 65, img: 'summer-mango.svg' },
+        { name: 'Fresh Lemon', weight: '250 g', price: 20, img: 'summer-lemon.svg' }
+      ],
+      herbs: [
+        { name: 'Coriander', weight: '100 g', price: 12, img: 'fresh-coriander.svg' },
+        { name: 'Fresh Mint', weight: '100 g', price: 15, img: 'fresh-mint.svg' }
+      ]
+    };
+
+    function selectMarketTab(el, tabKey) {
+      document.querySelectorAll('.market-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      
+      const grid = document.querySelector('.market-products-grid');
+      if (grid && marketData[tabKey]) {
+        grid.innerHTML = marketData[tabKey].map(item => `
+          <div class="product-box">
+            <img src="${item.img}" class="product-box-img" alt="${item.name}" />
+            <div class="product-box-title" contenteditable="true">${item.name}</div>
+            <div class="product-box-meta">${item.weight}</div>
+            <div class="product-box-footer">
+              <span class="product-price">₹${item.price}</span>
+              <button class="btn-green-add" style="width: 76px; padding: 6px 0;" onclick="addToCart('${item.name} (${item.weight})', ${item.price})">ADD</button>
+            </div>
+          </div>
+        `).join('');
+      }
+      showToast('Switched to ' + el.innerText.trim());
+    }
+
+    // Steppers in Daily Restock
+    function stepItem(item, delta) {
+      const el = document.getElementById('count-' + item);
+      let count = parseInt(el.innerText, 10) + delta;
+      if (count < 0) count = 0;
+      el.innerText = count;
+      showToast(item.toUpperCase() + ' quantity: ' + count);
+    }
+
+    // Breakfast checklist calculation
+    function toggleCheck(row, price) {
+      row.classList.toggle('checked');
+      const box = row.querySelector('.custom-check');
+      box.innerText = row.classList.contains('checked') ? '✓' : '';
+      recalcBreakfast();
+    }
+
+    function recalcBreakfast() {
+      const checkedRows = document.querySelectorAll('.breakfast-checklist .check-row.checked');
+      let total = 0;
+      let count = checkedRows.length;
+
+      checkedRows.forEach(row => {
+        const text = row.querySelector('.check-price').innerText.replace('₹', '');
+        total += parseInt(text, 10);
+      });
+
+      const btn = document.getElementById('btnBreakfastCta');
+      if (count === 0) {
+        btn.innerText = 'Select items to add';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+      } else {
+        btn.innerText = `Add ${count} item${count > 1 ? 's' : ''} • ₹${total}`;
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    }
+
+    function addBreakfastBundle() {
+      const checkedRows = document.querySelectorAll('.breakfast-checklist .check-row.checked');
+      showToast(`⚡ Added ${checkedRows.length} Breakfast items to FastMinute Cart!`);
+    }
+
+    function addToCart(title, price) {
+      showToast(`🛒 Added ${title} (₹${price})`);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastPill');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2400);
+    }
+  </script>
+</body>
+</html>

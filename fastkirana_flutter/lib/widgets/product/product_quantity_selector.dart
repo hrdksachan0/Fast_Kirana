@@ -201,7 +201,7 @@ class AddToCartButton extends ConsumerWidget {
                 width: s(28),
                 height: s(31),
                 child: Center(
-                  child: Icon(Icons.remove_rounded, size: s(14), color: Colors.white),
+                  child: Icon(Icons.remove_rounded, size: s(18), color: Colors.white),
                 ),
               ),
             ),
@@ -269,7 +269,7 @@ class AddToCartButton extends ConsumerWidget {
                 width: s(28),
                 height: s(31),
                 child: Center(
-                  child: Icon(Icons.add_rounded, size: s(14), color: Colors.white),
+                  child: Icon(Icons.add_rounded, size: s(18), color: Colors.white),
                 ),
               ),
             ),
@@ -323,7 +323,7 @@ class AddToCartButton extends ConsumerWidget {
               ),
             ),
             SizedBox(width: s(2.5)),
-            Icon(Icons.add_rounded, size: s(15), color: primaryColor),
+            Icon(Icons.add_rounded, size: s(17), color: primaryColor),
           ],
         ),
       ),
@@ -342,22 +342,22 @@ class AddToCartButton extends ConsumerWidget {
         }
       },
       child: Container(
-        width: s(36),
-        height: s(36),
+        width: s(38),
+        height: s(38),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(s(9)),
-          border: Border.all(color: const Color(0xFF16A34A), width: s(1.5)),
+          borderRadius: BorderRadius.circular(s(9.5)),
+          border: Border.all(color: const Color(0xFF16A34A), width: s(1.6)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF16A34A).withValues(alpha: 0.20),
+              color: const Color(0xFF16A34A).withValues(alpha: 0.22),
               blurRadius: s(6),
               offset: Offset(0, s(2)),
             ),
           ],
         ),
         child: Center(
-          child: Icon(Icons.add_rounded, size: s(22), color: const Color(0xFF16A34A)),
+          child: Icon(Icons.add, size: s(27), color: const Color(0xFF16A34A)),
         ),
       ),
     );

@@ -30,6 +30,7 @@ import '../../core/utils/restaurant_utils.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../providers/banner_provider.dart';
+import 'orders_screen.dart';
 import '../../widgets/sponsored_ad_card.dart';
 import '../../widgets/offline_banner.dart';
 import 'widgets/tracking_map_view.dart';
@@ -429,6 +430,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
               order: _order!,
               customEtaText: _etaText.isNotEmpty ? _etaText : null,
             );
+            if (parsed == OrderStatus.cancelled || parsed == OrderStatus.delivered) {
+              ref.invalidate(ordersProvider(''));
+            }
           }
           _fetchLiveOrder();
         },
@@ -596,6 +600,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       await dio.patch('/api/orders/$cleanId', data: {
         'status': 'CANCELLED',
       });
+
+      await NotificationService().clearLiveOrderActivity(
+        _order?.id ?? cleanId,
+        readableId: _order?.readableId ?? cleanId,
+      );
+      ref.invalidate(ordersProvider(''));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

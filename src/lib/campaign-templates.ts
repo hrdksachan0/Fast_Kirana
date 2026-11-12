@@ -1,3 +1,9 @@
+import premium0 from '../../public/navratri/templates/fresh-market.json'
+import premium1 from '../../public/navratri/templates/daily-restock.json'
+import premium2 from '../../public/navratri/templates/pack-value.json'
+import premium3 from '../../public/navratri/templates/gifting-boutique.json'
+import premium4 from '../../public/navratri/templates/movie-night.json'
+import premium5 from '../../public/navratri/templates/breakfast-club.json'
 import navratri from '../../public/navratri/navratri.json'
 import metadata from '../../public/navratri/templates/index.json'
 import diwali from '../../public/navratri/templates/diwali.json'
@@ -21,6 +27,12 @@ export interface CampaignTemplate {
 }
 
 const configs: Record<string, unknown> = {
+  'fresh-market': premium0,
+  'daily-restock': premium1,
+  'pack-value': premium2,
+  'gifting-boutique': premium3,
+  'movie-night': premium4,
+  'breakfast-club': premium5,
   navratri,
   diwali,
   holi,

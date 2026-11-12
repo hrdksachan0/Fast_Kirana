@@ -8,6 +8,8 @@ import '../../core/services/logger_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../core/services/location_service.dart';
+import '../../core/widgets/app_cached_image.dart';
+import '../../widgets/card_media_widget.dart';
 
 import '../../providers/product_provider.dart';
 import '../../providers/banner_provider.dart';
@@ -23,7 +25,9 @@ import '../navratri/navratri_data.dart';
 import 'widgets/blinkit_animated_bag.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
-  const SplashScreen({super.key});
+  final bool forceHome;
+
+  const SplashScreen({super.key, this.forceHome = false});
 
   @override
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
@@ -41,54 +45,104 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _requestAppPermissions();
+    if (!widget.forceHome) {
+      _requestAppPermissions();
+    }
 
     // 0. Pre-load local festive campaign instantly so Frame 1 is never empty
     initCampaignCache();
 
-    // 1. Warm up GPS location & nearest store hub concurrently with fast timeout
-    final locationFuture = LocationService.bootstrapUserLocation(ref)
-        .timeout(const Duration(milliseconds: 900), onTimeout: () {});
+    // 1. Hydrate cached address immediately & warm up GPS location + nearest store hub concurrently
+    final locationFuture = (() async {
+      if (LocationService.cachedAddress == null) {
+        await LocationService.loadCachedAddress();
+      }
+      await LocationService.bootstrapUserLocation(ref);
+    })().timeout(const Duration(milliseconds: 1500), onTimeout: () {});
 
     // 2. Warm up active store hubs, categories, catalog, banners, and festive campaign concurrently during splash
     final prefFuture = SharedPreferences.getInstance();
     ref.read(activeStoreHubsProvider.future).catchError((_) => <StoreHub>[]);
     final categoriesFuture =
         ref.read(categoriesProvider.future).catchError((_) => <Category>[]);
-    ref.read(homeProductCatalogProvider.future).catchError((_) => <Product>[]);
+    final catalogFuture =
+        ref.read(homeProductCatalogProvider.future).catchError((_) => <Product>[]);
     final bannersFuture =
         ref.read(bannersProvider('grocery').future).catchError((_) => <Banner>[]);
     final campaignFuture =
         ref.read(navratriDataProvider.future).then<NavratriData?>((v) => v).catchError((_) => null);
 
     // 3. Texture Precaching:
-    // Pre-cache top 8 category packshots so "Explore by Category" opens with ZERO shimmer!
-    categoriesFuture.then((categories) {
-      if (mounted && categories.isNotEmpty) {
-        for (final cat in categories.take(8)) {
-          final imgUrl = CategoryVisualHelper.resolveRealisticImageUrl(cat);
-          if (imgUrl.isNotEmpty) {
-            try {
-              precacheImage(
-                CachedNetworkImageProvider(imgUrl, maxWidth: 400, maxHeight: 400),
-                context,
-              ).catchError((_) {});
-            } catch (_) {}
-          }
+    // Pre-cache top 8 category packshots, first 2 hero banners, and top 16 product images
+    // so Home opens only after images are ready (no blank placeholders or fade-in delay).
+    final categoryPrecacheFuture = categoriesFuture.then((categories) async {
+      if (!mounted || categories.isEmpty) return;
+      final tasks = <Future<void>>[];
+      for (final cat in categories.take(8)) {
+        final imgUrl = CategoryVisualHelper.resolveRealisticImageUrl(cat);
+        if (imgUrl.isNotEmpty) {
+          tasks.add(
+            precacheImage(
+              CachedNetworkImageProvider(imgUrl, maxWidth: 400, maxHeight: 400),
+              context,
+            ).catchError((_) {}),
+          );
         }
       }
-    }).catchError((_) {});
+      if (tasks.isNotEmpty) {
+        await Future.wait(tasks);
+      }
+    }).timeout(const Duration(milliseconds: 3000), onTimeout: () {}).catchError((_) {});
 
-    bannersFuture.then((banners) {
-      if (mounted && banners.isNotEmpty) {
-        final firstImg = banners.first.imageUrl;
-        if (firstImg != null && firstImg.isNotEmpty) {
-          try {
-            precacheImage(CachedNetworkImageProvider(firstImg), context).catchError((_) {});
-          } catch (_) {}
+    final bannerPrecacheFuture = bannersFuture.then((banners) async {
+      if (!mounted || banners.isEmpty) return;
+      final tasks = <Future<void>>[];
+      for (final banner in banners.take(2)) {
+        final rawImg = banner.imageUrl;
+        if (rawImg != null && rawImg.trim().isNotEmpty) {
+          final resolvedUrl = CardMediaWidget.resolveUrl(rawImg);
+          tasks.add(
+            precacheImage(
+              CachedNetworkImageProvider(
+                resolvedUrl,
+                cacheManager: FastKiranaImageCacheManager.instance,
+                maxWidth: 1080,
+                maxHeight: 1440,
+              ),
+              context,
+            ).catchError((_) {}),
+          );
         }
       }
-    }).catchError((_) {});
+      if (tasks.isNotEmpty) {
+        await Future.wait(tasks);
+      }
+    }).timeout(const Duration(milliseconds: 3000), onTimeout: () {}).catchError((_) {});
+
+    final catalogPrecacheFuture = catalogFuture.then((products) async {
+      if (!mounted || products.isEmpty) return;
+      final tasks = <Future<void>>[];
+      for (final p in products.take(16)) {
+        final rawImg = p.imageUrl;
+        if (rawImg != null && rawImg.trim().isNotEmpty && !rawImg.startsWith('data:')) {
+          final resolvedUrl = CardMediaWidget.resolveUrl(rawImg);
+          tasks.add(
+            precacheImage(
+              CachedNetworkImageProvider(
+                resolvedUrl,
+                cacheManager: FastKiranaImageCacheManager.instance,
+                maxWidth: 400,
+                maxHeight: 400,
+              ),
+              context,
+            ).catchError((_) {}),
+          );
+        }
+      }
+      if (tasks.isNotEmpty) {
+        await Future.wait(tasks);
+      }
+    }).timeout(const Duration(milliseconds: 3500), onTimeout: () {}).catchError((_) {});
 
     campaignFuture.then((campaign) {
       if (mounted && campaign != null) {
@@ -106,15 +160,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       }
     }).catchError((_) {});
 
-    // 4. Blinkit-Style Animated Boot Timing:
-    // Wait for smooth physics bounce animation AND essential metadata,
-    // so Home screen opens with all festive sections, categories & banners pre-hydrated (zero layout shift!)
+    // 4. Wait for smooth splash animation AND essential metadata + decoded images
+    final minDelay = Duration(milliseconds: widget.forceHome ? 600 : 1400);
     Future.wait([
-      Future.delayed(const Duration(milliseconds: 1400)),
+      Future.delayed(minDelay),
       prefFuture,
       locationFuture,
-      categoriesFuture,
-      bannersFuture,
+      categoryPrecacheFuture,
+      bannerPrecacheFuture,
+      catalogPrecacheFuture,
       campaignFuture,
     ]).then((results) {
       final prefs = results[1] as SharedPreferences;
@@ -123,8 +177,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       _safeNavigate();
     });
 
-    // 5. Failsafe Watchdog: App will NEVER stay stuck on splash screen for more than 2.0s
-    Future.delayed(const Duration(milliseconds: 2000), () {
+    // 5. Failsafe Watchdog: App will never stay stuck on splash screen
+    Future.delayed(Duration(milliseconds: widget.forceHome ? 4500 : 3500), () {
       if (!_hasNavigated && mounted) {
         _safeNavigate();
       }
@@ -152,6 +206,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           : (p.getString('auth_token') ?? p.getString('user_id'));
 
       if (!mounted) return;
+
+      if (widget.forceHome) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+        return;
+      }
 
       // On web during preview/testing or when logged in with location
       if (kIsWeb && (token == null || token.isEmpty)) {

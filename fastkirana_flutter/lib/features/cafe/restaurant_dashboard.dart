@@ -215,9 +215,12 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
         if (matchedRest != null) {
           _assignedRestaurantId = matchedRest.id;
           _restaurantName = matchedRest.name;
-        } else if (_availableOutlets.isNotEmpty) {
-          _assignedRestaurantId = _availableOutlets.first['id'];
-          _restaurantName = _availableOutlets.first['name'] ?? _restaurantName;
+        } else {
+          final isAdminRole = (user?.role ?? '').toUpperCase() == 'ADMIN' || (user?.role ?? '').toUpperCase() == 'SUPER_ADMIN';
+          if (isAdminRole && _availableOutlets.isNotEmpty) {
+            _assignedRestaurantId = _availableOutlets.first['id'];
+            _restaurantName = _availableOutlets.first['name'] ?? _restaurantName;
+          }
         }
       }
     }
@@ -460,9 +463,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       }
     }
 
-    // 3. Fallback default & resolve name
+    // 3. Fallback default ONLY for Admin testing; non-admin kitchen accounts must have an assigned outlet
     if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
-      if (RestaurantRegistry.all.isNotEmpty) {
+      final isAdminRole = (user?.role ?? '').toUpperCase() == 'ADMIN' || (user?.role ?? '').toUpperCase() == 'SUPER_ADMIN';
+      if (isAdminRole && RestaurantRegistry.all.isNotEmpty) {
         final first = RestaurantRegistry.all.first;
         _assignedRestaurantId = first.id;
         _restaurantName = first.name;
@@ -526,23 +530,19 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       }
       _currentlySubscribedOutletId = outletId;
 
-      // 2. Register token with backend and subscribe strictly to current outlet topics
+      // 2. Register token with backend and subscribe strictly to current canonical outlet topic
       await notif.registerDeviceToken(dio, role: 'RESTAURANT', assignedRestaurantId: outletId);
       if (outletId != null && outletId.isNotEmpty) {
         await notif.subscribeToTopic('restaurant_$outletId');
-        await notif.subscribeToTopic('kitchen_$outletId');
-        await notif.subscribeToTopic('restaurant_orders_$outletId');
+        // Unsubscribe legacy duplicate topics
+        await notif.unsubscribeFromTopic('kitchen_$outletId');
+        await notif.unsubscribeFromTopic('restaurant_orders_$outletId');
         final restObj = RestaurantRegistry.find(outletId);
         if (restObj != null && restObj.slug.isNotEmpty && restObj.slug != outletId) {
-          await notif.subscribeToTopic('restaurant_${restObj.slug}');
-          await notif.subscribeToTopic('kitchen_${restObj.slug}');
-          await notif.subscribeToTopic('restaurant_orders_${restObj.slug}');
+          await notif.unsubscribeFromTopic('restaurant_${restObj.slug}');
+          await notif.unsubscribeFromTopic('kitchen_${restObj.slug}');
+          await notif.unsubscribeFromTopic('restaurant_orders_${restObj.slug}');
         }
-      }
-      final phone = prefs.getString('user_phone') ?? '';
-      final clean = phone.replaceAll('+91', '').replaceAll(' ', '').trim();
-      if (clean.length == 10) {
-        await notif.subscribeToTopic('phone_$clean');
       }
     } catch (e, _) {
       LoggerService.error('RestaurantDashboard: notification init error', e);
@@ -625,14 +625,19 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
         _restaurantBroadcastChannel = null;
       }
 
+      // Never open unfiltered global order streams when outlet is unresolved
+      if (_assignedRestaurantId == null || _assignedRestaurantId!.isEmpty) {
+        return;
+      }
+
       // 1. Database table changes (Listen to orders changes with strict outlet isolation)
       _restaurantOrdersChannel = supabase
-          .channel('public:restaurant_orders_channel_${_assignedRestaurantId ?? 'default'}')
+          .channel('public:restaurant_orders_channel_$_assignedRestaurantId')
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
             schema: 'public',
             table: 'orders',
-            filter: (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL')
+            filter: (_assignedRestaurantId != 'ALL')
                 ? PostgresChangeFilter(
                     type: PostgresChangeFilterType.eq,
                     column: 'restaurantId',
@@ -1451,8 +1456,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
                     _stopPendingAlarm();
                     _autoRefreshTimer?.cancel();
                     _audioPlayer.stop();
+                    await ref.read(authProvider.notifier).logout();
+                    if (!mounted) return;
                     nav.pushNamedAndRemoveUntil('/login', (route) => false);
-                    unawaited(ref.read(authProvider.notifier).logout());
                   }
                 }
               },

@@ -340,36 +340,6 @@ export async function GET(
   }
 }
 
-async function uploadDeliveryPhoto(base64Image: string, orderId: string): Promise<string> {
-  const { uploadToSupabaseStorage } = await import('@/lib/supabase-storage')
-  const sharp = (await import('sharp')).default
-
-  // Clean base64
-  let rawBase64 = base64Image
-  if (rawBase64.includes(',')) {
-    rawBase64 = rawBase64.split(',')[1]
-  }
-  const inputBuffer = Buffer.from(rawBase64, 'base64')
-
-  // Optimize to WebP
-  let finalBuffer: Buffer
-  let contentType = 'image/webp'
-  let ext = 'webp'
-  try {
-    finalBuffer = await sharp(inputBuffer)
-      .resize({ width: 800, withoutEnlargement: true, fit: 'inside' })
-      .webp({ quality: 75, effort: 4 })
-      .toBuffer()
-  } catch {
-    finalBuffer = inputBuffer
-    contentType = 'image/jpeg'
-    ext = 'jpg'
-  }
-
-  const path = `delivery-photos/${orderId}.${ext}`
-  return uploadToSupabaseStorage(finalBuffer, path, contentType)
-}
-
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -721,28 +691,11 @@ export async function PATCH(
       }
     }
 
-    let finalDeliveryPhoto = deliveryPhoto || null
-
-    if (status === 'DELIVERED' && deliveryPhoto && typeof deliveryPhoto === 'string') {
-      const isBase64 = deliveryPhoto.startsWith('data:image/') || (!deliveryPhoto.startsWith('http://') && !deliveryPhoto.startsWith('https://') && deliveryPhoto.length > 100)
-      
-      if (isBase64) {
-        try {
-          const supabaseUrl = await uploadDeliveryPhoto(deliveryPhoto, id)
-          finalDeliveryPhoto = supabaseUrl
-        } catch (uploadErr) {
-          console.error('[Supabase Storage] Error uploading delivery photo, falling back to base64:', uploadErr)
-        }
-      }
-    }
+    // Delivery photos are intentionally disabled (privacy & fast zero-friction delivery)
+    const safePhoto: string | null = null
 
     // Update using raw SQL to handle enum properly
     if (status === 'DELIVERED') {
-      let safePhoto = finalDeliveryPhoto
-      if (safePhoto && safePhoto.startsWith('data:') && safePhoto.length > 200000) {
-        console.warn(`[API orders] Delivery photo for order ${id} is too large (${safePhoto.length} chars). Saving as null to prevent db error.`)
-        safePhoto = null
-      }
 
       const isAlreadyPaidOnline = 
         existingOrder.paymentStatus === 'PAID' && 
@@ -1148,16 +1101,31 @@ export async function PATCH(
         data: { orderId: existingOrder.id }
       }).catch(err => console.error('Background sendPushNotification error:', err))
 
-      // Notify workers/staff of the update (Admin excluded — Admin only receives initial ADMIN_PENDING approval alerts)
-      sendPushNotificationToRoles([Role.CHEF, Role.DELIVERY, Role.PICKER], {
-        title: `Order #${baseOrderNo} Updated 🔄`,
-        body: `Order #${baseOrderNo} status changed to ${displayStatus}.`,
-        icon: `${origin}/icons/icon-192.png`,
-        badge: `${origin}/icons/icon-192.png`,
-        tag: `${orderTag}-staff-update`,
-        renotify: status !== 'CANCELLED',
-        data: { orderId: existingOrder.id }
-      }).catch(err => console.error('Background sendPushNotificationToRoles error:', err))
+      // Notify only the relevant outlet/hub staff — never broadcast to all CHEFs across restaurants
+      const isRestOrder = Boolean(existingOrder.restaurantId || existingOrder.orderType === 'RESTAURANT')
+      if (status === 'CANCELLED' && isRestOrder && existingOrder.restaurantId) {
+        sendPushNotificationToRestaurant(existingOrder.restaurantId, {
+          title: `Order #${baseOrderNo} Cancelled`,
+          body: `Order #${baseOrderNo} has been cancelled.`,
+          icon: `${origin}/icons/icon-192.png`,
+          badge: `${origin}/icons/icon-192.png`,
+          tag: `${orderTag}-rest-cancel`,
+          renotify: false,
+          data: { orderId: existingOrder.id, restaurantId: existingOrder.restaurantId, status: 'CANCELLED' },
+        }).catch(err => console.error('Background restaurant cancel push error:', err))
+      }
+
+      if (status === 'PACKED') {
+        sendPushNotificationToRoles([Role.DELIVERY], {
+          title: `Order #${baseOrderNo} Ready for Pickup 🛵`,
+          body: `Order #${baseOrderNo} is packed and ready for delivery.`,
+          icon: `${origin}/icons/icon-192.png`,
+          badge: `${origin}/icons/icon-192.png`,
+          tag: `${orderTag}-rider-ready`,
+          renotify: true,
+          data: { orderId: existingOrder.id, storeId: existingOrder.storeId || '' },
+        }).catch(err => console.error('Background rider push error:', err))
+      }
 
       // If order was approved by Admin from ADMIN_PENDING to PENDING / CONFIRMED / etc, alert Restaurant or Dark Store specifically
       const isAdminApproved = existingOrder.status === 'ADMIN_PENDING' && status !== 'ADMIN_PENDING' && status !== 'CANCELLED'

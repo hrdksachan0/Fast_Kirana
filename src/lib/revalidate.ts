@@ -1,5 +1,7 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
 
+let lastStorefrontRevalTime = 0
+
 /**
  * On-demand cache revalidation helper for storefront pages.
  * Purges Next.js static / ISR cache specifically for the affected content
@@ -25,6 +27,15 @@ export function revalidateStorefront(
       revalidateCategory(categorySlug)
       return
     }
+
+    // Debounce rapid full-storefront purges by 20 seconds.
+    // If multiple inventory items/POS scans update within 20s, a single revalidation
+    // is performed, preventing Vercel ISR write storms while keeping customers 100% up to date.
+    const now = Date.now()
+    if (now - lastStorefrontRevalTime < 20000) {
+      return
+    }
+    lastStorefrontRevalTime = now
 
     // Default: only invalidate the homepage (not every category page + every product cache)
     // Category-specific pages are invalidated only when categorySlug is provided above

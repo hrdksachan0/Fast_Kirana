@@ -1,0 +1,203 @@
+{
+  "enabled": true,
+  "sectionTitle": "Featured Zones",
+  "sectionSubtitle": "Curated daily baskets & instant savings",
+  "cards": [
+    {
+      "id": "seasonal-switch-up",
+      "type": "seasonalSwitchUp",
+      "badge": "01",
+      "title": "The Seasonal Switch-Up",
+      "subtitle": "POWERED BY Cetaphil DOT & KEY",
+      "backgroundColor": "#D6EEFF",
+      "borderColor": "#C0E2FD",
+      "accentColor": "#0284C7",
+      "textColor": "#1E3A8A",
+      "enabled": true,
+      "tabs": [
+        { "id": "body-lotion", "label": "Body\nLotions", "icon": "body.png" },
+        { "id": "face-moisturizer", "label": "Face\nMoisturizers", "icon": "face.png" },
+        { "id": "lip-balm", "label": "Lip\nBalm", "icon": "lip.png" },
+        { "id": "hair-care", "label": "Hair\nCare", "icon": "hair.png" },
+        { "id": "lip-sleeping-mask", "label": "Lip\nMask", "icon": "lip.png" }
+      ],
+      "items": []
+    },
+    {
+      "id": "fresh-market",
+      "type": "freshMarket",
+      "badge": "02",
+      "title": "bloom",
+      "subtitle": "Farm-fresh essentials",
+      "backgroundColor": "#E2EFFF",
+      "borderColor": "#CFE4FD",
+      "accentColor": "#15803D",
+      "textColor": "#0F172A",
+      "heroImage": "bloom-panoramic-header.svg",
+      "enabled": true,
+      "tabs": [],
+      "items": [
+        {
+          "id": "bloom-1",
+          "name": "Bloom Coriander Leaves",
+          "weight": "100 g",
+          "price": 26.0,
+          "originalPrice": 48.0,
+          "discountTag": "₹22 OFF",
+          "image": "fresh-coriander.svg"
+        },
+        {
+          "id": "bloom-2",
+          "name": "Bloom Chilli Green",
+          "weight": "100 g",
+          "price": 19.0,
+          "originalPrice": 29.0,
+          "discountTag": "₹10 OFF",
+          "image": "fresh-mint.svg"
+        },
+        {
+          "id": "bloom-3",
+          "name": "Bloom Muskmelon",
+          "weight": "1 pc (550 - 650 g)",
+          "price": 111.0,
+          "originalPrice": 231.0,
+          "discountTag": "₹120 OFF",
+          "image": "ref-fresh-cucumber.png"
+        }
+      ]
+    },
+    {
+      "id": "value-picks",
+      "type": "valuePicks",
+      "badge": "03",
+      "title": "Value Picks",
+      "subtitle": "Save more on your daily essentials",
+      "backgroundColor": "#FEFCE8",
+      "borderColor": "#FEF08A",
+      "accentColor": "#15803D",
+      "textColor": "#78350F",
+      "heroImage": "pack-value-hero.webp",
+      "specialRibbon": "Better value",
+      "enabled": true,
+      "tabs": [],
+      "items": [
+        {
+          "id": "vp-1",
+          "name": "Atta",
+          "weight": "1 kg",
+          "price": 60.0,
+          "unitPriceComparison": "₹60/kg",
+          "image": "ref-atta-1kg.png"
+        },
+        {
+          "id": "vp-2",
+          "name": "Atta",
+          "weight": "5 kg",
+          "price": 250.0,
+          "unitPriceComparison": "₹50/kg",
+          "discountTag": "Better value",
+          "image": "ref-atta-5kg.png"
+        }
+      ]
+    },
+    {
+      "id": "gifting-boutique",
+      "type": "giftingBoutique",
+      "badge": "04",
+      "title": "Gifting Boutique",
+      "subtitle": "Thoughtful gifts for special occasions",
+      "backgroundColor": "#FDF2F4",
+      "borderColor": "#FCE7F3",
+      "accentColor": "#15803D",
+      "textColor": "#831843",
+      "heroImage": "ref-rose-bouquet.png",
+      "enabled": true,
+      "tabs": [
+        { "id": "birthday", "label": "Birthday", "icon": "🎂" },
+        { "id": "anniversary", "label": "Anniversary", "icon": "🤍" }
+      ],
+      "items": [
+        {
+          "id": "gb-1",
+          "name": "Rose bouquet",
+          "weight": "8 stems",
+          "price": 399.0,
+          "image": "ref-rose-bouquet.png",
+          "tabId": "anniversary"
+        },
+        {
+          "id": "gb-2",
+          "name": "Chocolate cake",
+          "weight": "500 g",
+          "price": 499.0,
+          "image": "ref-chocolate-cake.png",
+          "tabId": "birthday"
+        }
+      ]
+    },
+    {
+      "id": "movie-night",
+      "type": "movieNight",
+      "badge": "05",
+      "title": "Movie Night",
+      "subtitle": "Snacks for the perfect watch time",
+      "backgroundColor": "#251640",
+      "borderColor": "#382458",
+      "accentColor": "#15803D",
+      "textColor": "#FFFFFF",
+      "heroImage": "ref-movie-cinema-scene.png",
+      "comboButtonLabel": "Add combo",
+      "comboButtonPrice": 149.0,
+      "enabled": true,
+      "tabs": [],
+      "items": [
+        {
+          "id": "mn-1",
+          "name": "Popcorn",
+          "weight": "150 g",
+          "price": 60.0,
+          "image": "movie-popcorn.svg"
+        },
+        {
+          "id": "mn-2",
+          "name": "Cold drink",
+          "weight": "750 ml",
+          "price": 40.0,
+          "image": "chilled-cola.svg"
+        }
+      ]
+    },
+    {
+      "id": "breakfast-club",
+      "type": "breakfastClub",
+      "badge": "06",
+      "title": "Breakfast Club",
+      "subtitle": "Fresh mornings start here",
+      "backgroundColor": "#FFF8F0",
+      "borderColor": "#FEE6D1",
+      "accentColor": "#15803D",
+      "textColor": "#9A3412",
+      "heroImage": "breakfast-club-hero.webp",
+      "comboButtonLabel": "Add Morning Combo",
+      "comboButtonPrice": 99.0,
+      "enabled": true,
+      "tabs": [],
+      "items": [
+        {
+          "id": "bc-1",
+          "name": "Whole Wheat Bread",
+          "weight": "400 g",
+          "price": 45.0,
+          "image": "ref-breakfast-toast.png"
+        },
+        {
+          "id": "bc-2",
+          "name": "Table Butter",
+          "weight": "100 g",
+          "price": 58.0,
+          "image": "table-butter.svg"
+        }
+      ]
+    }
+  ]
+}

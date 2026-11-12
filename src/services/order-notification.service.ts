@@ -200,7 +200,6 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
                 user: {
                   OR: [
                     { assignedRestaurantId: order.restaurantId },
-                    { role: { in: [Role.RESTAURANT_OWNER, Role.CHEF] } },
                     ...(cleanRestPhone ? [{ phone: { contains: cleanRestPhone } }] : []),
                   ]
                 }

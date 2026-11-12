@@ -70,23 +70,45 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
     final cartNotifier = ref.read(cartProvider.notifier);
     for (final item in items) {
-      final pid = item.productId ?? item.id;
+      // 1. Resolve true base productId
+      String pid = (item.productId != null && item.productId!.trim().isNotEmpty)
+          ? item.productId!.trim()
+          : '';
+      // Guard: Never use order item database ID ('oi_...') as a productId
+      if (pid.startsWith('oi_') || pid.isEmpty) {
+        if (!item.id.startsWith('oi_')) {
+          pid = item.id.trim();
+        } else {
+          pid = '';
+        }
+      }
+
+      final isRest = (item.restaurantId != null && item.restaurantId!.trim().isNotEmpty) ||
+          (order.restaurantId != null && order.restaurantId!.trim().isNotEmpty);
+      final effectiveRestId = (item.restaurantId != null && item.restaurantId!.trim().isNotEmpty)
+          ? item.restaurantId!.trim()
+          : order.restaurantId;
+
       final variantSuffix = (item.selectedVariant != null &&
               item.selectedVariant!.isNotEmpty &&
+              pid.isNotEmpty &&
               !pid.contains('_'))
           ? '_${item.selectedVariant}'
           : '';
-      final effectivePid = '$pid$variantSuffix';
+      final effectivePid = pid.isNotEmpty ? '$pid$variantSuffix' : (item.id.startsWith('oi_') ? item.name : item.id);
+
       final product = Product.fromJson({
         'id': effectivePid,
         'name': item.name,
-        'slug': pid,
+        'slug': pid.isNotEmpty ? pid : item.name.toLowerCase().replaceAll(' ', '-'),
         'price': item.price,
         'mrp': item.price,
         'imageUrl': item.imageUrl,
-        'categoryId': 'grocery',
-        'unit': item.selectedVariant ?? '1 unit',
+        'restaurantId': effectiveRestId,
+        'categoryId': isRest ? null : 'grocery',
+        'unit': item.selectedVariant ?? (item.unit != null && item.unit!.isNotEmpty ? item.unit : '1 unit'),
         'stock': 50,
+        'isAvailable': true,
       });
       cartNotifier.addProduct(product, item.quantity, item.selectedVariant);
     }

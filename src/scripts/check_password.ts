@@ -29,7 +29,11 @@ async function main() {
   console.log('Rider Account Details:', rider)
 
   if (rider) {
-    const newPassword = 'delivery123'
+    const newPassword = process.env.RIDER_NEW_PASSWORD || process.argv[2]
+    if (!newPassword) {
+      console.error('Usage: tsx src/scripts/check_password.ts <new-password> or set RIDER_NEW_PASSWORD')
+      process.exit(1)
+    }
     const passwordHash = await bcrypt.hash(newPassword, 12)
 
     await prisma.user.update({

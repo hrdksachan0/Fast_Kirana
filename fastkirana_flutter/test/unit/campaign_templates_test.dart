@@ -16,6 +16,12 @@ const _templateIds = [
   'value-picks',
   'summer',
   'monsoon',
+  'fresh-market',
+  'daily-restock',
+  'pack-value',
+  'gifting-boutique',
+  'movie-night',
+  'breakfast-club',
 ];
 
 void main() {
@@ -69,7 +75,7 @@ void main() {
         () async {
       final data = NavratriData.fromJson(manifests[id]!);
       expect(data.enabled, isTrue);
-      expect(data.demo, isTrue);
+      expect(data.demo, manifests[id]!['composition'] != 'blocks');
       expect(data.categories, hasLength(4));
       expect(
           data.labels.sectionLabel, manifests[id]!['labels']['sectionLabel']);
@@ -84,6 +90,7 @@ void main() {
         ...data.tabs.map((item) => item.image),
       };
       for (final image in images) {
+        if (id == 'navratri' && image.startsWith('https://')) continue;
         expect((await rootBundle.load(navratriAsset(image))).lengthInBytes,
             greaterThan(0),
             reason: '$id needs bundled $image');

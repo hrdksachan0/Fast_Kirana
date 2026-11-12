@@ -13,6 +13,7 @@ import '../../core/theme/design_system.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../widgets/brand_logo.dart';
 import 'otp_screen.dart';
+import '../splash/splash_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -118,7 +119,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_chosen_location', true);
     if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+    Navigator.of(context).pushAndRemoveUntil(
+      FadeSlideRoute(page: const SplashScreen(forceHome: true)),
+      (route) => false,
+    );
   }
 
   @override

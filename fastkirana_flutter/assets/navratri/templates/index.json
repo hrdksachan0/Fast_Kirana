@@ -62,5 +62,53 @@
     "description": "Tea, cooking ingredients, warm bowls and home care for rainy days.",
     "manifest": "templates/monsoon.json",
     "thumbnail": "monsoon-comfort.svg"
+  },
+  {
+    "id": "fresh-market",
+    "name": "Fresh Market",
+    "type": "Everyday",
+    "description": "Fresh produce with editable category links and a store catalogue collection.",
+    "manifest": "templates/fresh-market.json",
+    "thumbnail": "fresh-market-hero.webp"
+  },
+  {
+    "id": "daily-restock",
+    "name": "Daily Restock",
+    "type": "Everyday",
+    "description": "Restock the kitchen with editable category links and a store catalogue collection.",
+    "manifest": "templates/daily-restock.json",
+    "thumbnail": "daily-restock-hero.webp"
+  },
+  {
+    "id": "pack-value",
+    "name": "Value Picks",
+    "type": "Value",
+    "description": "Compare pantry packs with editable category links and a store catalogue collection.",
+    "manifest": "templates/pack-value.json",
+    "thumbnail": "pack-value-hero.webp"
+  },
+  {
+    "id": "gifting-boutique",
+    "name": "Gifting Boutique",
+    "type": "Everyday",
+    "description": "Flowers, cakes & little gifts with editable category links and a store catalogue collection.",
+    "manifest": "templates/gifting-boutique.json",
+    "thumbnail": "gifting-boutique-hero.webp"
+  },
+  {
+    "id": "movie-night",
+    "name": "Movie Night",
+    "type": "Everyday",
+    "description": "Choose your movie snacks with editable category links and a store catalogue collection.",
+    "manifest": "templates/movie-night.json",
+    "thumbnail": "movie-night-hero.webp"
+  },
+  {
+    "id": "breakfast-club",
+    "name": "Breakfast Club",
+    "type": "Everyday",
+    "description": "Build your breakfast with editable category links and a store catalogue collection.",
+    "manifest": "templates/breakfast-club.json",
+    "thumbnail": "breakfast-club-hero.webp"
   }
 ]

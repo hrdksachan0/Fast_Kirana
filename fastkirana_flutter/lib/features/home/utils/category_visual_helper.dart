@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../data/models/category.dart';
 
@@ -361,11 +360,10 @@ class CategoryVisualHelper {
         memCacheHeight: 400,
         maxWidthDiskCache: 600,
         maxHeightDiskCache: 600,
-        placeholder: (_, __) => Shimmer.fromColors(
-          baseColor: AppDesignSystem.border,
-          highlightColor: AppDesignSystem.gray50,
-          child: Container(color: Colors.white),
-        ),
+        fadeInDuration: Duration.zero,
+        fadeOutDuration: Duration.zero,
+        useOldImageOnUrlChange: true,
+        placeholder: (_, __) => const SizedBox.shrink(),
         errorWidget: (_, __, ___) => buildFallback(context, cat),
       ),
     );

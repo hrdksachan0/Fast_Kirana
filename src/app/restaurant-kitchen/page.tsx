@@ -291,7 +291,22 @@ export default function RestaurantKitchenPage() {
             )}
 
             <button
-              onClick={() => signOut({ callbackUrl: '/restaurant-login' })}
+              onClick={async () => {
+                try {
+                  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                    const reg = await navigator.serviceWorker.ready
+                    const sub = await reg.pushManager.getSubscription()
+                    if (sub) {
+                      await fetch('/api/push/subscribe', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ endpoint: sub.endpoint }),
+                      }).catch(() => {})
+                    }
+                  }
+                } catch (_) {}
+                await signOut({ callbackUrl: '/restaurant-login' })
+              }}
               className="p-2 sm:p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 transition-all cursor-pointer"
               title="Sign Out"
             >

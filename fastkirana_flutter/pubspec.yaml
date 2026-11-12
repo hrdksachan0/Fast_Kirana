@@ -104,6 +104,7 @@ flutter:
     - assets/sounds/
     - assets/navratri/
     - assets/navratri/templates/
+    - assets/navratri/categories/
 
   fonts:
     - family: Inter
@@ -121,3 +122,8 @@ flutter:
     - family: Roboto Mono
       fonts:
         - asset: assets/fonts/RobotoMono-Variable.ttf
+    - family: NotoSerif
+      fonts:
+        - asset: assets/fonts/NotoSerif-Regular.ttf
+        - asset: assets/fonts/NotoSerif-Italic.ttf
+          style: italic

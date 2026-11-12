@@ -41,8 +41,10 @@ export async function sendOtpEmail(email: string, otp: string) {
       </div>
       
       <!-- Footer -->
-      <div style="padding: 16px 24px; text-align: center; border: 1px solid #f0f0f0; border-top: none; border-radius: 0 0 12px 12px; background: #fafafa;">
-        <p style="color: #aaa; font-size: 11px; margin: 0;">© ${new Date().getFullYear()} FastMinute · Fast Delivery in Minutes</p>
+      <div style="padding: 16px 24px; text-align: center; border: 1px solid #f0f0f0; border-top: none; border-radius: 0 0 12px 12px; background: #fafafa; font-size: 11px; color: #888; line-height: 1.5;">
+        <p style="margin: 0 0 4px; font-weight: 700; color: #555;">FastMinute Hyperlocal Quick-Commerce</p>
+        <p style="margin: 0 0 4px;">NH34, Ghatampur Market, Kanpur Nagar, Uttar Pradesh - 209206, India</p>
+        <p style="margin: 0;">Support: help@fastminute.in | Phone: +91 70544 70303 | © ${new Date().getFullYear()} FastMinute</p>
       </div>
     </div>
   `

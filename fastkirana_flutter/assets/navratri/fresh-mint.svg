@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="mintGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="60%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#064E3B"/>
+    </linearGradient>
+  </defs>
+  <!-- Main Stem -->
+  <path d="M60 105 C60 85 58 60 60 30" stroke="#059669" stroke-width="4" stroke-linecap="round"/>
+  <!-- Top Pair Leaves -->
+  <path d="M60 30 C52 18 42 16 38 22 C34 30 46 36 60 30 Z" fill="url(#mintGrad)"/>
+  <path d="M60 30 C68 18 78 16 82 22 C86 30 74 36 60 30 Z" fill="url(#mintGrad)"/>
+  <path d="M60 30 C58 12 62 12 60 8" stroke="#059669" stroke-width="2.5"/>
+  <!-- Middle Pair Leaves (Opposite Serrated) -->
+  <path d="M60 52 C44 42 28 44 26 54 C24 64 42 66 60 52 Z" fill="url(#mintGrad)"/>
+  <path d="M60 52 C76 42 92 44 94 54 C96 64 78 66 60 52 Z" fill="url(#mintGrad)"/>
+  <!-- Bottom Pair Leaves -->
+  <path d="M60 76 C40 68 20 74 18 86 C16 98 40 96 60 76 Z" fill="url(#mintGrad)"/>
+  <path d="M60 76 C80 68 100 74 102 86 C104 98 80 96 60 76 Z" fill="url(#mintGrad)"/>
+  <!-- Leaf Vein Accents -->
+  <path d="M30 52 L56 52" stroke="#A7F3D0" stroke-width="1.5" opacity="0.6"/>
+  <path d="M90 52 L64 52" stroke="#A7F3D0" stroke-width="1.5" opacity="0.6"/>
+</svg>

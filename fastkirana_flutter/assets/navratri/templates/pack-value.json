@@ -1,0 +1,255 @@
+{
+  "version": 1,
+  "demo": false,
+  "enabled": true,
+  "autoplay": true,
+  "layout": "deals",
+  "searchPrefix": "Search for",
+  "decorationImage": null,
+  "labels": {
+    "sectionLabel": "Value Picks",
+    "specialsHeading": "Compare pantry packs",
+    "curvedTabLabel": "Value Picks",
+    "loadingText": "Loading products…",
+    "emptyText": "No products in this collection for this store yet.",
+    "demoLabel": "Demo prices",
+    "resultsDemoLabel": "Demo collection · illustrative prices"
+  },
+  "appearance": {
+    "background": "#FFF0C5",
+    "card": "#FFFCF8",
+    "text": "#302B29",
+    "smallText": "#302B29",
+    "headerText": "#643421",
+    "headerOutline": "#FFF0C5",
+    "underline": "#754834",
+    "tabSurface": "#FFFCF8"
+  },
+  "timings": {
+    "headerMs": 4400,
+    "productMs": 3400,
+    "searchMs": 3200,
+    "crossfadeMs": 320
+  },
+  "searchSuggestions": [
+    "Atta",
+    "Pulses",
+    "Oil",
+    "Rice"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "cover",
+      "kind": "illustration",
+      "eyebrow": "",
+      "title": "Value Picks",
+      "subtitle": "Compare pantry packs",
+      "image": "pack-value-hero.webp"
+    }
+  ],
+  "products": [
+    {
+      "id": "example-category-0",
+      "name": "Atta",
+      "image": "value-atta.svg",
+      "originalPrice": 0,
+      "price": 0,
+      "currency": "INR",
+      "categoryId": "category-0",
+      "destinationId": "browse-0"
+    },
+    {
+      "id": "example-category-1",
+      "name": "Pulses",
+      "image": "value-dal.svg",
+      "originalPrice": 0,
+      "price": 0,
+      "currency": "INR",
+      "categoryId": "category-1",
+      "destinationId": "browse-1"
+    },
+    {
+      "id": "example-category-2",
+      "name": "Oil",
+      "image": "value-oil.svg",
+      "originalPrice": 0,
+      "price": 0,
+      "currency": "INR",
+      "categoryId": "category-2",
+      "destinationId": "browse-2"
+    },
+    {
+      "id": "example-category-3",
+      "name": "Rice",
+      "image": "daily-rice.svg",
+      "originalPrice": 0,
+      "price": 0,
+      "currency": "INR",
+      "categoryId": "category-3",
+      "destinationId": "browse-3"
+    }
+  ],
+  "categories": [
+    {
+      "id": "category-0",
+      "label": "Atta",
+      "image": "value-atta.svg",
+      "destinationId": "browse-0",
+      "keywords": [
+        "atta",
+        "flour"
+      ]
+    },
+    {
+      "id": "category-1",
+      "label": "Pulses",
+      "image": "value-dal.svg",
+      "destinationId": "browse-1",
+      "keywords": [
+        "dal",
+        "pulses"
+      ]
+    },
+    {
+      "id": "category-2",
+      "label": "Oil",
+      "image": "value-oil.svg",
+      "destinationId": "browse-2",
+      "keywords": [
+        "oil"
+      ]
+    },
+    {
+      "id": "category-3",
+      "label": "Rice",
+      "image": "daily-rice.svg",
+      "destinationId": "browse-3",
+      "keywords": [
+        "rice"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "selection",
+      "label": "Compare pantry packs",
+      "image": "pack-value-hero.webp",
+      "keywords": [
+        "atta",
+        "flour",
+        "dal",
+        "pulses",
+        "oil",
+        "rice"
+      ]
+    },
+    {
+      "id": "category-0",
+      "label": "Atta",
+      "image": "value-atta.svg",
+      "keywords": [
+        "atta",
+        "flour"
+      ]
+    },
+    {
+      "id": "category-1",
+      "label": "Pulses",
+      "image": "value-dal.svg",
+      "keywords": [
+        "dal",
+        "pulses"
+      ]
+    },
+    {
+      "id": "category-2",
+      "label": "Oil",
+      "image": "value-oil.svg",
+      "keywords": [
+        "oil"
+      ]
+    },
+    {
+      "id": "category-3",
+      "label": "Rice",
+      "image": "daily-rice.svg",
+      "keywords": [
+        "rice"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "browse-0",
+      "kind": "search",
+      "query": "atta"
+    },
+    {
+      "id": "browse-1",
+      "kind": "search",
+      "query": "dal"
+    },
+    {
+      "id": "browse-2",
+      "kind": "search",
+      "query": "oil"
+    },
+    {
+      "id": "browse-3",
+      "kind": "search",
+      "query": "rice"
+    }
+  ],
+  "composition": "blocks",
+  "blocks": [
+    {
+      "id": "pack-value-banner",
+      "type": "banner",
+      "enabled": true,
+      "title": "",
+      "body": "",
+      "image": null,
+      "destinationId": null,
+      "itemIds": [],
+      "tabId": null,
+      "presentation": "wide",
+      "motion": {
+        "preset": "slide",
+        "speed": "slow"
+      }
+    },
+    {
+      "id": "pack-value-collection",
+      "type": "collection",
+      "enabled": true,
+      "title": "",
+      "body": "",
+      "image": null,
+      "destinationId": null,
+      "itemIds": [],
+      "tabId": "selection",
+      "presentation": "row",
+      "motion": {
+        "preset": "none",
+        "speed": "slow"
+      }
+    },
+    {
+      "id": "pack-value-categories",
+      "type": "categories",
+      "enabled": true,
+      "title": "",
+      "body": "",
+      "image": null,
+      "destinationId": null,
+      "itemIds": [],
+      "tabId": null,
+      "presentation": "grid",
+      "motion": {
+        "preset": "none",
+        "speed": "slow"
+      }
+    }
+  ]
+}

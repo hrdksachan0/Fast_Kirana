@@ -4,7 +4,7 @@
   "composition": "template",
   "blocks": [],
   "demo": true,
-  "enabled": true,
+  "enabled": false,
   "autoplay": true,
   "searchPrefix": "Search for",
   "decorationImage": "gold-lights.svg",
