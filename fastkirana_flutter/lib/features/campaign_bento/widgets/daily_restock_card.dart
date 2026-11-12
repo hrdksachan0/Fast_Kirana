@@ -53,12 +53,12 @@ class _DailyRestockCardState extends ConsumerState<DailyRestockCard> {
       children: [
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF4F9FD),
+            color: card.backgroundColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE0F2FE), width: 1.2),
+            border: Border.all(color: card.borderColor, width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0284C7).withOpacity(0.04),
+                color: card.accentColor.withValues(alpha: 0.05),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
@@ -78,38 +78,38 @@ class _DailyRestockCardState extends ConsumerState<DailyRestockCard> {
                       children: [
                         Text(
                           card.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
+                            color: card.textColor,
                             letterSpacing: -0.4,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           card.subtitle,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF64748B),
+                            color: card.textColor.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  // Blue shopping basket icon
+                  // Shopping basket icon container
                   Container(
                     width: 48,
                     height: 48,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE0F2FE),
+                    decoration: BoxDecoration(
+                      color: card.accentColor.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
-                    child: const Icon(
+                    child: Icon(
                       Icons.shopping_basket_rounded,
                       size: 26,
-                      color: Color(0xFF0284C7),
+                      color: card.accentColor,
                     ),
                   ),
                 ],

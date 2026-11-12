@@ -16,8 +16,29 @@ import {
   Eye,
   EyeOff,
   Palette,
+  Package,
+  Search,
+  X,
+  Tag,
+  DollarSign,
+  Boxes,
 } from 'lucide-react'
-import { GiftingStoreConfig, GiftingOccasion, DEFAULT_GIFTING_CONFIG } from '@/lib/gifting-store-config'
+import {
+  GiftingStoreConfig,
+  GiftingOccasion,
+  GiftingHamper,
+  DEFAULT_GIFTING_CONFIG,
+} from '@/lib/gifting-store-config'
+
+interface ProductSimple {
+  id: string
+  name: string
+  price: number
+  mrp: number
+  imageUrl?: string | null
+  category?: { name: string } | null
+  unit?: string | null
+}
 
 export function GiftingStoreTab() {
   const [config, setConfig] = useState<GiftingStoreConfig>(DEFAULT_GIFTING_CONFIG)
@@ -26,27 +47,54 @@ export function GiftingStoreTab() {
   const [uploadingField, setUploadingField] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
+  // Catalog products for linking
+  const [catalogProducts, setCatalogProducts] = useState<ProductSimple[]>([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
+
+  // Product Selection Modal state
+  const [pickerTarget, setPickerTarget] = useState<
+    | { type: 'occasion'; id: string; name: string; selectedIds: string[] }
+    | { type: 'hamper'; id: string; name: string; selectedIds: string[] }
+    | null
+  >(null)
+  const [pickerSearch, setPickerSearch] = useState('')
+
   const bannerFileRef = useRef<HTMLInputElement>(null)
 
-  // Fetch current config
+  // Fetch current config & catalog
   useEffect(() => {
-    async function fetchConfig() {
+    async function loadInitialData() {
       try {
         setIsLoading(true)
-        const res = await fetch('/api/admin/gifting-store')
-        if (res.ok) {
-          const data = await res.json()
+        const [configRes, productsRes] = await Promise.all([
+          fetch('/api/admin/gifting-store'),
+          fetch('/api/products?limit=250&excludeRestaurant=true'),
+        ])
+
+        if (configRes.ok) {
+          const data = await configRes.json()
           if (data && data.occasions) {
-            setConfig(data)
+            setConfig({
+              ...DEFAULT_GIFTING_CONFIG,
+              ...data,
+              hampers: Array.isArray(data.hampers) ? data.hampers : [],
+            })
+          }
+        }
+
+        if (productsRes.ok) {
+          const prodData = await productsRes.json()
+          if (Array.isArray(prodData?.products)) {
+            setCatalogProducts(prodData.products)
           }
         }
       } catch (err) {
-        console.error('Failed to load gifting store config', err)
+        console.error('Failed to load gifting store config or catalog', err)
       } finally {
         setIsLoading(false)
       }
     }
-    fetchConfig()
+    loadInitialData()
   }, [])
 
   // Auto-clear status message after 4s
@@ -57,10 +105,16 @@ export function GiftingStoreTab() {
     }
   }, [statusMessage])
 
-  // Direct Image Upload via /api/upload
-  const handleFileUpload = async (file: File, target: 'banner' | { type: 'occasion'; id: string }) => {
+  // Direct Image Upload via /api/upload to Supabase CDN
+  const handleFileUpload = async (
+    file: File,
+    target: 'banner' | { type: 'occasion'; id: string } | { type: 'hamper'; id: string }
+  ) => {
     try {
-      const targetKey = typeof target === 'string' ? target : `occasion_${target.id}`
+      const targetKey =
+        typeof target === 'string'
+          ? target
+          : `${target.type}_${target.id}`
       setUploadingField(targetKey)
 
       const formData = new FormData()
@@ -78,16 +132,23 @@ export function GiftingStoreTab() {
 
       if (target === 'banner') {
         setConfig((prev) => ({ ...prev, bannerImageUrl: data.url }))
-      } else {
+      } else if (target.type === 'occasion') {
         setConfig((prev) => ({
           ...prev,
           occasions: prev.occasions.map((occ) =>
             occ.id === target.id ? { ...occ, imageUrl: data.url } : occ
           ),
         }))
+      } else if (target.type === 'hamper') {
+        setConfig((prev) => ({
+          ...prev,
+          hampers: prev.hampers.map((hamp) =>
+            hamp.id === target.id ? { ...hamp, imageUrl: data.url } : hamp
+          ),
+        }))
       }
 
-      setStatusMessage({ type: 'success', text: 'Image uploaded successfully to Supabase!' })
+      setStatusMessage({ type: 'success', text: 'Photo uploaded successfully to Supabase CDN!' })
     } catch (err: any) {
       console.error('Image upload failed:', err)
       setStatusMessage({ type: 'error', text: err.message || 'Image upload failed. Please try again.' })
@@ -113,7 +174,7 @@ export function GiftingStoreTab() {
         throw new Error(data.error || 'Failed to save')
       }
 
-      setStatusMessage({ type: 'success', text: 'Gifting Store updated successfully! Mobile app is live in sync.' })
+      setStatusMessage({ type: 'success', text: 'Gifting Store updated successfully! Mobile app & web are live in sync.' })
     } catch (err: any) {
       console.error('Save failed:', err)
       setStatusMessage({ type: 'error', text: err.message || 'Failed to save configuration.' })
@@ -132,6 +193,7 @@ export function GiftingStoreTab() {
       imageUrl: '',
       emoji: '🎁',
       tags: ['gift'],
+      productIds: [],
       isActive: true,
       sortOrder: config.occasions.length + 1,
     }
@@ -150,6 +212,63 @@ export function GiftingStoreTab() {
     }))
   }
 
+  // Add a new Hamper
+  const handleAddHamper = () => {
+    const newId = `hamp_${Date.now()}`
+    const newHamper: GiftingHamper = {
+      id: newId,
+      name: 'New Curated Hamper',
+      tagline: 'Special Celebration Duo',
+      price: 499,
+      mrp: 649,
+      badge: '✨ ROYAL CHOICE',
+      imageUrl: '',
+      bundledProductIds: [],
+      isActive: true,
+      sortOrder: config.hampers.length + 1,
+    }
+    setConfig((prev) => ({
+      ...prev,
+      hampers: [...prev.hampers, newHamper],
+    }))
+  }
+
+  // Remove Hamper
+  const handleDeleteHamper = (id: string) => {
+    if (!confirm('Are you sure you want to delete this custom hamper?')) return
+    setConfig((prev) => ({
+      ...prev,
+      hampers: prev.hampers.filter((h) => h.id !== id),
+    }))
+  }
+
+  // Toggle product in picker
+  const toggleProductInPicker = (productId: string) => {
+    if (!pickerTarget) return
+    const isSelected = pickerTarget.selectedIds.includes(productId)
+    const nextIds = isSelected
+      ? pickerTarget.selectedIds.filter((id) => id !== productId)
+      : [...pickerTarget.selectedIds, productId]
+
+    setPickerTarget({ ...pickerTarget, selectedIds: nextIds })
+
+    if (pickerTarget.type === 'occasion') {
+      setConfig((prev) => ({
+        ...prev,
+        occasions: prev.occasions.map((occ) =>
+          occ.id === pickerTarget.id ? { ...occ, productIds: nextIds } : occ
+        ),
+      }))
+    } else if (pickerTarget.type === 'hamper') {
+      setConfig((prev) => ({
+        ...prev,
+        hampers: prev.hampers.map((hamp) =>
+          hamp.id === pickerTarget.id ? { ...hamp, bundledProductIds: nextIds } : hamp
+        ),
+      }))
+    }
+  }
+
   // Presets for gradient theme
   const THEME_PRESETS = [
     { label: 'Rose Gold', start: '#E89E90', end: '#CD7564' },
@@ -159,6 +278,15 @@ export function GiftingStoreTab() {
     { label: 'Emerald Glow', start: '#059669', end: '#065F46' },
     { label: 'Midnight Slate', start: '#1E293B', end: '#0F172A' },
   ]
+
+  const filteredPickerProducts = catalogProducts.filter((p) => {
+    if (!pickerSearch.trim()) return true
+    const q = pickerSearch.toLowerCase()
+    return (
+      p.name.toLowerCase().includes(q) ||
+      (p.category?.name ?? '').toLowerCase().includes(q)
+    )
+  })
 
   if (isLoading) {
     return (
@@ -178,13 +306,13 @@ export function GiftingStoreTab() {
             <span className="p-2 bg-pink-500/10 text-pink-600 rounded-xl">
               <Gift className="w-5 h-5" />
             </span>
-            <h2 className="text-xl font-bold tracking-tight">Gifting Store Manager</h2>
+            <h2 className="text-xl font-bold tracking-tight">Gifting & Hamper Manager</h2>
             <span className="px-2.5 py-0.5 text-xs font-extrabold uppercase bg-emerald-500/10 text-emerald-600 rounded-full border border-emerald-500/20">
               Live Sync
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Customize the mobile app Gifting Store: upload high-res photography, customize the hero banner, and curate festive occasions.
+            Full admin control over Occasions, Real Product Tagging (Ghatampur Hub), and Custom 1-Tap Gift Hampers.
           </p>
         </div>
 
@@ -243,7 +371,6 @@ export function GiftingStoreTab() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Form Inputs */}
           <div className="space-y-4">
             <div>
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">
@@ -271,7 +398,6 @@ export function GiftingStoreTab() {
               />
             </div>
 
-            {/* Gradient Preset Selector */}
             <div>
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">
                 Gradient Theme Presets
@@ -303,45 +429,6 @@ export function GiftingStoreTab() {
                 ))}
               </div>
             </div>
-
-            {/* Custom Hex Codes */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div>
-                <label className="text-xs font-bold text-muted-foreground block mb-1">Gradient Start Hex</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={config.gradientStart}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, gradientStart: e.target.value }))}
-                    className="w-9 h-9 rounded-lg border border-border p-0.5 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={config.gradientStart}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, gradientStart: e.target.value }))}
-                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-xs font-mono font-bold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-muted-foreground block mb-1">Gradient End Hex</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={config.gradientEnd}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, gradientEnd: e.target.value }))}
-                    className="w-9 h-9 rounded-lg border border-border p-0.5 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={config.gradientEnd}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, gradientEnd: e.target.value }))}
-                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-xs font-mono font-bold"
-                  />
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Right: Banner Image Uploader & Live Preview */}
@@ -350,14 +437,12 @@ export function GiftingStoreTab() {
               Hero Banner Image (Optional Custom Art)
             </label>
 
-            {/* Live Banner Preview Box */}
             <div
               className="relative w-full h-48 rounded-2xl p-6 text-white flex flex-col justify-between overflow-hidden shadow-md"
               style={{
                 background: `linear-gradient(135deg, ${config.gradientStart}, ${config.gradientEnd})`,
               }}
             >
-              {/* Background Art if Uploaded */}
               {config.bannerImageUrl && (
                 <img
                   src={config.bannerImageUrl}
@@ -366,7 +451,6 @@ export function GiftingStoreTab() {
                 />
               )}
 
-              {/* Text Preview */}
               <div className="relative z-10 space-y-1">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 bg-black/20 rounded-md">
                   FastMinute Luxury
@@ -381,11 +465,10 @@ export function GiftingStoreTab() {
 
               <div className="relative z-10 flex items-center justify-between text-[11px] font-semibold text-white/80">
                 <span>⚡ Ghatampur Instant Delivery</span>
-                <span>🎁 Curated Hampers</span>
+                <span>🎁 {config.hampers.length} Custom Hampers Live</span>
               </div>
             </div>
 
-            {/* Upload & Action Buttons */}
             <div className="flex items-center gap-2 pt-1">
               <input
                 ref={bannerFileRef}
@@ -422,22 +505,19 @@ export function GiftingStoreTab() {
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              Images are automatically converted to optimized WebP (&lt;80 KB) and stored on Supabase CDN.
-            </p>
           </div>
         </div>
       </div>
 
-      {/* ── CARD 2: OCCASIONS & CATEGORIES MANAGER ────────────────── */}
+      {/* ── CARD 2: OCCASION VISUAL CHIPS & PRODUCT TAGGING ──────── */}
       <div className="bg-card rounded-2xl border border-border p-6 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-border">
           <div className="flex items-center gap-2">
             <Layers className="w-5 h-5 text-primary" />
             <div>
-              <h3 className="text-base font-bold">Occasion Cards ({config.occasions.length})</h3>
+              <h3 className="text-base font-bold">Occasion Categories ({config.occasions.length})</h3>
               <p className="text-xs text-muted-foreground">
-                In cards par aap apni photo upload kar sakte hain, title edit kar sakte hain aur naye occasions jod sakte hain.
+                In cards par photo upload karein (Seasonal packshot style) aur Ghatampur Hub se specific real products link karein.
               </p>
             </div>
           </div>
@@ -457,6 +537,7 @@ export function GiftingStoreTab() {
           {config.occasions.map((occ, idx) => {
             const isUploading = uploadingField === `occasion_${occ.id}`
             const fileInputRef = React.createRef<HTMLInputElement>()
+            const linkedCount = occ.productIds?.length || 0
 
             return (
               <div
@@ -467,7 +548,6 @@ export function GiftingStoreTab() {
                     : 'bg-muted/40 border-dashed border-border opacity-70'
                 }`}
               >
-                {/* Occasion Card Header */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center">
@@ -490,7 +570,6 @@ export function GiftingStoreTab() {
                   </div>
 
                   <div className="flex items-center gap-1">
-                    {/* Active Toggle */}
                     <button
                       type="button"
                       onClick={() =>
@@ -509,7 +588,6 @@ export function GiftingStoreTab() {
                       {occ.isActive ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                     </button>
 
-                    {/* Delete */}
                     <button
                       type="button"
                       onClick={() => handleDeleteOccasion(occ.id)}
@@ -521,11 +599,11 @@ export function GiftingStoreTab() {
                   </div>
                 </div>
 
-                {/* Image Upload Box */}
+                {/* Circular Packshot Photo Upload Box (Seasonal Switch-Up style) */}
                 <div className="relative border border-dashed border-border rounded-xl p-3 bg-muted/20 flex items-center gap-3">
-                  <div className="w-16 h-16 rounded-xl bg-background border border-border flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                  <div className="w-14 h-14 rounded-full bg-background border-2 border-primary/20 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
                     {occ.imageUrl ? (
-                      <img src={occ.imageUrl} alt={occ.title} className="w-full h-full object-contain p-1" />
+                      <img src={occ.imageUrl} alt={occ.title} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-2xl">{occ.emoji || '🎁'}</span>
                     )}
@@ -547,13 +625,13 @@ export function GiftingStoreTab() {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploading}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-bold rounded-lg transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-bold rounded-lg transition-all"
                     >
                       {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-                      {occ.imageUrl ? 'Change Photo' : 'Upload Image'}
+                      {occ.imageUrl ? 'Change Packshot' : 'Upload Packshot'}
                     </button>
 
-                    {occ.imageUrl ? (
+                    {occ.imageUrl && (
                       <button
                         type="button"
                         onClick={() =>
@@ -568,13 +646,10 @@ export function GiftingStoreTab() {
                       >
                         Reset to Emoji
                       </button>
-                    ) : (
-                      <p className="text-[10px] text-muted-foreground truncate">No image uploaded (showing emoji)</p>
                     )}
                   </div>
                 </div>
 
-                {/* Subtitle / Title Input */}
                 <div>
                   <label className="text-[11px] font-bold text-muted-foreground block mb-1">
                     Display Card Title
@@ -595,58 +670,414 @@ export function GiftingStoreTab() {
                   />
                 </div>
 
-                {/* Emoji & Tags */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-[11px] font-bold text-muted-foreground block mb-1">Emoji</label>
-                    <input
-                      type="text"
-                      value={occ.emoji}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          occasions: prev.occasions.map((o) =>
-                            o.id === occ.id ? { ...o, emoji: e.target.value } : o
-                          ),
-                        }))
-                      }
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs font-bold text-center focus:ring-1 focus:ring-primary outline-hidden"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="text-[11px] font-bold text-muted-foreground block mb-1">
-                      Filter Tags (comma separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={occ.tags.join(', ')}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          occasions: prev.occasions.map((o) =>
-                            o.id === occ.id
-                              ? {
-                                  ...o,
-                                  tags: e.target.value
-                                    .split(',')
-                                    .map((t) => t.trim().toLowerCase())
-                                    .filter(Boolean),
-                                }
-                              : o
-                          ),
-                        }))
-                      }
-                      placeholder="cake, gift, chocolate"
-                      className="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-xs font-medium focus:ring-1 focus:ring-primary outline-hidden"
-                    />
-                  </div>
+                {/* Product Linking Button */}
+                <div className="pt-1 border-t border-border/60">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPickerTarget({
+                        type: 'occasion',
+                        id: occ.id,
+                        name: occ.title || occ.label,
+                        selectedIds: occ.productIds || [],
+                      })
+                    }
+                    className="w-full flex items-center justify-between px-3 py-2 bg-secondary/80 hover:bg-secondary rounded-xl text-xs font-bold transition-all"
+                  >
+                    <span className="flex items-center gap-1.5 text-secondary-foreground">
+                      <Package className="w-3.5 h-3.5 text-primary" />
+                      Link Catalog Products
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-black text-[11px]">
+                      {linkedCount} linked
+                    </span>
+                  </button>
+                  <p className="text-[10px] text-muted-foreground mt-1 px-1">
+                    {linkedCount > 0
+                      ? `Only these ${linkedCount} real products will show in this tab.`
+                      : 'No products linked yet (falls back to category tags).'}
+                  </p>
                 </div>
               </div>
             )
           })}
         </div>
       </div>
+
+      {/* ── CARD 3: CURATED 1-TAP HAMPERS CREATOR ────────────────── */}
+      <div className="bg-card rounded-2xl border border-border p-6 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Boxes className="w-5 h-5 text-primary" />
+            <div>
+              <h3 className="text-base font-bold">Curated 1-Tap Hampers ({config.hampers.length})</h3>
+              <p className="text-xs text-muted-foreground">
+                Aapke dwara banaye gaye real hampers. Har hamper me real products link honge taaki live stock count ho sake.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleAddHamper}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-pink-500 text-white hover:bg-pink-600 text-xs font-bold rounded-xl shadow-xs transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            + Create New Hamper
+          </button>
+        </div>
+
+        {config.hampers.length === 0 ? (
+          <div className="p-8 rounded-2xl border-2 border-dashed border-border text-center space-y-2">
+            <Boxes className="w-8 h-8 text-muted-foreground mx-auto opacity-50" />
+            <h4 className="text-sm font-bold text-foreground">No Custom Hampers Yet</h4>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              Mobile app me zero fake hampers dikhenge. Click &quot;+ Create New Hamper&quot; to build your first real gift hamper (e.g. Mithai + Chocolates combo).
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {config.hampers.map((hamper, idx) => {
+              const isUploading = uploadingField === `hamper_${hamper.id}`
+              const fileInputRef = React.createRef<HTMLInputElement>()
+              const bundleCount = hamper.bundledProductIds?.length || 0
+
+              return (
+                <div
+                  key={hamper.id}
+                  className={`p-4 rounded-2xl border transition-all space-y-3.5 ${
+                    hamper.isActive
+                      ? 'bg-card border-border shadow-xs'
+                      : 'bg-muted/40 border-dashed border-border opacity-70'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-pink-500/10 text-pink-700 font-extrabold text-[10px]">
+                      HAMPER #{idx + 1}
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfig((prev) => ({
+                            ...prev,
+                            hampers: prev.hampers.map((h) =>
+                              h.id === hamper.id ? { ...h, isActive: !h.isActive } : h
+                            ),
+                          }))
+                        }
+                        title={hamper.isActive ? 'Hide Hamper' : 'Show Hamper'}
+                        className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                          hamper.isActive ? 'text-emerald-600 hover:bg-emerald-50' : 'text-muted-foreground hover:bg-muted'
+                        }`}
+                      >
+                        {hamper.isActive ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteHamper(hamper.id)}
+                        className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                        title="Delete Hamper"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hamper Photo Upload */}
+                  <div className="relative border border-dashed border-border rounded-xl p-3 bg-muted/20 flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-xl bg-background border border-border flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                      {hamper.imageUrl ? (
+                        <img src={hamper.imageUrl} alt={hamper.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-2xl">🎁</span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleFileUpload(file, { type: 'hamper', id: hamper.id })
+                        }}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-bold rounded-lg transition-all"
+                      >
+                        {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                        {hamper.imageUrl ? 'Change Photo' : 'Upload Photo'}
+                      </button>
+
+                      <p className="text-[10px] text-muted-foreground truncate">Real photography (Supabase CDN)</p>
+                    </div>
+                  </div>
+
+                  {/* Hamper Name & Tagline */}
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground block mb-0.5">
+                        Hamper Title
+                      </label>
+                      <input
+                        type="text"
+                        value={hamper.name}
+                        onChange={(e) =>
+                          setConfig((prev) => ({
+                            ...prev,
+                            hampers: prev.hampers.map((h) =>
+                              h.id === hamper.id ? { ...h, name: e.target.value } : h
+                            ),
+                          }))
+                        }
+                        placeholder="e.g. Ghatampur Royal Mithai Box"
+                        className="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-xs font-bold focus:ring-1 focus:ring-primary outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground block mb-0.5">
+                        Tagline Subtitle
+                      </label>
+                      <input
+                        type="text"
+                        value={hamper.tagline}
+                        onChange={(e) =>
+                          setConfig((prev) => ({
+                            ...prev,
+                            hampers: prev.hampers.map((h) =>
+                              h.id === hamper.id ? { ...h, tagline: e.target.value } : h
+                            ),
+                          }))
+                        }
+                        placeholder="e.g. Kaju Katli + Belgian Truffle Cake"
+                        className="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-xs font-medium focus:ring-1 focus:ring-primary outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pricing & Badge */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground block mb-0.5">Price (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={hamper.price}
+                        onChange={(e) =>
+                          setConfig((prev) => ({
+                            ...prev,
+                            hampers: prev.hampers.map((h) =>
+                              h.id === hamper.id ? { ...h, price: parseFloat(e.target.value) || 0 } : h
+                            ),
+                          }))
+                        }
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs font-black focus:ring-1 focus:ring-primary outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground block mb-0.5">MRP (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={hamper.mrp}
+                        onChange={(e) =>
+                          setConfig((prev) => ({
+                            ...prev,
+                            hampers: prev.hampers.map((h) =>
+                              h.id === hamper.id ? { ...h, mrp: parseFloat(e.target.value) || 0 } : h
+                            ),
+                          }))
+                        }
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs font-semibold focus:ring-1 focus:ring-primary outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-muted-foreground block mb-0.5">Badge</label>
+                      <input
+                        type="text"
+                        value={hamper.badge}
+                        onChange={(e) =>
+                          setConfig((prev) => ({
+                            ...prev,
+                            hampers: prev.hampers.map((h) =>
+                              h.id === hamper.id ? { ...h, badge: e.target.value } : h
+                            ),
+                          }))
+                        }
+                        placeholder="✨ ROYAL"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs font-bold focus:ring-1 focus:ring-primary outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bundled Product Linker */}
+                  <div className="pt-1 border-t border-border/60">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPickerTarget({
+                          type: 'hamper',
+                          id: hamper.id,
+                          name: hamper.name,
+                          selectedIds: hamper.bundledProductIds || [],
+                        })
+                      }
+                      className="w-full flex items-center justify-between px-3 py-2 bg-pink-500/10 hover:bg-pink-500/20 text-pink-700 rounded-xl text-xs font-bold transition-all"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Boxes className="w-3.5 h-3.5" />
+                        Bundle Products
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-pink-500 text-white font-black text-[10px]">
+                        {bundleCount} items
+                      </span>
+                    </button>
+                    <p className="text-[10px] text-muted-foreground mt-1 px-1">
+                      {bundleCount > 0
+                        ? `${bundleCount} real items will be added to cart and stock-checked.`
+                        : '⚠️ Link at least 1 real product for accurate stock tracking.'}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── MODAL: PRODUCT LINKER DRAWER ─────────────────────────── */}
+      {pickerTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-2xl rounded-2xl border border-border shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between gap-3 bg-muted/30">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary">
+                  {pickerTarget.type === 'occasion' ? 'Occasion Product Linker' : 'Hamper Bundle Creator'}
+                </span>
+                <h3 className="text-base font-bold text-foreground">
+                  Link Products for &ldquo;{pickerTarget.name}&rdquo;
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPickerTarget(null)}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search Box */}
+            <div className="p-4 border-b border-border bg-background">
+              <div className="relative">
+                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+                <input
+                  type="text"
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                  placeholder="Search catalog products (name, category, price)..."
+                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-border bg-muted/20 text-xs font-semibold focus:ring-2 focus:ring-primary/20 outline-hidden"
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-2 px-1">
+                <span>Showing {filteredPickerProducts.length} products</span>
+                <span className="font-bold text-primary">{pickerTarget.selectedIds.length} currently selected</span>
+              </div>
+            </div>
+
+            {/* Product List */}
+            <div className="p-4 overflow-y-auto divide-y divide-border/60 flex-1">
+              {filteredPickerProducts.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground text-xs">
+                  No products matched your search.
+                </div>
+              ) : (
+                filteredPickerProducts.map((p) => {
+                  const isChecked = pickerTarget.selectedIds.includes(p.id)
+
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => toggleProductInPicker(p.id)}
+                      className={`py-2.5 px-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                        isChecked ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+                            isChecked
+                              ? 'bg-primary border-primary text-primary-foreground'
+                              : 'border-muted-foreground/40 bg-background'
+                          }`}
+                        >
+                          {isChecked && <Check className="w-3.5 h-3.5" />}
+                        </div>
+
+                        {p.imageUrl ? (
+                          <img
+                            src={p.imageUrl}
+                            alt={p.name}
+                            className="w-10 h-10 object-contain rounded-lg border border-border bg-white p-0.5 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-xs shrink-0">
+                            📦
+                          </div>
+                        )}
+
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-foreground truncate">{p.name}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {p.category?.name || 'General'} {p.unit ? `• ${p.unit}` : ''}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-black text-foreground">₹{Math.round(p.price)}</span>
+                        {p.mrp > p.price && (
+                          <span className="text-[10px] text-muted-foreground line-through block">
+                            ₹{Math.round(p.mrp)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-border bg-muted/20 flex items-center justify-between">
+              <span className="text-xs font-bold text-muted-foreground">
+                {pickerTarget.selectedIds.length} items will be linked.
+              </span>
+              <button
+                type="button"
+                onClick={() => setPickerTarget(null)}
+                className="px-5 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl shadow-xs hover:opacity-90 transition-all"
+              >
+                Done / Keep Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

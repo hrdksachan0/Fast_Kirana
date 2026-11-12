@@ -194,16 +194,14 @@ class LuxuryGiftEnvelopeCard extends StatelessWidget {
                             giftNote.isNotEmpty
                                 ? '“$giftNote”'
                                 : 'Tap to write a personalized message card. Our partner handwrites it and adds a satin ribbon!',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontStyle: giftNote.isNotEmpty ? FontStyle.italic : FontStyle.normal,
                               fontWeight: giftNote.isNotEmpty ? FontWeight.w600 : FontWeight.w500,
                               color: giftNote.isNotEmpty
                                   ? const Color(0xFF6B1728)
                                   : const Color(0xFF824F5C),
-                              height: 1.35,
+                              height: 1.45,
                             ),
                           ),
                         ],

@@ -1,159 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:collection/collection.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../data/models/product.dart';
-import '../../../providers/cart_provider.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
+import '../../../../data/models/product.dart';
+import '../../../../data/models/gifting_store_config.dart';
+import '../../../../providers/cart_provider.dart';
 
-class GiftComboBundle {
-  final String id;
-  final String title;
-  final String subtitle;
-  final String tag;
-  final String image1;
-  final String name1;
-  final String image2;
-  final String name2;
-  final double totalPrice;
-  final double originalPrice;
-  final List<String> searchKeywords;
-
-  const GiftComboBundle({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    required this.tag,
-    required this.image1,
-    required this.name1,
-    required this.image2,
-    required this.name2,
-    required this.totalPrice,
-    required this.originalPrice,
-    required this.searchKeywords,
-  });
-}
-
+/// Curated 1-Tap Gift Hampers Shelf
+/// Strictly renders only Admin-created custom hampers from the Admin Web Console.
+/// Zero hardcoded fake bundles or mock Unsplash products.
 class CuratedGiftCombosShelf extends ConsumerWidget {
+  final List<GiftingHamperModel> hampers;
   final List<Product> catalog;
   final VoidCallback onHamperAdded;
 
   const CuratedGiftCombosShelf({
     super.key,
+    required this.hampers,
     required this.catalog,
     required this.onHamperAdded,
   });
 
-  static const List<GiftComboBundle> _defaultCombos = [
-    GiftComboBundle(
-      id: 'combo-romance',
-      title: 'Romance & Truffle Duo',
-      subtitle: 'Red Rose Bouquet + Belgian Truffle Cake',
-      tag: '🔥 POPULAR DUO',
-      image1: 'assets/navratri/ref-rose-bouquet.png',
-      name1: 'Rose Bouquet (8 Stems)',
-      image2: 'assets/navratri/ref-chocolate-cake.png',
-      name2: 'Truffle Cake (500g)',
-      totalPrice: 699,
-      originalPrice: 898,
-      searchKeywords: ['rose', 'cake'],
-    ),
-    GiftComboBundle(
-      id: 'combo-celebration',
-      title: 'Sweet Celebrations Box',
-      subtitle: 'Premium Kaju Katli + Ferrero Rocher Box',
-      tag: '✨ ROYAL CHOICE',
-      image1: 'assets/navratri/haldirams-kaju-katli-box.webp',
-      name1: 'Kaju Katli (250g)',
-      image2: 'assets/navratri/diwali-chocolates.svg',
-      name2: 'Ferrero Rocher Box',
-      totalPrice: 499,
-      originalPrice: 649,
-      searchKeywords: ['kaju', 'chocolate'],
-    ),
-    GiftComboBundle(
-      id: 'combo-party',
-      title: 'Midnight Surprise Hamper',
-      subtitle: 'Strawberry Delight Cake + Celebration Popper',
-      tag: '🎉 MIDNIGHT HIT',
-      image1: 'assets/navratri/gifting-boutique-hero-hd.jpg',
-      name1: 'Berry Velvet Cake',
-      image2: 'assets/navratri/ref-rose-bouquet.png',
-      name2: 'Fresh Petals & Card',
-      totalPrice: 549,
-      originalPrice: 720,
-      searchKeywords: ['cake', 'gift'],
-    ),
-  ];
-
-  void _addComboToCart(WidgetRef ref, GiftComboBundle combo) {
+  void _addHamperToCart(BuildContext context, WidgetRef ref, GiftingHamperModel hamper) {
     HapticFeedback.mediumImpact();
 
-    // Match with real DB products from catalog if possible
-    Product? prod1;
-    Product? prod2;
-
-    for (final p in catalog) {
-      final nl = p.name.toLowerCase();
-      if (prod1 == null && combo.searchKeywords.isNotEmpty && nl.contains(combo.searchKeywords[0])) {
-        prod1 = p;
-      } else if (prod2 == null && combo.searchKeywords.length > 1 && nl.contains(combo.searchKeywords[1])) {
-        prod2 = p;
+    // 1. Resolve real bundled products from active catalog
+    final itemsToAdd = <Product>[];
+    for (final prodId in hamper.bundledProductIds) {
+      final found = catalog.firstWhereOrNull(
+        (p) => p.id == prodId || p.slug == prodId,
+      );
+      if (found != null && found.isAvailable) {
+        itemsToAdd.add(found);
       }
     }
 
-    final p1 = prod1 ??
-        Product(
-          id: '${combo.id}_1',
-          name: combo.name1,
-          slug: '${combo.id}_1',
-          mrp: combo.originalPrice * 0.55,
-          price: combo.totalPrice * 0.55,
-          discount: 15,
-          unit: '1 box',
-          stock: 99,
-          isAvailable: true,
-          tags: const ['gifting', 'combo'],
-          minStock: 0,
-          costPrice: combo.totalPrice * 0.4,
-          isFlashDeal: false,
-          isTopPick: true,
-          isBestSeller: true,
-          sortOrder: 0,
-          createdAt: DateTime.now(),
-          imageUrl: combo.image1,
-        );
+    if (itemsToAdd.isEmpty) {
+      // If no bundled items found in local stock, check if hamper itself exists as product
+      final matchedHamper = catalog.firstWhereOrNull(
+        (p) => p.id == hamper.id || p.name.toLowerCase() == hamper.name.toLowerCase(),
+      );
+      if (matchedHamper != null && matchedHamper.isAvailable) {
+        ref.read(cartProvider.notifier).addProduct(matchedHamper, 1);
+        onHamperAdded();
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${hamper.name} items are currently out of stock at this hub'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
-    final p2 = prod2 ??
-        Product(
-          id: '${combo.id}_2',
-          name: combo.name2,
-          slug: '${combo.id}_2',
-          mrp: combo.originalPrice * 0.45,
-          price: combo.totalPrice * 0.45,
-          discount: 15,
-          unit: '1 pc',
-          stock: 99,
-          isAvailable: true,
-          tags: const ['gifting', 'combo'],
-          minStock: 0,
-          costPrice: combo.totalPrice * 0.35,
-          isFlashDeal: false,
-          isTopPick: true,
-          isBestSeller: true,
-          sortOrder: 0,
-          createdAt: DateTime.now(),
-          imageUrl: combo.image2,
-        );
-
-    ref.read(cartProvider.notifier).addProduct(p1, 1);
-    ref.read(cartProvider.notifier).addProduct(p2, 1);
+    // Add all bundled real products to cart
+    for (final item in itemsToAdd) {
+      ref.read(cartProvider.notifier).addProduct(item, 1);
+    }
     onHamperAdded();
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final activeHampers = hampers.where((h) => h.isActive).toList();
+    if (activeHampers.isEmpty) {
+      return const SizedBox.shrink(); // Zero fake hampers!
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -186,7 +103,7 @@ class CuratedGiftCombosShelf extends ConsumerWidget {
                   border: Border.all(color: const Color(0xFFFDE68A)),
                 ),
                 child: Text(
-                  'SAVE UP TO 25%',
+                  'LIMITED EDITION',
                   style: GoogleFonts.inter(
                     fontSize: 9,
                     fontWeight: FontWeight.w900,
@@ -206,11 +123,11 @@ class CuratedGiftCombosShelf extends ConsumerWidget {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            itemCount: _defaultCombos.length,
+            itemCount: activeHampers.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
-              final combo = _defaultCombos[index];
-              final saved = (combo.originalPrice - combo.totalPrice).round();
+              final hamper = activeHampers[index];
+              final saved = hamper.mrp > hamper.price ? (hamper.mrp - hamper.price).round() : 0;
 
               return Container(
                 width: 270,
@@ -238,7 +155,7 @@ class CuratedGiftCombosShelf extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Combo Badge & Saving Pill
+                    // Badge & Saving Pill
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -249,7 +166,7 @@ class CuratedGiftCombosShelf extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            combo.tag,
+                            hamper.badge.isNotEmpty ? hamper.badge : '✨ CURATED DUO',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 8.5,
                               fontWeight: FontWeight.w800,
@@ -257,53 +174,36 @@ class CuratedGiftCombosShelf extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'Save ₹$saved',
-                            style: GoogleFonts.inter(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF15803D),
+                        if (saved > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Save ₹$saved',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF15803D),
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
 
-                    // Duo Artwork Preview (Overlapping Dual Circles)
+                    // Artwork Preview & Title
                     Row(
                       children: [
-                        SizedBox(
-                          width: 82,
-                          height: 52,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Positioned(
-                                left: 0,
-                                top: 2,
-                                child: _ComboMiniAvatar(image: combo.image1),
-                              ),
-                              Positioned(
-                                left: 32,
-                                top: 2,
-                                child: _ComboMiniAvatar(image: combo.image2),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
+                        _HamperAvatar(imageUrl: hamper.imageUrl),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                combo.title,
+                                hamper.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.plusJakartaSans(
@@ -312,17 +212,19 @@ class CuratedGiftCombosShelf extends ConsumerWidget {
                                   color: const Color(0xFF3D0C18),
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                combo.subtitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF7A4A57),
+                              if (hamper.tagline.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  hamper.tagline,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF7A4A57),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ),
@@ -338,26 +240,28 @@ class CuratedGiftCombosShelf extends ConsumerWidget {
                           textBaseline: TextBaseline.alphabetic,
                           children: [
                             Text(
-                              '₹${combo.totalPrice.toInt()}',
+                              '₹${hamper.price.toInt()}',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
                                 color: const Color(0xFF3D0C18),
                               ),
                             ),
-                            const SizedBox(width: 5),
-                            Text(
-                              '₹${combo.originalPrice.toInt()}',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                decoration: TextDecoration.lineThrough,
-                                color: const Color(0xFF94A3B8),
+                            if (hamper.mrp > hamper.price) ...[
+                              const SizedBox(width: 5),
+                              Text(
+                                '₹${hamper.mrp.toInt()}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  decoration: TextDecoration.lineThrough,
+                                  color: const Color(0xFF94A3B8),
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                         Bounceable(
-                          onTap: () => _addComboToCart(ref, combo),
+                          onTap: () => _addHamperToCart(context, ref, hamper),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
                             decoration: BoxDecoration(
@@ -405,16 +309,16 @@ class CuratedGiftCombosShelf extends ConsumerWidget {
   }
 }
 
-class _ComboMiniAvatar extends StatelessWidget {
-  final String image;
+class _HamperAvatar extends StatelessWidget {
+  final String imageUrl;
 
-  const _ComboMiniAvatar({required this.image});
+  const _HamperAvatar({required this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 46,
-      height: 46,
+      width: 50,
+      height: 50,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
@@ -428,16 +332,16 @@ class _ComboMiniAvatar extends StatelessWidget {
         ],
       ),
       child: ClipOval(
-        child: image.startsWith('http')
+        child: imageUrl.startsWith('http')
             ? CachedNetworkImage(
-                imageUrl: image,
+                imageUrl: imageUrl,
                 fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => const Icon(Icons.card_giftcard, size: 20),
+                errorWidget: (_, __, ___) => const Center(
+                  child: Text('🎁', style: TextStyle(fontSize: 22)),
+                ),
               )
-            : Image.asset(
-                image,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, size: 20),
+            : const Center(
+                child: Text('🎁', style: TextStyle(fontSize: 22)),
               ),
       ),
     );

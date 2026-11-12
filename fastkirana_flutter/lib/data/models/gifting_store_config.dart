@@ -1,5 +1,64 @@
 import 'package:flutter/material.dart';
 
+class GiftingHamperModel {
+  final String id;
+  final String name;
+  final String tagline;
+  final double price;
+  final double mrp;
+  final String badge;
+  final String imageUrl;
+  final List<String> bundledProductIds;
+  final bool isActive;
+  final int sortOrder;
+
+  const GiftingHamperModel({
+    required this.id,
+    required this.name,
+    this.tagline = '',
+    required this.price,
+    required this.mrp,
+    this.badge = '✨ CURATED DUO',
+    this.imageUrl = '',
+    this.bundledProductIds = const [],
+    this.isActive = true,
+    this.sortOrder = 0,
+  });
+
+  factory GiftingHamperModel.fromJson(Map<String, dynamic> json) {
+    final rawBundle = json['bundledProductIds'];
+    final bundleList = rawBundle is List
+        ? rawBundle.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList()
+        : <String>[];
+
+    return GiftingHamperModel(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      tagline: json['tagline']?.toString() ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      mrp: (json['mrp'] as num?)?.toDouble() ?? 0.0,
+      badge: json['badge']?.toString() ?? '✨ CURATED DUO',
+      imageUrl: json['imageUrl']?.toString() ?? '',
+      bundledProductIds: bundleList,
+      isActive: json['isActive'] ?? true,
+      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'tagline': tagline,
+        'price': price,
+        'mrp': mrp,
+        'badge': badge,
+        'imageUrl': imageUrl,
+        'bundledProductIds': bundledProductIds,
+        'isActive': isActive,
+        'sortOrder': sortOrder,
+      };
+}
+
 class GiftingOccasionModel {
   final String id;
   final String label;
@@ -7,6 +66,7 @@ class GiftingOccasionModel {
   final String imageUrl;
   final String emoji;
   final List<String> tags;
+  final List<String> productIds;
   final bool isActive;
   final int sortOrder;
 
@@ -17,6 +77,7 @@ class GiftingOccasionModel {
     this.imageUrl = '',
     this.emoji = '🎁',
     this.tags = const [],
+    this.productIds = const [],
     this.isActive = true,
     this.sortOrder = 0,
   });
@@ -27,6 +88,11 @@ class GiftingOccasionModel {
         ? rawTags.map((e) => e.toString().toLowerCase().trim()).toList()
         : <String>[];
 
+    final rawProducts = json['productIds'];
+    final productsList = rawProducts is List
+        ? rawProducts.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList()
+        : <String>[];
+
     return GiftingOccasionModel(
       id: json['id']?.toString() ?? '',
       label: json['label']?.toString() ?? '',
@@ -34,6 +100,7 @@ class GiftingOccasionModel {
       imageUrl: json['imageUrl']?.toString() ?? '',
       emoji: json['emoji']?.toString() ?? '🎁',
       tags: tagsList,
+      productIds: productsList,
       isActive: json['isActive'] ?? true,
       sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
     );
@@ -46,6 +113,7 @@ class GiftingOccasionModel {
         'imageUrl': imageUrl,
         'emoji': emoji,
         'tags': tags,
+        'productIds': productIds,
         'isActive': isActive,
         'sortOrder': sortOrder,
       };
@@ -59,6 +127,7 @@ class GiftingStoreConfigModel {
   final String gradientStartHex;
   final String gradientEndHex;
   final List<GiftingOccasionModel> occasions;
+  final List<GiftingHamperModel> hampers;
 
   const GiftingStoreConfigModel({
     this.enabled = true,
@@ -68,6 +137,7 @@ class GiftingStoreConfigModel {
     this.gradientStartHex = '#E89E90',
     this.gradientEndHex = '#CD7564',
     this.occasions = const [],
+    this.hampers = const [],
   });
 
   Color get gradientStart => _hexToColor(gradientStartHex, const Color(0xFFE89E90));
@@ -97,6 +167,16 @@ class GiftingStoreConfigModel {
 
     occasionsList.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
+    final rawHampers = json['hampers'];
+    final hampersList = rawHampers is List
+        ? rawHampers
+            .whereType<Map<String, dynamic>>()
+            .map((e) => GiftingHamperModel.fromJson(e))
+            .toList()
+        : <GiftingHamperModel>[];
+
+    hampersList.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
     return GiftingStoreConfigModel(
       enabled: json['enabled'] ?? true,
       bannerTitle: json['bannerTitle']?.toString() ?? 'Gifting Store',
@@ -105,6 +185,7 @@ class GiftingStoreConfigModel {
       gradientStartHex: json['gradientStart']?.toString() ?? '#E89E90',
       gradientEndHex: json['gradientEnd']?.toString() ?? '#CD7564',
       occasions: occasionsList.isNotEmpty ? occasionsList : defaultOccasions,
+      hampers: hampersList,
     );
   }
 
@@ -113,9 +194,10 @@ class GiftingStoreConfigModel {
       id: 'occ_birthday',
       label: 'Birthday',
       title: 'Birthday Specials',
-      imageUrl: '', // Empty by default for custom admin photography
+      imageUrl: '',
       emoji: '🎈',
       tags: ['birthday', 'gift', 'cake', 'chocolate'],
+      productIds: [],
       isActive: true,
       sortOrder: 1,
     ),
@@ -126,6 +208,7 @@ class GiftingStoreConfigModel {
       imageUrl: '',
       emoji: '🧸',
       tags: ['anniversary', 'gift', 'romantic', 'cake'],
+      productIds: [],
       isActive: true,
       sortOrder: 2,
     ),
@@ -136,6 +219,7 @@ class GiftingStoreConfigModel {
       imageUrl: '',
       emoji: '🎂',
       tags: ['cake', 'bakery', 'pastry'],
+      productIds: [],
       isActive: true,
       sortOrder: 3,
     ),
@@ -146,6 +230,7 @@ class GiftingStoreConfigModel {
       imageUrl: '',
       emoji: '🍫',
       tags: ['chocolate', 'gift', 'sweet'],
+      productIds: [],
       isActive: true,
       sortOrder: 4,
     ),
@@ -156,6 +241,7 @@ class GiftingStoreConfigModel {
       imageUrl: '',
       emoji: '🍯',
       tags: ['mithai', 'sweets', 'traditional'],
+      productIds: [],
       isActive: true,
       sortOrder: 5,
     ),
@@ -166,6 +252,7 @@ class GiftingStoreConfigModel {
       imageUrl: '',
       emoji: '🎁',
       tags: ['dry-fruit', 'nut', 'hamper', 'festive'],
+      productIds: [],
       isActive: true,
       sortOrder: 6,
     ),

@@ -63,6 +63,11 @@ const cardVisibilityFields = {
   endDate: z.string().nullable().optional(),
   timeSlot: bentoTimeSlotEnum.default('ALL_DAY'),
   targetHubs: z.array(z.string().trim()).default(['all']),
+  badge: z.string().trim().optional().default(''),
+  backgroundColor: z.string().trim().optional().default(''),
+  borderColor: z.string().trim().optional().default(''),
+  accentColor: z.string().trim().optional().default(''),
+  textColor: z.string().trim().optional().default(''),
 }
 
 export const campaignBentoConfigSchema = z
@@ -144,6 +149,11 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   freshMarket: {
     enabled: true,
     sortOrder: 1,
+    badge: '01',
+    backgroundColor: '#E2EFFF',
+    borderColor: '#CFE4FD',
+    accentColor: '#15803D',
+    textColor: '#0F172A',
     minInStockItems: 1,
     scheduleEnabled: false,
     startDate: null,
@@ -240,6 +250,11 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   dailyRestock: {
     enabled: true,
     sortOrder: 2,
+    badge: '02',
+    backgroundColor: '#F4F9FD',
+    borderColor: '#E0F2FE',
+    accentColor: '#0284C7',
+    textColor: '#0F172A',
     minInStockItems: 1,
     scheduleEnabled: false,
     startDate: null,
@@ -285,6 +300,11 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   valuePicks: {
     enabled: true,
     sortOrder: 3,
+    badge: '03',
+    backgroundColor: '#FEFCE8',
+    borderColor: '#FEF08A',
+    accentColor: '#15803D',
+    textColor: '#78350F',
     minInStockItems: 1,
     scheduleEnabled: false,
     startDate: null,
@@ -322,6 +342,11 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   giftingBoutique: {
     enabled: true,
     sortOrder: 4,
+    badge: '04',
+    backgroundColor: '#FDF2F4',
+    borderColor: '#FCE7F3',
+    accentColor: '#15803D',
+    textColor: '#831843',
     minInStockItems: 1,
     scheduleEnabled: false,
     startDate: null,
@@ -358,6 +383,11 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   movieNight: {
     enabled: true,
     sortOrder: 5,
+    badge: '05',
+    backgroundColor: '#251640',
+    borderColor: '#382458',
+    accentColor: '#15803D',
+    textColor: '#FFFFFF',
     minInStockItems: 1,
     scheduleEnabled: false,
     startDate: null,
@@ -403,6 +433,11 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   breakfastClub: {
     enabled: true,
     sortOrder: 6,
+    badge: '06',
+    backgroundColor: '#FFF8F0',
+    borderColor: '#FEE6D1',
+    accentColor: '#15803D',
+    textColor: '#9A3412',
     minInStockItems: 1,
     scheduleEnabled: false,
     startDate: null,

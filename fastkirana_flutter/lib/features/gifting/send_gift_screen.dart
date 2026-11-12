@@ -156,8 +156,8 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
               TextField(
                 controller: _giftNoteCtrl,
                 textCapitalization: TextCapitalization.sentences,
-                maxLines: 2,
-                maxLength: 120,
+                maxLines: 3,
+                maxLength: 250,
                 style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   filled: true,
@@ -477,9 +477,10 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
                   ),
                 ),
 
-                // 4. Curated 1-Tap Gift Combos & Hampers
+                // 4. Curated 1-Tap Gift Combos & Hampers (Strictly Admin Created)
                 SliverToBoxAdapter(
                   child: CuratedGiftCombosShelf(
+                    hampers: config.hampers,
                     catalog: products,
                     onHamperAdded: () {
                       _confettiController.play();
@@ -488,84 +489,99 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
                   ),
                 ),
 
-                // 5. Horizontal Scrolling Occasion Pills / Cards (Royal Velvet & Gold)
+                // 5. Visual Occasion Tabs (Seasonal Switch-Up Style with high-res circular packshots)
                 SliverToBoxAdapter(
                   child: Container(
                     margin: const EdgeInsets.only(top: 14, bottom: 8),
-                    child: SizedBox(
-                      height: 48,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        itemCount: occasions.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final occ = occasions[index];
-                          final isSelected = occ.label == _selectedOccasion;
-                          return Bounceable(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(() {
-                                _selectedOccasion = occ.label;
-                              });
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeOutCubic,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isSelected ? const Color(0xFF4A0E1C) : Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? const Color(0xFFFFDF73)
-                                      : const Color(0xFFEBC1CC),
-                                  width: isSelected ? 1.5 : 1.0,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: isSelected
-                                        ? const Color(0xFF6B1728).withValues(alpha: 0.25)
-                                        : Colors.black.withValues(alpha: 0.03),
-                                    blurRadius: isSelected ? 8 : 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (occ.imageUrl.trim().isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 6),
-                                      child: CachedNetworkImage(
-                                        imageUrl: occ.imageUrl,
-                                        width: 22,
-                                        height: 22,
-                                        fit: BoxFit.contain,
-                                        errorWidget: (_, __, ___) =>
-                                            Text(occ.emoji, style: const TextStyle(fontSize: 16)),
+                    height: 92,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      itemCount: occasions.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      itemBuilder: (context, index) {
+                        final occ = occasions[index];
+                        final isSelected = occ.label == _selectedOccasion;
+                        return Bounceable(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() {
+                              _selectedOccasion = occ.label;
+                            });
+                          },
+                          child: SizedBox(
+                            width: 74,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Circular Thumbnail with Luxury Gold/Crimson Border
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeOutCubic,
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? const Color(0xFFFFF1F2) : Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected ? const Color(0xFFBE123C) : const Color(0xFFE2E8F0),
+                                      width: isSelected ? 2.2 : 1.2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isSelected
+                                            ? const Color(0xFFBE123C).withValues(alpha: 0.22)
+                                            : Colors.black.withValues(alpha: 0.04),
+                                        blurRadius: isSelected ? 8 : 4,
+                                        offset: const Offset(0, 2),
                                       ),
-                                    )
-                                  else
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 6),
-                                      child: Text(occ.emoji, style: const TextStyle(fontSize: 16)),
-                                    ),
-                                  Text(
-                                    occ.title,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11.5,
-                                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                                      color: isSelected ? const Color(0xFFFFE082) : const Color(0xFF4A0E1C),
-                                    ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                  padding: const EdgeInsets.all(3),
+                                  child: ClipOval(
+                                    child: occ.imageUrl.trim().isNotEmpty
+                                        ? CachedNetworkImage(
+                                            imageUrl: occ.imageUrl.trim(),
+                                            fit: BoxFit.cover,
+                                            errorWidget: (_, __, ___) => Center(
+                                              child: Text(occ.emoji, style: const TextStyle(fontSize: 22)),
+                                            ),
+                                          )
+                                        : Center(
+                                            child: Text(occ.emoji, style: const TextStyle(fontSize: 22)),
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                // 2-line Text Label
+                                Text(
+                                  occ.title.isNotEmpty ? occ.title : occ.label,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10.5,
+                                    height: 1.15,
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    color: isSelected ? const Color(0xFFBE123C) : const Color(0xFF475569),
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                // Flowing active indicator pill
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  height: 2.5,
+                                  width: isSelected ? 24 : 0,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFBE123C),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -643,46 +659,91 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
                 ),
 
                 // 5. 3-Column Zepto Style Product Cards Grid (Real-time backend attached!)
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(10, 4, 10, 110),
-                sliver: SliverGrid(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: Responsive.isTablet(context) ? 4 : 3,
-                    childAspectRatio: Responsive.isTablet(context)
-                        ? 0.72
-                        : (MediaQuery.of(context).size.width < 360 ? 0.60 : 0.63),
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 10,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final product = giftProducts[index];
-                      final inCartCount = cartItems
-                          .where((item) => item.product.id == product.id)
-                          .fold(0, (sum, item) => sum + item.quantity);
+                if (giftProducts.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF1F2),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: const Color(0xFFFECDD3)),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text('🎁', style: TextStyle(fontSize: 26)),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Gifts for $_selectedOccasion coming soon!',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF334155),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Our darkstore team is stocking up items for this occasion.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(10, 4, 10, 110),
+                    sliver: SliverGrid(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: Responsive.isTablet(context) ? 4 : 3,
+                        childAspectRatio: Responsive.isTablet(context)
+                            ? 0.72
+                            : (MediaQuery.of(context).size.width < 360 ? 0.60 : 0.63),
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 10,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final product = giftProducts[index];
+                          final inCartCount = cartItems
+                              .where((item) => item.product.id == product.id)
+                              .fold(0, (sum, item) => sum + item.quantity);
 
-                      return _ZeptoGiftCard(
-                        product: product,
-                        inCartCount: inCartCount,
-                        onAdd: () {
-                          HapticFeedback.lightImpact();
-                          _confettiController.play();
-                          ref.read(cartProvider.notifier).addProduct(product);
+                          return _ZeptoGiftCard(
+                            product: product,
+                            inCartCount: inCartCount,
+                            onAdd: () {
+                              HapticFeedback.lightImpact();
+                              _confettiController.play();
+                              ref.read(cartProvider.notifier).addProduct(product);
+                            },
+                            onIncrement: () {
+                              HapticFeedback.lightImpact();
+                              ref.read(cartProvider.notifier).increment(product);
+                            },
+                            onDecrement: () {
+                              HapticFeedback.lightImpact();
+                              ref.read(cartProvider.notifier).decrement(product.id);
+                            },
+                          );
                         },
-                        onIncrement: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(cartProvider.notifier).increment(product);
-                        },
-                        onDecrement: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(cartProvider.notifier).decrement(product.id);
-                        },
-                      );
-                    },
-                    childCount: giftProducts.length,
+                        childCount: giftProducts.length,
+                      ),
+                    ),
                   ),
-                ),
-              ),
             ],
           ),
           ),
@@ -803,21 +864,40 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
     String occasion,
     List<GiftingOccasionModel> occasions,
   ) {
-    final occ = occasions.firstWhereOrNull((o) => o.label == occasion);
-    final occasionTags = (occ?.tags ?? []).map((t) => t.toLowerCase().trim()).toList();
-    final lower = occasion.toLowerCase();
+    final occ = occasions.firstWhereOrNull((o) => o.label == occasion || o.title == occasion);
+    if (occ == null) return const [];
 
+    // 1. Explicit admin-curated product links (Highest priority)
+    if (occ.productIds.isNotEmpty) {
+      final explicit = allProducts
+          .where((p) => occ.productIds.contains(p.id) || occ.productIds.contains(p.slug))
+          .toList();
+      if (explicit.isNotEmpty) {
+        return explicit;
+      }
+    }
+
+    // 2. Dynamic tag & category matching from Admin
+    final occasionTags = occ.tags.map((t) => t.toLowerCase().trim()).toList();
+    if (occasionTags.isNotEmpty) {
+      final matched = allProducts.where((p) {
+        final name = p.name.toLowerCase();
+        final cat = (p.category?.name ?? '').toLowerCase();
+        final tags = p.tags.map((t) => t.toLowerCase().trim()).toList();
+        return occasionTags.any((t) => tags.contains(t) || name.contains(t) || cat.contains(t));
+      }).take(36).toList();
+      if (matched.isNotEmpty) {
+        return matched;
+      }
+    }
+
+    // 3. Category Fallback matching by keyword
+    final lower = occasion.toLowerCase();
     final matched = allProducts.where((p) {
       final name = p.name.toLowerCase();
       final cat = (p.category?.name ?? '').toLowerCase();
       final tags = p.tags.map((t) => t.toLowerCase().trim()).toList();
 
-      // 1. Dynamic tags matching from Admin
-      if (occasionTags.isNotEmpty && occasionTags.any((t) => tags.contains(t) || name.contains(t) || cat.contains(t))) {
-        return true;
-      }
-
-      // 2. Fallbacks
       if (lower.contains('anniversary')) {
         return name.contains('silk') ||
             name.contains('ferrero') ||
@@ -860,147 +940,9 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
           name.contains('cake') ||
           name.contains('chocolate') ||
           cat.contains('sweet');
-    }).toList();
+    }).take(36).toList();
 
-    if (matched.length >= 6) {
-      return matched.take(24).toList();
-    }
-
-    // Prioritize real database products first, supplemented with curated hampers to keep the 3-column grid rich
-    final fallback = _getFallbackGiftHampers();
-    final combined = <Product>[...matched];
-    for (final f in fallback) {
-      if (!combined.any((p) => p.name.toLowerCase() == f.name.toLowerCase() || p.id == f.id)) {
-        combined.add(f);
-      }
-      if (combined.length >= 12) break;
-    }
-    return combined;
-  }
-
-  List<Product> _getFallbackGiftHampers() {
-    return [
-      Product(
-        id: 'gift-ferrero-16',
-        name: 'Ferrero Rocher Premium Gold Box (16 Pcs)',
-        slug: 'ferrero-rocher-16',
-        mrp: 599,
-        price: 529,
-        discount: 70,
-        unit: '200 g',
-        stock: 40,
-        isAvailable: true,
-        tags: ['gift', 'chocolate', 'premium'],
-        minStock: 5,
-        costPrice: 450,
-        isFlashDeal: false,
-        isTopPick: true,
-        isBestSeller: true,
-        sortOrder: 1,
-        imageUrl: 'https://images.unsplash.com/photo-1582293041079-7814c2f12063?w=400&q=80',
-        createdAt: DateTime.now(),
-      ),
-      Product(
-        id: 'gift-truffle-cake',
-        name: 'Dutch Truffle Chocolate Fresh Cake',
-        slug: 'dutch-truffle-cake-500g',
-        mrp: 450,
-        price: 399,
-        discount: 51,
-        unit: '500 g',
-        stock: 25,
-        isAvailable: true,
-        tags: ['gift', 'cake', 'birthday'],
-        minStock: 2,
-        costPrice: 300,
-        isFlashDeal: true,
-        isTopPick: true,
-        isBestSeller: true,
-        sortOrder: 2,
-        imageUrl: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80',
-        createdAt: DateTime.now(),
-      ),
-      Product(
-        id: 'gift-cadbury-celebration',
-        name: 'Cadbury Celebrations Rich Dry Fruit Box',
-        slug: 'cadbury-celebrations-gift-box',
-        mrp: 299,
-        price: 249,
-        discount: 50,
-        unit: '250 g',
-        stock: 50,
-        isAvailable: true,
-        tags: ['gift', 'chocolate', 'sweets'],
-        minStock: 5,
-        costPrice: 200,
-        isFlashDeal: false,
-        isTopPick: true,
-        isBestSeller: true,
-        sortOrder: 3,
-        imageUrl: 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=400&q=80',
-        createdAt: DateTime.now(),
-      ),
-      Product(
-        id: 'gift-haldiram-kaju-katli',
-        name: 'Haldiram Royal Kaju Katli Gift Pack',
-        slug: 'haldiram-kaju-katli-gift',
-        mrp: 499,
-        price: 449,
-        discount: 50,
-        unit: '500 g',
-        stock: 30,
-        isAvailable: true,
-        tags: ['gift', 'mithai', 'sweets'],
-        minStock: 5,
-        costPrice: 380,
-        isFlashDeal: false,
-        isTopPick: true,
-        isBestSeller: false,
-        sortOrder: 4,
-        imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
-        createdAt: DateTime.now(),
-      ),
-      Product(
-        id: 'gift-nut-circle',
-        name: "Haldiram's Nut Circle (Dry Fruit Pack)",
-        slug: 'haldiram-nut-circle-400g',
-        mrp: 1199,
-        price: 1022,
-        discount: 177,
-        unit: '400 g',
-        stock: 50,
-        isAvailable: true,
-        tags: ['gift', 'dry fruit', 'festive'],
-        minStock: 5,
-        costPrice: 850,
-        isFlashDeal: false,
-        isTopPick: true,
-        isBestSeller: false,
-        sortOrder: 5,
-        imageUrl: 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=400&q=80',
-        createdAt: DateTime.now(),
-      ),
-      Product(
-        id: 'gift-silk-pralines',
-        name: 'Cadbury Dairy Milk Silk Pralines Box',
-        slug: 'cadbury-silk-pralines',
-        mrp: 199,
-        price: 175,
-        discount: 24,
-        unit: '150 g',
-        stock: 35,
-        isAvailable: true,
-        tags: ['gift', 'chocolate'],
-        minStock: 5,
-        costPrice: 140,
-        isFlashDeal: false,
-        isTopPick: false,
-        isBestSeller: false,
-        sortOrder: 6,
-        imageUrl: 'https://images.unsplash.com/photo-1582293041079-7814c2f12063?w=400&q=80',
-        createdAt: DateTime.now(),
-      ),
-    ];
+    return matched;
   }
 }
 

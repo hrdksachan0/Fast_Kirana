@@ -280,7 +280,7 @@ export function InteractiveCampaignBento({
         {shouldRenderCard('freshMarket', activeConfig.freshMarket.enabled) && (
           <div className={cn('flex flex-col', !activeConfig.freshMarket.enabled && 'opacity-60')}>
             <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
-              <span>01</span>
+              <span>{activeConfig.freshMarket.badge || '01'}</span>
               {!activeConfig.freshMarket.enabled && (
                 <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
                   Hidden
@@ -289,6 +289,10 @@ export function InteractiveCampaignBento({
             </span>
             <motion.div
               variants={cardVariants}
+              style={{
+                backgroundColor: activeConfig.freshMarket.backgroundColor || undefined,
+                borderColor: activeConfig.freshMarket.borderColor || undefined,
+              }}
               className="rounded-[22px] bg-[#F0F7F2] border border-[#DCFCE7] p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(21,128,61,0.04)] h-full"
             >
               <div>
@@ -415,7 +419,7 @@ export function InteractiveCampaignBento({
         {shouldRenderCard('dailyRestock', activeConfig.dailyRestock.enabled) && (
           <div className={cn('flex flex-col', !activeConfig.dailyRestock.enabled && 'opacity-60')}>
             <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
-              <span>02</span>
+              <span>{activeConfig.dailyRestock.badge || '02'}</span>
               {!activeConfig.dailyRestock.enabled && (
                 <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
                   Hidden
@@ -424,6 +428,10 @@ export function InteractiveCampaignBento({
             </span>
             <motion.div
               variants={cardVariants}
+              style={{
+                backgroundColor: activeConfig.dailyRestock.backgroundColor || undefined,
+                borderColor: activeConfig.dailyRestock.borderColor || undefined,
+              }}
               className="rounded-[22px] bg-[#F4F9FD] border border-[#E0F2FE] p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(2,132,199,0.04)] h-full"
             >
               <div>
@@ -527,7 +535,7 @@ export function InteractiveCampaignBento({
         {shouldRenderCard('valuePicks', activeConfig.valuePicks.enabled) && (
           <div className={cn('flex flex-col', !activeConfig.valuePicks.enabled && 'opacity-60')}>
             <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
-              <span>03</span>
+              <span>{activeConfig.valuePicks.badge || '03'}</span>
               {!activeConfig.valuePicks.enabled && (
                 <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
                   Hidden
@@ -536,6 +544,10 @@ export function InteractiveCampaignBento({
             </span>
             <motion.div
               variants={cardVariants}
+              style={{
+                backgroundColor: activeConfig.valuePicks.backgroundColor || undefined,
+                borderColor: activeConfig.valuePicks.borderColor || undefined,
+              }}
               className="rounded-[22px] bg-[#FEFCE8] border border-[#FEF08A] p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(202,138,4,0.04)] h-full"
             >
               <div>
@@ -636,7 +648,7 @@ export function InteractiveCampaignBento({
             className={cn('flex flex-col', !activeConfig.giftingBoutique.enabled && 'opacity-60')}
           >
             <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
-              <span>04</span>
+              <span>{activeConfig.giftingBoutique.badge || '04'}</span>
               {!activeConfig.giftingBoutique.enabled && (
                 <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
                   Hidden
@@ -655,6 +667,10 @@ export function InteractiveCampaignBento({
               return (
                 <motion.div
                   variants={cardVariants}
+                  style={{
+                    backgroundColor: activeConfig.giftingBoutique.backgroundColor || undefined,
+                    borderColor: activeConfig.giftingBoutique.borderColor || undefined,
+                  }}
                   className="rounded-[22px] bg-[#FDF2F4] border border-[#FCE7F3] p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(225,29,72,0.04)] h-full"
                 >
                   <div>
@@ -770,7 +786,7 @@ export function InteractiveCampaignBento({
         {shouldRenderCard('movieNight', activeConfig.movieNight.enabled) && (
           <div className={cn('flex flex-col', !activeConfig.movieNight.enabled && 'opacity-60')}>
             <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
-              <span>05</span>
+              <span>{activeConfig.movieNight.badge || '05'}</span>
               {!activeConfig.movieNight.enabled && (
                 <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
                   Hidden
@@ -779,6 +795,10 @@ export function InteractiveCampaignBento({
             </span>
             <motion.div
               variants={cardVariants}
+              style={{
+                backgroundColor: activeConfig.movieNight.backgroundColor || undefined,
+                borderColor: activeConfig.movieNight.borderColor || undefined,
+              }}
               className="rounded-[22px] bg-[#251640] border border-[#382458] p-5 flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.3)] h-full text-white"
             >
               <div>
@@ -852,7 +872,7 @@ export function InteractiveCampaignBento({
         {shouldRenderCard('breakfastClub', activeConfig.breakfastClub.enabled) && (
           <div className={cn('flex flex-col', !activeConfig.breakfastClub.enabled && 'opacity-60')}>
             <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
-              <span>06</span>
+              <span>{activeConfig.breakfastClub.badge || '06'}</span>
               {!activeConfig.breakfastClub.enabled && (
                 <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
                   Hidden
@@ -861,6 +881,10 @@ export function InteractiveCampaignBento({
             </span>
             <motion.div
               variants={cardVariants}
+              style={{
+                backgroundColor: activeConfig.breakfastClub.backgroundColor || undefined,
+                borderColor: activeConfig.breakfastClub.borderColor || undefined,
+              }}
               className="rounded-[22px] bg-[#FBF9F6] border border-[#E2E8F0] p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.03)] h-full"
             >
               <div>

@@ -42,10 +42,24 @@ export function revalidateStorefront(
     revalidateTag('products', 'max')
     revalidateTag('banners', 'max')
     revalidateTag('restaurants', 'max')
+    revalidateTag('campaign', 'max')
+    revalidateTag('settings', 'max')
     revalidatePath('/', 'page')
     revalidatePath('/food', 'page')
+    revalidatePath('/campaign-bento', 'page')
   } catch (err) {
     console.error('Failed to trigger targeted revalidation:', err)
+  }
+}
+
+export function revalidateCampaign() {
+  try {
+    revalidateTag('campaign', 'max')
+    revalidateTag('settings', 'max')
+    revalidatePath('/', 'page')
+    revalidatePath('/campaign-bento', 'page')
+  } catch (err) {
+    console.error('Failed to revalidate campaign tag:', err)
   }
 }
 

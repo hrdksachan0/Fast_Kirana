@@ -9,6 +9,8 @@ import 'widgets/daily_restock_card.dart';
 import 'widgets/seasonal_switch_up_card.dart';
 import 'widgets/value_picks_card.dart';
 import 'widgets/gifting_boutique_card.dart';
+import 'widgets/movie_night_card.dart';
+import 'widgets/breakfast_club_card.dart';
 
 class CampaignBentoZone extends ConsumerWidget {
   final bool showLiveEditButton;
@@ -31,8 +33,9 @@ class CampaignBentoZone extends ConsumerWidget {
       case CampaignCardType.giftingBoutique:
         return GiftingBoutiqueCard(card: card);
       case CampaignCardType.movieNight:
+        return MovieNightCard(card: card);
       case CampaignCardType.breakfastClub:
-        return const SizedBox.shrink();
+        return BreakfastClubCard(card: card);
       case CampaignCardType.custom:
         return FreshMarketCard(card: card);
     }
@@ -55,10 +58,7 @@ class CampaignBentoZone extends ConsumerWidget {
 
     final hub = ref.watch(currentStoreHubProvider);
     final activeCards = config.cards
-        .where((c) =>
-            c.isVisibleForHub(hub.id) &&
-            c.type != CampaignCardType.movieNight &&
-            c.type != CampaignCardType.breakfastClub)
+        .where((c) => c.isVisibleForHub(hub.id))
         .toList();
     activeCards.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     if (activeCards.isEmpty) return const SizedBox.shrink();
@@ -68,42 +68,16 @@ class CampaignBentoZone extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (config.sectionTitle.isNotEmpty || showLiveEditButton) ...[
-            Row(
-              children: [
-                if (config.sectionTitle.isNotEmpty)
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          config.sectionTitle,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.6,
-                              ),
-                        ),
-                        if (config.sectionSubtitle.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            config.sectionSubtitle,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: const Color(0xFF64748B),
-                                ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                if (showLiveEditButton)
-                  IconButton(
-                    tooltip: 'Customize campaigns',
-                    icon: const Icon(Icons.tune_rounded),
-                    onPressed: () => _openLiveCustomizer(context, ref),
-                  ),
-              ],
+          if (showLiveEditButton) ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                tooltip: 'Customize campaigns',
+                icon: const Icon(Icons.tune_rounded),
+                onPressed: () => _openLiveCustomizer(context, ref),
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
           ],
           for (final card in activeCards) ...[
             _buildCard(card),
@@ -187,7 +161,7 @@ class _BentoLiveCustomizerSheetState
                   ),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: card.accentColor.withOpacity(0.15),
+                      backgroundColor: card.accentColor.withValues(alpha: 0.15),
                       child: Text(
                         card.badge.isNotEmpty ? card.badge : '${index + 1}',
                         style: TextStyle(
@@ -201,7 +175,7 @@ class _BentoLiveCustomizerSheetState
                     subtitle: Text('${card.items.length} items • ${card.type.name}'),
                     trailing: Switch(
                       value: card.enabled,
-                      activeColor: const Color(0xFF15803D),
+                      activeThumbColor: const Color(0xFF15803D),
                       onChanged: (val) {
                         notifier.toggleCard(card.id, val);
                       },

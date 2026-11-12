@@ -180,8 +180,8 @@ class _FreshMarketCardState extends ConsumerState<FreshMarketCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Panoramic Branded Summer Fruit Header ("bloom")
-          const _BloomPanoramicHeader(),
+          // 1. Panoramic Branded Summer Fruit Header
+          _BloomPanoramicHeader(title: widget.card.title),
 
           const SizedBox(height: 12),
 
@@ -261,10 +261,12 @@ class _FreshMarketCardState extends ConsumerState<FreshMarketCard> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _BloomPanoramicHeader extends StatelessWidget {
-  const _BloomPanoramicHeader();
+  final String title;
+  const _BloomPanoramicHeader({this.title = 'Fresh Market'});
 
   @override
   Widget build(BuildContext context) {
+    final displayTitle = title.trim().isNotEmpty ? title : 'Fresh Market';
     return SizedBox(
       height: 114,
       width: double.infinity,
@@ -279,16 +281,16 @@ class _BloomPanoramicHeader extends StatelessWidget {
             fit: BoxFit.cover,
           ),
 
-          // 2. Fallback / Enhancing Cloud Typography "bloom"
+          // 2. Fallback / Enhancing Cloud Typography
           Positioned(
             top: 14,
             left: 0,
             right: 0,
             child: Center(
               child: Text(
-                'bloom',
+                displayTitle,
                 style: GoogleFonts.quicksand(
-                  fontSize: 40,
+                  fontSize: displayTitle.length > 8 ? 32 : 40,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                   letterSpacing: -1.2,

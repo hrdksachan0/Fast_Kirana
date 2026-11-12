@@ -108,12 +108,12 @@ class _BreakfastClubCardState extends ConsumerState<BreakfastClubCard> {
       children: [
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFFBF9F6),
+            color: card.backgroundColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+            border: Border.all(color: card.borderColor, width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: card.accentColor.withValues(alpha: 0.05),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
@@ -127,20 +127,20 @@ class _BreakfastClubCardState extends ConsumerState<BreakfastClubCard> {
               // Title & Subtitle
               Text(
                 card.title.isNotEmpty ? card.title : 'Breakfast Club',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: card.textColor,
                   letterSpacing: -0.4,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 card.subtitle.isNotEmpty ? card.subtitle : 'Your quick breakfast list',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF64748B),
+                  color: card.textColor.withValues(alpha: 0.7),
                 ),
               ),
 

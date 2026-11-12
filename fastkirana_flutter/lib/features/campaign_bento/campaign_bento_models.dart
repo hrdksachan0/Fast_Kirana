@@ -207,7 +207,7 @@ class CampaignBentoCardConfig {
     this.targetHubs = const ['all'],
   });
 
-  static Color _parseColor(dynamic val, Color fallback) {
+  static Color parseColor(dynamic val, Color fallback) {
     if (val is int) return Color(val);
     if (val is String && val.startsWith('#')) {
       final hex = val.replaceFirst('#', '');
@@ -220,8 +220,10 @@ class CampaignBentoCardConfig {
     return fallback;
   }
 
+  static Color _parseColor(dynamic val, Color fallback) => parseColor(val, fallback);
+
   static String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
   }
 
   factory CampaignBentoCardConfig.fromJson(Map<String, dynamic> json) {
@@ -414,17 +416,16 @@ class CampaignBentoConfig {
 
   const CampaignBentoConfig({
     this.enabled = true,
-    this.sectionTitle = 'Featured Zones',
-    this.sectionSubtitle = 'Curated daily baskets & instant savings',
+    this.sectionTitle = '',
+    this.sectionSubtitle = '',
     this.cards = const [],
   });
 
   factory CampaignBentoConfig.fromJson(Map<String, dynamic> json) {
     return CampaignBentoConfig(
       enabled: json['enabled'] as bool? ?? true,
-      sectionTitle: json['sectionTitle'] as String? ?? 'Featured Zones',
-      sectionSubtitle:
-          json['sectionSubtitle'] as String? ?? 'Curated daily baskets & instant savings',
+      sectionTitle: json['sectionTitle'] as String? ?? '',
+      sectionSubtitle: json['sectionSubtitle'] as String? ?? '',
       cards: (json['cards'] as List<dynamic>?)
               ?.map((e) => CampaignBentoCardConfig.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -453,83 +454,115 @@ class CampaignBentoConfig {
     );
   }
 
-  /// Default production configurations matching the curated archetypes
+  /// Default production configurations matching the curated archetypes (1:1 with Web Admin)
   static CampaignBentoConfig defaultProductionConfig() {
     return const CampaignBentoConfig(
       enabled: true,
-      sectionTitle: 'Featured Zones',
-      sectionSubtitle: 'Curated daily baskets & instant savings',
+      sectionTitle: '',
+      sectionSubtitle: '',
       cards: [
-        // 01. The Seasonal Switch-Up (Zepto Personal Care & Winter Archetype)
-        CampaignBentoCardConfig(
-          id: 'seasonal-switch-up',
-          type: CampaignCardType.seasonalSwitchUp,
-          badge: '01',
-          title: 'The Seasonal Switch-Up',
-          subtitle: 'POWERED BY Cetaphil DOT & KEY',
-          backgroundColor: Color(0xFFD6EEFF),
-          borderColor: Color(0xFFC0E2FD),
-          accentColor: Color(0xFF0284C7),
-          textColor: Color(0xFF1E3A8A),
-          tabs: [
-            CampaignBentoTabConfig(id: 'body-lotion', label: 'Body\nLotions', icon: 'body.png'),
-            CampaignBentoTabConfig(id: 'face-moisturizer', label: 'Face\nMoisturizers', icon: 'face.png'),
-            CampaignBentoTabConfig(id: 'lip-balm', label: 'Lip\nBalm', icon: 'lip.png'),
-            CampaignBentoTabConfig(id: 'hair-care', label: 'Hair\nCare', icon: 'hair.png'),
-            CampaignBentoTabConfig(id: 'lip-sleeping-mask', label: 'Lip\nMask', icon: 'lip.png'),
-          ],
-          items: [],
-        ),
-
-        // 02. bloom (Zepto Summer/Farm-Fresh Panoramic Fruits & Veggies Archetype)
+        // 01. Fresh Market (Zepto Summer/Farm-Fresh Panoramic Fruits & Veggies Archetype)
         CampaignBentoCardConfig(
           id: 'fresh-market',
           type: CampaignCardType.freshMarket,
-          badge: '02',
-          title: 'bloom',
-          subtitle: 'Farm-fresh essentials',
+          badge: '01',
+          sortOrder: 1,
+          title: 'Fresh Market',
+          subtitle: 'Farm-fresh essentials, ready to add',
           backgroundColor: Color(0xFFE2EFFF),
           borderColor: Color(0xFFCFE4FD),
           accentColor: Color(0xFF15803D),
           textColor: Color(0xFF0F172A),
           heroImage: 'bloom-panoramic-header.svg',
-          tabs: [],
+          tabs: [
+            CampaignBentoTabConfig(id: 'sabzi', label: 'Sabzi', icon: '🍅'),
+            CampaignBentoTabConfig(id: 'fruits', label: 'Fruits', icon: '🥭'),
+            CampaignBentoTabConfig(id: 'herbs', label: 'Herbs', icon: '🌿'),
+          ],
           items: [
             CampaignBentoItemConfig(
-              id: 'bloom-1',
-              name: 'Bloom Coriander Leaves',
-              weight: '100 g',
-              price: 26,
-              originalPrice: 48,
-              discountTag: '₹22 OFF',
-              image: 'fresh-coriander.svg',
+              id: 'fresh-1',
+              name: 'Fresh Tomato',
+              weight: '500 g',
+              price: 25,
+              originalPrice: 30,
+              discountTag: '₹5 OFF',
+              image: 'ref-fresh-tomato.png',
+              tabId: 'sabzi',
             ),
             CampaignBentoItemConfig(
-              id: 'bloom-2',
-              name: 'Bloom Chilli Green',
-              weight: '100 g',
-              price: 19,
-              originalPrice: 29,
-              discountTag: '₹10 OFF',
-              image: 'fresh-mint.svg',
-            ),
-            CampaignBentoItemConfig(
-              id: 'bloom-3',
-              name: 'Bloom Muskmelon',
-              weight: '1 pc (550 - 650 g)',
-              price: 111,
-              originalPrice: 231,
-              discountTag: '₹120 OFF',
+              id: 'fresh-2',
+              name: 'Fresh Cucumber',
+              weight: '500 g',
+              price: 30,
+              originalPrice: 35,
+              discountTag: '₹5 OFF',
               image: 'ref-fresh-cucumber.png',
+              tabId: 'sabzi',
+            ),
+            CampaignBentoItemConfig(
+              id: 'fresh-3',
+              name: 'Safeda Mango',
+              weight: '1 kg',
+              price: 160,
+              originalPrice: 200,
+              discountTag: '₹40 OFF',
+              image: 'summer-mango.svg',
+              tabId: 'fruits',
             ),
           ],
         ),
 
-        // 03. Value Picks
+        // 02. Daily Restock (Zepto Morning/Essential Grocery Archetype)
+        CampaignBentoCardConfig(
+          id: 'daily-restock',
+          type: CampaignCardType.dailyRestock,
+          badge: '02',
+          sortOrder: 2,
+          title: 'Daily Restock',
+          subtitle: 'Everyday groceries at your fingertips',
+          backgroundColor: Color(0xFFF4F9FD),
+          borderColor: Color(0xFFE0F2FE),
+          accentColor: Color(0xFF0284C7),
+          textColor: Color(0xFF0F172A),
+          heroImage: 'daily-grocery-basket.svg',
+          items: [
+            CampaignBentoItemConfig(
+              id: 'dr-1',
+              name: 'Toned Fresh Milk',
+              weight: '500 ml',
+              price: 30,
+              originalPrice: 32,
+              discountTag: '₹2 OFF',
+              image: 'daily-milk.svg',
+            ),
+            CampaignBentoItemConfig(
+              id: 'dr-2',
+              name: 'Sandwich Bread',
+              weight: '400 g',
+              price: 45,
+              originalPrice: 50,
+              discountTag: '₹5 OFF',
+              image: 'daily-bread.svg',
+            ),
+            CampaignBentoItemConfig(
+              id: 'dr-3',
+              name: 'Chakki Fresh Atta',
+              weight: '1 kg',
+              price: 55,
+              originalPrice: 65,
+              discountTag: '₹10 OFF',
+              image: 'ref-atta-1kg.png',
+            ),
+          ],
+        ),
+
+        // 03. Value Picks (Zepto Multi-Pack & Value Archetype)
         CampaignBentoCardConfig(
           id: 'value-picks',
           type: CampaignCardType.valuePicks,
           badge: '03',
+          sortOrder: 3,
           title: 'Value Picks',
           subtitle: 'Save more on your daily essentials',
           backgroundColor: Color(0xFFFEFCE8),
@@ -558,11 +591,12 @@ class CampaignBentoConfig {
           ],
         ),
 
-        // 04. Gifting Boutique
+        // 04. Gifting Boutique (Zepto Occasion Luxury Gift Archetype)
         CampaignBentoCardConfig(
           id: 'gifting-boutique',
           type: CampaignCardType.giftingBoutique,
           badge: '04',
+          sortOrder: 4,
           title: 'Gifting Boutique',
           subtitle: 'Thoughtful gifts for special occasions',
           backgroundColor: Color(0xFFFDF2F4),
@@ -589,6 +623,72 @@ class CampaignBentoConfig {
               price: 499,
               image: 'ref-chocolate-cake.png',
               tabId: 'birthday',
+            ),
+          ],
+        ),
+
+        // 05. Movie Night (Zepto Cinema Snack Archetype)
+        CampaignBentoCardConfig(
+          id: 'movie-night',
+          type: CampaignCardType.movieNight,
+          badge: '05',
+          sortOrder: 5,
+          title: 'Movie Night',
+          subtitle: 'Snacks for the perfect watch time',
+          backgroundColor: Color(0xFF251640),
+          borderColor: Color(0xFF382458),
+          accentColor: Color(0xFF15803D),
+          textColor: Color(0xFFFFFFFF),
+          heroImage: 'ref-movie-cinema-scene.png',
+          comboButtonLabel: 'Add combo',
+          comboButtonPrice: 149,
+          items: [
+            CampaignBentoItemConfig(
+              id: 'mn-1',
+              name: 'Popcorn',
+              weight: '150 g',
+              price: 60,
+              image: 'movie-popcorn.svg',
+            ),
+            CampaignBentoItemConfig(
+              id: 'mn-2',
+              name: 'Cold drink',
+              weight: '750 ml',
+              price: 40,
+              image: 'chilled-cola.svg',
+            ),
+          ],
+        ),
+
+        // 06. Breakfast Club (Zepto Morning Quick-Basket Archetype)
+        CampaignBentoCardConfig(
+          id: 'breakfast-club',
+          type: CampaignCardType.breakfastClub,
+          badge: '06',
+          sortOrder: 6,
+          title: 'Breakfast Club',
+          subtitle: 'Your quick breakfast list',
+          backgroundColor: Color(0xFFFFF8F0),
+          borderColor: Color(0xFFFEE6D1),
+          accentColor: Color(0xFF15803D),
+          textColor: Color(0xFF9A3412),
+          heroImage: 'ref-breakfast-toast.png',
+          comboButtonLabel: 'Add Morning Combo',
+          comboButtonPrice: 99,
+          items: [
+            CampaignBentoItemConfig(
+              id: 'bc-1',
+              name: 'Whole Wheat Bread',
+              weight: '400 g',
+              price: 45,
+              image: 'ref-breakfast-toast.png',
+            ),
+            CampaignBentoItemConfig(
+              id: 'bc-2',
+              name: 'Table Butter',
+              weight: '100 g',
+              price: 58,
+              image: 'table-butter.svg',
             ),
           ],
         ),

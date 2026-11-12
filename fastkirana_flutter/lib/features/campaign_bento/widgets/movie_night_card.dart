@@ -60,20 +60,12 @@ class _MovieNightCardState extends ConsumerState<MovieNightCard> {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF1E0E38),
-            Color(0xFF140828),
-            Color(0xFF0E051D),
-          ],
-        ),
+        color: card.backgroundColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF381B60), width: 1.0),
+        border: Border.all(color: card.borderColor, width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0E051D).withValues(alpha: 0.45),
+            color: card.backgroundColor.withValues(alpha: 0.45),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -87,11 +79,11 @@ class _MovieNightCardState extends ConsumerState<MovieNightCard> {
           // Title & Subtitle (Clean & modern, matching reference)
           Text(
             card.title.isNotEmpty ? card.title : 'Movie Night',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Plus Jakarta Sans',
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: card.textColor,
               letterSpacing: -0.3,
             ),
           ),
@@ -100,11 +92,11 @@ class _MovieNightCardState extends ConsumerState<MovieNightCard> {
             card.subtitle.isNotEmpty
                 ? card.subtitle
                 : 'Snacks for the perfect watch time',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Plus Jakarta Sans',
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: Color(0xFFB4A5D9),
+              color: card.textColor.withValues(alpha: 0.7),
             ),
           ),
 

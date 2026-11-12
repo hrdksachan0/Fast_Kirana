@@ -62,6 +62,13 @@ export async function POST(request: NextRequest) {
       create: { key: 'gifting_store_config', value: payloadString },
     })
 
+    try {
+      const { clearSettingsCache } = await import('@/lib/settings-cache')
+      const { revalidateCampaign } = await import('@/lib/revalidate')
+      await clearSettingsCache()
+      revalidateCampaign()
+    } catch (_) {}
+
     return NextResponse.json({ success: true, config: result.data }, { headers })
   } catch (error) {
     console.error('[API] /api/admin/gifting-store POST error:', error)

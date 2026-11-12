@@ -1,68 +1,98 @@
 {
   "enabled": true,
-  "sectionTitle": "Featured Zones",
-  "sectionSubtitle": "Curated daily baskets & instant savings",
+  "sectionTitle": "",
+  "sectionSubtitle": "",
   "cards": [
-    {
-      "id": "seasonal-switch-up",
-      "type": "seasonalSwitchUp",
-      "badge": "01",
-      "title": "The Seasonal Switch-Up",
-      "subtitle": "POWERED BY Cetaphil DOT & KEY",
-      "backgroundColor": "#D6EEFF",
-      "borderColor": "#C0E2FD",
-      "accentColor": "#0284C7",
-      "textColor": "#1E3A8A",
-      "enabled": true,
-      "tabs": [
-        { "id": "body-lotion", "label": "Body\nLotions", "icon": "body.png" },
-        { "id": "face-moisturizer", "label": "Face\nMoisturizers", "icon": "face.png" },
-        { "id": "lip-balm", "label": "Lip\nBalm", "icon": "lip.png" },
-        { "id": "hair-care", "label": "Hair\nCare", "icon": "hair.png" },
-        { "id": "lip-sleeping-mask", "label": "Lip\nMask", "icon": "lip.png" }
-      ],
-      "items": []
-    },
     {
       "id": "fresh-market",
       "type": "freshMarket",
-      "badge": "02",
-      "title": "bloom",
-      "subtitle": "Farm-fresh essentials",
+      "badge": "01",
+      "title": "Fresh Market",
+      "subtitle": "Farm-fresh essentials, ready to add",
       "backgroundColor": "#E2EFFF",
       "borderColor": "#CFE4FD",
       "accentColor": "#15803D",
       "textColor": "#0F172A",
       "heroImage": "bloom-panoramic-header.svg",
       "enabled": true,
+      "tabs": [
+        { "id": "sabzi", "label": "Sabzi", "icon": "🍅" },
+        { "id": "fruits", "label": "Fruits", "icon": "🥭" },
+        { "id": "herbs", "label": "Herbs", "icon": "🌿" }
+      ],
+      "items": [
+        {
+          "id": "fresh-1",
+          "name": "Fresh Tomato",
+          "weight": "500 g",
+          "price": 25.0,
+          "originalPrice": 30.0,
+          "discountTag": "₹5 OFF",
+          "image": "ref-fresh-tomato.png",
+          "tabId": "sabzi"
+        },
+        {
+          "id": "fresh-2",
+          "name": "Fresh Cucumber",
+          "weight": "500 g",
+          "price": 30.0,
+          "originalPrice": 35.0,
+          "discountTag": "₹5 OFF",
+          "image": "ref-fresh-cucumber.png",
+          "tabId": "sabzi"
+        },
+        {
+          "id": "fresh-3",
+          "name": "Safeda Mango",
+          "weight": "1 kg",
+          "price": 160.0,
+          "originalPrice": 200.0,
+          "discountTag": "₹40 OFF",
+          "image": "summer-mango.svg",
+          "tabId": "fruits"
+        }
+      ]
+    },
+    {
+      "id": "daily-restock",
+      "type": "dailyRestock",
+      "badge": "02",
+      "title": "Daily Restock",
+      "subtitle": "Everyday groceries at your fingertips",
+      "backgroundColor": "#F4F9FD",
+      "borderColor": "#E0F2FE",
+      "accentColor": "#0284C7",
+      "textColor": "#0F172A",
+      "heroImage": "daily-grocery-basket.svg",
+      "enabled": true,
       "tabs": [],
       "items": [
         {
-          "id": "bloom-1",
-          "name": "Bloom Coriander Leaves",
-          "weight": "100 g",
-          "price": 26.0,
-          "originalPrice": 48.0,
-          "discountTag": "₹22 OFF",
-          "image": "fresh-coriander.svg"
+          "id": "dr-1",
+          "name": "Toned Fresh Milk",
+          "weight": "500 ml",
+          "price": 30.0,
+          "originalPrice": 32.0,
+          "discountTag": "₹2 OFF",
+          "image": "daily-milk.svg"
         },
         {
-          "id": "bloom-2",
-          "name": "Bloom Chilli Green",
-          "weight": "100 g",
-          "price": 19.0,
-          "originalPrice": 29.0,
+          "id": "dr-2",
+          "name": "Sandwich Bread",
+          "weight": "400 g",
+          "price": 45.0,
+          "originalPrice": 50.0,
+          "discountTag": "₹5 OFF",
+          "image": "daily-bread.svg"
+        },
+        {
+          "id": "dr-3",
+          "name": "Chakki Fresh Atta",
+          "weight": "1 kg",
+          "price": 55.0,
+          "originalPrice": 65.0,
           "discountTag": "₹10 OFF",
-          "image": "fresh-mint.svg"
-        },
-        {
-          "id": "bloom-3",
-          "name": "Bloom Muskmelon",
-          "weight": "1 pc (550 - 650 g)",
-          "price": 111.0,
-          "originalPrice": 231.0,
-          "discountTag": "₹120 OFF",
-          "image": "ref-fresh-cucumber.png"
+          "image": "ref-atta-1kg.png"
         }
       ]
     },
@@ -172,12 +202,12 @@
       "type": "breakfastClub",
       "badge": "06",
       "title": "Breakfast Club",
-      "subtitle": "Fresh mornings start here",
+      "subtitle": "Your quick breakfast list",
       "backgroundColor": "#FFF8F0",
       "borderColor": "#FEE6D1",
       "accentColor": "#15803D",
       "textColor": "#9A3412",
-      "heroImage": "breakfast-club-hero.webp",
+      "heroImage": "ref-breakfast-toast.png",
       "comboButtonLabel": "Add Morning Combo",
       "comboButtonPrice": 99.0,
       "enabled": true,

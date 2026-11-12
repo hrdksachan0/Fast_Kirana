@@ -797,8 +797,8 @@ export function CampaignBentoEditor({
             </label>
           </div>
 
-          {/* Shared Title & Subtitle */}
-          <div className="grid gap-3 sm:grid-cols-2">
+          {/* Shared Title, Subtitle & Corner Badge */}
+          <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Card Title</label>
               <input
@@ -828,6 +828,195 @@ export function CampaignBentoEditor({
                   }))
                 }
               />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Corner Badge Text
+              </label>
+              <input
+                type="text"
+                className={inputClass}
+                value={draft[selectedCard].badge ?? ''}
+                placeholder="e.g. 01, BEST VALUE, FRESH"
+                onChange={(e) =>
+                  updateDraft((prev) => ({
+                    ...prev,
+                    [selectedCard]: { ...prev[selectedCard], badge: e.target.value },
+                  }))
+                }
+              />
+            </div>
+          </div>
+
+          {/* Visual Theme & Color Design Studio */}
+          <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                Visual Design & Theme Palette
+              </span>
+              <div className="flex items-center gap-1.5">
+                {[
+                  { name: 'Emerald', bg: '#E2EFFF', border: '#CFE4FD', accent: '#15803D', text: '#0F172A' },
+                  { name: 'Sky Blue', bg: '#F4F9FD', border: '#E0F2FE', accent: '#0284C7', text: '#0F172A' },
+                  { name: 'Honey', bg: '#FEFCE8', border: '#FEF08A', accent: '#D97706', text: '#78350F' },
+                  { name: 'Wine', bg: '#FDF2F4', border: '#FCE7F3', accent: '#BE185D', text: '#831843' },
+                  { name: 'Dark', bg: '#251640', border: '#382458', accent: '#8B5CF6', text: '#FFFFFF' },
+                  { name: 'Sunrise', bg: '#FFF8F0', border: '#FEE6D1', accent: '#EA580C', text: '#9A3412' },
+                ].map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    title={`Apply ${preset.name} theme`}
+                    onClick={() =>
+                      updateDraft((prev) => ({
+                        ...prev,
+                        [selectedCard]: {
+                          ...prev[selectedCard],
+                          backgroundColor: preset.bg,
+                          borderColor: preset.border,
+                          accentColor: preset.accent,
+                          textColor: preset.text,
+                        },
+                      }))
+                    }
+                    className="flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer shadow-xs"
+                  >
+                    <span className="h-2 w-2 rounded-full border border-black/10" style={{ backgroundColor: preset.bg }} />
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 pt-1">
+              {/* Background Color */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-700 mb-1">
+                  Card Background
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    className="h-7 w-7 rounded border border-slate-300 p-0 cursor-pointer shrink-0"
+                    value={draft[selectedCard].backgroundColor || '#F8FAFC'}
+                    onChange={(e) =>
+                      updateDraft((prev) => ({
+                        ...prev,
+                        [selectedCard]: { ...prev[selectedCard], backgroundColor: e.target.value },
+                      }))
+                    }
+                  />
+                  <input
+                    type="text"
+                    className="w-full text-xs font-mono rounded border border-slate-300 px-2 py-1 bg-white uppercase"
+                    value={draft[selectedCard].backgroundColor ?? ''}
+                    placeholder="#E2EFFF"
+                    onChange={(e) =>
+                      updateDraft((prev) => ({
+                        ...prev,
+                        [selectedCard]: { ...prev[selectedCard], backgroundColor: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Border Color */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-700 mb-1">
+                  Card Border
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    className="h-7 w-7 rounded border border-slate-300 p-0 cursor-pointer shrink-0"
+                    value={draft[selectedCard].borderColor || '#E2E8F0'}
+                    onChange={(e) =>
+                      updateDraft((prev) => ({
+                        ...prev,
+                        [selectedCard]: { ...prev[selectedCard], borderColor: e.target.value },
+                      }))
+                    }
+                  />
+                  <input
+                    type="text"
+                    className="w-full text-xs font-mono rounded border border-slate-300 px-2 py-1 bg-white uppercase"
+                    value={draft[selectedCard].borderColor ?? ''}
+                    placeholder="#CFE4FD"
+                    onChange={(e) =>
+                      updateDraft((prev) => ({
+                        ...prev,
+                        [selectedCard]: { ...prev[selectedCard], borderColor: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Accent Color */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-700 mb-1">
+                  Accent / CTA Color
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    className="h-7 w-7 rounded border border-slate-300 p-0 cursor-pointer shrink-0"
+                    value={draft[selectedCard].accentColor || '#15803D'}
+                    onChange={(e) =>
+                      updateDraft((prev) => ({
+                        ...prev,
+                        [selectedCard]: { ...prev[selectedCard], accentColor: e.target.value },
+                      }))
+                    }
+                  />
+                  <input
+                    type="text"
+                    className="w-full text-xs font-mono rounded border border-slate-300 px-2 py-1 bg-white uppercase"
+                    value={draft[selectedCard].accentColor ?? ''}
+                    placeholder="#15803D"
+                    onChange={(e) =>
+                      updateDraft((prev) => ({
+                        ...prev,
+                        [selectedCard]: { ...prev[selectedCard], accentColor: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Text Color */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-700 mb-1">
+                  Primary Text Color
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    className="h-7 w-7 rounded border border-slate-300 p-0 cursor-pointer shrink-0"
+                    value={draft[selectedCard].textColor || '#0F172A'}
+                    onChange={(e) =>
+                      updateDraft((prev) => ({
+                        ...prev,
+                        [selectedCard]: { ...prev[selectedCard], textColor: e.target.value },
+                      }))
+                    }
+                  />
+                  <input
+                    type="text"
+                    className="w-full text-xs font-mono rounded border border-slate-300 px-2 py-1 bg-white uppercase"
+                    value={draft[selectedCard].textColor ?? ''}
+                    placeholder="#0F172A"
+                    onChange={(e) =>
+                      updateDraft((prev) => ({
+                        ...prev,
+                        [selectedCard]: { ...prev[selectedCard], textColor: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
