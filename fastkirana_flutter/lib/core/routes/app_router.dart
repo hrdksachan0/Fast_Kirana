@@ -137,10 +137,13 @@ class AppRouter {
       case '/map-picker':
         return SwiggyModalRoute(page: const MapPickerScreen());
       case '/login':
-        return ZeptoSlideRoute(page: const LoginScreen());
+        return FadeThroughRoute(
+          page: const LoginScreen(),
+          transitionDurationOverride: const Duration(milliseconds: 380),
+        );
       case '/admin':
       case '/admin/login':
-        return ZeptoSlideRoute(page: const AdminLoginScreen());
+        return FadeThroughRoute(page: const AdminLoginScreen());
       case '/admin-orders':
       case '/admin/orders':
       case '/admin/dashboard':
@@ -154,7 +157,7 @@ class AppRouter {
       case '/delivery/dashboard':
         return FadeThroughRoute(page: const DeliveryDashboard());
       case '/delivery/login':
-        return ZeptoSlideRoute(page: const DeliveryLoginScreen());
+        return FadeThroughRoute(page: const DeliveryLoginScreen());
       case '/restaurants':
       case '/restaurants-list':
       case '/food':
