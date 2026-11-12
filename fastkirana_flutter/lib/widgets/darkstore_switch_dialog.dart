@@ -9,11 +9,13 @@ import 'package:google_fonts/google_fonts.dart';
 class DarkstoreSwitchDialog extends StatefulWidget {
   final String? hubName;
   final String? cityName;
+  final int durationMs;
 
   const DarkstoreSwitchDialog({
     super.key,
     this.hubName,
     this.cityName,
+    this.durationMs = 900,
   });
 
   /// Static helper to trigger the darkstore switch transition dialog
@@ -21,7 +23,7 @@ class DarkstoreSwitchDialog extends StatefulWidget {
     BuildContext context, {
     String? hubName,
     String? cityName,
-    int durationMs = 850,
+    int durationMs = 900,
   }) async {
     try {
       await showDialog(
@@ -29,7 +31,11 @@ class DarkstoreSwitchDialog extends StatefulWidget {
         barrierDismissible: false,
         barrierColor: Colors.black.withValues(alpha: 0.45),
         routeSettings: const RouteSettings(name: 'darkstore_switch_hud'),
-        builder: (_) => DarkstoreSwitchDialog(hubName: hubName, cityName: cityName),
+        builder: (_) => DarkstoreSwitchDialog(
+          hubName: hubName,
+          cityName: cityName,
+          durationMs: durationMs,
+        ),
       );
     } catch (_) {}
   }
@@ -66,8 +72,8 @@ class _DarkstoreSwitchDialogState extends State<DarkstoreSwitchDialog>
       CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut),
     );
 
-    // Auto-dismiss after 900ms transition
-    Future.delayed(const Duration(milliseconds: 900), () {
+    // Auto-dismiss after durationMs transition
+    Future.delayed(Duration(milliseconds: widget.durationMs), () {
       if (mounted && Navigator.canPop(context)) {
         Navigator.pop(context);
       }
@@ -82,11 +88,14 @@ class _DarkstoreSwitchDialogState extends State<DarkstoreSwitchDialog>
 
   @override
   Widget build(BuildContext context) {
-    final locationLabel = widget.cityName?.trim().isNotEmpty == true
+    final rawLabel = widget.cityName?.trim().isNotEmpty == true
         ? widget.cityName!.trim()
         : widget.hubName?.trim().isNotEmpty == true
             ? widget.hubName!.trim()
             : 'Nearest';
+    final locationLabel = rawLabel.toLowerCase().endsWith('hub')
+        ? rawLabel
+        : '$rawLabel Hub';
 
     return PopScope(
       canPop: false,
