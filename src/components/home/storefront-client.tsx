@@ -445,14 +445,14 @@ export function StorefrontClient({
                   />
                 </div>
 
-                {/* 3.5 Dynamic Bento Campaign Deals Hub */}
-                <div className="section-lazy-render">
+                {/* 3.5 Dynamic Bento Campaign Deals Hub (Hidden from Web App) */}
+                {/* <div className="section-lazy-render">
                   <InteractiveCampaignBento
                     initialConfig={initialBentoCampaign}
                     products={!isLoadingStoreData ? currentGroceryProducts : []}
                     storeId={activeStoreId}
                   />
-                </div>
+                </div> */}
 
                 {/* 4. Deals & Curations Hub (Products & Curated For You) */}
                 <div className="section-lazy-render">

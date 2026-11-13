@@ -40,8 +40,8 @@ export default function CampaignBentoPage() {
         </div>
       </header>
 
-      {/* The Dynamic Campaign Bento Hub */}
-      <InteractiveCampaignBento />
+      {/* The Dynamic Campaign Bento Hub (Hidden) */}
+      {/* <InteractiveCampaignBento /> */}
     </main>
   )
 }

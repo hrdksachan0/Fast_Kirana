@@ -652,14 +652,7 @@ export default async function Home() {
             return null
           }
         })()}
-        initialBentoCampaign={(() => {
-          if (!bentoCampaignRaw) return null
-          try {
-            return parseCampaignBentoConfig(bentoCampaignRaw)
-          } catch {
-            return defaultCampaignBentoConfig
-          }
-        })()}
+        initialBentoCampaign={null}
       />
 
       {/* LocalBusiness JSON-LD Schema Markup */}
