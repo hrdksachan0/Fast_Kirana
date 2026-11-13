@@ -60,13 +60,15 @@ void main() {
     // Section title/subtitle headers are cleanly omitted for direct bento focus
     expect(find.byType(CampaignBentoZone), findsOneWidget);
 
-    // Verify Archetypes matching 1:1 with Web Admin
-    expect(find.text('Fresh Market'), findsWidgets);
-    expect(find.text('Daily Restock'), findsOneWidget);
+    // Verify Archetypes: Seasonal Switch-Up as 01, bloom (Fresh Market) as 02, Value Picks as 03, Gifting Boutique as 04
+    expect(find.text('The Seasonal Switch-Up'), findsOneWidget);
+    expect(find.text('bloom'), findsOneWidget);
     expect(find.text('Value Picks'), findsOneWidget);
     expect(find.text('Gifting Boutique'), findsWidgets);
-    expect(find.text('Movie Night'), findsOneWidget);
-    expect(find.text('Breakfast Club'), findsOneWidget);
+
+    // Verify deleted/disabled cards are hidden
+    expect(find.text('Movie Night'), findsNothing);
+    expect(find.text('Breakfast Club'), findsNothing);
 
     // Verify Card Numbering is cleanly removed (no slide numbers)
     expect(find.text('01'), findsNothing);

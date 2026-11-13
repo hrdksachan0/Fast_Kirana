@@ -381,7 +381,7 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
     ],
   },
   movieNight: {
-    enabled: true,
+    enabled: false,
     sortOrder: 5,
     badge: '05',
     backgroundColor: '#251640',
@@ -431,7 +431,7 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
     ],
   },
   breakfastClub: {
-    enabled: true,
+    enabled: false,
     sortOrder: 6,
     badge: '06',
     backgroundColor: '#FFF8F0',

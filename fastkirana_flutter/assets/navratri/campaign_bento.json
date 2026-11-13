@@ -4,10 +4,32 @@
   "sectionSubtitle": "",
   "cards": [
     {
+      "id": "seasonal-switch-up",
+      "type": "seasonalSwitchUp",
+      "badge": "01",
+      "sortOrder": 1,
+      "title": "The Seasonal Switch-Up",
+      "subtitle": "POWERED BY Cetaphil DOT & KEY",
+      "backgroundColor": "#D6EEFF",
+      "borderColor": "#C0E2FD",
+      "accentColor": "#0284C7",
+      "textColor": "#1E3A8A",
+      "enabled": true,
+      "tabs": [
+        { "id": "body-lotion", "label": "Body\nLotions", "icon": "body.png" },
+        { "id": "face-moisturizer", "label": "Face\nMoisturizers", "icon": "face.png" },
+        { "id": "lip-balm", "label": "Lip\nBalm", "icon": "lip.png" },
+        { "id": "hair-care", "label": "Hair\nCare", "icon": "hair.png" },
+        { "id": "lip-sleeping-mask", "label": "Lip\nMask", "icon": "lip.png" }
+      ],
+      "items": []
+    },
+    {
       "id": "fresh-market",
       "type": "freshMarket",
-      "badge": "01",
-      "title": "Fresh Market",
+      "badge": "02",
+      "sortOrder": 2,
+      "title": "bloom",
       "subtitle": "Farm-fresh essentials, ready to add",
       "backgroundColor": "#E2EFFF",
       "borderColor": "#CFE4FD",
@@ -54,52 +76,10 @@
       ]
     },
     {
-      "id": "daily-restock",
-      "type": "dailyRestock",
-      "badge": "02",
-      "title": "Daily Restock",
-      "subtitle": "Everyday groceries at your fingertips",
-      "backgroundColor": "#F4F9FD",
-      "borderColor": "#E0F2FE",
-      "accentColor": "#0284C7",
-      "textColor": "#0F172A",
-      "heroImage": "daily-grocery-basket.svg",
-      "enabled": true,
-      "tabs": [],
-      "items": [
-        {
-          "id": "dr-1",
-          "name": "Toned Fresh Milk",
-          "weight": "500 ml",
-          "price": 30.0,
-          "originalPrice": 32.0,
-          "discountTag": "₹2 OFF",
-          "image": "daily-milk.svg"
-        },
-        {
-          "id": "dr-2",
-          "name": "Sandwich Bread",
-          "weight": "400 g",
-          "price": 45.0,
-          "originalPrice": 50.0,
-          "discountTag": "₹5 OFF",
-          "image": "daily-bread.svg"
-        },
-        {
-          "id": "dr-3",
-          "name": "Chakki Fresh Atta",
-          "weight": "1 kg",
-          "price": 55.0,
-          "originalPrice": 65.0,
-          "discountTag": "₹10 OFF",
-          "image": "ref-atta-1kg.png"
-        }
-      ]
-    },
-    {
       "id": "value-picks",
       "type": "valuePicks",
       "badge": "03",
+      "sortOrder": 3,
       "title": "Value Picks",
       "subtitle": "Save more on your daily essentials",
       "backgroundColor": "#FEFCE8",
@@ -134,6 +114,7 @@
       "id": "gifting-boutique",
       "type": "giftingBoutique",
       "badge": "04",
+      "sortOrder": 4,
       "title": "Gifting Boutique",
       "subtitle": "Thoughtful gifts for special occasions",
       "backgroundColor": "#FDF2F4",
@@ -162,70 +143,6 @@
           "price": 499.0,
           "image": "ref-chocolate-cake.png",
           "tabId": "birthday"
-        }
-      ]
-    },
-    {
-      "id": "movie-night",
-      "type": "movieNight",
-      "badge": "05",
-      "title": "Movie Night",
-      "subtitle": "Snacks for the perfect watch time",
-      "backgroundColor": "#251640",
-      "borderColor": "#382458",
-      "accentColor": "#15803D",
-      "textColor": "#FFFFFF",
-      "heroImage": "ref-movie-cinema-scene.png",
-      "comboButtonLabel": "Add combo",
-      "comboButtonPrice": 149.0,
-      "enabled": true,
-      "tabs": [],
-      "items": [
-        {
-          "id": "mn-1",
-          "name": "Popcorn",
-          "weight": "150 g",
-          "price": 60.0,
-          "image": "movie-popcorn.svg"
-        },
-        {
-          "id": "mn-2",
-          "name": "Cold drink",
-          "weight": "750 ml",
-          "price": 40.0,
-          "image": "chilled-cola.svg"
-        }
-      ]
-    },
-    {
-      "id": "breakfast-club",
-      "type": "breakfastClub",
-      "badge": "06",
-      "title": "Breakfast Club",
-      "subtitle": "Your quick breakfast list",
-      "backgroundColor": "#FFF8F0",
-      "borderColor": "#FEE6D1",
-      "accentColor": "#15803D",
-      "textColor": "#9A3412",
-      "heroImage": "ref-breakfast-toast.png",
-      "comboButtonLabel": "Add Morning Combo",
-      "comboButtonPrice": 99.0,
-      "enabled": true,
-      "tabs": [],
-      "items": [
-        {
-          "id": "bc-1",
-          "name": "Whole Wheat Bread",
-          "weight": "400 g",
-          "price": 45.0,
-          "image": "ref-breakfast-toast.png"
-        },
-        {
-          "id": "bc-2",
-          "name": "Table Butter",
-          "weight": "100 g",
-          "price": 58.0,
-          "image": "table-butter.svg"
         }
       ]
     }
