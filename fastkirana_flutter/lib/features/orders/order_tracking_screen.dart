@@ -488,6 +488,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         _triggerStatusHaptic(order.status, prevStatus);
 
         _setupCoordinatesFromOrder(order);
+        _syncRiderLocationFromEndpoint(order);
 
         // Re-subscribe with newly discovered order IDs (readableId, combinedId)
         final newKeys = _collectTrackingChannelKeys();
@@ -730,6 +731,50 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
+  /// High-reliability multi-channel GPS sync from /api/delivery/location
+  Future<void> _syncRiderLocationFromEndpoint(Order order) async {
+    if (order.status != OrderStatus.shipped && order.status != OrderStatus.packed) return;
+    try {
+      final dio = ref.read(dioProvider);
+      var cleanId = widget.orderId.trim().replaceAll('#', '');
+      final candidateIds = <String>{
+        cleanId,
+        order.id,
+        if (order.readableId != null && order.readableId!.isNotEmpty)
+          order.readableId!.replaceAll('#', '').trim(),
+        if (order.combinedId != null && order.combinedId!.isNotEmpty)
+          order.combinedId!.replaceAll('#', '').trim(),
+        if (cleanId.startsWith('FK-')) cleanId.substring(3),
+        if (RegExp(r'^\d+$').hasMatch(cleanId)) 'FK-$cleanId',
+      };
+
+      for (final qId in candidateIds) {
+        try {
+          final locRes = await dio.get('/api/delivery/location', queryParameters: {'orderId': qId});
+          if (locRes.data is Map<String, dynamic>) {
+            final locData = locRes.data as Map<String, dynamic>;
+            final riderMap = locData['rider'] is Map<String, dynamic>
+                ? locData['rider'] as Map<String, dynamic>
+                : null;
+            final rLat = (riderMap?['lat'] as num?)?.toDouble() ??
+                (locData['deliveryLat'] as num?)?.toDouble() ??
+                (locData['lat'] as num?)?.toDouble() ??
+                (locData['latitude'] as num?)?.toDouble();
+            final rLng = (riderMap?['lng'] as num?)?.toDouble() ??
+                (locData['deliveryLng'] as num?)?.toDouble() ??
+                (locData['lng'] as num?)?.toDouble() ??
+                (locData['longitude'] as num?)?.toDouble();
+            final heading = ((riderMap?['heading'] ?? locData['heading'] ?? locData['bearing']) as num?)?.toDouble() ?? 0.0;
+            if (rLat != null && rLng != null && rLat != 0.0 && rLng != 0.0) {
+              _updateRiderLocation(LatLng(rLat, rLng), heading);
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
   Future<void> _silentPollOrder() async {
     try {
       final repo = OrderRepository(ref.read(dioProvider));
@@ -759,39 +804,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         }
 
         // 🛵 Active Delivery GPS sync directly from delivery location endpoint
-        if (order.status == OrderStatus.shipped || order.status == OrderStatus.packed) {
-          try {
-            final dio = ref.read(dioProvider);
-            final candidateIds = <String>{
-              cleanId,
-              order.id,
-              if (order.readableId != null && order.readableId!.isNotEmpty)
-                order.readableId!.replaceAll('#', '').trim(),
-              if (cleanId.startsWith('FK-')) cleanId.substring(3),
-              if (RegExp(r'^\d+$').hasMatch(cleanId)) 'FK-$cleanId',
-            };
-
-            for (final qId in candidateIds) {
-              try {
-                final locRes = await dio.get('/api/delivery/location', queryParameters: {'orderId': qId});
-                if (locRes.data is Map<String, dynamic>) {
-                  final locData = locRes.data as Map<String, dynamic>;
-                  final rLat = (locData['deliveryLat'] as num?)?.toDouble() ??
-                      (locData['lat'] as num?)?.toDouble() ??
-                      (locData['latitude'] as num?)?.toDouble();
-                  final rLng = (locData['deliveryLng'] as num?)?.toDouble() ??
-                      (locData['lng'] as num?)?.toDouble() ??
-                      (locData['longitude'] as num?)?.toDouble();
-                  final heading = ((locData['heading'] ?? locData['bearing']) as num?)?.toDouble() ?? 0.0;
-                  if (rLat != null && rLng != null && rLat != 0.0 && rLng != 0.0) {
-                    _updateRiderLocation(LatLng(rLat, rLng), heading);
-                    break;
-                  }
-                }
-              } catch (_) {}
-            }
-          } catch (_) {}
-        }
+        await _syncRiderLocationFromEndpoint(order);
       }
     } catch (e) { LoggerService.error("Bare catch", e); }
   }

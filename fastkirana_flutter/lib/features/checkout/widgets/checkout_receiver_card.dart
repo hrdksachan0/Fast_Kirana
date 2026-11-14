@@ -143,7 +143,6 @@ class CheckoutReceiverCard extends StatelessWidget {
               color: isOrderingForSomeone ? AppDesignSystem.orange600 : AppDesignSystem.slate400,
             ),
           ),
-          ),
         ],
       ),
     );

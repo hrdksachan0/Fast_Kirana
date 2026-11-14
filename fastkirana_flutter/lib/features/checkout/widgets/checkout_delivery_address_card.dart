@@ -202,15 +202,6 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 12),
-              fontWeight: FontWeight.w500,
-              color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.slate600,
-              height: 1.35,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
 
           // Row 3: Zepto-Style Far Away Orange Tooltip Callout (Only if > 2.0 km away)
           if (showFarAwayBubble) ...[
