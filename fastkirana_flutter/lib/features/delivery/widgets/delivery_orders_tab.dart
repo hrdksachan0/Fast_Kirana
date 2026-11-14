@@ -71,19 +71,23 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Flexible(
-              child: Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11),
-                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                  color: isSelected ? Colors.white : AppDesignSystem.slate700,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 11),
+                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                    color: isSelected ? Colors.white : AppDesignSystem.slate700,
+                  ),
+                  maxLines: 1,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 3),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
               decoration: BoxDecoration(
                 color: isSelected ? Colors.white.withValues(alpha: 0.25) : Colors.white,
                 borderRadius: BorderRadius.circular(10),
@@ -148,14 +152,17 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
             child: Row(
               children: [
                 Expanded(
+                  flex: 8,
                   child: _buildFilterPill(0, '⚡ All', totalCount, AppDesignSystem.slate900),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
+                  flex: 11,
                   child: _buildFilterPill(1, '📦 Pickup', pickupCount, AppDesignSystem.violet600),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
+                  flex: 14,
                   child: _buildFilterPill(2, '🔥 Item Ready', itemReadyCount, const Color(0xFFD97706)),
                 ),
               ],

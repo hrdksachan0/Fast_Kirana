@@ -673,17 +673,250 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
     );
   }
 
+  /// Strict exclusion list: products that should NEVER appear in the luxury gifting store
+  bool _isNonGiftingProduct(Product p) {
+    final name = p.name.toLowerCase();
+    final cat = (p.category?.name ?? '').toLowerCase();
+
+    // 1. Health drinks, milk powders, nutritional supplements (e.g. Bournvita, Horlicks)
+    const healthDrinkBanned = [
+      'bournvita',
+      'bourn vita',
+      'horlicks',
+      'complan',
+      'boost',
+      'milo',
+      'pediasure',
+      'ensure',
+      'protein',
+      'whey',
+    ];
+    if (healthDrinkBanned.any((w) => name.contains(w))) return true;
+
+    // 2. Daily cooking staples, flours, oils, spices, grains
+    const staplesBanned = [
+      'atta',
+      'maida',
+      'besan',
+      'suji',
+      'sooji',
+      'chawal',
+      'rice',
+      'dal',
+      'mustard oil',
+      'refined oil',
+      'soyabean oil',
+      'fortune oil',
+      'cooking oil',
+      'salt',
+      'namak',
+      'sugar',
+      'cheeni',
+      'haldi',
+      'mirch powder',
+      'dhaniya powder',
+      'jeera',
+      'hing',
+      'garam masala',
+      'spices',
+      'poha',
+    ];
+    if (staplesBanned.any((w) => name.contains(w))) return true;
+
+    // 3. Vegetables, fruits, fresh produce (prevent 'capsicum' matching 'cap', 'cauliflower' matching 'flower')
+    const produceBanned = [
+      'capsicum',
+      'shimla mirch',
+      'cauliflower',
+      'gobhi',
+      'aloo',
+      'potato',
+      'pyaz',
+      'onion',
+      'tomato',
+      'tamatar',
+      'sabzi',
+      'vegetable',
+      'lemon',
+      'nimbu',
+      'adrak',
+      'ginger',
+      'lahsun',
+      'garlic',
+      'mirchi',
+      'chilli',
+      'kheera',
+      'cucumber',
+      'baingan',
+      'brinjal',
+      'bhindi',
+      'lauki',
+      'matar',
+      'palak',
+      'spinach',
+      'dhaniya patti',
+      'coriander',
+    ];
+    if (produceBanned.any((w) => name.contains(w))) return true;
+
+    // 4. Household, cleaning, toiletries, personal care (prevent 'rose' cleaner / agarbatti / pears soap)
+    const householdBanned = [
+      'cleaner',
+      'floor cleaner',
+      'harpic',
+      'colin',
+      'lizol',
+      'dettol',
+      'savlon',
+      'soap',
+      'shampoo',
+      'conditioner',
+      'detergent',
+      'surf',
+      'ariel',
+      'tide',
+      'rin',
+      'vim',
+      'dishwash',
+      'agarbatti',
+      'dhoop',
+      'mosquito',
+      'all out',
+      'good knight',
+      'coil',
+      'hit',
+      'toilet',
+      'diaper',
+      'sanitary',
+      'napkin',
+      'toothpaste',
+      'colgate',
+      'brush',
+      'pears',
+      'face wash',
+      'body wash',
+      'scrub',
+      'broom',
+      'mop',
+      'garbage bag',
+      'phenyl',
+      'gulab jal',
+      'rose water',
+    ];
+    if (householdBanned.any((w) => name.contains(w))) return true;
+
+    // 5. Beverages, syrups, cold drinks, sodas
+    const beverageBanned = [
+      'syrup',
+      'shake',
+      'milkshake',
+      'tang',
+      'glucon',
+      'rasna',
+      'soda',
+      'pepsi',
+      'coca-cola',
+      'coca cola',
+      'coke',
+      'thums up',
+      'sprite',
+      'fanta',
+      'frooti',
+      'maaza',
+      'slice',
+      'sting',
+      'energy drink',
+      'red bull',
+      'bisleri',
+      'packaged water',
+      'water bottle',
+    ];
+    if (beverageBanned.any((w) => name.contains(w))) return true;
+
+    // 6. Fast food, savory snacks, everyday biscuits, cooking staples
+    const snacksBanned = [
+      'pizza',
+      'burger',
+      'sandwich',
+      'chowmein',
+      'noodle',
+      'maggi',
+      'pasta',
+      'kurkure',
+      'chips',
+      'lays',
+      'bingo',
+      'namkeen',
+      'bhujia',
+      'popcorn',
+      'peanut butter',
+      'mayonnaise',
+      'ketchup',
+      'sauce',
+      'biscuit',
+      'biscuits',
+      'cookies',
+      'bourbon',
+      'parle-g',
+      'parle g',
+      'marie',
+      'monaco',
+      'krackjack',
+      'hide & seek',
+      'dark fantasy',
+      'bread',
+      'pav',
+      'rusk',
+      'toast',
+      'bun',
+      'curd',
+      'dahi',
+      'paneer',
+    ];
+    if (snacksBanned.any((w) => name.contains(w))) return true;
+
+    // 7. Non-gifting categories
+    const bannedCats = [
+      'cleaning',
+      'household',
+      'vegetables',
+      'fruits',
+      'staples',
+      'atta',
+      'rice',
+      'dal',
+      'oil',
+      'masala',
+      'personal care',
+      'oral care',
+      'hygiene',
+      'baby care',
+      'dairy',
+      'beverages',
+    ];
+    // Special exception for milk cake which might be categorized under dairy
+    if (bannedCats.any((bc) => cat.contains(bc))) {
+      if (name.contains('milk cake')) return false;
+      return true;
+    }
+
+    return false;
+  }
+
   List<Product> _filterGiftingProducts(
     List<Product> allProducts,
     String occasion,
     List<GiftingOccasionModel> occasions,
   ) {
+    // 0. Filter out all non-gifting products first
+    final cleanProducts = allProducts.where((p) => !_isNonGiftingProduct(p)).toList();
+
     final occ = occasions.firstWhereOrNull((o) => o.label == occasion || o.title == occasion);
-    if (occ == null) return const [];
+    final occasionLabel = (occ?.label ?? occasion).toLowerCase();
 
     // 1. Explicit admin-curated product links (Highest priority)
-    if (occ.productIds.isNotEmpty) {
-      final explicit = allProducts
+    if (occ != null && occ.productIds.isNotEmpty) {
+      final explicit = cleanProducts
           .where((p) => occ.productIds.contains(p.id) || occ.productIds.contains(p.slug))
           .toList();
       if (explicit.isNotEmpty) {
@@ -691,70 +924,114 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
       }
     }
 
-    // 2. Dynamic tag & category matching from Admin
-    final occasionTags = occ.tags.map((t) => t.toLowerCase().trim()).toList();
-    if (occasionTags.isNotEmpty) {
-      final matched = allProducts.where((p) {
-        final name = p.name.toLowerCase();
-        final cat = (p.category?.name ?? '').toLowerCase();
-        final tags = p.tags.map((t) => t.toLowerCase().trim()).toList();
-        return occasionTags.any((t) => tags.contains(t) || name.contains(t) || cat.contains(t));
-      }).take(36).toList();
-      if (matched.isNotEmpty) {
-        return matched;
-      }
-    }
-
-    // 3. Category Fallback matching by keyword
-    final lower = occasion.toLowerCase();
-    final matched = allProducts.where((p) {
+    // 2. Strict Occasion-Specific Filtering
+    final matched = cleanProducts.where((p) {
       final name = p.name.toLowerCase();
       final cat = (p.category?.name ?? '').toLowerCase();
       final tags = p.tags.map((t) => t.toLowerCase().trim()).toList();
 
-      if (lower.contains('anniversary')) {
-        return name.contains('silk') ||
-            name.contains('ferrero') ||
-            name.contains('chocolate') ||
+      // --- TAB 1: BIRTHDAY ---
+      if (occasionLabel.contains('birthday')) {
+        final isCake = name.contains('cake') || name.contains('donut');
+        final isCandle = name.contains('candle');
+        final isCelebrationPack = name.contains('celebration') ||
+            name.contains('gift pack') ||
+            name.contains('assorted gift');
+        final isBouquet = name.contains('bouquet') ||
+            name.contains('rose bouquet') ||
+            name.contains('roses') ||
+            name.contains('single red rose') ||
+            name.contains('single pink rose');
+        return isCake || isCandle || isCelebrationPack || isBouquet;
+      }
+
+      // --- TAB 2: ANNIVERSARY ---
+      if (occasionLabel.contains('anniversary')) {
+        final isBouquet = name.contains('bouquet') ||
             name.contains('rose') ||
-            tags.contains('gift');
-      }
-      if (lower.contains('birthday') || lower.contains('cake')) {
-        return name.contains('cake') ||
-            cat.contains('bakery') ||
-            name.contains('chocolate') ||
-            tags.contains('cake') ||
-            tags.contains('sweet');
-      }
-      if (lower.contains('chocolate')) {
-        return name.contains('chocolate') ||
-            name.contains('silk') ||
+            name.contains('royal bloom');
+        final isSilkOrLuxuryChoco = name.contains('silk') ||
+            name.contains('bournville') ||
+            name.contains('temptation') ||
             name.contains('ferrero') ||
-            name.contains('cadbury') ||
-            tags.contains('chocolate');
+            name.contains('celebration') ||
+            name.contains('gift pack');
+        final isCake = name.contains('cake');
+        final isCandle = name.contains('candle');
+        return isBouquet || isSilkOrLuxuryChoco || isCake || isCandle;
       }
-      if (lower.contains('mithai')) {
-        return name.contains('katli') ||
-            name.contains('jamun') ||
+
+      // --- TAB 3: CAKES ---
+      if (occasionLabel.contains('cake')) {
+        return name.contains('cake') ||
+            name.contains('donut cake') ||
+            name.contains('pastry') ||
+            tags.contains('cake');
+      }
+
+      // --- TAB 4: CHOCOLATES ---
+      if (occasionLabel.contains('chocolate')) {
+        final isRealChoco = name.contains('silk') ||
+            name.contains('celebration') ||
+            name.contains('bournville') ||
+            name.contains('temptation') ||
+            name.contains('kitkat dessert') ||
+            name.contains('amul dark chocolate') ||
+            name.contains('amul chocolate') ||
+            name.contains('ferrero') ||
+            name.contains('dairy milk');
+        final isChocolateTagged = (name.contains('chocolate') || tags.contains('chocolate')) &&
+            !name.contains('shake') &&
+            !name.contains('syrup') &&
+            !name.contains('ice cream');
+        return isRealChoco || isChocolateTagged;
+      }
+
+      // --- TAB 5: MITHAI ---
+      if (occasionLabel.contains('mithai')) {
+        return name.contains('kaju katli') ||
+            name.contains('soan papdi') ||
+            name.contains('milk cake') ||
+            name.contains('chhena') ||
+            name.contains('gulab jamun') ||
+            name.contains('rasgulla') ||
             name.contains('laddu') ||
-            name.contains('haldiram') ||
-            name.contains('sweet') ||
-            tags.contains('sweet');
+            name.contains('ladoo') ||
+            name.contains('peda') ||
+            name.contains('barfi') ||
+            (name.contains('haldiram') && (name.contains('sweet') || name.contains('papdi') || name.contains('katli') || name.contains('jamun'))) ||
+            cat.contains('mithai') ||
+            cat.contains('sweets') ||
+            tags.contains('mithai');
       }
-      if (lower.contains('dry fruit') || lower.contains('festive')) {
-        return name.contains('almond') ||
-            name.contains('kaju') ||
+
+      // --- TAB 6: DRY FRUITS ---
+      if (occasionLabel.contains('dry fruit') || occasionLabel.contains('festive')) {
+        return name.contains('kaju') ||
             name.contains('cashew') ||
-            name.contains('nut') ||
-            p.isBestSeller ||
+            name.contains('pista') ||
+            name.contains('pistachio') ||
+            name.contains('almond') ||
+            name.contains('badam') ||
+            name.contains('walnut') ||
+            name.contains('akhrot') ||
+            name.contains('kishmish') ||
+            name.contains('raisin') ||
+            name.contains('seeds, nuts & berries') ||
+            name.contains('sunflower seeds') ||
+            name.contains('dry fruit') ||
+            name.contains('hamper') ||
+            tags.contains('dry-fruit') ||
             tags.contains('dry fruit');
       }
+
+      // Fallback for custom occasions
       return name.contains('gift') ||
           name.contains('celebration') ||
           name.contains('cake') ||
-          name.contains('chocolate') ||
-          cat.contains('sweet');
-    }).take(36).toList();
+          name.contains('silk') ||
+          name.contains('bouquet');
+    }).take(40).toList();
 
     return matched;
   }

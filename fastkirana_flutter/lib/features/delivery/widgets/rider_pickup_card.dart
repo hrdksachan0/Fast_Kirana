@@ -221,23 +221,24 @@ class RiderPickupCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8.5, vertical: 3.5),
                           decoration: BoxDecoration(
-                            color: AppDesignSystem.slate900,
+                            color: const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF94A3B8), width: 1.2),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1.5),
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
                               ),
                             ],
                           ),
                           child: Text(
                             '#$orderNum',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 14),
+                              fontSize: Responsive.scaledFontSize(context, 13),
                               fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: 0.4,
+                              color: const Color(0xFF0F172A),
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ),

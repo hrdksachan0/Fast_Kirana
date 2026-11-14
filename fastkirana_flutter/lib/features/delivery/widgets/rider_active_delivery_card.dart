@@ -141,105 +141,104 @@ class RiderActiveDeliveryCard extends StatelessWidget {
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: effectiveStop == 1 ? AppDesignSystem.green100 : const Color(0xFFDBEAFE),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                effectiveTotal > 1
-                                    ? 'STOP #$effectiveStop OF $effectiveTotal • ${effectiveStop == 1 ? 'ACTIVE DROP' : 'NEXT DROP'}'
-                                    : 'STOP #$effectiveStop • ACTIVE DROP',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 9.5),
-                                  fontWeight: FontWeight.w900,
-                                  color: effectiveStop == 1 ? AppDesignSystem.green700 : const Color(0xFF1E40AF),
-                                ),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: effectiveStop == 1 ? AppDesignSystem.green100 : const Color(0xFFDBEAFE),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              effectiveTotal > 1
+                                  ? 'STOP #$effectiveStop OF $effectiveTotal • ${effectiveStop == 1 ? 'ACTIVE DROP' : 'NEXT DROP'}'
+                                  : 'STOP #$effectiveStop • ACTIVE DROP',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 9.5),
+                                fontWeight: FontWeight.w900,
+                                color: effectiveStop == 1 ? AppDesignSystem.green700 : const Color(0xFF1E40AF),
                               ),
                             ),
-                            if (isBatch || effectiveTotal > 1) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFECFDF5),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Text('⚡', style: TextStyle(fontSize: 9.5)),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      '+₹${bonusEarning.toInt()} Batch Bonus',
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 9),
-                                        fontWeight: FontWeight.w900,
-                                        color: const Color(0xFF047857),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                          ),
+                          if (isFood)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: AppDesignSystem.violet50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: AppDesignSystem.violet200, width: 0.8),
                               ),
-                            ],
-                            if (isFood) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppDesignSystem.violet50,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: AppDesignSystem.violet200, width: 0.8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      outlet.name,
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 9.5),
-                                        fontWeight: FontWeight.w800,
-                                        color: AppDesignSystem.statusShippedText,
-                                      ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('🍽️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    outlet.name,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 9.5),
+                                      fontWeight: FontWeight.w800,
+                                      color: AppDesignSystem.statusShippedText,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ],
-                        ),
+                            ),
+                          if (isBatch || effectiveTotal > 1)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFDF5),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('⚡', style: TextStyle(fontSize: 9.5)),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '+₹${bonusEarning.toInt()} Batch Bonus',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 9),
+                                      fontWeight: FontWeight.w900,
+                                      color: const Color(0xFF047857),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8.5, vertical: 3.5),
                       decoration: BoxDecoration(
-                        color: AppDesignSystem.slate900,
+                        color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF94A3B8), width: 1.2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1.5),
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
                           ),
                         ],
                       ),
                       child: Text(
                         '#$orderNum',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 14),
+                          fontSize: Responsive.scaledFontSize(context, 13),
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 0.4,
+                          color: const Color(0xFF0F172A),
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ),
