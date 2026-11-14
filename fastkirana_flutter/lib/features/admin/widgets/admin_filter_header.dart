@@ -23,6 +23,10 @@ class AdminFilterHeader extends StatefulWidget {
   final ValueChanged<String> onFilterSelected;
   final bool? isAutoApprove;
   final ValueChanged<bool>? onToggleAutoApprove;
+  final String selectedOutlet;
+  final List<Map<String, dynamic>> outlets;
+  final ValueChanged<String> onOutletSelected;
+  final Map<String, int> statusCounts;
 
   const AdminFilterHeader({
     super.key,
@@ -40,6 +44,10 @@ class AdminFilterHeader extends StatefulWidget {
     required this.onFilterSelected,
     this.isAutoApprove,
     this.onToggleAutoApprove,
+    this.selectedOutlet = 'ALL',
+    this.outlets = const [],
+    required this.onOutletSelected,
+    this.statusCounts = const {},
   });
 
   @override
@@ -102,20 +110,23 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
   }
 
   String _formatStatusLabel(String status) {
+    final count = widget.statusCounts[status];
+    final countSuffix = (count != null && count > 0) ? ' ($count)' : '';
     if (status == 'ALL') {
-      return widget.selectedTab == 0 ? 'All Live' : 'All History';
+      final total = widget.selectedTab == 0 ? widget.displayLiveCount : widget.displayHistoryCount;
+      return widget.selectedTab == 0 ? 'All Live ($total)' : 'All History ($total)';
     }
     if (status == 'PAYMENT_PENDING') {
       return '⚠️ Payment Pending${widget.displayPendingPaymentCount > 0 ? ' (${widget.displayPendingPaymentCount})' : ''}';
     }
-    if (status == 'ADMIN_PENDING') return 'Admin Pending';
-    if (status == 'PENDING') return 'Kitchen Pending';
-    if (status == 'CONFIRMED') return 'Confirmed';
-    if (status == 'PACKED') return 'Packed';
-    if (status == 'SHIPPED') return 'Shipped';
-    if (status == 'DELIVERED') return 'Delivered';
-    if (status == 'CANCELLED') return 'Cancelled';
-    return status;
+    if (status == 'ADMIN_PENDING') return '⚠️ Needs Approval$countSuffix';
+    if (status == 'PENDING') return 'Kitchen Pending$countSuffix';
+    if (status == 'CONFIRMED') return 'Confirmed$countSuffix';
+    if (status == 'PACKED') return 'Packed$countSuffix';
+    if (status == 'SHIPPED') return 'Shipped$countSuffix';
+    if (status == 'DELIVERED') return 'Delivered$countSuffix';
+    if (status == 'CANCELLED') return 'Cancelled$countSuffix';
+    return '$status$countSuffix';
   }
 
   @override
@@ -146,9 +157,102 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
             child: _isSearchOpen ? _buildSearchInputRow() : _buildTabsWithSearchButtonRow(),
           ),
 
+          // Row 2: 1-Tap Restaurant & Darkstore Outlet Pills Filter
+          if (widget.outlets.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            SizedBox(
+              height: 32,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: widget.outlets.length,
+                itemBuilder: (context, index) {
+                  final outlet = widget.outlets[index];
+                  final outletId = outlet['id']?.toString() ?? 'ALL';
+                  final outletName = outlet['name']?.toString() ?? 'All Outlets';
+                  final count = outlet['count'] as int? ?? 0;
+                  final iconStr = outlet['icon']?.toString() ?? '🏪';
+                  final isSelected = widget.selectedOutlet == outletId;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        widget.onOutletSelected(outletId);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? (outletId == 'DARKSTORE' ? const Color(0xFF0F766E) : AppDesignSystem.slate900)
+                              : (isSelected ? AppDesignSystem.slate900 : const Color(0xFFF8FAFC)),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected
+                                ? (outletId == 'DARKSTORE' ? const Color(0xFF0D9488) : AppDesignSystem.slate900)
+                                : AppDesignSystem.slate200,
+                            width: 1.2,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: (outletId == 'DARKSTORE' ? const Color(0xFF0F766E) : AppDesignSystem.slate900)
+                                        .withValues(alpha: 0.25),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1.5),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(iconStr, style: const TextStyle(fontSize: 12)),
+                            const SizedBox(width: 4),
+                            Text(
+                              outletName,
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                                color: isSelected ? Colors.white : AppDesignSystem.slate700,
+                              ),
+                            ),
+                            if (count > 0) ...[
+                              const SizedBox(width: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Colors.white.withValues(alpha: 0.22)
+                                      : AppDesignSystem.slate200,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '$count',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: isSelected ? Colors.white : AppDesignSystem.slate700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+
           const SizedBox(height: 6),
 
-          // Row 2: Status Sub-filter Chips (Horizontal scroll)
+          // Row 3: Status Sub-filter Chips (Horizontal scroll)
           SizedBox(
             height: 34,
             child: ListView.builder(
@@ -158,6 +262,9 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
               itemBuilder: (context, index) {
                 final status = activeFilters[index];
                 final isSelected = widget.currentSubFilter == status;
+                final isNeedsApproval = status == 'ADMIN_PENDING';
+                final approvalCount = widget.statusCounts['ADMIN_PENDING'] ?? 0;
+
                 return Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: ChoiceChip(
@@ -177,13 +284,21 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
                             ? Colors.white
                             : (status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
                                 ? const Color(0xFFE11D48)
-                                : AppDesignSystem.slate600),
+                                : (isNeedsApproval && approvalCount > 0
+                                    ? const Color(0xFFB45309)
+                                    : AppDesignSystem.slate600)),
                       ),
                     ),
-                    selectedColor: status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900,
+                    selectedColor: status == 'PAYMENT_PENDING'
+                        ? const Color(0xFFE11D48)
+                        : (isNeedsApproval && approvalCount > 0
+                            ? const Color(0xFFD97706)
+                            : AppDesignSystem.slate900),
                     backgroundColor: status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
                         ? const Color(0xFFFFF1F2)
-                        : AppDesignSystem.slate100,
+                        : (isNeedsApproval && approvalCount > 0
+                            ? const Color(0xFFFFFBEB)
+                            : AppDesignSystem.slate100),
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
                     visualDensity: VisualDensity.compact,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -191,10 +306,16 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
                       borderRadius: BorderRadius.circular(10),
                       side: BorderSide(
                         color: isSelected
-                            ? (status == 'PAYMENT_PENDING' ? const Color(0xFFE11D48) : AppDesignSystem.slate900)
+                            ? (status == 'PAYMENT_PENDING'
+                                ? const Color(0xFFE11D48)
+                                : (isNeedsApproval && approvalCount > 0
+                                    ? const Color(0xFFD97706)
+                                    : AppDesignSystem.slate900))
                             : (status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
                                 ? const Color(0xFFFDA4AF)
-                                : AppDesignSystem.slate200),
+                                : (isNeedsApproval && approvalCount > 0
+                                    ? const Color(0xFFFDE68A)
+                                    : AppDesignSystem.slate200)),
                         width: 1,
                       ),
                     ),

@@ -220,9 +220,28 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      '#$orderNum',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 13), fontWeight: FontWeight.w900, color: slateDark),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.5, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: AppDesignSystem.slate900,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1.5),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '#$orderNum',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 14),
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
                     ),
                   ],
                 ),

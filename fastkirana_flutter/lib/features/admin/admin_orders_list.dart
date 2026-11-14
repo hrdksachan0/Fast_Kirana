@@ -57,6 +57,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   int _selectedTab = 0;
   String _liveSubFilter = 'ALL';
   String _historySubFilter = 'ALL';
+  String _selectedOutlet = 'ALL';
   String _searchQuery = '';
 
   static List<Order> _cachedOrders = [];
@@ -1790,11 +1791,118 @@ $formattedItems
         order.status == OrderStatus.shipped;
   }
 
+  bool _orderMatchesOutlet(Order o, String outletId) {
+    if (outletId == 'ALL') return true;
+    if (outletId == 'DARKSTORE') {
+      if (!o.isRestaurantOrder) return true;
+      if (o.isCombined == true && o.subOrders != null) {
+        return o.subOrders!.any((s) => !s.isRestaurantOrder);
+      }
+      return false;
+    }
+    final target = outletId.toLowerCase().trim();
+    final rId = (o.restaurantId ?? '').toLowerCase().trim();
+    final sName = (o.shopName ?? '').toLowerCase().trim();
+    if (rId == target || sName.contains(target) || target.contains(sName)) return true;
+    if (o.subOrders != null && o.subOrders!.isNotEmpty) {
+      return o.subOrders!.any((s) {
+        final subRId = (s.restaurantId ?? '').toLowerCase().trim();
+        final subSName = (s.shopName ?? '').toLowerCase().trim();
+        return subRId == target || subSName.contains(target) || target.contains(subSName);
+      });
+    }
+    return false;
+  }
+
+  List<Map<String, dynamic>> _buildOutletsList() {
+    final relevantOrders = _selectedTab == 0
+        ? _allOrders.where(_isLiveOrder).toList()
+        : _allOrders.where((o) => !_isLiveOrder(o)).toList();
+
+    final List<Map<String, dynamic>> result = [];
+
+    // 1. All Outlets
+    result.add({
+      'id': 'ALL',
+      'name': 'All Outlets',
+      'icon': '🏢',
+      'count': relevantOrders.length,
+    });
+
+    // 2. Darkstore (Grocery)
+    final darkstoreCount = relevantOrders.where((o) => _orderMatchesOutlet(o, 'DARKSTORE')).length;
+    result.add({
+      'id': 'DARKSTORE',
+      'name': 'Darkstore',
+      'icon': '🛒',
+      'count': darkstoreCount,
+    });
+
+    // 3. Known / Registered Restaurants & Dynamic Restaurants from orders
+    final Map<String, String> uniqueRestaurants = {};
+    for (final r in RestaurantRegistry.all) {
+      uniqueRestaurants[r.id] = r.name;
+    }
+    for (final o in relevantOrders) {
+      if (o.restaurantId != null && o.restaurantId!.isNotEmpty) {
+        uniqueRestaurants[o.restaurantId!] = o.shopName ?? RestaurantRegistry.getName(o.restaurantId) ?? 'Restaurant';
+      }
+      if (o.subOrders != null) {
+        for (final sub in o.subOrders!) {
+          if (sub.restaurantId != null && sub.restaurantId!.isNotEmpty) {
+            uniqueRestaurants[sub.restaurantId!] = sub.shopName ?? RestaurantRegistry.getName(sub.restaurantId) ?? 'Restaurant';
+          }
+        }
+      }
+    }
+
+    uniqueRestaurants.forEach((restId, restName) {
+      final count = relevantOrders.where((o) => _orderMatchesOutlet(o, restId)).length;
+      String icon = '🍽️';
+      final lowerName = restName.toLowerCase();
+      if (lowerName.contains('cafe') || lowerName.contains('burger') || lowerName.contains('pizza')) {
+        icon = '🍕';
+      } else if (lowerName.contains('bal udyan') || lowerName.contains('garden')) {
+        icon = '🌲';
+      }
+      String shortName = restName
+          .replaceAll(RegExp(r'\s+restaurant', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+cafe', caseSensitive: false), ' Cafe')
+          .trim();
+      result.add({
+        'id': restId,
+        'name': shortName,
+        'icon': icon,
+        'count': count,
+      });
+    });
+
+    return result;
+  }
+
+  Map<String, int> _buildStatusCounts() {
+    final relevantOrders = _selectedTab == 0
+        ? _allOrders.where(_isLiveOrder).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList()
+        : _allOrders.where((o) => !_isLiveOrder(o)).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList();
+
+    final Map<String, int> counts = {};
+    counts['ALL'] = relevantOrders.length;
+    counts['PAYMENT_PENDING'] = relevantOrders.where((o) => o.status == OrderStatus.pending && _isUnpaidOnline(o)).length;
+    counts['ADMIN_PENDING'] = relevantOrders.where((o) => o.status == OrderStatus.adminPending).length;
+    counts['PENDING'] = relevantOrders.where((o) => o.status == OrderStatus.pending && !_isUnpaidOnline(o)).length;
+    counts['CONFIRMED'] = relevantOrders.where((o) => o.status == OrderStatus.confirmed).length;
+    counts['PACKED'] = relevantOrders.where((o) => o.status == OrderStatus.packed).length;
+    counts['SHIPPED'] = relevantOrders.where((o) => o.status == OrderStatus.shipped).length;
+    counts['DELIVERED'] = relevantOrders.where((o) => o.status == OrderStatus.delivered).length;
+    counts['CANCELLED'] = relevantOrders.where((o) => o.status == OrderStatus.cancelled).length;
+    return counts;
+  }
+
   List<Order> _getFilteredOrders() {
     List<Order> list = [];
     if (_selectedTab == 0) {
-      // Live Tab
-      list = _allOrders.where(_isLiveOrder).toList();
+      // Live Tab with Outlet Filter
+      list = _allOrders.where(_isLiveOrder).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList();
       if (_liveSubFilter == 'PAYMENT_PENDING') {
         list = list.where((o) => o.status == OrderStatus.pending && _isUnpaidOnline(o)).toList();
       } else if (_liveSubFilter == 'PENDING') {
@@ -1802,12 +1910,16 @@ $formattedItems
       } else if (_liveSubFilter != 'ALL') {
         list = list.where((o) => o.status.name.toUpperCase() == _liveSubFilter).toList();
       }
+      // STRICT FIFO (First In, First Out): Oldest pending orders on TOP!
+      list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     } else {
-      // History Tab
-      list = _allOrders.where((o) => !_isLiveOrder(o)).toList();
+      // History Tab with Outlet Filter
+      list = _allOrders.where((o) => !_isLiveOrder(o)).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList();
       if (_historySubFilter != 'ALL') {
         list = list.where((o) => o.status.name.toUpperCase() == _historySubFilter).toList();
       }
+      // LIFO for History: Most recently completed orders on TOP!
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     }
 
     if (_searchQuery.isNotEmpty) {
@@ -1998,11 +2110,11 @@ $formattedItems
               ),
             ),
 
-            // 2. Pinned Sticky Filter Header (Live/History tabs + On-Demand Search + Sub-filters)
+            // 2. Pinned Sticky Filter Header (Live/History tabs + Outlet pills + Status chips)
             SliverPersistentHeader(
               pinned: true,
               delegate: _StickyAdminFilterHeaderDelegate(
-                height: 92.0,
+                height: 130.0,
                 child: AdminFilterHeader(
                   selectedTab: _selectedTab,
                   displayLiveCount: displayLiveCount,
@@ -2012,6 +2124,12 @@ $formattedItems
                   liveStatusFilters: _liveStatusFilters,
                   historyStatusFilters: _historyStatusFilters,
                   currentSubFilter: _selectedTab == 0 ? _liveSubFilter : _historySubFilter,
+                  selectedOutlet: _selectedOutlet,
+                  outlets: _buildOutletsList(),
+                  onOutletSelected: (outletId) {
+                    setState(() => _selectedOutlet = outletId);
+                  },
+                  statusCounts: _buildStatusCounts(),
                   onTabChanged: (index) {
                     setState(() {
                       _selectedTab = index;
