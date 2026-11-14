@@ -61,20 +61,20 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: selectedAddress == null ? AppDesignSystem.rose300 : AppDesignSystem.slate200,
-          width: 1.2,
+          width: 1.1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -86,10 +86,10 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(7.5),
+                padding: const EdgeInsets.all(6.5),
                 decoration: BoxDecoration(
                   color: selectedAddress == null ? AppDesignSystem.rose50 : AppDesignSystem.orange50,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8.5),
                   border: Border.all(
                     color: selectedAddress == null ? AppDesignSystem.rose200 : AppDesignSystem.orange200,
                   ),
@@ -102,40 +102,52 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
                           : (selectedAddress.label.toLowerCase().contains('current')
                               ? Icons.my_location_rounded
                               : Icons.home_rounded)),
-                  size: 17,
+                  size: 15.5,
                   color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.orange600,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        () {
-                          if (selectedAddress == null ||
-                              selectedAddress.label.trim().isEmpty ||
-                              selectedAddress.label.trim() == '.') {
-                            return 'Select Address';
-                          }
-                          final clean = selectedAddress.label.replaceAll('📍', '').trim();
-                          return clean.isNotEmpty ? clean : 'Delivery Address';
-                        }(),
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 14.5),
-                          fontWeight: FontWeight.w900,
-                          color: selectedAddress == null ? AppDesignSystem.rose700 : slateDark,
+                child: InkWell(
+                  onTap: () async {
+                    HapticFeedback.selectionClick();
+                    await AddressSelectorSheet.show(
+                      context,
+                      activeAddress: selectedAddress,
+                      onAddressSelected: widget.onAddressChanged,
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          () {
+                            if (selectedAddress == null ||
+                                selectedAddress.label.trim().isEmpty ||
+                                selectedAddress.label.trim() == '.') {
+                              return 'Select Address';
+                            }
+                            final clean = selectedAddress.label.replaceAll('📍', '').trim();
+                            return clean.isNotEmpty ? clean : 'Delivery Address';
+                          }(),
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 13.5),
+                            fontWeight: FontWeight.w800,
+                            color: selectedAddress == null ? AppDesignSystem.rose700 : slateDark,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          softWrap: true,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: slateMuted),
-                  ],
+                      const SizedBox(width: 3),
+                      const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: slateMuted),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
 
               // Interactive Change Address Pill
               Bounceable(
@@ -148,22 +160,22 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 8.5, vertical: 4.5),
                   decoration: BoxDecoration(
                     color: selectedAddress == null ? AppDesignSystem.rose50 : AppDesignSystem.slate100,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: selectedAddress == null ? AppDesignSystem.rose300 : AppDesignSystem.slate200,
-                      width: 1.1,
+                      width: 1.0,
                     ),
                   ),
                   child: Text(
                     selectedAddress == null ? 'SELECT' : 'CHANGE',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 11),
+                      fontSize: Responsive.scaledFontSize(context, 10.5),
                       fontWeight: FontWeight.w800,
                       color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.slate700,
-                      letterSpacing: 0.3,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ),
@@ -171,7 +183,7 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
             ],
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           // Row 2: Full Address Clean Text Line
           Text(
@@ -181,6 +193,15 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
                     .replaceAll(RegExp(r',\s*,+'), ', ')
                     .trim()
                 : 'Please select a delivery address to place your order.',
+            style: GoogleFonts.inter(
+              fontSize: Responsive.scaledFontSize(context, 11.5),
+              fontWeight: FontWeight.w500,
+              color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.slate600,
+              height: 1.3,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 12),
               fontWeight: FontWeight.w500,
@@ -278,27 +299,27 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
             ),
           ],
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
 
           // Row 4: Distance & Delivery Tier Badge (Subtle Green Pill)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
+            padding: const EdgeInsets.symmetric(horizontal: 8.5, vertical: 5),
             decoration: BoxDecoration(
               color: !tier.isServiceable ? AppDesignSystem.statusCancelled : const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: !tier.isServiceable ? AppDesignSystem.rose200 : const Color(0xFFBBF7D0),
-                width: 1.0,
+                width: 0.9,
               ),
             ),
             child: Row(
               children: [
                 Icon(
                   !tier.isServiceable ? Icons.error_outline_rounded : Icons.delivery_dining_rounded,
-                  size: 15,
+                  size: 14,
                   color: !tier.isServiceable ? AppDesignSystem.red600 : const Color(0xFF16A34A),
                 ),
-                const SizedBox(width: 7),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     !tier.isServiceable
@@ -307,7 +328,7 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
                             : 'Map Location Needed • Tap CHANGE to set location')
                         : '${tier.tierName} (${tier.distanceKm.toStringAsFixed(1)} km) • ${tier.freeDeliveryLabel}',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                      fontSize: Responsive.scaledFontSize(context, 10),
                       fontWeight: FontWeight.w800,
                       color: !tier.isServiceable ? AppDesignSystem.red600 : const Color(0xFF15803D),
                     ),

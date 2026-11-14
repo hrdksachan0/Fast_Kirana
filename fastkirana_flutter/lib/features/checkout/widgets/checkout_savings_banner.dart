@@ -16,21 +16,21 @@ class CheckoutSavingsBanner extends StatelessWidget {
     if (totalSavings <= 0) return const SizedBox.shrink();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: AppDesignSystem.statusDelivered,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppDesignSystem.emerald200),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppDesignSystem.emerald200, width: 0.9),
       ),
       child: Row(
         children: [
-          Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
-          const SizedBox(width: 8),
+          Text('✨', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
+          const SizedBox(width: 7),
           Text(
             '₹${totalSavings.toStringAsFixed(0)} saved! On this order',
             style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 12.5),
+              fontSize: Responsive.scaledFontSize(context, 11.5),
               fontWeight: FontWeight.w800,
               color: AppDesignSystem.statusDeliveredText,
             ),

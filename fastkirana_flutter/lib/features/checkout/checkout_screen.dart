@@ -567,7 +567,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       // 2. Top Savings Banner
                       if (totalSavings > 0) ...[
                         CheckoutSavingsBanner(totalSavings: totalSavings),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                       ],
 
                       // 3. Receiver Info Card
@@ -621,43 +621,43 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           controller.setReceiverDetails(name, phone);
                         },
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
 
                       // 4. Cart Items Review Card
                       CheckoutItemsReviewCard(items: items),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
 
 
                       // 6. FastMinute Wallet Split-Payment Toggle Card
                       if (wallet.totalUsable > 0) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
                           decoration: BoxDecoration(
                             color: !isEligibleForWallet
                                 ? const Color(0xFFF8FAFC)
                                 : (checkoutState.useWalletBalance ? const Color(0xFFF0FDF4) : Colors.white),
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(15),
                             border: Border.all(
                               color: !isEligibleForWallet
                                   ? AppDesignSystem.slate200
                                   : (checkoutState.useWalletBalance ? AppDesignSystem.emerald600 : AppDesignSystem.slate200),
-                              width: (isEligibleForWallet && checkoutState.useWalletBalance) ? 1.5 : 1.1,
+                              width: (isEligibleForWallet && checkoutState.useWalletBalance) ? 1.4 : 1.0,
                             ),
                             boxShadow: AppDesignSystem.shadowSm,
                           ),
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(9),
+                                padding: const EdgeInsets.all(7.5),
                                 decoration: BoxDecoration(
                                   color: !isEligibleForWallet
                                       ? const Color(0xFFF1F5F9)
                                       : (checkoutState.useWalletBalance ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9)),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: const Text('👛', style: TextStyle(fontSize: 18)),
+                                child: const Text('👛', style: TextStyle(fontSize: 16)),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,7 +667,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         Text(
                                           'FastMinute Wallet',
                                           style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 13.5),
+                                            fontSize: Responsive.scaledFontSize(context, 12.5),
                                             fontWeight: FontWeight.w800,
                                             color: isEligibleForWallet ? slateDark : AppDesignSystem.slate500,
                                           ),
@@ -682,7 +682,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                           child: Text(
                                             '₹${walletUsable.toStringAsFixed(0)}',
                                             style: GoogleFonts.inter(
-                                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                                              fontSize: Responsive.scaledFontSize(context, 9),
                                               fontWeight: FontWeight.w800,
                                               color: isEligibleForWallet ? const Color(0xFF15803D) : AppDesignSystem.slate600,
                                             ),
@@ -690,7 +690,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 2),
+                                    const SizedBox(height: 1.5),
                                     Text(
                                       !isEligibleForWallet
                                           ? 'Min. order ₹99 required to use referral bonus (Add ₹${(minPromoOrderValue - subtotal).toInt()} more)'
@@ -702,7 +702,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                                   ? '₹${realCash.toStringAsFixed(0)} Real Cash ready • Add ₹${(minPromoOrderValue - subtotal).toInt()} more for ₹${promoCash.toStringAsFixed(0)} bonus'
                                                   : 'Tap switch to apply wallet balance')),
                                       style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 11),
+                                        fontSize: Responsive.scaledFontSize(context, 10.5),
                                         color: !isEligibleForWallet
                                             ? const Color(0xFFB45309)
                                             : (checkoutState.useWalletBalance ? const Color(0xFF047857) : slateMuted),
@@ -728,7 +728,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 8),
                       ],
 
                       // 7. Detailed Bill Summary
@@ -745,11 +745,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         tipAmount: widget.tipAmount,
                         tier: tier,
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
 
                       // 8. Trust Badges
                       const CheckoutTrustBadges(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),

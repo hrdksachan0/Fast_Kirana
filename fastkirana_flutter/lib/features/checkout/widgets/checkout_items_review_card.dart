@@ -26,11 +26,11 @@ class CheckoutItemsReviewCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppDesignSystem.slate300, width: 1.2),
+        border: Border.all(color: AppDesignSystem.slate200, width: 1.1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -47,12 +47,12 @@ class CheckoutItemsReviewCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
-                  const SizedBox(width: 6),
+                  Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                  const SizedBox(width: 5),
                   Text(
                     'Order Items Review',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 13),
+                      fontSize: Responsive.scaledFontSize(context, 12.5),
                       fontWeight: FontWeight.w900,
                       color: AppDesignSystem.slate900,
                     ),
@@ -60,15 +60,15 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppDesignSystem.slate200,
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppDesignSystem.slate100,
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   '${items.length} ${items.length == 1 ? 'item' : 'items'}',
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                    fontSize: Responsive.scaledFontSize(context, 10),
                     fontWeight: FontWeight.w700,
                     color: AppDesignSystem.slate500,
                   ),
@@ -76,28 +76,28 @@ class CheckoutItemsReviewCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // 1. Grocery Section
           if (groceryItems.isNotEmpty) ...[
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
               decoration: BoxDecoration(
                 color: AppDesignSystem.slate50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppDesignSystem.slate300),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppDesignSystem.slate200),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
-                      const SizedBox(width: 5),
+                      Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 11))),
+                      const SizedBox(width: 4),
                       Text(
                         'Grocery & Daily Essentials',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                          fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w800,
                           color: AppDesignSystem.primary,
                         ),
@@ -106,19 +106,19 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                       Text(
                         'Darkstore',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9.5),
+                          fontSize: Responsive.scaledFontSize(context, 9),
                           fontWeight: FontWeight.w600,
                           color: AppDesignSystem.slate500,
                         ),
                       ),
                     ],
                   ),
-                  const Divider(height: 14, thickness: 0.8, color: AppDesignSystem.slate300),
+                  const Divider(height: 10, thickness: 0.6, color: AppDesignSystem.slate200),
                   ...groceryItems.map((item) => _buildReviewItemRow(context, item)),
                 ],
               ),
             ),
-            if (restaurantGroups.isNotEmpty) const SizedBox(height: 10),
+            if (restaurantGroups.isNotEmpty) const SizedBox(height: 8),
           ],
 
           // 2. Restaurant Sections
@@ -126,11 +126,11 @@ class CheckoutItemsReviewCard extends StatelessWidget {
             final outletName = entry.key;
             final rItems = entry.value;
             return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
               decoration: BoxDecoration(
                 color: AppDesignSystem.orange50,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppDesignSystem.orange200),
               ),
               child: Column(
@@ -138,12 +138,12 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
-                      const SizedBox(width: 5),
+                      Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 11))),
+                      const SizedBox(width: 4),
                       Text(
                         outletName,
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                          fontSize: Responsive.scaledFontSize(context, 11),
                           fontWeight: FontWeight.w800,
                           color: AppDesignSystem.orange600,
                         ),
@@ -152,14 +152,14 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                       Text(
                         'Fresh Kitchen',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9.5),
+                          fontSize: Responsive.scaledFontSize(context, 9),
                           fontWeight: FontWeight.w600,
                           color: AppDesignSystem.orange600,
                         ),
                       ),
                     ],
                   ),
-                  const Divider(height: 14, thickness: 0.8, color: AppDesignSystem.orange200),
+                  const Divider(height: 10, thickness: 0.6, color: AppDesignSystem.orange200),
                   ...rItems.map((item) => _buildReviewItemRow(context, item)),
                 ],
               ),
@@ -172,8 +172,9 @@ class CheckoutItemsReviewCard extends StatelessWidget {
 
   Widget _buildReviewItemRow(BuildContext context, CartItem item) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3.5),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (item.product.imageUrl != null && item.product.imageUrl!.isNotEmpty)
             AppCachedImage(
@@ -193,17 +194,20 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                 Text(
                   item.product.name,
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                    fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: FontWeight.w700,
                     color: AppDesignSystem.slate900,
+                    height: 1.25,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
+                  softWrap: true,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 1),
                 Text(
                   '${item.product.unit.isNotEmpty ? item.product.unit : "1 unit"} × ${item.quantity}',
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 10),
+                    fontSize: Responsive.scaledFontSize(context, 9.5),
                     fontWeight: FontWeight.w500,
                     color: AppDesignSystem.slate500,
                   ),
@@ -211,10 +215,11 @@ class CheckoutItemsReviewCard extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             '₹${(item.product.price * item.quantity).toInt()}',
             style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 12),
+              fontSize: Responsive.scaledFontSize(context, 11.5),
               fontWeight: FontWeight.w800,
               color: AppDesignSystem.slate900,
             ),

@@ -29,19 +29,19 @@ class CheckoutReceiverCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: AppDesignSystem.slate200,
-          width: 1.2,
+          width: 1.1,
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -52,23 +52,23 @@ class CheckoutReceiverCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(4.5),
                 decoration: BoxDecoration(
                   color: isOrderingForSomeone
                       ? AppDesignSystem.statusPending
                       : AppDesignSystem.blue50,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(7),
                 ),
                 child: Text(
                   isOrderingForSomeone ? '🎁' : '👤',
-                  style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13)),
+                  style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12)),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Text(
                 isOrderingForSomeone ? 'Ordering for someone else' : 'Contact Details for Order',
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11.5),
+                  fontSize: Responsive.scaledFontSize(context, 11),
                   fontWeight: FontWeight.w700,
                   color: AppDesignSystem.slate500,
                 ),
@@ -77,21 +77,21 @@ class CheckoutReceiverCard extends StatelessWidget {
               Bounceable(
                 onTap: () => _showEditReceiverModal(context),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8.5, vertical: 3.5),
                   decoration: BoxDecoration(
                     color: AppDesignSystem.orange50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppDesignSystem.orange300, width: 1),
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(color: AppDesignSystem.orange300, width: 0.9),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.edit_outlined, size: 12, color: AppDesignSystem.orange600),
+                      const Icon(Icons.edit_outlined, size: 11, color: AppDesignSystem.orange600),
                       const SizedBox(width: 3),
                       Text(
                         isOrderingForSomeone ? 'Edit' : '+ Change',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w800,
                           color: AppDesignSystem.orange600,
                         ),
@@ -102,43 +102,47 @@ class CheckoutReceiverCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           // Row 2: Customer Name & Phone Number
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
+            spacing: 6,
             runSpacing: 2,
             children: [
               Text(
                 customerName,
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                  fontSize: Responsive.scaledFontSize(context, 12.5),
                   fontWeight: FontWeight.w900,
                   color: AppDesignSystem.slate900,
                 ),
+                maxLines: 2,
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
               ),
               if (customerPhone.isNotEmpty)
                 Text(
                   '•   $customerPhone',
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                    fontSize: Responsive.scaledFontSize(context, 12),
                     fontWeight: FontWeight.w700,
                     color: AppDesignSystem.slate600,
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1.5),
           Text(
             isOrderingForSomeone
                 ? 'Delivery rider will call this receiver number at doorstep'
                 : 'Order tracking and delivery updates will be sent here',
             style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 10.5),
+              fontSize: Responsive.scaledFontSize(context, 10),
               fontWeight: FontWeight.w500,
               color: isOrderingForSomeone ? AppDesignSystem.orange600 : AppDesignSystem.slate400,
             ),
+          ),
           ),
         ],
       ),

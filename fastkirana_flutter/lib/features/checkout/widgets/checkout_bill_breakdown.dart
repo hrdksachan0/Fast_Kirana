@@ -44,13 +44,13 @@ class CheckoutBillBreakdown extends StatelessWidget {
             : 'Delivery Fee';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: slateBorder, width: 1.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: slateBorder, width: 1.1),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 3)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -58,28 +58,28 @@ class CheckoutBillBreakdown extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
-              const SizedBox(width: 6),
+              Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+              const SizedBox(width: 5),
               Text(
                 'Bill Summary',
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 14),
+                  fontSize: Responsive.scaledFontSize(context, 13),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 9),
           _buildRow(context, 'Item Total', '₹${subtotal.toInt()}'),
-          const SizedBox(height: 7),
+          const SizedBox(height: 5.5),
           _buildRow(
             context,
             deliveryFeeLabel,
             deliveryFee == 0.0 ? 'FREE' : '₹${deliveryFee.toInt()}',
             isFree: deliveryFee == 0.0,
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 5.5),
           _buildRow(
             context,
             (handlingLabel != null && handlingLabel!.trim().isNotEmpty) ? handlingLabel! : packagingLabel,
@@ -87,19 +87,19 @@ class CheckoutBillBreakdown extends StatelessWidget {
             isFree: (handlingFee ?? packagingFee) == 0.0,
           ),
           if (tipAmount > 0) ...[
-            const SizedBox(height: 7),
+            const SizedBox(height: 5.5),
             _buildRow(context, 'Delivery Partner Tip', '₹${tipAmount.toInt()}'),
           ],
           if (discountAmount > 0) ...[
-            const SizedBox(height: 7),
+            const SizedBox(height: 5.5),
             _buildRow(context, 'Discount', '-₹${discountAmount.toInt()}', isDiscount: true),
           ],
           if (walletAmountUsed > 0) ...[
-            const SizedBox(height: 7),
+            const SizedBox(height: 5.5),
             _buildRow(context, '👛 Wallet Balance Applied', '-₹${walletAmountUsed.toInt()}', isDiscount: true),
           ],
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
+            padding: EdgeInsets.symmetric(vertical: 8),
             child: Divider(height: 1, color: AppDesignSystem.slate200),
           ),
           Row(
