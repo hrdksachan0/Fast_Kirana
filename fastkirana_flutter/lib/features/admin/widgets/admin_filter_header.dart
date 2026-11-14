@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:collection/collection.dart';
 import '../../../../core/theme/design_system.dart';
 
 /// Pinned Sticky Header for Admin Orders:
@@ -129,6 +130,213 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
     return '$status$countSuffix';
   }
 
+  void _showOutletSelectorSheet(BuildContext context) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('🏪', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Filter by Outlet',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: AppDesignSystem.slate900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: AppDesignSystem.slate500),
+                      onPressed: () => Navigator.pop(ctx),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Select a darkstore or kitchen to view only its assigned orders.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppDesignSystem.slate500,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: widget.outlets.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1, color: AppDesignSystem.slate100),
+                    itemBuilder: (context, index) {
+                      final outlet = widget.outlets[index];
+                      final outletId = outlet['id']?.toString() ?? 'ALL';
+                      final outletName = outlet['name']?.toString() ?? 'All Outlets';
+                      final count = outlet['count'] as int? ?? 0;
+                      final iconStr = outlet['icon']?.toString() ?? '🏪';
+                      final isSelected = widget.selectedOutlet == outletId;
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF3B82F6) : AppDesignSystem.slate200,
+                              width: 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(iconStr, style: const TextStyle(fontSize: 16)),
+                          ),
+                        ),
+                        title: Text(
+                          outletName,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: isSelected ? AppDesignSystem.slate900 : AppDesignSystem.slate700,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (count > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFDBEAFE) : AppDesignSystem.slate100,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '$count orders',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: isSelected ? const Color(0xFF1D4ED8) : AppDesignSystem.slate600,
+                                  ),
+                                ),
+                              ),
+                            Icon(
+                              isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                              size: 20,
+                              color: isSelected ? const Color(0xFF2563EB) : AppDesignSystem.slate300,
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          widget.onOutletSelected(outletId);
+                          Navigator.pop(ctx);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOutletDropdownPill(BuildContext context) {
+    final selectedOutletData = widget.outlets.firstWhereOrNull((o) => o['id'] == widget.selectedOutlet);
+    final isAll = widget.selectedOutlet == 'ALL';
+    final name = selectedOutletData != null ? selectedOutletData['name']?.toString() ?? 'Outlets' : 'All Outlets';
+    final icon = selectedOutletData != null ? selectedOutletData['icon']?.toString() ?? '🏪' : '🏪';
+    final count = selectedOutletData != null ? selectedOutletData['count'] as int? ?? 0 : widget.displayLiveCount;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _showOutletSelectorSheet(context),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(
+            color: isAll ? const Color(0xFFF1F5F9) : const Color(0xFF0F766E),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isAll ? const Color(0xFFCBD5E1) : const Color(0xFF0D9488),
+              width: 1.2,
+            ),
+            boxShadow: !isAll
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF0F766E).withValues(alpha: 0.25),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1.5),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 12)),
+              const SizedBox(width: 4),
+              Text(
+                name,
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 11),
+                  fontWeight: FontWeight.w900,
+                  color: isAll ? AppDesignSystem.slate900 : Colors.white,
+                ),
+              ),
+              if (count > 0) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: isAll ? const Color(0xFFE2E8F0) : Colors.white.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 9.5),
+                      fontWeight: FontWeight.w900,
+                      color: isAll ? AppDesignSystem.slate800 : Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 3),
+              Icon(
+                Icons.arrow_drop_down_rounded,
+                size: 16,
+                color: isAll ? AppDesignSystem.slate600 : Colors.white,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeFilters = widget.selectedTab == 0 ? widget.liveStatusFilters : widget.historyStatusFilters;
@@ -147,181 +355,97 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+      padding: const EdgeInsets.fromLTRB(14, 5, 14, 5),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Row 1: Segmented Tabs OR Active Search Input Bar
           SizedBox(
-            height: 40,
+            height: 38,
             child: _isSearchOpen ? _buildSearchInputRow() : _buildTabsWithSearchButtonRow(),
           ),
 
-          // Row 2: 1-Tap Restaurant & Darkstore Outlet Pills Filter
-          if (widget.outlets.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            SizedBox(
-              height: 32,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: widget.outlets.length,
-                itemBuilder: (context, index) {
-                  final outlet = widget.outlets[index];
-                  final outletId = outlet['id']?.toString() ?? 'ALL';
-                  final outletName = outlet['name']?.toString() ?? 'All Outlets';
-                  final count = outlet['count'] as int? ?? 0;
-                  final iconStr = outlet['icon']?.toString() ?? '🏪';
-                  final isSelected = widget.selectedOutlet == outletId;
+          const SizedBox(height: 5),
+
+          // Row 2: Unified 1-Tap Outlet Selector Anchor + Status Filter Chips
+          SizedBox(
+            height: 32,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              children: [
+                if (widget.outlets.isNotEmpty) ...[
+                  _buildOutletDropdownPill(context),
+                  Container(
+                    height: 18,
+                    width: 1,
+                    margin: const EdgeInsets.only(right: 6, top: 7, bottom: 7),
+                    color: AppDesignSystem.slate300,
+                  ),
+                ],
+                ...activeFilters.map((status) {
+                  final isSelected = widget.currentSubFilter == status;
+                  final isNeedsApproval = status == 'ADMIN_PENDING';
+                  final approvalCount = widget.statusCounts['ADMIN_PENDING'] ?? 0;
 
                   return Padding(
                     padding: const EdgeInsets.only(right: 6),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        widget.onOutletSelected(outletId);
+                    child: ChoiceChip(
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        if (selected) {
+                          HapticFeedback.selectionClick();
+                          widget.onFilterSelected(status);
+                        }
                       },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
+                      label: Text(
+                        _formatStatusLabel(status),
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                           color: isSelected
-                              ? (outletId == 'DARKSTORE' ? const Color(0xFF0F766E) : AppDesignSystem.slate900)
-                              : (isSelected ? AppDesignSystem.slate900 : const Color(0xFFF8FAFC)),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected
-                                ? (outletId == 'DARKSTORE' ? const Color(0xFF0D9488) : AppDesignSystem.slate900)
-                                : AppDesignSystem.slate200,
-                            width: 1.2,
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: (outletId == 'DARKSTORE' ? const Color(0xFF0F766E) : AppDesignSystem.slate900)
-                                        .withValues(alpha: 0.25),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1.5),
-                                  ),
-                                ]
-                              : null,
+                              ? Colors.white
+                              : (status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
+                                  ? const Color(0xFFE11D48)
+                                  : (isNeedsApproval && approvalCount > 0
+                                      ? const Color(0xFFB45309)
+                                      : AppDesignSystem.slate600)),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(iconStr, style: const TextStyle(fontSize: 12)),
-                            const SizedBox(width: 4),
-                            Text(
-                              outletName,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
-                                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                                color: isSelected ? Colors.white : AppDesignSystem.slate700,
-                              ),
-                            ),
-                            if (count > 0) ...[
-                              const SizedBox(width: 5),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? Colors.white.withValues(alpha: 0.22)
-                                      : AppDesignSystem.slate200,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '$count',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: isSelected ? Colors.white : AppDesignSystem.slate700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+                      ),
+                      selectedColor: status == 'PAYMENT_PENDING'
+                          ? const Color(0xFFE11D48)
+                          : (isNeedsApproval && approvalCount > 0
+                              ? const Color(0xFFD97706)
+                              : AppDesignSystem.slate900),
+                      backgroundColor: status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
+                          ? const Color(0xFFFFF1F2)
+                          : (isNeedsApproval && approvalCount > 0
+                              ? const Color(0xFFFFFBEB)
+                              : AppDesignSystem.slate100),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(
+                          color: isSelected
+                              ? (status == 'PAYMENT_PENDING'
+                                  ? const Color(0xFFE11D48)
+                                  : (isNeedsApproval && approvalCount > 0
+                                      ? const Color(0xFFD97706)
+                                      : AppDesignSystem.slate900))
+                              : (status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
+                                  ? const Color(0xFFFDA4AF)
+                                  : (isNeedsApproval && approvalCount > 0
+                                      ? const Color(0xFFFDE68A)
+                                      : AppDesignSystem.slate200)),
+                          width: 1,
                         ),
                       ),
                     ),
                   );
-                },
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 6),
-
-          // Row 3: Status Sub-filter Chips (Horizontal scroll)
-          SizedBox(
-            height: 34,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: activeFilters.length,
-              itemBuilder: (context, index) {
-                final status = activeFilters[index];
-                final isSelected = widget.currentSubFilter == status;
-                final isNeedsApproval = status == 'ADMIN_PENDING';
-                final approvalCount = widget.statusCounts['ADMIN_PENDING'] ?? 0;
-
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      if (selected) {
-                        HapticFeedback.selectionClick();
-                        widget.onFilterSelected(status);
-                      }
-                    },
-                    label: Text(
-                      _formatStatusLabel(status),
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
-                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                        color: isSelected
-                            ? Colors.white
-                            : (status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
-                                ? const Color(0xFFE11D48)
-                                : (isNeedsApproval && approvalCount > 0
-                                    ? const Color(0xFFB45309)
-                                    : AppDesignSystem.slate600)),
-                      ),
-                    ),
-                    selectedColor: status == 'PAYMENT_PENDING'
-                        ? const Color(0xFFE11D48)
-                        : (isNeedsApproval && approvalCount > 0
-                            ? const Color(0xFFD97706)
-                            : AppDesignSystem.slate900),
-                    backgroundColor: status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
-                        ? const Color(0xFFFFF1F2)
-                        : (isNeedsApproval && approvalCount > 0
-                            ? const Color(0xFFFFFBEB)
-                            : AppDesignSystem.slate100),
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      side: BorderSide(
-                        color: isSelected
-                            ? (status == 'PAYMENT_PENDING'
-                                ? const Color(0xFFE11D48)
-                                : (isNeedsApproval && approvalCount > 0
-                                    ? const Color(0xFFD97706)
-                                    : AppDesignSystem.slate900))
-                            : (status == 'PAYMENT_PENDING' && widget.displayPendingPaymentCount > 0
-                                ? const Color(0xFFFDA4AF)
-                                : (isNeedsApproval && approvalCount > 0
-                                    ? const Color(0xFFFDE68A)
-                                    : AppDesignSystem.slate200)),
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                );
-              },
+                }),
+              ],
             ),
           ),
         ],

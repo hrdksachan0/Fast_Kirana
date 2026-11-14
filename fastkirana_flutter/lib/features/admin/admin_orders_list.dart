@@ -2110,11 +2110,11 @@ $formattedItems
               ),
             ),
 
-            // 2. Pinned Sticky Filter Header (Live/History tabs + Outlet pills + Status chips)
+            // 2. Pinned Sticky Filter Header (Live/History tabs + Unified Outlet & Status bar)
             SliverPersistentHeader(
               pinned: true,
               delegate: _StickyAdminFilterHeaderDelegate(
-                height: 130.0,
+                height: 88.0,
                 child: AdminFilterHeader(
                   selectedTab: _selectedTab,
                   displayLiveCount: displayLiveCount,
