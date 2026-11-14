@@ -34,7 +34,7 @@ class DeliveryOrdersTab extends StatefulWidget {
 }
 
 class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
-  // 0 = All, 1 = To Deliver, 2 = To Pickup
+  // 0 = All, 1 = Pickup, 2 = Item Ready
   int _filterIndex = 0;
 
   static const Color slateDark = AppDesignSystem.slate900;
@@ -111,8 +111,17 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
   Widget build(BuildContext context) {
     final safeBottom = MediaQuery.of(context).padding.bottom;
     final totalCount = widget.activeDeliveries.length + widget.pendingPickups.length;
-    final showActive = _filterIndex == 0 || _filterIndex == 1;
-    final showPickup = _filterIndex == 0 || _filterIndex == 2;
+    final pickupCount = widget.pendingPickups.length;
+    final itemReadyOrders = widget.pendingPickups.where((o) => (o['status'] ?? '').toString().toUpperCase() == 'PACKED').toList();
+    final itemReadyCount = itemReadyOrders.length;
+
+    // Filter modes:
+    // 0 = All (Show Out for Delivery + Ready for Pickup)
+    // 1 = Pickup (Show all Ready for Pickup orders waiting at store)
+    // 2 = Item Ready (Show strictly PACKED/Food Ready orders waiting at counter)
+    final showActiveDeliveries = _filterIndex == 0;
+    final showPickupSection = _filterIndex == 0 || _filterIndex == 1 || _filterIndex == 2;
+    final displayedPickups = _filterIndex == 2 ? itemReadyOrders : widget.pendingPickups;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -120,7 +129,7 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 3-Pill Action Filter for Rider
+          // 3-Pill Action Filter for Rider: All | Pickup | Item Ready
           Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(4),
@@ -143,18 +152,18 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                 ),
                 const SizedBox(width: 4),
                 Expanded(
-                  child: _buildFilterPill(1, '🛵 Deliver', widget.activeDeliveries.length, AppDesignSystem.emeraldBrand),
+                  child: _buildFilterPill(1, '📦 Pickup', pickupCount, AppDesignSystem.violet600),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
-                  child: _buildFilterPill(2, '📦 Pickup', widget.pendingPickups.length, AppDesignSystem.violet600),
+                  child: _buildFilterPill(2, '🔥 Item Ready', itemReadyCount, const Color(0xFFD97706)),
                 ),
               ],
             ),
           ),
 
-          // Section 1: OUT FOR DELIVERY
-          if (showActive) ...[
+          // Section 1: OUT FOR DELIVERY (Shown in "All" mode)
+          if (showActiveDeliveries) ...[
             Row(
               children: [
                 Container(
@@ -231,11 +240,11 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                       ],
                     ),
             ),
-            if (showPickup) const SizedBox(height: 22),
+            if (showPickupSection) const SizedBox(height: 22),
           ],
 
-          // Section 2: READY FOR PICKUP
-          if (showPickup) ...[
+          // Section 2: READY FOR PICKUP (Shown in All, Pickup, and Item Ready modes)
+          if (showPickupSection) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -244,17 +253,21 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                     Container(
                       width: 26,
                       height: 26,
-                      decoration: const BoxDecoration(
-                        color: AppDesignSystem.violet600,
+                      decoration: BoxDecoration(
+                        color: _filterIndex == 2 ? const Color(0xFFD97706) : AppDesignSystem.violet600,
                         shape: BoxShape.circle,
                       ),
-                      child: const Center(
-                        child: Icon(Icons.inventory_2_rounded, size: 13, color: Colors.white),
+                      child: Center(
+                        child: Icon(
+                          _filterIndex == 2 ? Icons.check_circle_rounded : Icons.inventory_2_rounded,
+                          size: 13,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'READY FOR PICKUP',
+                      _filterIndex == 2 ? 'ITEMS PACKED & READY' : 'READY FOR PICKUP',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w900,
@@ -267,15 +280,15 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppDesignSystem.violet200,
+                    color: _filterIndex == 2 ? const Color(0xFFFEF3C7) : AppDesignSystem.violet200,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${widget.pendingPickups.length} Orders',
+                    '${displayedPickups.length} Orders',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 10),
                       fontWeight: FontWeight.w800,
-                      color: AppDesignSystem.violet600,
+                      color: _filterIndex == 2 ? const Color(0xFFB45309) : AppDesignSystem.violet600,
                     ),
                   ),
                 ),
@@ -287,11 +300,45 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
               duration: const Duration(milliseconds: 350),
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
-              child: widget.pendingPickups.isEmpty
-                  ? const EmptyPendingPickupCard(key: ValueKey('empty_pending_pickup'))
+              child: displayedPickups.isEmpty
+                  ? (_filterIndex == 2
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppDesignSystem.slate200),
+                          ),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                const Text('🍳', style: TextStyle(fontSize: 28)),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'No Packed Items Waiting',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 13),
+                                    fontWeight: FontWeight.w800,
+                                    color: slateDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Items will appear here as soon as the kitchen or darkstore packs them.',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11),
+                                    color: AppDesignSystem.slate500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : const EmptyPendingPickupCard(key: ValueKey('empty_pending_pickup')))
                   : Column(
-                      key: const ValueKey('pending_pickups_list'),
-                      children: widget.pendingPickups
+                      key: ValueKey('pending_pickups_$_filterIndex'),
+                      children: displayedPickups
                           .map((o) => RiderPickupCard(
                                 key: ValueKey('pickup_${o['id']}'),
                                 order: o,
