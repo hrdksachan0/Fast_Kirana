@@ -2165,12 +2165,15 @@ async def create_order(
         if is_premium_packaging and not any("Premium Thermal Packaging" in p for p in notes_parts):
             notes_parts.append("✨ Premium Thermal Packaging Requested (+₹15)")
 
-        if actual_wallet_debit > Decimal("0.00") and payment_method != "WALLET":
-            notes_parts.append(f"💳 Wallet Used: ₹{float(actual_wallet_debit):.2f}")
-            notes_parts.append(f"[WALLET_USED:{float(actual_wallet_debit):.2f}]")
-        elif payment_method == "WALLET":
-            notes_parts.append(f"💳 Paid via Wallet: ₹{float(actual_wallet_debit):.2f}")
-            notes_parts.append(f"[WALLET_USED:{float(actual_wallet_debit):.2f}]")
+        base_notes_parts = list(notes_parts)
+
+        if not is_combined:
+            if actual_wallet_debit > Decimal("0.00") and payment_method != "WALLET":
+                notes_parts.append(f"💳 Wallet Used: ₹{float(actual_wallet_debit):.2f}")
+                notes_parts.append(f"[WALLET_USED:{float(actual_wallet_debit):.2f}]")
+            elif payment_method == "WALLET":
+                notes_parts.append(f"💳 Paid via Wallet: ₹{float(actual_wallet_debit):.2f}")
+                notes_parts.append(f"[WALLET_USED:{float(actual_wallet_debit):.2f}]")
 
         if is_online_paid and not any("Cashfree PG Paid" in p for p in notes_parts):
             cf_note_ref = f"Cashfree PG Paid (Ref: {incoming_payment_id})" if incoming_payment_id else "Cashfree PG Paid"
@@ -2203,7 +2206,13 @@ async def create_order(
             g_gross = max(0.0, round(grocery_subtotal - grocery_disc + delivery_fee_charge + grocery_misc, 2))
             g_wallet_deduct = min(g_gross, wallet_debit_val)
             g_net = max(0.0, round(g_gross - g_wallet_deduct, 2))
-            rem_wallet_debit = wallet_debit_val - g_wallet_deduct
+            rem_wallet_debit = round(wallet_debit_val - g_wallet_deduct, 2)
+
+            g_notes_parts = list(base_notes_parts)
+            if g_wallet_deduct > 0:
+                g_notes_parts.append(f"💳 Wallet Used: ₹{g_wallet_deduct:.2f}")
+                g_notes_parts.append(f"[WALLET_USED:{g_wallet_deduct:.2f}]")
+            g_notes = " | ".join(g_notes_parts) if g_notes_parts else None
 
             order_specs.append({
                 "type": OrderType.GROCERY,
@@ -2216,11 +2225,19 @@ async def create_order(
                 "deliveryFee": round(delivery_fee_charge, 2),
                 "miscFee": round(grocery_misc, 2),
                 "total": g_net,
-                "items": grocery_items
+                "items": grocery_items,
+                "notes": g_notes
             })
             # 2. Restaurant Companion Order (miscFee 0.0 so combined packaging charge is strictly charged once)
             r_gross = max(0.0, round(restaurant_data[0]["subtotal"] - restaurant_disc, 2))
             r_net = max(0.0, round(r_gross - rem_wallet_debit, 2))
+
+            r_notes_parts = list(base_notes_parts)
+            if rem_wallet_debit > 0:
+                r_notes_parts.append(f"💳 Wallet Used: ₹{rem_wallet_debit:.2f}")
+                r_notes_parts.append(f"[WALLET_USED:{rem_wallet_debit:.2f}]")
+            r_notes = " | ".join(r_notes_parts) if r_notes_parts else None
+
             order_specs.append({
                 "type": OrderType.RESTAURANT,
                 "readableId": f"{readable_id}-R",
@@ -2232,7 +2249,8 @@ async def create_order(
                 "deliveryFee": 0.0,
                 "miscFee": 0.0,
                 "total": r_net,
-                "items": restaurant_data[0]["items"]
+                "items": restaurant_data[0]["items"],
+                "notes": r_notes
             })
         elif has_restaurant_items:
             r_gross = max(0.0, round(combined_subtotal - combined_discount + delivery_fee_charge + misc_fee_charge, 2))
@@ -2247,7 +2265,8 @@ async def create_order(
                 "deliveryFee": round(delivery_fee_charge, 2),
                 "miscFee": round(misc_fee_charge, 2),
                 "total": max(0.0, round(r_gross - wallet_debit_val, 2)),
-                "items": restaurant_data[0]["items"]
+                "items": restaurant_data[0]["items"],
+                "notes": final_order_notes
             })
         else:
             grocery_misc = misc_fee_charge
@@ -2263,7 +2282,8 @@ async def create_order(
                 "deliveryFee": round(delivery_fee_charge, 2),
                 "miscFee": round(grocery_misc, 2),
                 "total": max(0.0, round(g_gross - wallet_debit_val, 2)),
-                "items": grocery_items
+                "items": grocery_items,
+                "notes": final_order_notes
             })
 
         clean_cf_order_id = incoming_cf_order_id.strip() if incoming_cf_order_id else None
@@ -2347,7 +2367,7 @@ async def create_order(
                 shopName=spec["shopName"],
                 shopPhone=spec["shopPhone"],
                 restaurantId=spec["restaurantId"],
-                notes=final_order_notes,
+                notes=spec.get("notes") or final_order_notes,
                 confirmedAt=datetime.utcnow() if initial_order_status == OrderStatus.CONFIRMED else None
             )
             db.add(ord_obj)
@@ -3732,12 +3752,19 @@ async def update_order(
                 if w_match:
                     refund_amt = Decimal(w_match.group(1))
                     if refund_amt > Decimal("0.00"):
+                        tx_ref_id = f"wtx_ref_{order.id}"
+                        meta = {
+                            "orderId": order.id,
+                            "readableId": order.readableId,
+                            "combinedId": order.combinedId
+                        }
                         await credit_customer_wallet(
                             user_id=order.userId,
                             amount=refund_amt,
                             description=f"Refund for cancelled order #{order.readableId} 👛",
                             db=db,
-                            metadata={"orderId": order.id, "readableId": order.readableId}
+                            tx_id=tx_ref_id,
+                            metadata=meta
                         )
                         order.notes = f"{order.notes or ''} | [WALLET_REFUNDED]".strip(" |")
                         logger.info(f"Refunded ₹{refund_amt} to customer {order.userId} for cancelled order #{order.readableId}")

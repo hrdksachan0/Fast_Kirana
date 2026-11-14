@@ -339,6 +339,8 @@ import '../navratri/navratri_linked_products.dart';
 
 import '../navratri/navratri_shopping_section.dart';
 import '../campaign_bento/campaign_bento_zone.dart';
+import '../../data/models/home_layout_config.dart';
+import '../../providers/home_layout_provider.dart';
 import '../categories/category_products_screen.dart';
 
 
@@ -1574,28 +1576,198 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   }
 
+  List<Widget> _buildDynamicHomeSections({
+    required HomeLayoutConfigModel homeLayout,
+    required dynamic navratri,
+    required List<Product> campaignProducts,
+    required AsyncValue<dynamic>? festiveCatalog,
+  }) {
+    final List<Widget> slivers = [];
 
+    for (final section in homeLayout.sections) {
+      if (!section.enabled) continue;
 
+      switch (section.id) {
+        case 'diwali_campaign':
+          if (navratri != null && _isGrocerySelected) {
+            slivers.add(
+              SliverToBoxAdapter(
+                child: NavratriShoppingSection(
+                  data: navratri,
+                  catalog: campaignProducts,
+                  catalogLoading: festiveCatalog?.isLoading ?? false,
+                  catalogFailed: festiveCatalog?.hasError ?? false,
+                  onProductSelected: (product) => Navigator.push(
+                    context,
+                    FadeSlideRoute(
+                        page: ProductDetailScreen(product: product)),
+                  ),
+                  onNavigate: (destination) {
+                    final q = destination.query.trim();
+                    if (q.startsWith('/category/') ||
+                        q.startsWith('category/')) {
+                      final slug = q
+                          .replaceFirst(RegExp(r'^/?category/'), '')
+                          .trim();
+                      final categoriesAsync = ref.read(categoriesProvider);
+                      final cat = categoriesAsync.valueOrNull?.firstWhere(
+                        (c) =>
+                            c.slug.toLowerCase() == slug.toLowerCase() ||
+                            c.id == slug,
+                        orElse: () => Category(
+                            id: slug,
+                            name: slug.replaceAll('-', ' '),
+                            slug: slug),
+                      );
+                      if (cat != null) {
+                        Navigator.push(
+                          context,
+                          FadeSlideRoute(
+                              page: CategoryProductsScreen(category: cat)),
+                        );
+                        return;
+                      }
+                    }
+                    final cleanQuery = q.startsWith('/search?q=')
+                        ? q.replaceFirst('/search?q=', '')
+                        : (q.startsWith('/category/')
+                            ? q
+                                .replaceFirst('/category/', '')
+                                .replaceAll('-', ' ')
+                            : q);
+                    Navigator.push(
+                      context,
+                      FadeSlideRoute(
+                        page: SearchScreen(initialQuery: cleanQuery),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          }
+          break;
 
+        case 'hero_banners':
+          slivers.add(
+            SliverToBoxAdapter(
+              child: DynamicHeroBannerCarousel(
+                key: ValueKey(
+                    'hero_carousel_${_isGrocerySelected ? "grocery" : "food"}'),
+                type: _isGrocerySelected ? 'grocery' : 'food',
+                onSwitchMode: (isGrocery) {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _isGrocerySelected = isGrocery;
+                  });
+                },
+              ),
+            ),
+          );
+          break;
 
+        case 'top_categories':
+          if (_isGrocerySelected) {
+            slivers.add(
+              const SliverToBoxAdapter(
+                child: HomeTopCategoriesGrid(),
+              ),
+            );
+          }
+          break;
 
+        case 'bento_gifting':
+          if (_isGrocerySelected) {
+            slivers.add(
+              const SliverToBoxAdapter(
+                child: SingleCampaignBentoCard(
+                  type: CampaignCardType.giftingBoutique,
+                ),
+              ),
+            );
+          }
+          break;
 
+        case 'bento_fresh_market':
+          if (_isGrocerySelected) {
+            slivers.add(
+              const SliverToBoxAdapter(
+                child: SingleCampaignBentoCard(
+                  type: CampaignCardType.freshMarket,
+                ),
+              ),
+            );
+          }
+          break;
 
+        case 'bento_seasonal':
+          if (_isGrocerySelected) {
+            slivers.add(
+              const SliverToBoxAdapter(
+                child: SingleCampaignBentoCard(
+                  type: CampaignCardType.seasonalSwitchUp,
+                ),
+              ),
+            );
+          }
+          break;
 
+        case 'bento_daily_restock':
+          if (_isGrocerySelected) {
+            slivers.add(
+              const SliverToBoxAdapter(
+                child: SingleCampaignBentoCard(
+                  type: CampaignCardType.dailyRestock,
+                ),
+              ),
+            );
+          }
+          break;
 
+        case 'bento_value_picks':
+          if (_isGrocerySelected) {
+            slivers.add(
+              const SliverToBoxAdapter(
+                child: SingleCampaignBentoCard(
+                  type: CampaignCardType.valuePicks,
+                ),
+              ),
+            );
+          }
+          break;
 
+        case 'campaign_bento':
+          if (_isGrocerySelected) {
+            slivers.add(
+              const SliverToBoxAdapter(
+                child: CampaignBentoZone(showLiveEditButton: false),
+              ),
+            );
+          }
+          break;
 
+        case 'product_sections':
+          if (_isGrocerySelected) {
+            slivers.add(
+              SliverToBoxAdapter(
+                child: HomeBuyAgainShelf(
+                    isGrocerySelected: _isGrocerySelected),
+              ),
+            );
+            slivers.add(
+              const SliverToBoxAdapter(
+                child: HomeProductSections(),
+              ),
+            );
+          }
+          break;
+      }
+    }
 
-
+    return slivers;
+  }
 
   @override
-
-
-
-
-
-
-
   Widget build(BuildContext context) {
 
 
@@ -1649,6 +1821,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         campaignState?.valueOrNull ?? memoryCachedCampaign;
     final navratri =
         configuredCampaign?.enabled == true ? configuredCampaign : null;
+
+    final homeLayoutState = ref.watch(homeLayoutConfigProvider);
+    final homeLayout = homeLayoutState.valueOrNull ?? const HomeLayoutConfigModel();
 
 
 
@@ -2409,13 +2584,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
               onRefresh: () async {
-
-
-
-
-
-
-
+                ref.invalidate(homeLayoutConfigProvider);
                 ref.invalidate(navratriDataProvider);
 
 
@@ -3020,66 +3189,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
                         child: UnserviceableLocationBanner()),
-                    // 1. Diwali / Festive Campaign Section (Top Position)
-                    if (navratri != null && _isGrocerySelected) ...[
+                    // Dynamic Hero Banner Carousel for Food Mode
+                    if (!_isGrocerySelected) ...[
                       SliverToBoxAdapter(
-                        child: NavratriShoppingSection(
-                          data: navratri,
-                          catalog: campaignProducts,
-                          catalogLoading: festiveCatalog?.isLoading ?? false,
-                          catalogFailed: festiveCatalog?.hasError ?? false,
-                          onProductSelected: (product) => Navigator.push(
-                            context,
-                            FadeSlideRoute(
-                                page: ProductDetailScreen(product: product)),
-                          ),
-                          onNavigate: (destination) {
-                            final q = destination.query.trim();
-                            if (q.startsWith('/category/') || q.startsWith('category/')) {
-                              final slug = q.replaceFirst(RegExp(r'^/?category/'), '').trim();
-                              final categoriesAsync = ref.read(categoriesProvider);
-                              final cat = categoriesAsync.valueOrNull?.firstWhere(
-                                (c) => c.slug.toLowerCase() == slug.toLowerCase() || c.id == slug,
-                                orElse: () => Category(id: slug, name: slug.replaceAll('-', ' '), slug: slug),
-                              );
-                              if (cat != null) {
-                                Navigator.push(
-                                  context,
-                                  FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
-                                );
-                                return;
-                              }
-                            }
-                            final cleanQuery = q.startsWith('/search?q=')
-                                ? q.replaceFirst('/search?q=', '')
-                                : (q.startsWith('/category/')
-                                    ? q.replaceFirst('/category/', '').replaceAll('-', ' ')
-                                    : q);
-                            Navigator.push(
-                              context,
-                              FadeSlideRoute(
-                                page: SearchScreen(initialQuery: cleanQuery),
-                              ),
-                            );
+                        child: DynamicHeroBannerCarousel(
+                          key: const ValueKey('hero_carousel_food'),
+                          type: 'food',
+                          onSwitchMode: (isGrocery) {
+                            HapticFeedback.selectionClick();
+                            setState(() {
+                              _isGrocerySelected = isGrocery;
+                            });
                           },
                         ),
                       ),
                     ],
-
-                    // 2. Dynamic Hero Banner Carousel (Below Diwali Campaign)
-                    SliverToBoxAdapter(
-                      child: DynamicHeroBannerCarousel(
-                        key: ValueKey(
-                            'hero_carousel_${_isGrocerySelected ? "grocery" : "food"}'),
-                        type: _isGrocerySelected ? 'grocery' : 'food',
-                        onSwitchMode: (isGrocery) {
-                          HapticFeedback.selectionClick();
-                          setState(() {
-                            _isGrocerySelected = isGrocery;
-                          });
-                        },
-                      ),
-                    ),
                     if (_isGrocerySelected) ...[
 
 
@@ -3808,10 +3932,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
 
-                        const SliverToBoxAdapter(
-                            child: HomeTopCategoriesGrid()),
-                        const SliverToBoxAdapter(
-                            child: CampaignBentoZone(showLiveEditButton: false)),
+                        ..._buildDynamicHomeSections(
+                          homeLayout: homeLayout,
+                          navratri: navratri,
+                          campaignProducts: campaignProducts,
+                          festiveCatalog: festiveCatalog,
+                        ),
 
 
 
@@ -3827,39 +3953,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
 
-                        SliverToBoxAdapter(
 
-
-
-
-
-
-
-                          child: HomeBuyAgainShelf(
-
-
-
-
-
-
-
-                              isGrocerySelected: _isGrocerySelected),
-
-
-
-
-
-
-
-                        ),
-
-
-
-
-
-
-
-                        const SliverToBoxAdapter(child: HomeProductSections()),
 
 
 

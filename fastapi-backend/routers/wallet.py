@@ -484,18 +484,52 @@ async def credit_customer_wallet(
     description: str,
     db: AsyncSession,
     tx_type: WalletTxType = WalletTxType.CREDIT_REFUND,
+    tx_id: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None
 ) -> CustomerWallet:
     """
-    Atomic wallet credit helper used during refunds, top-ups, or rewards.
-    Uses Postgres Row-Level Lock (SELECT FOR UPDATE) to ensure concurrency safety.
+    Atomic, idempotent wallet credit helper used during refunds, top-ups, or rewards.
+    Uses Postgres Row-Level Lock (SELECT FOR UPDATE) to ensure concurrency safety and prevent duplicate refunds.
     """
-    wallet = await get_or_create_wallet(user_id, db)
-    bal_before = wallet.balance
-    wallet.balance = Decimal(str(wallet.balance)) + amount
+    if amount <= Decimal("0.00"):
+        return await get_or_create_wallet(user_id, db)
+
+    # 1. Deterministic Idempotency Check by tx_id
+    target_tx_id = tx_id or f"wtx_{uuid.uuid4().hex[:16]}"
+    if tx_id:
+        existing_tx_stmt = select(WalletTransaction).where(WalletTransaction.id == tx_id)
+        existing_tx = (await db.execute(existing_tx_stmt)).scalar_one_or_none()
+        if existing_tx:
+            logger.warning(f"Wallet transaction {tx_id} already exists. Skipping duplicate credit.")
+            return await get_or_create_wallet(user_id, db)
+
+    # 2. Domain Idempotency Check: Don't refund the same order twice
+    if metadata and "orderId" in metadata and tx_type == WalletTxType.CREDIT_REFUND:
+        order_id_str = str(metadata["orderId"])
+        dup_stmt = select(WalletTransaction).where(
+            WalletTransaction.type == WalletTxType.CREDIT_REFUND,
+            WalletTransaction.status == WalletTxStatus.SUCCESS,
+            WalletTransaction.metadata_json["orderId"].astext == order_id_str
+        )
+        dup_tx = (await db.execute(dup_stmt)).scalars().first()
+        if dup_tx:
+            logger.warning(f"Order {order_id_str} was already refunded via {dup_tx.id}. Preventing duplicate refund.")
+            return await get_or_create_wallet(user_id, db)
+
+    # 3. Row-level locked wallet update
+    lock_stmt = select(CustomerWallet).where(CustomerWallet.userId == user_id).with_for_update()
+    res = await db.execute(lock_stmt)
+    wallet = res.scalars().first()
+    if not wallet:
+        wallet = await get_or_create_wallet(user_id, db)
+        res = await db.execute(select(CustomerWallet).where(CustomerWallet.id == wallet.id).with_for_update())
+        wallet = res.scalars().first()
+
+    bal_before = Decimal(str(wallet.balance))
+    wallet.balance = bal_before + amount
 
     tx = WalletTransaction(
-        id=f"wtx_{uuid.uuid4().hex[:16]}",
+        id=target_tx_id,
         walletId=wallet.id,
         amount=amount,
         type=tx_type,

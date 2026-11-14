@@ -38,7 +38,14 @@ interface CheckoutAddressSectionProps {
   handleSaveAddress: (e: React.FormEvent) => Promise<void>
   handleEditAddressClick: (addr: Address) => void
   handleCancelAddressForm: () => void
-  handleUpdateAddressCoordinates?: (addressId: string, lat: number, lng: number) => Promise<boolean>
+  handleUpdateAddressCoordinates?: (
+    addressId: string,
+    lat: number,
+    lng: number,
+    houseNo?: string,
+    label?: string,
+    street?: string
+  ) => Promise<boolean>
 }
 
 export function CheckoutAddressSection({
@@ -396,13 +403,22 @@ export function CheckoutAddressSection({
             <FreeMapPicker
               initialLat={selectedAddress.lat ?? (originLat ?? storeLat)}
               initialLng={selectedAddress.lng ?? (originLng ?? storeLng)}
+              initialHouseNo={selectedAddress.houseNo !== '.' ? selectedAddress.houseNo : ''}
+              initialLabel={selectedAddress.label || 'Home'}
               storeLat={originLat ?? storeLat}
               storeLng={originLng ?? storeLng}
               originName={originName}
               deliveryRadiusKm={passedMaxRadiusKm ?? 5.0}
               onLocationSelect={async (loc) => {
                 if (handleUpdateAddressCoordinates) {
-                  const success = await handleUpdateAddressCoordinates(selectedAddress.id, loc.lat, loc.lng)
+                  const success = await handleUpdateAddressCoordinates(
+                    selectedAddress.id,
+                    loc.lat,
+                    loc.lng,
+                    loc.houseNo,
+                    loc.label,
+                    loc.street
+                  )
                   if (success) {
                     setIsAdjustingPin(false)
                   }

@@ -352,7 +352,7 @@ export const HUB_CONFIG = [
     description: 'Promo banners, coupons, push notifications & store config',
     color: 'from-rose-500/10 to-pink-500/10',
     activeBorder: 'border-rose-500/60 ring-2 ring-rose-500/20',
-    tabs: ['banners', 'campaigns', 'flash-deals', 'gifting-store', 'coupons', 'push-notifications', 'settings'] as const
+    tabs: ['banners', 'campaigns', 'home-layout', 'flash-deals', 'gifting-store', 'coupons', 'push-notifications', 'settings'] as const
   }
 ] as const
 

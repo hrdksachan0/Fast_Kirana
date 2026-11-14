@@ -7,12 +7,14 @@ class BlinkitAnimatedBag extends StatefulWidget {
   final String title;
   final String subtitle;
   final VoidCallback? onCycleTap;
+  final bool showBottomBranding;
 
   const BlinkitAnimatedBag({
     super.key,
     this.title = '100% Farm-Fresh Fruits & Vegetables',
     this.subtitle = 'Delivered fresh at your doorstep with superfast delivery',
     this.onCycleTap,
+    this.showBottomBranding = true,
   });
 
   @override
@@ -273,32 +275,34 @@ class _BlinkitAnimatedBagState extends State<BlinkitAnimatedBag>
             // Shimmer Loading Progress Indicator
             _buildShimmerIndicator(),
 
-            const SizedBox(height: 28),
+            if (widget.showBottomBranding) ...[
+              const SizedBox(height: 28),
 
-            // Clean FastMinute Branding at Bottom
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE11D48),
-                    shape: BoxShape.circle,
+              // Clean FastMinute Branding at Bottom
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE11D48),
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'FASTMINUTE',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2.2,
-                    color: const Color(0xFF94A3B8),
+                  const SizedBox(width: 8),
+                  Text(
+                    'FASTMINUTE',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2.2,
+                      color: const Color(0xFF94A3B8),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         );
       },

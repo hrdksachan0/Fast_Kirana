@@ -75,6 +75,9 @@ export const patchAddressSchema = z.object({
   id: z.string().min(1, 'Address ID is required'),
   lat: z.union([z.number(), z.string()]).optional(),
   lng: z.union([z.number(), z.string()]).optional(),
+  houseNo: z.string().optional(),
+  label: z.string().optional(),
+  street: z.string().optional(),
 })
 
 export const deleteAddressSchema = z.object({

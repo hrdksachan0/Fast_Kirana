@@ -43,7 +43,7 @@ Widget _creamHeadline(String text, TextStyle style,
             style: style.copyWith(
               foreground: Paint()
                 ..style = PaintingStyle.stroke
-                ..strokeWidth = 2
+                ..strokeWidth = 1.2
                 ..color = outline,
             ),
           ),
@@ -438,7 +438,7 @@ class _NavratriShoppingSectionState
           Text(slide.eyebrow,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 10.5,
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
                   color: _headerSecondary)),
         _creamHeadline(
@@ -446,9 +446,9 @@ class _NavratriShoppingSectionState
           TextStyle(
               fontFamily: 'Poppins',
               fontSize: compact
-                  ? 23
-                  : (banner ? 27 : (slide.kind == 'title' ? 39 : 19)),
-              height: 1.18,
+                  ? 17
+                  : (banner ? 20 : (slide.kind == 'title' ? 22 : 16)),
+              height: 1.15,
               fontWeight: FontWeight.w700,
               color: _appearance.headerText),
           outline: _appearance.headerOutline,
@@ -458,7 +458,7 @@ class _NavratriShoppingSectionState
           Text(slide.subtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: FontWeight.w500,
                   color: _headerSecondary)),
       ],
@@ -468,7 +468,7 @@ class _NavratriShoppingSectionState
       return Column(children: [
         Expanded(child: copy),
         SizedBox(
-            height: 76,
+            height: 52,
             width: double.infinity,
             child: NavratriIllustration(image: slide.image!)),
       ]);
@@ -476,7 +476,7 @@ class _NavratriShoppingSectionState
     return LayoutBuilder(
         builder: (context, constraints) => Row(children: [
               SizedBox(
-                  width: math.min(108, constraints.maxWidth * .3),
+                  width: math.min(68, constraints.maxWidth * .22),
                   height: constraints.maxHeight,
                   child: NavratriIllustration(image: slide.image!)),
               const SizedBox(width: 8),
@@ -506,29 +506,29 @@ class _NavratriShoppingSectionState
     final heights = widget.data.headers.map((slide) {
       final copyWidth = slide.image == null || banner
           ? available
-          : available - math.min(108, available * .3) - 8;
+          : available - math.min(68, available * .22) - 8;
       return textHeight(
               slide.eyebrow,
-              const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600),
+              const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
               copyWidth) +
           textHeight(
               slide.title,
               TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: compact
-                      ? 23
-                      : (banner ? 27 : (slide.kind == 'title' ? 39 : 19)),
+                      ? 17
+                      : (banner ? 20 : (slide.kind == 'title' ? 22 : 16)),
                   fontWeight: FontWeight.w700,
-                  height: 1.18),
+                  height: 1.15),
               copyWidth) +
           textHeight(
               slide.subtitle,
-              const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+              const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500),
               copyWidth) +
-          (banner && slide.image != null ? 76 : 0);
+          (banner && slide.image != null ? 52 : 0);
     });
     return math.max(
-        banner ? 180 : (compact ? 88 : 110), heights.reduce(math.max) + 36);
+        banner ? 120 : (compact ? 70 : 88), heights.reduce(math.max) + 16);
   }
 
   double _gridHeight(double width, double scale) {
@@ -807,24 +807,24 @@ class _NavratriShoppingSectionState
     return Column(
       key: ValueKey('navratri-layout-$layout'),
       children: switch (layout) {
-        'banner' => [promo, const SizedBox(height: 10), _categoryRow(scale)],
+        'banner' => [promo, const SizedBox(height: 8), _categoryRow(scale)],
         'split' => [
-            _categoryPair(0, contentWidth, artHeight: 144),
+            _categoryPair(0, contentWidth, artHeight: 84),
+            const SizedBox(height: 6),
+            _categoryPair(2, contentWidth, artHeight: 48),
             const SizedBox(height: 8),
-            _categoryPair(2, contentWidth, artHeight: 64),
-            const SizedBox(height: 10),
             promo,
           ],
         'grid' => [
-            _categoryPair(0, contentWidth, artHeight: 92),
+            _categoryPair(0, contentWidth, artHeight: 64),
+            const SizedBox(height: 6),
+            _categoryPair(2, contentWidth, artHeight: 64),
             const SizedBox(height: 8),
-            _categoryPair(2, contentWidth, artHeight: 92),
-            const SizedBox(height: 10),
             promo,
           ],
         _ => [
             promo,
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             _categoryRow(scale, compact: true)
           ],
       },
@@ -878,7 +878,7 @@ class _NavratriShoppingSectionState
                                   height: headerHeight,
                                   child: Padding(
                                     padding: const EdgeInsets.fromLTRB(
-                                        28, 26, 28, 4),
+                                        16, 12, 16, 4),
                                     child: _switcher(SizedBox.expand(
                                       key: ValueKey(
                                           'header-${widget.data.headers[_header].id}'),
@@ -894,7 +894,7 @@ class _NavratriShoppingSectionState
                                   child: ExcludeSemantics(
                                     child: IgnorePointer(
                                       child: SizedBox(
-                                        height: 24,
+                                        height: 20,
                                         child: NavratriIllustration(
                                             image: widget.data.decorationImage ?? 'string-lights.svg',
                                             fit: BoxFit.fill),
@@ -906,21 +906,21 @@ class _NavratriShoppingSectionState
                             ),
                             Padding(
                               padding:
-                                  const EdgeInsets.symmetric(horizontal: 12),
+                                  const EdgeInsets.symmetric(horizontal: 10),
                               child: _layoutBody(width, scale, product),
                             ),
-                            const SizedBox(height: 18),
+                            const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.fromLTRB(30, 10, 30, 5),
+                              padding: const EdgeInsets.fromLTRB(20, 6, 20, 4),
                               decoration: const BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.vertical(
-                                  top: Radius.elliptical(75, 35),
+                                  top: Radius.elliptical(50, 24),
                                 ),
                               ),
                               child: Text(_labels.curvedTabLabel,
                                   style: TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w800,
                                       color: _appearance.smallText)),
                             ),
@@ -975,16 +975,16 @@ class _NavratriShoppingSectionState
             .toList()
         : <NavratriProduct>[];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 20),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(tab.label,
               style: TextStyle(
                   color: _appearance.smallText,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
           if (matches.isNotEmpty)
             SizedBox(
               height: Responsive.productShelfHeight(context),
@@ -1091,12 +1091,12 @@ class _PricePill extends StatelessWidget {
               Text(price(promotion.originalPrice),
                   style: TextStyle(
                       color: _CampaignStyle.of(context).smallText,
-                      fontSize: emphasize ? 12 : 9,
+                      fontSize: emphasize ? 10.5 : 8.5,
                       decoration: TextDecoration.lineThrough)),
             Text(price(promotion.price),
                 style: TextStyle(
                     color: _CampaignStyle.of(context).smallText,
-                    fontSize: emphasize ? 26 : 13,
+                    fontSize: emphasize ? 16 : 12,
                     fontWeight: FontWeight.w800)),
           ],
         ),
@@ -1113,22 +1113,22 @@ class _NavratriTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
       child: LayoutBuilder(builder: (context, constraints) {
         final contentWidth = math
             .max(
                 constraints.maxWidth,
-                tabs.length * (85 + math.max(0, scale - 1) * 30) +
-                    (tabs.length - 1) * 8)
+                tabs.length * (74 + math.max(0, scale - 1) * 20) +
+                    (tabs.length - 1) * 6)
             .toDouble();
-        final tabWidth = (contentWidth - (tabs.length - 1) * 8) / tabs.length;
+        final tabWidth = (contentWidth - (tabs.length - 1) * 6) / tabs.length;
         final measured = tabs.map((tab) {
           final painter = TextPainter(
             text: TextSpan(
                 text: tab.label,
                 style: DefaultTextStyle.of(context).style.merge(const TextStyle(
-                    fontSize: 10.5,
-                    height: 1.25,
+                    fontSize: 9.5,
+                    height: 1.2,
                     fontWeight: FontWeight.w800))),
             textDirection: Directionality.of(context),
             textScaler: MediaQuery.textScalerOf(context),
@@ -1136,7 +1136,7 @@ class _NavratriTabs extends StatelessWidget {
           return painter.height;
         }).reduce(math.max);
         final labelHeight =
-            math.max(42 + math.max(0, scale - 1) * 95, measured + 2).toDouble();
+            math.max(34 + math.max(0, scale - 1) * 60, measured + 2).toDouble();
         return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: SizedBox(
@@ -1145,7 +1145,7 @@ class _NavratriTabs extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     for (var i = 0; i < tabs.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 8),
+                      if (i > 0) const SizedBox(width: 6),
                       Expanded(
                         child: Semantics(
                           selected: i == selected,

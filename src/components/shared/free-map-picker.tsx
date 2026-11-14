@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Navigation, Search, X, Loader2, MapPin, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { getDistanceKm } from '@/lib/distance'
+import { cn } from '@/lib/utils'
 
 interface LocationData {
   lat: number
@@ -12,11 +13,15 @@ interface LocationData {
   street: string
   city: string
   pincode: string
+  houseNo?: string
+  label?: string
 }
 
 interface FreeMapPickerProps {
   initialLat?: number | null
   initialLng?: number | null
+  initialHouseNo?: string
+  initialLabel?: string
   storeLat?: number
   storeLng?: number
   originName?: string
@@ -60,6 +65,8 @@ function loadLeaflet(): Promise<any> {
 export function FreeMapPicker({
   initialLat = 26.1534185,
   initialLng = 80.1714024,
+  initialHouseNo = '',
+  initialLabel = 'Home',
   storeLat = 26.1534185,
   storeLng = 80.1714024,
   originName,
@@ -72,6 +79,8 @@ export function FreeMapPicker({
   
   const [currentLat, setCurrentLat] = useState<number>(initialLat || storeLat)
   const [currentLng, setCurrentLng] = useState<number>(initialLng || storeLng)
+  const [houseNo, setHouseNo] = useState<string>(initialHouseNo)
+  const [selectedTag, setSelectedTag] = useState<string>(initialLabel)
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [isDetecting, setIsDetecting] = useState(false)
@@ -263,6 +272,8 @@ export function FreeMapPicker({
       street: formattedAddress.split(',')[0] || 'Doorstep',
       city: city || 'Kanpur',
       pincode: pincode || '209206',
+      houseNo: houseNo.trim() || '.',
+      label: selectedTag || 'Home',
     })
   }
 
@@ -272,10 +283,10 @@ export function FreeMapPicker({
         <div>
           <h3 className="font-black text-text-primary text-base flex items-center gap-1.5">
             <span className="text-primary">📍</span>
-            <span>Set Exact Delivery Location</span>
+            <span>Pin Exact Delivery Location</span>
           </h3>
           <p className="text-[11px] text-text-secondary font-medium mt-0.5">
-            Move map or use GPS to pin your exact house / gate
+            Move map to place pin at your door / gate
           </p>
         </div>
         {onClose && (
@@ -323,7 +334,7 @@ export function FreeMapPicker({
       </button>
 
       {/* Map Container */}
-      <div className="relative w-full h-64 rounded-2xl overflow-hidden border border-border bg-muted shadow-inner">
+      <div className="relative w-full h-56 rounded-2xl overflow-hidden border border-border bg-muted shadow-inner">
         <div ref={mapContainerRef} className="w-full h-full" />
 
         {isLoadingMap && (
@@ -339,28 +350,77 @@ export function FreeMapPicker({
         </div>
       </div>
 
-      {/* Selected Address Display */}
-      <div className="p-3 bg-muted/40 rounded-2xl border border-border/60 text-xs space-y-1">
-        <div className="flex justify-between items-center gap-2">
-          <span className="font-bold text-text-primary text-[11px] truncate flex-1">{formattedAddress}</span>
-          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 ${isServiceable ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'}`}>
-            {isServiceable ? '🟢 Serviceable' : '🔴 Out of Service'}
+      {/* Zomato-Style Bottom Sheet: Address Details + Flat No + Tags */}
+      <div className="p-3.5 bg-muted/30 dark:bg-zinc-900/60 rounded-2xl border border-border/80 space-y-2.5">
+        {/* Address Mention Header */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-text-primary font-black text-xs">
+              <span className="text-primary text-sm">📍</span>
+              <span className="truncate">{formattedAddress.split(',').slice(0, 2).join(',') || formattedAddress}</span>
+            </div>
+            <p className="text-[10.5px] text-text-secondary truncate mt-0.5 font-medium">
+              {formattedAddress}
+            </p>
+          </div>
+          <span className={cn(
+            'text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 border',
+            isServiceable
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+          )}>
+            {isServiceable ? `${distanceKm.toFixed(1)} km • Deliverable` : `${distanceKm.toFixed(1)} km • Out of Zone`}
           </span>
         </div>
-        <p className="text-[10px] text-text-secondary font-medium">
-          Distance: {distanceKm.toFixed(1)} km from {originName || 'Store Hub'}
-        </p>
-      </div>
 
-      {/* Confirm Button */}
-      <button
-        type="button"
-        onClick={handleConfirm}
-        disabled={!isServiceable}
-        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-md active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
-      >
-        <Check size={16} /> Confirm Pin & Deliver Here
-      </button>
+        {/* Address Details Input */}
+        <div>
+          <label className="text-[10.5px] font-bold text-text-secondary flex items-center justify-between mb-1">
+            <span>Enter Your Address</span>
+          </label>
+          <input
+            type="text"
+            value={houseNo}
+            onChange={(e) => setHouseNo(e.target.value)}
+            placeholder="Enter Your Address"
+            className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-white dark:bg-zinc-800 focus:outline-none focus:border-primary font-medium shadow-2xs"
+          />
+        </div>
+
+        {/* Tag Selection Chips [Home] [Work] [Other] */}
+        <div className="flex items-center gap-2">
+          {[
+            { id: 'Home', icon: '🏠', label: 'Home' },
+            { id: 'Work', icon: '💼', label: 'Work' },
+            { id: 'Other', icon: '📍', label: 'Other' },
+          ].map((tag) => (
+            <button
+              key={tag.id}
+              type="button"
+              onClick={() => setSelectedTag(tag.id)}
+              className={cn(
+                'flex-1 py-1.5 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs',
+                selectedTag === tag.id
+                  ? 'bg-primary text-white border-primary shadow-xs'
+                  : 'bg-white dark:bg-zinc-800 text-text-secondary border-border/80 hover:bg-muted'
+              )}
+            >
+              <span>{tag.icon}</span>
+              <span>{tag.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Save & Deliver Here Button */}
+        <button
+          type="button"
+          onClick={handleConfirm}
+          disabled={!isServiceable}
+          className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl transition-all shadow-md active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 mt-1"
+        >
+          <Check size={16} /> Save Address & Deliver Here
+        </button>
+      </div>
     </div>
   )
 }

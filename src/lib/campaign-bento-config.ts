@@ -33,6 +33,7 @@ export const freshMarketTabSchema = z
     id: slugId,
     label: shortText.min(1),
     icon: z.string().trim().max(16).default('🥬'),
+    image: z.string().trim().optional().default(''),
     items: z.array(bentoSlotItemSchema).min(1).max(6),
   })
   .strict()
@@ -85,11 +86,11 @@ export const campaignBentoConfigSchema = z
         accentColor: z.string().trim().optional().default('#0284C7'),
         textColor: z.string().trim().optional().default('#1E3A8A'),
         tabs: z.array(freshMarketTabSchema).default([
-          { id: 'body-lotions', label: 'Body Lotions', icon: '🧴', items: [] },
-          { id: 'face-moisturizers', label: 'Face Moisturizers', icon: '✨', items: [] },
-          { id: 'lip-balm', label: 'Lip Balm', icon: '💄', items: [] },
-          { id: 'hair-care', label: 'Hair Care', icon: '💆', items: [] },
-          { id: 'lip-mask', label: 'Lip Mask', icon: '💋', items: [] },
+          { id: 'body-lotions', label: 'Body Lotions', icon: '🧴', image: '/navratri/categories/body.png', items: [] },
+          { id: 'face-moisturizers', label: 'Face Moisturizers', icon: '✨', image: '/navratri/categories/face.png', items: [] },
+          { id: 'lip-balm', label: 'Lip Balm', icon: '💄', image: '/navratri/categories/lip.png', items: [] },
+          { id: 'hair-care', label: 'Hair Care', icon: '💆', image: '/navratri/categories/hair.png', items: [] },
+          { id: 'lip-mask', label: 'Lip Mask', icon: '💋', image: '/navratri/categories/lip.png', items: [] },
         ]),
         items: z.array(bentoSlotItemSchema).default([]),
       })
@@ -111,11 +112,11 @@ export const campaignBentoConfigSchema = z
         accentColor: '#0284C7',
         textColor: '#1E3A8A',
         tabs: [
-          { id: 'body-lotions', label: 'Body Lotions', icon: '🧴', items: [] },
-          { id: 'face-moisturizers', label: 'Face Moisturizers', icon: '✨', items: [] },
-          { id: 'lip-balm', label: 'Lip Balm', icon: '💄', items: [] },
-          { id: 'hair-care', label: 'Hair Care', icon: '💆', items: [] },
-          { id: 'lip-mask', label: 'Lip Mask', icon: '💋', items: [] },
+          { id: 'body-lotions', label: 'Body Lotions', icon: '🧴', image: '/navratri/categories/body.png', items: [] },
+          { id: 'face-moisturizers', label: 'Face Moisturizers', icon: '✨', image: '/navratri/categories/face.png', items: [] },
+          { id: 'lip-balm', label: 'Lip Balm', icon: '💄', image: '/navratri/categories/lip.png', items: [] },
+          { id: 'hair-care', label: 'Hair Care', icon: '💆', image: '/navratri/categories/hair.png', items: [] },
+          { id: 'lip-mask', label: 'Lip Mask', icon: '💋', image: '/navratri/categories/lip.png', items: [] },
         ],
         items: [],
       }),
@@ -209,11 +210,11 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
     title: 'The Seasonal Switch-Up',
     subtitle: 'POWERED BY Cetaphil DOT & KEY',
     tabs: [
-      { id: 'body-lotions', label: 'Body Lotions', icon: '🧴', items: [] },
-      { id: 'face-moisturizers', label: 'Face Moisturizers', icon: '✨', items: [] },
-      { id: 'lip-balm', label: 'Lip Balm', icon: '💄', items: [] },
-      { id: 'hair-care', label: 'Hair Care', icon: '💆', items: [] },
-      { id: 'lip-mask', label: 'Lip Mask', icon: '💋', items: [] },
+      { id: 'body-lotions', label: 'Body Lotions', icon: '🧴', image: '/navratri/categories/body.png', items: [] },
+      { id: 'face-moisturizers', label: 'Face Moisturizers', icon: '✨', image: '/navratri/categories/face.png', items: [] },
+      { id: 'lip-balm', label: 'Lip Balm', icon: '💄', image: '/navratri/categories/lip.png', items: [] },
+      { id: 'hair-care', label: 'Hair Care', icon: '💆', image: '/navratri/categories/hair.png', items: [] },
+      { id: 'lip-mask', label: 'Lip Mask', icon: '💋', image: '/navratri/categories/lip.png', items: [] },
     ],
     items: [],
   },
@@ -239,6 +240,7 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
         id: 'sabzi',
         label: 'Sabzi',
         icon: '🍅',
+        image: '/navratri/ref-fresh-tomato.png',
         items: [
           {
             id: 'tomato',
@@ -266,6 +268,7 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
         id: 'fruits',
         label: 'Fruits',
         icon: '🥭',
+        image: '/navratri/summer-mango.svg',
         items: [
           {
             id: 'mango',
@@ -293,6 +296,7 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
         id: 'herbs',
         label: 'Herbs',
         icon: '🌿',
+        image: '/navratri/fresh-coriander.svg',
         items: [
           {
             id: 'coriander',

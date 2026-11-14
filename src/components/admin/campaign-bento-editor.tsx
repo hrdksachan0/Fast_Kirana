@@ -1269,7 +1269,7 @@ export function CampaignBentoEditor({
                         </div>
                         <div>
                           <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
-                            Tab Emoji / Icon
+                            Tab Emoji / Icon (Optional fallback)
                           </label>
                           <input
                             type="text"
@@ -1289,6 +1289,24 @@ export function CampaignBentoEditor({
                           />
                         </div>
                       </div>
+
+                      {/* Tab Image / Thumbnail */}
+                      <BentoImageInput
+                        label="Tab Photo / Image (Circular Avatar)"
+                        value={currentSeasonalTab.image || ''}
+                        onChange={(image) =>
+                          updateDraft((prev) => ({
+                            ...prev,
+                            seasonalSwitchUp: {
+                              ...(prev.seasonalSwitchUp ?? defaultCampaignBentoConfig.seasonalSwitchUp!),
+                              tabs: (prev.seasonalSwitchUp?.tabs ?? defaultCampaignBentoConfig.seasonalSwitchUp!.tabs).map((t) =>
+                                t.id === currentSeasonalTab.id ? { ...t, image } : t
+                              ),
+                            },
+                          }))
+                        }
+                        onUpload={onUpload}
+                      />
 
                       {currentSeasonalTab.items.map((slot, idx) => (
                         <BentoSlotEditor
@@ -1427,7 +1445,7 @@ export function CampaignBentoEditor({
                       </div>
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
-                          Pill Emoji / Icon
+                          Pill Emoji / Icon (Optional fallback)
                         </label>
                         <input
                           type="text"
@@ -1447,6 +1465,24 @@ export function CampaignBentoEditor({
                         />
                       </div>
                     </div>
+
+                    {/* Pill Image / Thumbnail */}
+                    <BentoImageInput
+                      label="Pill Photo / Image (Produce Thumbnail)"
+                      value={currentFreshTab.image || ''}
+                      onChange={(image) =>
+                        updateDraft((prev) => ({
+                          ...prev,
+                          freshMarket: {
+                            ...prev.freshMarket,
+                            tabs: prev.freshMarket.tabs.map((t) =>
+                              t.id === currentFreshTab.id ? { ...t, image } : t
+                            ),
+                          },
+                        }))
+                      }
+                      onUpload={onUpload}
+                    />
 
                     {currentFreshTab.items.map((slot, idx) => (
                       <BentoSlotEditor

@@ -17,7 +17,7 @@ class GiftingTrustStrip extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildPill('⚡', '10-Min Fast', 'Delivery'),
+          _buildPill('🌸', 'Handcrafted', 'With Love'),
           Container(width: 1, height: 22, color: const Color(0xFFEBC1CC)),
           _buildPill('💌', 'Free Handwritten', 'Card Inside'),
           Container(width: 1, height: 22, color: const Color(0xFFEBC1CC)),

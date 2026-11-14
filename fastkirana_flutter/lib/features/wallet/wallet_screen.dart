@@ -678,7 +678,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             Text(
               'FastMinute Wallet',
               style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 18),
+                fontSize: Responsive.scaledFontSize(context, 16.5),
                 fontWeight: FontWeight.w800,
                 color: AppDesignSystem.slate900,
                 letterSpacing: -0.3,
@@ -687,7 +687,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             Text(
               'Zero-failure 1-tap grocery payments',
               style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 11),
+                fontSize: Responsive.scaledFontSize(context, 10.5),
                 color: AppDesignSystem.slate500,
                 fontWeight: FontWeight.w500,
               ),
@@ -731,7 +731,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             // ==========================================
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
                 gradient: const LinearGradient(
                   colors: [
                     Color(0xFF0F172A), // Deep Slate Obsidian
@@ -745,8 +745,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF0F172A).withValues(alpha: 0.35),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -757,8 +757,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                     top: -24,
                     right: -24,
                     child: Container(
-                      width: 130,
-                      height: 130,
+                      width: 120,
+                      height: 120,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppDesignSystem.emerald600.withValues(alpha: 0.18),
@@ -769,8 +769,8 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                     bottom: -30,
                     left: -20,
                     child: Container(
-                      width: 110,
-                      height: 110,
+                      width: 100,
+                      height: 100,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppDesignSystem.primary.withValues(alpha: 0.14),
@@ -780,7 +780,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
 
                   // Main Card Content
                   Padding(
-                    padding: const EdgeInsets.all(22),
+                    padding: const EdgeInsets.all(18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -791,31 +791,31 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(5),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(7),
                                   ),
                                   child: const Icon(
                                     Icons.bolt_rounded,
                                     color: Color(0xFF34D399),
-                                    size: 16,
+                                    size: 15,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 7),
                                 Text(
                                   'FASTMINUTE CASH',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 11),
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
                                     fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.3,
+                                    letterSpacing: 1.2,
                                     color: const Color(0xFF94A3B8),
                                   ),
                                 ),
                               ],
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF10B981).withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(20),
@@ -828,18 +828,18 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Container(
-                                    width: 6,
-                                    height: 6,
+                                    width: 5,
+                                    height: 5,
                                     decoration: const BoxDecoration(
                                       shape: BoxShape.circle,
                                       color: Color(0xFF34D399),
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(width: 5),
                                   Text(
                                     'Active & Protected',
                                     style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                                      fontSize: Responsive.scaledFontSize(context, 10),
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFF6EE7B7),
                                     ),
@@ -849,18 +849,18 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 14),
 
                         // Balance Label
                         Text(
                           'Total Usable Balance',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12),
+                            fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF94A3B8),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
 
                         // Big Bold Balance Typography
                         Row(
@@ -870,7 +870,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                             Text(
                               '₹',
                               style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 26),
+                                fontSize: Responsive.scaledFontSize(context, 22),
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF34D399),
                               ),
@@ -879,10 +879,10 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                             Text(
                               wallet.totalUsable.toStringAsFixed(2),
                               style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 38),
+                                fontSize: Responsive.scaledFontSize(context, 32),
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
-                                letterSpacing: -1,
+                                letterSpacing: -0.8,
                               ),
                             ),
                           ],
@@ -890,23 +890,23 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
 
                         // Split Pills Breakdown
                         if (wallet.promoBalance > 0) ...[
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.card_giftcard_rounded, color: Color(0xFFFCD34D), size: 14),
+                                const Icon(Icons.card_giftcard_rounded, color: Color(0xFFFCD34D), size: 13),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     'Includes ₹${wallet.promoBalance.toStringAsFixed(2)} Referral Cashback (Directly usable on orders)',
                                     style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11),
+                                      fontSize: Responsive.scaledFontSize(context, 10.5),
                                       color: const Color(0xFFFDE68A),
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -917,7 +917,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                           ),
                         ],
 
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 16),
 
                         // Action Buttons Row
                         Row(
@@ -930,33 +930,33 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                   HapticFeedback.lightImpact();
                                   _showAddMoneySheet(context);
                                 },
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(12),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 13),
+                                  padding: const EdgeInsets.symmetric(vertical: 10.5),
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       colors: [Color(0xFF10B981), Color(0xFF059669)],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
-                                    borderRadius: BorderRadius.circular(14),
+                                    borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF10B981).withValues(alpha: 0.45),
-                                        blurRadius: 14,
-                                        offset: const Offset(0, 4),
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 3),
                                       ),
                                     ],
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 18),
-                                      const SizedBox(width: 8),
+                                      const Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 16),
+                                      const SizedBox(width: 6),
                                       Text(
                                         'Add Money',
                                         style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 13.5),
+                                          fontSize: Responsive.scaledFontSize(context, 12.5),
                                           fontWeight: FontWeight.w800,
                                           color: Colors.white,
                                         ),
@@ -966,7 +966,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 10),
 
                             // Invite & Earn Secondary Button
                             Expanded(
@@ -976,12 +976,12 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                   HapticFeedback.lightImpact();
                                   Navigator.pushNamed(context, '/referral');
                                 },
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(12),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 13),
+                                  padding: const EdgeInsets.symmetric(vertical: 10.5),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(14),
+                                    borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: Colors.white.withValues(alpha: 0.22),
                                       width: 1,
@@ -990,12 +990,12 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.celebration_rounded, color: Color(0xFFFCD34D), size: 18),
-                                      const SizedBox(width: 8),
+                                      const Icon(Icons.celebration_rounded, color: Color(0xFFFCD34D), size: 16),
+                                      const SizedBox(width: 6),
                                       Text(
                                         'Invite & Earn',
                                         style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 13.5),
+                                          fontSize: Responsive.scaledFontSize(context, 12.5),
                                           fontWeight: FontWeight.w700,
                                           color: Colors.white,
                                         ),
@@ -1013,16 +1013,16 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
 
             // ==========================================
             // QUICK TOP-UP PRESET STRIP
             // ==========================================
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppDesignSystem.slate200),
                 boxShadow: AppDesignSystem.shadowSm,
               ),
@@ -1031,12 +1031,12 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.flash_on_rounded, color: AppDesignSystem.warning, size: 16),
-                      const SizedBox(width: 6),
+                      const Icon(Icons.flash_on_rounded, color: AppDesignSystem.warning, size: 15),
+                      const SizedBox(width: 5),
                       Text(
                         'QUICK TOP-UP',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.8,
                           color: AppDesignSystem.slate700,
@@ -1044,23 +1044,23 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Row(
                     children: [200, 500, 1000, 2000].map((amt) {
                       final isPopular = amt == 500;
                       return Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 3),
                           child: InkWell(
                             onTap: () => _showAddMoneySheet(context, initialAmount: amt),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              padding: const EdgeInsets.symmetric(vertical: 7.5),
                               decoration: BoxDecoration(
                                 color: isPopular
                                     ? AppDesignSystem.primaryBg
                                     : const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: isPopular
                                       ? AppDesignSystem.primary.withValues(alpha: 0.5)
@@ -1074,7 +1074,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                   Text(
                                     '+₹$amt',
                                     style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w800,
                                       color: isPopular ? AppDesignSystem.primary : AppDesignSystem.slate800,
                                     ),
@@ -1083,7 +1083,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                     Text(
                                       'POPULAR',
                                       style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                                        fontSize: Responsive.scaledFontSize(context, 8),
                                         fontWeight: FontWeight.w800,
                                         color: AppDesignSystem.primaryDark,
                                         letterSpacing: 0.5,
@@ -1100,7 +1100,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
 
             // ==========================================
             // TRUST & BENEFITS BENTO GRID (Zepto / Blinkit style)
@@ -1135,7 +1135,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
 
             // ==========================================
             // TRANSACTION PASSBOOK HEADER
@@ -1146,28 +1146,28 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                 Text(
                   'Transaction Passbook',
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 16),
+                    fontSize: Responsive.scaledFontSize(context, 15),
                     fontWeight: FontWeight.w800,
                     color: AppDesignSystem.slate900,
                     letterSpacing: -0.3,
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: const Color(0xFFECFDF5),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFFA7F3D0)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 13),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 12),
+                      const SizedBox(width: 3.5),
                       Text(
                         'Verified Only',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontSize: Responsive.scaledFontSize(context, 10),
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF047857),
                         ),
@@ -1177,7 +1177,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             // ==========================================
             // TRANSACTIONS LIST / PASSBOOK
@@ -1277,39 +1277,46 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: txList.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
                   itemBuilder: (context, idx) {
                     final t = txList[idx];
                     final isCredit = t.isCredit;
 
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8.5),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppDesignSystem.slate200),
-                        boxShadow: AppDesignSystem.shadowSm,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFF1F5F9)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
-                          // Icon container
+                          // Icon container (Compact 34x34)
                           Container(
-                            width: 42,
-                            height: 42,
+                            width: 34,
+                            height: 34,
                             decoration: BoxDecoration(
                               color: isCredit ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: isCredit ? const Color(0xFFA7F3D0) : const Color(0xFFFECDD3),
+                                width: 0.8,
                               ),
                             ),
                             child: Icon(
                               isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                              size: 20,
+                              size: 16,
                               color: isCredit ? const Color(0xFF059669) : const Color(0xFFE11D48),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
 
                           // Description and date
                           Expanded(
@@ -1319,31 +1326,31 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                 Text(
                                   _cleanTxDescription(t.description, t.type),
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 13.5),
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
                                     fontWeight: FontWeight.w700,
                                     color: AppDesignSystem.slate900,
-                                    height: 1.25,
+                                    height: 1.2,
                                   ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   softWrap: true,
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 3),
                                 Wrap(
                                   crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 6,
+                                  spacing: 5,
                                   runSpacing: 2,
                                   children: [
                                     Text(
                                       _formatDateTime(t.createdAt),
                                       style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 11),
+                                        fontSize: Responsive.scaledFontSize(context, 10.5),
                                         color: AppDesignSystem.slate500,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                      padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.0),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFFECFDF5),
                                         borderRadius: BorderRadius.circular(4),
@@ -1352,12 +1359,12 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(Icons.check_circle_rounded, size: 9, color: Color(0xFF059669)),
-                                          const SizedBox(width: 3),
+                                          const Icon(Icons.check_circle_rounded, size: 8.5, color: Color(0xFF059669)),
+                                          const SizedBox(width: 2.5),
                                           Text(
                                             'Success',
                                             style: GoogleFonts.inter(
-                                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                                              fontSize: Responsive.scaledFontSize(context, 8.5),
                                               fontWeight: FontWeight.w700,
                                               color: const Color(0xFF059669),
                                             ),
@@ -1370,7 +1377,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
 
                           // Amount
                           Column(
@@ -1380,17 +1387,17 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                               Text(
                                 '${isCredit ? '+' : '-'}₹${t.amount.toStringAsFixed(2)}',
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 15),
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontWeight: FontWeight.w800,
                                   color: isCredit ? const Color(0xFF059669) : const Color(0xFFE11D48),
                                 ),
                               ),
                               if (t.balanceAfter > 0) ...[
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 1.5),
                                 Text(
                                   'Bal: ₹${t.balanceAfter.toStringAsFixed(2)}',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10),
+                                    fontSize: Responsive.scaledFontSize(context, 9.5),
                                     color: AppDesignSystem.slate400,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -1421,10 +1428,10 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppDesignSystem.slate200),
           boxShadow: AppDesignSystem.shadowSm,
         ),
@@ -1432,18 +1439,18 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
                 color: bgColor,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: iconColor, size: 16),
+              child: Icon(icon, color: iconColor, size: 14),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               title,
               style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 12),
+                fontSize: Responsive.scaledFontSize(context, 11),
                 fontWeight: FontWeight.w800,
                 color: AppDesignSystem.slate900,
               ),
@@ -1452,9 +1459,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             Text(
               desc,
               style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 10),
+                fontSize: Responsive.scaledFontSize(context, 9.5),
                 color: AppDesignSystem.slate500,
-                height: 1.2,
+                height: 1.15,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,

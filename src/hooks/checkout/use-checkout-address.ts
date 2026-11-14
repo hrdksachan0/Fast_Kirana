@@ -443,33 +443,48 @@ export function useCheckoutAddress({
   const handleUpdateAddressCoordinates = async (
     addressId: string,
     lat: number,
-    lng: number
+    lng: number,
+    houseNo?: string,
+    label?: string,
+    street?: string
   ): Promise<boolean> => {
     try {
+      const payload: any = { id: addressId, lat, lng }
+      if (houseNo) payload.houseNo = houseNo
+      if (label) payload.label = label
+      if (street) payload.street = street
+
       const res = await fetch(`${apiUrl()}/api/addresses`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: addressId, lat, lng }),
+        body: JSON.stringify(payload),
       })
       if (res.ok) {
         const updated = await res.json()
         setAddresses((prev) =>
           prev.map((a) =>
             a.id === addressId
-              ? { ...a, lat: updated.lat ?? lat, lng: updated.lng ?? lng }
+              ? {
+                  ...a,
+                  lat: updated.lat ?? lat,
+                  lng: updated.lng ?? lng,
+                  houseNo: updated.houseNo ?? a.houseNo,
+                  label: updated.label ?? a.label,
+                  street: updated.street ?? a.street,
+                }
               : a
           )
         )
         triggerHaptic('light')
-        toast.success('Exact delivery pin saved to your address! 📍')
+        toast.success('Address & exact pin saved successfully! 📍')
         return true
       } else {
         const err = await res.json().catch(() => ({}))
-        toast.error(err.error || 'Failed to update pin location')
+        toast.error(err.error || 'Failed to update address')
         return false
       }
     } catch {
-      toast.error('Network error updating pin location')
+      toast.error('Network error updating address')
       return false
     }
   }

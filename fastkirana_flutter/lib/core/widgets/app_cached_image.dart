@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:shimmer/shimmer.dart';
+import '../config/app_config.dart';
 
 /// Custom high-performance disk cache manager for FastKirana.
 /// Retains images for up to 30 days and caches up to 1,000 objects.
@@ -55,18 +56,20 @@ class AppCachedImage extends StatelessWidget {
     this.maxHeightDiskCache = 800,
   });
 
-  /// Normalize raw image URL to a fully-qualified https URL
+  /// Normalize raw image URL to a fully-qualified CDN or API https URL
   static String? normalizeUrl(String? raw) {
     if (raw == null) return null;
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return null;
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
+    final cdnUrl = AppConfig.toCdnImageUrl(trimmed);
+    if (cdnUrl.startsWith('http://') || cdnUrl.startsWith('https://')) {
+      return cdnUrl;
     }
-    if (trimmed.startsWith('/')) {
-      return 'https://www.fastkirana.in$trimmed';
-    }
-    return 'https://www.fastkirana.in/$trimmed';
+    final base = AppConfig.apiBaseUrl.endsWith('/')
+        ? AppConfig.apiBaseUrl.substring(0, AppConfig.apiBaseUrl.length - 1)
+        : AppConfig.apiBaseUrl;
+    final path = cdnUrl.startsWith('/') ? cdnUrl : '/$cdnUrl';
+    return '$base$path';
   }
 
   /// Create a high-performance CachedNetworkImageProvider hooked to FastKiranaImageCacheManager
@@ -110,8 +113,13 @@ class AppCachedImage extends StatelessWidget {
     return shimmer;
   }
 
-  /// Pre-cache a critical remote image (e.g. top banner or hero deal)
-  static Future<void> precache(BuildContext context, String? url) async {
+  /// Pre-cache a critical remote image (e.g. top banner or hero deal) with matching memory downsampling keys
+  static Future<void> precache(
+    BuildContext context,
+    String? url, {
+    int? memCacheWidth = 400,
+    int? memCacheHeight,
+  }) async {
     final normalized = normalizeUrl(url);
     if (normalized == null) return;
     try {
@@ -119,6 +127,8 @@ class AppCachedImage extends StatelessWidget {
         CachedNetworkImageProvider(
           normalized,
           cacheManager: FastKiranaImageCacheManager.instance,
+          maxWidth: memCacheWidth,
+          maxHeight: memCacheHeight,
         ),
         context,
       );
@@ -145,8 +155,9 @@ class AppCachedImage extends StatelessWidget {
         memCacheHeight: memCacheHeight,
         maxWidthDiskCache: maxWidthDiskCache,
         maxHeightDiskCache: maxHeightDiskCache,
-        fadeInDuration: const Duration(milliseconds: 180),
-        fadeOutDuration: const Duration(milliseconds: 120),
+        fadeInDuration: Duration.zero,
+        fadeOutDuration: Duration.zero,
+        useOldImageOnUrlChange: true,
         placeholder: (context, url) =>
             placeholder ?? buildShimmerPlaceholder(width: width, height: height, borderRadius: borderRadius),
         errorWidget: (context, url, error) => errorWidget ?? _buildFallback(),

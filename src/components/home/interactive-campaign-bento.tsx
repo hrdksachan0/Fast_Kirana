@@ -354,7 +354,7 @@ export function InteractiveCampaignBento({
                 </div>
 
                 {/* Liquid Beauty Sub-Category Connected Tabs */}
-                <div className="flex items-center gap-1.5 px-3 pt-3 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-2 px-3 pt-3 overflow-x-auto no-scrollbar">
                   {(activeConfig.seasonalSwitchUp?.tabs ?? []).map((tab) => {
                     const isSelected = (selectedSeasonalTab || 'body-lotions') === tab.id
                     return (
@@ -363,13 +363,29 @@ export function InteractiveCampaignBento({
                         type="button"
                         onClick={() => setSelectedSeasonalTab(tab.id)}
                         className={cn(
-                          'px-3 py-2 rounded-t-xl text-[11px] font-extrabold transition-all flex flex-col items-center gap-0.5 cursor-pointer shrink-0 border-t border-x',
+                          'px-3 py-2 rounded-t-xl text-[11px] font-extrabold transition-all flex flex-col items-center gap-1.5 cursor-pointer shrink-0 border-t border-x',
                           isSelected
                             ? 'bg-[#EAF5FF] text-[#0284C7] border-[#93C5FD] shadow-xs translate-y-[1px]'
                             : 'bg-white/70 text-slate-600 border-transparent hover:bg-white'
                         )}
                       >
-                        <span className="text-base">{tab.icon}</span>
+                        {/* Circular Image Avatar (matching Flutter app) */}
+                        <div
+                          className={cn(
+                            'w-11 h-11 rounded-full bg-white flex items-center justify-center overflow-hidden border p-0.5 shadow-2xs',
+                            isSelected ? 'border-[#0284C7] shadow-sm' : 'border-sky-200'
+                          )}
+                        >
+                          {tab.image ? (
+                            <img
+                              src={tab.image}
+                              alt={tab.label}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-xl">{tab.icon}</span>
+                          )}
+                        </div>
                         <span className="whitespace-nowrap">{tab.label}</span>
                       </button>
                     )
@@ -496,13 +512,21 @@ export function InteractiveCampaignBento({
                         type="button"
                         onClick={() => setActiveFreshPill(tab.id)}
                         className={cn(
-                          'px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none whitespace-nowrap',
+                          'px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none whitespace-nowrap',
                           isActive
                             ? 'bg-[#15803D] text-white shadow-xs'
                             : 'bg-white text-slate-700 hover:bg-white/80 border border-slate-200'
                         )}
                       >
-                        <span className="text-xs">{tab.icon}</span>
+                        {tab.image ? (
+                          <img
+                            src={tab.image}
+                            alt={tab.label}
+                            className="w-4 h-4 object-contain rounded-full"
+                          />
+                        ) : (
+                          <span className="text-xs">{tab.icon}</span>
+                        )}
                         <span>{tab.label}</span>
                       </button>
                     )

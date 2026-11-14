@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +19,7 @@ import '../../providers/store_settings_provider.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../../core/utils/dish_timing.dart';
 import '../../widgets/variant_selector_sheet.dart';
+import '../../widgets/floating_cart_bar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../products/product_detail_screen.dart';
 import '../bakery/bakery_store_screen.dart';
@@ -250,13 +253,18 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
               )
             : Padding(
                 padding: const EdgeInsets.only(left: 4),
-                child: Text(
-                  widget.category.name,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF0F172A),
-                    letterSpacing: -0.3,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    widget.category.name,
+                    maxLines: 1,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0F172A),
+                      letterSpacing: -0.3,
+                    ),
                   ),
                 ),
               ),
@@ -528,8 +536,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
             ],
           ),
 
-          // 4. Exact Reference Floating Bottom Cart Bar
-          const _ReferenceBottomCartBar(),
+          // 4. Exact Reference Floating Bottom Cart Bar (Single Universal Widget)
+          FloatingCartBar(bottomOffset: MediaQuery.of(context).padding.bottom + 10),
         ],
       ),
     );
@@ -557,11 +565,6 @@ class _ReferenceExactProductCard extends ConsumerWidget {
             .where((i) => i.productId == product.id || i.productId.startsWith('${product.id}_'))
             .fold<int>(0, (sum, i) => sum + i.quantity) ??
         0;
-    final discountAmount = (product.mrp > product.price) ? (product.mrp - product.price).round() : 0;
-    final hasFresh = product.tags.any((t) =>
-        t.toLowerCase().contains('fresh') ||
-        t.toLowerCase().contains('veg') ||
-        t.toLowerCase().contains('fruit'));
 
     // Store, timings, and stock availability checks
     final settings = ref.watch(storeSettingsProvider).valueOrNull;
@@ -602,20 +605,23 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(15),
-                    child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: product.imageUrl!,
-                            fit: BoxFit.cover,
-                            memCacheWidth: 350,
-                            memCacheHeight: 350,
-                            placeholder: (_, __) => Container(color: const Color(0xFFF8FAFC)),
-                            errorWidget: (_, __, ___) => const Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: product.imageUrl!,
+                              fit: BoxFit.contain,
+                              memCacheWidth: 350,
+                              memCacheHeight: 350,
+                              placeholder: (_, __) => Container(color: const Color(0xFFF8FAFC)),
+                              errorWidget: (_, __, ___) => const Center(
+                                child: Icon(Icons.shopping_basket_outlined, color: Color(0xFFCBD5E1), size: 30),
+                              ),
+                            )
+                          : const Center(
                               child: Icon(Icons.shopping_basket_outlined, color: Color(0xFFCBD5E1), size: 30),
                             ),
-                          )
-                        : const Center(
-                            child: Icon(Icons.shopping_basket_outlined, color: Color(0xFFCBD5E1), size: 30),
-                          ),
+                    ),
                   ),
                 ),
 
@@ -912,9 +918,39 @@ class _ReferenceExactProductCard extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // 2. Price Row: Solid Green Badge + Strike-through MRP
+          // 2. Product Title (UPAR! 2-lines max, uniform height for locked grid rows)
+          SizedBox(
+            height: 36,
+            child: Text(
+              product.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1E293B),
+                height: 1.25,
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
+
+          // 3. Unit / Weight
+          Text(
+            product.unit.isNotEmpty ? product.unit : '1 pc',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 4),
+
+          // 4. Price Row (NICHE!): Solid Green Badge + Strike-through MRP (No OFF pill)
           Row(
             children: [
               Container(
@@ -946,213 +982,7 @@ class _ReferenceExactProductCard extends ConsumerWidget {
               ],
             ],
           ),
-          const SizedBox(height: 2.5),
-
-          // 3. Discount Text: e.g. "₹23 OFF"
-          if (discountAmount > 0)
-            Text(
-              '₹$discountAmount OFF',
-              style: GoogleFonts.inter(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF16A34A),
-              ),
-            ),
-          const SizedBox(height: 3),
-
-          // 4. Product Title (2-lines max)
-          Text(
-            product.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1E293B),
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 3),
-
-          // 5. Unit / Weight
-          Text(
-            product.unit.isNotEmpty ? product.unit : '1 pc',
-            style: GoogleFonts.inter(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 3.5),
-
-          // 6. Fresh Badge
-          if (hasFresh)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0F2FE),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                'Fresh',
-                style: GoogleFonts.inter(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0284C7),
-                ),
-              ),
-            ),
         ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Exact Replica Floating Bottom Cart Bar (from User's Screenshot)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ReferenceBottomCartBar extends ConsumerWidget {
-  const _ReferenceBottomCartBar();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider).value;
-    if (cart == null || cart.totalItems == 0) return const SizedBox.shrink();
-
-    final settings = ref.watch(storeSettingsProvider).valueOrNull;
-    final isStoreOpen = settings?.groceryMartOpen ?? true;
-
-    final count = cart.totalItems;
-    final total = cart.subtotal;
-    final freeThreshold = settings?.freeDeliveryThreshold ?? 199.0;
-    final remainingForFree = (freeThreshold - total).clamp(0.0, freeThreshold).toInt();
-
-    return Positioned(
-      left: 12,
-      right: 12,
-      bottom: MediaQuery.of(context).padding.bottom + 8,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.10),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Delivery Scooter Icon
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Text('🛵', style: TextStyle(fontSize: 16)),
-              ),
-            ),
-            const SizedBox(width: 8),
-
-            // Free Delivery Unlock Helper or Store Closed Notice
-            Expanded(
-              child: RichText(
-                text: TextSpan(
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF334155),
-                  ),
-                  children: [
-                    if (!isStoreOpen) ...[
-                      const TextSpan(
-                        text: '🌙 Darkstore closed',
-                        style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFE11D48)),
-                      ),
-                      const TextSpan(
-                        text: ' · Order opens at 7 AM',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-                      ),
-                    ] else if (remainingForFree > 0) ...[
-                      const TextSpan(text: 'Shop for '),
-                      TextSpan(
-                        text: '₹$remainingForFree',
-                        style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                      ),
-                      const TextSpan(text: ' → Unlock free delivery'),
-                    ] else ...[
-                      const TextSpan(
-                        text: '🎉 Free Delivery Unlocked!',
-                        style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF16A34A)),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-
-            // Pink Cart Pill Button
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                Navigator.pushNamed(context, '/cart');
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDB2777), // Exact pink from reference screenshot
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFDB2777).withValues(alpha: 0.35),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 14),
-                    const SizedBox(width: 5),
-                    Text(
-                      'Cart',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$count',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFFDB2777),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

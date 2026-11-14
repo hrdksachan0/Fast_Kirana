@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'campaign_bento_models.dart';
+export 'campaign_bento_models.dart';
 import 'campaign_bento_provider.dart';
 import '../../providers/store_hub_provider.dart';
 import 'widgets/fresh_market_card.dart';
@@ -10,15 +11,37 @@ import 'widgets/seasonal_switch_up_card.dart';
 import 'widgets/value_picks_card.dart';
 import 'widgets/gifting_boutique_card.dart';
 
-class CampaignBentoZone extends ConsumerWidget {
-  final bool showLiveEditButton;
+class SingleCampaignBentoCard extends ConsumerWidget {
+  final CampaignCardType type;
 
-  const CampaignBentoZone({
+  const SingleCampaignBentoCard({
     super.key,
-    this.showLiveEditButton = false,
+    required this.type,
   });
 
-  Widget _buildCard(CampaignBentoCardConfig card) {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final config = ref.watch(campaignBentoProvider);
+    if (!config.enabled) return const SizedBox.shrink();
+
+    final hub = ref.watch(currentStoreHubProvider);
+    CampaignBentoCardConfig? card;
+    for (final c in config.cards) {
+      if (c.type == type && c.isVisibleForHub(hub.id)) {
+        card = c;
+        break;
+      }
+    }
+
+    if (card == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: buildCardWidget(card),
+    );
+  }
+
+  static Widget buildCardWidget(CampaignBentoCardConfig card) {
     switch (card.type) {
       case CampaignCardType.seasonalSwitchUp:
         return SeasonalSwitchUpCard(card: card);
@@ -36,6 +59,19 @@ class CampaignBentoZone extends ConsumerWidget {
       case CampaignCardType.custom:
         return FreshMarketCard(card: card);
     }
+  }
+}
+
+class CampaignBentoZone extends ConsumerWidget {
+  final bool showLiveEditButton;
+
+  const CampaignBentoZone({
+    super.key,
+    this.showLiveEditButton = false,
+  });
+
+  Widget _buildCard(CampaignBentoCardConfig card) {
+    return SingleCampaignBentoCard.buildCardWidget(card);
   }
 
   void _openLiveCustomizer(BuildContext context, WidgetRef ref) {

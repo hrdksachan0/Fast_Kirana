@@ -296,11 +296,11 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                         _buildAddressTypeSelector(),
                         const SizedBox(height: 16),
 
-                        // House / Flat No
+                        // Complete Address
                         _buildInputField(
                           controller: _houseController,
-                          label: 'House / Flat / Floor No. *',
-                          hint: 'e.g. Flat 402, 4th Floor, Tower B',
+                          label: 'Enter Your Address *',
+                          hint: 'Enter your complete address (House no, landmark, street)',
                           icon: Icons.home_work_rounded,
                         ),
                         const SizedBox(height: 12),

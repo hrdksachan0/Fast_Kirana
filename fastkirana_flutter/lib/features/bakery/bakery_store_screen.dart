@@ -16,6 +16,7 @@ import '../../providers/address_provider.dart';
 import '../../providers/store_hub_provider.dart';
 import '../cart/cart_screen.dart';
 import '../products/product_detail_screen.dart';
+import '../../widgets/floating_cart_bar.dart';
 
 /// Ultra-Modern Blinkit Glassmorphic Color Palette
 abstract final class BlinkitGlassTheme {
@@ -100,8 +101,6 @@ class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen>
     final cartState = ref.watch(cartProvider);
     final cart = cartState.valueOrNull;
     final cartItems = cart?.items ?? [];
-    final totalCartQty = cartItems.fold<int>(0, (sum, i) => sum + i.quantity);
-    final cartTotalAmount = cart?.subtotal ?? 0.0;
 
     // Filter products strictly excluding celebration/birthday cakes
     final tabProducts = _resolveTabProducts(allProducts, currentTab, _searchQuery);
@@ -185,14 +184,8 @@ class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen>
             ],
           ),
 
-          // 3. Liquid Frosted Emerald Floating Cart Bar
-          if (totalCartQty > 0)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 24,
-              child: _buildLiquidEmeraldCartBar(context, cartItems, totalCartQty, cartTotalAmount),
-            ),
+          // 3. Universal Floating Cart Bar
+          FloatingCartBar(bottomOffset: MediaQuery.of(context).padding.bottom + 16),
         ],
       ),
     );
@@ -1064,151 +1057,6 @@ class _BakeryStoreScreenState extends ConsumerState<BakeryStoreScreen>
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --- LIQUID FROSTED EMERALD FLOATING CART BAR ---
-  Widget _buildLiquidEmeraldCartBar(
-    BuildContext context,
-    List<dynamic> cartItems,
-    int totalQty,
-    double totalAmount,
-  ) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(30),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Bounceable(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CartScreen()),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF228413).withValues(alpha: 0.92),
-                  const Color(0xFF14600C).withValues(alpha: 0.96),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF166534).withValues(alpha: 0.4),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Dual Circular Product Previews with Frosted Ring
-                SizedBox(
-                  width: 52,
-                  height: 32,
-                  child: Stack(
-                    children: [
-                      if (cartItems.length > 1)
-                        Positioned(
-                          left: 18,
-                          child: Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                              border: Border.all(color: Colors.white, width: 1.5),
-                            ),
-                            child: const Center(
-                              child: Text('🥐', style: TextStyle(fontSize: 14)),
-                            ),
-                          ),
-                        ),
-                      Positioned(
-                        left: 0,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          child: const Center(
-                            child: Text('🍞', style: TextStyle(fontSize: 14)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'View cart',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Text('•', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$totalQty ${totalQty == 1 ? 'item' : 'items'}',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFFD1FAE5),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        'Total ₹${totalAmount.toInt()} (Free delivery unlocked)',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFFA7F3D0),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.2),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 13,
-                    color: Colors.white,
                   ),
                 ),
               ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/design_system.dart';
+import '../../../core/widgets/app_cached_image.dart';
 import '../../../data/models/category.dart';
 
 class CategoryVisualHelper {
@@ -355,6 +356,7 @@ class CategoryVisualHelper {
       borderRadius: BorderRadius.circular(10),
       child: CachedNetworkImage(
         imageUrl: imgUrl,
+        cacheManager: FastKiranaImageCacheManager.instance,
         fit: fit,
         memCacheWidth: 400,
         memCacheHeight: 400,

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../campaign_bento_models.dart';
 import '../../../core/routes/page_transitions.dart';
 import '../../gifting/send_gift_screen.dart';
+import '../../../providers/gifting_store_provider.dart';
 
 /// The Gifting Boutique Bento Zone Card (Rose & Gift Special)
-/// Exactly matching the premium editorial design reference
+/// Dynamically synced with Web Admin Gifting Store configuration.
 class GiftingBoutiqueCard extends ConsumerWidget {
   final CampaignBentoCardConfig card;
 
@@ -22,10 +24,29 @@ class GiftingBoutiqueCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const borderColor = Color(0xFFEFC6D0);
-    const roseInk = Color(0xFF52101F);
-    const roseSubtle = Color(0xFF7D4856);
-    const maroonPill = Color(0xFF6B1728);
+    // 1. Live Web Admin Gifting Configuration
+    final giftingConfigAsync = ref.watch(giftingStoreConfigProvider);
+    final config = giftingConfigAsync.valueOrNull;
+
+    // If Admin disabled the gifting store, hide card from home screen automatically
+    if (config != null && !config.enabled) {
+      return const SizedBox.shrink();
+    }
+
+    const borderColor = Color(0xFFF2D1DA);
+    const roseInk = Color(0xFF4C0E1E);
+    const roseSubtle = Color(0xFF8C5362);
+    final maroonPill = config?.gradientEnd ?? const Color(0xFF881337);
+
+    final title = config != null && config.bannerTitle.trim().isNotEmpty
+        ? config.bannerTitle.trim()
+        : 'Thoughtful Gifts,\nDelivered With Love';
+
+    final subtitle = config != null && config.bannerSubtitle.trim().isNotEmpty
+        ? config.bannerSubtitle.trim()
+        : 'Little things, big feelings.\nFresh blooms, cakes & treats.';
+
+    final bannerUrl = config?.bannerImageUrl.trim() ?? '';
 
     return GestureDetector(
       onTap: () => _openGiftingPage(context),
@@ -34,12 +55,12 @@ class GiftingBoutiqueCard extends ConsumerWidget {
         height: 224,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFFDECEF),
-              Color(0xFFF9D8E0),
+              config?.gradientStart.withValues(alpha: 0.18) ?? const Color(0xFFFDECEF),
+              config?.gradientEnd.withValues(alpha: 0.25) ?? const Color(0xFFF9D8E0),
             ],
           ),
           borderRadius: BorderRadius.circular(24),
@@ -54,14 +75,25 @@ class GiftingBoutiqueCard extends ConsumerWidget {
         ),
         child: Stack(
           children: [
-            // Full-bleed HD Gifting Boutique hero artwork (clean pink left + roses/chocolates/cake right)
+            // Full-bleed HD Gifting Boutique hero artwork (or uploaded image from Admin)
             Positioned.fill(
-              child: Image.asset(
-                'assets/navratri/gifting-boutique-hero-hd.jpg',
-                fit: BoxFit.cover,
-                alignment: Alignment.centerRight,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              ),
+              child: bannerUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: bannerUrl,
+                      fit: BoxFit.cover,
+                      alignment: Alignment.centerRight,
+                      errorWidget: (_, __, ___) => Image.asset(
+                        'assets/navratri/gifting-boutique-hero-hd.jpg',
+                        fit: BoxFit.cover,
+                        alignment: Alignment.centerRight,
+                      ),
+                    )
+                  : Image.asset(
+                      'assets/navratri/gifting-boutique-hero-hd.jpg',
+                      fit: BoxFit.cover,
+                      alignment: Alignment.centerRight,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
             ),
 
             // Left-side editorial copy + Explore Gifts CTA
@@ -81,9 +113,9 @@ class GiftingBoutiqueCard extends ConsumerWidget {
                           color: maroonPill,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(
-                          card.title.isNotEmpty ? card.title : 'Gifting Boutique',
-                          style: const TextStyle(
+                        child: const Text(
+                          'Gifting Boutique',
+                          style: TextStyle(
                             fontFamily: 'Plus Jakarta Sans',
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
@@ -92,29 +124,27 @@ class GiftingBoutiqueCard extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       Text(
-                        card.title.isNotEmpty ? card.title : 'Little things,\nbig feelings.',
+                        title,
                         style: const TextStyle(
                           fontFamily: 'NotoSerif',
-                          fontSize: 23,
+                          fontSize: 18.5,
                           fontWeight: FontWeight.w700,
                           color: roseInk,
-                          height: 1.12,
-                          letterSpacing: -0.4,
+                          height: 1.15,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
-                        card.subtitle.isNotEmpty
-                            ? card.subtitle
-                            : 'Flowers, cakes &\nthoughtful surprises.',
+                        subtitle,
                         style: const TextStyle(
                           fontFamily: 'Plus Jakarta Sans',
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w500,
                           color: roseSubtle,
-                          height: 1.3,
+                          height: 1.25,
                         ),
                       ),
                     ],

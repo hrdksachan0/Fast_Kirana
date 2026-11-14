@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -113,61 +112,10 @@ class _MainShellState extends ConsumerState<MainShell>
     }
   }
 
-  bool _isBottomNavVisible = true;
-  Timer? _scrollStopTimer;
-
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _scrollStopTimer?.cancel();
     super.dispose();
-  }
-
-  bool _handleScrollNotification(ScrollNotification notification) {
-    // Only react to vertical scrolling so horizontal carousels/shelves do not trigger hide
-    if (notification.metrics.axis != Axis.vertical) return false;
-
-    if (notification is ScrollStartNotification) {
-      if (notification.dragDetails != null) {
-        _onScrollActivity();
-      }
-    } else if (notification is ScrollUpdateNotification) {
-      final delta = notification.scrollDelta ?? 0.0;
-      // Filter out micro sub-pixel jitters
-      if (delta.abs() > 0.5) {
-        _onScrollActivity();
-      }
-    } else if (notification is ScrollEndNotification) {
-      _scheduleNavReveal();
-    } else if (notification is UserScrollNotification) {
-      if (notification.direction == ScrollDirection.idle) {
-        _scheduleNavReveal();
-      } else {
-        _onScrollActivity();
-      }
-    }
-
-    return false;
-  }
-
-  void _onScrollActivity() {
-    if (_isBottomNavVisible) {
-      setState(() {
-        _isBottomNavVisible = false;
-      });
-    }
-    _scheduleNavReveal();
-  }
-
-  void _scheduleNavReveal() {
-    _scrollStopTimer?.cancel();
-    _scrollStopTimer = Timer(const Duration(milliseconds: 400), () {
-      if (mounted && !_isBottomNavVisible) {
-        setState(() {
-          _isBottomNavVisible = true;
-        });
-      }
-    });
   }
 
   DateTime? _lastBackPressTime;
@@ -218,10 +166,7 @@ class _MainShellState extends ConsumerState<MainShell>
 
     final showCart = selectedIndex != 3 && cartCount > 0;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final baseBottom = _isBottomNavVisible
-        ? (56.0 + bottomInset + 10.0)
-        : (bottomInset + 10.0);
-    final cartBottomOffset = baseBottom;
+    final cartBottomOffset = 56.0 + bottomInset + 10.0;
     final trackingBottomOffset =
         showCart ? (cartBottomOffset + 76.0) : cartBottomOffset;
 
@@ -234,12 +179,6 @@ class _MainShellState extends ConsumerState<MainShell>
         if (currentTab != 0) {
           // If on Search, Categories, or Account -> jump back to Home tab
           HapticFeedback.lightImpact();
-          if (!_isBottomNavVisible) {
-            _scrollStopTimer?.cancel();
-            setState(() {
-              _isBottomNavVisible = true;
-            });
-          }
           ref.read(selectedTabProvider.notifier).state = 0;
           return;
         }
@@ -272,12 +211,10 @@ class _MainShellState extends ConsumerState<MainShell>
       },
       child: Scaffold(
         backgroundColor: AppDesignSystem.background,
-        body: NotificationListener<ScrollNotification>(
-          onNotification: _handleScrollNotification,
-          child: ResponsiveContainer(
-            maxWidth: Responsive.wideMaxContentWidth,
-            fillHeight: true,
-            child: Stack(
+        body: ResponsiveContainer(
+          maxWidth: Responsive.wideMaxContentWidth,
+          fillHeight: true,
+          child: Stack(
               children: [
                 IndexedStack(
                   index: selectedIndex,
@@ -300,36 +237,19 @@ class _MainShellState extends ConsumerState<MainShell>
                 // Global Zepto/Blinkit-style Floating Dynamic Island Connectivity Pill
                 const ZeptoConnectivityPill(),
 
-                // Liquid Bottom Navigation Bar docked at bottom of full-screen Stack (Zero white gap on hide)
+                // Liquid Bottom Navigation Bar permanently docked at bottom
                 Positioned(
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  child: AnimatedSlide(
-                    offset: _isBottomNavVisible
-                        ? Offset.zero
-                        : const Offset(0, 1.2),
-                    duration: const Duration(milliseconds: 280),
-                    curve: Curves.easeInOutCubic,
-                    child: AnimatedOpacity(
-                      opacity: _isBottomNavVisible ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 240),
-                      curve: Curves.easeInOut,
-                      child: IgnorePointer(
-                        ignoring: !_isBottomNavVisible,
-                        child:
-                            _buildLiquidBottomNav(context, ref, selectedIndex),
-                      ),
-                    ),
-                  ),
+                  child: _buildLiquidBottomNav(context, ref, selectedIndex),
                 ),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
   Widget _buildLiquidBottomNav(
       BuildContext context, WidgetRef ref, int selectedIndex) {
@@ -411,12 +331,6 @@ class _MainShellState extends ConsumerState<MainShell>
                         child: InkWell(
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            if (!_isBottomNavVisible) {
-                              _scrollStopTimer?.cancel();
-                              setState(() {
-                                _isBottomNavVisible = true;
-                              });
-                            }
                             ref.read(selectedTabProvider.notifier).state =
                                 index;
                           },

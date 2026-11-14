@@ -1,4 +1,4 @@
-# FastKirana Build Scripts
+﻿# FastKirana Build Scripts
 # =========================
 # PowerShell scripts for building the FastKirana Flutter app.
 
@@ -27,10 +27,11 @@ function Write-Header($text) {
     Write-Host ""
 }
 
-function Invoke-FlutterBuild($args) {
+function Invoke-FlutterBuild {
+    param([string[]]$CommandArgs)
     Push-Location $ProjectRoot
     try {
-        & flutter @args
+        & flutter @CommandArgs
         if ($LASTEXITCODE -ne 0) {
             throw "Flutter build failed with exit code $LASTEXITCODE"
         }
@@ -98,8 +99,10 @@ function Build-ReleaseApk {
     $outputPath = Join-Path $ProjectRoot "build\app\outputs\flutter-apk\app-release.apk"
     if (Test-Path $outputPath) {
         $size = [math]::Round((Get-Item $outputPath).Length / 1MB, 2)
+        Copy-Item $outputPath (Join-Path $ProjectRoot "fastminute-release.apk") -Force
         Write-Host ""
         Write-Host "  SUCCESS! APK built: $outputPath ($size MB)" -ForegroundColor Green
+        Write-Host "  Copied to: $(Join-Path $ProjectRoot 'fastminute-release.apk')" -ForegroundColor Cyan
     }
 }
 

@@ -23,6 +23,9 @@ import '../../data/models/store_hub.dart';
 import '../home/utils/category_visual_helper.dart';
 import '../navratri/navratri_data.dart';
 import 'widgets/blinkit_animated_bag.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../data/models/home_layout_config.dart';
+import '../../providers/home_layout_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   final bool forceHome;
@@ -71,19 +74,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         ref.read(bannersProvider('grocery').future).catchError((_) => <Banner>[]);
     final campaignFuture =
         ref.read(navratriDataProvider.future).then<NavratriData?>((v) => v).catchError((_) => null);
+    final homeLayoutFuture =
+        ref.read(homeLayoutConfigProvider.future).catchError((_) => const HomeLayoutConfigModel());
 
     // 3. Texture Precaching:
-    // Pre-cache top 8 category packshots, first 2 hero banners, and top 16 product images
-    // so Home opens only after images are ready (no blank placeholders or fade-in delay).
+    // Pre-cache top 12 category packshots, first 2 hero banners, and top 16 product images
+    // with exact memory downsampling and cache managers so Home opens with images ready on Frame 0.
     final categoryPrecacheFuture = categoriesFuture.then((categories) async {
       if (!mounted || categories.isEmpty) return;
       final tasks = <Future<void>>[];
-      for (final cat in categories.take(8)) {
+      for (final cat in categories.take(12)) {
         final imgUrl = CategoryVisualHelper.resolveRealisticImageUrl(cat);
         if (imgUrl.isNotEmpty) {
           tasks.add(
             precacheImage(
-              CachedNetworkImageProvider(imgUrl, maxWidth: 400, maxHeight: 400),
+              CachedNetworkImageProvider(
+                imgUrl,
+                cacheManager: FastKiranaImageCacheManager.instance,
+                maxWidth: 400,
+                maxHeight: 400,
+              ),
               context,
             ).catchError((_) {}),
           );
@@ -125,17 +135,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       for (final p in products.take(16)) {
         final rawImg = p.imageUrl;
         if (rawImg != null && rawImg.trim().isNotEmpty && !rawImg.startsWith('data:')) {
-          final resolvedUrl = CardMediaWidget.resolveUrl(rawImg);
           tasks.add(
-            precacheImage(
-              CachedNetworkImageProvider(
-                resolvedUrl,
-                cacheManager: FastKiranaImageCacheManager.instance,
-                maxWidth: 400,
-                maxHeight: 400,
-              ),
-              context,
-            ).catchError((_) {}),
+            AppCachedImage.precache(context, rawImg).catchError((_) {}),
           );
         }
       }
@@ -151,7 +152,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           if (firstHeader.image != null && firstHeader.image!.isNotEmpty) {
             try {
               precacheImage(
-                CachedNetworkImageProvider(firstHeader.image!),
+                CachedNetworkImageProvider(
+                  CardMediaWidget.resolveUrl(firstHeader.image!),
+                  cacheManager: FastKiranaImageCacheManager.instance,
+                ),
                 context,
               ).catchError((_) {});
             } catch (_) {}
@@ -161,7 +165,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     }).catchError((_) {});
 
     // 4. Wait for smooth splash animation AND essential metadata + decoded images
-    final minDelay = Duration(milliseconds: widget.forceHome ? 600 : 1400);
+    final minDelay = Duration(milliseconds: widget.forceHome ? 400 : 700);
     Future.wait([
       Future.delayed(minDelay),
       prefFuture,
@@ -170,6 +174,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       bannerPrecacheFuture,
       catalogPrecacheFuture,
       campaignFuture,
+      homeLayoutFuture,
     ]).then((results) {
       final prefs = results[1] as SharedPreferences;
       _safeNavigate(prefs: prefs);
@@ -242,14 +247,64 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
-          child: BlinkitAnimatedBag(
-            title: '100% Farm-Fresh Fruits & Vegetables',
-            subtitle: 'Delivered fresh at your doorstep with superfast delivery',
-          ),
+        child: Column(
+          children: [
+            const Spacer(),
+            const Center(
+              child: BlinkitAnimatedBag(
+                title: '100% Farm-Fresh Fruits & Vegetables',
+                subtitle: 'Delivered fresh at your doorstep with superfast delivery',
+                showBottomBranding: false,
+              ),
+            ),
+            const Spacer(),
+
+            // Dedicated Bottom Dock ("niche alag")
+            Padding(
+              padding: const EdgeInsets.only(bottom: 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE11D48),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        'FASTMINUTE',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2.8,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Trusted Quick Commerce',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF94A3B8),
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

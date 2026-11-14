@@ -298,7 +298,7 @@ export async function PATCH(request: Request) {
   const validation = await validateBodyLegacy(request, patchAddressSchema)
   if (!validation.success) return validation.error
 
-  const { id, lat, lng } = validation.data
+  const { id, lat, lng, houseNo, label, street } = validation.data
 
   try {
     const address = await prisma.address.findUnique({ where: { id } })
@@ -306,12 +306,23 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
     }
 
+    const updateData: any = {
+      lat: resolveFallbackCoordinates(lat, lng, address.pincode, address.city, address.street, address.area).lat,
+      lng: resolveFallbackCoordinates(lat, lng, address.pincode, address.city, address.street, address.area).lng,
+    }
+    if (houseNo !== undefined && houseNo !== null && houseNo.trim() !== '') {
+      updateData.houseNo = houseNo.trim()
+    }
+    if (label !== undefined && label !== null && label.trim() !== '') {
+      updateData.label = label.trim()
+    }
+    if (street !== undefined && street !== null && street.trim() !== '') {
+      updateData.street = street.trim()
+    }
+
     const updatedAddress = await prisma.address.update({
       where: { id },
-      data: {
-        lat: resolveFallbackCoordinates(lat, lng, address.pincode, address.city, address.street, address.area).lat,
-        lng: resolveFallbackCoordinates(lat, lng, address.pincode, address.city, address.street, address.area).lng,
-      },
+      data: updateData,
     })
 
     return NextResponse.json(updatedAddress)
