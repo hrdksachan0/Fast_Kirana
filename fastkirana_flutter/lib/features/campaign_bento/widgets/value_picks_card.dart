@@ -204,7 +204,6 @@ class _ValuePicksCardState extends ConsumerState<ValuePicksCard>
   bool _touching = false;
   bool _dragging = false;
   bool _hovering = false;
-  bool _userPaused = false;
   bool _reduceMotion = false;
   bool _tickerEnabled = true;
   bool _animating = false;
@@ -330,7 +329,6 @@ class _ValuePicksCardState extends ConsumerState<ValuePicksCard>
       _pairs.length > 1 &&
       _foreground &&
       _tickerEnabled &&
-      !_userPaused &&
       !_reduceMotion &&
       !_holding &&
       !_touching &&
@@ -574,156 +572,106 @@ class _ValuePicksCardState extends ConsumerState<ValuePicksCard>
     const borderColor = Color(0xFFF0E3A2);
     const ink = Color(0xFF29422F);
     const green = Color(0xFF365B38);
-    const count = 10;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 16, 14, 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       decoration: BoxDecoration(
         color: butter,
-        borderRadius: BorderRadius.circular(27),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFCA8A04).withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Eyebrow and "See all 10" button
+          // Sleek Compact Header Row (Single-row layout)
           Row(
-            children: [
-              const Icon(Icons.auto_awesome_outlined, size: 13, color: Color(0xFF8C7D3D)),
-              const SizedBox(width: 5),
-              const Expanded(
-                child: Text(
-                  'THE EVERYDAY EDIT',
-                  style: TextStyle(
-                    fontFamily: 'Plus Jakarta Sans',
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.4,
-                    color: Color(0xFF8C7D3D),
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => _showAllProductsSheet(context),
-                style: TextButton.styleFrom(
-                  foregroundColor: ink,
-                  backgroundColor: Colors.white.withValues(alpha: 0.65),
-                  minimumSize: const Size(64, 34),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  shape: const StadiumBorder(),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'See all $count',
-                      style: TextStyle(
-                        fontFamily: 'Plus Jakarta Sans',
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(width: 3),
-                    Icon(Icons.north_east, size: 12),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-
-          // Main Header Row: Title & Rotating Badge
-          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text.rich(
-                      TextSpan(children: [
-                        const TextSpan(text: 'Value '),
-                        const TextSpan(
-                          text: 'Picks',
-                          style: TextStyle(fontStyle: FontStyle.italic),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: green,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome, size: 10, color: Color(0xFFFFF6C7)),
+                        SizedBox(width: 3.5),
+                        Text(
+                          'VALUE PICKS',
+                          style: TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.6,
+                            color: Color(0xFFFFF6C7),
+                          ),
                         ),
-                      ]),
-                      style: const TextStyle(
-                        fontFamily: 'NotoSerif',
-                        fontSize: 32,
-                        fontWeight: FontWeight.w700,
-                        color: ink,
-                        height: 1.1,
-                        letterSpacing: -1.0,
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Stock up on good. Spend a little less.',
-                      style: TextStyle(
-                        fontFamily: 'Plus Jakarta Sans',
-                        fontSize: 10.5,
-                        color: Color(0xFF8A8054),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Transform.rotate(
-                angle: 0.18,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: const BoxDecoration(
-                    color: green,
-                    shape: BoxShape.circle,
                   ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  const SizedBox(width: 7),
+                  const Text(
+                    'Compare & Save',
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: ink,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: () => _showAllProductsSheet(context),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE5D895), width: 0.8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.shopping_bag_outlined, color: Color(0xFFFFF6C7), size: 17),
-                      SizedBox(height: 2),
                       Text(
-                        'PICK SMART',
+                        'See all',
                         style: TextStyle(
                           fontFamily: 'Plus Jakarta Sans',
-                          fontSize: 6.5,
+                          fontSize: 10,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFFFFF6C7),
-                          letterSpacing: 0.3,
+                          color: ink,
                         ),
                       ),
-                      Text(
-                        'EVERY DAY',
-                        style: TextStyle(
-                          fontFamily: 'Plus Jakarta Sans',
-                          fontSize: 6.5,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFFFFF6C7),
-                          letterSpacing: 0.3,
-                        ),
-                      ),
+                      SizedBox(width: 2),
+                      Icon(Icons.chevron_right_rounded, size: 13, color: ink),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
-          // Carousel of paired cards
+          // Carousel of paired cards (Ultra-compact proportion)
           LayoutBuilder(builder: (context, constraints) {
-            final cardWidth = (constraints.maxWidth - 10) / 2;
+            final cardWidth = (constraints.maxWidth - 8) / 2;
             final textScale = math.max(1.0, MediaQuery.textScalerOf(context).scale(13) / 13);
-            final height = (cardWidth - 20) / 1.04 + 192 + (textScale - 1) * 70;
+            final height = (cardWidth - 14) / 1.35 + 114 + (textScale - 1) * 35;
 
             return MouseRegion(
               onEnter: (_) {
@@ -775,7 +723,7 @@ class _ValuePicksCardState extends ConsumerState<ValuePicksCard>
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             for (var i = 0; i < 2; i++) ...[
-                              if (i == 1) const SizedBox(width: 10),
+                              if (i == 1) const SizedBox(width: 8),
                               Expanded(
                                 child: ValueProductCard(
                                   key: ValueKey('${pair.id}-${pair.products[i].id}-$raw'),
@@ -796,124 +744,61 @@ class _ValuePicksCardState extends ConsumerState<ValuePicksCard>
             );
           }),
 
-          // Saving Label Ribbon
+          // Single-Row Compact Footer: Saving Label on Left + Progress Indicator on Right
           Padding(
-            padding: const EdgeInsets.fromLTRB(2, 12, 2, 9),
+            padding: const EdgeInsets.only(top: 6),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.verified_outlined, size: 14, color: Color(0xFF69864B)),
-                const SizedBox(width: 5),
-                Flexible(
+                const Icon(Icons.verified_outlined, size: 12.5, color: Color(0xFF69864B)),
+                const SizedBox(width: 4),
+                Expanded(
                   child: Text(
                     _pairs[_index].savingLabel,
-                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontFamily: 'Plus Jakarta Sans',
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF758040),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF5E6D38),
                     ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                AnimatedBuilder(
+                  animation: _clock,
+                  builder: (context, _) => Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var i = 0; i < _pairs.length; i++)
+                        InkWell(
+                          onTap: () => _turnPage(i - _index, manual: true),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            width: i == _index ? 16 : 5,
+                            height: 4.5,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: i == _index
+                                  ? LinearProgressIndicator(
+                                      value: _clock.value,
+                                      backgroundColor: const Color(0xFFE0D5A0),
+                                      valueColor: AlwaysStoppedAnimation(
+                                        green.withValues(alpha: 0.8),
+                                      ),
+                                    )
+                                  : const ColoredBox(color: Color(0xFFD9D19E)),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-
-          const Divider(height: 1, color: Color(0xFFE9DFA8)),
-
-          // Bottom Navigation Row
-          Row(
-            children: [
-              const Text(
-                '$count picks',
-                style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF9B915F),
-                ),
-              ),
-              const Spacer(),
-              AnimatedBuilder(
-                animation: _clock,
-                builder: (context, _) => Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (var i = 0; i < _pairs.length; i++)
-                      InkWell(
-                        onTap: () => _turnPage(i - _index, manual: true),
-                        borderRadius: BorderRadius.circular(20),
-                        child: SizedBox(
-                          width: i == _index ? 28 : 18,
-                          height: 38,
-                          child: Center(
-                            child: SizedBox(
-                              width: i == _index ? 22 : 5,
-                              height: 5,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: i == _index
-                                    ? LinearProgressIndicator(
-                                        value: _clock.value,
-                                        backgroundColor: const Color(0xFFE0D5A0),
-                                        valueColor: AlwaysStoppedAnimation(
-                                          green.withValues(alpha: 0.6),
-                                        ),
-                                      )
-                                    : const ColoredBox(color: Color(0xFFD9D19E)),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              _arrow(
-                Icons.chevron_left,
-                'Previous product pair',
-                _pairs.length > 1 ? () => _turnPage(-1, manual: true) : null,
-              ),
-              _arrow(
-                _userPaused || _reduceMotion ? Icons.play_arrow : Icons.pause,
-                _reduceMotion
-                    ? 'Automatic movement disabled by system setting'
-                    : _userPaused
-                        ? 'Resume automatic rotation'
-                        : 'Pause automatic rotation',
-                _reduceMotion
-                    ? null
-                    : () {
-                        setState(() => _userPaused = !_userPaused);
-                        _syncClock();
-                      },
-                key: const ValueKey('value-pause'),
-              ),
-              _arrow(
-                Icons.chevron_right,
-                'Next product pair',
-                _pairs.length > 1 ? () => _turnPage(1, manual: true) : null,
-                key: const ValueKey('value-next'),
-              ),
-            ],
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _arrow(IconData icon, String label, VoidCallback? action, {Key? key}) {
-    return SizedBox(
-      width: 32,
-      height: 38,
-      child: IconButton(
-        key: key,
-        tooltip: label,
-        onPressed: action,
-        padding: EdgeInsets.zero,
-        icon: Icon(icon, size: 18, color: const Color(0xFF8F9062)),
       ),
     );
   }
@@ -1028,7 +913,7 @@ class ValueQuantityButton extends StatelessWidget {
       side: BorderSide(color: active ? ink : ink.withValues(alpha: 0.45)),
     );
     return SizedBox(
-      height: 40,
+      height: 30,
       child: Material(
         color: active ? ink : const Color(0xFFFFFEFA),
         shape: shape,
@@ -1047,13 +932,13 @@ class ValueQuantityButton extends StatelessWidget {
                         'ADD',
                         style: TextStyle(
                           fontFamily: 'Plus Jakarta Sans',
-                          fontSize: 12,
+                          fontSize: 11,
                           color: foreground,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Icon(Icons.add, size: 16, color: foreground),
+                      const SizedBox(width: 4),
+                      Icon(Icons.add, size: 14, color: foreground),
                     ],
                   ),
                 ),
@@ -1066,16 +951,16 @@ class ValueQuantityButton extends StatelessWidget {
                     onPressed: () => onChanged(quantity - 1),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    icon: Icon(Icons.remove, size: 16, color: foreground),
+                    icon: Icon(Icons.remove, size: 14, color: foreground),
                   ),
                 ),
                 Text(
                   '$quantity',
                   style: TextStyle(
                     fontFamily: 'Plus Jakarta Sans',
-                    fontSize: 13,
+                    fontSize: 12,
                     color: foreground,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 Expanded(
@@ -1085,7 +970,7 @@ class ValueQuantityButton extends StatelessWidget {
                     onPressed: () => onChanged(quantity + 1),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    icon: Icon(Icons.add, size: 16, color: foreground),
+                    icon: Icon(Icons.add, size: 14, color: foreground),
                   ),
                 ),
               ]),
@@ -1118,25 +1003,25 @@ class ValueProductCard extends StatelessWidget {
     const ink = Color(0xFF29422F);
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(7),
       decoration: BoxDecoration(
         color: const Color(0xFFFFFEFA),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: best ? const Color(0xFFBECAA7) : const Color(0xFFE9E7D6),
-          width: best ? 1.4 : 1.0,
+          width: best ? 1.3 : 1.0,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 23,
-            alignment: best ? Alignment.center : Alignment.centerLeft,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            height: 18,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 5),
             decoration: BoxDecoration(
-              color: best ? const Color(0xFFECF3E5) : Colors.transparent,
-              borderRadius: BorderRadius.circular(7),
+              color: best ? const Color(0xFFECF3E5) : const Color(0xFFF1F5E9),
+              borderRadius: BorderRadius.circular(5),
             ),
             child: FittedBox(
               fit: BoxFit.scaleDown,
@@ -1144,16 +1029,16 @@ class ValueProductCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (best) ...[
-                    const Icon(Icons.auto_awesome_outlined, size: 11, color: green),
-                    const SizedBox(width: 4),
+                    const Icon(Icons.auto_awesome, size: 9.5, color: green),
+                    const SizedBox(width: 3),
                   ],
                   Text(
-                    best ? 'BETTER VALUE' : 'THE DAILY PICK',
+                    best ? 'BETTER VALUE' : 'STANDARD PACK',
                     style: TextStyle(
                       fontFamily: 'Plus Jakarta Sans',
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.55,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.4,
                       color: best ? green : muted,
                     ),
                   ),
@@ -1161,37 +1046,37 @@ class ValueProductCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
           InkWell(
             onTap: onProductTap,
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(10),
             child: AspectRatio(
-              aspectRatio: 1.04,
+              aspectRatio: 1.35,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(13),
+                borderRadius: BorderRadius.circular(10),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     ColoredBox(color: photoBackground),
                     Transform.scale(
-                      scale: best ? 1.24 : 1.11,
+                      scale: best ? 1.15 : 1.05,
                       child: ColorFiltered(
                         colorFilter: ColorFilter.mode(photoBackground, BlendMode.multiply),
                         child: ProductArtwork(product: product),
                       ),
                     ),
                     Positioned(
-                      left: 7,
-                      bottom: 7,
+                      left: 5,
+                      bottom: 5,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(5),
+                          borderRadius: BorderRadius.circular(4),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 3,
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 2,
                               offset: const Offset(0, 1),
                             ),
                           ],
@@ -1200,8 +1085,8 @@ class ValueProductCard extends StatelessWidget {
                           product.packLabel,
                           style: const TextStyle(
                             fontFamily: 'Plus Jakarta Sans',
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
                             color: Color(0xFF687359),
                           ),
                         ),
@@ -1212,49 +1097,56 @@ class ValueProductCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           SizedBox(
-            height: 34,
+            height: 27,
             child: Text(
               product.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontFamily: 'Plus Jakarta Sans',
-                fontSize: 12.5,
+                fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: ink,
                 letterSpacing: -0.2,
-                height: 1.25,
+                height: 1.2,
               ),
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            '₹${product.price.toInt()}',
-            style: const TextStyle(
-              fontFamily: 'Plus Jakarta Sans',
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: ink,
-              letterSpacing: -0.8,
-              height: 1.15,
-            ),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            product.unitPriceLabel,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: 'Plus Jakarta Sans',
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: best ? const Color(0xFF5E8250) : muted,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '₹${product.price.toInt()}',
+                style: const TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.w900,
+                  color: ink,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  product.unitPriceLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    color: best ? const Color(0xFF5E8250) : muted,
+                  ),
+                ),
+              ),
+            ],
           ),
           const Spacer(),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           ValueQuantityButton(
             product: product,
             quantity: quantity,
