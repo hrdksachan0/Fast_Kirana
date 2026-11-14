@@ -38,10 +38,7 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
   // Outlet filter: 'ALL', 'DARKSTORE', or restaurantId ('REST-104', etc.)
   String _selectedOutlet = 'ALL';
 
-  // 0 = All Live (Out for Delivery + Pickup)
-  // 1 = On Way (Out for Delivery only)
-  // 2 = Pickup (Ready for Pickup)
-  // 3 = Ready (Items Packed & Ready)
+  // 0 = All, 1 = Pickup, 2 = Item Ready
   int _filterIndex = 0;
 
   static const Color slateDark = AppDesignSystem.slate900;
@@ -219,67 +216,71 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
 
   Widget _buildFilterPill(int index, String label, int count, Color activeColor) {
     final isSelected = _filterIndex == index;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          setState(() => _filterIndex = index);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 6.5, horizontal: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? activeColor : const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? activeColor : const Color(0xFFE2E8F0),
-              width: 1.2,
-            ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: activeColor.withValues(alpha: 0.28),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _filterIndex = index);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+            width: 1.2,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11),
-                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                  color: isSelected ? Colors.white : AppDesignSystem.slate700,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white.withValues(alpha: 0.25) : Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isSelected ? Colors.white.withValues(alpha: 0.4) : const Color(0xFFCBD5E1),
-                    width: 0.8,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withValues(alpha: 0.28),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
-                ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
                 child: Text(
-                  '$count',
+                  label,
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 10.5),
-                    fontWeight: FontWeight.w900,
-                    color: isSelected ? Colors.white : AppDesignSystem.slate900,
+                    fontSize: Responsive.scaledFontSize(context, 11),
+                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                    color: isSelected ? Colors.white : AppDesignSystem.slate700,
                   ),
+                  maxLines: 1,
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 3),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withValues(alpha: 0.25) : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isSelected ? Colors.white.withValues(alpha: 0.4) : const Color(0xFFCBD5E1),
+                  width: 0.8,
+                ),
+              ),
+              child: Text(
+                '$count',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                  fontWeight: FontWeight.w900,
+                  color: isSelected ? Colors.white : AppDesignSystem.slate900,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -304,20 +305,18 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
         .where((o) => (o['status'] ?? '').toString().toUpperCase() == 'PACKED')
         .toList();
 
-    // Counts for Live Status pills
-    final totalLiveCount = activeDeliveriesForOutlet.length + pendingPickupsForOutlet.length;
-    final onWayCount = activeDeliveriesForOutlet.length;
+    // Counts for Rider 3-pill filter (dynamically filtered by selected outlet)
+    final totalCount = activeDeliveriesForOutlet.length + pendingPickupsForOutlet.length;
     final pickupCount = pendingPickupsForOutlet.length;
     final itemReadyCount = itemReadyOrdersForOutlet.length;
 
     // Filter modes:
-    // 0 = All Live (Show Out for Delivery + Ready for Pickup)
-    // 1 = On Way (Show only Out for Delivery)
-    // 2 = Pickup (Show all Ready for Pickup orders waiting at store)
-    // 3 = Ready (Show strictly PACKED/Food Ready orders waiting at counter)
-    final showActiveDeliveries = _filterIndex == 0 || _filterIndex == 1;
-    final showPickupSection = _filterIndex == 0 || _filterIndex == 2 || _filterIndex == 3;
-    final displayedPickups = _filterIndex == 3 ? itemReadyOrdersForOutlet : pendingPickupsForOutlet;
+    // 0 = All (Show Out for Delivery + Ready for Pickup)
+    // 1 = Pickup (Show all Ready for Pickup orders waiting at store)
+    // 2 = Ready (Show strictly PACKED/Food Ready orders waiting at counter)
+    final showActiveDeliveries = _filterIndex == 0;
+    final showPickupSection = _filterIndex == 0 || _filterIndex == 1 || _filterIndex == 2;
+    final displayedPickups = _filterIndex == 2 ? itemReadyOrdersForOutlet : pendingPickupsForOutlet;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -346,23 +345,43 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
               },
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
-          // Row 2: Live Status Pills: All Live | On Way | Pickup | Ready (Like Admin)
-          SizedBox(
-            height: 34,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
+          // Row 2: 3-Pill Action Filter for Rider: All | Pickup | Ready
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppDesignSystem.slate200),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1.5),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
-                _buildFilterPill(0, '⚡ All Live', totalLiveCount, AppDesignSystem.slate900),
-                _buildFilterPill(1, '🛵 On Way', onWayCount, AppDesignSystem.emeraldBrand),
-                _buildFilterPill(2, '📦 Pickup', pickupCount, AppDesignSystem.violet600),
-                _buildFilterPill(3, '🔥 Ready', itemReadyCount, const Color(0xFFD97706)),
+                Expanded(
+                  flex: 8,
+                  child: _buildFilterPill(0, '⚡ All', totalCount, AppDesignSystem.slate900),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  flex: 11,
+                  child: _buildFilterPill(1, '📦 Pickup', pickupCount, AppDesignSystem.violet600),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  flex: 11,
+                  child: _buildFilterPill(2, '🔥 Ready', itemReadyCount, const Color(0xFFD97706)),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           // Section 1: OUT FOR DELIVERY (Shown in "All Live" and "On Way" modes)
           if (showActiveDeliveries) ...[
@@ -445,7 +464,7 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
             if (showPickupSection) const SizedBox(height: 22),
           ],
 
-          // Section 2: READY FOR PICKUP (Shown in All Live, Pickup, and Ready modes)
+          // Section 2: READY FOR PICKUP (Shown in All, Pickup, and Ready modes)
           if (showPickupSection) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -456,12 +475,12 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                       width: 26,
                       height: 26,
                       decoration: BoxDecoration(
-                        color: _filterIndex == 3 ? const Color(0xFFD97706) : AppDesignSystem.violet600,
+                        color: _filterIndex == 2 ? const Color(0xFFD97706) : AppDesignSystem.violet600,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
                         child: Icon(
-                          _filterIndex == 3 ? Icons.check_circle_rounded : Icons.inventory_2_rounded,
+                          _filterIndex == 2 ? Icons.check_circle_rounded : Icons.inventory_2_rounded,
                           size: 13,
                           color: Colors.white,
                         ),
@@ -469,7 +488,7 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      _filterIndex == 3 ? 'ITEMS PACKED & READY' : 'READY FOR PICKUP',
+                      _filterIndex == 2 ? 'ITEMS PACKED & READY' : 'READY FOR PICKUP',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 13),
                         fontWeight: FontWeight.w900,
@@ -482,7 +501,7 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: _filterIndex == 3 ? const Color(0xFFFEF3C7) : AppDesignSystem.violet200,
+                    color: _filterIndex == 2 ? const Color(0xFFFEF3C7) : AppDesignSystem.violet200,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -490,7 +509,7 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 10),
                       fontWeight: FontWeight.w800,
-                      color: _filterIndex == 3 ? const Color(0xFFB45309) : AppDesignSystem.violet600,
+                      color: _filterIndex == 2 ? const Color(0xFFB45309) : AppDesignSystem.violet600,
                     ),
                   ),
                 ),
@@ -503,7 +522,7 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
               child: displayedPickups.isEmpty
-                  ? (_filterIndex == 3
+                  ? (_filterIndex == 2
                       ? Container(
                           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                           decoration: BoxDecoration(
