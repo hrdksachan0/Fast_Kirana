@@ -667,11 +667,11 @@ class _ValuePicksCardState extends ConsumerState<ValuePicksCard>
           ),
           const SizedBox(height: 8),
 
-          // Carousel of paired cards (Ultra-compact proportion)
+          // Carousel of paired cards (Balanced proportion & zero overlap)
           LayoutBuilder(builder: (context, constraints) {
             final cardWidth = (constraints.maxWidth - 8) / 2;
             final textScale = math.max(1.0, MediaQuery.textScalerOf(context).scale(13) / 13);
-            final height = (cardWidth - 14) / 1.35 + 114 + (textScale - 1) * 35;
+            final height = (cardWidth - 14) / 1.42 + 132 + (textScale - 1) * 35;
 
             return MouseRegion(
               onEnter: (_) {
@@ -746,7 +746,7 @@ class _ValuePicksCardState extends ConsumerState<ValuePicksCard>
 
           // Single-Row Compact Footer: Saving Label on Left + Progress Indicator on Right
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.only(top: 10, bottom: 2),
             child: Row(
               children: [
                 const Icon(Icons.verified_outlined, size: 12.5, color: Color(0xFF69864B)),
@@ -1003,6 +1003,7 @@ class ValueProductCard extends StatelessWidget {
     const ink = Color(0xFF29422F);
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(7),
       decoration: BoxDecoration(
         color: const Color(0xFFFFFEFA),
@@ -1051,7 +1052,7 @@ class ValueProductCard extends StatelessWidget {
             onTap: onProductTap,
             borderRadius: BorderRadius.circular(10),
             child: AspectRatio(
-              aspectRatio: 1.35,
+              aspectRatio: 1.42,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: Stack(
