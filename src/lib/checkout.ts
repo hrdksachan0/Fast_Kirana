@@ -135,7 +135,10 @@ export function validateAddress(
   const c = (address.city || '').trim().toLowerCase()
 
   const isAkbarpur = p === '224122' || c.includes('akbarpur') || c.includes('ambedkar')
-  const allowedPincodes = isAkbarpur
+  const isBarharwa = p === '816101' || c.includes('barharwa') || c.includes('sahibganj')
+  const allowedPincodes = isBarharwa
+    ? ['816101']
+    : isAkbarpur
     ? ['224122']
     : [DEFAULT_STORE_PINCODE, '209206', '209201', '209214', '209208', '208001', '208002', '208011', '208012', '208020']
 
@@ -143,7 +146,9 @@ export function validateAddress(
     return { valid: false, error: `Selected address pincode (${p}) is outside our delivery zone.` }
   }
 
-  const allowedCities = isAkbarpur
+  const allowedCities = isBarharwa
+    ? ['barharwa', 'sahibganj', 'jharkhand', 'sant nagar', 'station road']
+    : isAkbarpur
     ? ['akbarpur', 'ambedkar', 'ambedkarnagar', 'up', 'uttar pradesh']
     : ['ghatampur', 'kanpur', 'nagar', 'dehat', 'up', 'uttar pradesh']
 
@@ -158,23 +163,13 @@ export function validateAddress(
   }
 
   if (address.lat && address.lng) {
-    // If Akbarpur, measure against Akbarpur Hub coordinates
-    const targetStoreLat = isAkbarpur ? 26.4380 : storeLat
-    const targetStoreLng = isAkbarpur ? 82.5400 : storeLng
+    // Measure against hub coordinates (Barharwa, Akbarpur or Ghatampur)
+    const targetStoreLat = isBarharwa ? 24.857140 : (isAkbarpur ? 26.4380 : storeLat)
+    const targetStoreLng = isBarharwa ? 87.778952 : (isAkbarpur ? 82.5400 : storeLng)
     const dist = getDistanceKm(targetStoreLat, targetStoreLng, address.lat, address.lng)
 
-    // Auto-Healing:
-    // If the customer has explicitly entered a valid recognized pincode (e.g. 209206 for Ghatampur, 224122 for Akbarpur)
-    // or valid city text, but their phone/browser GPS coordinates point to a distant cell tower (> 10 km away, e.g. Kanpur tower 45 km away),
-    // DO NOT hard block them! Auto-heal or treat as valid delivery address.
-    const isExplicitLocalPincode = p === '209206' || p === '224122' || c.includes('ghatampur') || c.includes('akbarpur')
-    if (dist >= 25.0 && isExplicitLocalPincode) {
-      console.warn(`[Auto-Heal] Address ${address.id || ''} has cell-tower drift (${dist.toFixed(1)} km) for pincode ${p}. Allowing order.`);
-      return { valid: true }
-    }
-
     const rules = getDeliveryRules(dist, { maxRadiusKm })
-    if (!rules.isServiceable) {
+    if (!rules.isServiceable || dist > maxRadiusKm) {
       return { valid: false, error: `Your address is outside our delivery zone (${dist.toFixed(1)} km away). We deliver only up to ${maxRadiusKm} km.` }
     }
   }
@@ -259,8 +254,7 @@ export async function validateCheckoutEligibility(
           const rDist = getDistanceKm(restLoc.lat, restLoc.lng, selectedAddr.lat, selectedAddr.lng)
           const p = (selectedAddr.pincode || '').trim().replace(/\s+/g, '')
           const c = (selectedAddr.city || '').trim().toLowerCase()
-          const isExplicitLocalPincode = p === '209206' || p === '224122' || c.includes('ghatampur') || c.includes('akbarpur')
-          if (rDist > restLoc.deliveryRadiusKm && !(rDist >= 25.0 && isExplicitLocalPincode)) {
+          if (rDist > restLoc.deliveryRadiusKm) {
             return {
               valid: false,
               error: `Your address is outside ${restLoc.name}'s delivery zone (${rDist.toFixed(1)} km away). Delivery from this restaurant is strictly limited to ${restLoc.deliveryRadiusKm.toFixed(0)} km.`

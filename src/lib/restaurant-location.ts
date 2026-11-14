@@ -54,6 +54,14 @@ export const KNOWN_RESTAURANT_LOCATIONS: Record<string, RestaurantLocationInfo> 
     lng: 80.170,
     deliveryRadiusKm: 5.0,
   },
+  'REST-106': {
+    id: 'REST-106',
+    name: 'Radha Rani Restaurant',
+    slug: 'radha-rani-restaurant',
+    lat: 24.857140,
+    lng: 87.778952,
+    deliveryRadiusKm: 5.0,
+  },
   // Legacy CUID / alias mappings
   'cms2p1lap0000n0id8alldboy': {
     id: 'REST-101',
@@ -154,6 +162,14 @@ export function getRestaurantLocation(
     lowerName.includes('zayka')
   ) {
     return KNOWN_RESTAURANT_LOCATIONS['REST-105']
+  }
+  if (
+    lowerSlug.includes('radha') ||
+    lowerSlug.includes('rani') ||
+    lowerName.includes('radha rani') ||
+    lowerName.includes('radharani')
+  ) {
+    return KNOWN_RESTAURANT_LOCATIONS['REST-106']
   }
 
   // 4. If it's a restaurant product but coordinates are unknown, return fallback with default radius

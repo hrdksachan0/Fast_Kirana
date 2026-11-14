@@ -69,9 +69,10 @@ export function useCheckoutAddress({
 
   // Pre-fill phone number from session if available
   useEffect(() => {
-    if (session?.user?.phone && !prefilledPhoneRef.current) {
+    const sessionPhone = (session?.user as any)?.phone
+    if (sessionPhone && !prefilledPhoneRef.current) {
       prefilledPhoneRef.current = true
-      let phoneVal = session.user.phone
+      let phoneVal = sessionPhone
       if (phoneVal.startsWith('wa-') && phoneVal.includes('@')) {
         phoneVal = phoneVal.split('@')[0].replace('wa-', '')
       }
@@ -439,6 +440,40 @@ export function useCheckoutAddress({
     })
   }
 
+  const handleUpdateAddressCoordinates = async (
+    addressId: string,
+    lat: number,
+    lng: number
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch(`${apiUrl()}/api/addresses`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: addressId, lat, lng }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setAddresses((prev) =>
+          prev.map((a) =>
+            a.id === addressId
+              ? { ...a, lat: updated.lat ?? lat, lng: updated.lng ?? lng }
+              : a
+          )
+        )
+        triggerHaptic('light')
+        toast.success('Exact delivery pin saved to your address! 📍')
+        return true
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Failed to update pin location')
+        return false
+      }
+    } catch {
+      toast.error('Network error updating pin location')
+      return false
+    }
+  }
+
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
 
   return {
@@ -466,5 +501,6 @@ export function useCheckoutAddress({
     handleSaveAddress,
     handleEditAddressClick,
     handleCancelAddressForm,
+    handleUpdateAddressCoordinates,
   }
 }

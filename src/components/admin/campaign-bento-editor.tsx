@@ -51,12 +51,10 @@ const buttonClass =
   'inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer'
 
 const CARD_META: { key: BentoCardKey; num: string; label: string; accent: string }[] = [
-  { key: 'freshMarket', num: '01', label: 'Fresh Market', accent: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
-  { key: 'dailyRestock', num: '02', label: 'Daily Restock', accent: 'bg-sky-50 border-sky-200 text-sky-800' },
+  { key: 'seasonalSwitchUp', num: '01', label: 'Seasonal Switch-Up', accent: 'bg-sky-50 border-sky-200 text-sky-800' },
+  { key: 'freshMarket', num: '02', label: 'bloom / Fresh Market', accent: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
   { key: 'valuePicks', num: '03', label: 'Value Picks', accent: 'bg-amber-50 border-amber-200 text-amber-900' },
   { key: 'giftingBoutique', num: '04', label: 'Gifting Boutique', accent: 'bg-rose-50 border-rose-200 text-rose-800' },
-  { key: 'movieNight', num: '05', label: 'Movie Night', accent: 'bg-purple-50 border-purple-200 text-purple-900' },
-  { key: 'breakfastClub', num: '06', label: 'Breakfast Club', accent: 'bg-orange-50 border-orange-200 text-orange-900' },
 ]
 
 function BentoImageInput({
@@ -404,7 +402,8 @@ export function CampaignBentoEditor({
     structuredClone(defaultCampaignBentoConfig)
   )
   const [published, setPublished] = useState<CampaignBentoConfig | null>(null)
-  const [selectedCard, setSelectedCard] = useState<BentoCardKey>('freshMarket')
+  const [selectedCard, setSelectedCard] = useState<BentoCardKey>('seasonalSwitchUp')
+  const [selectedSeasonalTabId, setSelectedSeasonalTabId] = useState<string>('body-lotions')
   const [selectedFreshTabId, setSelectedFreshTabId] = useState<string>('sabzi')
   const [previewModeView, setPreviewModeView] = useState<'all-desktop' | 'all-mobile' | 'single'>(
     'single'
@@ -512,13 +511,16 @@ export function CampaignBentoEditor({
 
   const cardCoverage = (key: BentoCardKey) => {
     let items: BentoSlotItem[] = []
-    if (key === 'freshMarket') items = draft.freshMarket.tabs.flatMap((t) => t.items)
-    else if (key === 'dailyRestock') items = draft.dailyRestock.items
+    if (key === 'seasonalSwitchUp') {
+      const sw = draft.seasonalSwitchUp ?? defaultCampaignBentoConfig.seasonalSwitchUp!
+      items = [...sw.tabs.flatMap((t) => t.items), ...sw.items]
+    } else if (key === 'freshMarket') items = draft.freshMarket.tabs.flatMap((t) => t.items)
+    else if (key === 'dailyRestock') items = draft.dailyRestock?.items ?? []
     else if (key === 'valuePicks') items = draft.valuePicks.items
     else if (key === 'giftingBoutique')
       items = [draft.giftingBoutique.heroItem, draft.giftingBoutique.miniItem]
-    else if (key === 'movieNight') items = draft.movieNight.items
-    else if (key === 'breakfastClub') items = draft.breakfastClub.items
+    else if (key === 'movieNight') items = draft.movieNight?.items ?? []
+    else if (key === 'breakfastClub') items = draft.breakfastClub?.items ?? []
     const linked = items.filter((s) => resolveBentoSlotProduct(s, products).isLinked).length
     return { linked, total: items.length }
   }
@@ -1205,6 +1207,160 @@ export function CampaignBentoEditor({
               )}
             </div>
           </div>
+
+          {/* 01 THE SEASONAL SWITCH-UP */}
+          {selectedCard === 'seasonalSwitchUp' && (
+            <div className="space-y-4">
+              <div className="space-y-3 border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Beauty Sub-Category Tabs & Product Slots
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(draft.seasonalSwitchUp?.tabs ?? []).map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setSelectedSeasonalTabId(tab.id)}
+                        className={cn(
+                          'rounded-full px-3 py-1 text-xs font-bold cursor-pointer transition-all',
+                          (selectedSeasonalTabId || 'body-lotions') === tab.id
+                            ? 'bg-[#0284C7] text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        )}
+                      >
+                        {tab.icon} {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {(() => {
+                  const currentSeasonalTab =
+                    draft.seasonalSwitchUp?.tabs.find(
+                      (t) => t.id === (selectedSeasonalTabId || 'body-lotions')
+                    ) ?? draft.seasonalSwitchUp?.tabs[0]
+
+                  if (!currentSeasonalTab) return null
+
+                  return (
+                    <div className="space-y-3">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                            Tab Label
+                          </label>
+                          <input
+                            type="text"
+                            className={inputClass}
+                            value={currentSeasonalTab.label}
+                            onChange={(e) =>
+                              updateDraft((prev) => ({
+                                ...prev,
+                                seasonalSwitchUp: {
+                                  ...(prev.seasonalSwitchUp ?? defaultCampaignBentoConfig.seasonalSwitchUp!),
+                                  tabs: (prev.seasonalSwitchUp?.tabs ?? defaultCampaignBentoConfig.seasonalSwitchUp!.tabs).map((t) =>
+                                    t.id === currentSeasonalTab.id ? { ...t, label: e.target.value } : t
+                                  ),
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                            Tab Emoji / Icon
+                          </label>
+                          <input
+                            type="text"
+                            className={inputClass}
+                            value={currentSeasonalTab.icon}
+                            onChange={(e) =>
+                              updateDraft((prev) => ({
+                                ...prev,
+                                seasonalSwitchUp: {
+                                  ...(prev.seasonalSwitchUp ?? defaultCampaignBentoConfig.seasonalSwitchUp!),
+                                  tabs: (prev.seasonalSwitchUp?.tabs ?? defaultCampaignBentoConfig.seasonalSwitchUp!.tabs).map((t) =>
+                                    t.id === currentSeasonalTab.id ? { ...t, icon: e.target.value } : t
+                                  ),
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      {currentSeasonalTab.items.map((slot, idx) => (
+                        <BentoSlotEditor
+                          key={slot.id}
+                          slot={slot}
+                          indexLabel={`${currentSeasonalTab.label} Slot #${idx + 1}`}
+                          products={products}
+                          canRemove={currentSeasonalTab.items.length > 1}
+                          onRemove={() =>
+                            updateDraft((prev) => ({
+                              ...prev,
+                              seasonalSwitchUp: {
+                                ...(prev.seasonalSwitchUp ?? defaultCampaignBentoConfig.seasonalSwitchUp!),
+                                tabs: (prev.seasonalSwitchUp?.tabs ?? defaultCampaignBentoConfig.seasonalSwitchUp!.tabs).map((t) =>
+                                  t.id === currentSeasonalTab.id
+                                    ? { ...t, items: t.items.filter((_, i) => i !== idx) }
+                                    : t
+                                ),
+                              },
+                            }))
+                          }
+                          onChange={(patch) =>
+                            updateDraft((prev) => ({
+                              ...prev,
+                              seasonalSwitchUp: {
+                                ...(prev.seasonalSwitchUp ?? defaultCampaignBentoConfig.seasonalSwitchUp!),
+                                tabs: (prev.seasonalSwitchUp?.tabs ?? defaultCampaignBentoConfig.seasonalSwitchUp!.tabs).map((t) =>
+                                  t.id === currentSeasonalTab.id
+                                    ? {
+                                        ...t,
+                                        items: t.items.map((it, i) =>
+                                          i === idx ? { ...it, ...patch } : it
+                                        ),
+                                      }
+                                    : t
+                                ),
+                              },
+                            }))
+                          }
+                        />
+                      ))}
+
+                      {currentSeasonalTab.items.length < 6 && (
+                        <button
+                          type="button"
+                          className={buttonClass}
+                          onClick={() =>
+                            updateDraft((prev) => ({
+                              ...prev,
+                              seasonalSwitchUp: {
+                                ...(prev.seasonalSwitchUp ?? defaultCampaignBentoConfig.seasonalSwitchUp!),
+                                tabs: (prev.seasonalSwitchUp?.tabs ?? defaultCampaignBentoConfig.seasonalSwitchUp!.tabs).map((t) =>
+                                  t.id === currentSeasonalTab.id
+                                    ? {
+                                        ...t,
+                                        items: [...t.items, newSlotTemplate(currentSeasonalTab.id)],
+                                      }
+                                    : t
+                                ),
+                              },
+                            }))
+                          }
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Add Product to {currentSeasonalTab.label}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
 
           {/* 01 FRESH MARKET */}
           {selectedCard === 'freshMarket' && (

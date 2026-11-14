@@ -19,6 +19,7 @@ interface FreeMapPickerProps {
   initialLng?: number | null
   storeLat?: number
   storeLng?: number
+  originName?: string
   deliveryRadiusKm?: number
   onLocationSelect: (data: LocationData) => void
   onClose?: () => void
@@ -61,6 +62,7 @@ export function FreeMapPicker({
   initialLng = 80.1714024,
   storeLat = 26.1534185,
   storeLng = 80.1714024,
+  originName,
   deliveryRadiusKm = 2.0,
   onLocationSelect,
   onClose,
@@ -265,16 +267,23 @@ export function FreeMapPicker({
   }
 
   return (
-    <div className="bg-card border border-border rounded-3xl p-5 shadow-xl space-y-4 max-w-md w-full mx-auto">
-      <div className="flex justify-between items-center border-b border-border/40 pb-3">
+    <div className="bg-card border border-border rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3.5 max-w-md w-full mx-auto animate-in fade-in zoom-in-95 duration-200">
+      <div className="flex justify-between items-start border-b border-border/40 pb-3">
         <div>
-          <h3 className="font-extrabold text-text-primary text-base flex items-center gap-1.5">
-            <span>🗺️</span> 100% Free Interactive Map
+          <h3 className="font-black text-text-primary text-base flex items-center gap-1.5">
+            <span className="text-primary">📍</span>
+            <span>Set Exact Delivery Location</span>
           </h3>
-          <p className="text-[10px] text-text-secondary font-semibold">Zero Google API costs • Real-time OpenStreetMap</p>
+          <p className="text-[11px] text-text-secondary font-medium mt-0.5">
+            Move map or use GPS to pin your exact house / gate
+          </p>
         </div>
         {onClose && (
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted text-text-secondary">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-xl hover:bg-muted text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+            aria-label="Close"
+          >
             <X size={18} />
           </button>
         )}
@@ -283,20 +292,20 @@ export function FreeMapPicker({
       {/* Search Bar */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             type="text"
-            placeholder="Search city, area or street..."
+            placeholder="Search colony, area or street..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearchOSM()}
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-border bg-muted/20 focus:outline-none focus:border-rose-500 font-semibold"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-border bg-muted/30 focus:outline-none focus:border-primary font-medium"
           />
         </div>
         <button
           onClick={handleSearchOSM}
           disabled={isSearching}
-          className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 shrink-0"
+          className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-white text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 shrink-0 shadow-2xs"
         >
           {isSearching ? <Loader2 size={14} className="animate-spin" /> : 'Search'}
         </button>
@@ -307,10 +316,10 @@ export function FreeMapPicker({
         type="button"
         onClick={handleDetectGPS}
         disabled={isDetecting}
-        className="w-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-xl p-3 flex items-center gap-2.5 transition-all text-xs font-bold cursor-pointer active:scale-95"
+        className="w-full bg-primary/10 hover:bg-primary/15 text-primary border border-primary/20 rounded-xl p-2.5 flex items-center justify-center gap-2 transition-all text-xs font-bold cursor-pointer active:scale-98"
       >
-        {isDetecting ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} className="rotate-45" />}
-        <span>📍 Detect My Exact GPS Location</span>
+        {isDetecting ? <Loader2 size={15} className="animate-spin" /> : <Navigation size={15} className="rotate-45" />}
+        <span>Detect My Exact GPS Location</span>
       </button>
 
       {/* Map Container */}
@@ -318,27 +327,29 @@ export function FreeMapPicker({
         <div ref={mapContainerRef} className="w-full h-full" />
 
         {isLoadingMap && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-            <Loader2 size={24} className="animate-spin text-rose-600" />
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-xs flex items-center justify-center">
+            <Loader2 size={24} className="animate-spin text-primary" />
           </div>
         )}
 
-        {/* Center Target Pin */}
+        {/* Center Target Pin with Zomato/Swiggy Bobbing effect */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full pointer-events-none z-20 flex flex-col items-center">
-          <MapPin size={32} className="text-rose-600 fill-rose-100 drop-shadow-md transition-transform duration-200" />
-          <div className="w-2.5 h-1 bg-black/30 rounded-full blur-[1px]" />
+          <MapPin size={34} className="text-primary fill-primary/20 drop-shadow-md transition-transform duration-200" />
+          <div className="w-2.5 h-1 bg-black/35 rounded-full blur-[1px]" />
         </div>
       </div>
 
       {/* Selected Address Display */}
       <div className="p-3 bg-muted/40 rounded-2xl border border-border/60 text-xs space-y-1">
-        <div className="flex justify-between items-center">
-          <span className="font-bold text-text-primary text-[11px] truncate max-w-[240px]">{formattedAddress}</span>
-          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${isServiceable ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'}`}>
+        <div className="flex justify-between items-center gap-2">
+          <span className="font-bold text-text-primary text-[11px] truncate flex-1">{formattedAddress}</span>
+          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 ${isServiceable ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'}`}>
             {isServiceable ? '🟢 Serviceable' : '🔴 Out of Service'}
           </span>
         </div>
-        <p className="text-[10px] text-text-secondary font-medium">Distance: {distanceKm.toFixed(1)} km from Store Hub</p>
+        <p className="text-[10px] text-text-secondary font-medium">
+          Distance: {distanceKm.toFixed(1)} km from {originName || 'Store Hub'}
+        </p>
       </div>
 
       {/* Confirm Button */}
@@ -348,7 +359,7 @@ export function FreeMapPicker({
         disabled={!isServiceable}
         className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-md active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
       >
-        <Check size={16} /> Confirm Location & Deliver Here
+        <Check size={16} /> Confirm Pin & Deliver Here
       </button>
     </div>
   )

@@ -74,12 +74,57 @@ export const campaignBentoConfigSchema = z
   .object({
     version: z.literal(1).default(1),
     enabled: z.boolean().default(false),
+    seasonalSwitchUp: z
+      .object({
+        ...cardVisibilityFields,
+        title: shortText.min(1).default('The Seasonal Switch-Up'),
+        subtitle: shortText.default('POWERED BY Cetaphil DOT & KEY'),
+        badge: z.string().trim().optional().default('01'),
+        backgroundColor: z.string().trim().optional().default('#D6EEFF'),
+        borderColor: z.string().trim().optional().default('#C0E2FD'),
+        accentColor: z.string().trim().optional().default('#0284C7'),
+        textColor: z.string().trim().optional().default('#1E3A8A'),
+        tabs: z.array(freshMarketTabSchema).default([
+          { id: 'body-lotions', label: 'Body Lotions', icon: '🧴', items: [] },
+          { id: 'face-moisturizers', label: 'Face Moisturizers', icon: '✨', items: [] },
+          { id: 'lip-balm', label: 'Lip Balm', icon: '💄', items: [] },
+          { id: 'hair-care', label: 'Hair Care', icon: '💆', items: [] },
+          { id: 'lip-mask', label: 'Lip Mask', icon: '💋', items: [] },
+        ]),
+        items: z.array(bentoSlotItemSchema).default([]),
+      })
+      .optional()
+      .default({
+        enabled: true,
+        sortOrder: 1,
+        minInStockItems: 1,
+        scheduleEnabled: false,
+        startDate: null,
+        endDate: null,
+        timeSlot: 'ALL_DAY',
+        targetHubs: ['all'],
+        title: 'The Seasonal Switch-Up',
+        subtitle: 'POWERED BY Cetaphil DOT & KEY',
+        badge: '01',
+        backgroundColor: '#D6EEFF',
+        borderColor: '#C0E2FD',
+        accentColor: '#0284C7',
+        textColor: '#1E3A8A',
+        tabs: [
+          { id: 'body-lotions', label: 'Body Lotions', icon: '🧴', items: [] },
+          { id: 'face-moisturizers', label: 'Face Moisturizers', icon: '✨', items: [] },
+          { id: 'lip-balm', label: 'Lip Balm', icon: '💄', items: [] },
+          { id: 'hair-care', label: 'Hair Care', icon: '💆', items: [] },
+          { id: 'lip-mask', label: 'Lip Mask', icon: '💋', items: [] },
+        ],
+        items: [],
+      }),
     freshMarket: z
       .object({
         ...cardVisibilityFields,
-        title: shortText.min(1).default('Fresh Market'),
+        title: shortText.min(1).default('bloom'),
         subtitle: shortText.default('Farm-fresh essentials, ready to add'),
-        headerImage: campaignImageSchema.default('/navratri/daily-vegetables.svg'),
+        headerImage: campaignImageSchema.default('/navratri/bloom-panoramic-header.svg'),
         tabs: z.array(freshMarketTabSchema).min(1).max(5),
       })
       .strict(),
@@ -136,6 +181,7 @@ export type FreshMarketTab = z.infer<typeof freshMarketTabSchema>
 export type GiftingOccasion = z.infer<typeof giftingOccasionSchema>
 export type CampaignBentoConfig = z.infer<typeof campaignBentoConfigSchema>
 export type BentoCardKey =
+  | 'seasonalSwitchUp'
   | 'freshMarket'
   | 'dailyRestock'
   | 'valuePicks'
@@ -146,10 +192,35 @@ export type BentoCardKey =
 export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   version: 1,
   enabled: false,
-  freshMarket: {
+  seasonalSwitchUp: {
     enabled: true,
     sortOrder: 1,
     badge: '01',
+    backgroundColor: '#D6EEFF',
+    borderColor: '#C0E2FD',
+    accentColor: '#0284C7',
+    textColor: '#1E3A8A',
+    minInStockItems: 1,
+    scheduleEnabled: false,
+    startDate: null,
+    endDate: null,
+    timeSlot: 'ALL_DAY',
+    targetHubs: ['all'],
+    title: 'The Seasonal Switch-Up',
+    subtitle: 'POWERED BY Cetaphil DOT & KEY',
+    tabs: [
+      { id: 'body-lotions', label: 'Body Lotions', icon: '🧴', items: [] },
+      { id: 'face-moisturizers', label: 'Face Moisturizers', icon: '✨', items: [] },
+      { id: 'lip-balm', label: 'Lip Balm', icon: '💄', items: [] },
+      { id: 'hair-care', label: 'Hair Care', icon: '💆', items: [] },
+      { id: 'lip-mask', label: 'Lip Mask', icon: '💋', items: [] },
+    ],
+    items: [],
+  },
+  freshMarket: {
+    enabled: true,
+    sortOrder: 2,
+    badge: '02',
     backgroundColor: '#E2EFFF',
     borderColor: '#CFE4FD',
     accentColor: '#15803D',
@@ -160,9 +231,9 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
     endDate: null,
     timeSlot: 'ALL_DAY',
     targetHubs: ['all'],
-    title: 'Fresh Market',
+    title: 'bloom',
     subtitle: 'Farm-fresh essentials, ready to add',
-    headerImage: '/navratri/daily-vegetables.svg',
+    headerImage: '/navratri/bloom-panoramic-header.svg',
     tabs: [
       {
         id: 'sabzi',
@@ -586,13 +657,15 @@ export function isBentoCardVisible(
 
 export function collectBentoSlotItems(config: CampaignBentoConfig): BentoSlotItem[] {
   return [
+    ...(config.seasonalSwitchUp?.tabs?.flatMap((tab) => tab.items) ?? []),
+    ...(config.seasonalSwitchUp?.items ?? []),
     ...config.freshMarket.tabs.flatMap((tab) => tab.items),
     ...config.dailyRestock.items,
     ...config.valuePicks.items,
     config.giftingBoutique.heroItem,
     config.giftingBoutique.miniItem,
-    ...config.movieNight.items,
-    ...config.breakfastClub.items,
+    ...(config.movieNight?.items ?? []),
+    ...(config.breakfastClub?.items ?? []),
   ]
 }
 

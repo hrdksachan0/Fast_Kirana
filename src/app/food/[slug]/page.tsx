@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { RestaurantStorefront } from '@/components/food/restaurant-storefront'
-import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID, OUTLET_BAL_UDYAN_ID, OUTLET_PIZZA_LOVERS_ID } from '@/lib/constants'
+import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID, OUTLET_BAL_UDYAN_ID, OUTLET_PIZZA_LOVERS_ID, OUTLET_RADHA_RANI_ID } from '@/lib/constants'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 import { resolveProductBogoBadge } from '@/lib/coupon-rules'
 
@@ -37,6 +37,10 @@ async function findRestaurantBySlug(rawSlug: string) {
   const isPizzaLovers =
     decodedSlug.includes('pizza') ||
     decodedSlug.includes('hot-pizza')
+
+  const isRadhaRani =
+    decodedSlug.includes('radha') ||
+    decodedSlug.includes('rani')
 
   // 1. Primary search: exact slug, ID, or known alias ID
   const restaurant = await prisma.restaurant.findFirst({
@@ -71,6 +75,13 @@ async function findRestaurantBySlug(rawSlug: string) {
               { id: OUTLET_PIZZA_LOVERS_ID },
               { slug: { in: ['hot-pizza-lovers', 'pizza-lovers', 'pizza-lover'] } },
               { name: { contains: 'Pizza', mode: 'insensitive' as const } },
+            ]
+          : []),
+        ...(isRadhaRani
+          ? [
+              { id: OUTLET_RADHA_RANI_ID },
+              { slug: { in: ['radha-rani', 'radha-rani-restaurant', 'radharani'] } },
+              { name: { contains: 'Radha', mode: 'insensitive' as const } },
             ]
           : []),
         // Fuzzy startsWith fallback

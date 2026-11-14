@@ -6,6 +6,7 @@
  * - REST-103: Bal Udyan Restaurant
  * - REST-104: Hot Pizza Lovers
  * - REST-105: Zayka Non Veg Hotel
+ * - REST-106: Radha Rani Restaurant
  */
 export interface SessionLike {
   user?: {
@@ -73,6 +74,16 @@ export function normalizeRestaurantId(id: string | null | undefined): string | n
     clean.includes('zayka')
   ) {
     return 'REST-105'
+  }
+
+  if (
+    clean === 'rest-106' ||
+    clean === 'radha-rani' ||
+    clean === 'radha-rani-restaurant' ||
+    clean === 'radharani' ||
+    clean.includes('radha')
+  ) {
+    return 'REST-106'
   }
 
   return id

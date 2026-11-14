@@ -295,6 +295,9 @@ async def _resolve_effective_restaurant(restaurant_id: Optional[str], current_us
             "zayka-non-veg": "REST-105",
             "zayka": "REST-105",
             "0b2470fa-8221-49e1-aa3b-4c98b2bb5941": "REST-105",
+            "radha-rani-restaurant": "REST-106",
+            "radha-rani": "REST-106",
+            "radharani": "REST-106",
         }
         target_id = alias_map.get(target_id.lower(), target_id)
 

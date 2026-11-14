@@ -679,6 +679,8 @@ async def get_products(
             matched_rest_ids.add('REST-104')
         if 'zayka' in normalized_search:
             matched_rest_ids.add('REST-105')
+        if 'radha' in normalized_search or ('radha' in search_words and 'rani' in search_words):
+            matched_rest_ids.add('REST-106')
 
         is_explicit_restaurant_search = bool(matched_rest_ids) or any(
             rw in normalized_search.split() for rw in ['restaurant', 'cafe', 'dhaba', 'kitchen', 'hotel', 'bhojnalaya']

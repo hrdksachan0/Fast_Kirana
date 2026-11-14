@@ -117,11 +117,23 @@ export function InteractiveCampaignBento({
     return Array.from(map.values())
   }, [linkedProducts, fallbackCatalog, propProducts])
 
-  // Card 01 State
+  // Card 01 State (Seasonal Switch-Up)
+  const [selectedSeasonalTab, setSelectedSeasonalTab] = useState<string>(
+    activeConfig.seasonalSwitchUp?.tabs[0]?.id ?? 'body-lotions'
+  )
+
+  // Card 02 State (bloom / Fresh Market)
   const [activeFreshPill, setActiveFreshPill] = useState<string>(
     activeConfig.freshMarket.tabs[0]?.id ?? 'sabzi'
   )
   const [previewQuantities, setPreviewQuantities] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    const sTabs = activeConfig.seasonalSwitchUp?.tabs ?? []
+    if (sTabs.length > 0 && !sTabs.some((t) => t.id === selectedSeasonalTab)) {
+      setSelectedSeasonalTab(sTabs[0].id)
+    }
+  }, [activeConfig.seasonalSwitchUp?.tabs, selectedSeasonalTab])
 
   useEffect(() => {
     const tabs = activeConfig.freshMarket.tabs
@@ -130,10 +142,10 @@ export function InteractiveCampaignBento({
     }
   }, [activeConfig.freshMarket.tabs, activeFreshPill])
 
-  // Card 03 State
-  const [valueCardAdded, setValueCardAdded] = useState<string | null>(null)
+  // Card 03 State (Value Picks)
+  const [valueActivePairIdx, setValueActivePairIdx] = useState<number>(0)
 
-  // Card 04 State
+  // Card 04 State (Gifting Boutique)
   const [activeOccasion, setActiveOccasion] = useState<string>(
     activeConfig.giftingBoutique.occasions[0]?.id ?? 'birthday'
   )
@@ -232,27 +244,41 @@ export function InteractiveCampaignBento({
     activeConfig.freshMarket.tabs.find((t) => t.id === activeFreshPill) ??
     activeConfig.freshMarket.tabs[0]
 
-  const breakfastResolved = activeConfig.breakfastClub.items.map((slot) => ({
-    slot,
-    resolved: resolveBentoSlotProduct(slot, mergedProducts),
-  }))
-
-  const selectedBreakfast = breakfastResolved.filter(
-    ({ slot, resolved }) => Boolean(breakfastChecks[slot.id]) && (previewMode || resolved.inStock)
-  )
-  const breakfastTotal = selectedBreakfast.reduce((sum, { resolved }) => sum + resolved.price, 0)
-  const breakfastCount = selectedBreakfast.length
-
   const shouldRenderCard = (key: BentoCardKey, cardEnabled: boolean) => {
     if (focusedCard !== 'all' && focusedCard !== key) return false
     if (!cardEnabled && !previewMode) return false
     return true
   }
 
+  // Active Value Picks Pairs (matching Flutter 1kg vs 5kg comparison layout)
+  const valuePairs = [
+    {
+      id: 'atta',
+      left: {
+        name: 'Whole wheat atta',
+        packLabel: '1 kg',
+        price: 60,
+        unitPriceLabel: '₹60 / kg',
+        imageUrl: '/navratri/ref-atta-1kg.png',
+        isBetterValue: false,
+      },
+      right: {
+        name: 'Whole wheat atta',
+        packLabel: '5 kg',
+        price: 250,
+        unitPriceLabel: '₹50 / kg',
+        imageUrl: '/navratri/ref-atta-5kg.png',
+        isBetterValue: true,
+      },
+      savingLabel: 'Save ₹50 when you pick the 5 kg pack',
+    },
+  ]
+  const currentPair = valuePairs[valueActivePairIdx] ?? valuePairs[0]
+
   const gridClass =
     focusedCard !== 'all'
       ? 'grid grid-cols-1 max-w-md mx-auto gap-6'
-      : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7'
+      : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 sm:gap-7'
 
   return (
     <section
@@ -264,7 +290,7 @@ export function InteractiveCampaignBento({
       {previewMode && !activeConfig.enabled && (
         <div className="mb-3 flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
           <EyeOff className="h-4 w-4 shrink-0" />
-          <span>6-Card Bento section is currently hidden on the live storefront.</span>
+          <span>4-Card Bento section is currently hidden on the live storefront.</span>
         </div>
       )}
 
@@ -275,12 +301,164 @@ export function InteractiveCampaignBento({
         className={cn(gridClass, previewMode && !activeConfig.enabled && 'opacity-70')}
       >
         {/* ======================================================== */}
-        {/* 01: FRESH MARKET                                         */}
+        {/* 01: THE SEASONAL SWITCH-UP (Zepto Wavy Beauty Zone)     */}
+        {/* ======================================================== */}
+        {shouldRenderCard('seasonalSwitchUp', activeConfig.seasonalSwitchUp?.enabled ?? true) && (
+          <div
+            className={cn(
+              'flex flex-col',
+              !(activeConfig.seasonalSwitchUp?.enabled ?? true) && 'opacity-60'
+            )}
+          >
+            <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
+              <span>{activeConfig.seasonalSwitchUp?.badge || '01'}</span>
+              {!(activeConfig.seasonalSwitchUp?.enabled ?? true) && (
+                <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
+                  Hidden
+                </span>
+              )}
+            </span>
+
+            <motion.div
+              variants={cardVariants}
+              className="rounded-[24px] bg-gradient-to-b from-[#D6EEFF] via-[#E9F5FF] to-[#F7FBFF] border-[1.2px] border-[#C0E2FD] overflow-hidden flex flex-col justify-between shadow-[0_4px_18px_rgba(2,132,199,0.06)]"
+            >
+              <div>
+                {/* Wavy Scalloped Top Edge Bar */}
+                <div className="h-2.5 w-full bg-[#BFDBFE]/60 overflow-hidden relative">
+                  <svg
+                    viewBox="0 0 100 10"
+                    preserveAspectRatio="none"
+                    className="w-full h-full fill-[#D6EEFF]"
+                  >
+                    <path d="M0,10 Q2.5,0 5,10 Q7.5,0 10,10 Q12.5,0 15,10 Q17.5,0 20,10 Q22.5,0 25,10 Q27.5,0 30,10 Q32.5,0 35,10 Q37.5,0 40,10 Q42.5,0 45,10 Q47.5,0 50,10 Q52.5,0 55,10 Q57.5,0 60,10 Q62.5,0 65,10 Q67.5,0 70,10 Q72.5,0 75,10 Q77.5,0 80,10 Q82.5,0 85,10 Q87.5,0 90,10 Q92.5,0 95,10 Q97.5,0 100,10 L100,0 L0,0 Z" />
+                  </svg>
+                </div>
+
+                {/* Header Title & Co-Sponsor Subtitle */}
+                <div className="pt-2 pb-1 text-center px-4">
+                  <h3 className="text-lg font-black text-[#1E3A8A] tracking-tight">
+                    {activeConfig.seasonalSwitchUp?.title || 'The Seasonal Switch-Up'}
+                  </h3>
+                  <div className="flex items-center justify-center gap-1.5 mt-1 text-[9px] font-extrabold text-[#1E40AF]">
+                    <span>❄️</span>
+                    <span className="w-4 h-[1.2px] bg-gradient-to-r from-transparent to-[#60A5FA]" />
+                    <span>POWERED BY</span>
+                    <span className="rounded-full bg-[#0060A9] px-1.5 py-0.5 text-white font-black text-[9px]">
+                      Cetaphil
+                    </span>
+                    <span className="font-black text-[#1E3A8A]">DOT & KEY</span>
+                    <span className="w-4 h-[1.2px] bg-gradient-to-l from-transparent to-[#60A5FA]" />
+                    <span>❄️</span>
+                  </div>
+                </div>
+
+                {/* Liquid Beauty Sub-Category Connected Tabs */}
+                <div className="flex items-center gap-1.5 px-3 pt-3 overflow-x-auto no-scrollbar">
+                  {(activeConfig.seasonalSwitchUp?.tabs ?? []).map((tab) => {
+                    const isSelected = (selectedSeasonalTab || 'body-lotions') === tab.id
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setSelectedSeasonalTab(tab.id)}
+                        className={cn(
+                          'px-3 py-2 rounded-t-xl text-[11px] font-extrabold transition-all flex flex-col items-center gap-0.5 cursor-pointer shrink-0 border-t border-x',
+                          isSelected
+                            ? 'bg-[#EAF5FF] text-[#0284C7] border-[#93C5FD] shadow-xs translate-y-[1px]'
+                            : 'bg-white/70 text-slate-600 border-transparent hover:bg-white'
+                        )}
+                      >
+                        <span className="text-base">{tab.icon}</span>
+                        <span className="whitespace-nowrap">{tab.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Connected Horizontal Product Cards */}
+                <div className="bg-[#EAF5FF] border-t border-[#93C5FD] p-3">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {(() => {
+                      const curTab =
+                        activeConfig.seasonalSwitchUp?.tabs.find(
+                          (t) => t.id === selectedSeasonalTab
+                        ) ?? activeConfig.seasonalSwitchUp?.tabs[0]
+                      const items = curTab?.items ?? []
+
+                      if (items.length === 0) {
+                        return (
+                          <div className="col-span-2 text-center py-5 text-xs font-semibold text-slate-500 bg-white/70 rounded-xl border border-sky-100">
+                            ✨ Real beauty products for {curTab?.label || 'this tab'} will appear from live Ghatampur stock.
+                          </div>
+                        )
+                      }
+
+                      return items.slice(0, 2).map((slot) => {
+                        const resolved = resolveBentoSlotProduct(slot, mergedProducts)
+                        const qty = getCartQty(resolved)
+                        return (
+                          <div
+                            key={slot.id}
+                            className="bg-white rounded-2xl p-2.5 flex flex-col justify-between border border-sky-100 shadow-2xs"
+                          >
+                            <div className="w-full h-20 relative mb-1.5 flex items-center justify-center p-1">
+                              <Image
+                                src={resolved.imageUrl}
+                                alt={resolved.name}
+                                fill
+                                unoptimized
+                                className="object-contain"
+                              />
+                            </div>
+                            <div>
+                              <h4 className="text-[11px] font-extrabold text-[#0F172A] leading-tight truncate">
+                                {resolved.name}
+                              </h4>
+                              <p className="text-[10px] text-slate-500">{resolved.unit}</p>
+                              <div className="flex items-center justify-between mt-1.5">
+                                <span className="text-xs font-black text-[#0F172A]">
+                                  {formatInr(resolved.price)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddResolved(resolved)}
+                                  className="px-2.5 py-1 rounded-md bg-[#0284C7] hover:bg-[#0369A1] text-white text-[10px] font-extrabold uppercase cursor-pointer"
+                                >
+                                  {qty > 0 ? `ADD (${qty})` : 'ADD'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* See All Footer */}
+              <div className="p-3 bg-[#EAF5FF]">
+                <button
+                  type="button"
+                  onClick={() => toast.info('Navigates to Beauty & Personal Care category')}
+                  className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 border border-sky-200 text-[#0284C7] text-xs font-extrabold flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span>See All</span>
+                  <span>▸</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* 02: BLOOM / FRESH MARKET (Fruit Skyline & Floating +)     */}
         {/* ======================================================== */}
         {shouldRenderCard('freshMarket', activeConfig.freshMarket.enabled) && (
           <div className={cn('flex flex-col', !activeConfig.freshMarket.enabled && 'opacity-60')}>
             <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
-              <span>{activeConfig.freshMarket.badge || '01'}</span>
+              <span>{activeConfig.freshMarket.badge || '02'}</span>
               {!activeConfig.freshMarket.enabled && (
                 <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
                   Hidden
@@ -289,40 +467,27 @@ export function InteractiveCampaignBento({
             </span>
             <motion.div
               variants={cardVariants}
-              style={{
-                backgroundColor: activeConfig.freshMarket.backgroundColor || undefined,
-                borderColor: activeConfig.freshMarket.borderColor || undefined,
-              }}
-              className="rounded-[22px] bg-[#F0F7F2] border border-[#DCFCE7] p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(21,128,61,0.04)] h-full"
+              className="rounded-[24px] bg-gradient-to-b from-[#E2EFFF] via-[#EFF6FF] to-[#F4F9FF] border-[1.2px] border-[#CFE4FD] overflow-hidden flex flex-col justify-between shadow-[0_4px_18px_rgba(2,132,199,0.06)]"
             >
               <div>
-                <div className="flex items-center gap-1 text-[#15803D] font-extrabold text-sm tracking-tight mb-2">
-                  <Zap className="w-4 h-4 fill-[#15803D]" />
-                  <span>FastMinute</span>
-                </div>
-
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-xl font-extrabold text-[#0F172A] tracking-tight leading-tight">
-                      {activeConfig.freshMarket.title}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                      {activeConfig.freshMarket.subtitle}
-                    </p>
-                  </div>
-                  <div className="w-14 h-11 relative flex-shrink-0">
-                    <Image
-                      src={activeConfig.freshMarket.headerImage}
-                      alt={activeConfig.freshMarket.title}
-                      fill
-                      unoptimized
-                      className="object-contain"
-                    />
+                {/* Panoramic Fruit Skyline Header with Cloud "bloom" */}
+                <div className="relative w-full h-24 overflow-hidden bg-gradient-to-r from-sky-400 to-sky-200">
+                  <Image
+                    src={activeConfig.freshMarket.headerImage || '/navratri/bloom-panoramic-header.svg'}
+                    alt="bloom fresh market"
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="font-black text-3xl text-white tracking-tight drop-shadow-[0_2px_4px_rgba(2,132,199,0.4)]">
+                      {activeConfig.freshMarket.title || 'bloom'}
+                    </span>
                   </div>
                 </div>
 
-                {/* Filter Pills */}
-                <div className="flex items-center gap-2 mt-3.5 overflow-x-auto no-scrollbar">
+                {/* Filter Pills: Sabzi | Fruits | Herbs */}
+                <div className="flex items-center gap-2 px-3 pt-3 overflow-x-auto no-scrollbar">
                   {activeConfig.freshMarket.tabs.map((tab) => {
                     const isActive = currentFreshTab?.id === tab.id
                     return (
@@ -331,7 +496,7 @@ export function InteractiveCampaignBento({
                         type="button"
                         onClick={() => setActiveFreshPill(tab.id)}
                         className={cn(
-                          'px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none whitespace-nowrap',
+                          'px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none whitespace-nowrap',
                           isActive
                             ? 'bg-[#15803D] text-white shadow-xs'
                             : 'bg-white text-slate-700 hover:bg-white/80 border border-slate-200'
@@ -344,193 +509,87 @@ export function InteractiveCampaignBento({
                   })}
                 </div>
 
-                {/* 2-Item Product Cards */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentFreshTab?.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.18 }}
-                    className="grid grid-cols-2 gap-3 mt-4"
-                  >
-                    {(currentFreshTab?.items ?? []).map((slot) => {
+                {/* Produce Product Cards with "select >" Bronze Badge & Floating Pink '+' */}
+                <div className="p-3">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {(currentFreshTab?.items ?? []).slice(0, 2).map((slot) => {
                       const resolved = resolveBentoSlotProduct(slot, mergedProducts)
                       const qty = getCartQty(resolved)
+                      const discountAmount =
+                        resolved.mrp > resolved.price ? Math.round(resolved.mrp - resolved.price) : 0
+
                       return (
                         <div
                           key={slot.id}
-                          className="bg-white rounded-2xl p-3 flex flex-col justify-between border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
+                          className="bg-white rounded-2xl p-2.5 flex flex-col justify-between border border-slate-200/90 shadow-2xs relative"
                         >
-                          <div className="w-full h-20 relative mb-1.5 flex items-center justify-center p-1">
+                          <div className="w-full h-24 relative mb-1.5 flex items-center justify-center bg-[#F8FAFC] rounded-xl p-1">
+                            {/* "select >" Bronze Pill */}
+                            <span className="absolute top-1.5 left-1.5 rounded bg-[#78350F] px-1.5 py-0.5 text-[8.5px] font-black text-white">
+                              select &gt;
+                            </span>
                             <Image
                               src={resolved.imageUrl}
                               alt={resolved.name}
                               fill
                               unoptimized
-                              className="object-contain hover:scale-105 transition-transform"
+                              className="object-contain p-2"
                             />
+                            {/* Signature Floating Pink '+' Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleAddResolved(resolved)}
+                              className="absolute -bottom-2 -right-1 h-7 w-7 rounded-lg bg-white border border-[#DB2777] text-[#DB2777] hover:bg-pink-50 flex items-center justify-center font-black text-sm shadow-xs cursor-pointer"
+                            >
+                              {qty > 0 ? qty : '+'}
+                            </button>
                           </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-[#0F172A] leading-snug truncate">
+
+                          <div className="pt-1">
+                            <div className="flex items-center gap-1">
+                              <span className="rounded bg-[#16A34A] px-1.5 py-0.5 text-[10px] font-black text-white">
+                                {formatInr(resolved.price)}
+                              </span>
+                              {resolved.mrp > resolved.price && (
+                                <span className="text-[10px] text-slate-400 line-through">
+                                  {formatInr(resolved.mrp)}
+                                </span>
+                              )}
+                            </div>
+                            {discountAmount > 0 && (
+                              <p className="text-[9px] font-black text-[#16A34A] mt-0.5">
+                                ₹{discountAmount} OFF
+                              </p>
+                            )}
+                            <h4 className="text-[11px] font-extrabold text-[#0F172A] leading-tight truncate mt-1">
                               {resolved.name}
                             </h4>
-                            <div className="flex items-center justify-between text-xs text-slate-500 mt-0.5">
-                              <span className="text-[11px] font-medium truncate max-w-[64px]">
-                                {resolved.unit}
-                              </span>
-                              <div className="flex items-baseline gap-1">
-                                {resolved.mrp > resolved.price && (
-                                  <span className="text-[10px] text-slate-400 line-through tabular-nums">
-                                    {formatInr(resolved.mrp)}
-                                  </span>
-                                )}
-                                <span className="text-sm font-extrabold text-[#0F172A] tabular-nums">
-                                  {formatInr(resolved.price)}
-                                </span>
-                              </div>
-                            </div>
+                            <p className="text-[10px] text-slate-500">{resolved.unit}</p>
                           </div>
-                          <button
-                            type="button"
-                            disabled={!previewMode && resolved.isLinked && !resolved.inStock}
-                            onClick={() => handleAddResolved(resolved)}
-                            className="mt-2.5 w-full py-1.5 rounded-lg bg-[#15803D] hover:bg-[#166534] active:bg-[#14532D] disabled:bg-slate-200 disabled:text-slate-500 text-white text-xs font-extrabold uppercase tracking-wider transition-colors cursor-pointer"
-                          >
-                            {!previewMode && resolved.isLinked && !resolved.inStock
-                              ? 'Out of stock'
-                              : qty > 0
-                                ? `ADD (${qty})`
-                                : 'ADD'}
-                          </button>
                         </div>
                       )
                     })}
-                  </motion.div>
-                </AnimatePresence>
+                  </div>
+                </div>
+              </div>
+
+              {/* See All Footer */}
+              <div className="p-3 pt-0">
+                <button
+                  type="button"
+                  onClick={() => toast.info('Navigates to Fruits & Vegetables category')}
+                  className="w-full py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 text-xs font-extrabold flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                >
+                  <span>See All</span>
+                  <span>▸</span>
+                </button>
               </div>
             </motion.div>
           </div>
         )}
 
         {/* ======================================================== */}
-        {/* 02: DAILY RESTOCK                                        */}
-        {/* ======================================================== */}
-        {shouldRenderCard('dailyRestock', activeConfig.dailyRestock.enabled) && (
-          <div className={cn('flex flex-col', !activeConfig.dailyRestock.enabled && 'opacity-60')}>
-            <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
-              <span>{activeConfig.dailyRestock.badge || '02'}</span>
-              {!activeConfig.dailyRestock.enabled && (
-                <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
-                  Hidden
-                </span>
-              )}
-            </span>
-            <motion.div
-              variants={cardVariants}
-              style={{
-                backgroundColor: activeConfig.dailyRestock.backgroundColor || undefined,
-                borderColor: activeConfig.dailyRestock.borderColor || undefined,
-              }}
-              className="rounded-[22px] bg-[#F4F9FD] border border-[#E0F2FE] p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(2,132,199,0.04)] h-full"
-            >
-              <div>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-1 text-[#15803D] font-extrabold text-sm tracking-tight mb-2">
-                      <Zap className="w-4 h-4 fill-[#15803D]" />
-                      <span>FastMinute</span>
-                    </div>
-                    <h3 className="text-xl font-extrabold text-[#0F172A] tracking-tight leading-tight">
-                      {activeConfig.dailyRestock.title}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                      {activeConfig.dailyRestock.subtitle}
-                    </p>
-                  </div>
-                  <div className="w-11 h-11 rounded-full bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center p-2 flex-shrink-0">
-                    <Image
-                      src={activeConfig.dailyRestock.headerImage}
-                      alt={activeConfig.dailyRestock.title}
-                      width={28}
-                      height={28}
-                      unoptimized
-                    />
-                  </div>
-                </div>
-
-                {/* Stepper Rows */}
-                <div className="mt-4 space-y-2.5">
-                  {activeConfig.dailyRestock.items.map((slot) => {
-                    const resolved = resolveBentoSlotProduct(slot, mergedProducts)
-                    const qty = getCartQty(resolved)
-                    const outOfStock = !previewMode && resolved.isLinked && !resolved.inStock
-                    return (
-                      <div
-                        key={slot.id}
-                        className="bg-white rounded-xl p-2.5 flex items-center justify-between border border-slate-100 shadow-2xs gap-2"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 relative flex-shrink-0">
-                            <Image
-                              src={resolved.imageUrl}
-                              alt={resolved.name}
-                              fill
-                              unoptimized
-                              className="object-contain"
-                            />
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-[#0F172A] leading-snug truncate">
-                              {resolved.name}
-                            </h4>
-                            <p className="text-[11px] text-slate-500 truncate">{resolved.unit}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-sm font-extrabold text-[#0F172A] tabular-nums">
-                            {formatInr(resolved.price)}
-                          </span>
-                          {outOfStock ? (
-                            <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-md">
-                              No stock
-                            </span>
-                          ) : (
-                            <div className="flex items-center border border-sky-200 rounded-lg bg-[#F0F9FF] overflow-hidden">
-                              <button
-                                type="button"
-                                aria-label={`Decrease ${resolved.name}`}
-                                disabled={qty <= 0}
-                                onClick={() => handleDecrementResolved(resolved)}
-                                className="w-6 h-6 flex items-center justify-center text-[#0284C7] hover:bg-sky-200 disabled:opacity-40 text-xs font-bold cursor-pointer"
-                              >
-                                <Minus className="w-3 h-3" />
-                              </button>
-                              <span className="w-6 text-center text-xs font-extrabold text-slate-800 tabular-nums">
-                                {qty}
-                              </span>
-                              <button
-                                type="button"
-                                aria-label={`Increase ${resolved.name}`}
-                                onClick={() => handleAddResolved(resolved)}
-                                className="w-6 h-6 flex items-center justify-center text-[#0284C7] hover:bg-sky-200 text-xs font-bold cursor-pointer"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* 03: VALUE PICKS                                          */}
+        {/* 03: VALUE PICKS (1kg vs 5kg Comparison Card)             */}
         {/* ======================================================== */}
         {shouldRenderCard('valuePicks', activeConfig.valuePicks.enabled) && (
           <div className={cn('flex flex-col', !activeConfig.valuePicks.enabled && 'opacity-60')}>
@@ -544,96 +603,114 @@ export function InteractiveCampaignBento({
             </span>
             <motion.div
               variants={cardVariants}
-              style={{
-                backgroundColor: activeConfig.valuePicks.backgroundColor || undefined,
-                borderColor: activeConfig.valuePicks.borderColor || undefined,
-              }}
-              className="rounded-[22px] bg-[#FEFCE8] border border-[#FEF08A] p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(202,138,4,0.04)] h-full"
+              className="rounded-[27px] bg-[#F9EFB6] border border-[#F0E3A2] p-4 flex flex-col justify-between shadow-[0_4px_16px_rgba(202,138,4,0.06)]"
             >
               <div>
-                <div className="flex items-center gap-1 text-[#15803D] font-extrabold text-sm tracking-tight mb-2">
-                  <Zap className="w-4 h-4 fill-[#15803D]" />
-                  <span>FastMinute</span>
+                {/* Eyebrow & See All */}
+                <div className="flex items-center justify-between mb-1 text-[9px] font-black tracking-wider text-[#8C7D3D]">
+                  <span className="flex items-center gap-1">
+                    <span>✨</span>
+                    <span>THE EVERYDAY EDIT</span>
+                  </span>
+                  <span className="rounded-full bg-white/70 px-2 py-0.5 text-[#29422F]">
+                    See all 10 ↗
+                  </span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-[#FDE047] shadow-xs">
-                  <h3 className="text-xl font-black text-[#0F172A] leading-tight">
-                    {activeConfig.valuePicks.title}
-                  </h3>
-                  <p className="text-xs text-[#713F12] font-semibold mt-0.5">
-                    {activeConfig.valuePicks.subtitle}
-                  </p>
+                {/* Title & "PICK SMART EVERY DAY" Rotating Badge */}
+                <div className="flex items-center justify-between gap-2 mt-1">
+                  <div>
+                    <h3 className="text-2xl font-black text-[#29422F] tracking-tight font-serif">
+                      Value <span className="italic font-normal">Picks</span>
+                    </h3>
+                    <p className="text-[11px] text-[#8A8054] font-medium">
+                      Stock up on good. Spend a little less.
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-[#365B38] text-[#FFF6C7] flex flex-col items-center justify-center text-[6px] font-black tracking-tight shrink-0 shadow-xs rotate-6">
+                    <span>🛍️</span>
+                    <span>PICK SMART</span>
+                    <span>EVERY DAY</span>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mt-3.5">
-                  {activeConfig.valuePicks.items.map((slot) => {
-                    const resolved = resolveBentoSlotProduct(slot, mergedProducts)
-                    const outOfStock = !previewMode && resolved.isLinked && !resolved.inStock
-                    return (
-                      <div
-                        key={slot.id}
-                        className={cn(
-                          'bg-white rounded-2xl p-3 flex flex-col justify-between border shadow-2xs relative overflow-hidden',
-                          resolved.badge ? 'border-[#BBF7D0]' : 'border-slate-200'
-                        )}
+                {/* Dual Pack Comparison (Standard vs Better Value Saver) */}
+                <div className="grid grid-cols-2 gap-2.5 mt-3">
+                  {/* Left: Standard Pack */}
+                  <div className="bg-[#FFFFFA] rounded-2xl p-2.5 border border-[#E9E7D6] flex flex-col justify-between">
+                    <span className="text-[9px] font-bold text-[#89917C] uppercase tracking-wide">
+                      THE DAILY PICK
+                    </span>
+                    <div className="w-full h-20 relative my-1 bg-[#F7F7EF] rounded-xl flex items-center justify-center p-1">
+                      <Image
+                        src={currentPair.left.imageUrl}
+                        alt={currentPair.left.name}
+                        fill
+                        unoptimized
+                        className="object-contain p-1"
+                      />
+                      <span className="absolute bottom-1 left-1 rounded bg-white/95 px-1.5 py-0.5 text-[9px] font-bold text-[#687359]">
+                        {currentPair.left.packLabel}
+                      </span>
+                    </div>
+                    <div>
+                      <h5 className="text-[11px] font-bold text-[#29422F] truncate">
+                        {currentPair.left.name}
+                      </h5>
+                      <p className="text-base font-extrabold text-[#29422F] leading-tight">
+                        ₹{currentPair.left.price}
+                      </p>
+                      <p className="text-[9.5px] text-[#89917C]">{currentPair.left.unitPriceLabel}</p>
+                      <button
+                        type="button"
+                        onClick={() => toast.success(`Added ${currentPair.left.name} (${currentPair.left.packLabel})`)}
+                        className="w-full mt-2 py-1 rounded-lg border border-[#365B38] text-[#365B38] hover:bg-[#365B38] hover:text-white text-[11px] font-extrabold transition-colors cursor-pointer"
                       >
-                        {resolved.badge && (
-                          <div className="absolute top-0 right-0 z-10 bg-[#15803D] text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-bl-lg tracking-wider text-center leading-tight max-w-[74px]">
-                            {resolved.badge}
-                          </div>
-                        )}
-                        <div className="w-full h-22 relative mb-1 flex items-center justify-center">
-                          <Image
-                            src={resolved.imageUrl}
-                            alt={resolved.name}
-                            fill
-                            unoptimized
-                            className="object-contain"
-                          />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-extrabold text-[#0F172A] leading-snug truncate">
-                            {resolved.name}
-                          </h4>
-                          <p className="text-xs text-slate-500 font-medium truncate">
-                            {resolved.unit}
-                          </p>
-                          <div className="mt-1 flex items-baseline justify-between gap-1">
-                            <span className="text-base font-black text-[#0F172A] tabular-nums">
-                              {formatInr(resolved.price)}
-                            </span>
-                            {resolved.perUnitLabel && (
-                              <span
-                                className={cn(
-                                  'text-[11px] font-semibold tabular-nums truncate',
-                                  resolved.badge ? 'text-[#15803D] font-bold' : 'text-slate-400'
-                                )}
-                              >
-                                {resolved.perUnitLabel}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={outOfStock}
-                          onClick={() => {
-                            if (handleAddResolved(resolved)) {
-                              setValueCardAdded(slot.id)
-                              setTimeout(() => setValueCardAdded(null), 1800)
-                            }
-                          }}
-                          className="mt-2.5 w-full py-1.5 rounded-lg bg-[#15803D] hover:bg-[#166534] disabled:bg-slate-200 disabled:text-slate-500 text-white text-xs font-extrabold uppercase tracking-wider transition-colors cursor-pointer"
-                        >
-                          {outOfStock
-                            ? 'Out of stock'
-                            : valueCardAdded === slot.id
-                              ? 'ADDED'
-                              : 'ADD'}
-                        </button>
-                      </div>
-                    )
-                  })}
+                        ADD +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right: Value Pack (Better Value) */}
+                  <div className="bg-[#FFFFFA] rounded-2xl p-2.5 border-[1.4px] border-[#BECAA7] flex flex-col justify-between shadow-xs">
+                    <span className="text-[9px] font-black text-[#365B38] uppercase tracking-wide flex items-center gap-1 bg-[#ECF3E5] px-1.5 py-0.5 rounded">
+                      <span>✨</span> BETTER VALUE
+                    </span>
+                    <div className="w-full h-20 relative my-1 bg-[#F3F6ED] rounded-xl flex items-center justify-center p-1">
+                      <Image
+                        src={currentPair.right.imageUrl}
+                        alt={currentPair.right.name}
+                        fill
+                        unoptimized
+                        className="object-contain p-1"
+                      />
+                      <span className="absolute bottom-1 left-1 rounded bg-white/95 px-1.5 py-0.5 text-[9px] font-bold text-[#687359]">
+                        {currentPair.right.packLabel}
+                      </span>
+                    </div>
+                    <div>
+                      <h5 className="text-[11px] font-bold text-[#29422F] truncate">
+                        {currentPair.right.name}
+                      </h5>
+                      <p className="text-base font-black text-[#29422F] leading-tight">
+                        ₹{currentPair.right.price}
+                      </p>
+                      <p className="text-[9.5px] font-bold text-[#5E8250]">{currentPair.right.unitPriceLabel}</p>
+                      <button
+                        type="button"
+                        onClick={() => toast.success(`Added ${currentPair.right.name} (${currentPair.right.packLabel}) - Better Value!`)}
+                        className="w-full mt-2 py-1 rounded-lg bg-[#365B38] hover:bg-[#2A472C] text-white text-[11px] font-extrabold shadow-xs transition-colors cursor-pointer"
+                      >
+                        ADD +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Saving Ribbon */}
+                <div className="mt-3 flex items-center justify-center gap-1.5 text-center text-[10px] font-bold text-[#758040] bg-white/60 py-1 px-2 rounded-full border border-[#E9DFA8]">
+                  <span>🛡️</span>
+                  <span>{currentPair.savingLabel}</span>
                 </div>
               </div>
             </motion.div>
@@ -641,12 +718,10 @@ export function InteractiveCampaignBento({
         )}
 
         {/* ======================================================== */}
-        {/* 04: GIFTING BOUTIQUE                                     */}
+        {/* 04: GIFTING BOUTIQUE (224px Luxury Hero Card)           */}
         {/* ======================================================== */}
         {shouldRenderCard('giftingBoutique', activeConfig.giftingBoutique.enabled) && (
-          <div
-            className={cn('flex flex-col', !activeConfig.giftingBoutique.enabled && 'opacity-60')}
-          >
+          <div className={cn('flex flex-col', !activeConfig.giftingBoutique.enabled && 'opacity-60')}>
             <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
               <span>{activeConfig.giftingBoutique.badge || '04'}</span>
               {!activeConfig.giftingBoutique.enabled && (
@@ -655,353 +730,47 @@ export function InteractiveCampaignBento({
                 </span>
               )}
             </span>
-            {(() => {
-              const hero = resolveBentoSlotProduct(
-                activeConfig.giftingBoutique.heroItem,
-                mergedProducts
-              )
-              const mini = resolveBentoSlotProduct(
-                activeConfig.giftingBoutique.miniItem,
-                mergedProducts
-              )
-              return (
-                <motion.div
-                  variants={cardVariants}
-                  style={{
-                    backgroundColor: activeConfig.giftingBoutique.backgroundColor || undefined,
-                    borderColor: activeConfig.giftingBoutique.borderColor || undefined,
-                  }}
-                  className="rounded-[22px] bg-[#FDF2F4] border border-[#FCE7F3] p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(225,29,72,0.04)] h-full"
-                >
-                  <div>
-                    <div className="flex items-center gap-1 text-[#15803D] font-extrabold text-sm tracking-tight mb-2">
-                      <Zap className="w-4 h-4 fill-[#15803D]" />
-                      <span>FastMinute</span>
-                    </div>
-
-                    <h3 className="text-xl font-extrabold text-[#831843] tracking-tight leading-tight">
-                      {activeConfig.giftingBoutique.title}
-                    </h3>
-                    <p className="text-xs text-[#9D174D] mt-0.5 font-medium">
-                      {activeConfig.giftingBoutique.subtitle}
-                    </p>
-
-                    <div className="grid grid-cols-12 gap-3 mt-3.5">
-                      <div className="col-span-5 relative h-48 rounded-2xl overflow-hidden bg-white/70">
-                        <Image
-                          src={hero.imageUrl}
-                          alt={hero.name}
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
-
-                      <div className="col-span-7 flex flex-col justify-between">
-                        <div>
-                          <h4 className="text-sm font-extrabold text-[#0F172A] leading-snug line-clamp-2">
-                            {hero.name}
-                          </h4>
-                          <p className="text-xs text-slate-500">{hero.unit}</p>
-                          <div className="mt-1 flex items-center justify-between gap-2">
-                            <span className="text-base font-black text-[#0F172A] tabular-nums">
-                              {formatInr(hero.price)}
-                            </span>
-                            <button
-                              type="button"
-                              disabled={!previewMode && hero.isLinked && !hero.inStock}
-                              onClick={() => handleAddResolved(hero)}
-                              className="px-3.5 py-1 rounded-full bg-[#15803D] hover:bg-[#166534] disabled:bg-slate-300 text-white text-xs font-extrabold cursor-pointer"
-                            >
-                              {!previewMode && hero.isLinked && !hero.inStock ? 'OUT' : 'ADD'}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="my-2">
-                          <p className="text-[10px] font-semibold text-slate-500 mb-1">Occasion</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {activeConfig.giftingBoutique.occasions.map((occ) => (
-                              <button
-                                key={occ.id}
-                                type="button"
-                                onClick={() => setActiveOccasion(occ.id)}
-                                className={cn(
-                                  'px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer select-none',
-                                  activeOccasion === occ.id
-                                    ? 'bg-[#FCE7F3] border border-[#F43F5E] text-[#9F1239]'
-                                    : 'bg-white border border-slate-200 text-slate-700'
-                                )}
-                              >
-                                {occ.icon} {occ.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl p-2 border border-[#FCE7F3] flex items-center justify-between shadow-2xs gap-1.5">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-8 h-8 relative flex-shrink-0">
-                              <Image
-                                src={mini.imageUrl}
-                                alt={mini.name}
-                                fill
-                                unoptimized
-                                className="object-contain"
-                              />
-                            </div>
-                            <div className="min-w-0">
-                              <h5 className="text-[11px] font-bold text-[#0F172A] leading-tight truncate max-w-[85px]">
-                                {mini.name}
-                              </h5>
-                              <p className="text-[10px] text-slate-500 truncate">{mini.unit}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-xs font-black text-[#0F172A] tabular-nums">
-                              {formatInr(mini.price)}
-                            </span>
-                            <button
-                              type="button"
-                              disabled={!previewMode && mini.isLinked && !mini.inStock}
-                              onClick={() => handleAddResolved(mini)}
-                              className="px-2 py-0.5 rounded-full bg-[#15803D] hover:bg-[#166534] disabled:bg-slate-300 text-white text-[10px] font-bold cursor-pointer"
-                            >
-                              {!previewMode && mini.isLinked && !mini.inStock ? 'OUT' : 'ADD'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )
-            })()}
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* 05: MOVIE NIGHT                                          */}
-        {/* ======================================================== */}
-        {shouldRenderCard('movieNight', activeConfig.movieNight.enabled) && (
-          <div className={cn('flex flex-col', !activeConfig.movieNight.enabled && 'opacity-60')}>
-            <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
-              <span>{activeConfig.movieNight.badge || '05'}</span>
-              {!activeConfig.movieNight.enabled && (
-                <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
-                  Hidden
-                </span>
-              )}
-            </span>
             <motion.div
               variants={cardVariants}
-              style={{
-                backgroundColor: activeConfig.movieNight.backgroundColor || undefined,
-                borderColor: activeConfig.movieNight.borderColor || undefined,
-              }}
-              className="rounded-[22px] bg-[#251640] border border-[#382458] p-5 flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.3)] h-full text-white"
+              className="rounded-[24px] bg-gradient-to-br from-[#FDECEF] to-[#F9D8E0] border-[1.2px] border-[#EFC6D0] h-[224px] relative overflow-hidden shadow-[0_6px_20px_rgba(136,19,55,0.07)] cursor-pointer group"
+              onClick={() => toast.info('Navigates to Gifting Boutique / Send Gift')}
             >
-              <div>
-                <div className="flex items-center gap-1 text-white font-extrabold text-sm tracking-tight mb-2">
-                  <Zap className="w-4 h-4 fill-white" />
-                  <span>FastMinute</span>
+              {/* Full-bleed HD Gifting Boutique Hero Artwork */}
+              <div className="absolute inset-0">
+                <Image
+                  src="/navratri/gifting-boutique-hero-hd.jpg"
+                  alt="Gifting Boutique"
+                  fill
+                  unoptimized
+                  className="object-cover object-right"
+                />
+              </div>
+
+              {/* Left-Side Editorial Content */}
+              <div className="relative h-full flex flex-col justify-between p-5 z-10 max-w-[62%]">
+                <div>
+                  <span className="rounded-full bg-[#6B1728] px-3 py-1 text-[10px] font-bold tracking-wide text-white">
+                    GIFTING BOUTIQUE
+                  </span>
+                  <h3 className="text-2xl font-bold text-[#52101F] tracking-tight leading-tight mt-2.5 font-serif">
+                    Little things,<br />big feelings.
+                  </h3>
+                  <p className="text-[11px] text-[#7D4856] font-medium mt-1 leading-snug">
+                    Flowers, cakes &amp;<br />thoughtful surprises.
+                  </p>
                 </div>
 
-                <h3 className="text-xl font-extrabold text-white tracking-tight leading-tight">
-                  {activeConfig.movieNight.title}
-                </h3>
-                <p className="text-xs text-[#DDD6FE] mt-0.5 font-medium">
-                  {activeConfig.movieNight.subtitle}
-                </p>
-
-                <div className="w-full h-36 my-3 rounded-xl relative overflow-hidden">
-                  <Image
-                    src={activeConfig.movieNight.heroImage}
-                    alt={activeConfig.movieNight.title}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 bg-[#351B4D] p-2.5 rounded-xl border border-[#4C2A6D]">
-                  {activeConfig.movieNight.items.map((slot, index) => {
-                    const resolved = resolveBentoSlotProduct(slot, mergedProducts)
-                    const outOfStock = !previewMode && resolved.isLinked && !resolved.inStock
-                    const qty = getCartQty(resolved)
-                    return (
-                      <div
-                        key={slot.id}
-                        className={cn(
-                          'flex flex-col justify-between min-w-0',
-                          index === 1 && activeConfig.movieNight.items.length === 3
-                            ? 'border-x border-[#4C2A6D] px-2'
-                            : ''
-                        )}
-                      >
-                        <div>
-                          <h5 className="text-xs font-bold text-white truncate">{resolved.name}</h5>
-                          <p className="text-[10px] text-[#C4B5FD] truncate">{resolved.unit}</p>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between gap-1">
-                          <span className="text-sm font-black text-white tabular-nums">
-                            {formatInr(resolved.price)}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={outOfStock}
-                            aria-label={`Add ${resolved.name}`}
-                            onClick={() => handleAddResolved(resolved)}
-                            className="w-6 h-6 rounded-md bg-[#15803D] hover:bg-[#166534] disabled:bg-slate-600 text-white flex items-center justify-center text-xs font-black cursor-pointer shrink-0"
-                          >
-                            {qty > 0 ? qty : '+'}
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#6B1728] px-4 py-2 text-xs font-bold text-white shadow-md group-hover:scale-105 transition-transform">
+                    <span>Explore Gifts</span>
+                    <span>→</span>
+                  </span>
                 </div>
               </div>
             </motion.div>
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* 06: BREAKFAST CLUB                                       */}
-        {/* ======================================================== */}
-        {shouldRenderCard('breakfastClub', activeConfig.breakfastClub.enabled) && (
-          <div className={cn('flex flex-col', !activeConfig.breakfastClub.enabled && 'opacity-60')}>
-            <span className="text-sm font-extrabold text-slate-500 mb-1 pl-1 flex items-center gap-2">
-              <span>{activeConfig.breakfastClub.badge || '06'}</span>
-              {!activeConfig.breakfastClub.enabled && (
-                <span className="text-[10px] rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">
-                  Hidden
-                </span>
-              )}
-            </span>
-            <motion.div
-              variants={cardVariants}
-              style={{
-                backgroundColor: activeConfig.breakfastClub.backgroundColor || undefined,
-                borderColor: activeConfig.breakfastClub.borderColor || undefined,
-              }}
-              className="rounded-[22px] bg-[#FBF9F6] border border-[#E2E8F0] p-5 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.03)] h-full"
-            >
-              <div>
-                <div className="flex items-center gap-1 text-[#15803D] font-extrabold text-sm tracking-tight mb-2">
-                  <Zap className="w-4 h-4 fill-[#15803D]" />
-                  <span>FastMinute</span>
-                </div>
-
-                <h3 className="text-xl font-extrabold text-[#0F172A] tracking-tight leading-tight">
-                  {activeConfig.breakfastClub.title}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                  {activeConfig.breakfastClub.subtitle}
-                </p>
-
-                <div className="grid grid-cols-12 gap-3 mt-3.5">
-                  <div className="col-span-5 relative h-40 rounded-xl overflow-hidden bg-white">
-                    <Image
-                      src={activeConfig.breakfastClub.heroImage}
-                      alt={activeConfig.breakfastClub.title}
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                  </div>
-
-                  <div className="col-span-7 space-y-2">
-                    {breakfastResolved.map(({ slot, resolved }) => {
-                      const isChecked = Boolean(breakfastChecks[slot.id])
-                      const outOfStock = !previewMode && resolved.isLinked && !resolved.inStock
-                      return (
-                        <div
-                          key={slot.id}
-                          onClick={() => {
-                            if (outOfStock) return
-                            setBreakfastChecks((prev) => ({
-                              ...prev,
-                              [slot.id]: !prev[slot.id],
-                            }))
-                          }}
-                          className={cn(
-                            'flex items-center justify-between p-1.5 rounded-lg border border-slate-100 bg-white shadow-2xs select-none gap-1',
-                            outOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                          )}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div
-                              className={cn(
-                                'w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold transition-all shrink-0',
-                                isChecked && !outOfStock
-                                  ? 'bg-[#15803D] text-white'
-                                  : 'border border-slate-300 bg-white'
-                              )}
-                            >
-                              {isChecked && !outOfStock && <Check className="w-3 h-3 stroke-[3]" />}
-                            </div>
-                            <div className="w-6 h-6 relative flex-shrink-0">
-                              <Image
-                                src={resolved.imageUrl}
-                                alt={resolved.name}
-                                fill
-                                unoptimized
-                                className="object-contain"
-                              />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-[#0F172A] leading-tight truncate">
-                                {resolved.name}
-                              </p>
-                              <p className="text-[10px] text-slate-500 leading-none truncate">
-                                {outOfStock ? 'Out of stock' : resolved.unit}
-                              </p>
-                            </div>
-                          </div>
-                          <span className="text-xs font-extrabold text-[#0F172A] tabular-nums shrink-0">
-                            {formatInr(resolved.price)}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={breakfastCount === 0}
-                  onClick={() => {
-                    let addedReal = 0
-                    for (const { resolved } of selectedBreakfast) {
-                      if (previewMode) {
-                        addedReal += 1
-                      } else if (resolved.product && resolved.inStock) {
-                        addItem(resolved.product, storeId ?? undefined)
-                        addedReal += 1
-                      }
-                    }
-                    triggerHaptic('success')
-                    if (previewMode) {
-                      toast.info(
-                        `Preview: Would add ${breakfastCount} breakfast items (${formatInr(breakfastTotal)})`
-                      )
-                    } else if (addedReal > 0) {
-                      toast.success(`🥞 Added ${addedReal} breakfast items to basket!`)
-                    } else if (selectedBreakfast[0]) {
-                      handleAddResolved(selectedBreakfast[0].resolved)
-                    }
-                  }}
-                  className="mt-3.5 w-full py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] disabled:bg-slate-300 text-white text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <span>Add {breakfastCount} items</span>
-                  <span>•</span>
-                  <span className="tabular-nums">{formatInr(breakfastTotal)}</span>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
       </motion.div>
     </section>
   )

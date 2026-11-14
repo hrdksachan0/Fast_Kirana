@@ -116,9 +116,9 @@ function resolveFallbackCoordinates(
     return { lat: 26.4289124, lng: 82.5399322 }
   }
 
-  // Pakur Central Hub (816107)
-  if (pin === '816107' || c.includes('pakur') || s.includes('pakur')) {
-    return { lat: 24.857778, lng: 87.774167 }
+  // Pakur / Barharwa Central Hub (816101 / 816107)
+  if (pin === '816101' || pin === '816107' || c.includes('barharwa') || s.includes('barharwa') || a.includes('barharwa') || c.includes('pakur') || s.includes('pakur') || c.includes('sahibganj')) {
+    return { lat: 24.857140, lng: 87.778952 }
   }
 
   return { lat: null, lng: null }

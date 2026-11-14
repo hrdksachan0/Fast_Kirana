@@ -1057,8 +1057,21 @@ async def create_order(
     target_lat = address.lat
     target_lng = address.lng
     if (target_lat is None or target_lng is None) and address:
-        target_lat = 26.1534185
-        target_lng = 80.1714024
+        p_clean = (address.pincode or "").strip()
+        c_clean = (address.city or "").lower().strip()
+        s_clean = (address.street or "").lower().strip()
+        a_clean = (address.area or "").lower().strip()
+
+        # Barharwa / Pakur Central Hub (816101 / 816107)
+        if p_clean in ["816101", "816107"] or any(k in c_clean or k in s_clean or k in a_clean for k in ["barharwa", "pakur", "sahibganj"]):
+            target_lat, target_lng = 24.857140, 87.778952
+        # Akbarpur Central Hub (224122)
+        elif p_clean == "224122" or any(k in c_clean or k in s_clean or k in a_clean for k in ["akbarpur", "ambedkar nagar"]):
+            target_lat, target_lng = 26.4380, 82.5400
+        # Ghatampur Central Hub (209206)
+        else:
+            target_lat, target_lng = 26.1534185, 80.1714024
+
         address.lat = target_lat
         address.lng = target_lng
         address_query = f"{address.houseNo or ''} {address.street or ''} {address.area or ''}, {address.city or ''}, {address.pincode or ''}".strip()
@@ -1133,16 +1146,6 @@ async def create_order(
             surge_charge = await evaluate_surge_fee(settings_map, hub_lat, hub_lng, float(matched_hub.surgeCharge or 0.0))
 
             dist_km = get_distance_km(hub_lat, hub_lng, target_lat, target_lng)
-            # Cell-tower drift auto-heal (matches frontend checkout.ts logic)
-            p_code = (address.pincode or "").strip()
-            c_name = (address.city or "").lower().strip()
-            known_hub_pins = [s.id.replace("hub-", "") for s in active_dark_stores if s.id and s.id.startswith("hub-")]
-            known_hub_cities = [(s.city or "").lower().strip() for s in active_dark_stores if s.city] + [re.sub(r"\s+(Hub|Market|Central|Dark\s*Store).*$", "", s.name or "", flags=re.IGNORECASE).lower().strip() for s in active_dark_stores if s.name]
-            is_explicit_local = (p_code in known_hub_pins) or any((c and c in c_name) for c in known_hub_cities)
-            if dist_km > max_radius and is_explicit_local:
-                logger.warning(f"[Auto-Heal] Address {address.id} cell-tower drift ({dist_km:.1f} km) for local pincode {p_code}. Treating as local express zone.")
-                dist_km = 1.5
-
             delivery_rules = get_delivery_rules(dist_km, max_radius, surge_charge, settings_map)
 
             if not delivery_rules["isServiceable"] or dist_km > max_radius:
@@ -1158,15 +1161,6 @@ async def create_order(
             surge_charge = await evaluate_surge_fee(settings_map, store_lat, store_lng)
 
             dist_km = get_distance_km(store_lat, store_lng, target_lat, target_lng)
-            p_code = (address.pincode or "").strip()
-            c_name = (address.city or "").lower().strip()
-            known_hub_pins = [s.id.replace("hub-", "") for s in active_dark_stores if s.id and s.id.startswith("hub-")]
-            known_hub_cities = [(s.city or "").lower().strip() for s in active_dark_stores if s.city] + [re.sub(r"\s+(Hub|Market|Central|Dark\s*Store).*$", "", s.name or "", flags=re.IGNORECASE).lower().strip() for s in active_dark_stores if s.name]
-            is_explicit_local = (p_code in known_hub_pins) or any((c and c in c_name) for c in known_hub_cities)
-            if dist_km > max_radius and is_explicit_local:
-                logger.warning(f"[Auto-Heal] Address {address.id} cell-tower drift ({dist_km:.1f} km) for local pincode {p_code}. Treating as local express zone.")
-                dist_km = 1.5
-
             delivery_rules = get_delivery_rules(dist_km, max_radius, surge_charge, settings_map)
 
             if not delivery_rules["isServiceable"] or dist_km > max_radius:
@@ -4478,6 +4472,8 @@ def normalize_restaurant_id(rid: Optional[str]) -> Optional[str]:
         return "REST-104"
     if "zayka" in r or "105" in r or "0b2470fa" in r:
         return "REST-105"
+    if "radha" in r or "106" in r:
+        return "REST-106"
     return str(rid).strip()
 
 

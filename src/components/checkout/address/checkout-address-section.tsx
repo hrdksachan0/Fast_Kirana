@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { MapPin, Plus, Loader2, Home, Building2, Navigation, Check, Edit2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Address } from '@/types'
 import { cn, formatAddress, formatPhone } from '@/lib/utils'
 import { getDistanceKm } from '@/lib/distance'
 import { CheckoutAddressForm } from './checkout-address-form'
+import { FreeMapPicker } from '@/components/shared/free-map-picker'
 import { AddressFormData } from '@/hooks/checkout/use-checkout-address'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -36,6 +38,7 @@ interface CheckoutAddressSectionProps {
   handleSaveAddress: (e: React.FormEvent) => Promise<void>
   handleEditAddressClick: (addr: Address) => void
   handleCancelAddressForm: () => void
+  handleUpdateAddressCoordinates?: (addressId: string, lat: number, lng: number) => Promise<boolean>
 }
 
 export function CheckoutAddressSection({
@@ -68,7 +71,10 @@ export function CheckoutAddressSection({
   handleSaveAddress,
   handleEditAddressClick,
   handleCancelAddressForm,
+  handleUpdateAddressCoordinates,
 }: CheckoutAddressSectionProps) {
+  const [isAdjustingPin, setIsAdjustingPin] = useState(false)
+
   const getAddressIcon = (label?: string) => {
     const l = (label || '').toLowerCase()
     if (l.includes('work') || l.includes('office')) {
@@ -166,6 +172,29 @@ export function CheckoutAddressSection({
                         <span>📞</span> {formatPhone(selectedAddress.phone)}
                       </p>
                     )}
+
+                    {/* Zomato-style micro-action: Set / Adjust Exact House Pin */}
+                    {(() => {
+                      const effectiveLat = originLat ?? storeLat
+                      const effectiveLng = originLng ?? storeLng
+                      const isDefaultOrMissingPin =
+                        !selectedAddress.lat ||
+                        !selectedAddress.lng ||
+                        (Math.abs(selectedAddress.lat - effectiveLat) < 0.0001 && Math.abs(selectedAddress.lng - effectiveLng) < 0.0001)
+
+                      return (
+                        <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => setIsAdjustingPin(true)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-primary bg-primary/10 hover:bg-primary/15 border border-primary/20 transition-all cursor-pointer shadow-2xs hover:scale-[1.01] active:scale-[0.98]"
+                          >
+                            <MapPin className="h-3.5 w-3.5 stroke-[2.5]" />
+                            <span>{isDefaultOrMissingPin ? '📍 Set Exact House Pin (Optional)' : '📍 Adjust Pin on Map (Optional)'}</span>
+                          </button>
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -357,6 +386,33 @@ export function CheckoutAddressSection({
               handleDetectLocationForCheckout={handleDetectLocationForCheckout}
             />
           )}
+        </div>
+      )}
+
+      {/* Modal for Setting Exact House Pin */}
+      {isAdjustingPin && selectedAddress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-md max-h-[92vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+            <FreeMapPicker
+              initialLat={selectedAddress.lat ?? (originLat ?? storeLat)}
+              initialLng={selectedAddress.lng ?? (originLng ?? storeLng)}
+              storeLat={originLat ?? storeLat}
+              storeLng={originLng ?? storeLng}
+              originName={originName}
+              deliveryRadiusKm={passedMaxRadiusKm ?? 5.0}
+              onLocationSelect={async (loc) => {
+                if (handleUpdateAddressCoordinates) {
+                  const success = await handleUpdateAddressCoordinates(selectedAddress.id, loc.lat, loc.lng)
+                  if (success) {
+                    setIsAdjustingPin(false)
+                  }
+                } else {
+                  setIsAdjustingPin(false)
+                }
+              }}
+              onClose={() => setIsAdjustingPin(false)}
+            />
+          </div>
         </div>
       )}
     </div>

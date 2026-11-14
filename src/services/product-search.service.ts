@@ -116,6 +116,9 @@ export class ProductSearchService {
       if (normalizedQuery.includes('zayka')) {
         matchedRestIds.add('REST-105')
       }
+      if (normalizedQuery.includes('radha') || (searchTokens.includes('radha') && searchTokens.includes('rani'))) {
+        matchedRestIds.add('REST-106')
+      }
       const isRestaurantSearch = matchedRestIds.size > 0 || searchTokens.some(w => ['restaurant', 'cafe', 'dhaba', 'kitchen', 'hotel'].includes(w))
 
       // 2.5 Supabase PgVector Semantic AI Search (Option 1 + 3)

@@ -94,6 +94,7 @@ export default function CheckoutPage() {
     handleSaveAddress,
     handleEditAddressClick,
     handleCancelAddressForm,
+    handleUpdateAddressCoordinates,
   } = addressHook
 
   // 3. User Order Inputs
@@ -282,6 +283,7 @@ export default function CheckoutPage() {
               handleSaveAddress={handleSaveAddress}
               handleEditAddressClick={handleEditAddressClick}
               handleCancelAddressForm={handleCancelAddressForm}
+              handleUpdateAddressCoordinates={handleUpdateAddressCoordinates}
             />
 
             {/* Order For Someone Else */}
