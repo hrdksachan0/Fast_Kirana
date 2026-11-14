@@ -467,11 +467,11 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                           SliverPadding(
                             padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
                             sliver: SliverGrid(
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
-                                childAspectRatio: 0.58,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 16,
+                                childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
                               ),
                               delegate: SliverChildBuilderDelegate(
                                 (context, index) {
@@ -918,24 +918,24 @@ class _ReferenceExactProductCard extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
 
           // 2. Product Title (UPAR! 2-lines max, uniform height for locked grid rows)
           SizedBox(
-            height: 36,
+            height: 28,
             child: Text(
               product.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 11.5,
+                fontSize: 10.8,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF1E293B),
-                height: 1.25,
+                height: 1.2,
               ),
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
 
           // 3. Unit / Weight
           Text(
@@ -943,12 +943,12 @@ class _ReferenceExactProductCard extends ConsumerWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.inter(
-              fontSize: 10.5,
+              fontSize: 9.8,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF64748B),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
 
           // 4. Price Row (NICHE!): Solid Green Badge + Strike-through MRP (No OFF pill)
           Row(

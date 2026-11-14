@@ -1,497 +1,497 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_bounceable/flutter_bounceable.dart';
-import '../../data/models/product.dart';
-import '../../providers/cart_provider.dart';
-import '../cart_conflict_dialog.dart';
-import '../variant_selector_sheet.dart';
-import '../../core/utils/stock_notice_helper.dart';
-
-// ─── Add To Cart Button & Quantity Stepper ─────────────────────────────────
-
-class AddToCartButton extends ConsumerWidget {
-  final BuildContext scaffoldContext;
-  final Product product;
-  final int inCartQty;
-  final bool hasVariants;
-  final bool isOutOfStock;
-  final bool isTimingClosed;
-  final String? nextSlot;
-  final bool isStoreOpen;
-  final bool isFood;
-  final List<Color> gradientColors;
-  final Color primaryColor;
-  final double uiScale;
-  final bool isZeptoStyle;
-
-  const AddToCartButton({
-    super.key,
-    required this.scaffoldContext,
-    required this.product,
-    required this.inCartQty,
-    required this.hasVariants,
-    required this.isOutOfStock,
-    required this.isTimingClosed,
-    this.nextSlot,
-    required this.isStoreOpen,
-    required this.isFood,
-    required this.gradientColors,
-    required this.primaryColor,
-    required this.uiScale,
-    this.isZeptoStyle = false,
-  });
-
-  double s(double v) => v * uiScale;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    Widget btn;
-    if (isOutOfStock) {
-      btn = _soldOut();
-    } else if (!isStoreOpen) {
-      btn = _storeClosed();
-    } else if (inCartQty > 0) {
-      btn = _stepper(context, ref);
-    } else if (isZeptoStyle) {
-      btn = _zeptoAddButton(context, ref);
-    } else {
-      btn = _addButton(context, ref);
-    }
-
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.centerRight,
-      child: btn,
-    );
-  }
-
-  Widget _soldOut() {
-    return Container(
-      height: s(30),
-      padding: EdgeInsets.symmetric(horizontal: s(8)),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(s(8)),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: s(0.9)),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        'SOLD OUT',
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: s(9.0),
-          fontWeight: FontWeight.w800,
-          color: const Color(0xFF94A3B8),
-          letterSpacing: 0.3,
-        ),
-      ),
-    );
-  }
-
-  Widget _storeClosed() {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
-        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
-                SizedBox(width: s(8)),
-                Expanded(
-                  child: Text(
-                    isFood
-                        ? '${product.restaurant?.name ?? "This Restaurant"} is currently closed.'
-                        : 'FastMinute Grocery Darkstore is currently closed.',
-                    style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFF0F172A),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      },
-      child: Container(
-        height: s(26),
-        padding: EdgeInsets.symmetric(horizontal: s(5.5), vertical: s(2)),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.94),
-          borderRadius: BorderRadius.circular(s(7)),
-          border: Border.all(color: const Color(0xFFCBD5E1), width: s(0.85)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.schedule_rounded, size: s(10.5), color: const Color(0xFF64748B)),
-            SizedBox(width: s(2)),
-            Text(
-              'CLOSED',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: s(8.5),
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF64748B),
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _stepper(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider).value;
-    final matchingItems = cart?.items.where((i) => i.productId == product.id || i.productId.startsWith('${product.id}_')).toList() ?? [];
-
-    return Container(
-      height: s(31),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(s(9)),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withValues(alpha: 0.35),
-            blurRadius: s(9),
-            offset: Offset(0, s(2.5)),
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Decrement Button
-          Semantics(
-            button: true,
-            label: 'Decrease quantity',
-            child: InkWell(
-              borderRadius: BorderRadius.horizontal(left: Radius.circular(s(8))),
-              onTap: () {
-                HapticFeedback.lightImpact();
-                if (hasVariants) {
-                  // If only 1 variant item is in the cart, decrement it directly
-                  if (matchingItems.length == 1) {
-                    ref.read(cartProvider.notifier).decrement(matchingItems.first.productId);
-                  } else {
-                    VariantSelectorSheet.show(context, product);
-                  }
-                } else {
-                  ref.read(cartProvider.notifier).decrement(product.id);
-                }
-              },
-              child: SizedBox(
-                width: s(28),
-                height: s(31),
-                child: Center(
-                  child: Icon(Icons.remove_rounded, size: s(18), color: Colors.white),
-                ),
-              ),
-            ),
-          ),
-
-          // Count - tapping opens variant sheet if product has variants
-          GestureDetector(
-            onTap: hasVariants ? () => VariantSelectorSheet.show(context, product) : null,
-            child: Container(
-              constraints: BoxConstraints(minWidth: s(18)),
-              alignment: Alignment.center,
-              child: Text(
-                '$inCartQty',
-                style: GoogleFonts.plusJakartaSans(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: s(12.5),
-                  letterSpacing: -0.2,
-                ),
-              ),
-            ),
-          ),
-
-          // Increment Button
-          Semantics(
-            button: true,
-            label: 'Increase quantity',
-            child: InkWell(
-              borderRadius: BorderRadius.horizontal(right: Radius.circular(s(8))),
-              onTap: () {
-                if (hasVariants) {
-                  // If only 1 variant item is in the cart, increment it directly
-                  if (matchingItems.length == 1) {
-                    final singleItem = matchingItems.first;
-                    final effectiveItemStock = product.getStockForVariant(singleItem.selectedVariant);
-                    if (effectiveItemStock > 0 && inCartQty >= effectiveItemStock) {
-                      HapticFeedback.heavyImpact();
-                      _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
-                      return;
-                    }
-                    HapticFeedback.lightImpact();
-                    final success = ref.read(cartProvider.notifier).addProduct(singleItem.product, 1, singleItem.selectedVariant);
-                    if (!success) {
-                      _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
-                    }
-                  } else {
-                    VariantSelectorSheet.show(context, product);
-                  }
-                } else {
-                  if (product.stock > 0 && inCartQty >= product.stock) {
-                    HapticFeedback.heavyImpact();
-                    _showStockLimitSnackbar(ref);
-                    return;
-                  }
-                  final conflict = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
-                  if (conflict != null) {
-                    _showConflictDialog(context, ref);
-                  } else {
-                    HapticFeedback.lightImpact();
-                    ref.read(cartProvider.notifier).increment(product);
-                  }
-                }
-              },
-              child: SizedBox(
-                width: s(28),
-                height: s(31),
-                child: Center(
-                  child: Icon(Icons.add_rounded, size: s(18), color: Colors.white),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _addButton(BuildContext context, WidgetRef ref) {
-    return Bounceable(
-      scaleFactor: 0.92,
-      onTap: () {
-        HapticFeedback.lightImpact();
-        if (hasVariants) {
-          VariantSelectorSheet.show(context, product);
-        } else {
-          _handleAdd(context, ref);
-        }
-      },
-      child: Container(
-        height: s(31),
-        padding: EdgeInsets.symmetric(horizontal: s(12)),
-        decoration: BoxDecoration(
-          color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4),
-          borderRadius: BorderRadius.circular(s(9)),
-          border: Border.all(
-            color: isFood ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
-            width: s(1.4),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withValues(alpha: 0.20),
-              blurRadius: s(8),
-              offset: Offset(0, s(2)),
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'ADD',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: s(12.0),
-                fontWeight: FontWeight.w900,
-                color: primaryColor,
-                letterSpacing: 0.5,
-              ),
-            ),
-            SizedBox(width: s(2.5)),
-            Icon(Icons.add_rounded, size: s(17), color: primaryColor),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _zeptoAddButton(BuildContext context, WidgetRef ref) {
-    return Bounceable(
-      scaleFactor: 0.92,
-      onTap: () {
-        HapticFeedback.lightImpact();
-        if (hasVariants) {
-          VariantSelectorSheet.show(context, product);
-        } else {
-          _handleAdd(context, ref);
-        }
-      },
-      child: Container(
-        width: s(38),
-        height: s(38),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(s(9.5)),
-          border: Border.all(color: const Color(0xFF16A34A), width: s(1.6)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF16A34A).withValues(alpha: 0.22),
-              blurRadius: s(6),
-              offset: Offset(0, s(2)),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Icon(Icons.add, size: s(27), color: const Color(0xFF16A34A)),
-        ),
-      ),
-    );
-  }
-
-  void _showStockLimitSnackbar(WidgetRef ref, {int? customStock}) {
-    final cartItems = ref.read(cartProvider).value?.totalItems ?? 0;
-    StockNoticeHelper.showStockLimit(
-      context: scaffoldContext,
-      stock: customStock ?? product.getStockForVariant(null),
-      hasFloatingCart: cartItems > 0,
-    );
-  }
-
-  void _showConflictDialog(BuildContext context, WidgetRef ref) {
-    CartConflictDialog.show(
-      scaffoldContext,
-      product: product,
-      existingOutletName: ref.read(cartProvider.notifier).currentRestaurantName ?? '',
-      groceryItemsCount: ref.read(cartProvider.notifier).groceryItemsCount,
-      onConfirm: () => ref.read(cartProvider.notifier).replaceRestaurantItemsWith(product, 1),
-    );
-  }
-
-  void _handleAdd(BuildContext context, WidgetRef ref) {
-    final cartItems = ref.read(cartProvider).value?.totalItems ?? 0;
-    if (!product.isInStock) {
-      final bottomPadding = MediaQuery.of(scaffoldContext).padding.bottom;
-      final bottomMargin = (cartItems > 0) ? (bottomPadding + 80.0) : (bottomPadding + 16.0);
-      ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
-      ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-        SnackBar(
-          content: Text('${product.name} is currently out of stock.'),
-          backgroundColor: const Color(0xFFDC2626),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(left: 16, right: 16, bottom: bottomMargin),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
-        ),
-      );
-      return;
-    }
-    final conflict = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
-    if (conflict != null) {
-      _showConflictDialog(context, ref);
-      return;
-    }
-    final success = ref.read(cartProvider.notifier).addProduct(product, 1);
-    if (!success) {
-      final effStock = product.getStockForVariant(null);
-      _showStockLimitSnackbar(ref, customStock: effStock);
-    }
-  }
-}
-
-// ─── Variant Pill Widget ───────────────────────────────────────────────────
-
-class VariantPill extends StatelessWidget {
-  final Product product;
-  final List variants;
-  final bool hasVariants;
-  final bool isOutOfStock;
-  final bool isFood;
-  final double uiScale;
-
-  const VariantPill({
-    super.key,
-    required this.product,
-    required this.variants,
-    required this.hasVariants,
-    required this.isOutOfStock,
-    required this.isFood,
-    required this.uiScale,
-  });
-
-  double s(double v) => v * uiScale;
-
-  @override
-  Widget build(BuildContext context) {
-    if (hasVariants) {
-      final label = variants.isNotEmpty ? '${variants.length} Options' : 'Customise';
-      return GestureDetector(
-        onTap: () {
-          if (!isOutOfStock) VariantSelectorSheet.show(context, product);
-        },
-        child: Container(
-          margin: EdgeInsets.only(bottom: s(4)),
-          padding: EdgeInsets.symmetric(horizontal: s(6), vertical: s(2.2)),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(s(6)),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: s(0.85)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: s(9.2),
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF475569),
-                ),
-              ),
-              SizedBox(width: s(2)),
-              Icon(Icons.keyboard_arrow_down_rounded, size: s(12), color: const Color(0xFF64748B)),
-            ],
-          ),
-        ),
-      );
-    }
-    return Container(
-      margin: EdgeInsets.only(bottom: s(4)),
-      padding: EdgeInsets.symmetric(horizontal: s(5.5), vertical: s(2)),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(s(5)),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: s(0.85)),
-      ),
-      child: Text(
-        () {
-          final u = product.unit.trim();
-          if (u.isEmpty || u == '1 unit') return isFood ? 'Serves 1' : '1 pc';
-          if (u.toLowerCase() == 'serving') return '1 Serving';
-          return u;
-        }(),
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: s(9.2),
-          fontWeight: FontWeight.w700,
-          color: const Color(0xFF64748B),
-          letterSpacing: 0.1,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
+import '../../data/models/product.dart';
+import '../../providers/cart_provider.dart';
+import '../cart_conflict_dialog.dart';
+import '../variant_selector_sheet.dart';
+import '../../core/utils/stock_notice_helper.dart';
+
+// ─── Add To Cart Button & Quantity Stepper ─────────────────────────────────
+
+class AddToCartButton extends ConsumerWidget {
+  final BuildContext scaffoldContext;
+  final Product product;
+  final int inCartQty;
+  final bool hasVariants;
+  final bool isOutOfStock;
+  final bool isTimingClosed;
+  final String? nextSlot;
+  final bool isStoreOpen;
+  final bool isFood;
+  final List<Color> gradientColors;
+  final Color primaryColor;
+  final double uiScale;
+  final bool isZeptoStyle;
+
+  const AddToCartButton({
+    super.key,
+    required this.scaffoldContext,
+    required this.product,
+    required this.inCartQty,
+    required this.hasVariants,
+    required this.isOutOfStock,
+    required this.isTimingClosed,
+    this.nextSlot,
+    required this.isStoreOpen,
+    required this.isFood,
+    required this.gradientColors,
+    required this.primaryColor,
+    required this.uiScale,
+    this.isZeptoStyle = false,
+  });
+
+  double s(double v) => v * uiScale;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    Widget btn;
+    if (isOutOfStock) {
+      btn = _soldOut();
+    } else if (!isStoreOpen) {
+      btn = _storeClosed();
+    } else if (inCartQty > 0) {
+      btn = _stepper(context, ref);
+    } else if (isZeptoStyle) {
+      btn = _zeptoAddButton(context, ref);
+    } else {
+      btn = _addButton(context, ref);
+    }
+
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerRight,
+      child: btn,
+    );
+  }
+
+  Widget _soldOut() {
+    return Container(
+      height: s(30),
+      padding: EdgeInsets.symmetric(horizontal: s(8)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(s(8)),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: s(0.9)),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        'SOLD OUT',
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: s(9.0),
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFF94A3B8),
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+
+  Widget _storeClosed() {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
+        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
+                SizedBox(width: s(8)),
+                Expanded(
+                  child: Text(
+                    isFood
+                        ? '${product.restaurant?.name ?? "This Restaurant"} is currently closed.'
+                        : 'FastMinute Grocery Darkstore is currently closed.',
+                    style: GoogleFonts.inter(fontSize: s(12), fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF0F172A),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Container(
+        height: s(26),
+        padding: EdgeInsets.symmetric(horizontal: s(5.5), vertical: s(2)),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(s(7)),
+          border: Border.all(color: const Color(0xFFCBD5E1), width: s(0.85)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.schedule_rounded, size: s(10.5), color: const Color(0xFF64748B)),
+            SizedBox(width: s(2)),
+            Text(
+              'CLOSED',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: s(8.5),
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF64748B),
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stepper(BuildContext context, WidgetRef ref) {
+    final cart = ref.watch(cartProvider).value;
+    final matchingItems = cart?.items.where((i) => i.productId == product.id || i.productId.startsWith('${product.id}_')).toList() ?? [];
+
+    return Container(
+      height: s(31),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(s(9)),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.35),
+            blurRadius: s(9),
+            offset: Offset(0, s(2.5)),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Decrement Button
+          Semantics(
+            button: true,
+            label: 'Decrease quantity',
+            child: InkWell(
+              borderRadius: BorderRadius.horizontal(left: Radius.circular(s(8))),
+              onTap: () {
+                HapticFeedback.lightImpact();
+                if (hasVariants) {
+                  // If only 1 variant item is in the cart, decrement it directly
+                  if (matchingItems.length == 1) {
+                    ref.read(cartProvider.notifier).decrement(matchingItems.first.productId);
+                  } else {
+                    VariantSelectorSheet.show(context, product);
+                  }
+                } else {
+                  ref.read(cartProvider.notifier).decrement(product.id);
+                }
+              },
+              child: SizedBox(
+                width: s(28),
+                height: s(31),
+                child: Center(
+                  child: Icon(Icons.remove_rounded, size: s(18), color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+
+          // Count - tapping opens variant sheet if product has variants
+          GestureDetector(
+            onTap: hasVariants ? () => VariantSelectorSheet.show(context, product) : null,
+            child: Container(
+              constraints: BoxConstraints(minWidth: s(18)),
+              alignment: Alignment.center,
+              child: Text(
+                '$inCartQty',
+                style: GoogleFonts.plusJakartaSans(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: s(12.5),
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
+          ),
+
+          // Increment Button
+          Semantics(
+            button: true,
+            label: 'Increase quantity',
+            child: InkWell(
+              borderRadius: BorderRadius.horizontal(right: Radius.circular(s(8))),
+              onTap: () {
+                if (hasVariants) {
+                  // If only 1 variant item is in the cart, increment it directly
+                  if (matchingItems.length == 1) {
+                    final singleItem = matchingItems.first;
+                    final effectiveItemStock = product.getStockForVariant(singleItem.selectedVariant);
+                    if (effectiveItemStock > 0 && inCartQty >= effectiveItemStock) {
+                      HapticFeedback.heavyImpact();
+                      _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
+                      return;
+                    }
+                    HapticFeedback.lightImpact();
+                    final success = ref.read(cartProvider.notifier).addProduct(singleItem.product, 1, singleItem.selectedVariant);
+                    if (!success) {
+                      _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
+                    }
+                  } else {
+                    VariantSelectorSheet.show(context, product);
+                  }
+                } else {
+                  if (product.stock > 0 && inCartQty >= product.stock) {
+                    HapticFeedback.heavyImpact();
+                    _showStockLimitSnackbar(ref);
+                    return;
+                  }
+                  final conflict = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
+                  if (conflict != null) {
+                    _showConflictDialog(context, ref);
+                  } else {
+                    HapticFeedback.lightImpact();
+                    ref.read(cartProvider.notifier).increment(product);
+                  }
+                }
+              },
+              child: SizedBox(
+                width: s(28),
+                height: s(31),
+                child: Center(
+                  child: Icon(Icons.add_rounded, size: s(18), color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _addButton(BuildContext context, WidgetRef ref) {
+    return Bounceable(
+      scaleFactor: 0.92,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        if (hasVariants) {
+          VariantSelectorSheet.show(context, product);
+        } else {
+          _handleAdd(context, ref);
+        }
+      },
+      child: Container(
+        height: s(31),
+        padding: EdgeInsets.symmetric(horizontal: s(12)),
+        decoration: BoxDecoration(
+          color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(s(9)),
+          border: Border.all(
+            color: isFood ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
+            width: s(1.4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: primaryColor.withValues(alpha: 0.20),
+              blurRadius: s(8),
+              offset: Offset(0, s(2)),
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'ADD',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: s(12.0),
+                fontWeight: FontWeight.w900,
+                color: primaryColor,
+                letterSpacing: 0.5,
+              ),
+            ),
+            SizedBox(width: s(2.5)),
+            Icon(Icons.add_rounded, size: s(17), color: primaryColor),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _zeptoAddButton(BuildContext context, WidgetRef ref) {
+    return Bounceable(
+      scaleFactor: 0.92,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        if (hasVariants) {
+          VariantSelectorSheet.show(context, product);
+        } else {
+          _handleAdd(context, ref);
+        }
+      },
+      child: Container(
+        width: s(38),
+        height: s(38),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(s(9.5)),
+          border: Border.all(color: const Color(0xFF16A34A), width: s(1.6)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF16A34A).withValues(alpha: 0.22),
+              blurRadius: s(6),
+              offset: Offset(0, s(2)),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Icon(Icons.add, size: s(27), color: const Color(0xFF16A34A)),
+        ),
+      ),
+    );
+  }
+
+  void _showStockLimitSnackbar(WidgetRef ref, {int? customStock}) {
+    final cartItems = ref.read(cartProvider).value?.totalItems ?? 0;
+    StockNoticeHelper.showStockLimit(
+      context: scaffoldContext,
+      stock: customStock ?? product.getStockForVariant(null),
+      hasFloatingCart: cartItems > 0,
+    );
+  }
+
+  void _showConflictDialog(BuildContext context, WidgetRef ref) {
+    CartConflictDialog.show(
+      scaffoldContext,
+      product: product,
+      existingOutletName: ref.read(cartProvider.notifier).currentRestaurantName ?? '',
+      groceryItemsCount: ref.read(cartProvider.notifier).groceryItemsCount,
+      onConfirm: () => ref.read(cartProvider.notifier).replaceRestaurantItemsWith(product, 1),
+    );
+  }
+
+  void _handleAdd(BuildContext context, WidgetRef ref) {
+    final cartItems = ref.read(cartProvider).value?.totalItems ?? 0;
+    if (!product.isInStock) {
+      final bottomPadding = MediaQuery.of(scaffoldContext).padding.bottom;
+      final bottomMargin = (cartItems > 0) ? (bottomPadding + 80.0) : (bottomPadding + 16.0);
+      ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
+      ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+        SnackBar(
+          content: Text('${product.name} is currently out of stock.'),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(left: 16, right: 16, bottom: bottomMargin),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
+        ),
+      );
+      return;
+    }
+    final conflict = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
+    if (conflict != null) {
+      _showConflictDialog(context, ref);
+      return;
+    }
+    final success = ref.read(cartProvider.notifier).addProduct(product, 1);
+    if (!success) {
+      final effStock = product.getStockForVariant(null);
+      _showStockLimitSnackbar(ref, customStock: effStock);
+    }
+  }
+}
+
+// ─── Variant Pill Widget ───────────────────────────────────────────────────
+
+class VariantPill extends StatelessWidget {
+  final Product product;
+  final List variants;
+  final bool hasVariants;
+  final bool isOutOfStock;
+  final bool isFood;
+  final double uiScale;
+
+  const VariantPill({
+    super.key,
+    required this.product,
+    required this.variants,
+    required this.hasVariants,
+    required this.isOutOfStock,
+    required this.isFood,
+    required this.uiScale,
+  });
+
+  double s(double v) => v * uiScale;
+
+  @override
+  Widget build(BuildContext context) {
+    if (hasVariants) {
+      final label = variants.isNotEmpty ? '${variants.length} Options' : 'Customise';
+      return GestureDetector(
+        onTap: () {
+          if (!isOutOfStock) VariantSelectorSheet.show(context, product);
+        },
+        child: Container(
+          margin: EdgeInsets.only(bottom: s(2)),
+          padding: EdgeInsets.symmetric(horizontal: s(6), vertical: s(2.2)),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(s(6)),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: s(0.85)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: s(9.2),
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF475569),
+                ),
+              ),
+              SizedBox(width: s(2)),
+              Icon(Icons.keyboard_arrow_down_rounded, size: s(12), color: const Color(0xFF64748B)),
+            ],
+          ),
+        ),
+      );
+    }
+    return Container(
+      margin: EdgeInsets.only(bottom: s(2)),
+      padding: EdgeInsets.symmetric(horizontal: s(5.5), vertical: s(2)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(s(5)),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: s(0.85)),
+      ),
+      child: Text(
+        () {
+          final u = product.unit.trim();
+          if (u.isEmpty || u == '1 unit') return isFood ? 'Serves 1' : '1 pc';
+          if (u.toLowerCase() == 'serving') return '1 Serving';
+          return u;
+        }(),
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: s(9.2),
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF64748B),
+          letterSpacing: 0.1,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
