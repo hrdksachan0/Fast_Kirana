@@ -3976,6 +3976,33 @@ async def update_order(
         if should_sync_status:
             companion.status = order.status
             companion.updatedAt = datetime.utcnow()
+            if target_status == OrderStatus.CANCELLED:
+                if "[WALLET_USED:" in (companion.notes or "") and "[WALLET_REFUNDED]" not in (companion.notes or ""):
+                    try:
+                        from routers.wallet import credit_customer_wallet
+                        from decimal import Decimal
+                        comp_w_match = re.search(r"\[WALLET_USED:([0-9.]+)\]", companion.notes or "")
+                        if comp_w_match:
+                            comp_refund_amt = Decimal(comp_w_match.group(1))
+                            if comp_refund_amt > Decimal("0.00"):
+                                comp_tx_ref_id = f"wtx_ref_{companion.id}"
+                                comp_meta = {
+                                    "orderId": companion.id,
+                                    "readableId": companion.readableId,
+                                    "combinedId": companion.combinedId
+                                }
+                                await credit_customer_wallet(
+                                    user_id=companion.userId,
+                                    amount=comp_refund_amt,
+                                    description=f"Refund for cancelled order #{companion.readableId} 👛",
+                                    db=db,
+                                    tx_id=comp_tx_ref_id,
+                                    metadata=comp_meta
+                                )
+                                companion.notes = f"{companion.notes or ''} | [WALLET_REFUNDED]".strip(" |")
+                                logger.info(f"Refunded companion ₹{comp_refund_amt} to customer {companion.userId} for order #{companion.readableId}")
+                    except Exception as comp_ref_err:
+                        logger.error(f"Error refunding companion wallet for order {companion.id}: {comp_ref_err}")
         if "deliveryUserId" in payload or role == Role.DELIVERY:
             companion.deliveryUserId = order.deliveryUserId
             companion.deliveryLat = order.deliveryLat

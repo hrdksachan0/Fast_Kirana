@@ -490,6 +490,7 @@ async def credit_customer_wallet(
     """
     Atomic, idempotent wallet credit helper used during refunds, top-ups, or rewards.
     Uses Postgres Row-Level Lock (SELECT FOR UPDATE) to ensure concurrency safety and prevent duplicate refunds.
+    Enforces a strict debit-ceiling rule for combined orders (-G and -R) to prevent double refunds.
     """
     if amount <= Decimal("0.00"):
         return await get_or_create_wallet(user_id, db)
@@ -503,20 +504,7 @@ async def credit_customer_wallet(
             logger.warning(f"Wallet transaction {tx_id} already exists. Skipping duplicate credit.")
             return await get_or_create_wallet(user_id, db)
 
-    # 2. Domain Idempotency Check: Don't refund the same order twice
-    if metadata and "orderId" in metadata and tx_type == WalletTxType.CREDIT_REFUND:
-        order_id_str = str(metadata["orderId"])
-        dup_stmt = select(WalletTransaction).where(
-            WalletTransaction.type == WalletTxType.CREDIT_REFUND,
-            WalletTransaction.status == WalletTxStatus.SUCCESS,
-            WalletTransaction.metadata_json["orderId"].astext == order_id_str
-        )
-        dup_tx = (await db.execute(dup_stmt)).scalars().first()
-        if dup_tx:
-            logger.warning(f"Order {order_id_str} was already refunded via {dup_tx.id}. Preventing duplicate refund.")
-            return await get_or_create_wallet(user_id, db)
-
-    # 3. Row-level locked wallet update
+    # 2. Row-level locked wallet fetch to prevent race conditions
     lock_stmt = select(CustomerWallet).where(CustomerWallet.userId == user_id).with_for_update()
     res = await db.execute(lock_stmt)
     wallet = res.scalars().first()
@@ -524,6 +512,69 @@ async def credit_customer_wallet(
         wallet = await get_or_create_wallet(user_id, db)
         res = await db.execute(select(CustomerWallet).where(CustomerWallet.id == wallet.id).with_for_update())
         wallet = res.scalars().first()
+
+    # 3. Master Domain Idempotency & Debit-Ceiling Guard for Refunds
+    if metadata and tx_type == WalletTxType.CREDIT_REFUND:
+        order_id_str = str(metadata.get("orderId") or "").strip()
+        combined_id_str = str(metadata.get("combinedId") or "").strip()
+        readable_id_str = str(metadata.get("readableId") or "").strip()
+        base_readable = re.sub(r'-[GR\d]+$', '', readable_id_str, flags=re.IGNORECASE).strip().lstrip("#") if readable_id_str else ""
+
+        # Fetch recent transactions for this wallet to audit debits vs refunds
+        recent_txs_stmt = select(WalletTransaction).where(
+            WalletTransaction.walletId == wallet.id,
+            WalletTransaction.status == WalletTxStatus.SUCCESS
+        )
+        recent_txs = (await db.execute(recent_txs_stmt)).scalars().all()
+
+        total_already_refunded = Decimal("0.00")
+        total_original_debit = Decimal("0.00")
+
+        for t in recent_txs:
+            t_meta = t.metadata_json or {}
+            t_desc = t.description or ""
+
+            # Check if this transaction relates to the current order or its combined siblings
+            is_match = False
+            if order_id_str and (t_meta.get("orderId") == order_id_str or t.id == f"wtx_ref_{order_id_str}"):
+                is_match = True
+            elif combined_id_str and t_meta.get("combinedId") == combined_id_str:
+                is_match = True
+            elif base_readable and (f"#{base_readable}" in t_desc or str(t_meta.get("readableId", "")).startswith(base_readable)):
+                is_match = True
+
+            if is_match:
+                if t.type == WalletTxType.CREDIT_REFUND:
+                    total_already_refunded += Decimal(str(t.amount or 0.0))
+                elif t.type == WalletTxType.DEBIT_PURCHASE:
+                    total_original_debit += Decimal(str(t.amount or 0.0))
+
+        # Enforce strict ceiling if an original wallet debit exists for this order/combined order
+        if total_original_debit > Decimal("0.00"):
+            max_remaining_refund = max(Decimal("0.00"), total_original_debit - total_already_refunded)
+            if max_remaining_refund <= Decimal("0.00"):
+                logger.warning(
+                    f"🛡️ [Double Refund Guard] Order #{readable_id_str or order_id_str} (base: #{base_readable}) "
+                    f"is already fully refunded! Total debited: ₹{total_original_debit}, Already refunded: ₹{total_already_refunded}. "
+                    f"Skipping duplicate refund."
+                )
+                return wallet
+            if amount > max_remaining_refund:
+                logger.info(
+                    f"🛡️ [Double Refund Guard] Capping refund for #{readable_id_str} from ₹{amount} to ₹{max_remaining_refund} "
+                    f"to respect original debit ceiling (₹{total_original_debit})."
+                )
+                amount = max_remaining_refund
+        else:
+            # If no original debit found (or exact single order), prevent duplicate refund for the exact same orderId
+            if order_id_str:
+                exact_refund = next(
+                    (t for t in recent_txs if t.type == WalletTxType.CREDIT_REFUND and (t.metadata_json or {}).get("orderId") == order_id_str),
+                    None
+                )
+                if exact_refund:
+                    logger.warning(f"🛡️ [Double Refund Guard] Order {order_id_str} was already refunded via {exact_refund.id}. Preventing duplicate.")
+                    return wallet
 
     bal_before = Decimal(str(wallet.balance))
     wallet.balance = bal_before + amount

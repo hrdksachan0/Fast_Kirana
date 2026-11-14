@@ -2263,3 +2263,63 @@ async def get_daily_finance_reconciliation(
         "transactions": transactions,
     }
 
+
+# ============================================================
+# HOME SCREEN SECTIONS MANAGER (SERVER-DRIVEN UI)
+# ============================================================
+
+@router.get("/home-layout")
+async def admin_get_home_layout(
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Admin endpoint to fetch current home sections layout sequence."""
+    import json
+    from routers.public import DEFAULT_HOME_SECTIONS
+    stmt = select(StoreSetting).where(StoreSetting.key == "home_sections_layout")
+    res = await db.execute(stmt)
+    row = res.scalars().first()
+    if row and row.value:
+        try:
+            data = json.loads(row.value)
+            if isinstance(data, dict) and "sections" in data:
+                sections = sorted(data["sections"], key=lambda s: s.get("sortOrder", 999))
+                return {"sections": sections}
+        except Exception:
+            pass
+    return {"sections": DEFAULT_HOME_SECTIONS}
+
+
+@router.post("/home-layout")
+async def admin_save_home_layout(
+    payload: Dict[str, Any] = Body(...),
+    current_admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Admin endpoint to save live home screen layout sequence."""
+    import json
+    sections = payload.get("sections")
+    if not isinstance(sections, list) or len(sections) == 0:
+        raise HTTPException(status_code=422, detail="Valid 'sections' list is required")
+
+    payload_str = json.dumps({"sections": sections})
+    stmt = select(StoreSetting).where(StoreSetting.key == "home_sections_layout")
+    res = await db.execute(stmt)
+    setting = res.scalars().first()
+
+    if setting:
+        setting.value = payload_str
+        setting.updatedAt = datetime.utcnow()
+    else:
+        setting = StoreSetting(
+            id=f"ss_{uuid.uuid4().hex[:16]}",
+            key="home_sections_layout",
+            value=payload_str,
+            updatedAt=datetime.utcnow()
+        )
+        db.add(setting)
+
+    await db.commit()
+    return {"success": True, "layout": {"sections": sections}}
+
+

@@ -281,3 +281,34 @@ async def get_public_settings_alias(
     """Public settings alias for storefront."""
     from routers.settings import get_public_settings
     return await get_public_settings(response=response, storeId=storeId, hubId=hubId, db=db)
+
+
+DEFAULT_HOME_SECTIONS = [
+    {"id": "diwali_campaign", "label": "🪔 Diwali / Festive Campaign Section", "description": "Diwali Mahotsav specials, clay diyas, Lakshmi pooja kits & festive sweets.", "enabled": True, "sortOrder": 1},
+    {"id": "hero_banners", "label": "🖼️ Hero Promo Banners Carousel", "description": "Rotating discount billboards, bank offers & darkstore promos.", "enabled": True, "sortOrder": 2},
+    {"id": "top_categories", "label": "📦 Top Category Icons Grid", "description": "Fast circular & squircle category tiles (Dairy, Veggies, Snacks, Atta).", "enabled": True, "sortOrder": 3},
+    {"id": "bento_gifting", "label": "🎁 Bento: Gifting Boutique & Hampers", "description": "Curated gift hampers, celebratory boxes & luxury gifting card.", "enabled": True, "sortOrder": 4},
+    {"id": "bento_fresh_market", "label": "🥬 Bento: Fresh Market (Bloom)", "description": "Farm-fresh hydroponics, daily vegetables, fruits & herbs.", "enabled": True, "sortOrder": 5},
+    {"id": "bento_seasonal", "label": "🧴 Bento: Seasonal Switch-Up", "description": "Winter skin care, cold creams, body lotions & wellness picks.", "enabled": True, "sortOrder": 6},
+    {"id": "bento_daily_restock", "label": "🛒 Bento: Daily Restock", "description": "Morning essentials, bread, milk, eggs & kitchen pantry restock.", "enabled": True, "sortOrder": 7},
+    {"id": "bento_value_picks", "label": "🏷️ Bento: Value Picks", "description": "Budget-friendly combos, mega savings & clearance steals.", "enabled": True, "sortOrder": 8},
+    {"id": "product_sections", "label": "🥛 Product Feed (Dairy, Snacks & Daily Staples)", "description": "Horizontal product carousels & vertical infinite grocery feed.", "enabled": True, "sortOrder": 9},
+]
+
+
+@router.get("/home-layout")
+async def get_home_layout(db: AsyncSession = Depends(get_db)):
+    """Fetch live home screen layout sequence configured from admin."""
+    import json
+    stmt = select(StoreSetting).where(StoreSetting.key == "home_sections_layout")
+    res = await db.execute(stmt)
+    row = res.scalars().first()
+    if row and row.value:
+        try:
+            data = json.loads(row.value)
+            if isinstance(data, dict) and "sections" in data:
+                sections = sorted(data["sections"], key=lambda s: s.get("sortOrder", 999))
+                return {"sections": sections}
+        except Exception:
+            pass
+    return {"sections": DEFAULT_HOME_SECTIONS}

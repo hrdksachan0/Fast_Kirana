@@ -1204,10 +1204,22 @@ async def verify_cashfree_payment(
                         metadata={"walletDeduction": w_used_verify, "cfOrderId": sanitized_check_id},
                         allow_promo=True,
                     )
-                    wallet_note = f"💳 Wallet Used: ₹{w_used_verify:.2f} | [WALLET_USED:{w_used_verify:.2f}]"
-                    order.notes = f"{order.notes} | {wallet_note}" if order.notes else wallet_note
-                    for co in comb_orders:
-                        co.notes = f"{co.notes} | {wallet_note}" if co.notes else wallet_note
+                    if comb_orders:
+                        # Partition wallet deduction across combined sub-orders to prevent duplicate refund quotas
+                        g_alloc = min(float(order.total or 0.0), w_used_verify)
+                        rem_alloc = max(0.0, round(w_used_verify - g_alloc, 2))
+                        if g_alloc > 0:
+                            g_note = f"💳 Wallet Used: ₹{g_alloc:.2f} | [WALLET_USED:{g_alloc:.2f}]"
+                            order.notes = f"{order.notes} | {g_note}" if order.notes else g_note
+                        for co in comb_orders:
+                            co_alloc = min(float(co.total or 0.0), rem_alloc)
+                            rem_alloc = max(0.0, round(rem_alloc - co_alloc, 2))
+                            if co_alloc > 0:
+                                co_note = f"💳 Wallet Used: ₹{co_alloc:.2f} | [WALLET_USED:{co_alloc:.2f}]"
+                                co.notes = f"{co.notes} | {co_note}" if co.notes else co_note
+                    else:
+                        wallet_note = f"💳 Wallet Used: ₹{w_used_verify:.2f} | [WALLET_USED:{w_used_verify:.2f}]"
+                        order.notes = f"{order.notes} | {wallet_note}" if order.notes else wallet_note
             except Exception as w_v_err:
                 logger.warning(f"Error debiting wallet on verify for order #{order.readableId}: {w_v_err}")
 
@@ -2051,9 +2063,19 @@ async def auto_recover_unplaced_cashfree_order(
                     metadata={"walletDeduction": recovered_wallet_used, "cfOrderId": clean_cf_id},
                     allow_promo=True,
                 )
-                wallet_note = f"💳 Wallet Used: ₹{recovered_wallet_used:.2f} | [WALLET_USED:{recovered_wallet_used:.2f}]"
-                for co in created_orders:
-                    co["order"].notes = f"{co['order'].notes} | {wallet_note}" if co["order"].notes else wallet_note
+                if len(created_orders) > 1:
+                    rem_alloc = recovered_wallet_used
+                    for idx, co in enumerate(created_orders):
+                        ord_tot = float(co["order"].total or 0.0)
+                        alloc = min(ord_tot, rem_alloc) if idx < len(created_orders) - 1 else rem_alloc
+                        rem_alloc = max(0.0, round(rem_alloc - alloc, 2))
+                        if alloc > 0:
+                            w_note = f"💳 Wallet Used: ₹{alloc:.2f} | [WALLET_USED:{alloc:.2f}]"
+                            co["order"].notes = f"{co['order'].notes} | {w_note}" if co["order"].notes else w_note
+                else:
+                    wallet_note = f"💳 Wallet Used: ₹{recovered_wallet_used:.2f} | [WALLET_USED:{recovered_wallet_used:.2f}]"
+                    for co in created_orders:
+                        co["order"].notes = f"{co['order'].notes} | {wallet_note}" if co["order"].notes else wallet_note
             except Exception as w_err:
                 logger.warning(f"Error debiting wallet on auto-recover for user {user_id}: {w_err}")
 
@@ -2566,10 +2588,22 @@ async def cashfree_webhook(
                             metadata={"walletDeduction": w_used_wh, "cfOrderId": str(cf_order_id)},
                             allow_promo=True,
                         )
-                        wallet_note = f"💳 Wallet Used: ₹{w_used_wh:.2f} | [WALLET_USED:{w_used_wh:.2f}]"
-                        order.notes = f"{order.notes} | {wallet_note}" if order.notes else wallet_note
-                        for co in comb_orders:
-                            co.notes = f"{co.notes} | {wallet_note}" if co.notes else wallet_note
+                        if comb_orders:
+                            # Partition wallet deduction across combined sub-orders to prevent duplicate refund quotas
+                            g_alloc = min(float(order.total or 0.0), w_used_wh)
+                            rem_alloc = max(0.0, round(w_used_wh - g_alloc, 2))
+                            if g_alloc > 0:
+                                g_note = f"💳 Wallet Used: ₹{g_alloc:.2f} | [WALLET_USED:{g_alloc:.2f}]"
+                                order.notes = f"{order.notes} | {g_note}" if order.notes else g_note
+                            for co in comb_orders:
+                                co_alloc = min(float(co.total or 0.0), rem_alloc)
+                                rem_alloc = max(0.0, round(rem_alloc - co_alloc, 2))
+                                if co_alloc > 0:
+                                    co_note = f"💳 Wallet Used: ₹{co_alloc:.2f} | [WALLET_USED:{co_alloc:.2f}]"
+                                    co.notes = f"{co.notes} | {co_note}" if co.notes else co_note
+                        else:
+                            wallet_note = f"💳 Wallet Used: ₹{w_used_wh:.2f} | [WALLET_USED:{w_used_wh:.2f}]"
+                            order.notes = f"{order.notes} | {wallet_note}" if order.notes else wallet_note
                 except Exception as w_wh_err:
                     logger.warning(f"Error debiting wallet on webhook for order #{order.readableId}: {w_wh_err}")
 

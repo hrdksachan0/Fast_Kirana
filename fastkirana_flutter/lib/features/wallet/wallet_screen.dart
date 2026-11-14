@@ -1273,142 +1273,152 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                   );
                 }
 
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: txList.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
-                  itemBuilder: (context, idx) {
-                    final t = txList[idx];
-                    final isCredit = t.isCredit;
-
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8.5),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFF1F5F9)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                      child: Row(
-                        children: [
-                          // Icon container (Compact 34x34)
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: isCredit ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isCredit ? const Color(0xFFA7F3D0) : const Color(0xFFFECDD3),
-                                width: 0.8,
-                              ),
-                            ),
-                            child: Icon(
-                              isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                              size: 16,
-                              color: isCredit ? const Color(0xFF059669) : const Color(0xFFE11D48),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: txList.length,
+                      separatorBuilder: (_, __) => const Divider(
+                        height: 1,
+                        thickness: 0.6,
+                        color: Color(0xFFF1F5F9),
+                        indent: 52,
+                        endIndent: 12,
+                      ),
+                      itemBuilder: (context, idx) {
+                        final t = txList[idx];
+                        final isCredit = t.isCredit;
 
-                          // Description and date
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _cleanTxDescription(t.description, t.type),
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 12.5),
-                                    fontWeight: FontWeight.w700,
-                                    color: AppDesignSystem.slate900,
-                                    height: 1.2,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  softWrap: true,
-                                ),
-                                const SizedBox(height: 3),
-                                Wrap(
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 5,
-                                  runSpacing: 2,
-                                  children: [
-                                    Text(
-                                      _formatDateTime(t.createdAt),
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 10.5),
-                                        color: AppDesignSystem.slate500,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.0),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFECFDF5),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.check_circle_rounded, size: 8.5, color: Color(0xFF059669)),
-                                          const SizedBox(width: 2.5),
-                                          Text(
-                                            'Success',
-                                            style: GoogleFonts.inter(
-                                              fontSize: Responsive.scaledFontSize(context, 8.5),
-                                              fontWeight: FontWeight.w700,
-                                              color: const Color(0xFF059669),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-
-                          // Amount
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisSize: MainAxisSize.min,
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7.5),
+                          color: Colors.transparent,
+                          child: Row(
                             children: [
-                              Text(
-                                '${isCredit ? '+' : '-'}₹${t.amount.toStringAsFixed(2)}',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13.5),
-                                  fontWeight: FontWeight.w800,
+                              // Sleek 30x30 Icon with soft pastel tint
+                              Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: isCredit ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
+                                  borderRadius: BorderRadius.circular(8.5),
+                                  border: Border.all(
+                                    color: isCredit ? const Color(0xFFA7F3D0) : const Color(0xFFFECDD3),
+                                    width: 0.6,
+                                  ),
+                                ),
+                                child: Icon(
+                                  isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                  size: 14,
                                   color: isCredit ? const Color(0xFF059669) : const Color(0xFFE11D48),
                                 ),
                               ),
-                              if (t.balanceAfter > 0) ...[
-                                const SizedBox(height: 1.5),
-                                Text(
-                                  'Bal: ₹${t.balanceAfter.toStringAsFixed(2)}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    color: AppDesignSystem.slate400,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                              const SizedBox(width: 10),
+
+                              // Description and date
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _cleanTxDescription(t.description, t.type),
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 12),
+                                        fontWeight: FontWeight.w700,
+                                        color: AppDesignSystem.slate900,
+                                        height: 1.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          _formatDateTime(t.createdAt),
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 10),
+                                            color: AppDesignSystem.slate500,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFECFDF5),
+                                            borderRadius: BorderRadius.circular(3.5),
+                                            border: Border.all(color: const Color(0xFFA7F3D0), width: 0.6),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.check_circle_rounded, size: 7.5, color: Color(0xFF059669)),
+                                              const SizedBox(width: 2),
+                                              Text(
+                                                'Success',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: Responsive.scaledFontSize(context, 8),
+                                                  fontWeight: FontWeight.w700,
+                                                  color: const Color(0xFF059669),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
+                              const SizedBox(width: 8),
+
+                              // Amount & Balance
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '${isCredit ? '+' : '-'}₹${t.amount.toStringAsFixed(2)}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 13),
+                                      fontWeight: FontWeight.w800,
+                                      color: isCredit ? const Color(0xFF059669) : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  if (t.balanceAfter > 0) ...[
+                                    const SizedBox(height: 1),
+                                    Text(
+                                      'Bal: ₹${t.balanceAfter.toStringAsFixed(2)}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 9),
+                                        color: AppDesignSystem.slate400,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ],
                           ),
-                        ],
-                      ),
-                    );
-                  },
+                        );
+                      },
+                    ),
+                  ),
                 );
               },
             ),
