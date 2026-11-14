@@ -49,7 +49,7 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         decoration: BoxDecoration(
           color: isSelected ? activeColor : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(12),
@@ -83,15 +83,19 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
             ),
             const SizedBox(width: 4),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
               decoration: BoxDecoration(
                 color: isSelected ? Colors.white.withValues(alpha: 0.25) : Colors.white,
                 borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isSelected ? Colors.white.withValues(alpha: 0.4) : const Color(0xFFCBD5E1),
+                  width: 0.8,
+                ),
               ),
               child: Text(
                 '$count',
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 9.5),
+                  fontSize: Responsive.scaledFontSize(context, 10.5),
                   fontWeight: FontWeight.w900,
                   color: isSelected ? Colors.white : AppDesignSystem.slate900,
                 ),
