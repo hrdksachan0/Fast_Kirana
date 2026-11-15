@@ -1910,8 +1910,8 @@ $formattedItems
       } else if (_liveSubFilter != 'ALL') {
         list = list.where((o) => o.status.name.toUpperCase() == _liveSubFilter).toList();
       }
-      // STRICT FIFO (First In, First Out): Oldest pending orders on TOP!
-      list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      // Newest orders on TOP (Admin preference: latest incoming order first)
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } else {
       // History Tab with Outlet Filter
       list = _allOrders.where((o) => !_isLiveOrder(o)).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList();
