@@ -144,73 +144,134 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
     return result;
   }
 
-  Widget _buildOutletChip({
-    required String id,
-    required String name,
-    required String icon,
-    required int count,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: isSelected ? AppDesignSystem.slate900 : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? AppDesignSystem.slate900 : AppDesignSystem.slate200,
-              width: 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isSelected ? 0.12 : 0.02),
-                blurRadius: 4,
-                offset: const Offset(0, 1.5),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(icon, style: const TextStyle(fontSize: 13)),
-              const SizedBox(width: 5),
-              Text(
-                name,
-                style: GoogleFonts.inter(
-                  fontSize: 11.5,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  color: isSelected ? Colors.white : AppDesignSystem.slate800,
+  void _showOutletSelectorSheet(BuildContext context, List<Map<String, dynamic>> outlets) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('🏪', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Filter by Outlet',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: AppDesignSystem.slate900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: AppDesignSystem.slate500),
+                      onPressed: () => Navigator.pop(ctx),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 5),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white.withValues(alpha: 0.22) : AppDesignSystem.slate100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$count',
+                const SizedBox(height: 2),
+                Text(
+                  'Select a store or kitchen to view only its assigned drops and pickups.',
                   style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: isSelected ? Colors.white : AppDesignSystem.slate700,
+                    fontSize: 12,
+                    color: AppDesignSystem.slate500,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: outlets.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1, color: AppDesignSystem.slate100),
+                    itemBuilder: (context, index) {
+                      final outlet = outlets[index];
+                      final outletId = outlet['id']?.toString() ?? 'ALL';
+                      final outletName = outlet['name']?.toString() ?? 'All Outlets';
+                      final count = outlet['count'] as int? ?? 0;
+                      final iconStr = outlet['icon']?.toString() ?? '🏪';
+                      final isSelected = _selectedOutlet == outletId;
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF3B82F6) : AppDesignSystem.slate200,
+                              width: 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(iconStr, style: const TextStyle(fontSize: 16)),
+                          ),
+                        ),
+                        title: Text(
+                          outletName,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: isSelected ? AppDesignSystem.slate900 : AppDesignSystem.slate700,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (count > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFDBEAFE) : AppDesignSystem.slate100,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '$count orders',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: isSelected ? const Color(0xFF1D4ED8) : AppDesignSystem.slate600,
+                                  ),
+                                ),
+                              ),
+                            Icon(
+                              isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                              size: 20,
+                              color: isSelected ? const Color(0xFF2563EB) : AppDesignSystem.slate300,
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedOutlet = outletId);
+                          Navigator.pop(ctx);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -318,31 +379,87 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
     final showPickupSection = _filterIndex == 0 || _filterIndex == 1 || _filterIndex == 2;
     final displayedPickups = _filterIndex == 2 ? itemReadyOrdersForOutlet : pendingPickupsForOutlet;
 
+    final selectedOutletData = outlets.firstWhereOrNull((o) => o['id'] == _selectedOutlet);
+    final isAllOutlet = _selectedOutlet == 'ALL';
+    final selectedOutletName = selectedOutletData != null ? selectedOutletData['name']?.toString() ?? 'All Outlets' : 'All Outlets';
+    final selectedOutletIcon = selectedOutletData != null ? selectedOutletData['icon']?.toString() ?? '🏢' : '🏢';
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.fromLTRB(16, 12, 16, 32 + safeBottom),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Outlet Filter Chips (All Outlets | Darkstore | Hot Pizza | A.S. Cafe ...)
-          SizedBox(
-            height: 34,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: outlets.length,
-              itemBuilder: (context, i) {
-                final out = outlets[i];
-                final isSelected = _selectedOutlet == out['id'];
-                return _buildOutletChip(
-                  id: out['id'] as String,
-                  name: out['name'] as String,
-                  icon: out['icon'] as String,
-                  count: out['count'] as int,
-                  isSelected: isSelected,
-                  onTap: () => setState(() => _selectedOutlet = out['id'] as String),
-                );
-              },
+          // Row 1: Column-wise Outlet Dropdown Anchor
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _showOutletSelectorSheet(context, outlets),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7.5),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isAllOutlet ? AppDesignSystem.slate200 : const Color(0xFF0D9488),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1.5),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Text(selectedOutletIcon, style: const TextStyle(fontSize: 15)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            selectedOutletName,
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 12),
+                              fontWeight: FontWeight.w800,
+                              color: AppDesignSystem.slate900,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: isAllOutlet ? AppDesignSystem.slate100 : const Color(0xFFCCFBF1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '$totalCount Orders',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                              fontWeight: FontWeight.w800,
+                              color: isAllOutlet ? AppDesignSystem.slate700 : const Color(0xFF0F766E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppDesignSystem.slate100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppDesignSystem.slate700),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
