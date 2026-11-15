@@ -1431,37 +1431,55 @@ export function OrdersTab({
                               <option value="CANCELLED">Cancelled</option>
                             </select>
                             
-                            {o.status === 'ADMIN_PENDING' && (
-                              <div className="flex flex-col gap-1 w-full">
-                                <button
-                                  onClick={() => onUpdateOrderStatus(o.id, 'PENDING')}
-                                  disabled={updatingOrderId === o.id}
-                                  className="w-full py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer flex items-center justify-center gap-1"
-                                  title="Approve Order & Dispatch to Store/Kitchen"
-                                >
-                                  <span>🛡️ Approve</span>
-                                </button>
-                                <button
-                                  onClick={() => setCancelConfirmOrder(o)}
-                                  disabled={updatingOrderId === o.id}
-                                  className="w-full py-0.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[9px] font-extrabold rounded-md transition-all active:scale-95 cursor-pointer"
-                                  title="Reject / Cancel Order"
-                                >
-                                  ✕ Reject
-                                </button>
-                              </div>
-                            )}
+                            {(() => {
+                              const displayName = ((o as any).restaurantName || o.shopName || '').trim()
+                              const isRest = Boolean(o.restaurantId || (displayName && (displayName.toLowerCase().includes('restaurant') || displayName.toLowerCase().includes('wedson') || displayName.toLowerCase().includes('as ') || displayName.toLowerCase().includes('cafe'))) || o.readableId?.endsWith('-R'))
 
-                            {o.status === 'PENDING' && (
-                              <button
-                                onClick={() => onUpdateOrderStatus(o.id, 'CONFIRMED')}
-                                disabled={updatingOrderId === o.id}
-                                className="w-full py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer"
-                                title="Accept & Confirm Order"
-                              >
-                                ✓ Accept
-                              </button>
-                            )}
+                              if (o.status === 'ADMIN_PENDING') {
+                                return (
+                                  <div className="flex flex-col gap-1 w-full">
+                                    <button
+                                      onClick={() => onUpdateOrderStatus(o.id, 'PENDING')}
+                                      disabled={updatingOrderId === o.id}
+                                      className="w-full py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer flex items-center justify-center gap-1"
+                                      title="Verify & Place Order (Dispatches to Restaurant/Store)"
+                                    >
+                                      <span>🛡️ Verify & Place</span>
+                                    </button>
+                                    <button
+                                      onClick={() => setCancelConfirmOrder(o)}
+                                      disabled={updatingOrderId === o.id}
+                                      className="w-full py-0.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[9px] font-extrabold rounded-md transition-all active:scale-95 cursor-pointer"
+                                      title="Reject / Cancel Order"
+                                    >
+                                      ✕ Reject
+                                    </button>
+                                  </div>
+                                )
+                              }
+
+                              if (o.status === 'PENDING') {
+                                if (isRest) {
+                                  return (
+                                    <div className="py-1 px-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-400 text-[9px] font-black text-center leading-tight shadow-2xs" title="Order placed. Waiting for restaurant kitchen to accept and confirm.">
+                                      👨‍🍳 Awaiting Restaurant Accept
+                                    </div>
+                                  )
+                                }
+                                return (
+                                  <button
+                                    onClick={() => onUpdateOrderStatus(o.id, 'CONFIRMED')}
+                                    disabled={updatingOrderId === o.id}
+                                    className="w-full py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all active:scale-95 shadow-xs cursor-pointer"
+                                    title="Accept & Confirm Order"
+                                  >
+                                    ✓ Accept
+                                  </button>
+                                )
+                              }
+
+                              return null
+                            })()}
                             {o.status === 'CONFIRMED' && (
                               <button
                                 onClick={() => onUpdateOrderStatus(o.id, 'PACKED')}

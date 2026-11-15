@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { revalidateStorefront } from '@/lib/revalidate'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 
 export async function POST(request: NextRequest) {
   const adminResult = await requireAdmin()
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       name?: string
       storeId?: string
     }
-    const targetStoreId = storeId || (session.user as any)?.assignedStoreId || null
+    const targetStoreId = getEffectiveStoreId(session, storeId) || 'hub-209206'
 
     if (!productId && !barcode && !name) {
       return NextResponse.json(
@@ -100,12 +100,13 @@ export async function POST(request: NextRequest) {
       const newTotalStock = prevStock + parsedQty
 
       // 4. Update the aggregate fields on the parent Product
+      // Global stock represents live warehouse (hub-209206). Other hubs update storeInventory only.
+      const isCentralHub = targetStoreId === 'hub-209206'
       const updatedProduct = await tx.product.update({
         where: { id: activeProductId },
         data: {
-          stock: newTotalStock,
+          ...(isCentralHub ? { stock: newTotalStock, isAvailable: true } : {}),
           costPrice: parsedCost,
-          isAvailable: true, // Automatically ensure item is available upon inward
           ...(product.expiryDate ? {} : { expiryDate: parsedExpiry }),
         },
         include: {
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // 4b. Localize inwarding to specific dark store inventory if provided
+      // 4b. Localize inwarding to specific dark store inventory
       if (targetStoreId) {
         try {
           await tx.storeInventory.upsert({
@@ -127,9 +128,11 @@ export async function POST(request: NextRequest) {
               storeId: targetStoreId,
               productId: activeProductId,
               stock: parsedQty,
+              isAvailable: true,
             },
             update: {
               stock: { increment: parsedQty },
+              isAvailable: true,
             }
           })
         } catch (invErr) {

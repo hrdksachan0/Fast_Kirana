@@ -106,8 +106,8 @@ class AppRouter {
       }
     }
 
-    // Handle deep links like /restaurants/<id> or /restaurant/<id> or /cafe/<id> (customer restaurant menu)
-    final restMatch = RegExp(r'^/(?:restaurants?|cafe)/([^/?#]+)/?$').firstMatch(cleanPath);
+    // Handle deep links like /food/<id_or_slug> or /restaurants/<id> or /restaurant/<id> or /cafe/<id> (customer restaurant menu)
+    final restMatch = RegExp(r'^/(?:restaurants?|cafe|food)/([^/?#]+)/?$').firstMatch(cleanPath);
     if (restMatch != null) {
       final restId = restMatch.group(1) ?? '';
       if (restId.isNotEmpty &&

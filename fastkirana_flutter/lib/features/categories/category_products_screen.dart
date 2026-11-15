@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -644,10 +642,10 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                   ),
                 ),
 
-                // Bottom Center/Right: Action Pill (Closed / Sold Out / In Cart Stepper / ADD)
+                // Bottom Center/Right: Action Pill (Inside card container, resting cleanly on bottom right)
                 Positioned(
-                  bottom: -11,
-                  right: 8,
+                  bottom: 6,
+                  right: 6,
                   child: !isStoreOpen
                       ? GestureDetector(
                           onTap: () {
@@ -772,7 +770,7 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                                       height: 29,
                                       padding: const EdgeInsets.symmetric(horizontal: 5),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFDB2777), // Vibrant Pink/Rose from screenshot
+                                        color: const Color(0xFFDB2777), // Vibrant Pink/Rose
                                         borderRadius: BorderRadius.circular(8),
                                         boxShadow: [
                                           BoxShadow(
@@ -918,24 +916,24 @@ class _ReferenceExactProductCard extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
 
           // 2. Product Title (UPAR! 2-lines max, uniform height for locked grid rows)
           SizedBox(
-            height: 28,
+            height: 30,
             child: Text(
               product.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 10.8,
+                fontSize: 11.0,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF1E293B),
-                height: 1.2,
+                height: 1.25,
               ),
             ),
           ),
-          const SizedBox(height: 1),
+          const SizedBox(height: 2),
 
           // 3. Unit / Weight
           Text(

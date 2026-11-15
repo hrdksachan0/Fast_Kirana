@@ -30,12 +30,18 @@ router = APIRouter(prefix="/api", tags=["Restaurant & Cafe"])
 @router.get("/restaurants")
 async def get_restaurants(
     search: Optional[str] = Query(None),
+    storeId: Optional[str] = Query(None),
+    current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get all restaurants (public)."""
+    """Get all restaurants (public or hub scoped)."""
     from models import Restaurant
     from sqlalchemy import cast, String
+    user_assigned_store = current_user.get("assignedStoreId") if current_user else None
+    effective_store_id = user_assigned_store or storeId or "hub-209206"
     stmt = select(Restaurant).where(Restaurant.isActive == True)
+    if effective_store_id and effective_store_id != "all":
+        stmt = stmt.where(Restaurant.storeId == effective_store_id)
     if search:
         stmt = stmt.where(or_(
             Restaurant.name.ilike(f"%{search}%"),
@@ -342,7 +348,14 @@ async def _resolve_effective_restaurant(restaurant_id: Optional[str], current_us
             if r:
                 return r
 
-    # 4. Fall back to phone / email match
+    # 4. Fall back to store hub if admin has assignedStoreId
+    user_store = current_user.get("assignedStoreId")
+    if is_admin and user_store and user_store != "all":
+        store_rest = (await db.execute(select(Restaurant).where(Restaurant.storeId == user_store).order_by(Restaurant.id))).scalars().first()
+        if store_rest:
+            return store_rest
+
+    # 5. Fall back to phone / email match
     phone = current_user.get("phone")
     email = current_user.get("email")
     filters = []
@@ -728,10 +741,57 @@ async def restaurant_dashboard_update_order(
 @restaurant_router.get("/products")
 async def restaurant_dashboard_products(
     restaurantId: Optional[str] = Query(None),
+    storeId: Optional[str] = Query(None),
     current_user: dict = Depends(require_auth),
     db: AsyncSession = Depends(get_db)
 ):
     """Restaurant owner's products with strict outlet isolation."""
+    role = str(current_user.get("role", "")).upper()
+    is_admin = role in ["ADMIN", "SUPER_ADMIN"]
+    effective_store = storeId if (storeId and storeId != "all") else current_user.get("assignedStoreId")
+
+    # If ALL restaurants requested for an admin in a specific store hub
+    if (not restaurantId or restaurantId.strip().upper() == "ALL") and is_admin and effective_store and effective_store != "all":
+        rest_stmt = select(Restaurant).where(Restaurant.storeId == effective_store).order_by(Restaurant.id)
+        hub_res = await db.execute(rest_stmt)
+        hub_restaurants = hub_res.scalars().all()
+        hub_rest_ids = [r.id for r in hub_restaurants]
+        if hub_rest_ids:
+            stmt = select(Product).options(
+                selectinload(Product.category)
+            ).where(Product.restaurantId.in_(hub_rest_ids)).order_by(desc(Product.createdAt))
+            res = await db.execute(stmt)
+            products = res.scalars().all()
+            first_r = hub_restaurants[0]
+            return {
+                "products": [
+                    {
+                        "id": p.id,
+                        "name": p.name,
+                        "description": p.description,
+                        "price": float(p.price),
+                        "mrp": float(p.mrp) if p.mrp else float(p.price),
+                        "stock": p.stock,
+                        "isAvailable": p.isAvailable,
+                        "imageUrl": p.imageUrl,
+                        "restaurantId": p.restaurantId,
+                        "menuSection": getattr(p, "menuSection", None) or (p.category.name if p.category else "Main Menu"),
+                        "category": {"id": p.category.id, "name": p.category.name} if p.category else None,
+                        "variants": p.variants,
+                        "tags": p.tags,
+                    }
+                    for p in products
+                ],
+                "restaurant": {
+                    "id": first_r.id,
+                    "name": first_r.name,
+                    "slug": first_r.slug,
+                    "isOpen": first_r.isOpen,
+                    "commissionRate": getattr(first_r, "commissionRate", 20.0) or 20.0,
+                    "menuSections": first_r.menuSections,
+                }
+            }
+
     restaurant = await _resolve_effective_restaurant(restaurantId, current_user, db)
     if not restaurant:
         return {"products": [], "restaurant": None}
@@ -752,6 +812,7 @@ async def restaurant_dashboard_products(
                 "stock": p.stock,
                 "isAvailable": p.isAvailable,
                 "imageUrl": p.imageUrl,
+                "restaurantId": p.restaurantId,
                 "menuSection": getattr(p, "menuSection", None) or (p.category.name if p.category else "Main Menu"),
                 "category": {"id": p.category.id, "name": p.category.name} if p.category else None,
                 "variants": p.variants,
@@ -1062,6 +1123,8 @@ async def restaurant_dashboard_delete_product(
         try:
             await db.execute(text("DELETE FROM reviews WHERE \"productId\" = :prod_id"), {"prod_id": product.id})
             await db.execute(text("DELETE FROM cart_items WHERE \"productId\" = :prod_id"), {"prod_id": product.id})
+            await db.execute(text("DELETE FROM store_inventories WHERE \"productId\" = :prod_id"), {"prod_id": product.id})
+            await db.execute(text("DELETE FROM product_images WHERE \"productId\" = :prod_id"), {"prod_id": product.id})
         except Exception:
             pass
 

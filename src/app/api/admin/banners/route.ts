@@ -211,12 +211,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Banner not found' }, { status: 404 })
     }
 
+    if (session.user?.assignedStoreId && existing.storeId && existing.storeId !== session.user.assignedStoreId) {
+      return NextResponse.json({ error: 'Forbidden: You cannot modify banners belonging to other hubs' }, { status: 403 })
+    }
+
     let existingMeta: any = {}
     if (existing.code && existing.code.startsWith('{') && existing.code.endsWith('}')) {
       try { existingMeta = JSON.parse(existing.code) } catch (_) {}
     }
 
-    const targetStoreId = body.storeId !== undefined ? body.storeId : existing.storeId
+    const targetStoreId = getEffectiveStoreId(session, body.storeId !== undefined ? body.storeId : existing.storeId)
     let validStoreId: string | null = null
     if (targetStoreId && targetStoreId !== 'all' && targetStoreId !== 'ALL') {
       try {
@@ -306,6 +310,10 @@ export async function DELETE(request: NextRequest) {
 
     if (!existing) {
       return NextResponse.json({ error: 'Banner not found' }, { status: 404 })
+    }
+
+    if (session.user?.assignedStoreId && existing.storeId !== session.user.assignedStoreId) {
+      return NextResponse.json({ error: 'Forbidden: You cannot delete banners belonging to other hubs' }, { status: 403 })
     }
 
     await prisma.promoBanner.delete({

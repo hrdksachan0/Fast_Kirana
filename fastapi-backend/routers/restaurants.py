@@ -54,8 +54,18 @@ async def get_restaurants(
     Uses ultra-fast in-memory cache for public requests (<5ms response).
     """
     role = current_user.get("role") if current_user else None
-    is_admin = role == "ADMIN"
-    effective_store_id = storeId or x_store_id
+    is_admin = role in ["ADMIN", "SUPER_ADMIN", "SUPERADMIN"]
+    user_assigned_store = current_user.get("assignedStoreId") if current_user else None
+
+    # Branch staff are strictly locked to their assigned hub
+    if user_assigned_store:
+        effective_store_id = user_assigned_store
+    else:
+        effective_store_id = storeId or x_store_id
+
+    # For customer catalog browsing without store selection, default to central hub
+    if not is_admin and not effective_store_id:
+        effective_store_id = "hub-209206" 
 
     # Serve public requests from cache
     cache_key = f"{cuisine}:{search}:{effective_store_id or 'all'}:{all}"
@@ -233,7 +243,7 @@ async def create_restaurant(
         isActive=bool(payload.get("isActive", True)),
         rating=parse_float(payload.get("rating"), 4.0),
         deliveryRadiusKm=parse_float(payload.get("deliveryRadiusKm"), 5.0),
-        storeId=payload.get("storeId"),
+        storeId=admin_user.get("assignedStoreId") or payload.get("storeId") or ("hub-816101" if (payload.get("city") or "").lower() == "barharwa" else "hub-209206"),
         menuSections=payload.get("menuSections", [])
     )
 

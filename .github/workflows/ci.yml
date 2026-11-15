@@ -85,7 +85,12 @@ jobs:
 
       - name: Build Android Release APK
         working-directory: fastkirana_flutter
-        run: flutter build apk --release --android-skip-build-dependency-validation
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE_URL=https://api.fastminute.in \
+            --dart-define=WEB_STOREFRONT_URL=https://www.fastminute.in \
+            --dart-define=RAZORPAY_KEY_ID=rzp_live_TRvyzlqHiRGWbr \
+            --dart-define=BUILD_FLAVOR=prod
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4

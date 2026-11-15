@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'core/theme/design_system.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
@@ -207,10 +208,23 @@ void main() async {
     ]);
   } catch (_) {}
 
-  // ─── Instant UI Render (<100ms) ─────────────────────────────────
-  // Launch the widget tree immediately to draw the first frame on Android.
-  // This completely eliminates OS ANR (Application Not Responding) watchdog kills on small phones!
-  runApp(const ProviderScope(child: FastKiranaApp()));
+  // ─── Instant UI Render with Sentry Exception Tracking ─────────────────
+  // Launch the widget tree with Sentry Flutter monitoring
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = 'https://5023e5e409dfadc92641afb6e27c2d47@o4512435718586368.ingest.us.sentry.io/4512435766624257';
+      options.tracesSampleRate = 0.2; // 20% performance trace sampling
+      options.enableAutoPerformanceTracing = true;
+      options.attachScreenshot = false;
+      options.sendDefaultPii = false;
+    },
+    appRunner: () => runApp(
+      DefaultAssetBundle(
+        bundle: SentryAssetBundle(),
+        child: const ProviderScope(child: FastKiranaApp()),
+      ),
+    ),
+  );
 
   // ─── Non-Blocking Background Services Pipeline ──────────────────
   // Heavy services (Firebase, Supabase, Notifications, Deep Links)

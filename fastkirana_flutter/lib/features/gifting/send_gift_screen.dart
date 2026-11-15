@@ -37,7 +37,7 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
   bool _isSecretGift = true;
   bool _sendTrackingLink = true;
 
-  String _selectedOccasion = 'Birthday';
+  String _selectedOccasion = 'Flowers';
 
   @override
   void dispose() {
@@ -930,68 +930,105 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
       final cat = (p.category?.name ?? '').toLowerCase();
       final tags = p.tags.map((t) => t.toLowerCase().trim()).toList();
 
-      // --- TAB 1: BIRTHDAY ---
-      if (occasionLabel.contains('birthday')) {
-        final isCake = name.contains('cake') || name.contains('donut');
-        final isCandle = name.contains('candle');
-        final isCelebrationPack = name.contains('celebration') ||
-            name.contains('gift pack') ||
-            name.contains('assorted gift');
-        final isBouquet = name.contains('bouquet') ||
-            name.contains('rose bouquet') ||
-            name.contains('roses') ||
-            name.contains('single red rose') ||
-            name.contains('single pink rose');
-        return isCake || isCandle || isCelebrationPack || isBouquet;
+      // --- TAB 1: FLOWERS & BOUQUETS ---
+      if (occasionLabel.contains('flower') || occasionLabel.contains('rose') || occasionLabel.contains('bouquet')) {
+        final isNonFloral = name.contains('gulabri') ||
+            name.contains('floor cleaner') ||
+            name.contains('agarbatti') ||
+            name.contains('dhoop') ||
+            name.contains('syrup') ||
+            name.contains('sherbet') ||
+            name.contains('sharbat') ||
+            name.contains('water') ||
+            name.contains('soap') ||
+            name.contains('perfume') ||
+            name.contains('spray') ||
+            name.contains('room freshener') ||
+            name.contains('tea');
+        if (isNonFloral) return false;
+
+        final isFloralCategory = cat.contains('flower') || cat.contains('bouquet');
+        final isFloralName = name.contains('rose') ||
+            name.contains('bouquet') ||
+            name.contains('bloom') ||
+            name.contains('gajra') ||
+            name.contains('carnation') ||
+            name.contains('orchid') ||
+            name.contains('tulip') ||
+            name.contains('lily') ||
+            name.contains('sunflower');
+        final isFloralTag = tags.contains('flower') ||
+            tags.contains('flowers') ||
+            tags.contains('bouquet') ||
+            tags.contains('roses') ||
+            tags.contains('rose');
+        return isFloralCategory || isFloralName || isFloralTag;
       }
 
-      // --- TAB 2: ANNIVERSARY ---
-      if (occasionLabel.contains('anniversary')) {
-        final isBouquet = name.contains('bouquet') ||
-            name.contains('rose') ||
-            name.contains('royal bloom');
-        final isSilkOrLuxuryChoco = name.contains('silk') ||
-            name.contains('bournville') ||
-            name.contains('temptation') ||
-            name.contains('ferrero') ||
-            name.contains('celebration') ||
-            name.contains('gift pack');
-        final isCake = name.contains('cake');
-        final isCandle = name.contains('candle');
-        return isBouquet || isSilkOrLuxuryChoco || isCake || isCandle;
-      }
+      // --- TAB 2: CAKES & BAKERY ---
+      if (occasionLabel.contains('cake') || occasionLabel.contains('pastry') || occasionLabel.contains('bakery')) {
+        final isNonCake = name.contains('soap') ||
+            name.contains('rusk') ||
+            name.contains('milk cake') || // traditional sweet goes to Sweets
+            name.contains('atta') ||
+            name.contains('premix');
+        if (isNonCake) return false;
 
-      // --- TAB 3: CAKES ---
-      if (occasionLabel.contains('cake')) {
-        return name.contains('cake') ||
+        final isCakeName = name.contains('cake') ||
             name.contains('donut cake') ||
             name.contains('pastry') ||
-            tags.contains('cake');
+            name.contains('swiss roll') ||
+            name.contains('muffin') ||
+            name.contains('brownie') ||
+            name.contains('cupcake');
+        final isCakeTag = tags.contains('cake') || tags.contains('cakes') || tags.contains('pastry');
+        return isCakeName || isCakeTag;
       }
 
-      // --- TAB 4: CHOCOLATES ---
-      if (occasionLabel.contains('chocolate')) {
-        final isRealChoco = name.contains('silk') ||
-            name.contains('celebration') ||
+      // --- TAB 3: LUXURY CHOCOLATES ---
+      if (occasionLabel.contains('choc')) {
+        final isNonChocolate = name.contains('shake') ||
+            name.contains('syrup') ||
+            name.contains('ice cream') ||
+            name.contains('biscuit') ||
+            name.contains('bournvita') ||
+            name.contains('horlicks') ||
+            name.contains('cake');
+        if (isNonChocolate) return false;
+
+        final isChocoBrand = name.contains('celebration') ||
+            name.contains('silk') ||
+            name.contains('ferrero') ||
             name.contains('bournville') ||
             name.contains('temptation') ||
-            name.contains('kitkat dessert') ||
-            name.contains('amul dark chocolate') ||
+            name.contains('kitkat') ||
+            name.contains('dairy milk') ||
+            name.contains('amul dark') ||
             name.contains('amul chocolate') ||
-            name.contains('ferrero') ||
-            name.contains('dairy milk');
-        final isChocolateTagged = (name.contains('chocolate') || tags.contains('chocolate')) &&
-            !name.contains('shake') &&
-            !name.contains('syrup') &&
-            !name.contains('ice cream');
-        return isRealChoco || isChocolateTagged;
+            name.contains('snickers') ||
+            name.contains('5 star') ||
+            name.contains('perk') ||
+            name.contains('munch') ||
+            name.contains('galaxy') ||
+            name.contains('hershey');
+        final isChocoTagged = (name.contains('chocolate') || tags.contains('chocolate') || tags.contains('chocolates') || cat.contains('chocolate'));
+        return isChocoBrand || isChocoTagged;
       }
 
-      // --- TAB 5: MITHAI ---
-      if (occasionLabel.contains('mithai')) {
-        return name.contains('kaju katli') ||
-            name.contains('soan papdi') ||
+      // --- TAB 4: ROYAL SWEETS & MITHAI ---
+      if (occasionLabel.contains('sweet') || occasionLabel.contains('mithai')) {
+        final isNonMithai = name.contains('corn') || // sweet corn
+            name.contains('soda') || // lime soda sweet
+            name.contains('potato') || // sweet potato
+            name.contains('sauce') ||
+            name.contains('biscuit') ||
+            name.contains('namkeen') ||
+            name.contains('chutney');
+        if (isNonMithai) return false;
+
+        final isMithaiName = name.contains('kaju katli') ||
             name.contains('milk cake') ||
+            name.contains('soan papdi') ||
             name.contains('chhena') ||
             name.contains('gulab jamun') ||
             name.contains('rasgulla') ||
@@ -999,30 +1036,13 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
             name.contains('ladoo') ||
             name.contains('peda') ||
             name.contains('barfi') ||
-            (name.contains('haldiram') && (name.contains('sweet') || name.contains('papdi') || name.contains('katli') || name.contains('jamun'))) ||
-            cat.contains('mithai') ||
-            cat.contains('sweets') ||
-            tags.contains('mithai');
-      }
-
-      // --- TAB 6: DRY FRUITS ---
-      if (occasionLabel.contains('dry fruit') || occasionLabel.contains('festive')) {
-        return name.contains('kaju') ||
-            name.contains('cashew') ||
-            name.contains('pista') ||
-            name.contains('pistachio') ||
-            name.contains('almond') ||
-            name.contains('badam') ||
-            name.contains('walnut') ||
-            name.contains('akhrot') ||
-            name.contains('kishmish') ||
-            name.contains('raisin') ||
-            name.contains('seeds, nuts & berries') ||
-            name.contains('sunflower seeds') ||
-            name.contains('dry fruit') ||
-            name.contains('hamper') ||
-            tags.contains('dry-fruit') ||
-            tags.contains('dry fruit');
+            name.contains('burfi') ||
+            name.contains('rasmalai') ||
+            name.contains('cham cham') ||
+            (name.contains('haldiram') && (name.contains('sweet') || name.contains('papdi') || name.contains('katli') || name.contains('jamun')));
+        final isMithaiCategory = cat.contains('sweets') || cat.contains('mithai');
+        final isMithaiTag = tags.contains('mithai') || tags.contains('sweets') || tags.contains('sweet');
+        return isMithaiName || isMithaiCategory || isMithaiTag;
       }
 
       // Fallback for custom occasions

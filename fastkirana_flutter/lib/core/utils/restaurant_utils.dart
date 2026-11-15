@@ -211,9 +211,14 @@ class RestaurantRegistry {
     }
 
     // Keyword heuristics for known brands if search query slightly varies
-    if (q.contains('pizza')) {
+    if (q.contains('rajdhani')) {
       for (final r in _byKey.values) {
-        if (r.name.toLowerCase().contains('pizza')) return r;
+        if (r.name.toLowerCase().contains('rajdhani') || r.slug.toLowerCase().contains('rajdhani')) return r;
+      }
+    }
+    if (q.contains('hot pizza') || q.contains('pizza lovers') || q.contains('pizza lover')) {
+      for (final r in _byKey.values) {
+        if (r.name.toLowerCase().contains('hot pizza') || r.slug.toLowerCase().contains('hot-pizza')) return r;
       }
     }
     if (q.contains('wedson')) {

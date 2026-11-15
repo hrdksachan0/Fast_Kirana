@@ -36,6 +36,7 @@ interface Product {
   description: string | null
   imageUrl: string | null
   categoryId: string
+  restaurantId?: string | null
   mrp: number
   price: number
   stock: number
@@ -573,16 +574,21 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
     if (!confirmed) return
 
     try {
-      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
+      const fastToken = (session as any)?.fastapiToken || (session?.user as any)?.fastapiToken || (typeof window !== 'undefined' ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token')) : null)
+      const targetRestId = effectiveRestId || product.restaurantId || (session?.user as any)?.assignedRestaurantId || ''
+
+      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}?restaurantId=${encodeURIComponent(targetRestId)}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          ...(fastToken ? { 'Authorization': `Bearer ${fastToken}` } : {}),
           ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
           ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
           ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
           ...(session?.user?.phone ? { 'x-user-phone': session.user.phone } : {}),
-          ...(session?.user?.assignedRestaurantId ? { 'x-restaurant-id': session.user.assignedRestaurantId } : {})
-        }
+          ...(targetRestId ? { 'x-restaurant-id': targetRestId } : {})
+        },
+        credentials: 'include'
       })
 
       if (res.ok) {
@@ -590,7 +596,7 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
         fetchCatalogAndCategories()
       } else {
         const errData = await res.json().catch(() => ({}))
-        toast.error(errData.error || 'Failed to remove product')
+        toast.error(errData.error || errData.detail || errData.message || 'Failed to remove product')
       }
     } catch (err: unknown) {
       console.error(err)
@@ -603,16 +609,21 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
     const isCurrentlyOutOfStock = product.stock <= 0
     const newStock = isCurrentlyOutOfStock ? 999 : 0
     try {
+      const fastToken = (session as any)?.fastapiToken || (session?.user as any)?.fastapiToken || (typeof window !== 'undefined' ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token')) : null)
+      const targetRestId = effectiveRestId || product.restaurantId || (session?.user as any)?.assignedRestaurantId || ''
+
       const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          ...(fastToken ? { 'Authorization': `Bearer ${fastToken}` } : {}),
           ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
           ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
           ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
           ...(session?.user?.phone ? { 'x-user-phone': session.user.phone } : {}),
-          ...(session?.user?.assignedRestaurantId ? { 'x-restaurant-id': session.user.assignedRestaurantId } : {})
+          ...(targetRestId ? { 'x-restaurant-id': targetRestId } : {})
         },
+        credentials: 'include',
         body: JSON.stringify({ stock: newStock })
       })
 
@@ -621,7 +632,7 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
         toast.success(`"${product.name}" is now ${newStock > 0 ? '🟢 Kitchen Ready (In Stock)' : '🔴 Sold Out (Out of Stock)'}!`)
       } else {
         const errorData = await res.json().catch(() => ({}))
-        toast.error(errorData.error || errorData.message || 'Failed to update kitchen stock')
+        toast.error(errorData.error || errorData.detail || errorData.message || 'Failed to update kitchen stock')
       }
     } catch (err: unknown) {
       console.error(err)
@@ -633,29 +644,34 @@ export function RestaurantCatalogManager({ initialRestaurantId }: RestaurantCata
   const handleToggleAvailability = async (product: Product) => {
     const newStatus = !product.isAvailable
     try {
+      const fastToken = (session as any)?.fastapiToken || (session?.user as any)?.fastapiToken || (typeof window !== 'undefined' ? (localStorage.getItem('fastapi_token') || localStorage.getItem('fastkirana_token')) : null)
+      const targetRestId = effectiveRestId || product.restaurantId || (session?.user as any)?.assignedRestaurantId || ''
+
       const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          ...(fastToken ? { 'Authorization': `Bearer ${fastToken}` } : {}),
           ...(session?.user?.id ? { 'x-user-id': session.user.id } : {}),
           ...(session?.user?.role ? { 'x-user-role': session.user.role } : {}),
           ...(session?.user?.email ? { 'x-user-email': session.user.email } : {}),
           ...(session?.user?.phone ? { 'x-user-phone': session.user.phone } : {}),
-          ...(session?.user?.assignedRestaurantId ? { 'x-restaurant-id': session.user.assignedRestaurantId } : {})
+          ...(targetRestId ? { 'x-restaurant-id': targetRestId } : {})
         },
+        credentials: 'include',
         body: JSON.stringify({ isAvailable: newStatus })
       })
 
       if (res.ok) {
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, isAvailable: newStatus } : p))
-        toast.success(`"${product.name}" is now ${newStatus ? '👁️ Visible on storefront' : '🙈 Hidden from storefront'}!`)
+        toast.success(`"${product.name}" is now ${newStatus ? '🟢 Visible in Storefront' : '⚪ Hidden from Storefront'}!`)
       } else {
         const errorData = await res.json().catch(() => ({}))
-        toast.error(errorData.error || errorData.message || 'Failed to toggle visibility')
+        toast.error(errorData.error || errorData.detail || errorData.message || 'Failed to update availability')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      toast.error(err?.message || 'Failed to toggle visibility')
+      toast.error('Failed to update availability')
     }
   }
 

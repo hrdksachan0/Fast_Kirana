@@ -270,16 +270,34 @@ export async function GET(
         const combinedMisc = ordersToSum.reduce((sum, o) => sum + (o.miscFee || 0), 0)
         const combinedTotal = ordersToSum.reduce((sum, o) => sum + (o.total || 0), 0)
 
-        const allNotes = combinedOrders.map(o => o.notes || '').join(' ')
+        // Sum wallet amount across all sub-orders in the combo
         let combinedWalletUsed = 0
-        const cWalletMatch = allNotes.match(/\[WALLET_USED:([\d.]+)\]/) || allNotes.match(/Paid via Wallet:\s*₹?([\d.]+)/i)
-        if (cWalletMatch) {
-          combinedWalletUsed = parseFloat(cWalletMatch[1]) || 0
-        } else if (order.paymentMethod === 'WALLET' || combinedTotal === 0) {
-          const gross = combinedSubtotal + combinedDelivery + combinedMisc + combinedTaxes - combinedDiscount
-          if (gross > combinedTotal) {
-            combinedWalletUsed = Math.max(0, gross - combinedTotal)
+        for (const sub of combinedOrders) {
+          const notesStr = sub.notes || ''
+          const wMatches = Array.from(notesStr.matchAll(/\[WALLET_USED:([\d.]+)\]/g))
+          if (wMatches.length > 0) {
+            for (const m of wMatches as RegExpMatchArray[]) {
+              combinedWalletUsed += parseFloat((m as any)[1]) || 0
+            }
+          } else {
+            const singleM = notesStr.match(/Paid via Wallet:\s*₹?([\d.]+)/i)
+            if (singleM) {
+              combinedWalletUsed += parseFloat(singleM[1]) || 0
+            } else if (sub.paymentMethod === 'WALLET' || (sub.total === 0 && sub.paymentStatus === 'PAID')) {
+              const subGross = (sub.subtotal || 0) + (sub.deliveryFee || 0) + (sub.miscFee || 0) + (sub.taxes || 0) - (sub.discount || 0)
+              combinedWalletUsed += Math.max(0, subGross - (sub.total || 0))
+            }
           }
+        }
+
+        const grossCombined = combinedSubtotal + combinedDelivery + combinedMisc + combinedTaxes - combinedDiscount
+        if (combinedWalletUsed === 0 && (order.paymentMethod === 'WALLET' || combinedTotal === 0)) {
+          if (grossCombined > combinedTotal) {
+            combinedWalletUsed = Math.max(0, grossCombined - combinedTotal)
+          }
+        } else if ((order.paymentMethod === 'WALLET' || combinedTotal === 0) && combinedWalletUsed < grossCombined) {
+          // If customer paid via wallet and total is 0, wallet deduction must cover entire gross
+          combinedWalletUsed = grossCombined
         }
 
         const mergedOrder = {
@@ -581,11 +599,17 @@ export async function PATCH(
       if (!isOwner && !isAdmin && !isPicker && !isRestaurantStaff && !isDelivery) {
         return NextResponse.json({ error: 'Unauthorized to cancel this order' }, { status: 403 })
       }
-      // Customers can ONLY cancel before the order is confirmed
+      // Customers can ONLY cancel before the order is confirmed (PENDING or ADMIN_PENDING) and within 5 minutes
       if (isOwner && !isAdmin && !isPicker && !isRestaurantStaff && !isDelivery) {
-        if (existingOrder.status !== 'PENDING') {
+        if (existingOrder.status !== 'PENDING' && existingOrder.status !== 'ADMIN_PENDING') {
           return NextResponse.json({
             error: 'Order cannot be cancelled after confirmation. The kitchen or store is already preparing your order.',
+          }, { status: 400 })
+        }
+        const orderAgeMinutes = (Date.now() - new Date(existingOrder.createdAt).getTime()) / 60000
+        if (orderAgeMinutes > 5.0) {
+          return NextResponse.json({
+            error: 'Free cancellation window (5 minutes) has expired. Please contact support.',
           }, { status: 400 })
         }
       }
@@ -1056,6 +1080,51 @@ export async function PATCH(
         } catch (stockErr) {
           console.error('Failed to restore inventory for cancelled order:', id, stockErr)
         }
+
+        // Auto-refund CustomerWallet if wallet amount was used on this order
+        try {
+          let walletRefundAmount = 0
+          if (existingOrder.notes) {
+            const matches = [...existingOrder.notes.matchAll(/\[WALLET_USED:([\d.]+)\]/g)]
+            if (matches.length > 0) {
+              walletRefundAmount = matches.reduce((sum, m) => sum + parseFloat(m[1] || '0'), 0)
+            }
+          }
+          if (walletRefundAmount <= 0 && existingOrder.paymentMethod === 'WALLET') {
+            walletRefundAmount = Number(existingOrder.total || 0)
+          }
+
+          if (walletRefundAmount > 0 && existingOrder.userId) {
+            const userWallet = await prisma.customerWallet.findUnique({
+              where: { userId: existingOrder.userId }
+            })
+            if (userWallet) {
+              const currentBal = Number(userWallet.balance)
+              const newBal = currentBal + walletRefundAmount
+              await prisma.customerWallet.update({
+                where: { id: userWallet.id },
+                data: { balance: newBal }
+              })
+              const baseOrderNum = existingOrder.readableId
+                ? String(existingOrder.readableId).replace(/-[GR\d]+$/i, '')
+                : id.slice(-6).toUpperCase()
+              await prisma.walletTransaction.create({
+                data: {
+                  walletId: userWallet.id,
+                  amount: walletRefundAmount,
+                  type: 'CREDIT_REFUND',
+                  status: 'SUCCESS',
+                  description: `Refund for cancelled order #${baseOrderNum}`,
+                  balanceBefore: currentBal,
+                  balanceAfter: newBal,
+                  paymentGateway: 'WALLET',
+                }
+              })
+            }
+          }
+        } catch (wRefundErr) {
+          console.error('Failed to process wallet refund for cancelled order:', id, wRefundErr)
+        }
       }
 
       if (shouldUpdateAllCombined && existingOrder.combinedId) {
@@ -1184,32 +1253,30 @@ export async function PATCH(
             },
             select: { token: true },
             orderBy: { createdAt: 'desc' },
-            take: 1,
+            take: 5,
           })
 
           const uniqueTokens = Array.from(new Set(customerTokenRecords.map(t => t.token)))
 
-          if (uniqueTokens.length > 0) {
-            // Direct delivery to active device tokens (Exact 1 push per device)
-            for (const token of uniqueTokens) {
-              broadcastPromises.push(
-                fcmMessaging.send({
-                  token,
-                  notification: fcmPayload.notification,
-                  data: dataPayload,
-                  android: fcmPayload.android,
-                  apns: fcmPayload.apns,
-                }).catch((err: any) => console.error('Customer direct token push error:', token.slice(0, 15), err?.message))
-              )
-            }
-          } else {
-            // Fallback to topic broadcast only if no registered tokens found
-            for (const phone of uniquePhones) {
-              broadcastPromises.push(
-                sendTopicWithRetry(fcmMessaging, { topic: `phone_${phone}`, ...fcmPayload })
-                  .catch((err: any) => console.error(`Topic phone_${phone} push error:`, err?.message))
-              )
-            }
+          // 1. Direct delivery to active device tokens
+          for (const token of uniqueTokens) {
+            broadcastPromises.push(
+              fcmMessaging.send({
+                token,
+                notification: fcmPayload.notification,
+                data: dataPayload,
+                android: fcmPayload.android,
+                apns: fcmPayload.apns,
+              }).catch((err: any) => console.error('Customer direct token push error:', token.slice(0, 15), err?.message))
+            )
+          }
+
+          // 2. Broadcast to phone topics (guarantees delivery on mobile devices subscribed to phone topic)
+          for (const phone of uniquePhones) {
+            broadcastPromises.push(
+              sendTopicWithRetry(fcmMessaging, { topic: `phone_${phone}`, ...fcmPayload })
+                .catch((err: any) => console.error(`Topic phone_${phone} push error:`, err?.message))
+            )
           }
 
           await Promise.allSettled(broadcastPromises)

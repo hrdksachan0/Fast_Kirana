@@ -1490,10 +1490,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final cleanDisplayId = cleanRaw.isNotEmpty
         ? (cleanRaw.startsWith('FK-') ? '#$cleanRaw' : '#FK-$cleanRaw')
         : '#ORDER';
-    final canCancel = (_order?.status == OrderStatus.adminPending) &&
+    final createdAt = _order?.createdAt;
+    final elapsedSeconds = createdAt != null ? DateTime.now().difference(createdAt).inSeconds : 0;
+    final isWithin5Min = elapsedSeconds <= 300;
+    final isPreConfirmation = (_order?.status == OrderStatus.pending || _order?.status == OrderStatus.adminPending);
+    final canCancel = isPreConfirmation &&
+        isWithin5Min &&
         !isCancelled &&
         !isDelivered &&
-        (_order?.subOrders?.every((s) => s.status == OrderStatus.adminPending) ?? true);
+        (_order?.subOrders?.every((s) => s.status == OrderStatus.pending || s.status == OrderStatus.adminPending) ?? true);
 
     final initialTarget = _riderPosition ?? _storePosition ?? LatLng(AppConfig.darkstoreLat, AppConfig.darkstoreLng);
 
@@ -1919,6 +1924,16 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           distanceText: _distanceText,
                         ),
                         const SizedBox(height: 14),
+
+                        // Pre-Confirmation Cancel Option Banner (5-min window)
+                        if (canCancel) ...[
+                          TrackingCancelBanner(
+                            isCancelling: _isCancelling,
+                            onCancel: _confirmAndCancelOrder,
+                            createdAt: _order?.createdAt,
+                          ),
+                          const SizedBox(height: 14),
+                        ],
 
                         // 4. Delivery Address Card
                         if (_order?.deliveryMethod != 'PICKUP') ...[

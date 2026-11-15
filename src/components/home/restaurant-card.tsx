@@ -49,7 +49,7 @@ export function RestaurantCard({ restaurant, index = 0 }: RestaurantCardProps) {
       transition={{ duration: 0.28, delay: index * 0.04, ease: 'easeOut' }}
     >
       <Link
-        href={`/food/${restaurant.slug}`}
+        href={`/food/${restaurant.id || restaurant.slug}`}
         prefetch={false}
         className="block group"
       >

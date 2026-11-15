@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/routes/page_transitions.dart';
 import '../core/services/location_service.dart';
-import '../core/theme/responsive.dart';
 import '../features/cart/cart_screen.dart';
 import '../providers/cart_provider.dart';
 

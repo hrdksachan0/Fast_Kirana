@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
-            "status" = 'ADMIN_PENDING'::"OrderStatus",
+            "status" = 'PENDING'::"OrderStatus",
             notes = CASE 
               WHEN notes IS NULL OR notes = '' THEN ${cfNote}
               WHEN notes LIKE '%Cashfree PG%' THEN notes
@@ -245,7 +245,7 @@ export async function POST(req: NextRequest) {
         UPDATE orders 
         SET "paymentStatus" = 'PAID'::"PaymentStatus",
             "paymentMethod" = 'UPI'::"PaymentMethod",
-            "status" = 'ADMIN_PENDING'::"OrderStatus",
+            "status" = 'PENDING'::"OrderStatus",
             notes = CASE 
               WHEN notes IS NULL OR notes = '' THEN ${cfNote}
               WHEN notes LIKE '%Cashfree PG%' THEN notes

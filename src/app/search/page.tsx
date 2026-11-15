@@ -197,7 +197,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             {restaurants.map((restaurant) => (
               <Link
                 key={restaurant.id}
-                href={`/restaurants/${restaurant.slug}`}
+                href={`/food/${restaurant.id || restaurant.slug}`}
                 className="flex items-center gap-3 bg-card border border-border/80 hover:border-primary/40 rounded-2xl p-3 min-w-[250px] shadow-sm transition-all"
               >
                 {restaurant.logoUrl ? (

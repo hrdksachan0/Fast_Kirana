@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Query, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import or_, and_, not_
@@ -37,12 +37,14 @@ async def get_banners(
     placement: Optional[str] = None,
     platform: Optional[str] = None,
     storeId: Optional[str] = None,
+    x_store_id: Optional[str] = Header(None, alias="x-store-id"),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get active promotional banners with high-speed Redis & in-memory multi-tier caching (60s TTL).
     """
-    cache_key = f"banners:{type or 'all'}:{placement or 'all'}:{platform or 'all'}:{storeId or 'all'}"
+    effective_store_id = storeId or x_store_id
+    cache_key = f"banners:{type or 'all'}:{placement or 'all'}:{platform or 'all'}:{effective_store_id or 'all'}"
     now = time.time()
 
     # 1. Check Redis / Memory cache
@@ -105,8 +107,8 @@ async def get_banners(
                 continue
             if platform and b_platform != platform and b_platform != "all":
                 continue
-            if storeId and storeId != "all":
-                if b_store_id and b_store_id != "all" and b_store_id != storeId:
+            if effective_store_id and effective_store_id != "all":
+                if b_store_id and b_store_id != "all" and b_store_id != effective_store_id:
                     continue
 
             banner_data = {

@@ -323,7 +323,7 @@ export function RestaurantMenuSectionsEditor({ assignedRestaurantId }: Restauran
       toast.success('Menu categories updated successfully!')
     } catch (err: any) {
       console.error(err)
-      toast.error('Failed to save menu categories')
+      toast.error(err.message || 'Failed to save menu categories')
     } finally {
       setSavingSections(false)
     }

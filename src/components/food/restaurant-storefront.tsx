@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Clock, MapPin, Search, Leaf, ArrowLeft, ShoppingBag, X, ChevronRight, RefreshCw, Moon, Sparkles } from 'lucide-react'
+import { Star, Clock, MapPin, Search, Leaf, ArrowLeft, ShoppingBag, X, ChevronRight, RefreshCw, Moon, Sparkles, Lock, ShieldCheck } from 'lucide-react'
 import { ProductCard } from '@/components/product/product-card'
 import { cn } from '@/lib/utils'
 import { triggerHaptic } from '@/lib/haptic'
@@ -196,14 +196,8 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
   const [reviewsLoading, setReviewsLoading] = useState(true)
   const [newRating, setNewRating] = useState(5)
   const [newComment, setNewComment] = useState('')
-  const [reviewerName, setReviewerName] = useState('')
   const [isSubmittingReview, setIsSubmittingReview] = useState(false)
 
-  useEffect(() => {
-    if (session?.user?.name && !session.user.name.includes('Guest')) {
-      setReviewerName(session.user.name)
-    }
-  }, [session?.user?.name])
 
   const fetchReviews = async () => {
     try {
@@ -227,17 +221,21 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault()
     if (newRating < 1 || newRating > 5) return
+    if (!session?.user) {
+      toast.error('Please log in with your FastMinute account to submit a review.')
+      return
+    }
     setIsSubmittingReview(true)
     try {
       const targetIdentifier = restaurant.id || restaurant.slug
-      const finalName = reviewerName.trim() || session?.user?.name || ''
+      const finalName = session.user.name?.trim() || (session.user as any)?.phone || 'Verified Customer'
       const res = await fetch(`${apiUrl()}/api/restaurants/${targetIdentifier}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           rating: newRating,
           comment: newComment,
-          userId: session?.user?.id,
+          userId: session.user.id,
           userName: finalName,
         }),
       })
@@ -959,14 +957,40 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
                 ))}
               </div>
 
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Your Name (e.g. Rahul Sharma)"
-                  value={reviewerName}
-                  onChange={(e) => setReviewerName(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs font-semibold text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-                />
+              <div className="space-y-2.5">
+                {session?.user ? (
+                  <div className="flex items-center justify-between px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/80 rounded-xl">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold text-xs flex items-center justify-center">
+                        {(session.user.name || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                          <span>{session.user.name || 'Verified User'}</span>
+                          <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                            <ShieldCheck className="w-2.5 h-2.5" />
+                            Verified Account
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-zinc-400">Reviewing from your registered account</p>
+                      </div>
+                    </div>
+                    <Lock className="w-3.5 h-3.5 text-zinc-400" />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs">
+                    <div className="text-amber-800 dark:text-amber-300 font-medium">
+                      Log in to your FastMinute account to submit a review
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/login')}
+                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold shrink-0"
+                    >
+                      Log In
+                    </button>
+                  </div>
+                )}
                 <textarea
                   placeholder="Tell us about your experience (food quality, packaging, delivery)..."
                   value={newComment}
@@ -977,10 +1001,10 @@ export function RestaurantStorefront({ restaurant, products, recommendedAddons =
 
               <button
                 type="submit"
-                disabled={isSubmittingReview}
+                disabled={isSubmittingReview || !session?.user}
                 className="w-full sm:w-auto px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-black shadow-md shadow-orange-500/25 active:scale-95 transition-all flex items-center justify-center gap-1 disabled:opacity-50"
               >
-                {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+                {isSubmittingReview ? 'Submitting...' : session?.user ? 'Submit Review' : 'Sign in to Review'}
               </button>
             </form>
           </div>

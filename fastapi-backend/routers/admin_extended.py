@@ -1,3 +1,11 @@
+def _get_admin_store(current_admin: Any, store_id: Optional[str]) -> Optional[str]:
+    assigned = getattr(current_admin, "assignedStoreId", None) if hasattr(current_admin, "assignedStoreId") else (current_admin.get("assignedStoreId") if isinstance(current_admin, dict) else None)
+    if assigned:
+        return str(assigned).strip()
+    if store_id and str(store_id).lower() != "all":
+        return str(store_id).strip()
+    return None
+
 """
 Admin Extended Routes
 Migrated from Next.js API routes to FastAPI.
@@ -1988,7 +1996,7 @@ async def admin_restaurant_sales(
         end_local = datetime.combine(now_ist.date(), datetime.max.time())
         end = end_local - ist_offset
 
-    effective_store = storeId or (getattr(current_admin, "assignedStoreId", None) if hasattr(current_admin, "assignedStoreId") else (current_admin.get("assignedStoreId") if isinstance(current_admin, dict) else None))
+    effective_store = _get_admin_store(current_admin, storeId)
 
     # 1. Fetch active restaurants
     r_stmt = select(Restaurant).where(Restaurant.isActive == True)
@@ -2219,7 +2227,7 @@ async def admin_store_product_sales(
         end_local = datetime.combine(now_ist.date(), datetime.max.time())
         end = end_local - ist_offset
 
-    effective_store = storeId or (getattr(current_admin, "assignedStoreId", None) if hasattr(current_admin, "assignedStoreId") else (current_admin.get("assignedStoreId") if isinstance(current_admin, dict) else None))
+    effective_store = _get_admin_store(current_admin, storeId)
 
     # 1. Fetch Dark Stores Map
     stores_stmt = select(DarkStore)

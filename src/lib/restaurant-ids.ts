@@ -60,7 +60,11 @@ export function normalizeRestaurantId(id: string | null | undefined): string | n
     clean === 'hot-pizza-lovers' ||
     clean === 'pizza-lovers' ||
     clean === 'pizza-lover' ||
-    clean.includes('pizza')
+    clean === 'hot pizza lovers' ||
+    clean === 'pizza lovers' ||
+    clean.includes('hot-pizza') ||
+    clean.includes('pizza-lover') ||
+    clean.includes('pizza lover')
   ) {
     return 'REST-104'
   }

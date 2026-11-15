@@ -222,11 +222,11 @@ export function TrackerStatusHero({
       </div>
 
       {/* Pre-Confirmation Cancel Option Banner */}
-      {order.status === 'PENDING' && combinedStatus === 'PENDING' && (
+      {(order.status === 'PENDING' || order.status === 'ADMIN_PENDING') && (combinedStatus === 'PENDING' || combinedStatus === 'ADMIN_PENDING') && (
         <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-medium">
             <span className="text-base">⏳</span>
-            <span>Awaiting store confirmation. Need to change your mind? You can cancel right now.</span>
+            <span>Awaiting store confirmation. Need to change your mind? Free cancellation available before preparation begins.</span>
           </div>
           <button
             onClick={onOpenCancelModal}

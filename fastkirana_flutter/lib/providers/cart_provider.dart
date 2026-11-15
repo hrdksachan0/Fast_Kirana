@@ -86,12 +86,16 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   int get lastAcknowledgedVersion => _lastAcknowledgedVersion;
   bool _isSyncing = false;
   List<CartItem>? _latestPendingItems;
+  int _syncRetryCount = 0;
+  Timer? _retryTimer;
 
   /// Monotonic sequence sync queue:
   /// Immediately increments local cart version and debounces server sync by 300ms.
   /// Serializes whole-cart writes so older requests never overwrite newer snapshots.
   void _scheduleDebouncedSync(List<CartItem> items) async {
     _debounceSyncTimer?.cancel();
+    _retryTimer?.cancel();
+    _syncRetryCount = 0;
     _cartVersion++;
     _latestPendingItems = items;
     final capturedKey = await repository.getPendingSyncKeyForCurrentScope();
@@ -116,6 +120,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
 
     _isSyncing = true;
     final targetKey = capturedKey ?? await repository.getPendingSyncKeyForCurrentScope();
+    bool syncSuccess = false;
     try {
       final isClearIntent = itemsToSync.isEmpty && _lastClearVersion == versionToSync;
       final success = await repository.syncCart(
@@ -125,6 +130,9 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
         isExplicitClear: isClearIntent,
       );
       if (success) {
+        syncSuccess = true;
+        _syncRetryCount = 0;
+        _retryTimer?.cancel();
         _lastAcknowledgedVersion = versionToSync;
         if (_cartVersion == versionToSync) {
           await repository.setPendingSync(false, targetKey: targetKey);
@@ -139,6 +147,20 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
       // Only flush if newer edits occurred while this attempt was in flight
       if (_cartVersion > versionToSync && _latestPendingItems != null) {
         _flushPendingSync();
+      } else if (!syncSuccess && _lastAcknowledgedVersion < versionToSync) {
+        // Offline-first retry queue with exponential backoff on spotty connection
+        if (_syncRetryCount < 5) {
+          _syncRetryCount++;
+          const retryDelays = [2, 4, 8, 16, 30];
+          final retrySeconds = retryDelays[_syncRetryCount - 1];
+          _retryTimer?.cancel();
+          _retryTimer = Timer(Duration(seconds: retrySeconds), () {
+            if (_latestPendingItems != null && _lastAcknowledgedVersion < _cartVersion) {
+              LoggerService.info('CartProvider: offline cart auto-retry sync (attempt $_syncRetryCount) for key $targetKey');
+              _flushPendingSync(targetKey);
+            }
+          });
+        }
       }
     }
   }
@@ -147,6 +169,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   @override
   void dispose() {
     _debounceSyncTimer?.cancel();
+    _retryTimer?.cancel();
     super.dispose();
   }
 

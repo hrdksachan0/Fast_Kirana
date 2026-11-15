@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <title>FastMinute - Rider Hiring Pamphlet</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      padding: 6px;
+    }
+
+    .poster-border {
+      border: 3.5px solid #ff102a;
+      border-radius: 14px;
+      padding: 22px;
+      text-align: center;
+      position: relative;
+    }
+
+    /* Top Logo & Header */
+    .top-brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+    .brand-logo-img {
+      width: 58px;
+      height: 58px;
+      border-radius: 12px;
+      object-fit: cover;
+      box-shadow: 0 4px 10px rgba(255, 16, 42, 0.3);
+    }
+    .brand-title {
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: -1.2px;
+      line-height: 1;
+    }
+    .brand-title .fast { color: #ff102a; }
+    .brand-title .minute { color: #1e293b; }
+
+    .tag-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .tag-pill {
+      background: #ff102a;
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 10px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .badge-urgent {
+      display: inline-block;
+      background: #ff102a;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 4px 18px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(255, 16, 42, 0.25);
+    }
+
+    .subtitle {
+      font-size: 18px;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 18px;
+    }
+
+    /* Salary Callout Cards */
+    .salary-section {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .salary-box {
+      flex: 1;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .salary-box.bike {
+      background: #fff5f5;
+      border: 2px solid #ff102a;
+    }
+    .salary-box.no-bike {
+      background: #f8fafc;
+      border: 2px solid #64748b;
+    }
+    .salary-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .salary-box.bike .salary-title { color: #b91c1c; }
+    .salary-box.no-bike .salary-title { color: #334155; }
+
+    .salary-amount {
+      font-size: 32px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .salary-desc {
+      font-size: 11.5px;
+      color: #475569;
+      line-height: 1.4;
+      font-weight: 600;
+    }
+
+    /* Benefits List */
+    .benefits-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+      text-align: left;
+    }
+    .benefits-heading {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #334155;
+    }
+    .benefit-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .benefit-icon {
+      color: #ff102a;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    /* Documents & Requirements */
+    .docs-section {
+      text-align: left;
+      background: #ffffff;
+      border: 1.5px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin-bottom: 18px;
+    }
+    .docs-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .docs-list {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.4;
+    }
+
+    /* Call to Action Footer */
+    .cta-footer {
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: 8px;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 5px solid #ff102a;
+    }
+    .cta-text {
+      text-align: left;
+    }
+    .cta-text h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #ff102a;
+      margin-bottom: 2px;
+    }
+    .cta-text p {
+      font-size: 11.5px;
+      color: #cbd5e1;
+    }
+    .contact-number {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #ffffff;
+      background: #ff102a;
+      padding: 8px 16px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="poster-border">
+    <div class="badge-urgent">⚡ तत्काल डिलीवरी राइडर भर्ती (घाटमपुर)</div>
+
+    <!-- Exact Brand Logo Header -->
+    <div class="top-brand-row">
+      <img src="file:///D:/Fastkirana/public/brand/fastminute_official_logo.png" class="brand-logo-img" alt="FastMinute App Icon" />
+      <div>
+        <div class="brand-title"><span class="fast">Fast</span><span class="minute">Minute</span></div>
+        <div class="tag-container">
+          <span class="tag-pill">10-20 Mins Instant Delivery</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="subtitle">घाटमपुर में डिलीवरी लड़कों की आवश्यकता (फुल टाइम / पार्ट टाइम)</div>
+
+    <!-- Salary Cards -->
+    <div class="salary-section">
+      <div class="salary-box bike">
+        <div class="salary-title">विकल्प 1: खुद की बाइक + पेट्रोल</div>
+        <div class="salary-amount">₹14,000<span style="font-size: 15px; font-weight: 700;"> / महीना</span></div>
+        <div class="salary-desc">यदि आपके पास अपनी बाइक, वैध लाइसेंस और पेट्रोल है। अपने वाहन से तुरंत कमाई शुरू करें!</div>
+      </div>
+      <div class="salary-box no-bike">
+        <div class="salary-title">विकल्प 2: बिना बाइक (कंपनी वाहन)</div>
+        <div class="salary-amount">₹9,000<span style="font-size: 15px; font-weight: 700;"> / महीना</span></div>
+        <div class="salary-desc">यदि आपके पास बाइक नहीं है, तो भी आप कंपनी के वाहन/ई-बाइक से डिलीवरी करके जुड़ सकते हैं।</div>
+      </div>
+    </div>
+
+    <!-- Benefits -->
+    <div class="benefits-box">
+      <div class="benefits-heading">★ FastMinute से जुड़ने के मुख्य फायदे ★</div>
+      <div class="benefits-grid">
+        <div class="benefit-item"><span class="benefit-icon">✔</span> लोकल घाटमपुर में काम (5–7 किमी का सुरक्षित दायरा)</div>
+        <div class="benefit-item"><span class="benefit-icon">✔</span> समय पर बैंक खाते में निश्चित मासिक वेतन</div>
+        <div class="benefit-item"><span class="benefit-icon">✔</span> फास्ट-डिलीवरी बैग व आधिकारिक टी-शर्ट उपलब्ध</div>
+        <div class="benefit-item"><span class="benefit-icon">✔</span> मासिक टारगेट पूरे करने पर अतिरिक्त इंसेंटिव/बोनस</div>
+      </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="docs-section">
+      <div class="docs-title">📋 आवश्यक दस्तावेज:</div>
+      <div class="docs-list">
+        1. <strong>आधार कार्ड</strong> &nbsp;|&nbsp; 
+        2. <strong>पैन कार्ड</strong> &nbsp;|&nbsp; 
+        3. <strong>बैंक पासबुक / खाता विवरण</strong> &nbsp;|&nbsp; 
+        4. <strong>ड्राइविंग लाइसेंस व बाइक RC</strong> (₹14,000 वाले राइडर्स के लिए) &nbsp;|&nbsp; 
+        5. <strong>स्मार्टफोन</strong>
+      </div>
+    </div>
+
+    <!-- Contact Footer -->
+    <div class="cta-footer">
+      <div class="cta-text">
+        <h3>आज ही हब पर संपर्क करें:</h3>
+        <p>फास्टमिनट घाटमपुर सेंट्रल वेयरहाउस (`hub-209206`), घाटमपुर (कानपुर देहात)</p>
+      </div>
+      <div class="contact-number">
+        📞 तुरंत संपर्क / WhatsApp करें
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -3,7 +3,7 @@ import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
-import { Search, ToggleLeft, ToggleRight, Check, X, Sparkles, SlidersHorizontal, RefreshCw, Utensils, IndianRupee, Plus, Loader2, Image as ImageIcon, Layers } from 'lucide-react'
+import { Search, ToggleLeft, ToggleRight, Check, X, Sparkles, SlidersHorizontal, RefreshCw, Utensils, IndianRupee, Plus, Loader2, Image as ImageIcon, Layers, Trash2 } from 'lucide-react'
 import { RestaurantMenuSectionsEditor } from './restaurant-menu-sections-editor'
 import { toast } from 'sonner'
 import { formatPrice } from '@/lib/utils'
@@ -389,6 +389,33 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
       }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to update stock status')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleDeleteDish = async (product: Product) => {
+    const confirmed = window.confirm(`Are you sure you want to permanently delete "${product.name}" from the restaurant menu?`)
+    if (!confirmed) return
+
+    setUpdatingId(product.id)
+    try {
+      const targetRestId = (product as any).restaurantId || (selectedRestaurantId !== 'ALL' && selectedRestaurantId !== 'NONE' ? selectedRestaurantId : (restaurants[0]?.id || ''))
+      const res = await fetch(`${apiUrl()}/api/restaurant-dashboard/products/${product.id}?restaurantId=${encodeURIComponent(targetRestId)}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || data.detail || data.message || 'Failed to delete dish')
+      }
+      setProducts(prev => prev.filter(p => p.id !== product.id))
+      toast.success(`Dish "${product.name}" deleted successfully! 🗑️`)
+      fetchRestaurantProducts()
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete dish')
+      console.error(err)
     } finally {
       setUpdatingId(null)
     }
@@ -788,6 +815,16 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
                     >
                       {product.isAvailable ? 'Hide from Menu' : 'Show on Menu'}
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDish(product)}
+                      disabled={updatingId === product.id}
+                      className="px-2.5 py-2 text-[10px] font-extrabold rounded-xl transition-all cursor-pointer select-none border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 flex items-center justify-center gap-1 shrink-0"
+                      title="Delete dish permanently"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -835,7 +872,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
             </div>
 
             <form onSubmit={handleSaveDish} className="p-5 space-y-4">
-              {restaurants.length > 1 && (
+              {restaurants.length > 0 && (
                 <div>
                   <label className="text-[10px] font-bold text-text-secondary block mb-1">Restaurant Outlet *</label>
                   <select
@@ -845,7 +882,7 @@ export function AdminRestaurantConsole({ isAdmin = false, storeId }: AdminRestau
                   >
                     {restaurants.map(r => (
                       <option key={r.id} value={r.id}>
-                        🍽️ {r.name}
+                        🍽️ {r.name} ({r.city || r.id})
                       </option>
                     ))}
                   </select>

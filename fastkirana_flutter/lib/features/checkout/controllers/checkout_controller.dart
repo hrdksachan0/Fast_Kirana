@@ -928,6 +928,11 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
     // 4A. Full Wallet Payment Auto-Route
     if (walletAmountUsed >= grandTotalBeforeWallet && grandTotalBeforeWallet > 0) {
+      state = state.copyWith(
+        pendingCashfreeOrderId: null,
+        pendingGrandTotal: null,
+        selectedPayment: 'wallet',
+      );
       await completeOrderPlacement(context, cart: cart, paymentId: 'WALLET_${DateTime.now().millisecondsSinceEpoch}');
       return;
     }
@@ -1162,6 +1167,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     var effectivePayment = (draft != null && draft.selectedPayment.isNotEmpty)
         ? draft.selectedPayment
         : state.selectedPayment;
+    if (paymentId != null && paymentId.startsWith('WALLET_')) {
+      effectivePayment = 'wallet';
+    }
 
     // Anti-Fraud check
     if (effectivePayment == 'online') {
@@ -1338,8 +1346,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       orderNotes = '$forStr | $orderNotes';
     }
 
-    final effectiveCfOrderId = draft?.cfOrderId ?? state.pendingCashfreeOrderId;
-    if (effectiveCfOrderId != null && effectiveCfOrderId.isNotEmpty) {
+    final bool isWalletPayment = effectivePayment == 'wallet' || (paymentId != null && paymentId.startsWith('WALLET_'));
+    final effectiveCfOrderId = isWalletPayment ? null : (draft?.cfOrderId ?? state.pendingCashfreeOrderId);
+    if (!isWalletPayment && effectiveCfOrderId != null && effectiveCfOrderId.isNotEmpty) {
       final cfTag = '[CF_ORDER:$effectiveCfOrderId]';
       if (!orderNotes.contains(cfTag)) {
         orderNotes = '$orderNotes | $cfTag';
@@ -1647,9 +1656,12 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       }
     } catch (e) {
       debugPrint('Backend sync notice: $e');
-      final isOnlinePaid = paymentId != null && paymentId.isNotEmpty;
+      final isOnlinePaid = paymentId != null &&
+          paymentId.isNotEmpty &&
+          !paymentId.startsWith('WALLET_') &&
+          !paymentId.startsWith('FREE_PROMO_');
 
-      // 🛡️ CONFIRMED PAYMENT: If paid online, save locally and proceed directly to Order Success!
+      // 🛡️ CONFIRMED PAYMENT: If paid online via gateway, save locally and proceed directly to Order Success!
       if (isOnlinePaid) {
         debugPrint('🛡️ Payment Confirmed ($paymentId): Order placed, clearing recovery and proceeding to Order Success.');
         try {

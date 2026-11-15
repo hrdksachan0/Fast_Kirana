@@ -312,3 +312,79 @@ async def get_home_layout(db: AsyncSession = Depends(get_db)):
         except Exception:
             pass
     return {"sections": DEFAULT_HOME_SECTIONS}
+
+
+@router.get("/gifting-store")
+async def get_gifting_store(
+    storeId: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch live luxury gifting store configuration & occasions from admin."""
+    import json
+    target_key = f"store:{storeId}:gifting_store_config" if (storeId and storeId not in ("all", "ALL")) else "gifting_store_config"
+    stmt = select(StoreSetting).where(StoreSetting.key.in_([target_key, "gifting_store_config"]))
+    res = await db.execute(stmt)
+    rows = res.scalars().all()
+
+    target_row = next((r for r in rows if r.key == target_key), None) or next((r for r in rows if r.key == "gifting_store_config"), None)
+    if target_row and target_row.value:
+        try:
+            return json.loads(target_row.value)
+        except Exception:
+            pass
+
+    return {
+        "enabled": True,
+        "bannerTitle": "Gifting Store",
+        "bannerSubtitle": "Curated by FastMinute",
+        "bannerImageUrl": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/banners/perfect-gifting-banner.webp",
+        "gradientStart": "#E89E90",
+        "gradientEnd": "#CD7564",
+        "occasions": [
+            {
+                "id": "occ_flowers",
+                "label": "Flowers",
+                "title": "Fresh Flowers & Bouquets",
+                "imageUrl": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/gifting/cutout_flowers.png",
+                "emoji": "🌸",
+                "tags": ["flower", "flowers", "bouquet", "rose", "roses", "bloom", "floral", "gifting"],
+                "productIds": [],
+                "isActive": True,
+                "sortOrder": 1,
+            },
+            {
+                "id": "occ_cakes",
+                "label": "Cakes",
+                "title": "Cakes & Bakery",
+                "imageUrl": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/gifting/cutout_cake.png",
+                "emoji": "🎂",
+                "tags": ["cake", "cakes", "bakery", "pastry", "donut cake", "celebration cake", "swiss roll"],
+                "productIds": [],
+                "isActive": True,
+                "sortOrder": 2,
+            },
+            {
+                "id": "occ_chocolates",
+                "label": "Chocolates",
+                "title": "Luxury Chocolates",
+                "imageUrl": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/gifting/cutout_chocolates.png",
+                "emoji": "🍫",
+                "tags": ["chocolate", "chocolates", "silk", "bournville", "temptation", "celebration", "ferrero", "gift pack", "dairy milk"],
+                "productIds": [],
+                "isActive": True,
+                "sortOrder": 3,
+            },
+            {
+                "id": "occ_sweets",
+                "label": "Sweets",
+                "title": "Royal Sweets & Mithai",
+                "imageUrl": "https://bberzasmxwioxjynbuaf.supabase.co/storage/v1/object/public/fastkirana-images/gifting/cutout_sweets.png",
+                "emoji": "🍬",
+                "tags": ["mithai", "sweets", "sweet", "kaju katli", "soan papdi", "milk cake", "gulab jamun", "rasgulla", "laddu", "barfi", "peda"],
+                "productIds": [],
+                "isActive": True,
+                "sortOrder": 4,
+            },
+        ],
+        "hampers": [],
+    }

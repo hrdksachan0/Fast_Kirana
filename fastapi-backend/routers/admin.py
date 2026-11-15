@@ -31,6 +31,14 @@ def _get_admin_attr(admin_obj: Any, attr: str, default: Any = None) -> Any:
         return admin_obj.get(attr, default)
     return getattr(admin_obj, attr, default)
 
+def resolve_effective_admin_store(current_admin: Any, requested_store: Optional[str]) -> Optional[str]:
+    assigned = _get_admin_attr(current_admin, "assignedStoreId")
+    if assigned:
+        return str(assigned).strip()
+    if requested_store and str(requested_store).lower() != "all":
+        return str(requested_store).strip()
+    return None
+
 def to_iso_utc(dt: Any) -> Optional[str]:
     if not dt:
         return None
@@ -72,7 +80,7 @@ async def get_admin_rider_cash_summary(
     rider_stmt = select(User).options(selectinload(User.riderWallet)).where(
         User.role == Role.DELIVERY
     )
-    effective_store = storeId or _get_admin_attr(current_admin, "assignedStoreId")
+    effective_store = resolve_effective_admin_store(current_admin, storeId)
     if effective_store and effective_store.lower() != 'all':
         rider_stmt = rider_stmt.where(User.assignedStoreId == effective_store)
 
@@ -494,7 +502,7 @@ async def get_sales_reports(
             endDate = end_local.strftime("%Y-%m-%d")
 
         # 1. Fetch delivered orders with storeId filtering
-        effective_store = storeId or _get_admin_attr(current_admin, "assignedStoreId")
+        effective_store = resolve_effective_admin_store(current_admin, storeId)
         orders_stmt = select(Order).where(
             Order.status.in_([OrderStatus.DELIVERED, "DELIVERED"]),
             Order.createdAt >= start,
@@ -1088,7 +1096,7 @@ async def get_admin_inventory_forecast(
     try:
         from models import StoreInventory
         
-        effective_store_id = storeId
+        effective_store_id = resolve_effective_admin_store(current_admin, storeId)
 
         # Load active products from categories other than cafe
         products_stmt = select(Product).options(selectinload(Product.category)).join(Category).where(
@@ -1297,7 +1305,7 @@ async def get_admin_riders(
     Get active delivery riders/partners for order assignment.
     """
     stmt = select(User).where(User.role == Role.DELIVERY)
-    effective_store = storeId or _get_admin_attr(current_admin, "assignedStoreId")
+    effective_store = resolve_effective_admin_store(current_admin, storeId)
     if effective_store and effective_store.lower() != 'all':
         stmt = stmt.where(User.assignedStoreId == effective_store)
     stmt = stmt.order_by(User.name.asc())
@@ -2015,7 +2023,7 @@ async def get_daily_finance_reconciliation(
         Order.createdAt <= utc_end
     )
 
-    effective_store = storeId or _get_admin_attr(current_admin, "assignedStoreId")
+    effective_store = resolve_effective_admin_store(current_admin, storeId)
     if effective_store and effective_store.lower() != "all":
         order_stmt = order_stmt.where(Order.storeId == effective_store)
 

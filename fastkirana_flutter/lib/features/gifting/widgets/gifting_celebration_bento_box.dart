@@ -151,9 +151,13 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                const tabWidth = 84.0;
+                const sidePadding = 10.0;
+                final availableWidth = constraints.maxWidth - (sidePadding * 2);
+                final calculatedTabWidth = occasions.length <= 4 && occasions.isNotEmpty
+                    ? (availableWidth / occasions.length).clamp(76.0, 94.0)
+                    : 84.0;
+                final tabWidth = calculatedTabWidth;
                 const tabHeight = 104.0;
-                const sidePadding = 12.0;
                 final fullWidth = math.max(
                   constraints.maxWidth,
                   sidePadding * 2 + (tabWidth * occasions.length),
@@ -369,28 +373,29 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
               curve: Curves.easeOutCubic,
               width: isSelected ? 52 : 46,
               height: isSelected ? 52 : 46,
-              padding: const EdgeInsets.all(2.5),
+              padding: EdgeInsets.all(isSelected ? 3.0 : 3.5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                color: Colors.white,
                 gradient: isSelected
                     ? const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
                       )
-                    : LinearGradient(
+                    : const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Colors.white, Colors.white.withValues(alpha: 0.85)],
+                        colors: [Colors.white, Color(0xFFFFF5F7)],
                       ),
                 border: Border.all(
                   color: Colors.white,
-                  width: isSelected ? 2.0 : 1.5,
+                  width: isSelected ? 2.2 : 1.5,
                 ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: const Color(0xFFBE123C).withValues(alpha: 0.35),
+                          color: const Color(0xFFBE123C).withValues(alpha: 0.38),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -403,22 +408,40 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                         ),
                       ],
               ),
-              child: ClipOval(
-                child: CachedNetworkImage(
-                  imageUrl: imgUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    color: const Color(0xFFFFF1F2),
-                    child: Center(
-                      child: Text(occ.emoji, style: const TextStyle(fontSize: 20)),
-                    ),
-                  ),
-                  errorWidget: (_, __, ___) => Container(
-                    color: const Color(0xFFFFF1F2),
-                    child: Center(
-                      child: Text(occ.emoji, style: const TextStyle(fontSize: 20)),
-                    ),
-                  ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                ),
+                padding: const EdgeInsets.all(2.5),
+                child: ClipOval(
+                  child: imgUrl.startsWith('assets/')
+                      ? Image.asset(
+                          imgUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: const Color(0xFFFFF1F2),
+                            child: Center(
+                              child: Text(occ.emoji, style: const TextStyle(fontSize: 20)),
+                            ),
+                          ),
+                        )
+                      : CachedNetworkImage(
+                          imageUrl: imgUrl,
+                          fit: BoxFit.contain,
+                          placeholder: (_, __) => Container(
+                            color: const Color(0xFFFFF1F2),
+                            child: Center(
+                              child: Text(occ.emoji, style: const TextStyle(fontSize: 20)),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: const Color(0xFFFFF1F2),
+                            child: Center(
+                              child: Text(occ.emoji, style: const TextStyle(fontSize: 20)),
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -447,22 +470,23 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
   }
 
   static String _getOccasionImageUrl(GiftingOccasionModel occ) {
-    if (occ.imageUrl.trim().isNotEmpty) return occ.imageUrl;
-    final label = occ.label.toLowerCase();
-    if (label.contains('birth')) {
-      return 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=200&q=80';
-    } else if (label.contains('anniv') || label.contains('love') || label.contains('romance')) {
-      return 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=200&q=80';
-    } else if (label.contains('rose') || label.contains('flower') || label.contains('bloom')) {
-      return 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=200&q=80';
-    } else if (label.contains('cake') || label.contains('bake') || label.contains('pastry')) {
-      return 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?w=200&q=80';
-    } else if (label.contains('choc')) {
-      return 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=200&q=80';
-    } else if (label.contains('hamper') || label.contains('combo') || label.contains('box')) {
-      return 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=200&q=80';
+    if (occ.imageUrl.trim().isNotEmpty) {
+      final u = occ.imageUrl.trim();
+      if (u.startsWith('assets/')) return u;
+      if (u.startsWith('/navratri/')) return 'assets$u';
+      return u;
     }
-    return 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=200&q=80';
+    final label = occ.label.toLowerCase();
+    if (label.contains('flower') || label.contains('rose') || label.contains('bouquet') || label.contains('bloom')) {
+      return 'assets/navratri/cutout_flowers.png';
+    } else if (label.contains('cake') || label.contains('bake') || label.contains('pastry')) {
+      return 'assets/navratri/cutout_cake.png';
+    } else if (label.contains('choc')) {
+      return 'assets/navratri/cutout_chocolates.png';
+    } else if (label.contains('sweet') || label.contains('mithai')) {
+      return 'assets/navratri/cutout_sweets.png';
+    }
+    return 'assets/navratri/cutout_flowers.png';
   }
 }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 import { normalizePhone, getLast10Digits, isValidIndianPhone } from '@/lib/phone'
 import bcrypt from 'bcryptjs'
 import { getStoreUserFilter } from '@/lib/store-resolver'
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const search = searchParams.get('search')
   const role = searchParams.get('role')
   const status = searchParams.get('status')
-  const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+  const storeId = getEffectiveStoreId(session, searchParams.get('storeId'))
   
   const skip = (page - 1) * limit
 
@@ -165,6 +165,16 @@ export async function PATCH(request: Request) {
       console.warn('[AdminUsersProxy] FastAPI proxy failed, running local handler:', proxyErr)
     }
 
+    const userAssignedStore = (session?.user as any)?.assignedStoreId || null
+    if (userAssignedStore) {
+      if (assignedStoreId !== undefined && assignedStoreId !== userAssignedStore) {
+        return NextResponse.json({ error: 'Forbidden: You can only assign staff to your own store hub' }, { status: 403 })
+      }
+      if (role && (role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+        return NextResponse.json({ error: 'Forbidden: Only SuperAdmins can create or promote Admins' }, { status: 403 })
+      }
+    }
+
     const updateData: any = {}
     if (name) updateData.name = name.trim()
     if (phone) updateData.phone = phone.trim()
@@ -208,13 +218,21 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
   try {
     const body = await request.json()
     const { userId, password, action, name, phone, email, role, assignedStoreId } = body
+
+    const userAssignedStore = (session?.user as any)?.assignedStoreId || null
+    if (userAssignedStore) {
+      if (role && (role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+        return NextResponse.json({ error: 'Forbidden: Only SuperAdmins can create Admins' }, { status: 403 })
+      }
+      body.assignedStoreId = userAssignedStore
+    }
 
     if (action === 'create' || (!userId && phone)) {
       if (!phone || !password) {

@@ -41,6 +41,25 @@ class TrackingReceiptCard extends StatelessWidget {
     }();
     final isDistanceDelivery = deliveryFee > 25.0;
 
+    // Strict Self-Balancing Calculation
+    final gross = subtotal + deliveryFee + miscFee + taxes - discount;
+    double walletUsed = 0.0;
+    if (order?.subOrders != null && order!.subOrders!.isNotEmpty) {
+      for (final s in order!.subOrders!) {
+        walletUsed += (s.walletAmountUsed > 0) ? s.walletAmountUsed : 0.0;
+      }
+    }
+    if (walletUsed <= 0 && order?.walletAmountUsed != null && order!.walletAmountUsed > 0) {
+      walletUsed = order!.walletAmountUsed;
+    }
+    final isFullWalletPay = order?.paymentMethod == PaymentMethod.wallet || (total == 0 && (walletUsed > 0 || order?.paymentMethod == PaymentMethod.wallet));
+    if (isFullWalletPay && (walletUsed > 0 || order?.paymentMethod == PaymentMethod.wallet || total == 0)) {
+      walletUsed = gross;
+    } else {
+      walletUsed = walletUsed.clamp(0.0, gross);
+    }
+    final computedCustomerPaid = isFullWalletPay ? 0.0 : (gross - walletUsed).clamp(0.0, double.infinity);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -169,7 +188,7 @@ class TrackingReceiptCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Items Subtotal', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+              Text('Item Total', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
               Text('₹${subtotal.toInt()}', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: slateDark)),
             ],
           ),
@@ -177,7 +196,7 @@ class TrackingReceiptCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(isDistanceDelivery ? 'Delivery Partner Fee (Distance-based)' : 'Delivery Partner Fee', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+              Text(isDistanceDelivery ? 'Delivery Fee (Distance-based)' : 'Delivery Fee', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
               Text(
                 deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}',
                 style: GoogleFonts.plusJakartaSans(
@@ -188,26 +207,36 @@ class TrackingReceiptCard extends StatelessWidget {
               ),
             ],
           ),
-          if (miscFee > 0) ...[
-            const SizedBox(height: 5),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Handling Fee', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
-                Text('₹${miscFee.toInt()}', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: slateDark)),
-              ],
-            ),
-          ],
-          if (taxes > 0) ...[
-            const SizedBox(height: 5),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Handling & Taxes', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
-                Text('₹${taxes.toInt()}', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w700, color: slateDark)),
-              ],
-            ),
-          ],
+          const SizedBox(height: 5),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Packaging Charge', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+              Text(
+                miscFee > 0 ? '₹${miscFee.toInt()}' : (isPickup ? 'FREE' : '₹0'),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: Responsive.scaledFontSize(context, 12.5),
+                  fontWeight: FontWeight.w700,
+                  color: miscFee > 0 ? slateDark : brandGreen,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Handling & Taxes', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+              Text(
+                taxes > 0 ? '₹${taxes.toInt()}' : '₹0',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: Responsive.scaledFontSize(context, 12.5),
+                  fontWeight: FontWeight.w700,
+                  color: taxes > 0 ? slateDark : brandGreen,
+                ),
+              ),
+            ],
+          ),
           if (discount > 0) ...[
             const SizedBox(height: 5),
             Row(
@@ -218,42 +247,36 @@ class TrackingReceiptCard extends StatelessWidget {
               ],
             ),
           ],
-          if (((order?.walletAmountUsed ?? 0) > 0) || ((subtotal + deliveryFee + miscFee + taxes - discount) > total && (order?.paymentMethod == PaymentMethod.wallet || total == 0))) ...[
+          if (walletUsed > 0 || isFullWalletPay) ...[
             const SizedBox(height: 5),
-            Builder(builder: (context) {
-              final gross = subtotal + deliveryFee + miscFee + taxes - discount;
-              final wAmt = (order?.walletAmountUsed != null && order!.walletAmountUsed > 0)
-                  ? order!.walletAmountUsed
-                  : (gross - total).clamp(0.0, gross);
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.account_balance_wallet_rounded, size: 13, color: brandGreen),
-                      const SizedBox(width: 4),
-                      Text(
-                        'FastMinute Wallet',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: Responsive.scaledFontSize(context, 12),
-                          fontWeight: FontWeight.w700,
-                          color: brandGreen,
-                        ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.account_balance_wallet_rounded, size: 13, color: brandGreen),
+                    const SizedBox(width: 4),
+                    Text(
+                      'FastMinute Wallet',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: Responsive.scaledFontSize(context, 12),
+                        fontWeight: FontWeight.w700,
+                        color: brandGreen,
                       ),
-                    ],
-                  ),
-                  Text(
-                    '-₹${wAmt.toInt()}',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: Responsive.scaledFontSize(context, 12.5),
-                      fontWeight: FontWeight.w800,
-                      color: brandGreen,
                     ),
+                  ],
+                ),
+                Text(
+                  '-₹${walletUsed.toInt()}',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                    fontWeight: FontWeight.w800,
+                    color: brandGreen,
                   ),
-                ],
-              );
-            }),
+                ),
+              ],
+            ),
           ],
           if ((order?.refundAmount ?? 0) > 0) ...[
             const SizedBox(height: 5),
@@ -295,7 +318,7 @@ class TrackingReceiptCard extends StatelessWidget {
                   Text(
                     (order?.refundAmount ?? 0) > 0
                         ? 'Original: ₹${total.toInt()} • ${order?.paymentMethod.displayName ?? "COD"}'
-                        : (total == 0 && ((order?.walletAmountUsed ?? 0) > 0 || order?.paymentMethod == PaymentMethod.wallet)
+                        : (computedCustomerPaid == 0 && (walletUsed > 0 || isFullWalletPay)
                             ? 'FastMinute Wallet (PAID)'
                             : (order?.paymentMethod.displayName ?? 'COD')),
                     style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 10.5), fontWeight: FontWeight.w600, color: slateMuted),
@@ -303,7 +326,7 @@ class TrackingReceiptCard extends StatelessWidget {
                 ],
               ),
               Text(
-                '₹${((total - (order?.refundAmount ?? 0.0)).clamp(0.0, double.infinity)).toInt()}',
+                '₹${((computedCustomerPaid - (order?.refundAmount ?? 0.0)).clamp(0.0, double.infinity)).toInt()}',
                 style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 17), fontWeight: FontWeight.w900, color: primaryRed),
               ),
             ],

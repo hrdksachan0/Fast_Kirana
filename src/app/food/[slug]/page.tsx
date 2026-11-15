@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { RestaurantStorefront } from '@/components/food/restaurant-storefront'
-import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID, OUTLET_BAL_UDYAN_ID, OUTLET_PIZZA_LOVERS_ID, OUTLET_RADHA_RANI_ID } from '@/lib/constants'
+import { OUTLET_AS_RESTAURANT_ID, OUTLET_WEDSON_ID, OUTLET_BAL_UDYAN_ID, OUTLET_PIZZA_LOVERS_ID, OUTLET_RADHA_RANI_ID, OUTLET_ZAYKA_ID } from '@/lib/constants'
 import { checkStoreOperatingStatus } from '@/lib/restaurant-schedule'
 import { resolveProductBogoBadge } from '@/lib/coupon-rules'
 
@@ -12,7 +12,42 @@ async function findRestaurantBySlug(rawSlug: string) {
   const decodedSlug = decodeURIComponent(rawSlug || '').trim().toLowerCase().replace(/\/+$/, '')
   if (!decodedSlug) return null
 
-  // Known alias flags
+  const slugHyphenated = decodedSlug.replace(/\s+/g, '-')
+  const slugSpaced = decodedSlug.replace(/-+/g, ' ')
+
+  // 1. Exact match on ID or Slug (Highest priority - 0 false positives)
+  const exactMatch = await prisma.restaurant.findFirst({
+    where: {
+      OR: [
+        { id: { equals: rawSlug, mode: 'insensitive' } },
+        { id: { equals: decodedSlug, mode: 'insensitive' } },
+        { slug: { equals: decodedSlug, mode: 'insensitive' } },
+        { slug: { equals: slugHyphenated, mode: 'insensitive' } },
+        { slug: { equals: slugSpaced, mode: 'insensitive' } },
+      ],
+      isActive: true,
+    },
+  })
+  if (exactMatch) return exactMatch
+
+  // 2. Specific Known Outlet Aliases (Never match generic single words like "pizza")
+  const isHotPizzaLovers =
+    decodedSlug === 'hot-pizza-lovers' ||
+    decodedSlug === 'hot pizza lovers' ||
+    decodedSlug === 'pizza-lovers' ||
+    decodedSlug === 'pizza lovers' ||
+    decodedSlug === 'pizza-lover' ||
+    decodedSlug === 'pizza lover' ||
+    decodedSlug === 'hot-pizza' ||
+    decodedSlug === 'hot pizza' ||
+    decodedSlug.includes('hot-pizza') ||
+    decodedSlug.includes('hot pizza') ||
+    decodedSlug.includes('pizza-lover') ||
+    decodedSlug.includes('pizza lover')
+
+  const isRajdhani =
+    decodedSlug.includes('rajdhani')
+
   const isAsRestaurant =
     decodedSlug === 'as-restaurant' ||
     decodedSlug === 'as-cafe' ||
@@ -31,74 +66,109 @@ async function findRestaurantBySlug(rawSlug: string) {
     decodedSlug === 'restaurant-kitchen'
 
   const isBalUdyan =
-    decodedSlug.includes('bal') ||
-    decodedSlug.includes('udyan')
-
-  const isPizzaLovers =
-    decodedSlug.includes('pizza') ||
-    decodedSlug.includes('hot-pizza')
+    decodedSlug.includes('bal udyan') ||
+    decodedSlug.includes('bal-udyan') ||
+    decodedSlug.includes('baludyan')
 
   const isRadhaRani =
-    decodedSlug.includes('radha') ||
-    decodedSlug.includes('rani')
+    decodedSlug.includes('radha rani') ||
+    decodedSlug.includes('radha-rani') ||
+    decodedSlug.includes('radharani')
 
-  // 1. Primary search: exact slug, ID, or known alias ID
-  const restaurant = await prisma.restaurant.findFirst({
+  const isZayka =
+    decodedSlug.includes('zayka')
+
+  const aliasOrConditions: any[] = []
+
+  if (isHotPizzaLovers) {
+    aliasOrConditions.push(
+      { id: OUTLET_PIZZA_LOVERS_ID },
+      { id: 'cmtn66nhy000004k0fu84b7ke' },
+      { slug: { in: ['hot-pizza-lovers', 'pizza-lovers', 'pizza-lover', 'hot-pizza'] } },
+      { name: { contains: 'Hot Pizza', mode: 'insensitive' as const } },
+      { name: { contains: 'Pizza Lovers', mode: 'insensitive' as const } }
+    )
+  }
+
+  if (isRajdhani) {
+    aliasOrConditions.push(
+      { slug: { contains: 'rajdhani', mode: 'insensitive' as const } },
+      { name: { contains: 'Rajdhani', mode: 'insensitive' as const } }
+    )
+  }
+
+  if (isAsRestaurant) {
+    aliasOrConditions.push(
+      { id: OUTLET_AS_RESTAURANT_ID },
+      { slug: { in: ['as-cafe', 'as-restaurant', 'a-s-cafe', 'a-s-restaurant'] } },
+      { name: { contains: 'A.S', mode: 'insensitive' as const } }
+    )
+  }
+
+  if (isWedson) {
+    aliasOrConditions.push(
+      { id: OUTLET_WEDSON_ID },
+      { slug: { in: ['wedson', 'wedson-restaurant', 'restaurant-kitchen'] } },
+      { name: { contains: 'Wedson', mode: 'insensitive' as const } }
+    )
+  }
+
+  if (isBalUdyan) {
+    aliasOrConditions.push(
+      { id: OUTLET_BAL_UDYAN_ID },
+      { slug: { in: ['bal-udyan', 'bal-udyan-restaurant', 'baludyan'] } },
+      { name: { contains: 'Bal Udyan', mode: 'insensitive' as const } }
+    )
+  }
+
+  if (isRadhaRani) {
+    aliasOrConditions.push(
+      { id: OUTLET_RADHA_RANI_ID },
+      { slug: { in: ['radha-rani', 'radha-rani-restaurant', 'radharani'] } },
+      { name: { contains: 'Radha', mode: 'insensitive' as const } }
+    )
+  }
+
+  if (isZayka) {
+    aliasOrConditions.push(
+      { id: OUTLET_ZAYKA_ID },
+      { slug: { in: ['zayka', 'zayka-non-veg', 'zayka-non-veg-hotel'] } },
+      { name: { contains: 'Zayka', mode: 'insensitive' as const } }
+    )
+  }
+
+  if (aliasOrConditions.length > 0) {
+    const aliasMatch = await prisma.restaurant.findFirst({
+      where: {
+        OR: aliasOrConditions,
+        isActive: true,
+      },
+    })
+    if (aliasMatch) return aliasMatch
+  }
+
+  // 3. Fallback: Prefix / StartsWith match
+  const startsWithMatch = await prisma.restaurant.findFirst({
     where: {
       OR: [
-        { slug: { equals: decodedSlug, mode: 'insensitive' } },
-        { id: rawSlug },
-        { id: decodedSlug },
-        ...(isAsRestaurant
-          ? [
-              { id: OUTLET_AS_RESTAURANT_ID },
-              { slug: { in: ['as-cafe', 'as-restaurant', 'a-s-cafe', 'a-s-restaurant'] } },
-              { name: { contains: 'A.S', mode: 'insensitive' as const } },
-            ]
-          : []),
-        ...(isWedson
-          ? [
-              { id: OUTLET_WEDSON_ID },
-              { slug: { in: ['wedson', 'wedson-restaurant', 'restaurant-kitchen'] } },
-              { name: { contains: 'Wedson', mode: 'insensitive' as const } },
-            ]
-          : []),
-        ...(isBalUdyan
-          ? [
-              { id: OUTLET_BAL_UDYAN_ID },
-              { slug: { in: ['bal-udyan', 'bal-udyan-restaurant', 'baludyan'] } },
-              { name: { contains: 'Bal Udyan', mode: 'insensitive' as const } },
-            ]
-          : []),
-        ...(isPizzaLovers
-          ? [
-              { id: OUTLET_PIZZA_LOVERS_ID },
-              { slug: { in: ['hot-pizza-lovers', 'pizza-lovers', 'pizza-lover'] } },
-              { name: { contains: 'Pizza', mode: 'insensitive' as const } },
-            ]
-          : []),
-        ...(isRadhaRani
-          ? [
-              { id: OUTLET_RADHA_RANI_ID },
-              { slug: { in: ['radha-rani', 'radha-rani-restaurant', 'radharani'] } },
-              { name: { contains: 'Radha', mode: 'insensitive' as const } },
-            ]
-          : []),
-        // Fuzzy startsWith fallback
+        { slug: { startsWith: slugHyphenated, mode: 'insensitive' } },
         { slug: { startsWith: decodedSlug, mode: 'insensitive' } },
+        { name: { startsWith: decodedSlug, mode: 'insensitive' } },
+        { name: { startsWith: slugSpaced, mode: 'insensitive' } },
       ],
       isActive: true,
     },
   })
+  if (startsWithMatch) return startsWithMatch
 
-  if (restaurant) return restaurant
-
-  // 2. Secondary fallback: contains search on name or slug
+  // 4. Final Fallback: Full contains match
   return await prisma.restaurant.findFirst({
     where: {
       OR: [
+        { slug: { contains: slugHyphenated, mode: 'insensitive' } },
         { slug: { contains: decodedSlug, mode: 'insensitive' } },
         { name: { contains: decodedSlug, mode: 'insensitive' } },
+        { name: { contains: slugSpaced, mode: 'insensitive' } },
       ],
       isActive: true,
     },

@@ -1334,7 +1334,7 @@ export async function POST(request: NextRequest) {
     const isOnlineRequested = rawMethod === 'RAZORPAY' || rawMethod === 'UPI' || rawMethod === 'ONLINE'
 
     let isOnlinePaid = false
-    const cfCheckId = body.cfOrderId || (paymentId.startsWith('CF_') ? paymentId.replace(/^CF_/, '') : (paymentId.startsWith('cf_') ? paymentId : null))
+    const cfCheckId = isWalletPaid ? null : (body.cfOrderId || (paymentId.startsWith('CF_') ? paymentId.replace(/^CF_/, '') : (paymentId.startsWith('cf_') ? paymentId : null)))
 
     // 💳 Handle Wallet deduction directly on ordersToCreate
     if (requestedWalletAmount > 0) {
@@ -1486,11 +1486,11 @@ export async function POST(request: NextRequest) {
 
     const autoApproveSetting = settingsMap['admin_auto_approve_orders']
     const isAutoApprove = autoApproveSetting === 'true'
-    // Online Paid orders (funds already captured) move straight to CONFIRMED.
+    // Online Paid orders (funds already captured) move straight to PENDING (Placed - No Admin Verification, Restaurant/Store accepts).
     // Online UNPAID orders land in PENDING (Payment Pending queue in Admin dashboard).
-    // Cash on Delivery (COD) orders require Admin Approval (ADMIN_PENDING) unless auto-approve is true.
+    // Cash on Delivery (COD) orders require Admin Verification (ADMIN_PENDING) unless auto-approve is true.
     const initialOrderStatus = isOnlinePaid
-      ? OrderStatus.CONFIRMED
+      ? OrderStatus.PENDING
       : (isOnlineRequested ? OrderStatus.PENDING : (isAutoApprove ? OrderStatus.PENDING : OrderStatus.ADMIN_PENDING))
 
     // 6. Create orders inside a Prisma Transaction
@@ -1732,7 +1732,7 @@ export async function POST(request: NextRequest) {
             data: {
               addressId: orderAddressId,
               status: initialOrderStatus,
-              confirmedAt: (isOnlinePaid || initialOrderStatus === OrderStatus.CONFIRMED) ? now : undefined,
+              confirmedAt: isOnlinePaid ? now : undefined,
               subtotal: orderInfo.subtotal,
               discount: orderInfo.discount,
               deliveryFee: orderInfo.deliveryFee,
@@ -1783,7 +1783,7 @@ export async function POST(request: NextRequest) {
               cfOrderId: cfCheckId ? String(cfCheckId).trim() : null,
               orderType: (orderInfo.type === 'RESTAURANT' || orderInfo.restaurantId) ? 'RESTAURANT' : 'GROCERY',
               status: initialOrderStatus,
-              confirmedAt: (isOnlinePaid || initialOrderStatus === OrderStatus.CONFIRMED) ? now : null,
+              confirmedAt: isOnlinePaid ? now : null,
 
               subtotal: orderInfo.subtotal,
               discount: orderInfo.discount,

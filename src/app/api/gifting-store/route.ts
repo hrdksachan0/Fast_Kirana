@@ -7,10 +7,16 @@ const headers = { 'Cache-Control': 'no-store, max-age=0' }
 
 export async function GET(request: NextRequest) {
   try {
-    const row = await prisma.storeSetting.findUnique({
-      where: { key: 'gifting_store_config' },
-      select: { value: true },
+    const requested = request.nextUrl.searchParams.get('storeId') || request.headers.get('x-store-id')
+    const storeId = requested && requested !== 'all' && requested !== 'ALL' ? requested.trim() : null
+
+    const key = storeId ? `store:${storeId}:gifting_store_config` : 'gifting_store_config'
+    const rows = await prisma.storeSetting.findMany({
+      where: { key: { in: [...new Set([key, 'gifting_store_config'])] } },
+      select: { key: true, value: true },
     })
+
+    const row = rows.find(r => r.key === key) ?? rows.find(r => r.key === 'gifting_store_config')
 
     if (!row || !row.value) {
       return NextResponse.json(DEFAULT_GIFTING_CONFIG, { headers })

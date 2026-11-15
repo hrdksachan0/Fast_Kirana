@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 
-export async function POST() {
-  const adminResult = await requireAdmin()
+export async function POST(request: Request) {
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
+  const session = adminResult.session
+
+  const { searchParams } = new URL(request.url)
+  const effectiveStoreId = getEffectiveStoreId(session, searchParams.get('storeId'))
 
   try {
+    const where: any = { status: 'CANCELLED' }
+    if (effectiveStoreId) {
+      where.storeId = effectiveStoreId
+    }
+
     const cancelledOrders = await prisma.order.findMany({
-      where: { status: 'CANCELLED' },
+      where,
       select: { id: true },
     })
 

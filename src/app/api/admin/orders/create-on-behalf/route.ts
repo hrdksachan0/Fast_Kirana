@@ -10,8 +10,10 @@ import { getLast10Digits } from '@/lib/phone'
 import { validateBodyLegacy, createOnBehalfOrderSchema } from '@/lib/validation'
 
 export async function POST(request: Request) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
+  const session = adminResult.session
+  const adminStoreId = (session?.user as any)?.assignedStoreId || null
 
   const validation = await validateBodyLegacy(request, createOnBehalfOrderSchema)
   if (!validation.success) return validation.error
@@ -82,22 +84,6 @@ export async function POST(request: Request) {
       })
     }
 
-    if (!address) {
-      // Create default Ghatampur address for manual admin orders
-      address = await prisma.address.create({
-        data: {
-          userId: customer.id,
-          label: deliveryMethod === 'PICKUP' ? 'STORE_PICKUP' : 'HOME',
-          houseNo: 'Ghatampur Express',
-          street: 'Main Market Road',
-          area: 'Ghatampur',
-          city: 'Ghatampur',
-          pincode: '209206',
-          phone: customer.phone || '7054470303'
-        }
-      })
-    }
-
     // 3. Normalize Items & Fetch DB Products
     const normalizedItems = items.map((i: any) => {
       const p = i.product || i
@@ -128,6 +114,33 @@ export async function POST(request: Request) {
     const restaurantId = restaurantProduct?.restaurantId || null
     const restaurant = restaurantProduct?.restaurant || null
     const finalShopName = shopName || restaurant?.name || (restaurantId ? 'Restaurant Kitchen' : 'FastMinute Grocery')
+
+    // Determine effective store hub
+    let effectiveStoreId = adminStoreId || (restaurant as any)?.storeId || null
+    if (!effectiveStoreId && address?.pincode) {
+      const { resolveDarkStoreForCustomer } = await import('@/lib/store-resolver')
+      const resolved = await resolveDarkStoreForCustomer(address, null)
+      effectiveStoreId = resolved.storeId
+    }
+    if (!effectiveStoreId) {
+      effectiveStoreId = 'hub-209206'
+    }
+
+    if (!address) {
+      const isBarharwa = effectiveStoreId === 'hub-816101'
+      address = await prisma.address.create({
+        data: {
+          userId: customer.id,
+          label: deliveryMethod === 'PICKUP' ? 'STORE_PICKUP' : 'HOME',
+          houseNo: isBarharwa ? 'Barharwa Express' : 'Ghatampur Express',
+          street: isBarharwa ? 'Station Road' : 'Main Market Road',
+          area: isBarharwa ? 'Barharwa' : 'Ghatampur',
+          city: isBarharwa ? 'Barharwa' : 'Ghatampur',
+          pincode: isBarharwa ? '816101' : '209206',
+          phone: customer.phone || '7054470303'
+        }
+      })
+    }
 
     // 4. Calculate Subtotal & Totals
     let subtotal = 0
@@ -212,6 +225,7 @@ export async function POST(request: Request) {
           isB2B,
           shopName: finalShopName,
           restaurantId,
+          storeId: effectiveStoreId,
           items: {
             create: orderItemsData.map((item) => ({
               productId: item.productId,

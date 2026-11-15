@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function GET(request: NextRequest) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const { searchParams } = new URL(request.url)
     const startDateParam = searchParams.get('startDate')
     const endDateParam = searchParams.get('endDate')
-    const storeId = searchParams.get('storeId')
+    const storeId = getEffectiveStoreId(session, searchParams.get('storeId'))
 
     const now = new Date()
     let start: Date

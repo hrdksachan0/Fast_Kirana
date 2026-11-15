@@ -515,23 +515,37 @@ export function generateInvoiceHtml(order: any): string {
 
         <table class="summary-table">
           <tr>
-            <td>Subtotal:</td>
+            <td>Item Total:</td>
             <td style="text-align: right;">₹${(order.subtotal || 0).toFixed(2)}</td>
           </tr>
-          ${order.discount ? `
-            <tr>
-              <td>Discount:</td>
-              <td style="text-align: right; color: green;">-₹${order.discount.toFixed(2)}</td>
+          <tr>
+            <td>Delivery Fee:</td>
+            <td style="text-align: right; ${(order.deliveryFee || 0) === 0 ? 'color: #008000; font-weight: bold;' : ''}">
+              ${(order.deliveryFee || 0) === 0 ? 'FREE' : `₹${(order.deliveryFee || 0).toFixed(2)}`}
+            </td>
+          </tr>
+          <tr>
+            <td>Packaging Charge:</td>
+            <td style="text-align: right;">₹${(order.miscFee || 0).toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td>Handling & Taxes:</td>
+            <td style="text-align: right;">₹${(order.taxes || 0).toFixed(2)}</td>
+          </tr>
+          ${(order.discount || 0) > 0 ? `
+            <tr style="color: #008000;">
+              <td>Discount Savings:</td>
+              <td style="text-align: right;">-₹${order.discount.toFixed(2)}</td>
             </tr>
           ` : ''}
-          ${order.deliveryFee ? `
-            <tr>
-              <td>Delivery Fee:</td>
-              <td style="text-align: right;">₹${order.deliveryFee.toFixed(2)}</td>
+          ${((order.walletAmountUsed || 0) > 0 || (order.paymentMethod === 'WALLET' && (order.total === 0 || !order.total))) ? `
+            <tr style="color: #008000; font-weight: bold;">
+              <td>FastMinute Wallet:</td>
+              <td style="text-align: right;">-₹${(order.walletAmountUsed || Math.max(0, (order.subtotal || 0) + (order.deliveryFee || 0) + (order.miscFee || 0) + (order.taxes || 0) - (order.discount || 0))).toFixed(2)}</td>
             </tr>
           ` : ''}
           <tr style="font-size: 14px; font-weight: 900; border-top: 1px dashed #000;">
-            <td style="padding-top: 4px;">TOTAL AMOUNT:</td>
+            <td style="padding-top: 4px;">CUSTOMER PAID (${order.paymentMethod || 'PAID'}):</td>
             <td style="text-align: right; padding-top: 4px;">₹${(order.total || 0).toFixed(2)}</td>
           </tr>
         </table>

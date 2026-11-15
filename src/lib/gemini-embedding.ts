@@ -7,6 +7,8 @@
 const queryEmbeddingCache = new Map<string, number[]>()
 const MAX_CACHE_SIZE = 500
 
+let hasWarnedGeminiKey = false
+
 export async function getGeminiQueryEmbedding(rawQuery: string): Promise<number[] | null> {
   const query = (rawQuery || '').trim().toLowerCase()
   if (!query || query.length < 2) return null
@@ -18,7 +20,10 @@ export async function getGeminiQueryEmbedding(rawQuery: string): Promise<number[
 
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
   if (!apiKey) {
-    console.warn('[GeminiEmbedding] GEMINI_API_KEY not found in environment.')
+    if (process.env.NODE_ENV === 'development' && !hasWarnedGeminiKey) {
+      console.warn('[GeminiEmbedding] GEMINI_API_KEY not found in environment. Semantic AI search will fall back to Postgres keyword full-text search.')
+      hasWarnedGeminiKey = true
+    }
     return null
   }
 

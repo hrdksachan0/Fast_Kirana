@@ -421,10 +421,18 @@ class Order {
         double parsed = (json['walletAmountUsed'] as num?)?.toDouble() ?? 0.0;
         if (parsed <= 0 && json['notes'] != null) {
           final notesStr = json['notes'].toString();
-          final m = RegExp(r'\[WALLET_USED:([\d.]+)\]').firstMatch(notesStr) ??
-              RegExp(r'Paid via Wallet:\s*₹?([\d.]+)').firstMatch(notesStr);
-          if (m != null) {
-            parsed = double.tryParse(m.group(1) ?? '') ?? 0.0;
+          final matches = RegExp(r'\[WALLET_USED:([\d.]+)\]').allMatches(notesStr);
+          if (matches.isNotEmpty) {
+            double sumWallet = 0.0;
+            for (final match in matches) {
+              sumWallet += double.tryParse(match.group(1) ?? '') ?? 0.0;
+            }
+            if (sumWallet > 0) parsed = sumWallet;
+          } else {
+            final m = RegExp(r'Paid via Wallet:\s*₹?([\d.]+)').firstMatch(notesStr);
+            if (m != null) {
+              parsed = double.tryParse(m.group(1) ?? '') ?? 0.0;
+            }
           }
         }
         if (parsed <= 0 && _parsePaymentMethod(json['paymentMethod']) == PaymentMethod.wallet) {

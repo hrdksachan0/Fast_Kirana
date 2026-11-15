@@ -219,12 +219,12 @@ export function RestaurantManager({ initialRestaurants }: RestaurantManagerProps
                     ID: {restaurant.id}
                   </span>
                   <a 
-                    href={`/food/${restaurant.slug}`} 
+                    href={`/food/${restaurant.id || restaurant.slug}`} 
                     target="_blank" 
                     rel="noreferrer" 
                     className="text-[10px] font-mono text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
                   >
-                    /{restaurant.slug} <ExternalLink className="h-2.5 w-2.5" />
+                    /{restaurant.id || restaurant.slug} <ExternalLink className="h-2.5 w-2.5" />
                   </a>
                 </div>
                 

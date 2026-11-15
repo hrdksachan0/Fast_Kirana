@@ -186,13 +186,16 @@ export async function getStoreRestaurantFilter(storeId?: string | null) {
     where: { id: storeId },
     select: { name: true }
   })
-  if (!store) return {}
+  if (!store) return { storeId }
 
   const city = extractCityFromStoreName(store.name)
-  if (!city) return {}
+  if (!city) return { storeId }
 
   return {
-    city: { contains: city, mode: 'insensitive' as const }
+    OR: [
+      { storeId },
+      { city: { contains: city, mode: 'insensitive' as const } }
+    ]
   }
 }
 

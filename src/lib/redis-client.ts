@@ -51,23 +51,36 @@ function initUpstash(): Redis | null {
  */
 export const cache = {
   async get<T>(key: string): Promise<T | null> {
+    // ⚡ L1 CACHE: Check fast local RAM first (0.1ms, zero Upstash bandwidth consumed)
+    const entry = memoryStore.get(key)
+    const now = Date.now()
+    if (entry) {
+      if (entry.expiresAt > now) {
+        return entry.value as T
+      } else {
+        memoryStore.delete(key)
+      }
+    }
+
+    // ⚡ L2 CACHE: If memory miss, fetch from Upstash Redis
     const upstash = initUpstash()
     if (upstash) {
       try {
         const data = await upstash.get<T>(key)
-        if (data !== null && data !== undefined) return data
+        if (data !== null && data !== undefined) {
+          // Store in L1 RAM for next 120 seconds or remaining TTL to eliminate future Upstash network hits
+          memoryStore.set(key, {
+            value: data,
+            expiresAt: now + 120 * 1000,
+          })
+          return data
+        }
       } catch (err) {
         console.warn(`Redis get failed for key "${key}", falling back to memory:`, err)
       }
     }
 
-    const entry = memoryStore.get(key)
-    if (!entry) return null
-    if (entry.expiresAt <= Date.now()) {
-      memoryStore.delete(key)
-      return null
-    }
-    return entry.value as T
+    return null
   },
 
   async set(key: string, value: any, opts?: { ex?: number }): Promise<void> {

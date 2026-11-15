@@ -644,53 +644,76 @@ class OrderDetailScreen extends StatelessWidget {
                       ],
                     );
                   }),
-                  if (order.walletAmountUsed > 0 || (order.paymentMethod == PaymentMethod.wallet && (order.subtotal + order.deliveryFee + order.miscFee - order.discount) > order.total))
-                    Builder(builder: (context) {
-                      final gross = order.subtotal + order.deliveryFee + order.miscFee - order.discount;
-                      final wAmt = order.walletAmountUsed > 0 ? order.walletAmountUsed : (gross - order.total).clamp(0.0, gross);
-                      return _buildBillRow('FastMinute Wallet', '-₹${wAmt.toInt()}', isGreen: true);
-                    }),
-                  if (order.refundAmount > 0)
-                    _buildBillRow(
-                      'Refund Credited',
-                      '-₹${order.refundAmount.toInt()}',
-                      customColor: const Color(0xFFE11D48),
-                    ),
-                  const SizedBox(height: 10),
-                  const Divider(color: AppDesignSystem.slate200),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            order.refundAmount > 0 ? 'Net Paid Total' : 'Total Paid',
-                            style: GoogleFonts.inter(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w900,
-                              color: textDark,
+                  Builder(builder: (context) {
+                    final gross = order.subtotal + order.deliveryFee + order.miscFee + order.taxes - order.discount;
+                    double walletUsed = 0.0;
+                    if (order.subOrders != null && order.subOrders!.isNotEmpty) {
+                      for (final s in order.subOrders!) {
+                        walletUsed += (s.walletAmountUsed > 0) ? s.walletAmountUsed : 0.0;
+                      }
+                    }
+                    if (walletUsed <= 0 && order.walletAmountUsed > 0) {
+                      walletUsed = order.walletAmountUsed;
+                    }
+                    final isFullWalletPay = order.paymentMethod == PaymentMethod.wallet || (order.total == 0 && (walletUsed > 0 || order.paymentMethod == PaymentMethod.wallet));
+                    if (isFullWalletPay && (walletUsed > 0 || order.paymentMethod == PaymentMethod.wallet || order.total == 0)) {
+                      walletUsed = gross;
+                    } else {
+                      walletUsed = walletUsed.clamp(0.0, gross);
+                    }
+                    final computedCustomerPaid = isFullWalletPay ? 0.0 : (gross - walletUsed).clamp(0.0, double.infinity);
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (walletUsed > 0 || isFullWalletPay)
+                          _buildBillRow('FastMinute Wallet', '-₹${walletUsed.toInt()}', isGreen: true),
+                        if (order.refundAmount > 0)
+                          _buildBillRow(
+                            'Refund Credited',
+                            '-₹${order.refundAmount.toInt()}',
+                            customColor: const Color(0xFFE11D48),
+                          ),
+                        const SizedBox(height: 10),
+                        const Divider(color: AppDesignSystem.slate200),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  order.refundAmount > 0 ? 'Net Paid Total' : 'Total Paid',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: textDark,
+                                  ),
+                                ),
+                                Text(
+                                  order.refundAmount > 0
+                                      ? 'Original: ₹${order.total.toInt()} • ${order.paymentMethod.displayName}'
+                                      : (computedCustomerPaid == 0 && (walletUsed > 0 || isFullWalletPay)
+                                          ? 'FastMinute Wallet (PAID)'
+                                          : order.paymentMethod.displayName),
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: textMuted),
+                                ),
+                              ],
                             ),
-                          ),
-                          Text(
-                            order.refundAmount > 0
-                                ? 'Original: ₹${order.total.toInt()} • ${order.paymentMethod.displayName}'
-                                : order.paymentMethod.displayName,
-                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: textMuted),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '₹${(order.total - order.refundAmount).clamp(0, double.infinity).toInt()}',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: primaryRed,
+                            Text(
+                              '₹${((computedCustomerPaid - order.refundAmount).clamp(0.0, double.infinity)).toInt()}',
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: primaryRed,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    );
+                  }),
                 ],
               ),
             ),

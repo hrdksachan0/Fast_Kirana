@@ -1,22 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/auth'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  const adminResult = await requireAdmin(request)
+  if (adminResult.error) return adminResult.error
+  const session = adminResult.session
+
   try {
-    const session = await auth()
     const { searchParams } = new URL(request.url)
-    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+    const effectiveStoreId = getEffectiveStoreId(session, searchParams.get('storeId'))
 
     const where: any = {
       role: 'DELIVERY',
     }
 
-    if (storeId && storeId !== 'all' && storeId !== 'ALL') {
-      where.OR = [
-        { assignedStoreId: storeId },
-        { assignedStoreId: null },
-      ]
+    if (effectiveStoreId && effectiveStoreId !== 'all' && effectiveStoreId !== 'ALL') {
+      where.assignedStoreId = effectiveStoreId
     }
 
     const riders = await prisma.user.findMany({

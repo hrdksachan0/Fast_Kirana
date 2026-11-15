@@ -363,16 +363,17 @@ async def send_pwa_notification_to_user(user_id: str, title: str, body: str, dat
                 tokens = list(set(t for t in res.scalars().all() if t and len(t) > 10))
 
         if tokens:
-            # DIRECT DISPATCH: Send directly to the user's active device tokens (EXACTLY ONCE)
             await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
-        else:
-            # FALLBACK ONLY: If no device tokens are registered in DB, send to user topic
-            if user_id:
-                await send_fcm_topic_notification(f"user_{user_id}", title, body, data)
-            elif phone:
-                clean_phone = str(phone).replace("+91", "").replace(" ", "").replace("-", "").strip()
-                if clean_phone and len(clean_phone) == 10:
-                    await send_fcm_topic_notification(f"phone_{clean_phone}", title, body, data)
+
+        # Broadcast to phone topic (covers mobile apps subscribed to phone_$phone)
+        if phone:
+            clean_phone = str(phone).replace("+91", "").replace(" ", "").replace("-", "").strip()
+            if clean_phone and len(clean_phone) == 10:
+                await send_fcm_topic_notification(f"phone_{clean_phone}", title, body, data)
+
+        # Broadcast to user topic (covers mobile apps subscribed to user_$userId)
+        if user_id:
+            await send_fcm_topic_notification(f"user_{user_id}", title, body, data)
     except Exception as e:
         logger.error(f"Failed to dispatch FCM push notification to user: {str(e)}")
 
@@ -1934,7 +1935,9 @@ async def create_order(
         incoming_payment_status = str(payload.get("paymentStatus") or "").upper()
         incoming_payment_id = str(payload.get("paymentId") or payload.get("cfPaymentId") or "").strip()
         incoming_cf_order_id = str(payload.get("cfOrderId") or "").strip()
-        if not incoming_cf_order_id:
+        if payment_method == "WALLET":
+            incoming_cf_order_id = ""
+        elif not incoming_cf_order_id:
             if incoming_payment_id.startswith("CF_"):
                 incoming_cf_order_id = incoming_payment_id.replace("CF_", "")
             elif incoming_payment_id.startswith("cf_"):
@@ -2042,7 +2045,7 @@ async def create_order(
 
         expected_online_total = max(0.0, round(final_total - wallet_used_amount, 2))
 
-        if payment_method != "COD":
+        if payment_method not in ["COD", "WALLET"]:
             if incoming_cf_order_id:
                 # 0. Check pending session intent binding to verify initiating user
                 try:
@@ -2135,8 +2138,7 @@ async def create_order(
 
         auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
         is_auto_approve = auto_approve_setting.lower() == "true"
-        # Manual confirmation requirement: Even paid online orders start in ADMIN_PENDING for Admin review & KOT dispatch
-        initial_order_status = OrderStatus.ADMIN_PENDING
+        initial_order_status = OrderStatus.PENDING if (is_online_paid or is_auto_approve) else OrderStatus.ADMIN_PENDING
 
         # Construct notes — strip any injected fake gateway markers like [CF_ORDER:...] from customer text
         raw_notes = (payload.get("notes") or "").strip()
@@ -4192,6 +4194,14 @@ async def update_order(
     status_title = stage_titles.get(st_val, f"Order #{base_order_no} Update 🔔")
     status_body = stage_bodies.get(st_val, f"Your FastMinute order #{base_order_no} is now {st_val}.")
 
+    cust_phone = None
+    if hasattr(order, "customerPhone") and order.customerPhone:
+        cust_phone = order.customerPhone
+    elif hasattr(order, "address") and order.address and hasattr(order.address, "phone"):
+        cust_phone = order.address.phone
+    elif hasattr(order, "user") and order.user and hasattr(order.user, "phone"):
+        cust_phone = order.user.phone
+
     background_tasks.add_task(
         send_pwa_notification_to_user,
         order.userId,
@@ -4201,9 +4211,11 @@ async def update_order(
             "orderId": order.id,
             "readableId": order.readableId,
             "status": order.status.value,
-            "type": "ORDER_STATUS_UPDATE"
+            "type": "ORDER_STATUS_UPDATE",
+            "screen": "order-tracking"
         },
-        db
+        db,
+        cust_phone
     )
 
     # Strict outlet-isolated notifications (Never leak food order updates to grocery pickers, or vice versa)
@@ -4522,7 +4534,7 @@ def normalize_restaurant_id(rid: Optional[str]) -> Optional[str]:
         return "REST-102"
     if "bal-udyan" in r or "103" in r or "cmsbhxb6a" in r:
         return "REST-103"
-    if "pizza" in r or "104" in r:
+    if "hot-pizza" in r or "pizza-lovers" in r or "pizza lover" in r or "104" in r:
         return "REST-104"
     if "zayka" in r or "105" in r or "0b2470fa" in r:
         return "REST-105"

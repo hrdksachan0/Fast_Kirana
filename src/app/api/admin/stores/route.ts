@@ -65,6 +65,11 @@ export async function POST(request: NextRequest) {
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
+  const assignedStoreId = (session?.user as any)?.assignedStoreId || null
+  if (assignedStoreId) {
+    return NextResponse.json({ error: 'Forbidden: Only SuperAdmins can create new DarkStore Hubs' }, { status: 403 })
+  }
+
   try {
     const body = await request.json()
     const {
@@ -212,12 +217,18 @@ export async function PATCH(request: NextRequest) {
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
+  const assignedStoreId = (session?.user as any)?.assignedStoreId || null
+
   try {
     const body = await request.json()
     const { id, name, latitude, longitude, deliveryPolygon, isActive, surgeCharge, groceryOpen, managerPhone } = body
 
     if (!id) {
       return NextResponse.json({ error: 'Store ID is required' }, { status: 400 })
+    }
+
+    if (assignedStoreId && assignedStoreId !== id) {
+      return NextResponse.json({ error: 'Forbidden: You can only update settings for your assigned store hub' }, { status: 403 })
     }
 
     const updateData: any = {}

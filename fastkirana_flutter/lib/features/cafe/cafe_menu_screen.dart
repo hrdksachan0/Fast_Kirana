@@ -124,10 +124,15 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   void _centerCategoryInHorizontalBar(String tag) {
     if (!_horizontalCategoryController.hasClients) return;
 
-    final products = ref.read(restaurantMenuProvider(widget.restaurantId)).valueOrNull ?? [];
     final restaurantsList = ref.read(restaurantsProvider).valueOrNull ?? [];
     final currentRestaurant = widget.restaurant ??
-        restaurantsList.cast<Restaurant?>().firstWhere((r) => r?.id == widget.restaurantId, orElse: () => null);
+        restaurantsList.cast<Restaurant?>().firstWhere(
+          (r) => r?.id.toLowerCase() == widget.restaurantId.toLowerCase() ||
+                 r?.slug.toLowerCase() == widget.restaurantId.toLowerCase(),
+          orElse: () => RestaurantRegistry.find(widget.restaurantId),
+        );
+    final effectiveRestaurantId = currentRestaurant?.id ?? widget.restaurantId;
+    final products = ref.read(restaurantMenuProvider(effectiveRestaurantId)).valueOrNull ?? [];
 
     final cats = _buildCategories(products, currentRestaurant);
     final index = cats.indexWhere((c) => c.tag == tag);
@@ -599,11 +604,16 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    final menuAsync = ref.watch(restaurantMenuProvider(widget.restaurantId));
-    final reviewsAsync = ref.watch(restaurantReviewsProvider(widget.restaurantId));
     final restaurantsList = ref.watch(restaurantsProvider).valueOrNull ?? [];
     final currentRestaurant = widget.restaurant ??
-        restaurantsList.cast<Restaurant?>().firstWhere((r) => r?.id == widget.restaurantId, orElse: () => null);
+        restaurantsList.cast<Restaurant?>().firstWhere(
+          (r) => r?.id.toLowerCase() == widget.restaurantId.toLowerCase() ||
+                 r?.slug.toLowerCase() == widget.restaurantId.toLowerCase(),
+          orElse: () => RestaurantRegistry.find(widget.restaurantId),
+        );
+    final effectiveRestaurantId = currentRestaurant?.id ?? widget.restaurantId;
+    final menuAsync = ref.watch(restaurantMenuProvider(effectiveRestaurantId));
+    final reviewsAsync = ref.watch(restaurantReviewsProvider(effectiveRestaurantId));
 
     final restaurantName = currentRestaurant?.name ?? widget.restaurantName;
     final description = currentRestaurant?.description;
@@ -629,9 +639,9 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
               RefreshIndicator(
                 color: AppDesignSystem.primary,
                 onRefresh: () async {
-                  ref.invalidate(restaurantMenuProvider(widget.restaurantId));
-                  ref.invalidate(restaurantReviewsProvider(widget.restaurantId));
-                  ref.invalidate(restaurantCouponsProvider(widget.restaurantId));
+                  ref.invalidate(restaurantMenuProvider(effectiveRestaurantId));
+                  ref.invalidate(restaurantReviewsProvider(effectiveRestaurantId));
+                  ref.invalidate(restaurantCouponsProvider(effectiveRestaurantId));
                   ref.invalidate(restaurantsProvider);
                 },
                 child: NestedScrollView(
@@ -1103,7 +1113,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                   ),
 
                 // ─── 2.5 RESTAURANT OFFERS / BOGO TICKETS STRIP ───
-                _buildRestaurantOffersStrip(currentRestaurant),
+                _buildRestaurantOffersStrip(currentRestaurant, effectiveRestaurantId),
 
                 // ─── 3. MENU / REVIEWS TAB BAR ───
                 SliverToBoxAdapter(
@@ -1150,7 +1160,7 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
               controller: _tabController,
               children: [
                 _buildMenuTab(menuAsync, currentRestaurant, isPureVeg),
-                _buildReviewsTab(reviewsAsync),
+                _buildReviewsTab(reviewsAsync, effectiveRestaurantId),
               ],
             ),
           ),
@@ -1367,11 +1377,11 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   // ═══════════════════════════════════════════════════════
   // REVIEWS TAB (Real Data from API & DB)
   // ═══════════════════════════════════════════════════════
-  Widget _buildReviewsTab(AsyncValue<Map<String, dynamic>> reviewsAsync) {
+  Widget _buildReviewsTab(AsyncValue<Map<String, dynamic>> reviewsAsync, String effectiveId) {
     return CafeReviewsTab(
       reviewsAsync: reviewsAsync,
       restaurantName: widget.restaurantName,
-      restaurantId: widget.restaurantId,
+      restaurantId: effectiveId,
     );
   }
 
@@ -1452,10 +1462,10 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
   }
 
 
-  Widget _buildRestaurantOffersStrip(Restaurant? currentRestaurant) {
+  Widget _buildRestaurantOffersStrip(Restaurant? currentRestaurant, String effectiveId) {
     return CafeOffersStrip(
       currentRestaurant: currentRestaurant,
-      restaurantId: widget.restaurantId,
+      restaurantId: effectiveId,
     );
   }
 }

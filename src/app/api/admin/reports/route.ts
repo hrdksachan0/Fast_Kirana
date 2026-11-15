@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       end.setHours(23, 59, 59, 999)
     }
 
-    const storeId = searchParams.get('storeId') || (session?.user as any)?.assignedStoreId || null
+    const storeId = getEffectiveStoreId(session, searchParams.get('storeId'))
 
     const storeWhereOrders = storeId && storeId !== 'all'
       ? Prisma.sql`AND "storeId" = ${storeId}`

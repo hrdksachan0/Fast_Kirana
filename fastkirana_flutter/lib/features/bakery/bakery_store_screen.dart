@@ -14,7 +14,6 @@ import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/store_hub_provider.dart';
-import '../cart/cart_screen.dart';
 import '../products/product_detail_screen.dart';
 import '../../widgets/floating_cart_bar.dart';
 

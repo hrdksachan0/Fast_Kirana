@@ -120,16 +120,27 @@ class TrackingPreparingCard extends StatelessWidget {
 class TrackingCancelBanner extends StatelessWidget {
   final bool isCancelling;
   final VoidCallback onCancel;
+  final DateTime? createdAt;
 
   const TrackingCancelBanner({
     super.key,
     required this.isCancelling,
     required this.onCancel,
+    this.createdAt,
   });
 
   @override
   Widget build(BuildContext context) {
     const primaryRed = Color(0xFFE11D48);
+
+    final remainingText = () {
+      if (createdAt == null) return 'Cancel for free before store begins preparation';
+      final elapsedSec = DateTime.now().difference(createdAt!).inSeconds;
+      final remainingSec = (300 - elapsedSec).clamp(0, 300);
+      final mins = remainingSec ~/ 60;
+      final secs = (remainingSec % 60).toString().padLeft(2, '0');
+      return 'Free cancellation ($mins:$secs mins left)';
+    }();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -156,10 +167,10 @@ class TrackingCancelBanner extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Cancel for free before store begins preparation',
+                  remainingText,
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10.5),
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                     color: const Color(0xFFBE123C),
                   ),
                 ),

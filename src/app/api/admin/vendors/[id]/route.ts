@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 import { auth } from '@/auth'
 import { isRootAdminAccount } from '@/lib/superadmin-config'
 
@@ -10,18 +10,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let adminResult = await requireAdmin()
-  if (adminResult.error) {
-    adminResult = await requireAdmin(request)
-  }
-  if (adminResult.error) {
-    const session = await auth()
-    const role = (session?.user as any)?.role?.toUpperCase()
-    if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'STAFF' || isRootAdminAccount(session?.user as any)) {
-      adminResult = { error: null, session } as any
-    }
-  }
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   const { id } = await params
   const { searchParams } = new URL(request.url)
@@ -33,7 +24,7 @@ export async function GET(
 
   const startDateStr = searchParams.get('startDate') || defaultStart
   const endDateStr = searchParams.get('endDate') || defaultEnd
-  const storeId = searchParams.get('storeId')
+  const storeId = getEffectiveStoreId(session, searchParams.get('storeId'))
 
   const startUtc = new Date(`${startDateStr}T00:00:00.000Z`)
   const endUtc = new Date(`${endDateStr}T23:59:59.999Z`)
@@ -50,6 +41,10 @@ export async function GET(
 
     if (!vendor) {
       return NextResponse.json({ error: 'Vendor not found' }, { status: 404 })
+    }
+
+    if (vendor.storeId && (session?.user as any)?.assignedStoreId && vendor.storeId !== (session?.user as any)?.assignedStoreId) {
+      return NextResponse.json({ error: 'Forbidden: Vendor belongs to another store hub' }, { status: 403 })
     }
 
     // 1. Fetch all products assigned to this vendor
@@ -114,7 +109,7 @@ export async function GET(
       },
     })
 
-    // 3. Aggregate Itemized Sales & Payable
+    // 3. Aggregate Itemized Sales & Payable and Daily Sales
     const itemSalesSummary: Record<
       string,
       {
@@ -123,11 +118,32 @@ export async function GET(
         unit: string
         categoryName: string
         barcode: string | null
+        imageUrl: string | null
         unitsSold: number
         unitCostPrice: number
         sellingPrice: number
         totalPayable: number
         currentStock: number
+      }
+    > = {}
+
+    const dailySalesMap: Record<
+      string,
+      {
+        date: string
+        totalUnits: number
+        totalPayable: number
+        items: Record<
+          string,
+          {
+            productId: string
+            name: string
+            unit: string
+            unitCostPrice: number
+            unitsSold: number
+            totalPayable: number
+          }
+        >
       }
     > = {}
 
@@ -158,6 +174,7 @@ export async function GET(
         unit: prod.unit || '',
         categoryName: prod.category?.name || 'Uncategorized',
         barcode: prod.barcode || null,
+        imageUrl: prod.imageUrl || null,
         unitsSold: 0,
         unitCostPrice: initCost,
         sellingPrice: prod.price,
@@ -168,6 +185,16 @@ export async function GET(
 
     // Accumulate delivered sales with robust variant cost resolution
     for (const order of deliveredOrders) {
+      const orderDateStr = order.createdAt.toISOString().split('T')[0]
+      if (!dailySalesMap[orderDateStr]) {
+        dailySalesMap[orderDateStr] = {
+          date: orderDateStr,
+          totalUnits: 0,
+          totalPayable: 0,
+          items: {},
+        }
+      }
+
       for (const item of order.items) {
         if (item.isRefunded || !item.productId) continue
 
@@ -225,6 +252,7 @@ export async function GET(
         totalUnitsSold += qty
         totalPayableAmount += itemPayable
 
+        // Update Itemized Sales
         if (itemSalesSummary[item.productId]) {
           itemSalesSummary[item.productId].unitsSold += qty
           itemSalesSummary[item.productId].totalPayable += itemPayable
@@ -234,10 +262,46 @@ export async function GET(
             ) / 100
           }
         }
+
+        // Update Daily Sales Map
+        dailySalesMap[orderDateStr].totalUnits += qty
+        dailySalesMap[orderDateStr].totalPayable += itemPayable
+
+        const pUnit = item.selectedVariant || baseProd?.unit || ''
+        const pName = item.name || baseProd?.name || 'Item'
+        const dayItemKey = `${item.productId}_${pUnit}`
+
+        if (!dailySalesMap[orderDateStr].items[dayItemKey]) {
+          dailySalesMap[orderDateStr].items[dayItemKey] = {
+            productId: item.productId,
+            name: pName,
+            unit: pUnit,
+            unitCostPrice: effectiveCostPrice,
+            unitsSold: qty,
+            totalPayable: itemPayable,
+          }
+        } else {
+          const cur = dailySalesMap[orderDateStr].items[dayItemKey]
+          cur.unitsSold += qty
+          cur.totalPayable += itemPayable
+          if (cur.unitsSold > 0) {
+            cur.unitCostPrice = Math.round((cur.totalPayable / cur.unitsSold) * 100) / 100
+          }
+        }
       }
     }
 
     const itemizedSales = Object.values(itemSalesSummary).sort((a, b) => b.totalPayable - a.totalPayable)
+
+    const dailySales = Object.values(dailySalesMap)
+      .filter((day) => day.totalUnits > 0)
+      .map((day) => ({
+        date: day.date,
+        totalUnits: day.totalUnits,
+        totalPayable: Math.round(day.totalPayable * 100) / 100,
+        items: Object.values(day.items),
+      }))
+      .sort((a, b) => b.date.localeCompare(a.date))
 
     // 4. Calculate Payouts & Balances
     const payoutsList = vendor.payouts || []
@@ -308,6 +372,7 @@ export async function GET(
         lowStockCount: lowStockItems.length,
       },
       itemizedSales,
+      dailySales,
       payouts: payoutsList,
       lowStockItems,
       products: products.map((p) => ({
@@ -399,10 +464,22 @@ export async function DELETE(
 ) {
   const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   const { id } = await params
 
   try {
+    const existing = await (prisma as any).vendor.findUnique({
+      where: { id },
+      select: { id: true, storeId: true }
+    })
+    if (!existing) {
+      return NextResponse.json({ error: 'Vendor not found' }, { status: 404 })
+    }
+    if (existing.storeId && (session?.user as any)?.assignedStoreId && existing.storeId !== (session?.user as any)?.assignedStoreId) {
+      return NextResponse.json({ error: 'Forbidden: Cannot delete vendor from another hub' }, { status: 403 })
+    }
+
     // Unlink products before deleting vendor
     await prisma.product.updateMany({
       where: { vendorId: id },

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../core/services/logger_service.dart';
@@ -8,10 +9,24 @@ final giftingStoreConfigProvider =
   final dio = ref.read(dioProvider);
 
   try {
-    final response = await dio.get('/api/gifting-store');
-    if (response.data != null && response.data is Map) {
+    Response? response;
+    // 1. Try web storefront endpoint (always live with dynamic config)
+    try {
+      response = await dio.get(
+        '/api/gifting-store',
+        options: Options(
+          extra: {'override_base_url': 'https://www.fastminute.in'},
+        ),
+      );
+    } catch (_) {
+      // 2. Fallback to primary API endpoint
+      response = await dio.get('/api/gifting-store');
+    }
+
+    final data = response.data;
+    if (data is Map) {
       return GiftingStoreConfigModel.fromJson(
-        Map<String, dynamic>.from(response.data),
+        Map<String, dynamic>.from(data),
       );
     }
   } catch (e, st) {

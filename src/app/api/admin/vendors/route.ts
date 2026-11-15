@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 import { auth } from '@/auth'
 import { isRootAdminAccount } from '@/lib/superadmin-config'
 
@@ -20,14 +20,15 @@ export async function GET(request: NextRequest) {
   }
   if (adminResult.error) return adminResult.error
 
+  const session = adminResult.session
   const { searchParams } = new URL(request.url)
   const format = searchParams.get('format') // 'names' for legacy string array
-  const storeId = searchParams.get('storeId')
+  const effectiveStoreId = getEffectiveStoreId(session, searchParams.get('storeId'))
 
   const vendorWhere: any = {}
-  if (storeId && storeId !== 'all') {
+  if (effectiveStoreId && effectiveStoreId !== 'all') {
     vendorWhere.OR = [
-      { storeId },
+      { storeId: effectiveStoreId },
       { storeId: null },
     ]
   }
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
               name: vName,
               companyName: vName,
               isActive: true,
-              storeId: storeId && storeId !== 'all' ? storeId : null,
+              storeId: effectiveStoreId && effectiveStoreId !== 'all' ? effectiveStoreId : null,
             },
           })
 
@@ -179,6 +180,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
+  const session = adminResult.session
 
   try {
     const body = await request.json()
@@ -197,6 +199,8 @@ export async function POST(request: NextRequest) {
       isActive = true,
       storeId,
     } = body
+
+    const effectiveStoreId = getEffectiveStoreId(session, storeId)
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Vendor name is required' }, { status: 400 })
@@ -222,7 +226,7 @@ export async function POST(request: NextRequest) {
           ifscCode: ifscCode?.trim() || null,
           address: address?.trim() || null,
           isActive: Boolean(isActive),
-          storeId: storeId || null,
+          storeId: effectiveStoreId || null,
         },
       })
 
@@ -276,7 +280,7 @@ export async function POST(request: NextRequest) {
           ifscCode: ifscCode?.trim() || null,
           address: address?.trim() || null,
           isActive: Boolean(isActive),
-          storeId: storeId || null,
+          storeId: effectiveStoreId || null,
         },
       })
 

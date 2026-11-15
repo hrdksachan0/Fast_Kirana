@@ -107,6 +107,7 @@ export async function GET(
         unit: string
         categoryName: string
         barcode: string | null
+        imageUrl: string | null
         unitsSold: number
         unitCostPrice: number
         sellingPrice: number
@@ -141,6 +142,7 @@ export async function GET(
         unit: prod.unit || '',
         categoryName: prod.category?.name || 'Uncategorized',
         barcode: prod.barcode || null,
+        imageUrl: prod.imageUrl || null,
         unitsSold: 0,
         unitCostPrice: initCost,
         sellingPrice: prod.price,
@@ -149,14 +151,39 @@ export async function GET(
       }
     }
 
-    // Daily sales map (date -> { date, unitsSold, payableAmount, ordersCount })
-    const dailySalesMap: Record<string, { date: string; unitsSold: number; payableAmount: number; ordersCount: number }> = {}
+    // Daily sales map (date -> { date, totalUnits, totalPayable, ordersCount, items })
+    const dailySalesMap: Record<
+      string,
+      {
+        date: string
+        totalUnits: number
+        totalPayable: number
+        ordersCount: number
+        items: Record<
+          string,
+          {
+            productId: string
+            name: string
+            unit: string
+            unitCostPrice: number
+            unitsSold: number
+            totalPayable: number
+          }
+        >
+      }
+    > = {}
 
     // Accumulate delivered sales
     for (const order of deliveredOrders) {
       const orderDateStr = order.createdAt.toISOString().split('T')[0]
       if (!dailySalesMap[orderDateStr]) {
-        dailySalesMap[orderDateStr] = { date: orderDateStr, unitsSold: 0, payableAmount: 0, ordersCount: 0 }
+        dailySalesMap[orderDateStr] = {
+          date: orderDateStr,
+          totalUnits: 0,
+          totalPayable: 0,
+          ordersCount: 0,
+          items: {},
+        }
       }
       let orderHasVendorItems = false
 
@@ -166,11 +193,48 @@ export async function GET(
         const baseProd = productMap.get(item.productId)
         let effectiveCostPrice = item.costPrice && item.costPrice > 0 ? Number(item.costPrice) : 0
 
-        if (!effectiveCostPrice && baseProd?.costPrice && Number(baseProd.costPrice) > 0) {
-          effectiveCostPrice = Number(baseProd.costPrice)
-        }
-        if (!effectiveCostPrice && item.price > 0) {
-          effectiveCostPrice = Math.round(Number(item.price) * 0.75 * 100) / 100
+        if (!effectiveCostPrice) {
+          const rawVariants = item.variants || baseProd?.variants
+          let variantsList: any[] = []
+          if (rawVariants) {
+            try {
+              variantsList = typeof rawVariants === 'string' ? JSON.parse(rawVariants as string) : rawVariants
+            } catch {}
+          }
+
+          let target = item.selectedVariant
+          if (!target && item.name && item.name.includes('(')) {
+            const match = item.name.match(/\(([^)]+)\)/)
+            if (match) target = match[1]
+          }
+
+          if (Array.isArray(variantsList) && variantsList.length > 0) {
+            if (target) {
+              const normTarget = target.toLowerCase().replace(/[^a-z0-9]/g, '')
+              const matched = variantsList.find((v: any) => {
+                if (!v) return false
+                const vName = (v.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                const vUnit = (v.unit || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                return vName === normTarget || vUnit === normTarget || normTarget.includes(vName) || vName.includes(normTarget)
+              })
+              if (matched && Number(matched.costPrice) > 0) {
+                effectiveCostPrice = Number(matched.costPrice)
+              }
+            }
+            if (!effectiveCostPrice) {
+              const priceMatched = variantsList.find((v: any) => v && Number(v.price) === Number(item.price))
+              if (priceMatched && Number(priceMatched.costPrice) > 0) {
+                effectiveCostPrice = Number(priceMatched.costPrice)
+              }
+            }
+          }
+
+          if (!effectiveCostPrice && baseProd?.costPrice && Number(baseProd.costPrice) > 0) {
+            effectiveCostPrice = Number(baseProd.costPrice)
+          }
+          if (!effectiveCostPrice && item.price > 0) {
+            effectiveCostPrice = Math.round(Number(item.price) * 0.75 * 100) / 100
+          }
         }
 
         const qty = item.quantity || 0
@@ -180,8 +244,8 @@ export async function GET(
         totalPayableAmount += itemPayable
         orderHasVendorItems = true
 
-        dailySalesMap[orderDateStr].unitsSold += qty
-        dailySalesMap[orderDateStr].payableAmount += itemPayable
+        dailySalesMap[orderDateStr].totalUnits += qty
+        dailySalesMap[orderDateStr].totalPayable += itemPayable
 
         if (itemSalesSummary[item.productId]) {
           itemSalesSummary[item.productId].unitsSold += qty
@@ -192,6 +256,28 @@ export async function GET(
             ) / 100
           }
         }
+
+        const pUnit = item.selectedVariant || baseProd?.unit || ''
+        const pName = item.name || baseProd?.name || 'Item'
+        const dayItemKey = `${item.productId}_${pUnit}`
+
+        if (!dailySalesMap[orderDateStr].items[dayItemKey]) {
+          dailySalesMap[orderDateStr].items[dayItemKey] = {
+            productId: item.productId,
+            name: pName,
+            unit: pUnit,
+            unitCostPrice: effectiveCostPrice,
+            unitsSold: qty,
+            totalPayable: itemPayable,
+          }
+        } else {
+          const cur = dailySalesMap[orderDateStr].items[dayItemKey]
+          cur.unitsSold += qty
+          cur.totalPayable += itemPayable
+          if (cur.unitsSold > 0) {
+            cur.unitCostPrice = Math.round((cur.totalPayable / cur.unitsSold) * 100) / 100
+          }
+        }
       }
 
       if (orderHasVendorItems) {
@@ -200,7 +286,16 @@ export async function GET(
     }
 
     const itemizedSales = Object.values(itemSalesSummary).sort((a, b) => b.totalPayable - a.totalPayable)
-    const dailySales = Object.values(dailySalesMap).sort((a, b) => b.date.localeCompare(a.date))
+    const dailySales = Object.values(dailySalesMap)
+      .filter((day) => day.totalUnits > 0)
+      .map((day) => ({
+        date: day.date,
+        totalUnits: day.totalUnits,
+        totalPayable: Math.round(day.totalPayable * 100) / 100,
+        ordersCount: day.ordersCount,
+        items: Object.values(day.items),
+      }))
+      .sort((a, b) => b.date.localeCompare(a.date))
 
     // 4. Calculate Payouts & Balances
     const payoutsList = vendor.payouts || []

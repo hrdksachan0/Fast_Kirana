@@ -1,67 +1,77 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/auth'
 import { OrderStatus, PaymentStatus, PaymentMethod } from '@prisma/client'
 import { revalidateStorefront } from '@/lib/revalidate'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, getEffectiveStoreId } from '@/lib/auth-guard'
 
 export async function POST(request: NextRequest) {
-  const adminResult = await requireAdmin()
+  const adminResult = await requireAdmin(request)
   if (adminResult.error) return adminResult.error
   const session = adminResult.session
 
   try {
     const body = await request.json()
-    const { items, paymentMethod, subtotal, discount, total } = body as {
+    const { items, paymentMethod, subtotal, discount, total, storeId } = body as {
       items: Array<{
         productId: string
         quantity: number
-        price: number // Billed selling price (can be MRP or custom or discounted)
+        price: number
       }>
       paymentMethod: string
       subtotal: number
       discount: number
       total: number
+      storeId?: string
     }
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: 'No items in transaction' }, { status: 400 })
     }
 
+    const effectiveStoreId = getEffectiveStoreId(session, storeId) || 'hub-209206'
+    const isBarharwa = effectiveStoreId === 'hub-816101'
+
     // 1. Get or Create Default Walk-in Customer User
-    const walkinEmail = 'walkin@fastkirana.in'
-    let walkinUser = await prisma.user.findUnique({
-      where: { email: walkinEmail }
+    const walkinEmail = `walkin_${effectiveStoreId}@fastkirana.in`
+    let walkinUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: walkinEmail },
+          { email: 'walkin@fastkirana.in' }
+        ]
+      }
     })
 
     if (!walkinUser) {
       walkinUser = await prisma.user.create({
         data: {
           email: walkinEmail,
-          name: 'Walk-in Customer',
-          phone: '0000000000',
+          name: isBarharwa ? 'Barharwa Walk-in Customer' : 'Walk-in Customer',
+          phone: isBarharwa ? '7633898577' : '0000000000',
           role: 'USER',
-          passwordHash: 'WALKIN_NO_PASS'
+          passwordHash: 'WALKIN_NO_PASS',
+          assignedStoreId: effectiveStoreId
         }
       })
     }
 
     // 2. Get or Create Default Walk-in Customer Address
+    const addressLabel = `RETAIL_COUNTER_${effectiveStoreId}`
     let walkinAddress = await prisma.address.findFirst({
-      where: { userId: walkinUser.id, label: 'RETAIL_COUNTER' }
+      where: { userId: walkinUser.id, label: addressLabel }
     })
 
     if (!walkinAddress) {
       walkinAddress = await prisma.address.create({
         data: {
           userId: walkinUser.id,
-          label: 'RETAIL_COUNTER',
-          houseNo: 'Retail Counter',
-          street: 'Ghatampur Store',
-          area: 'Vikas Medical Store, NH34',
-          city: 'Kanpur',
-          pincode: '209206',
-          phone: '0000000000',
+          label: addressLabel,
+          houseNo: isBarharwa ? 'Barharwa Counter' : 'Retail Counter',
+          street: isBarharwa ? 'Station Road' : 'Ghatampur Store',
+          area: isBarharwa ? 'Barharwa Market' : 'Vikas Medical Store, NH34',
+          city: isBarharwa ? 'Barharwa' : 'Kanpur',
+          pincode: isBarharwa ? '816101' : '209206',
+          phone: isBarharwa ? '7633898577' : '0000000000',
           isDefault: true
         }
       })
@@ -85,12 +95,13 @@ export async function POST(request: NextRequest) {
       const seqResult = await tx.$queryRaw<{ nextval: number }[]>`SELECT nextval('order_readable_id_seq')::int as nextval`
       const nextReadableId = String(seqResult[0].nextval)
 
-      // Create Order
+      // Create Order with storeId
       const newOrder = await tx.order.create({
         data: {
           readableId: nextReadableId,
           userId: walkinUser.id,
           addressId: walkinAddress.id,
+          storeId: effectiveStoreId,
           status: OrderStatus.DELIVERED,
           subtotal: finalSubtotal,
           discount: finalDiscount,
@@ -116,7 +127,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Write order item
-        const costPrice = product.costPrice || product.price * 0.75 // Fallback if no cost price loaded
+        const costPrice = product.costPrice || product.price * 0.75
         await tx.orderItem.create({
           data: {
             orderId: newOrder.id,
@@ -128,71 +139,91 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        // Decrement product stock (FIFO batch calculation if active batches exist)
-        const batches = await tx.productBatch.findMany({
-          where: {
-            productId: item.productId,
-            quantity: { gt: 0 }
-          },
-          orderBy: {
-            expiryDate: 'asc'
-          }
-        })
-
-        let remainingToDeduct = item.quantity
-        if (batches.length > 0) {
-          for (const batch of batches) {
-            if (remainingToDeduct <= 0) break
-            const deductFromThisBatch = Math.min(batch.quantity, remainingToDeduct)
-            await tx.productBatch.update({
-              where: { id: batch.id },
-              data: { quantity: { decrement: deductFromThisBatch } }
-            })
-            remainingToDeduct -= deductFromThisBatch
-          }
+        // Decrement StoreInventory for the specific hub
+        try {
+          await tx.storeInventory.upsert({
+            where: {
+              productId_storeId: {
+                productId: item.productId,
+                storeId: effectiveStoreId
+              }
+            },
+            create: {
+              productId: item.productId,
+              storeId: effectiveStoreId,
+              stock: 0
+            },
+            update: {
+              stock: { decrement: item.quantity }
+            }
+          })
+        } catch (invErr) {
+          console.warn('Could not decrement StoreInventory on POS checkout:', invErr)
         }
 
-        // Query active batches again to compute new aggregate stock level
-        const activeBatches = await tx.productBatch.findMany({
-          where: {
-            productId: item.productId,
-            quantity: { gt: 0 }
-          },
-          orderBy: { expiryDate: 'asc' }
-        })
+        // If central hub (Ghatampur), also decrement productBatches and aggregate product.stock
+        if (effectiveStoreId === 'hub-209206') {
+          const batches = await tx.productBatch.findMany({
+            where: {
+              productId: item.productId,
+              quantity: { gt: 0 }
+            },
+            orderBy: {
+              expiryDate: 'asc'
+            }
+          })
 
-        const prevStock = product.stock
-        const newTotalStock = activeBatches.length > 0 
-          ? activeBatches.reduce((sum, b) => sum + b.quantity, 0)
-          : Math.max(0, prevStock - item.quantity)
-        
-        const newEarliestExpiry = activeBatches.length > 0 ? activeBatches[0].expiryDate : null
-
-        // Update product stock aggregate
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: newTotalStock,
-            expiryDate: newEarliestExpiry
+          let remainingToDeduct = item.quantity
+          if (batches.length > 0) {
+            for (const batch of batches) {
+              if (remainingToDeduct <= 0) break
+              const deductFromThisBatch = Math.min(batch.quantity, remainingToDeduct)
+              await tx.productBatch.update({
+                where: { id: batch.id },
+                data: { quantity: { decrement: deductFromThisBatch } }
+              })
+              remainingToDeduct -= deductFromThisBatch
+            }
           }
-        })
 
-        // Create Stock Log entry
-        await tx.stockLog.create({
-          data: {
-            productId: item.productId,
-            quantity: -item.quantity, // negative representing sale
-            type: 'RETAIL_POS',
-            prevStock,
-            newStock: newTotalStock
-          }
-        })
+          const activeBatches = await tx.productBatch.findMany({
+            where: {
+              productId: item.productId,
+              quantity: { gt: 0 }
+            },
+            orderBy: { expiryDate: 'asc' }
+          })
+
+          const prevStock = product.stock
+          const newTotalStock = activeBatches.length > 0 
+            ? activeBatches.reduce((sum, b) => sum + b.quantity, 0)
+            : Math.max(0, prevStock - item.quantity)
+          
+          const newEarliestExpiry = activeBatches.length > 0 ? activeBatches[0].expiryDate : null
+
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              stock: newTotalStock,
+              expiryDate: newEarliestExpiry
+            }
+          })
+
+          await tx.stockLog.create({
+            data: {
+              productId: item.productId,
+              quantity: -item.quantity,
+              type: 'RETAIL_POS',
+              prevStock,
+              newStock: newTotalStock
+            }
+          })
+        }
       }
 
       return newOrder
     }, { maxWait: 20000, timeout: 25000 })
 
-    // Revalidate storefront cache
     try {
       revalidateStorefront()
     } catch (e) {

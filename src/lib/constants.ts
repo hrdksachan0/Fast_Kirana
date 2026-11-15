@@ -396,15 +396,29 @@ export function getOutletName(product: ProductData): string {
   const tags = Array.isArray(product.tags) ? product.tags.map((t: string) => t.toLowerCase()) : []
   const pName = (product.name || '').toLowerCase()
 
+  // 0. Explicit Rajdhani Pizza & Cake checks
+  if (
+    rSlug.includes('rajdhani') ||
+    lowerRName.includes('rajdhani') ||
+    tags.some((t: string) => t.includes('rajdhani')) ||
+    pName.includes('rajdhani')
+  ) {
+    return rName || 'Rajdhani Pizza & Cake'
+  }
+
   // 1. Explicit Hot Pizza Lovers checks (Highest Priority for REST-104)
   if (
     rId === OUTLET_PIZZA_LOVERS_ID ||
+    rId === 'cmtn66nhy000004k0fu84b7ke' ||
     rId === 'hot-pizza-lovers' ||
     rId === 'pizza-lovers' ||
     rId === 'pizza-lover' ||
-    rSlug.includes('pizza') ||
-    lowerRName.includes('pizza') ||
-    tags.some((t: string) => t.includes('pizza') || t === 'hot-pizza-lovers' || t === 'pizza-lovers') ||
+    rSlug.includes('hot-pizza') ||
+    rSlug.includes('pizza-lover') ||
+    lowerRName.includes('hot pizza') ||
+    lowerRName.includes('pizza lovers') ||
+    lowerRName.includes('pizza lover') ||
+    tags.some((t: string) => t === 'hot-pizza-lovers' || t === 'pizza-lovers' || t === 'hot pizza lovers') ||
     pName.includes('pizza lover')
   ) {
     return 'Hot Pizza Lovers'

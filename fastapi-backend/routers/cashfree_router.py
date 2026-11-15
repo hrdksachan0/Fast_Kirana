@@ -1157,7 +1157,7 @@ async def verify_cashfree_payment(
             pass
 
         if order.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
-            order.status = OrderStatus.ADMIN_PENDING
+            order.status = OrderStatus.PENDING
 
         # Handle companion combined orders if present
         comb_orders = []
@@ -1171,7 +1171,8 @@ async def verify_cashfree_payment(
                 if not co.notes or "Cashfree PG Paid" not in co.notes:
                     co.notes = f"{co.notes} | {cf_note}" if co.notes else cf_note
                 if co.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
-                    co.status = OrderStatus.ADMIN_PENDING
+                    co.status = OrderStatus.PENDING
+                    co.confirmedAt = datetime.utcnow()
 
         # Check if wallet deduction was part of this order and debit if not yet processed
         if "[WALLET_USED:" not in (order.notes or ""):
@@ -2539,7 +2540,7 @@ async def cashfree_webhook(
                 order.notes = f"{order.notes} | {cf_note}" if order.notes else cf_note
 
             if order.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
-                order.status = OrderStatus.ADMIN_PENDING
+                order.status = OrderStatus.PENDING
 
             comb_orders = []
             if order.combinedId:
@@ -2555,7 +2556,7 @@ async def cashfree_webhook(
                     if not co.notes or "Cashfree PG Paid" not in co.notes:
                         co.notes = f"{co.notes} | {cf_note}" if co.notes else cf_note
                     if co.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
-                        co.status = OrderStatus.ADMIN_PENDING
+                        co.status = OrderStatus.PENDING
 
             # Check if wallet deduction was part of this order and debit if not yet processed
             if "[WALLET_USED:" not in (order.notes or ""):

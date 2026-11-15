@@ -67,10 +67,14 @@ export function MobileOrderCard({
     CANCELLED: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
   }
 
+  const isRestaurant = Boolean(o.restaurantId || (o.shopName && (o.shopName.toLowerCase().includes('restaurant') || o.shopName.toLowerCase().includes('wedson') || o.shopName.toLowerCase().includes('as ') || o.shopName.toLowerCase().includes('cafe'))))
+
   // Quick next-step action button
   const nextAction: Record<string, { label: string; nextStatus: string; bg: string }> = {
-    ADMIN_PENDING: { label: '🛡️ Approve', nextStatus: 'PENDING', bg: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white' },
-    PENDING: { label: '✓ Confirm', nextStatus: 'CONFIRMED', bg: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
+    ADMIN_PENDING: { label: '🛡️ Verify & Place', nextStatus: 'PENDING', bg: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white' },
+    PENDING: isRestaurant
+      ? { label: '👨‍🍳 Awaiting Restaurant Accept', nextStatus: '', bg: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 cursor-default' }
+      : { label: '✓ Confirm', nextStatus: 'CONFIRMED', bg: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
     CONFIRMED: { label: '✓ Pack', nextStatus: 'PACKED', bg: 'bg-amber-500 hover:bg-amber-600 text-white' },
     PACKED: { label: '✓ Ship', nextStatus: 'SHIPPED', bg: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
     SHIPPED: { label: '✓ Deliver', nextStatus: 'DELIVERED', bg: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
@@ -123,7 +127,13 @@ export function MobileOrderCard({
         {/* Total Price + Item count */}
         <div className="text-right shrink-0">
           <div className="font-black text-base text-text-primary tabular-nums">
-            {formatPrice(o.total)}
+            {o.total === 0 && (o.paymentMethod === 'WALLET' || (o.walletAmountUsed || 0) > 0) ? (
+              <span className="text-emerald-600 dark:text-emerald-400">
+                ₹0 <span className="text-[9.5px] font-bold text-emerald-600/80">(Wallet)</span>
+              </span>
+            ) : (
+              formatPrice(o.total)
+            )}
           </div>
           {o.refundAmount > 0 && (
             <div className="text-[9px] font-bold text-rose-600">
@@ -155,7 +165,12 @@ export function MobileOrderCard({
           title="Tap to toggle payment status"
         >
           {o.paymentStatus === 'PAID' ? (
-            o.paymentMethod === 'COD' ? (
+            o.paymentMethod === 'WALLET' ? (
+              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full shadow-2xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                💳 WALLET PAID ✅
+              </span>
+            ) : o.paymentMethod === 'COD' ? (
               <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full shadow-2xs">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                 💵 CASH PAID ✅
@@ -258,8 +273,12 @@ export function MobileOrderCard({
         {action && (
           <button
             type="button"
-            onClick={() => onUpdateOrderStatus(o.id, action.nextStatus)}
-            disabled={isUpdating}
+            onClick={() => {
+              if (action.nextStatus) {
+                onUpdateOrderStatus(o.id, action.nextStatus)
+              }
+            }}
+            disabled={isUpdating || !action.nextStatus}
             className={`flex-1 min-w-[90px] py-1.5 px-2 text-[10px] font-black rounded-xl transition-all active:scale-95 shadow-xs cursor-pointer text-center ${action.bg}`}
           >
             {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : action.label}

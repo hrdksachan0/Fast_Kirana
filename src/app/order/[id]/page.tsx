@@ -335,52 +335,98 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
         )}
       </div>
 
-      {/* Receipt Summary */}
-      <div className="bg-card border border-border/80 p-5 rounded-3xl shadow-sm space-y-4">
-        <h2 className="text-xs font-black uppercase tracking-wider text-text-primary border-b border-border/40 pb-3">
-          Receipt Summary
-        </h2>
-        <div className="text-xs font-semibold text-text-secondary space-y-2.5">
-          {order.items.map((item: any) => (
-            <div key={item.id} className="flex justify-between items-center text-text-primary">
-              <span className="font-semibold">
-                {item.name} <span className="text-text-secondary font-mono">× {item.quantity}</span>
+      {/* Self-Balancing Receipt Summary */}
+      {(() => {
+        let walletAmountUsed = 0
+        if (order.notes) {
+          const matches = [...order.notes.matchAll(/\[WALLET_USED:([\d.]+)\]/g)]
+          if (matches.length > 0) {
+            walletAmountUsed = matches.reduce((sum: number, m: any) => sum + parseFloat(m[1] || '0'), 0)
+          }
+        }
+        const grossBill = Number(order.subtotal || 0) + Number(order.deliveryFee || 0) + Number(order.miscFee || 0) + Number(order.taxes || 0) - Number(order.discount || 0)
+        const isFullWallet = order.paymentMethod === 'WALLET' || (Number(order.total || 0) === 0 && (walletAmountUsed > 0 || order.paymentMethod === 'WALLET'))
+        if (isFullWallet) {
+          walletAmountUsed = grossBill
+        } else {
+          walletAmountUsed = Math.min(walletAmountUsed, grossBill)
+        }
+        const finalCustomerPaid = isFullWallet ? 0 : Math.max(0, grossBill - walletAmountUsed)
+
+        return (
+          <div className="bg-card border border-border/80 p-5 rounded-3xl shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <h2 className="text-xs font-black uppercase tracking-wider text-text-primary">
+                Bill Details
+              </h2>
+              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-muted text-text-secondary tracking-wider">
+                {order.items.length} {order.items.length === 1 ? 'ITEM' : 'ITEMS'}
               </span>
-              <span className="font-bold">{formatPrice(item.price * item.quantity)}</span>
             </div>
-          ))}
-          <div className="flex justify-between pt-2 border-t border-border/30">
-            <span className="text-text-secondary">Subtotal</span>
-            <span className="font-bold">{formatPrice(order.subtotal)}</span>
+            <div className="text-xs font-semibold text-text-secondary space-y-2.5">
+              {order.items.map((item: any) => (
+                <div key={item.id} className="flex justify-between items-center text-text-primary">
+                  <span className="font-semibold">
+                    {item.name} <span className="text-text-secondary font-mono">× {item.quantity}</span>
+                  </span>
+                  <span className="font-bold">{formatPrice(item.price * item.quantity)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between pt-2 border-t border-border/30">
+                <span className="text-text-secondary">Item Total</span>
+                <span className="font-bold text-text-primary">{formatPrice(order.subtotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-secondary">Delivery Fee</span>
+                <span className={`font-bold ${order.deliveryFee === 0 ? 'text-emerald-600 dark:text-emerald-400 font-black' : 'text-text-primary'}`}>
+                  {order.deliveryMethod === 'PICKUP' ? 'FREE (Store Pickup)' : (order.deliveryFee === 0 ? 'FREE' : formatPrice(order.deliveryFee))}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-secondary">{miscFeeLabel || 'Packaging Charge'}</span>
+                <span className={`font-bold ${order.miscFee === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-text-primary'}`}>
+                  {order.miscFee > 0 ? formatPrice(order.miscFee) : '₹0'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-secondary">Handling & Taxes</span>
+                <span className={`font-bold ${order.taxes === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-text-primary'}`}>
+                  {order.taxes > 0 ? formatPrice(order.taxes) : '₹0'}
+                </span>
+              </div>
+              {order.discount > 0 && (
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span>Discount Savings</span>
+                  <span className="font-black">-{formatPrice(order.discount)}</span>
+                </div>
+              )}
+              {walletAmountUsed > 0 && (
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <span>💳</span> FastMinute Wallet
+                  </span>
+                  <span className="font-black">-{formatPrice(walletAmountUsed)}</span>
+                </div>
+              )}
+              {order.refundAmount > 0 && (
+                <div className="flex justify-between text-rose-600 font-bold">
+                  <span>Refund Credited</span>
+                  <span className="font-black">-{formatPrice(order.refundAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-base font-black text-text-primary border-t border-border/40 pt-3.5 mt-3">
+                <div>
+                  <span>Total Paid</span>
+                  <p className="text-[10px] font-bold text-text-secondary">
+                    {order.paymentMethod === 'COD' ? (order.deliveryMethod === 'PICKUP' ? 'Cash On Pickup (COP)' : 'Cash On Delivery (COD)') : (order.paymentMethod === 'WALLET' ? 'FastMinute Wallet' : order.paymentMethod)}
+                  </p>
+                </div>
+                <span className="text-primary text-lg font-black">{formatPrice(finalCustomerPaid)}</span>
+              </div>
+            </div>
           </div>
-          {order.discount > 0 && (
-            <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
-              <span>Savings</span>
-              <span>-{formatPrice(order.discount)}</span>
-            </div>
-          )}
-          <div className="flex justify-between">
-            <span className="text-text-secondary">Delivery Fee</span>
-            <span className="font-bold">{order.deliveryFee === 0 ? 'FREE' : formatPrice(order.deliveryFee)}</span>
-          </div>
-          {order.taxes > 0 && (
-            <div className="flex justify-between">
-              <span className="text-text-secondary">GST / Taxes</span>
-              <span className="font-bold">{formatPrice(order.taxes)}</span>
-            </div>
-          )}
-          {order.miscFee > 0 && (
-            <div className="flex justify-between">
-              <span className="text-text-secondary">{miscFeeLabel}</span>
-              <span className="font-bold">{formatPrice(order.miscFee)}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center text-base font-black text-text-primary border-t border-border/40 pt-3.5 mt-3">
-            <span>Total Paid ({order.paymentMethod === 'COD' ? (order.deliveryMethod === 'PICKUP' ? 'COP' : 'COD') : order.paymentMethod})</span>
-            <span className="text-primary text-lg">{formatPrice(order.total)}</span>
-          </div>
-        </div>
-      </div>
+        )
+      })()}
     </div>
   )
 }
