@@ -78,6 +78,7 @@ export const patchAddressSchema = z.object({
   houseNo: z.string().optional(),
   label: z.string().optional(),
   street: z.string().optional(),
+  isDefault: z.boolean().optional(),
 })
 
 export const deleteAddressSchema = z.object({

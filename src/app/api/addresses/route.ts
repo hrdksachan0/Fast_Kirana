@@ -298,7 +298,7 @@ export async function PATCH(request: Request) {
   const validation = await validateBodyLegacy(request, patchAddressSchema)
   if (!validation.success) return validation.error
 
-  const { id, lat, lng, houseNo, label, street } = validation.data
+  const { id, lat, lng, houseNo, label, street, isDefault } = validation.data
 
   try {
     const address = await prisma.address.findUnique({ where: { id } })
@@ -306,9 +306,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Address not found or unauthorized' }, { status: 404 })
     }
 
-    const updateData: any = {
-      lat: resolveFallbackCoordinates(lat, lng, address.pincode, address.city, address.street, address.area).lat,
-      lng: resolveFallbackCoordinates(lat, lng, address.pincode, address.city, address.street, address.area).lng,
+    const updateData: any = {}
+    if (lat !== undefined && lng !== undefined && lat !== null && lng !== null) {
+      const coords = resolveFallbackCoordinates(lat, lng, address.pincode, address.city, address.street, address.area)
+      updateData.lat = coords.lat
+      updateData.lng = coords.lng
     }
     if (houseNo !== undefined && houseNo !== null && houseNo.trim() !== '') {
       updateData.houseNo = houseNo.trim()
@@ -318,6 +320,15 @@ export async function PATCH(request: Request) {
     }
     if (street !== undefined && street !== null && street.trim() !== '') {
       updateData.street = street.trim()
+    }
+    if (isDefault !== undefined && isDefault !== null) {
+      if (isDefault) {
+        await prisma.address.updateMany({
+          where: { userId },
+          data: { isDefault: false },
+        })
+      }
+      updateData.isDefault = Boolean(isDefault)
     }
 
     const updatedAddress = await prisma.address.update({

@@ -217,12 +217,13 @@ async def update_address_coordinates(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Partially update coordinates (lat/lng) of an address.
+    Partially update address fields (coordinates, default status, label, etc.).
     """
     user_id = get_user_id(current_user)
     address_id = payload.get("id")
     lat = payload.get("lat")
     lng = payload.get("lng")
+    is_default = payload.get("isDefault")
 
     if not address_id:
         raise HTTPException(status_code=400, detail="Address ID is required")
@@ -235,9 +236,30 @@ async def update_address_coordinates(
         if not address or address.userId != user_id:
             raise HTTPException(status_code=404, detail="Address not found or unauthorized")
 
-        final_lat, final_lng = resolve_fallback_coordinates(lat, lng, pincode, city, street, area)
-        address.lat = final_lat
-        address.lng = final_lng
+        if lat is not None and lng is not None:
+            final_lat, final_lng = resolve_fallback_coordinates(
+                lat, lng, address.pincode, address.city, address.street, address.area
+            )
+            address.lat = final_lat
+            address.lng = final_lng
+
+        if payload.get("houseNo"):
+            address.houseNo = str(payload.get("houseNo")).strip()
+        if payload.get("label"):
+            address.label = str(payload.get("label")).strip()
+        if payload.get("street"):
+            address.street = str(payload.get("street")).strip()
+
+        if is_default is not None:
+            if is_default is True:
+                # Unset previous default
+                from sqlalchemy import update
+                await db.execute(
+                    update(Address)
+                    .where(Address.userId == user_id)
+                    .values(isDefault=False)
+                )
+            address.isDefault = bool(is_default)
 
         await db.commit()
         await db.refresh(address)

@@ -1194,8 +1194,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     }
 
     final addresses = ref.read(addressesProvider).valueOrNull ?? [];
-    final selectedAddress = draft?.selectedAddress ??
-        ref.read(selectedAddressProvider) ??
+    final activeSelectedAddr = ref.read(selectedAddressProvider);
+    final selectedAddress = activeSelectedAddr ??
+        draft?.selectedAddress ??
         (state.selectedAddressIndex < addresses.length ? addresses[state.selectedAddressIndex] : null);
 
     if (effectiveDeliveryMethod != 'PICKUP' && selectedAddress == null) {

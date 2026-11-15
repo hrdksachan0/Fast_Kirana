@@ -193,6 +193,36 @@ class AddressRepository {
     } catch (e, st) { LoggerService.error('AddressRepository: updateCoordinates failed', e, st); }
   }
 
+  Future<void> setAddressAsDefault(String id) async {
+    final current = await getAddresses();
+    final updated = current.map((a) {
+      return Address(
+        id: a.id,
+        userId: a.userId,
+        label: a.label,
+        houseNo: a.houseNo,
+        street: a.street,
+        area: a.area,
+        city: a.city,
+        pincode: a.pincode,
+        phone: a.phone,
+        latitude: a.latitude,
+        longitude: a.longitude,
+        isDefault: a.id == id,
+      );
+    }).toList();
+    await _saveToCache(updated);
+
+    try {
+      await dio.patch('/api/addresses', data: {
+        'id': id,
+        'isDefault': true,
+      });
+    } catch (e, st) {
+      LoggerService.error('AddressRepository: setAddressAsDefault failed', e, st);
+    }
+  }
+
   Future<void> _saveToCache(List<Address> addresses) async {
     final prefs = await SharedPreferences.getInstance();
     final cacheKey = await _getCacheKey();

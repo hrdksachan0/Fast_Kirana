@@ -559,7 +559,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         tier: tier,
                         userDistanceMeters: _userDistanceFromAddressMeters,
                         onAddressChanged: (addr) {
-                          ref.read(selectedAddressProvider.notifier).state = addr;
+                          ref.read(selectedAddressProvider.notifier).selectAddress(addr);
                           _calculateProximity(addr);
                         },
                       ),
@@ -590,7 +590,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               context,
                               activeAddress: selectedAddress,
                               onAddressSelected: (addr) {
-                                ref.read(selectedAddressProvider.notifier).state = addr;
+                                ref.read(selectedAddressProvider.notifier).selectAddress(addr);
                                 _calculateProximity(addr);
                               },
                             );
@@ -612,7 +612,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             context,
                             activeAddress: selectedAddress,
                             onAddressSelected: (addr) {
-                              ref.read(selectedAddressProvider.notifier).state = addr;
+                              ref.read(selectedAddressProvider.notifier).selectAddress(addr);
                               _calculateProximity(addr);
                             },
                           );

@@ -926,7 +926,7 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
 
                         HapticFeedback.selectionClick();
 
-                        ref.read(selectedAddressProvider.notifier).state = addr;
+                        ref.read(selectedAddressProvider.notifier).selectAddress(addr);
 
                         widget.onAddressSelected(addr);
 

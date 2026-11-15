@@ -87,7 +87,7 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
 
                       return Bounceable(
                         onTap: () {
-                          ref.read(selectedAddressProvider.notifier).state = addr;
+                          ref.read(selectedAddressProvider.notifier).selectAddress(addr);
                           HapticFeedback.selectionClick();
                         },
                         child: Container(
