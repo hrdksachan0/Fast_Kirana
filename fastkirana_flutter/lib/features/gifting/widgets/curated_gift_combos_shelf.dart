@@ -64,12 +64,33 @@ class CuratedGiftCombosShelf extends ConsumerWidget {
     onHamperAdded();
   }
 
+  bool _isHamperInStock(GiftingHamperModel hamper) {
+    if (hamper.bundledProductIds.isEmpty) {
+      final matchedHamper = catalog.firstWhereOrNull(
+        (p) => p.id == hamper.id || p.name.toLowerCase() == hamper.name.toLowerCase(),
+      );
+      return matchedHamper != null && matchedHamper.isAvailable && matchedHamper.isInStock;
+    }
+    return hamper.bundledProductIds.every((prodId) {
+      final found = catalog.firstWhereOrNull(
+        (p) => p.id == prodId || p.slug == prodId,
+      );
+      return found != null && found.isAvailable && found.isInStock;
+    });
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeHampers = hampers.where((h) => h.isActive).toList();
     if (activeHampers.isEmpty) {
       return const SizedBox.shrink(); // Zero fake hampers!
     }
+
+    activeHampers.sort((a, b) {
+      final aStock = _isHamperInStock(a) ? 1 : 0;
+      final bStock = _isHamperInStock(b) ? 1 : 0;
+      return bStock.compareTo(aStock);
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,42 +281,59 @@ class CuratedGiftCombosShelf extends ConsumerWidget {
                             ],
                           ],
                         ),
-                        Bounceable(
-                          onTap: () => _addHamperToCart(context, ref, hamper),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFBE123C), Color(0xFFE11D48)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFBE123C).withValues(alpha: 0.35),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('🎁', style: TextStyle(fontSize: 11)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Add Hamper',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
+                        _isHamperInStock(hamper)
+                            ? Bounceable(
+                                onTap: () => _addHamperToCart(context, ref, hamper),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFFBE123C), Color(0xFFE11D48)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFFBE123C).withValues(alpha: 0.35),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text('🎁', style: TextStyle(fontSize: 11)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Add Hamper',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
+                              )
+                            : Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Text(
+                                  'SOLD OUT',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                ),
+                              ),
                       ],
                     ),
                   ],

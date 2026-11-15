@@ -13,6 +13,7 @@ import '../../data/models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/address_provider.dart';
+import '../../providers/store_settings_provider.dart';
 import '../checkout/controllers/checkout_controller.dart';
 import '../../widgets/floating_cart_bar.dart';
 import 'widgets/gifting_sparkle_canvas.dart';
@@ -273,6 +274,8 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
     // Real-time backend products connection
     final allProductsAsync = ref.watch(productsProvider(null));
     final products = allProductsAsync.valueOrNull ?? [];
+    final storeSettings = ref.watch(storeSettingsProvider).valueOrNull ?? const StoreSettings();
+    final isStoreOpen = storeSettings.isStoreOpen;
     final giftProducts = _filterGiftingProducts(products, _selectedOccasion, occasions);
 
     if (!config.enabled) {
@@ -511,6 +514,7 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
                     },
                     products: giftProducts,
                     cartItems: cartItems,
+                    isStoreOpen: isStoreOpen,
                     onAddToCart: (p) {
                       HapticFeedback.lightImpact();
                       ref.read(cartProvider.notifier).addProduct(p);
@@ -914,12 +918,20 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
     final occ = occasions.firstWhereOrNull((o) => o.label == occasion || o.title == occasion);
     final occasionLabel = (occ?.label ?? occasion).toLowerCase();
 
+    int compareStockAndBestseller(Product a, Product b) {
+      final aInStock = (a.isAvailable && a.isInStock) ? 1 : 0;
+      final bInStock = (b.isAvailable && b.isInStock) ? 1 : 0;
+      if (aInStock != bInStock) return bInStock.compareTo(aInStock);
+      return (b.isBestSeller ? 1 : 0).compareTo(a.isBestSeller ? 1 : 0);
+    }
+
     // 1. Explicit admin-curated product links (Highest priority)
     if (occ != null && occ.productIds.isNotEmpty) {
       final explicit = cleanProducts
           .where((p) => occ.productIds.contains(p.id) || occ.productIds.contains(p.slug))
           .toList();
       if (explicit.isNotEmpty) {
+        explicit.sort(compareStockAndBestseller);
         return explicit;
       }
     }
@@ -1051,8 +1063,10 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
           name.contains('cake') ||
           name.contains('silk') ||
           name.contains('bouquet');
-    }).take(40).toList();
+    }).toList();
 
-    return matched;
+    matched.sort(compareStockAndBestseller);
+
+    return matched.take(60).toList();
   }
 }

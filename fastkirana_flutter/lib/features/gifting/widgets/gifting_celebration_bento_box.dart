@@ -18,6 +18,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
   final ValueChanged<String> onOccasionChanged;
   final List<Product> products;
   final List<CartItem> cartItems;
+  final bool isStoreOpen;
   final Function(Product) onAddToCart;
   final Function(Product) onIncrement;
   final Function(Product) onDecrement;
@@ -29,6 +30,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
     required this.onOccasionChanged,
     required this.products,
     required this.cartItems,
+    this.isStoreOpen = true,
     required this.onAddToCart,
     required this.onIncrement,
     required this.onDecrement,
@@ -290,6 +292,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                       return _LuxuryGiftingCard(
                         product: product,
                         inCartCount: inCartCount,
+                        isStoreOpen: isStoreOpen,
                         onAdd: () => onAddToCart(product),
                         onIncrement: () => onIncrement(product),
                         onDecrement: () => onDecrement(product),
@@ -615,6 +618,7 @@ class _GiftingConnectedTabPainter extends CustomPainter {
 class _LuxuryGiftingCard extends StatelessWidget {
   final Product product;
   final int inCartCount;
+  final bool isStoreOpen;
   final VoidCallback onAdd;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
@@ -622,6 +626,7 @@ class _LuxuryGiftingCard extends StatelessWidget {
   const _LuxuryGiftingCard({
     required this.product,
     required this.inCartCount,
+    this.isStoreOpen = true,
     required this.onAdd,
     required this.onIncrement,
     required this.onDecrement,
@@ -629,6 +634,8 @@ class _LuxuryGiftingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isOutOfStock = !product.isInStock || !product.isAvailable || (product.parsedVariants.isEmpty && product.stock <= 0);
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -702,6 +709,34 @@ class _LuxuryGiftingCard extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                  // Out of stock overlay badge
+                  if (isOutOfStock)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'OUT OF STOCK',
+                            style: GoogleFonts.inter(
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -775,37 +810,85 @@ class _LuxuryGiftingCard extends StatelessWidget {
                   ],
                 ),
 
-                // Compact ADD Button / Stepper (Width: 64px, Height: 27px)
-                inCartCount == 0
-                    ? GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          onAdd();
-                        },
-                        child: Container(
-                          width: 64,
-                          height: 27,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF1F2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: const Color(0xFFE11D48),
-                              width: 1.2,
-                            ),
+                // Compact ADD Button / Stepper / Out of Stock / Closed
+                isOutOfStock
+                    ? Container(
+                        height: 27,
+                        padding: const EdgeInsets.symmetric(horizontal: 7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFFE2E8F0),
+                            width: 1.0,
                           ),
-                          child: Center(
-                            child: Text(
-                              'ADD',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFFE11D48),
-                                letterSpacing: 0.2,
-                              ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'SOLD OUT',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9.0,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF94A3B8),
+                              letterSpacing: 0.2,
                             ),
                           ),
                         ),
                       )
+                    : !isStoreOpen
+                        ? Container(
+                            height: 27,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'CLOSED',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF94A3B8),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ),
+                          )
+                        : inCartCount == 0
+                            ? GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  onAdd();
+                                },
+                                child: Container(
+                                  width: 64,
+                                  height: 27,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF1F2),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFFE11D48),
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'ADD',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFFE11D48),
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
                     : Container(
                         height: 27,
                         decoration: BoxDecoration(
