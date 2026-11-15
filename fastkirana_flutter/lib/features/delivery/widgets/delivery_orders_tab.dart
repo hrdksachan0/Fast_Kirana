@@ -278,17 +278,17 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
   Widget _buildFilterPill(int index, String label, int count, Color activeColor) {
     final isSelected = _filterIndex == index;
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       onTap: () {
         HapticFeedback.selectionClick();
         setState(() => _filterIndex = index);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
         decoration: BoxDecoration(
           color: isSelected ? activeColor : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected ? activeColor : const Color(0xFFE2E8F0),
             width: 1.2,
@@ -390,55 +390,62 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Column-wise Outlet Dropdown Anchor
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => _showOutletSelectorSheet(context, outlets),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7.5),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isAllOutlet ? AppDesignSystem.slate200 : const Color(0xFF0D9488),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1.5),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Text(selectedOutletIcon, style: const TextStyle(fontSize: 15)),
-                  const SizedBox(width: 8),
-                  Expanded(
+          // Unified 1-Row Filter Bar for Rider Console:
+          // Left: Column-wise Outlet Dropdown Anchor
+          // Right: 3-Pill Action Filter (⚡ All | 📦 Pickup | 🔥 Ready)
+          SizedBox(
+            height: 38,
+            child: Row(
+              children: [
+                // 1. Column-wise Outlet Dropdown Anchor
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _showOutletSelectorSheet(context, outlets),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 0),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isAllOutlet ? Colors.white : const Color(0xFFF0FDFA),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isAllOutlet ? AppDesignSystem.slate200 : const Color(0xFF0D9488),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1.5),
+                        ),
+                      ],
+                    ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Flexible(
+                        Text(selectedOutletIcon, style: const TextStyle(fontSize: 14)),
+                        const SizedBox(width: 4),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 82),
                           child: Text(
                             selectedOutletName,
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 12),
+                              fontSize: Responsive.scaledFontSize(context, 11),
                               fontWeight: FontWeight.w800,
-                              color: AppDesignSystem.slate900,
+                              color: isAllOutlet ? AppDesignSystem.slate900 : const Color(0xFF0F766E),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 3),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                          padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
                           decoration: BoxDecoration(
                             color: isAllOutlet ? AppDesignSystem.slate100 : const Color(0xFFCCFBF1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            '$totalCount Orders',
+                            '$totalCount',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 9.5),
                               fontWeight: FontWeight.w800,
@@ -446,54 +453,50 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                             ),
                           ),
                         ),
+                        const SizedBox(width: 2),
+                        const Icon(Icons.arrow_drop_down_rounded, size: 16, color: AppDesignSystem.slate600),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: AppDesignSystem.slate100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppDesignSystem.slate700),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
+                ),
 
-          // Row 2: 3-Pill Action Filter for Rider: All | Pickup | Ready
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppDesignSystem.slate200),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1.5),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
+                const SizedBox(width: 6),
+
+                // 2. 3-Pill Action Filter for Rider: All | Pickup | Ready
                 Expanded(
-                  flex: 8,
-                  child: _buildFilterPill(0, '⚡ All', totalCount, AppDesignSystem.slate900),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  flex: 11,
-                  child: _buildFilterPill(1, '📦 Pickup', pickupCount, AppDesignSystem.violet600),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  flex: 11,
-                  child: _buildFilterPill(2, '🔥 Ready', itemReadyCount, const Color(0xFFD97706)),
+                  child: Container(
+                    padding: const EdgeInsets.all(2.5),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppDesignSystem.slate200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1.5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 8,
+                          child: _buildFilterPill(0, '⚡ All', totalCount, AppDesignSystem.slate900),
+                        ),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          flex: 11,
+                          child: _buildFilterPill(1, '📦 Pickup', pickupCount, AppDesignSystem.violet600),
+                        ),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          flex: 11,
+                          child: _buildFilterPill(2, '🔥 Ready', itemReadyCount, const Color(0xFFD97706)),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),

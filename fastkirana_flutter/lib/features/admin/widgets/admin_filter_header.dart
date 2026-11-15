@@ -556,14 +556,14 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
 
           const SizedBox(height: 5),
 
-          // Row 2: Outlet Filter with Column-wise Dropdown Pill Anchor (Horizontal scroll)
-          if (widget.outlets.isNotEmpty) ...[
-            SizedBox(
-              height: 32,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                children: [
+          // Row 2: Unified 1-Row Filter Bar (Outlets Dropdown + Status Dropdown + Chips)
+          SizedBox(
+            height: 32,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              children: [
+                if (widget.outlets.isNotEmpty) ...[
                   _buildOutletDropdownPill(context),
                   Container(
                     height: 18,
@@ -571,83 +571,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
                     margin: const EdgeInsets.only(right: 6, top: 7, bottom: 7),
                     color: AppDesignSystem.slate300,
                   ),
-                  ...widget.outlets.map((outlet) {
-                    final outletId = outlet['id']?.toString() ?? 'ALL';
-                    final isSelected = widget.selectedOutlet == outletId;
-                    final outletName = outlet['name']?.toString() ?? '';
-                    final count = outlet['count'] as int? ?? 0;
-                    final iconStr = outlet['icon']?.toString() ?? '🍽️';
-
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          if (selected) {
-                            HapticFeedback.selectionClick();
-                            widget.onOutletSelected(outletId);
-                          }
-                        },
-                        avatar: Text(iconStr, style: const TextStyle(fontSize: 12)),
-                        label: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              outletName,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
-                                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                                color: isSelected ? Colors.white : AppDesignSystem.slate800,
-                              ),
-                            ),
-                            if (count > 0) ...[
-                              const SizedBox(width: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? Colors.white.withValues(alpha: 0.25) : AppDesignSystem.slate200,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '$count',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: isSelected ? Colors.white : AppDesignSystem.slate800,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        selectedColor: AppDesignSystem.slate900,
-                        backgroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                        visualDensity: VisualDensity.compact,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(
-                            color: isSelected ? AppDesignSystem.slate900 : AppDesignSystem.slate200,
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
                 ],
-              ),
-            ),
-            const SizedBox(height: 5),
-          ],
-
-          // Row 3: Status Sub-filter with Column-wise Dropdown Pill Anchor (Horizontal scroll)
-          SizedBox(
-            height: 32,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              children: [
                 _buildStatusDropdownPill(context),
                 Container(
                   height: 18,
