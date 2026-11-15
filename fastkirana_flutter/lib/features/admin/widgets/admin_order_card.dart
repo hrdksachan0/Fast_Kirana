@@ -136,6 +136,10 @@ class AdminOrderCard extends ConsumerWidget {
       }
     }
     final live = isLive ?? isLiveOrder(order);
+    // Calculate elapsed waiting time for Live orders (SLA Alert System)
+    final elapsedMinutes = DateTime.now().difference(order.createdAt).inMinutes;
+    final isSlaUrgent = live && elapsedMinutes >= 15 && (order.status == OrderStatus.pending || order.status == OrderStatus.confirmed || order.status == OrderStatus.adminPending);
+    final isSlaWarning = live && elapsedMinutes >= 10 && !isSlaUrgent && (order.status == OrderStatus.pending || order.status == OrderStatus.confirmed || order.status == OrderStatus.adminPending);
     // KOT state passed via constructor
     final isPickup = (order.deliveryMethod ?? '').toUpperCase().contains('PICKUP') ||
         (order.deliveryMethod ?? '').toUpperCase().contains('TAKEAWAY');
@@ -145,14 +149,30 @@ class AdminOrderCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: live ? statusColor.withValues(alpha: 0.4) : AppDesignSystem.slate200,
-          width: live ? 1.4 : 1.0,
+        border: Border(
+          left: BorderSide(
+            color: isSlaUrgent ? const Color(0xFFEF4444) : (live ? statusColor : AppDesignSystem.slate300),
+            width: live ? 5.5 : 3.0,
+          ),
+          top: BorderSide(
+            color: isSlaUrgent ? const Color(0xFFFCA5A5) : (live ? statusColor.withValues(alpha: 0.3) : AppDesignSystem.slate200),
+            width: 1.0,
+          ),
+          right: BorderSide(
+            color: isSlaUrgent ? const Color(0xFFFCA5A5) : (live ? statusColor.withValues(alpha: 0.3) : AppDesignSystem.slate200),
+            width: 1.0,
+          ),
+          bottom: BorderSide(
+            color: isSlaUrgent ? const Color(0xFFFCA5A5) : (live ? statusColor.withValues(alpha: 0.3) : AppDesignSystem.slate200),
+            width: 1.0,
+          ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
+            color: isSlaUrgent
+                ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                : Colors.black.withValues(alpha: 0.03),
+            blurRadius: isSlaUrgent ? 12 : 10,
             offset: const Offset(0, 3),
           ),
         ],
@@ -434,6 +454,51 @@ class AdminOrderCard extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      if (live && (order.status == OrderStatus.pending || order.status == OrderStatus.confirmed || order.status == OrderStatus.adminPending)) ...[
+                        const SizedBox(height: 3),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isSlaUrgent
+                                ? const Color(0xFFFEE2E2)
+                                : (isSlaWarning ? const Color(0xFFFEF3C7) : AppDesignSystem.slate100),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isSlaUrgent
+                                  ? const Color(0xFFEF4444)
+                                  : (isSlaWarning ? const Color(0xFFF59E0B) : AppDesignSystem.slate200),
+                              width: 0.9,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isSlaUrgent
+                                    ? Icons.warning_amber_rounded
+                                    : (isSlaWarning ? Icons.alarm_rounded : Icons.schedule_rounded),
+                                size: 10.5,
+                                color: isSlaUrgent
+                                    ? const Color(0xFFDC2626)
+                                    : (isSlaWarning ? const Color(0xFFD97706) : AppDesignSystem.slate600),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                isSlaUrgent
+                                    ? '⚠️ ${elapsedMinutes}m SLA Alert'
+                                    : (isSlaWarning ? '⏱️ ${elapsedMinutes}m waiting' : '${elapsedMinutes}m ago'),
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 9),
+                                  fontWeight: FontWeight.w900,
+                                  color: isSlaUrgent
+                                      ? const Color(0xFFDC2626)
+                                      : (isSlaWarning ? const Color(0xFFB45309) : AppDesignSystem.slate700),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],
