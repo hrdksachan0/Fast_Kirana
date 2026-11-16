@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { MapPin, Phone, User, ShoppingBag, CheckCircle2, Loader2, Navigation, ChevronDown, ChevronUp, Sparkles, QrCode } from 'lucide-react'
 import { formatPrice, formatPhone, formatAddress } from '@/lib/utils'
 import { parseOrderRecipient } from '../recipient-helper'
+import { detectOrderRoute } from '@/lib/route-detector'
 
 interface ActiveDeliveryCardProps {
   order: any
@@ -33,6 +34,7 @@ export default function ActiveDeliveryCard({
   const allItems = [...(order.items || []), ...(order.companionOrder?.items || [])]
 
   const recipient = parseOrderRecipient(order)
+  const routeInfo = detectOrderRoute(order)
   const customerPhone = recipient.recipientPhone || order.address?.phone || order.user?.phone || order.shopPhone
   const customerAddress = formatAddress(order.address)
   const mapUrl =
@@ -115,6 +117,9 @@ export default function ActiveDeliveryCard({
             <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
               <span className="text-xs font-mono font-black text-text-primary">
                 #{order.readableId || order.id.slice(0, 8)}
+              </span>
+              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${routeInfo.colorBadgeClass}`}>
+                {routeInfo.emoji} {routeInfo.shortLabel}
               </span>
               {order.companionOrder && (
                 <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">

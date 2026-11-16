@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { MapPin, Phone, ShoppingBag, Navigation, Clock, Loader2 } from 'lucide-react'
 import { formatPrice, formatPhone, formatAddress } from '@/lib/utils'
 import { parseOrderRecipient } from '../recipient-helper'
+import { detectOrderRoute } from '@/lib/route-detector'
 
 interface PendingPickupCardProps {
   order: any
@@ -23,6 +24,7 @@ export default function PendingPickupCard({
   onUpdateStatus,
 }: PendingPickupCardProps) {
   const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
+  const routeInfo = detectOrderRoute(order)
   
   // Maps URL
   const mapUrl = (order.deliveryLat || order.address?.lat) && (order.deliveryLng || order.address?.lng)
@@ -87,6 +89,9 @@ export default function PendingPickupCard({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-mono font-black text-text-primary">
                 #{order.readableId || order.id.slice(0, 8)}
+              </span>
+              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${routeInfo.colorBadgeClass}`}>
+                {routeInfo.emoji} {routeInfo.shortLabel}
               </span>
               {isRestaurant && (
                 <span className="bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 text-[9px] px-2 py-0.5 rounded-md font-black uppercase tracking-wider border border-rose-200 dark:border-rose-500/20">

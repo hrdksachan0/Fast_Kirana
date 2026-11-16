@@ -17,6 +17,7 @@ import { triggerConfetti } from '@/lib/confetti'
 import { optimizeRoute } from '@/lib/delivery-routing'
 import { useDeliveryOfflineSync } from '@/hooks/delivery/use-delivery-offline-sync'
 import { useRiderLocationTracking } from '@/hooks/delivery/use-rider-location-tracking'
+import { detectOrderRoute, DELIVERY_ROUTES, DeliveryRouteKey } from '@/lib/route-detector'
 
 // Sub-components
 import DeliveryHeader from './components/delivery-header'
@@ -37,6 +38,7 @@ export default function DeliveryDashboard() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   const [activeTab, setActiveTab] = useState<'deliveries' | 'wallet' | 'history'>('deliveries')
+  const [selectedRouteFilter, setSelectedRouteFilter] = useState<DeliveryRouteKey>('ALL')
   const [paymentChoiceOrderId, setPaymentChoiceOrderId] = useState<string | null>(null)
   const [qrModalOrder, setQrModalOrder] = useState<any | null>(null)
   const [confirmDeliveryOrder, setConfirmDeliveryOrder] = useState<any | null>(null)
@@ -371,8 +373,10 @@ export default function DeliveryDashboard() {
       seen.add(o.id)
       if (o.companionOrder) seen.add(o.companionOrder.id)
     }
-    return dedupped
-  }, [rawOutForDelivery])
+
+    if (selectedRouteFilter === 'ALL') return dedupped
+    return dedupped.filter((o) => detectOrderRoute(o).key === selectedRouteFilter)
+  }, [rawOutForDelivery, selectedRouteFilter])
 
   const pendingOrders = useMemo(() => {
     const raw = orders.filter(
@@ -386,7 +390,29 @@ export default function DeliveryDashboard() {
       seen.add(o.id)
       if (o.companionOrder) seen.add(o.companionOrder.id)
     }
-    return dedupped
+
+    if (selectedRouteFilter === 'ALL') return dedupped
+    return dedupped.filter((o) => detectOrderRoute(o).key === selectedRouteFilter)
+  }, [orders, selectedRouteFilter])
+
+  // Count active orders across routes for pill badges
+  const routeCounts = useMemo(() => {
+    const activeOrders = orders.filter((o) =>
+      ['SHIPPED', 'PACKED', 'PREPARING', 'CONFIRMED'].includes(o.status)
+    )
+    const counts: Record<DeliveryRouteKey, number> = {
+      ALL: activeOrders.length,
+      HAMIRPUR: 0,
+      MOOSANAGAR: 0,
+      KANPUR: 0,
+      JAHANABAD: 0,
+      TOWN_CENTER: 0,
+    }
+    for (const o of activeOrders) {
+      const r = detectOrderRoute(o).key
+      if (counts[r] !== undefined) counts[r]++
+    }
+    return counts
   }, [orders])
 
   const deliveredOrders = orders.filter(
@@ -476,8 +502,14 @@ export default function DeliveryDashboard() {
 
   const handleMarkDelivered = (orderId: string) => {
     const order = orders.find((o) => o.id === orderId)
-    if (order) {
-      setConfirmDeliveryOrder(order)
+    if (!order) return
+
+    // Streamlined: Skip redundant confirm handover popup!
+    // Directly go to COD payment collection if COD, else deliver directly with 1 tap.
+    if (order.paymentMethod === 'COD') {
+      setPaymentChoiceOrderId(order.id)
+    } else {
+      executeDeliveryCompletion(order.id, false, 'ONLINE')
     }
   }
 
@@ -568,6 +600,55 @@ export default function DeliveryDashboard() {
           <>
             {activeTab === 'deliveries' && (
               <div className="space-y-6">
+                {/* 4 Arterial Routes Filter Bar */}
+                <div className="bg-card/70 border border-border/80 backdrop-blur-sm p-3 rounded-2xl space-y-2 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-text-muted flex items-center gap-1">
+                      <span>📍 Select Route</span>
+                    </span>
+                    {selectedRouteFilter !== 'ALL' && (
+                      <button
+                        onClick={() => setSelectedRouteFilter('ALL')}
+                        className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                      >
+                        Reset All ({routeCounts.ALL})
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRouteFilter('ALL')}
+                      className={`px-3 py-1.5 text-[11px] font-black rounded-xl transition-all shrink-0 cursor-pointer border ${
+                        selectedRouteFilter === 'ALL'
+                          ? 'bg-primary text-white border-primary shadow-xs'
+                          : 'bg-background hover:bg-secondary border-border text-text-secondary'
+                      }`}
+                    >
+                      🚀 All Routes ({routeCounts.ALL})
+                    </button>
+                    {(['HAMIRPUR', 'MOOSANAGAR', 'KANPUR', 'JAHANABAD'] as const).map((rKey) => {
+                      const rInfo = DELIVERY_ROUTES[rKey]
+                      const count = routeCounts[rKey] || 0
+                      const isSelected = selectedRouteFilter === rKey
+                      return (
+                        <button
+                          key={rKey}
+                          type="button"
+                          onClick={() => setSelectedRouteFilter(rKey)}
+                          className={`px-3 py-1.5 text-[11px] font-black rounded-xl transition-all shrink-0 cursor-pointer border ${
+                            isSelected
+                              ? rInfo.activeButtonClass
+                              : 'bg-background hover:bg-secondary border-border text-text-secondary'
+                          }`}
+                        >
+                          {rInfo.emoji} {rInfo.shortLabel} {count > 0 ? `(${count})` : ''}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 {/* Out for Delivery Section */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
