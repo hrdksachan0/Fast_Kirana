@@ -275,7 +275,7 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
     final allProductsAsync = ref.watch(productsProvider(null));
     final products = allProductsAsync.valueOrNull ?? [];
     final storeSettings = ref.watch(storeSettingsProvider).valueOrNull;
-    final isStoreOpen = storeSettings?.isStoreOpen ?? true;
+    final isStoreOpen = storeSettings == null || (storeSettings.groceryMartOpen || storeSettings.restaurantOpen);
     final giftProducts = _filterGiftingProducts(products, _selectedOccasion, occasions);
 
     if (!config.enabled) {
