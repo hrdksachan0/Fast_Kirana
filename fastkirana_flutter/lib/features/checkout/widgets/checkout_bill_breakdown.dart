@@ -79,13 +79,14 @@ class CheckoutBillBreakdown extends StatelessWidget {
             deliveryFee == 0.0 ? 'FREE' : '₹${deliveryFee.toInt()}',
             isFree: deliveryFee == 0.0,
           ),
-          const SizedBox(height: 5.5),
-          _buildRow(
-            context,
-            (handlingLabel != null && handlingLabel!.trim().isNotEmpty) ? handlingLabel! : packagingLabel,
-            (handlingFee ?? packagingFee) == 0.0 ? 'FREE' : '+₹${(handlingFee ?? packagingFee).toInt()}',
-            isFree: (handlingFee ?? packagingFee) == 0.0,
-          ),
+          if ((handlingFee ?? packagingFee) > 0) ...[
+            const SizedBox(height: 5.5),
+            _buildRow(
+              context,
+              (handlingLabel != null && handlingLabel!.trim().isNotEmpty) ? handlingLabel! : packagingLabel,
+              '+₹${(handlingFee ?? packagingFee).toInt()}',
+            ),
+          ],
           if (tipAmount > 0) ...[
             const SizedBox(height: 5.5),
             _buildRow(context, 'Delivery Partner Tip', '₹${tipAmount.toInt()}'),

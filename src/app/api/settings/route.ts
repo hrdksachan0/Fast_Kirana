@@ -55,7 +55,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   delivery_fee_per_km_beyond_5km: '10',
   surge_mode: 'MANUAL_OFF',
   surge_rain_amount: '20',
-  surge_demand_amount: '15',
+  surge_demand_amount: '0',
   surge_manual_amount: '20',
   surge_max_cap: '25',
   surge_demand_threshold: '3.0',

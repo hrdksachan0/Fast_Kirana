@@ -1173,10 +1173,10 @@ export async function POST(request: NextRequest) {
 
     // Reuse settingsMap from the beginning of POST handler for tax and miscellaneous fee calculations
 
-    const taxPercent = parseFloat(settingsMap['tax_rate'] || '5')
+    const taxPercent = parseFloat(settingsMap['tax_rate'] || '0')
     const serverTaxRate = 0.00
-    const serverMiscFee = parseFloat(settingsMap['misc_fee'] || '5')
-    const serverCombinedMiscFee = parseFloat(settingsMap['combined_misc_fee'] || settingsMap['misc_fee'] || '5')
+    const serverMiscFee = parseFloat(settingsMap['misc_fee'] || '0')
+    const serverCombinedMiscFee = parseFloat(settingsMap['combined_misc_fee'] || settingsMap['misc_fee'] || '0')
 
     // Calculate details for each order to create
     const ordersToCreate: any[] = []

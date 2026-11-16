@@ -367,7 +367,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final deliveryFee = checkoutState.deliveryMethod == 'PICKUP' ? 0.0 : tier.deliveryFee;
     final handlingFee = checkoutState.deliveryMethod == 'PICKUP'
         ? 0.0
-        : (isCombined ? (storeSettings?.combinedMiscFee ?? 5.0) : (storeSettings?.miscFee ?? 5.0));
+        : (isCombined ? (storeSettings?.combinedMiscFee ?? 0.0) : (storeSettings?.miscFee ?? 0.0));
     final handlingLabel = isCombined
         ? (storeSettings?.combinedMiscFeeLabel ?? 'Combined Handling Fee')
         : (storeSettings?.miscFeeLabel ?? 'Handling Fee');

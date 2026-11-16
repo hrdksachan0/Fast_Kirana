@@ -110,9 +110,8 @@ class CartBillDetailsCard extends StatelessWidget {
             ),
           if (couponDiscount > 0) CartBillRow('Coupon Discount', '-₹${couponDiscount.toInt()}', isGreen: true),
           CartBillRow('Delivery Fee', deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}', isGreen: deliveryFee == 0),
-          CartBillRow(packagingLabel, packagingFee == 0 ? 'FREE' : '₹${packagingFee.toInt()}', isGreen: packagingFee == 0),
+          if (packagingFee > 0) CartBillRow(packagingLabel, '₹${packagingFee.toInt()}'),
           if (selectedTip > 0) CartBillRow('Delivery Partner Tip', '₹$selectedTip'),
-          const CartBillRow('Handling & Taxes', '₹0', isGreen: true),
           const Divider(height: 16, color: AppDesignSystem.slate200),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -228,14 +227,13 @@ class CartBillDetailsCard extends StatelessWidget {
                 deliveryFee == 0 ? 'FREE' : '₹${deliveryFee.toInt()}',
                 isGreen: deliveryFee == 0,
               ),
-              CartBillRow(
-                packagingLabel,
-                packagingFee == 0 ? 'FREE' : '₹${packagingFee.toInt()}',
-                isGreen: packagingFee == 0,
-              ),
+              if (packagingFee > 0)
+                CartBillRow(
+                  packagingLabel,
+                  '₹${packagingFee.toInt()}',
+                ),
               if (selectedTip > 0)
                 CartBillRow('Delivery Partner Tip', '₹$selectedTip', isGreen: false),
-              const CartBillRow('Handling & Taxes', '₹0', isGreen: true),
               const Divider(height: 22, color: AppDesignSystem.slate300),
               CartBillRow('To Pay', '₹${grandTotal.toInt()}', isBold: true),
               const SizedBox(height: 10),

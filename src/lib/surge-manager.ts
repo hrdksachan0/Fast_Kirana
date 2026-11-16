@@ -151,14 +151,14 @@ export async function evaluateSurgeStatus(
     }
   }
 
-  // Case 2: Manual ON
+  // Case 2: Manual ON (Admin turns Rain Surge ON directly)
   if (mode === 'MANUAL_ON') {
-    const fee = Math.min(manualAmount, maxCap)
+    const fee = Math.min(rainAmount > 0 ? rainAmount : manualAmount, maxCap)
     return {
       isSurgeActive: true,
       surgeFee: fee,
-      surgeReason: settingsMap['surge_manual_reason'] || '⚡ Special Delivery Surge',
-      surgeType: 'MANUAL',
+      surgeReason: '🌧️ Rain Surge (Delivery Partner Safety)',
+      surgeType: 'RAIN',
       mode,
     }
   }
@@ -213,24 +213,11 @@ export async function evaluateSurgeStatus(
     }
   }
 
-  // 2. High Demand check (min 4 pending orders and ratio >= threshold)
-  if (demand.activeOrders >= 4 && demand.ratio >= demandThreshold) {
-    const fee = Math.min(demandAmount, maxCap)
-    return {
-      isSurgeActive: true,
-      surgeFee: fee,
-      surgeReason: '⚡ High Demand Surge',
-      surgeType: 'DEMAND',
-      mode,
-      weatherInfo: weather,
-      demandInfo: demand,
-    }
-  }
-
+  // 2. High Demand check: Informational status only (₹0 charge - kitchen wait is free)
   return {
     isSurgeActive: false,
     surgeFee: 0,
-    surgeReason: '',
+    surgeReason: demand.activeOrders >= 4 ? '⚡ High Kitchen Demand' : '',
     surgeType: 'NONE',
     mode,
     weatherInfo: weather,

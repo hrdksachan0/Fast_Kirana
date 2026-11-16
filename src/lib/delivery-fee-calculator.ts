@@ -125,9 +125,9 @@ export async function calculateOrderDeliveryFees(
         }
 
         if (isCombinedFree || grocerySubtotal >= groceryRules.freeDeliveryThreshold || combinedSubtotal >= groceryRules.freeDeliveryThreshold) {
-          groceryDeliveryFee = 0
+          groceryDeliveryFee = hubSurgeFee
         } else {
-          groceryDeliveryFee = groceryRules.deliveryFee
+          groceryDeliveryFee = groceryRules.baseFee + hubSurgeFee
         }
       } else {
         groceryDeliveryFee = ((isCombinedFree || grocerySubtotal >= defaultThreshold || combinedSubtotal >= defaultThreshold) ? 0 : deliveryFeeVal) + hubSurgeFee
@@ -160,28 +160,32 @@ export async function calculateOrderDeliveryFees(
           }
         }
 
-        if (isCombinedFree || rData.subtotal >= rRules.freeDeliveryThreshold || combinedSubtotal >= rRules.freeDeliveryThreshold) {
+        // In combined order, restaurant delivery fee is waived (0) because grocery already covers the delivery
+        if (isCombinedOrder) {
           restaurantFees[rData.rId] = 0
+        } else if (isCombinedFree || rData.subtotal >= rRules.freeDeliveryThreshold || combinedSubtotal >= rRules.freeDeliveryThreshold) {
+          restaurantFees[rData.rId] = hubSurgeFee
         } else {
-          restaurantFees[rData.rId] = rRules.deliveryFee
+          restaurantFees[rData.rId] = rRules.baseFee + hubSurgeFee
         }
       } else {
         // Fallback if restaurant has no GPS coordinates saved
-        if (isCombinedFree || rData.subtotal >= rDefaultThreshold || combinedSubtotal >= rDefaultThreshold) {
+        if (isCombinedOrder) {
           restaurantFees[rData.rId] = 0
+        } else if (isCombinedFree || rData.subtotal >= rDefaultThreshold || combinedSubtotal >= rDefaultThreshold) {
+          restaurantFees[rData.rId] = hubSurgeFee
         } else {
           restaurantFees[rData.rId] = deliveryFeeVal + hubSurgeFee
         }
       }
     }
 
-    // Single delivery fee rule for combined order under threshold:
-    // If grocery has already been charged a delivery fee, waive delivery fee on the restaurant portion so customer is never double-charged
-    if (isCombinedOrder && !isCombinedFree) {
-      if (groceryDeliveryFee > 0) {
-        for (const rData of restaurantData) {
-          restaurantFees[rData.rId] = 0
-        }
+    // Single delivery fee rule for combined order:
+    // If grocery has items, grocery covers the trip (base fee + single rain surge if raining).
+    // Restaurant delivery fee is strictly 0 so customer is never double-charged
+    if (isCombinedOrder) {
+      for (const rData of restaurantData) {
+        restaurantFees[rData.rId] = 0
       }
     }
   }

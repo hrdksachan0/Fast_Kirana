@@ -399,8 +399,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final tier = ref.watch(deliveryTierProvider);
     final subtotal = cart.subtotal;
     final deliveryFee = tier.deliveryFee;
-    const packagingFee = 5.0;
-    const packagingLabel = 'Standard Packaging';
+    double packagingFee = 0.0;
+    String packagingLabel = 'Food Packaging';
+    for (final item in cart.items) {
+      final r = item.product.restaurant;
+      if (r != null && r.packagingFee != null && r.packagingFee! > packagingFee) {
+        packagingFee = r.packagingFee!;
+      }
+    }
     final itemSavings = cart.savings;
     final freeGiftSavings = (_freeGiftDetails != null && _freeGiftDetails!['originalPrice'] != null)
         ? ((_freeGiftDetails!['originalPrice'] as num).toDouble())
