@@ -274,7 +274,7 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
     // Real-time backend products connection
     final allProductsAsync = ref.watch(productsProvider(null));
     final products = allProductsAsync.valueOrNull ?? [];
-    final storeSettings = ref.watch(storeSettingsProvider).valueOrNull ?? const StoreSettings();
+    final storeSettings = ref.watch(storeSettingsProvider).valueOrNull ?? StoreSettings();
     final isStoreOpen = storeSettings.isStoreOpen;
     final giftProducts = _filterGiftingProducts(products, _selectedOccasion, occasions);
 

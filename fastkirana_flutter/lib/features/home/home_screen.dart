@@ -907,7 +907,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     .timeout(const Duration(seconds: 3), onTimeout: () {});
               } else {
                 LocationService.bootstrapUserLocation(ref);
-              }
                 Future.delayed(const Duration(milliseconds: 1500), () {
                   if (mounted) {
                     LocationService.checkLocationDriftAndPrompt(context, ref);
