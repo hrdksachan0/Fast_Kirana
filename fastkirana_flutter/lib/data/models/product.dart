@@ -510,6 +510,7 @@ class RestaurantInfo {
   final String? discountOffer;
   final String? openTime;
   final String? closeTime;
+  final double? packagingFee;
 
   RestaurantInfo({
     required this.id,
@@ -527,6 +528,7 @@ class RestaurantInfo {
     this.discountOffer,
     this.openTime,
     this.closeTime,
+    this.packagingFee,
   });
 
   factory RestaurantInfo.fromJson(Map<String, dynamic> json) {
@@ -568,6 +570,7 @@ class RestaurantInfo {
       discountOffer: json['discountOffer']?.toString() ?? json['offer']?.toString(),
       openTime: json['openTime']?.toString(),
       closeTime: json['closeTime']?.toString(),
+      packagingFee: (json['packagingFee'] as num?)?.toDouble() ?? (json['packaging_fee'] as num?)?.toDouble(),
     );
   }
 
@@ -587,6 +590,7 @@ class RestaurantInfo {
         'discountOffer': discountOffer,
         'openTime': openTime,
         'closeTime': closeTime,
+        'packagingFee': packagingFee,
       };
 }
 
