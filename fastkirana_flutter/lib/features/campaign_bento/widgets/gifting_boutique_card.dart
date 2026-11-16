@@ -52,7 +52,7 @@ class GiftingBoutiqueCard extends ConsumerWidget {
       onTap: () => _openGiftingPage(context),
       behavior: HitTestBehavior.opaque,
       child: Container(
-        height: 152,
+        height: (MediaQuery.sizeOf(context).width * 0.44 * (MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.3) > 1.0 ? 1.08 : 1.0)).clamp(168.0, 196.0),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -126,7 +126,9 @@ class GiftingBoutiqueCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        title,
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontFamily: 'NotoSerif',
                           fontSize: 15.0,
@@ -138,7 +140,9 @@ class GiftingBoutiqueCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        subtitle,
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontFamily: 'Plus Jakarta Sans',
                           fontSize: 10.0,

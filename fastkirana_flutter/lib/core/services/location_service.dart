@@ -1910,11 +1910,19 @@ class LocationService {
 
 
 
-    try {
-      ref.invalidate(homeProductCatalogProvider);
-      ref.invalidate(nearestHubResultProvider);
-      ref.invalidate(hubAvailabilityProvider);
-    } catch (_) {}
+    final previousHubId = AppConfig.darkstoreId;
+    final newHubId = details.nearestHub?.id;
+    if (newHubId != null && newHubId != previousHubId) {
+      try {
+        ref.invalidate(homeProductCatalogProvider);
+        ref.invalidate(nearestHubResultProvider);
+        ref.invalidate(hubAvailabilityProvider);
+      } catch (_) {}
+    } else {
+      try {
+        ref.invalidate(nearestHubResultProvider);
+      } catch (_) {}
+    }
 
 
 

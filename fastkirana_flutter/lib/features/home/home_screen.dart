@@ -470,7 +470,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
   int _selectedFilterIndex = 0;
-  bool _isResolvingInitialLocation = true;
+  bool _isResolvingInitialLocation = false;
 
 
 
@@ -759,6 +759,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
     _homeScrollController.addListener(_onHomeScroll);
+    final initialLocation = ref.read(selectedAddressProvider) ?? LocationService.cachedAddress;
+    if (initialLocation == null) {
+      _isResolvingInitialLocation = true;
+    }
 
 
 
@@ -898,12 +902,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             try {
               // Agar Pehle se Allowed hai:
               // App khulte hi bina kuch puche background me current location auto-set ho jati hai.
-              if (currentAddress == null ||
-                  currentAddress.id.startsWith('gps_') ||
-                  currentAddress.id.startsWith('addr_bootstrap_gps_')) {
+              if (currentAddress == null) {
                 await LocationService.bootstrapUserLocation(ref)
                     .timeout(const Duration(seconds: 3), onTimeout: () {});
               } else {
+                LocationService.bootstrapUserLocation(ref);
+              }
                 Future.delayed(const Duration(milliseconds: 1500), () {
                   if (mounted) {
                     LocationService.checkLocationDriftAndPrompt(context, ref);
