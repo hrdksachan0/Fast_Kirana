@@ -60,7 +60,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (LocationService.cachedAddress == null) {
         await LocationService.loadCachedAddress();
       }
-      await LocationService.bootstrapUserLocation(ref);
+      if (mounted) { await LocationService.bootstrapUserLocation(ref); }
     })().timeout(const Duration(milliseconds: 1500), onTimeout: () {});
 
     // 2. Warm up active store hubs, categories, catalog, banners, and festive campaign concurrently during splash

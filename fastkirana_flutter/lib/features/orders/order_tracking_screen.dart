@@ -606,6 +606,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         _order?.id ?? cleanId,
         readableId: _order?.readableId ?? cleanId,
       );
+      if (!mounted) return;
       ref.invalidate(ordersProvider(''));
 
       if (mounted) {
@@ -672,7 +673,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       queueMessage: 'Pay with cash or rider QR/UPI upon doorstep delivery',
     );
 
-    if (shouldSwitch != true) return;
+    if (shouldSwitch != true || !mounted) return;
 
     HapticFeedback.mediumImpact();
     setState(() => _isProcessingPayment = true);

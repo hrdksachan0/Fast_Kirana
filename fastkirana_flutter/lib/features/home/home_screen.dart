@@ -2619,6 +2619,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                 await ProductRepository.invalidateAllCache();
 
+                if (!mounted) return;
+
 
 
 

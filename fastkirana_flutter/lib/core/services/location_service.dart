@@ -1841,7 +1841,7 @@ class LocationService {
 
 
 
-      userId: ref.read(authProvider).value?.id ?? 'current',
+      userId: () { try { return ref.read(authProvider).value?.id; } catch (_) { return null; } }() ?? 'current',
 
 
 
@@ -1890,7 +1890,7 @@ class LocationService {
 
 
     await saveCachedAddress(addr);
-    ref.read(selectedAddressProvider.notifier).state = addr;
+    try { ref.read(selectedAddressProvider.notifier).state = addr; } catch (_) {}
 
 
 
@@ -1910,15 +1910,11 @@ class LocationService {
 
 
 
-    ref.invalidate(homeProductCatalogProvider);
-
-
-
-    ref.invalidate(nearestHubResultProvider);
-
-
-
-    ref.invalidate(hubAvailabilityProvider);
+    try {
+      ref.invalidate(homeProductCatalogProvider);
+      ref.invalidate(nearestHubResultProvider);
+      ref.invalidate(hubAvailabilityProvider);
+    } catch (_) {}
 
 
 
@@ -2414,8 +2410,9 @@ class LocationService {
       );
 
       // Immediately unlock nearest hub & home catalog using coordinates before slow reverse-geocoding finishes
-      if (ref.read(selectedAddressProvider) == null) {
-        ref.read(selectedAddressProvider.notifier).state = Address(
+      bool isAddressNull = false; try { isAddressNull = (ref.read(selectedAddressProvider) == null); } catch (_) {}
+      if (isAddressNull) {
+        try { ref.read(selectedAddressProvider.notifier).state = Address(
           id: 'gps_resolving_${DateTime.now().millisecondsSinceEpoch}',
           label: 'Current Location',
           street: 'Locating street...',
@@ -2425,7 +2422,7 @@ class LocationService {
           latitude: position.latitude,
           longitude: position.longitude,
           isDefault: true,
-        );
+        ); } catch (_) {}
       }
 
       final details = await getAddressFromCoordinates(position.latitude, position.longitude);
@@ -2477,11 +2474,12 @@ class LocationService {
       await loadCachedAddress();
     }
 
-    if (ref.read(selectedAddressProvider) == null && _cachedAddress != null) {
+    bool needSetCached = false; try { needSetCached = (ref.read(selectedAddressProvider) == null && _cachedAddress != null); } catch (_) {}
+    if (needSetCached) {
       ref.read(selectedAddressProvider.notifier).state = _cachedAddress;
     }
 
-    final currentAddress = ref.read(selectedAddressProvider);
+    Address? currentAddress; try { currentAddress = ref.read(selectedAddressProvider); } catch (_) { return; }
 
     if (currentAddress != null &&
         currentAddress.id != 'hub_active_default' &&
@@ -2591,7 +2589,7 @@ class LocationService {
 
 
 
-      final selectedAddress = ref.read(selectedAddressProvider);
+      Address? selectedAddress; try { selectedAddress = ref.read(selectedAddressProvider); } catch (_) { return; }
 
 
 

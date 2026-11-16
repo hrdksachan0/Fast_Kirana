@@ -159,6 +159,8 @@ class _DeliveryLocationScreenState extends ConsumerState<DeliveryLocationScreen>
       hubName: address.city.isNotEmpty ? address.city : address.area,
     );
 
+    if (!mounted) return;
+
     // 1. selectedAddressProvider set
     ref.read(selectedAddressProvider.notifier).state = address;
 

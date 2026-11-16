@@ -204,6 +204,8 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
         saved = await ref.read(addressesProvider.notifier).addAddress(addressData);
       }
 
+      if (!mounted) return;
+
       // Automatically select as current delivery address
       ref.read(selectedAddressProvider.notifier).state = saved;
 

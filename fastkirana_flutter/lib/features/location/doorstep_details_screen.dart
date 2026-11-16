@@ -267,6 +267,8 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_chosen_location', true);
 
+      if (!mounted) return;
+
       // Set active address
       ref.read(selectedAddressProvider.notifier).state = savedAddress;
 

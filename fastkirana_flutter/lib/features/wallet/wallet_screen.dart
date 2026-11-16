@@ -90,6 +90,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
       );
     } else {
       await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
       await ref.read(walletNotifierProvider.notifier).fetchBalance();
       if (mounted) ref.invalidate(walletTransactionsProvider);
     }
@@ -719,7 +720,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
       body: RefreshIndicator(
         color: AppDesignSystem.primary,
         onRefresh: () async {
+          if (!mounted) return;
           await ref.read(walletNotifierProvider.notifier).fetchBalance();
+          if (!mounted) return;
           ref.invalidate(walletTransactionsProvider);
         },
         child: ListView(
