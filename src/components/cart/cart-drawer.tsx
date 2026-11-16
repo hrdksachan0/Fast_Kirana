@@ -336,7 +336,7 @@ export function CartDrawer() {
 
   const isCombinedCart = groceryItems.length > 0 && cafeItems.length > 0
   const miscFee = isCombinedCart
-    ? (settings.combined_misc_fee ? parseFloat(settings.combined_misc_fee) : (settings.misc_fee ? parseFloat(settings.misc_fee) : 5))
+    ? (settings.combined_misc_fee ? parseFloat(settings.combined_misc_fee) : (settings.misc_fee ? parseFloat(settings.misc_fee) : 0))
     : (settings.misc_fee ? parseFloat(settings.misc_fee) : 0)
   const miscFeeLabel = isCombinedCart
     ? (settings.combined_misc_fee_label || 'Combined Packaging Charge')

@@ -635,12 +635,13 @@ class OrderDetailScreen extends StatelessWidget {
                           isPickupOrder ? 'FREE (Store Pickup)' : (effectiveDeliveryFee <= 0 ? 'FREE' : '₹${effectiveDeliveryFee.toInt()}'),
                           isGreen: effectiveDeliveryFee <= 0 || isPickupOrder,
                         ),
-                        _buildBillRow(
-                          'Packaging Charge',
-                          order.miscFee > 0 ? '₹${order.miscFee.toInt()}' : (isPickupOrder ? 'FREE' : '₹0'),
-                          isGreen: order.miscFee == 0 || isPickupOrder,
-                        ),
-                        _buildBillRow('Handling & Taxes', '₹0', isGreen: true),
+                        if (order.miscFee > 0)
+                          _buildBillRow(
+                            'Packaging Charge',
+                            '₹${order.miscFee.toInt()}',
+                          ),
+                        if (order.taxes > 0)
+                          _buildBillRow('Taxes', '₹${order.taxes.toInt()}'),
                       ],
                     );
                   }),

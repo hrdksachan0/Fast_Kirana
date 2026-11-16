@@ -207,36 +207,40 @@ class TrackingReceiptCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 5),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Packaging Charge', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
-              Text(
-                miscFee > 0 ? '₹${miscFee.toInt()}' : (isPickup ? 'FREE' : '₹0'),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: Responsive.scaledFontSize(context, 12.5),
-                  fontWeight: FontWeight.w700,
-                  color: miscFee > 0 ? slateDark : brandGreen,
+          if (miscFee > 0) ...[
+            const SizedBox(height: 5),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Packaging Charge', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+                Text(
+                  '₹${miscFee.toInt()}',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                    fontWeight: FontWeight.w700,
+                    color: slateDark,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Handling & Taxes', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
-              Text(
-                taxes > 0 ? '₹${taxes.toInt()}' : '₹0',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: Responsive.scaledFontSize(context, 12.5),
-                  fontWeight: FontWeight.w700,
-                  color: taxes > 0 ? slateDark : brandGreen,
+              ],
+            ),
+          ],
+          if (taxes > 0) ...[
+            const SizedBox(height: 5),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Taxes', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+                Text(
+                  '₹${taxes.toInt()}',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                    fontWeight: FontWeight.w700,
+                    color: slateDark,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
           if (discount > 0) ...[
             const SizedBox(height: 5),
             Row(

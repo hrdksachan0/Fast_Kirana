@@ -15,7 +15,7 @@ class CartBillSummaryCard extends StatelessWidget {
     super.key,
     required this.itemTotal,
     required this.deliveryFee,
-    this.handlingFee = 5.0,
+    this.handlingFee = 0.0,
     this.couponDiscount = 0.0,
     this.tipAmount = 0.0,
     required this.grandTotal,

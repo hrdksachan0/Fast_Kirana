@@ -382,18 +382,22 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                   {order.deliveryMethod === 'PICKUP' ? 'FREE (Store Pickup)' : (order.deliveryFee === 0 ? 'FREE' : formatPrice(order.deliveryFee))}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-text-secondary">{miscFeeLabel || 'Packaging Charge'}</span>
-                <span className={`font-bold ${order.miscFee === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-text-primary'}`}>
-                  {order.miscFee > 0 ? formatPrice(order.miscFee) : '₹0'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Handling & Taxes</span>
-                <span className={`font-bold ${order.taxes === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-text-primary'}`}>
-                  {order.taxes > 0 ? formatPrice(order.taxes) : '₹0'}
-                </span>
-              </div>
+              {order.miscFee > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">{miscFeeLabel || 'Packaging Charge'}</span>
+                  <span className="font-bold text-text-primary">
+                    {formatPrice(order.miscFee)}
+                  </span>
+                </div>
+              )}
+              {order.taxes > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-text-secondary">Taxes</span>
+                  <span className="font-bold text-text-primary">
+                    {formatPrice(order.taxes)}
+                  </span>
+                </div>
+              )}
               {order.discount > 0 && (
                 <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
                   <span>Discount Savings</span>
