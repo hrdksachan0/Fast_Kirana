@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
              COALESCE(o."refundAmount", 0)::float as "refundAmount"
       FROM orders o
       WHERE o.status::text = 'DELIVERED'
-        AND o."restaurantId" IS NOT NULL
+        AND (o."restaurantId" IS NOT NULL OR EXISTS (SELECT 1 FROM order_items oi2 JOIN products p2 ON oi2."productId" = p2.id WHERE oi2."orderId" = o.id AND p2."restaurantId" IS NOT NULL))
         AND o."createdAt" >= ${start}
         AND o."createdAt" <= ${end}
         ${storeWhereOrders}
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN products p ON oi."productId" = p.id
       LEFT JOIN categories c ON p."categoryId" = c.id
       WHERE o.status::text = 'DELIVERED'
-        AND o."restaurantId" IS NOT NULL
+        AND (o."restaurantId" IS NOT NULL OR EXISTS (SELECT 1 FROM order_items oi2 JOIN products p2 ON oi2."productId" = p2.id WHERE oi2."orderId" = o.id AND p2."restaurantId" IS NOT NULL))
         AND o."createdAt" >= ${start}
         AND o."createdAt" <= ${end}
         ${storeWhereOrders}
@@ -226,7 +226,7 @@ export async function GET(request: NextRequest) {
         if (!rStats) continue
 
         const restItems = itemsByRest[restId]
-        const orderRestSalesRaw = restItems.reduce((sum, item) => {
+        let orderRestSalesRaw = restItems.reduce((sum, item) => {
           if (item.isRefunded && (!item.refundAmount || item.refundAmount >= Number(item.price) * Number(item.quantity))) {
             return sum
           }
@@ -234,6 +234,11 @@ export async function GET(request: NextRequest) {
           const netItemTotal = Math.max(0, itemLineTotal - (Number(item.refundAmount) || 0))
           return sum + netItemTotal
         }, 0)
+
+        // Fallback to order food subtotal if order was for this restaurant and items yielded 0
+        if (orderRestSalesRaw <= 0 && restId === o.restaurantId) {
+          orderRestSalesRaw = Math.max(0, Number(o.subtotal) || 0)
+        }
 
         // Account for any item-level refund
         const totalItemRefunds = restItems.reduce((sum, item) => sum + (Number(item.refundAmount) || 0), 0)
