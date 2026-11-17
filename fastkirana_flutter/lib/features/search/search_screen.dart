@@ -1014,8 +1014,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
           fontSize: Responsive.scaledFontSize(context, 13),
           fontWeight: FontWeight.w600,
           color: AppDesignSystem.slate800,
+          height: 1.25,
         ),
-        maxLines: 1,
+        maxLines: 2,
         overflow: TextOverflow.ellipsis,
       );
     }
@@ -1025,12 +1026,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
     final after = text.substring(index + q.length);
 
     return RichText(
-      maxLines: 1,
+      maxLines: 2,
       overflow: TextOverflow.ellipsis,
       text: TextSpan(
         style: GoogleFonts.inter(
           fontSize: Responsive.scaledFontSize(context, 13),
           color: AppDesignSystem.slate800,
+          height: 1.25,
         ),
         children: [
           TextSpan(text: before, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -2128,10 +2130,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                 padding: const EdgeInsets.only(bottom: 12),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.only(right: 12),
                   child: Row(
                     children: [
                       _buildFilterChip(
-                        label: 'All Results',
+                        label: 'All',
                         count: '$totalCount',
                         isSelected: _activeFilter == 'all',
                         onTap: () => setState(() => _activeFilter = 'all'),
@@ -2270,8 +2274,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        margin: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? (activeBgColor ?? const Color(0xFF0F172A)) : Colors.white,
           borderRadius: BorderRadius.circular(20),
